@@ -1,0 +1,17 @@
+#include "Shared.xcconfig"
+
+PRODUCT_NAME = CodexPulse
+PRODUCT_BUNDLE_IDENTIFIER = com.codexpulse.menubar
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_KEY_CFBundleDisplayName = Codex Pulse
+INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.developer-tools
+INFOPLIST_KEY_LSUIElement = YES
+INFOPLIST_KEY_NSHighResolutionCapable = YES
+
+ENABLE_APP_SANDBOX = NO
+ENABLE_HARDENED_RUNTIME = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor

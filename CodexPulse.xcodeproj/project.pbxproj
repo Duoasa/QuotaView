@@ -1,0 +1,456 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B10000000000000000000001 /* CodexPulseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* CodexPulseApp.swift */; };
+		B10000000000000000000002 /* CodexStatusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* CodexStatusStore.swift */; };
+		B10000000000000000000003 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* MenuBarView.swift */; };
+		B10000000000000000000004 /* CodexPulseCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* CodexPulseCore.framework */; };
+		B10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* Assets.xcassets */; };
+		B10000000000000000000006 /* CodexAppServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* CodexAppServerClient.swift */; };
+		B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* CodexExecutableLocator.swift */; };
+		B10000000000000000000008 /* CodexModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* CodexModels.swift */; };
+		B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* CodexAppServerClientTests.swift */; };
+		B1000000000000000000000A /* CodexModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* CodexModelsTests.swift */; };
+		B1000000000000000000000B /* CodexPulseCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* CodexPulseCore.framework */; };
+		B1000000000000000000000C /* CodexPulseCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* CodexPulseCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C10000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000002;
+			remoteInfo = CodexPulseCore;
+		};
+		C10000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000002;
+			remoteInfo = CodexPulseCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D20000000000000000000001 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B1000000000000000000000C /* CodexPulseCore.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		F10000000000000000000001 /* CodexPulseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPulseApp.swift; sourceTree = "<group>"; };
+		F10000000000000000000002 /* CodexStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexStatusStore.swift; sourceTree = "<group>"; };
+		F10000000000000000000003 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		F10000000000000000000004 /* CodexAppServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClient.swift; sourceTree = "<group>"; };
+		F10000000000000000000005 /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
+		F10000000000000000000006 /* CodexModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModels.swift; sourceTree = "<group>"; };
+		F10000000000000000000007 /* CodexAppServerClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClientTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000008 /* CodexModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModelsTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000009 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
+		F1000000000000000000000A /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
+		F1000000000000000000000B /* Core.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Core.xcconfig; sourceTree = "<group>"; };
+		F1000000000000000000000C /* Tests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tests.xcconfig; sourceTree = "<group>"; };
+		F1000000000000000000000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F1000000000000000000000E /* CodexPulseCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = CodexPulseCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1000000000000000000000F /* CodexPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000010 /* CodexPulseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPulseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000004 /* CodexPulseCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D10000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D10000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000000000000000000000B /* CodexPulseCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G10000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				G10000000000000000000002 /* Sources */,
+				G10000000000000000000005 /* Tests */,
+				G10000000000000000000006 /* Resources */,
+				G10000000000000000000007 /* Configs */,
+				G10000000000000000000008 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		G10000000000000000000002 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				G10000000000000000000003 /* CodexPulse */,
+				G10000000000000000000004 /* CodexPulseCore */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000003 /* CodexPulse */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000001 /* CodexPulseApp.swift */,
+				F10000000000000000000002 /* CodexStatusStore.swift */,
+				F10000000000000000000003 /* MenuBarView.swift */,
+			);
+			path = CodexPulse;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000004 /* CodexPulseCore */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000004 /* CodexAppServerClient.swift */,
+				F10000000000000000000005 /* CodexExecutableLocator.swift */,
+				F10000000000000000000006 /* CodexModels.swift */,
+			);
+			path = CodexPulseCore;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000005 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000007 /* CodexAppServerClientTests.swift */,
+				F10000000000000000000008 /* CodexModelsTests.swift */,
+			);
+			path = Tests/CodexPulseCoreTests;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000006 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F1000000000000000000000D /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000007 /* Configs */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000009 /* Shared.xcconfig */,
+				F1000000000000000000000A /* App.xcconfig */,
+				F1000000000000000000000B /* Core.xcconfig */,
+				F1000000000000000000000C /* Tests.xcconfig */,
+			);
+			path = Configs;
+			sourceTree = "<group>";
+		};
+		G10000000000000000000008 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F1000000000000000000000F /* CodexPulse.app */,
+				F1000000000000000000000E /* CodexPulseCore.framework */,
+				F10000000000000000000010 /* CodexPulseTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000001 /* CodexPulse */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L10000000000000000000002 /* Build configuration list for PBXNativeTarget "CodexPulse" */;
+			buildPhases = (
+				S10000000000000000000001 /* Sources */,
+				D10000000000000000000001 /* Frameworks */,
+				D20000000000000000000001 /* Embed Frameworks */,
+				R10000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T10000000000000000000001 /* PBXTargetDependency */,
+			);
+			name = CodexPulse;
+			productName = CodexPulse;
+			productReference = F1000000000000000000000F /* CodexPulse.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000002 /* CodexPulseCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L10000000000000000000003 /* Build configuration list for PBXNativeTarget "CodexPulseCore" */;
+			buildPhases = (
+				S10000000000000000000002 /* Sources */,
+				D10000000000000000000002 /* Frameworks */,
+				R10000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexPulseCore;
+			productName = CodexPulseCore;
+			productReference = F1000000000000000000000E /* CodexPulseCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		A10000000000000000000003 /* CodexPulseTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L10000000000000000000004 /* Build configuration list for PBXNativeTarget "CodexPulseTests" */;
+			buildPhases = (
+				S10000000000000000000003 /* Sources */,
+				D10000000000000000000003 /* Frameworks */,
+				R10000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T10000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = CodexPulseTests;
+			productName = CodexPulseTests;
+			productReference = F10000000000000000000010 /* CodexPulseTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					A10000000000000000000001 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					A10000000000000000000002 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					A10000000000000000000003 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = L10000000000000000000001 /* Build configuration list for PBXProject "CodexPulse" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = zh_CN;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				zh_CN,
+			);
+			mainGroup = G10000000000000000000001;
+			productRefGroup = G10000000000000000000008 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000001 /* CodexPulse */,
+				A10000000000000000000002 /* CodexPulseCore */,
+				A10000000000000000000003 /* CodexPulseTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R10000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000005 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		R10000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		R10000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S10000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000001 /* CodexPulseApp.swift in Sources */,
+				B10000000000000000000002 /* CodexStatusStore.swift in Sources */,
+				B10000000000000000000003 /* MenuBarView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S10000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,
+				B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */,
+				B10000000000000000000008 /* CodexModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S10000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */,
+				B1000000000000000000000A /* CodexModelsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		T10000000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000002 /* CodexPulseCore */;
+			targetProxy = C10000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		T10000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000002 /* CodexPulseCore */;
+			targetProxy = C10000000000000000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		X10000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		X10000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		X10000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000A /* App.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		X10000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000A /* App.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		X10000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000B /* Core.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		X10000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000B /* Core.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		X10000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000C /* Tests.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		X10000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1000000000000000000000C /* Tests.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		L10000000000000000000001 /* Build configuration list for PBXProject "CodexPulse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X10000000000000000000001 /* Debug */,
+				X10000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L10000000000000000000002 /* Build configuration list for PBXNativeTarget "CodexPulse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X10000000000000000000003 /* Debug */,
+				X10000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L10000000000000000000003 /* Build configuration list for PBXNativeTarget "CodexPulseCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X10000000000000000000005 /* Debug */,
+				X10000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L10000000000000000000004 /* Build configuration list for PBXNativeTarget "CodexPulseTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X10000000000000000000007 /* Debug */,
+				X10000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E10000000000000000000001 /* Project object */;
+}

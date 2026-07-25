@@ -1,0 +1,7 @@
+#include "Shared.xcconfig"
+
+PRODUCT_NAME = CodexPulseTests
+PRODUCT_BUNDLE_IDENTIFIER = com.codexpulse.tests
+GENERATE_INFOPLIST_FILE = YES
+SKIP_INSTALL = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @loader_path/Frameworks @loader_path/../Frameworks
