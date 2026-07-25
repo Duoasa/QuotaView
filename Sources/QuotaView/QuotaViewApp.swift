@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 @MainActor
-struct CodexPulseApp: App {
+struct QuotaViewApp: App {
     @StateObject private var store: CodexStatusStore
 
     init() {

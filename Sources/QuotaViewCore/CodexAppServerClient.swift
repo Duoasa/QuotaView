@@ -147,8 +147,8 @@ public actor CodexAppServerClient {
                 method: "initialize",
                 params: [
                     "clientInfo": [
-                        "name": "codex_pulse",
-                        "title": "Codex Pulse",
+                        "name": "quotaview",
+                        "title": "QuotaView",
                         "version": "0.1.0"
                     ]
                 ],

@@ -1,7 +1,7 @@
 #include "Shared.xcconfig"
 
-PRODUCT_NAME = CodexPulseCore
-PRODUCT_BUNDLE_IDENTIFIER = com.codexpulse.core
+PRODUCT_NAME = QuotaViewCore
+PRODUCT_BUNDLE_IDENTIFIER = com.quotaview.core
 DEFINES_MODULE = YES
 SKIP_INSTALL = YES
 BUILD_LIBRARY_FOR_DISTRIBUTION = NO

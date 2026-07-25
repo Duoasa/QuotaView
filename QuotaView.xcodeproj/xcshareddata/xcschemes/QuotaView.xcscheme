@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A10000000000000000000001"
-               BuildableName = "CodexPulse.app"
-               BlueprintName = "CodexPulse"
-               ReferencedContainer = "container:CodexPulse.xcodeproj">
+               BuildableName = "QuotaView.app"
+               BlueprintName = "QuotaView"
+               ReferencedContainer = "container:QuotaView.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -29,9 +29,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A10000000000000000000003"
-               BuildableName = "CodexPulseTests.xctest"
-               BlueprintName = "CodexPulseTests"
-               ReferencedContainer = "container:CodexPulse.xcodeproj">
+               BuildableName = "QuotaViewTests.xctest"
+               BlueprintName = "QuotaViewTests"
+               ReferencedContainer = "container:QuotaView.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A10000000000000000000003"
-               BuildableName = "CodexPulseTests.xctest"
-               BlueprintName = "CodexPulseTests"
-               ReferencedContainer = "container:CodexPulse.xcodeproj">
+               BuildableName = "QuotaViewTests.xctest"
+               BlueprintName = "QuotaViewTests"
+               ReferencedContainer = "container:QuotaView.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A10000000000000000000001"
-            BuildableName = "CodexPulse.app"
-            BlueprintName = "CodexPulse"
-            ReferencedContainer = "container:CodexPulse.xcodeproj">
+            BuildableName = "QuotaView.app"
+            BlueprintName = "QuotaView"
+            ReferencedContainer = "container:QuotaView.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,9 +86,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A10000000000000000000001"
-            BuildableName = "CodexPulse.app"
-            BlueprintName = "CodexPulse"
-            ReferencedContainer = "container:CodexPulse.xcodeproj">
+            BuildableName = "QuotaView.app"
+            BlueprintName = "QuotaView"
+            ReferencedContainer = "container:QuotaView.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -1,5 +1,5 @@
 import XCTest
-@testable import CodexPulseCore
+@testable import QuotaViewCore
 
 final class CodexModelsTests: XCTestCase {
     func testSnapshotMapsRateLimitAndUsageFields() throws {

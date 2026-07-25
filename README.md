@@ -1,111 +1,115 @@
-# Codex Pulse
+# QuotaView
 
-Codex Pulse 是一个原生 macOS 菜单栏应用，用于查看本机 Codex 的账户状态、周期用量、刷新时间、Credits 余额和 Token 使用情况。
+QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.0 starts with the locally signed-in Codex account, with support for more AI providers planned.
 
-当前 MVP 不抓取网页，也不读取或复制 `~/.codex` 中的登录凭据。它启动本机 `codex app-server`，通过官方 JSON-RPC 接口读取当前已登录账户的数据。
+QuotaView does not scrape web pages or read, copy, or store login credentials from `~/.codex`. It starts the local `codex app-server` process and reads account data through its official JSON-RPC interface.
 
-## 当前功能
+## Download
 
-- 显示 Codex 是否可用、接近限额或已经耗尽额度
-- 显示当前周期的已用和剩余百分比
-- 显示下次限额刷新倒计时
-- 区分套餐剩余额度与额外 Credits 余额
-- 将可用额度刷新次数作为独立入口展示
-- 提供额度刷新二级页面、风险确认和最终确认弹窗
-- 当前额度刷新流程为演示模式，不会调用真实重置接口或消耗次数
-- 显示最近一天与累计 Token
-- 每 60 秒自动同步数据，也支持手动同步
-- 能定位 ChatGPT 应用内置、Homebrew 或自定义路径中的 `codex`
-- 离线、未安装和 App Server 错误状态
+Download `QuotaView-v0.1.0.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
 
-Finder 启动后的第一次账户限额请求可能需要 20–30 秒。客户端为冷启动保留 45 秒响应窗口，后续刷新通常会明显更快。
+The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. This build uses an ad-hoc signature and is not notarized with an Apple Developer ID. If macOS blocks the first launch, right-click the app in Finder and choose **Open**.
 
-应用会在自身的 macOS 偏好域中保存最近一次刷新成功时间、状态和错误摘要，不保存令牌或完整账户响应。需要诊断时可以运行：
+## Features
+
+- Shows whether the current AI service is available, near its limit, or exhausted.
+- Displays used and remaining quota percentages for the current window.
+- Shows the countdown to the next quota reset.
+- Separates plan quota from additional Credits balance.
+- Presents available quota reset credits as a dedicated action.
+- Includes a quota reset detail view, risk acknowledgement, and final confirmation.
+- Keeps quota reset in demo mode without calling the real consume endpoint.
+- Displays recent daily and lifetime token usage.
+- Refreshes automatically every 60 seconds and supports manual refresh.
+- Locates Codex from ChatGPT, Homebrew, a custom path, or the current `PATH`.
+- Handles offline, missing installation, and App Server error states.
+
+The first account request after launching from Finder may take 20–30 seconds. QuotaView allows a 45-second cold-start response window; later refreshes are usually much faster.
+
+## Privacy
+
+QuotaView stores only the latest successful refresh time, availability state, and a short error summary in its own macOS preferences domain. It does not store tokens or full account responses.
+
+For diagnostics:
 
 ```bash
-defaults read com.codexpulse.menubar
+defaults read com.quotaview.menubar
 ```
 
-## 环境要求
+## Requirements
 
-- macOS 14 或更高版本
-- Swift 6 工具链或 Xcode 16+
-- 已安装 ChatGPT/Codex，并且已经登录
+- macOS 14 or later
+- Swift 6 or Xcode 16+
+- ChatGPT/Codex installed and signed in
 
-应用按以下顺序查找 Codex：
+QuotaView looks for the Codex executable in this order:
 
-1. `CODEX_EXECUTABLE` 环境变量
+1. `CODEX_EXECUTABLE`
 2. `/Applications/ChatGPT.app/Contents/Resources/codex`
 3. `/opt/homebrew/bin/codex`
 4. `/usr/local/bin/codex`
-5. 当前 `PATH`
+5. The current `PATH`
 
-## 快速验证
+## Verify
 
-先运行单元测试：
+Run the unit tests:
 
 ```bash
 swift test
 ```
 
-再运行只读数据探针：
+Run the read-only data probe:
 
 ```bash
-swift run CodexPulseProbe
+swift run QuotaViewProbe
 ```
 
-探针会输出套餐、周期使用百分比、刷新时间、Credits 和累计 Token，不会输出登录令牌。
+The probe prints the plan, quota percentages, reset time, Credits balance, and lifetime token usage. It never prints login credentials.
 
-## 构建菜单栏应用
+## Build the App
 
 ```bash
 chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
-open dist/CodexPulse.app
+open dist/QuotaView.app
 ```
 
-构建脚本会生成并临时签名：
+The build script creates and ad-hoc signs:
 
 ```text
-dist/CodexPulse.app
-dist/CodexPulse.zip
+dist/QuotaView.app
+dist/QuotaView-v0.1.0.zip
 ```
 
-`CodexPulse.zip` 在应用离开当前工作区时能更好地保留 bundle 和签名结构。两者仍然都是本机开发版本；分发给其他用户前，需要使用 Apple Developer ID 正式签名并进行 notarization。
+The versioned ZIP preserves the macOS app bundle for GitHub Releases. A production distribution should use an Apple Developer ID signature and notarization.
 
-## 开发时直接运行
+## Run During Development
 
 ```bash
-swift run CodexPulse
+swift run QuotaView
 ```
 
-启动后应用只显示在 macOS 菜单栏，不显示 Dock 图标。
+QuotaView appears only in the macOS menu bar and does not show a Dock icon.
 
-## 使用 Xcode
+## Xcode
 
-标准原生工程位于：
-
-```text
-CodexPulse.xcodeproj
-```
-
-直接用 Xcode 打开，选择共享的 `CodexPulse` scheme 和 `My Mac`，即可运行或测试：
+Open the native Xcode project, select the shared `QuotaView` scheme and **My Mac**, then run or test:
 
 ```bash
-open CodexPulse.xcodeproj
+open QuotaView.xcodeproj
 ```
 
-工程包含三个 target：
+The project contains three targets:
 
-- `CodexPulse`：菜单栏主应用
-- `CodexPulseCore`：可复用的数据模型与 App Server 通信 framework
-- `CodexPulseTests`：Core 的单元和进程通信测试
+- `QuotaView`: the menu bar app
+- `QuotaViewCore`: reusable account models and App Server communication
+- `QuotaViewTests`: core model and process communication tests
 
-应用 target 明确关闭了 App Sandbox，因为它需要启动用户本机安装的 `codex app-server`。当前使用本地 ad-hoc 签名；加入 App Group、WidgetKit 和正式分发前，需要在 Xcode 的 Signing & Capabilities 中选择你的 Apple Developer Team。
+The app target disables App Sandbox because it must launch the locally installed `codex app-server`. Select an Apple Developer Team in **Signing & Capabilities** before a signed production distribution.
 
-## 数据协议
+## Data Protocol
 
-连接建立后，客户端依次发送：
+After initialization, the client requests:
 
 ```text
 initialize
@@ -114,41 +118,38 @@ account/rateLimits/read
 account/usage/read
 ```
 
-主要字段：
-
-| UI | App Server 字段 |
+| UI value | App Server field |
 | --- | --- |
-| 当前状态 | `rateLimitReachedType`、`spendControlReached`、`primary.usedPercent` |
-| 已用比例 | `primary.usedPercent` |
-| 剩余比例 | `100 - primary.usedPercent` |
-| 刷新时间 | `primary.resetsAt` |
-| Credits | `credits.balance`、`credits.unlimited` |
-| 免费重置次数 | `rateLimitResetCredits.availableCount` |
-| Token | `summary.lifetimeTokens`、`dailyUsageBuckets` |
+| Availability | `rateLimitReachedType`, `spendControlReached`, `primary.usedPercent` |
+| Used quota | `primary.usedPercent` |
+| Remaining quota | `100 - primary.usedPercent` |
+| Reset time | `primary.resetsAt` |
+| Credits | `credits.balance`, `credits.unlimited` |
+| Reset credits | `rateLimitResetCredits.availableCount` |
+| Tokens | `summary.lifetimeTokens`, `dailyUsageBuckets` |
 
-`Credits` 和“套餐剩余百分比”是两种不同概念，界面不会把二者合并。
+Credits and remaining plan quota are separate concepts and are never combined in the UI.
 
-当前版本仅实现额度刷新交互和安全确认，不发送
-`account/rateLimitResetCredit/consume`。待整体产品功能和交互完成后，再接入真实额度刷新，
-并为每次操作增加幂等键、结果处理和协议兼容性测试。
+Version 0.1.0 implements the quota reset interaction and safety confirmations but does not send `account/rateLimitResetCredit/consume`. A future implementation should add idempotency keys, explicit result handling, and protocol compatibility tests before enabling real quota resets.
 
-## 项目结构
+## Project Structure
 
 ```text
 Sources/
-├── CodexPulse/              # SwiftUI 菜单栏界面和状态容器
-├── CodexPulseCore/          # App Server 客户端、定位器、数据模型
-└── CodexPulseProbe/         # 无 UI 的真实数据验证工具
+├── QuotaView/              # SwiftUI menu bar UI and state
+├── QuotaViewCore/          # Provider client, executable locator, and models
+└── QuotaViewProbe/         # Read-only command-line probe
 Tests/
-└── CodexPulseCoreTests/     # JSON 映射和状态判断测试
+└── QuotaViewCoreTests/     # Model mapping and process communication tests
 ```
 
-## 下一阶段
+## Roadmap
 
-1. 增加 Codex 活跃任务列表和 `thread/status/changed` 实时通知。
-2. 使用 `ServiceManagement` 增加“登录时启动”。
-3. 增加历史趋势图和接近限额通知。
-4. 添加 WidgetKit 扩展，通过 App Group 与菜单栏应用共享最近一次快照。
-5. 添加 Developer ID 签名、notarization 和自动更新。
+1. Add active task status and real-time notifications.
+2. Add launch-at-login with `ServiceManagement`.
+3. Add historical trends and quota alerts.
+4. Add a WidgetKit extension backed by an App Group.
+5. Add more AI providers.
+6. Add Developer ID signing, notarization, and automatic updates.
 
-App Server 的 schema 与安装的 Codex 版本对应。发布版本应在 CI 中运行 `codex app-server generate-json-schema`，并把协议兼容性测试纳入构建流程。
+The App Server schema depends on the installed Codex version. Release CI should run `codex app-server generate-json-schema` and include protocol compatibility tests.

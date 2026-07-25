@@ -1,10 +1,10 @@
-import CodexPulseCore
+import QuotaViewCore
 import Foundation
 
 @main
-struct CodexPulseProbe {
+struct QuotaViewProbe {
     static func main() async {
-        let timeout = ProcessInfo.processInfo.environment["CODEX_PULSE_TIMEOUT_SECONDS"]
+        let timeout = ProcessInfo.processInfo.environment["QUOTAVIEW_TIMEOUT_SECONDS"]
             .flatMap(TimeInterval.init) ?? 45
         let client = CodexAppServerClient(requestTimeoutSeconds: timeout)
 
@@ -32,7 +32,7 @@ struct CodexPulseProbe {
 
             await client.stop()
         } catch {
-            fputs("Codex Pulse probe failed: \(error.localizedDescription)\n", stderr)
+            fputs("QuotaView probe failed: \(error.localizedDescription)\n", stderr)
             await client.stop()
             Foundation.exit(EXIT_FAILURE)
         }

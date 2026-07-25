@@ -1,4 +1,4 @@
-import CodexPulseCore
+import QuotaViewCore
 import Foundation
 import SwiftUI
 
@@ -39,12 +39,12 @@ final class CodexStatusStore: ObservableObject {
 
     var accessibilityStatus: String {
         if let errorMessage {
-            return "Codex Pulse：\(errorMessage)"
+            return "QuotaView：\(errorMessage)"
         }
         if let snapshot {
             return "Codex \(snapshot.availability.displayName)，剩余 \(snapshot.remainingPercent)%"
         }
-        return "Codex Pulse 正在连接"
+        return "QuotaView 正在连接"
     }
 
     func start() {

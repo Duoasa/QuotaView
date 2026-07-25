@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>zh_CN</string>
     <key>CFBundleDisplayName</key>
-    <string>Codex Pulse</string>
+    <string>QuotaView</string>
     <key>CFBundleExecutable</key>
-    <string>CodexPulse</string>
+    <string>QuotaView</string>
     <key>CFBundleIdentifier</key>
-    <string>com.codexpulse.menubar</string>
+    <string>com.quotaview.menubar</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Codex Pulse</string>
+    <string>QuotaView</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

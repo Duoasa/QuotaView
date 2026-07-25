@@ -3,33 +3,33 @@
 import PackageDescription
 
 let package = Package(
-    name: "CodexPulse",
+    name: "QuotaView",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .library(name: "CodexPulseCore", targets: ["CodexPulseCore"]),
-        .executable(name: "CodexPulse", targets: ["CodexPulse"]),
-        .executable(name: "CodexPulseProbe", targets: ["CodexPulseProbe"])
+        .library(name: "QuotaViewCore", targets: ["QuotaViewCore"]),
+        .executable(name: "QuotaView", targets: ["QuotaView"]),
+        .executable(name: "QuotaViewProbe", targets: ["QuotaViewProbe"])
     ],
     targets: [
         .target(
-            name: "CodexPulseCore",
+            name: "QuotaViewCore",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
-            name: "CodexPulse",
-            dependencies: ["CodexPulseCore"],
+            name: "QuotaView",
+            dependencies: ["QuotaViewCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
-            name: "CodexPulseProbe",
-            dependencies: ["CodexPulseCore"],
+            name: "QuotaViewProbe",
+            dependencies: ["QuotaViewCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
-            name: "CodexPulseCoreTests",
-            dependencies: ["CodexPulseCore"],
+            name: "QuotaViewCoreTests",
+            dependencies: ["QuotaViewCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]

@@ -1,5 +1,5 @@
 import AppKit
-import CodexPulseCore
+import QuotaViewCore
 import SwiftUI
 
 struct MenuBarView: View {
@@ -88,7 +88,7 @@ struct MenuBarView: View {
             .frame(width: 34, height: 34)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Codex Pulse")
+                Text("QuotaView")
                     .font(.system(size: 14, weight: .semibold))
 
                 Text("本机 Codex 用量监控")
@@ -480,7 +480,7 @@ struct MenuBarView: View {
             } label: {
                 Image(systemName: "power")
             }
-            .help("退出 Codex Pulse")
+            .help("退出 QuotaView")
         }
         .buttonStyle(.borderless)
         .font(.caption)
