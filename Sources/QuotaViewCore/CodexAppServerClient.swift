@@ -149,7 +149,7 @@ public actor CodexAppServerClient {
                     "clientInfo": [
                         "name": "quotaview",
                         "title": "QuotaView",
-                        "version": "0.1.0"
+                        "version": "0.1.3"
                     ]
                 ],
                 includeNullParams: false

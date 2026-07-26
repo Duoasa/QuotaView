@@ -20,23 +20,6 @@ final class CodexStatusStore: ObservableObject {
         self.diagnostics = diagnostics
     }
 
-    var menuBarIcon: String {
-        if errorMessage != nil {
-            return "exclamationmark.triangle.fill"
-        }
-
-        switch snapshot?.availability {
-        case .ready:
-            return "bolt.circle.fill"
-        case .limited:
-            return "gauge.with.dots.needle.67percent"
-        case .exhausted:
-            return "exclamationmark.octagon.fill"
-        case nil:
-            return "bolt.circle"
-        }
-    }
-
     var accessibilityStatus: String {
         if let errorMessage {
             return "QuotaView：\(errorMessage)"

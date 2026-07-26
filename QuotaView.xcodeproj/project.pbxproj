@@ -19,6 +19,9 @@
 		B1000000000000000000000A /* CodexModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* CodexModelsTests.swift */; };
 		B1000000000000000000000B /* QuotaViewCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; };
 		B1000000000000000000000C /* QuotaViewCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B1000000000000000000000D /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* AppPreferences.swift */; };
+		B1000000000000000000000E /* CodexTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* CodexTheme.swift */; };
+		B1000000000000000000000F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +72,9 @@
 		F1000000000000000000000E /* QuotaViewCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QuotaViewCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000000000000000000000F /* QuotaView.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuotaView.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000010 /* QuotaViewTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuotaViewTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000011 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		F10000000000000000000012 /* CodexTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTheme.swift; sourceTree = "<group>"; };
+		F10000000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +130,9 @@
 				F10000000000000000000001 /* QuotaViewApp.swift */,
 				F10000000000000000000002 /* CodexStatusStore.swift */,
 				F10000000000000000000003 /* MenuBarView.swift */,
+				F10000000000000000000011 /* AppPreferences.swift */,
+				F10000000000000000000012 /* CodexTheme.swift */,
+				F10000000000000000000013 /* SettingsView.swift */,
 			);
 			path = QuotaView;
 			sourceTree = "<group>";
@@ -308,6 +317,9 @@
 				B10000000000000000000001 /* QuotaViewApp.swift in Sources */,
 				B10000000000000000000002 /* CodexStatusStore.swift in Sources */,
 				B10000000000000000000003 /* MenuBarView.swift in Sources */,
+				B1000000000000000000000D /* AppPreferences.swift in Sources */,
+				B1000000000000000000000E /* CodexTheme.swift in Sources */,
+				B1000000000000000000000F /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

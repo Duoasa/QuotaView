@@ -1,14 +1,16 @@
+<img src="Resources/QuotaView-ICON.png" alt="QuotaView icon" width="200">
+
 # QuotaView
 
-QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.0 starts with the locally signed-in Codex account, with support for more AI providers planned.
+QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.3 starts with the locally signed-in Codex account, with support for more AI providers planned.
 
 QuotaView does not scrape web pages or read, copy, or store login credentials from `~/.codex`. It starts the local `codex app-server` process and reads account data through its official JSON-RPC interface.
 
 ## Download
 
-Download `QuotaView-v0.1.0.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
+Download `QuotaView-v0.1.3.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
 
-The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. This build uses an ad-hoc signature and is not notarized with an Apple Developer ID. If macOS blocks the first launch, right-click the app in Finder and choose **Open**.
+The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The v0.1.3 download is signed with an Apple Development certificate but is not notarized. If macOS blocks the first launch, right-click `QuotaView.app` in Finder and choose **Open**.
 
 ## Features
 
@@ -19,6 +21,12 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Presents available quota reset credits as a dedicated action.
 - Includes a quota reset detail view, risk acknowledgement, and final confirmation.
 - Keeps quota reset in demo mode without calling the real consume endpoint.
+- Offers frosted and clear native glass appearances with light/dark adaptation;
+  macOS 14–15 retain a Material fallback.
+- Uses QuotaView's blue-violet visual identity throughout the interface.
+- Lets you choose which values appear in the menu bar label and popover.
+- Includes a native Settings window with system-aware or fixed light/dark appearance.
+- Supports system-aware or fixed Simplified Chinese and English interfaces.
 - Displays recent daily and lifetime token usage.
 - Refreshes automatically every 60 seconds and supports manual refresh.
 - Locates Codex from ChatGPT, Homebrew, a custom path, or the current `PATH`.
@@ -28,7 +36,7 @@ The first account request after launching from Finder may take 20–30 seconds. 
 
 ## Privacy
 
-QuotaView stores only the latest successful refresh time, availability state, and a short error summary in its own macOS preferences domain. It does not store tokens or full account responses.
+QuotaView stores only the latest successful refresh time, availability state, a short error summary, and your display preferences in its own macOS preferences domain. It does not store tokens or full account responses.
 
 For diagnostics:
 
@@ -74,14 +82,28 @@ chmod +x scripts/build-app.sh
 open dist/QuotaView.app
 ```
 
-The build script creates and ad-hoc signs:
+The build script creates a Universal Xcode Release build with the complete asset catalog:
 
 ```text
 dist/QuotaView.app
-dist/QuotaView-v0.1.0.zip
+dist/QuotaView-v0.1.3.zip
 ```
 
-The versioned ZIP preserves the macOS app bundle for GitHub Releases. A production distribution should use an Apple Developer ID signature and notarization.
+Without additional options, the script prefers an installed Developer ID Application identity, then an Apple Development identity, and falls back to an ad-hoc signature with Hardened Runtime. To choose an identity explicitly:
+
+```bash
+CODESIGN_IDENTITY="Apple Development: Name (ID)" ./scripts/build-app.sh
+```
+
+For public distribution, use a Developer ID Application identity and an existing `notarytool` keychain profile:
+
+```bash
+CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
+NOTARY_PROFILE="QuotaView-notary" \
+./scripts/build-app.sh
+```
+
+The versioned ZIP preserves the signed macOS app bundle for GitHub Releases. Apple Development signatures are for development and testing; public distribution should use Developer ID signing and notarization.
 
 ## Run During Development
 
@@ -130,7 +152,7 @@ account/usage/read
 
 Credits and remaining plan quota are separate concepts and are never combined in the UI.
 
-Version 0.1.0 implements the quota reset interaction and safety confirmations but does not send `account/rateLimitResetCredit/consume`. A future implementation should add idempotency keys, explicit result handling, and protocol compatibility tests before enabling real quota resets.
+Version 0.1.3 implements the quota reset interaction and safety confirmations but does not send `account/rateLimitResetCredit/consume`. A future implementation should add idempotency keys, explicit result handling, and protocol compatibility tests before enabling real quota resets.
 
 ## Project Structure
 

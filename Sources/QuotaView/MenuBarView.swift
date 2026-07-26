@@ -4,6 +4,9 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var store: CodexStatusStore
+    @ObservedObject var preferences: AppPreferences
+
+    @Environment(\.openSettings) private var openSettings
 
     @State private var route: Route = .overview
     @State private var hasAcknowledgedReset = false
@@ -14,6 +17,15 @@ struct MenuBarView: View {
         case overview
         case resetDetails
     }
+
+    private struct MetricItem: Identifiable {
+        let id: String
+        let icon: String
+        let title: String
+        let value: String
+    }
+
+    private var copy: AppCopy { preferences.copy }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,47 +63,50 @@ struct MenuBarView: View {
             }
         }
         .frame(width: 344)
-        .background(.regularMaterial)
+        .quotaViewMenuContentSurface()
         .animation(.easeInOut(duration: 0.18), value: route)
         .alert(
-            "最后确认刷新额度？",
+            copy.text(
+                "最后确认刷新额度？",
+                "Final confirmation to reset quota?"
+            ),
             isPresented: $isShowingFinalConfirmation
         ) {
-            Button("取消", role: .cancel) {}
-            Button("确认演示刷新", role: .destructive) {
+            Button(copy.text("取消", "Cancel"), role: .cancel) {}
+            Button(
+                copy.text("确认演示刷新", "Confirm demo reset"),
+                role: .destructive
+            ) {
                 completeDemoReset()
             }
         } message: {
             Text(
-                "正式接入后，此操作将消耗 1 次刷新机会且无法撤销。"
-                + "当前版本仅演示流程，不会调用真实接口。"
+                copy.text(
+                    "正式接入后，此操作将消耗 1 次刷新机会且无法撤销。"
+                    + "当前版本仅演示流程，不会调用真实接口。",
+                    "Once the live integration is enabled, this action will "
+                    + "consume one reset credit and cannot be undone. "
+                    + "This version only demonstrates the flow and never "
+                    + "calls the live endpoint."
+                )
             )
         }
     }
 
     private var header: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.indigo, .blue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 34, height: 34)
+            Image("QuotaViewAppIcon")
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: 34, height: 34)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("QuotaView")
                     .font(.system(size: 14, weight: .semibold))
 
-                Text("本机 Codex 用量监控")
+                Text(copy.text("本机 Codex 用量监控", "Local Codex quota monitor"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -115,19 +130,25 @@ struct MenuBarView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("返回用量概览")
+            .help(copy.text("返回用量概览", "Return to quota overview"))
 
-            Text("额度刷新")
+            Text(copy.text("额度刷新", "Quota reset"))
                 .font(.system(size: 14, weight: .semibold))
 
             Spacer()
 
-            Label("演示", systemImage: "shield.lefthalf.filled")
+            Label(
+                copy.text("演示", "Demo"),
+                systemImage: "shield.lefthalf.filled"
+            )
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(.quaternary, in: Capsule())
+                .codexGlass(
+                    cornerRadius: 999,
+                    tintOpacity: 0.08
+                )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
@@ -137,7 +158,7 @@ struct MenuBarView: View {
     private var statusBadge: some View {
         if let snapshot = store.snapshot {
             Label(
-                snapshot.availability.displayName,
+                availabilityLabel(snapshot.availability),
                 systemImage: statusSymbol(for: snapshot.availability)
             )
             .font(.caption.weight(.semibold))
@@ -149,7 +170,7 @@ struct MenuBarView: View {
                 in: Capsule()
             )
         } else if store.errorMessage != nil {
-            Label("离线", systemImage: "wifi.slash")
+            Label(copy.text("离线", "Offline"), systemImage: "wifi.slash")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
                 .padding(.horizontal, 9)
@@ -162,76 +183,74 @@ struct MenuBarView: View {
     }
 
     private func snapshotContent(_ snapshot: CodexSnapshot) -> some View {
-        VStack(spacing: 18) {
-            HStack(spacing: 20) {
-                UsageRing(
-                    usedPercent: snapshot.usedPercent,
-                    availability: snapshot.availability
-                )
+        let metrics = metricItems(snapshot)
 
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("本周期剩余")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        return VStack(spacing: 18) {
+            if preferences.showUsageSummary {
+                HStack(spacing: 20) {
+                    UsageRing(
+                        usedPercent: snapshot.usedPercent,
+                        availability: snapshot.availability,
+                        copy: copy
+                    )
 
-                    Text("\(snapshot.remainingPercent)%")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(copy.text("本周期剩余", "Remaining this cycle"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                    HStack(spacing: 5) {
-                        Text(snapshot.planType.uppercased())
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.indigo)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.indigo.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                        Text("\(snapshot.remainingPercent)%")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .contentTransition(.numericText())
 
-                        if let window = windowLabel(snapshot.windowDurationMinutes) {
-                            Text(window)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 5) {
+                            Text(snapshot.planType.uppercased())
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(CodexTheme.accent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    CodexTheme.accent.opacity(0.1),
+                                    in: RoundedRectangle(cornerRadius: 4)
+                                )
+
+                            if let window = windowLabel(
+                                snapshot.windowDurationMinutes
+                            ) {
+                                Text(window)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
+
+                    Spacer(minLength: 0)
                 }
-
-                Spacer(minLength: 0)
             }
 
-            VStack(spacing: 0) {
-                metricRow(
-                    icon: "arrow.clockwise",
-                    title: "下次刷新",
-                    value: resetCountdown(snapshot.resetsAt)
-                )
+            if !metrics.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(
+                        Array(metrics.enumerated()),
+                        id: \.element.id
+                    ) { index, metric in
+                        if index > 0 {
+                            Divider().padding(.leading, 30)
+                        }
 
-                Divider().padding(.leading, 30)
-
-                metricRow(
-                    icon: "creditcard.fill",
-                    title: "Credits 余额",
-                    value: creditLabel(snapshot)
-                )
-
-                Divider().padding(.leading, 30)
-
-                metricRow(
-                    icon: "textformat.123",
-                    title: recentUsageTitle(snapshot.recentDailyDate),
-                    value: tokenLabel(snapshot.recentDailyTokens)
-                )
-
-                Divider().padding(.leading, 30)
-
-                metricRow(
-                    icon: "sum",
-                    title: "累计 Token",
-                    value: tokenLabel(snapshot.lifetimeTokens)
-                )
+                        metricRow(
+                            icon: metric.icon,
+                            title: metric.title,
+                            value: metric.value
+                        )
+                    }
+                }
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 12)
-            .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
 
-            resetCreditsEntry(snapshot)
+            if preferences.showResetAction {
+                resetCreditsEntry(snapshot)
+            }
 
             if let error = store.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -241,7 +260,12 @@ struct MenuBarView: View {
             }
 
             HStack {
-                Text("更新于 \(snapshot.lastUpdatedAt.formatted(date: .omitted, time: .shortened))")
+                Text(
+                    copy.text(
+                        "更新于 \(updatedTime(snapshot.lastUpdatedAt))",
+                        "Updated \(updatedTime(snapshot.lastUpdatedAt))"
+                    )
+                )
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
 
@@ -262,27 +286,40 @@ struct MenuBarView: View {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.counterclockwise.circle")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(CodexTheme.accent)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("额度刷新")
+                    Text(copy.text("额度刷新", "Quota reset"))
                         .font(.subheadline.weight(.semibold))
 
-                    Text("重置符合条件的 Codex 使用周期")
+                    Text(
+                        copy.text(
+                            "重置符合条件的 Codex 使用周期",
+                            "Reset an eligible Codex usage cycle"
+                        )
+                    )
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 8)
 
-                Text("\(snapshot.availableResetCredits) 次")
+                Text(
+                    copy.text(
+                        "\(snapshot.availableResetCredits) 次",
+                        "\(snapshot.availableResetCredits) available"
+                    )
+                )
                     .font(.caption.weight(.bold))
                     .monospacedDigit()
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(CodexTheme.accent)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
-                    .background(.indigo.opacity(0.14), in: Capsule())
+                    .background(
+                        CodexTheme.accent.opacity(0.14),
+                        in: Capsule()
+                    )
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -293,13 +330,16 @@ struct MenuBarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(.indigo.opacity(0.18), lineWidth: 1)
-        }
+        .codexGlass(
+            cornerRadius: 12,
+            interactive: true,
+            tintOpacity: 0.12
+        )
         .accessibilityLabel(
-            "额度刷新，\(snapshot.availableResetCredits) 次可用，打开详情"
+            copy.text(
+                "额度刷新，\(snapshot.availableResetCredits) 次可用，打开详情",
+                "Quota reset, \(snapshot.availableResetCredits) available, open details"
+            )
         )
     }
 
@@ -308,25 +348,28 @@ struct MenuBarView: View {
             VStack(spacing: 4) {
                 Image(systemName: "ticket.fill")
                     .font(.system(size: 22))
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(CodexTheme.accent)
                     .padding(.bottom, 2)
 
                 Text("\(snapshot.availableResetCredits)")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(CodexTheme.accent)
                     .monospacedDigit()
                     .contentTransition(.numericText())
 
-                Text("次可用")
+                Text(copy.text("次可用", "reset credits available"))
                     .font(.headline)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
-                "可用额度刷新次数 \(snapshot.availableResetCredits)"
+                copy.text(
+                    "可用额度刷新次数 \(snapshot.availableResetCredits)",
+                    "\(snapshot.availableResetCredits) quota reset credits available"
+                )
             )
 
             HStack {
-                Text("当前额度可用")
+                Text(copy.text("当前额度可用", "Current quota available"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -334,34 +377,46 @@ struct MenuBarView: View {
 
                 Text("\(snapshot.remainingPercent)%")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(CodexTheme.accent)
                     .monospacedDigit()
             }
 
             Divider()
 
             VStack(alignment: .leading, spacing: 11) {
-                Text("刷新前请确认")
+                Text(copy.text("刷新前请确认", "Before resetting"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
                 resetFact(
                     icon: "arrow.counterclockwise",
-                    text: "将消耗 1 次刷新机会"
+                    text: copy.text(
+                        "将消耗 1 次刷新机会",
+                        "Consumes one reset credit"
+                    )
                 )
                 resetFact(
                     icon: "clock.arrow.circlepath",
-                    text: "恢复符合条件的 Codex 使用额度"
+                    text: copy.text(
+                        "恢复符合条件的 Codex 使用额度",
+                        "Restores an eligible Codex quota"
+                    )
                 )
                 resetFact(
                     icon: "nosign",
-                    text: "正式刷新操作无法撤销"
+                    text: copy.text(
+                        "正式刷新操作无法撤销",
+                        "A live reset cannot be undone"
+                    )
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Toggle(
-                "我已阅读并理解以上说明",
+                copy.text(
+                    "我已阅读并理解以上说明",
+                    "I have read and understand the information above"
+                ),
                 isOn: $hasAcknowledgedReset
             )
             .toggleStyle(.checkbox)
@@ -373,15 +428,14 @@ struct MenuBarView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Text("使用 1 次刷新")
+                    Text(copy.text("使用 1 次刷新", "Use one reset"))
                         .font(.subheadline.weight(.semibold))
                     Spacer()
                 }
                 .padding(.vertical, 4)
             }
-            .buttonStyle(.borderedProminent)
+            .codexProminentButtonStyle()
             .controlSize(.large)
-            .tint(.indigo)
             .disabled(
                 !snapshot.canUseResetCredit
                 || !hasAcknowledgedReset
@@ -413,7 +467,7 @@ struct MenuBarView: View {
         } icon: {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.indigo)
+                .foregroundStyle(CodexTheme.accent)
                 .frame(width: 18)
         }
     }
@@ -422,9 +476,14 @@ struct MenuBarView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.regular)
-            Text("正在连接 Codex…")
+            Text(copy.text("正在连接 Codex…", "Connecting to Codex…"))
                 .font(.subheadline)
-            Text("首次读取可能需要 20–30 秒")
+            Text(
+                copy.text(
+                    "首次读取可能需要 20–30 秒",
+                    "The first request may take 20–30 seconds"
+                )
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -437,7 +496,7 @@ struct MenuBarView: View {
                 .font(.system(size: 30))
                 .foregroundStyle(.orange)
 
-            Text("无法读取 Codex")
+            Text(copy.text("无法读取 Codex", "Unable to read Codex"))
                 .font(.headline)
 
             Text(error)
@@ -446,56 +505,72 @@ struct MenuBarView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Button("重新连接") {
+            Button(copy.text("重新连接", "Reconnect")) {
                 Task {
                     await store.refresh()
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .codexProminentButtonStyle()
         }
         .frame(maxWidth: .infinity, minHeight: 250)
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Button {
                 Task {
                     await store.refresh()
                 }
             } label: {
-                Label("同步数据", systemImage: "arrow.clockwise")
+                Label(
+                    copy.text("同步数据", "Sync"),
+                    systemImage: "arrow.clockwise"
+                )
             }
             .disabled(store.isRefreshing)
 
             Button {
                 openCodex()
             } label: {
-                Label("打开 Codex", systemImage: "arrow.up.forward.app")
+                Label(
+                    copy.text("打开 Codex", "Open Codex"),
+                    systemImage: "arrow.up.forward.app"
+                )
             }
 
             Spacer()
+
+            Button {
+                showSettings()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .help(copy.text("打开设置", "Open Settings"))
 
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
                 Image(systemName: "power")
             }
-            .help("退出 QuotaView")
+            .help(copy.text("退出 QuotaView", "Quit QuotaView"))
         }
-        .buttonStyle(.borderless)
+        .codexToolbarButtonStyle()
         .font(.caption)
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
     }
 
     private var resetFooter: some View {
-        HStack {
+        HStack(spacing: 10) {
             Button {
                 Task {
                     await store.refresh()
                 }
             } label: {
-                Label("同步数据", systemImage: "arrow.clockwise")
+                Label(
+                    copy.text("同步数据", "Sync"),
+                    systemImage: "arrow.clockwise"
+                )
             }
             .disabled(store.isRefreshing)
 
@@ -506,15 +581,25 @@ struct MenuBarView: View {
                     .controlSize(.mini)
             } else {
                 Label(
-                    "演示模式 · 不消耗次数",
+                    copy.text(
+                        "演示模式 · 不消耗次数",
+                        "Demo mode · No credits consumed"
+                    ),
                     systemImage: "info.circle"
                 )
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
             }
+
+            Button {
+                showSettings()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .help(copy.text("打开设置", "Open Settings"))
         }
-        .buttonStyle(.borderless)
+        .codexToolbarButtonStyle()
         .font(.caption)
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
@@ -528,7 +613,7 @@ struct MenuBarView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.indigo)
+                .foregroundStyle(CodexTheme.accent)
                 .frame(width: 20)
 
             Text(title)
@@ -543,6 +628,56 @@ struct MenuBarView: View {
                 .lineLimit(1)
         }
         .padding(.vertical, 10)
+    }
+
+    private func metricItems(_ snapshot: CodexSnapshot) -> [MetricItem] {
+        var items: [MetricItem] = []
+
+        if preferences.showNextReset {
+            items.append(
+                MetricItem(
+                    id: "nextReset",
+                    icon: "arrow.clockwise",
+                    title: copy.text("下次刷新", "Next reset"),
+                    value: resetCountdown(snapshot.resetsAt)
+                )
+            )
+        }
+
+        if preferences.showCreditBalance {
+            items.append(
+                MetricItem(
+                    id: "credits",
+                    icon: "creditcard.fill",
+                    title: copy.text("Credits 余额", "Credits balance"),
+                    value: creditLabel(snapshot)
+                )
+            )
+        }
+
+        if preferences.showDailyTokens {
+            items.append(
+                MetricItem(
+                    id: "dailyTokens",
+                    icon: "textformat.123",
+                    title: recentUsageTitle(snapshot.recentDailyDate),
+                    value: tokenLabel(snapshot.recentDailyTokens)
+                )
+            )
+        }
+
+        if preferences.showLifetimeTokens {
+            items.append(
+                MetricItem(
+                    id: "lifetimeTokens",
+                    icon: "sum",
+                    title: copy.text("累计 Token", "Lifetime tokens"),
+                    value: tokenLabel(snapshot.lifetimeTokens)
+                )
+            )
+        }
+
+        return items
     }
 
     private func statusColor(
@@ -565,61 +700,115 @@ struct MenuBarView: View {
         }
     }
 
+    private func availabilityLabel(
+        _ availability: CodexSnapshot.Availability
+    ) -> String {
+        switch availability {
+        case .ready: copy.text("可用", "Available")
+        case .limited: copy.text("受限", "Limited")
+        case .exhausted: copy.text("已用尽", "Exhausted")
+        }
+    }
+
     private func windowLabel(_ minutes: Int?) -> String? {
         guard let minutes else { return nil }
         if minutes % 10_080 == 0 {
-            return "\(minutes / 10_080) 周窗口"
+            return copy.text(
+                "\(minutes / 10_080) 周窗口",
+                "\(minutes / 10_080)-week window"
+            )
         }
         if minutes % 1_440 == 0 {
-            return "\(minutes / 1_440) 天窗口"
+            return copy.text(
+                "\(minutes / 1_440) 天窗口",
+                "\(minutes / 1_440)-day window"
+            )
         }
         if minutes % 60 == 0 {
-            return "\(minutes / 60) 小时窗口"
+            return copy.text(
+                "\(minutes / 60) 小时窗口",
+                "\(minutes / 60)-hour window"
+            )
         }
-        return "\(minutes) 分钟窗口"
+        return copy.text(
+            "\(minutes) 分钟窗口",
+            "\(minutes)-minute window"
+        )
     }
 
     private func creditLabel(_ snapshot: CodexSnapshot) -> String {
         if snapshot.unlimitedCredits {
-            return "无限"
+            return copy.text("无限", "Unlimited")
         }
-        return snapshot.creditBalance ?? "不可用"
+        return snapshot.creditBalance ?? copy.text("不可用", "Unavailable")
     }
 
     private func recentUsageTitle(_ date: String?) -> String {
-        guard let date else { return "最近一天 Token" }
-        return "\(date) Token"
+        guard let date else {
+            return copy.text("最近一天 Token", "Recent daily tokens")
+        }
+        return copy.text("\(date) Token", "\(date) tokens")
     }
 
     private func tokenLabel(_ tokens: Int64?) -> String {
         guard let tokens else { return "—" }
-        return tokens.formatted(.number.notation(.compactName))
+        return tokens.formatted(
+            .number
+                .notation(.compactName)
+                .locale(preferences.locale)
+        )
     }
 
     private func resetCountdown(_ resetDate: Date?) -> String {
-        guard let resetDate else { return "未提供" }
+        guard let resetDate else {
+            return copy.text("未提供", "Unavailable")
+        }
 
         let remaining = Int(resetDate.timeIntervalSinceNow)
-        guard remaining > 0 else { return "即将刷新" }
+        guard remaining > 0 else {
+            return copy.text("即将刷新", "Resetting soon")
+        }
 
         let days = remaining / 86_400
         let hours = (remaining % 86_400) / 3_600
         let minutes = (remaining % 3_600) / 60
 
         if days > 0 {
-            return "\(days) 天 \(hours) 小时"
+            return copy.text(
+                "\(days) 天 \(hours) 小时",
+                "\(days)d \(hours)h"
+            )
         }
         if hours > 0 {
-            return "\(hours) 小时 \(minutes) 分"
+            return copy.text(
+                "\(hours) 小时 \(minutes) 分",
+                "\(hours)h \(minutes)m"
+            )
         }
-        return "\(max(minutes, 1)) 分钟"
+        return copy.text(
+            "\(max(minutes, 1)) 分钟",
+            "\(max(minutes, 1))m"
+        )
     }
 
     private func resetActionCaption(_ snapshot: CodexSnapshot) -> String {
         guard snapshot.canUseResetCredit else {
-            return "当前没有可用刷新次数"
+            return copy.text(
+                "当前没有可用刷新次数",
+                "No reset credits are currently available"
+            )
         }
-        return "刷新后剩余 \(snapshot.availableResetCreditsAfterOne) 次"
+        return copy.text(
+            "刷新后剩余 \(snapshot.availableResetCreditsAfterOne) 次",
+            "\(snapshot.availableResetCreditsAfterOne) will remain after reset"
+        )
+    }
+
+    private func updatedTime(_ date: Date) -> String {
+        date.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened)
+                .locale(preferences.locale)
+        )
     }
 
     private func openResetDetails() {
@@ -639,7 +828,16 @@ struct MenuBarView: View {
         // The live account/rateLimitResetCredit/consume call is intentionally
         // deferred until the product flow is complete.
         hasAcknowledgedReset = false
-        demoResultMessage = "演示确认完成；未调用真实接口，也未消耗刷新次数。"
+        demoResultMessage = copy.text(
+            "演示确认完成；未调用真实接口，也未消耗刷新次数。",
+            "Demo confirmation completed. No live endpoint was called "
+            + "and no reset credit was consumed."
+        )
+    }
+
+    private func showSettings() {
+        openSettings()
+        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
     private func openCodex() {
@@ -658,10 +856,11 @@ struct MenuBarView: View {
 private struct UsageRing: View {
     let usedPercent: Int
     let availability: CodexSnapshot.Availability
+    let copy: AppCopy
 
     private var color: Color {
         switch availability {
-        case .ready: .indigo
+        case .ready: CodexTheme.accent
         case .limited: .orange
         case .exhausted: .red
         }
@@ -687,13 +886,18 @@ private struct UsageRing: View {
                 Text("\(usedPercent)%")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                Text("已用")
+                Text(copy.text("已用", "Used"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
         .frame(width: 92, height: 92)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("已使用 \(usedPercent)%")
+        .accessibilityLabel(
+            copy.text(
+                "已使用 \(usedPercent)%",
+                "\(usedPercent)% used"
+            )
+        )
     }
 }

@@ -4,17 +4,44 @@ set -euo pipefail
 
 script_dir="${0:A:h}"
 project_dir="${script_dir:h}"
-build_cache_root="${TMPDIR:-/tmp}/quotaview-swiftpm"
+project_file="${project_dir}/QuotaView.xcodeproj"
+scheme="QuotaView"
+configuration="Release"
 dist_dir="${project_dir}/dist"
 info_plist="${project_dir}/Support/Info.plist"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
 release_name="QuotaView-v${version}"
 staging_dir="$(mktemp -d "/tmp/quotaview-package.XXXXXX")"
 verification_dir="$(mktemp -d "/tmp/quotaview-verify.XXXXXX")"
+derived_data="${staging_dir}/DerivedData"
+built_app="${derived_data}/Build/Products/${configuration}/QuotaView.app"
 staging_app="${staging_dir}/QuotaView.app"
 destination_app="${dist_dir}/QuotaView.app"
 staging_zip="${staging_dir}/${release_name}.zip"
 destination_zip="${dist_dir}/${release_name}.zip"
+signing_identity="${CODESIGN_IDENTITY:-}"
+notary_profile="${NOTARY_PROFILE:-}"
+
+if [[ -z "${signing_identity}" ]]; then
+    identity_inventory="$(security find-identity -v -p codesigning)"
+    signing_identity="$(
+        print -r -- "${identity_inventory}" \
+            | sed -n 's/^[^"]*"\(Developer ID Application:[^"]*\)".*$/\1/p' \
+            | head -n 1
+    )"
+
+    if [[ -z "${signing_identity}" ]]; then
+        signing_identity="$(
+            print -r -- "${identity_inventory}" \
+                | sed -n 's/^[^"]*"\(Apple Development:[^"]*\)".*$/\1/p' \
+                | head -n 1
+        )"
+    fi
+
+    if [[ -z "${signing_identity}" ]]; then
+        signing_identity="-"
+    fi
+fi
 
 cleanup() {
     rm -rf "${staging_dir}"
@@ -22,50 +49,128 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p \
-    "${build_cache_root}/cache" \
-    "${build_cache_root}/config" \
-    "${build_cache_root}/security" \
-    "${build_cache_root}/clang" \
-    "${staging_app}/Contents/MacOS" \
-    "${staging_app}/Contents/Resources" \
-    "${dist_dir}"
+if [[ "${signing_identity}" != "-" ]]; then
+    available_identities="$(security find-identity -v -p codesigning)"
+    if [[ "${available_identities}" != *"${signing_identity}"* ]]; then
+        print -u2 "Signing identity not found: ${signing_identity}"
+        print -u2 "Install or repair the requested code signing identity first."
+        exit 2
+    fi
+fi
 
-swift_args=(
-    --disable-sandbox
-    --arch arm64
-    --arch x86_64
-    --cache-path "${build_cache_root}/cache"
-    --config-path "${build_cache_root}/config"
-    --security-path "${build_cache_root}/security"
-    --scratch-path "${project_dir}/.build"
-)
+if [[ -n "${notary_profile}" ]] \
+    && [[ "${signing_identity}" != "Developer ID Application:"* ]]; then
+    print -u2 "NOTARY_PROFILE requires a Developer ID Application signature."
+    exit 2
+fi
+
+mkdir -p "${dist_dir}"
 
 cd "${project_dir}"
 
-CLANG_MODULE_CACHE_PATH="${build_cache_root}/clang" \
-    swift build "${swift_args[@]}" -c release --product QuotaView
+xcodebuild \
+    -project "${project_file}" \
+    -scheme "${scheme}" \
+    -configuration "${configuration}" \
+    -destination "generic/platform=macOS" \
+    -derivedDataPath "${derived_data}" \
+    ARCHS="arm64 x86_64" \
+    ONLY_ACTIVE_ARCH=NO \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    clean build
 
-binary_dir="$(
-    CLANG_MODULE_CACHE_PATH="${build_cache_root}/clang" \
-        swift build "${swift_args[@]}" -c release --show-bin-path
-)"
+if [[ ! -d "${built_app}" ]]; then
+    print -u2 "Xcode did not produce ${built_app}"
+    exit 3
+fi
 
-/bin/cp "${binary_dir}/QuotaView" "${staging_app}/Contents/MacOS/QuotaView"
-/bin/cp "${info_plist}" "${staging_app}/Contents/Info.plist"
-
-plutil -lint "${staging_app}/Contents/Info.plist"
+/usr/bin/ditto "${built_app}" "${staging_app}"
 xattr -cr "${staging_app}"
-codesign --force --deep --sign - "${staging_app}"
-codesign --verify --deep --strict "${staging_app}"
 
-(
-    cd "${staging_dir}"
-    /usr/bin/zip -qry -X "${release_name}.zip" "QuotaView.app"
+signing_args=(
+    --force
+    --sign "${signing_identity}"
+    --options runtime
 )
 
-unzip -q "${staging_zip}" -d "${verification_dir}"
-codesign --verify --deep --strict "${verification_dir}/QuotaView.app"
+if [[ "${signing_identity}" == "-" ]]; then
+    signing_args+=(--timestamp=none)
+else
+    signing_args+=(--timestamp)
+fi
+
+for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
+    codesign "${signing_args[@]}" "${framework}"
+done
+
+for library in "${staging_app}"/Contents/Frameworks/*.dylib(N); do
+    codesign "${signing_args[@]}" "${library}"
+done
+
+codesign "${signing_args[@]}" "${staging_app}"
+codesign --verify --deep --strict --verbose=4 "${staging_app}"
+
+built_version="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleShortVersionString' \
+        "${staging_app}/Contents/Info.plist"
+)"
+
+if [[ "${built_version}" != "${version}" ]]; then
+    print -u2 "Version mismatch: expected ${version}, built ${built_version}"
+    exit 4
+fi
+
+for resource in AppIcon.icns Assets.car; do
+    if [[ ! -f "${staging_app}/Contents/Resources/${resource}" ]]; then
+        print -u2 "Missing packaged resource: ${resource}"
+        exit 4
+    fi
+done
+
+architectures="$(
+    lipo -archs "${staging_app}/Contents/MacOS/QuotaView"
+)"
+
+if [[ " ${architectures} " != *" arm64 "* ]] \
+    || [[ " ${architectures} " != *" x86_64 "* ]]; then
+    print -u2 "Expected a universal binary, found: ${architectures}"
+    exit 4
+fi
+
+if [[ -n "${notary_profile}" ]]; then
+    notary_zip="${staging_dir}/${release_name}-notary.zip"
+    /usr/bin/ditto \
+        -c \
+        -k \
+        --keepParent \
+        "${staging_app}" \
+        "${notary_zip}"
+    xcrun notarytool submit \
+        "${notary_zip}" \
+        --keychain-profile "${notary_profile}" \
+        --wait
+    xcrun stapler staple "${staging_app}"
+    xcrun stapler validate "${staging_app}"
+    spctl --assess --type execute --verbose=4 "${staging_app}"
+fi
+
+/usr/bin/ditto \
+    -c \
+    -k \
+    --sequesterRsrc \
+    --keepParent \
+    "${staging_app}" \
+    "${staging_zip}"
+
+/usr/bin/ditto -x -k "${staging_zip}" "${verification_dir}"
+codesign \
+    --verify \
+    --deep \
+    --strict \
+    --verbose=4 \
+    "${verification_dir}/QuotaView.app"
 
 if [[ -d "${destination_app}" ]]; then
     previous_app="${dist_dir}/QuotaView.previous.$(date +%Y%m%d%H%M%S).app"
@@ -74,7 +179,20 @@ fi
 
 mv "${staging_app}" "${destination_app}"
 mv -f "${staging_zip}" "${destination_zip}"
-xattr -cr "${destination_app}"
 
 print "Built ${destination_app}"
 print "Archived ${destination_zip}"
+print "Architectures: ${architectures}"
+
+if [[ "${signing_identity}" == "-" ]]; then
+    print "Signature: ad-hoc with Hardened Runtime"
+    print "Warning: this signature has no trusted developer identity."
+else
+    print "Signature: ${signing_identity}"
+fi
+
+if [[ -n "${notary_profile}" ]]; then
+    print "Notarization: accepted and stapled"
+else
+    print "Notarization: not performed"
+fi
