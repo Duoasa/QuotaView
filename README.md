@@ -1,5 +1,7 @@
 <img src="Resources/QuotaView-ICON.png" alt="QuotaView icon" width="200">
 
+[**English**](README.md) | [简体中文](README.zh-CN.md)
+
 # QuotaView
 
 QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.3 starts with the locally signed-in Codex account, with support for more AI providers planned.
