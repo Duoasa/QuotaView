@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum CodexTheme {
@@ -25,6 +26,26 @@ enum CodexTheme {
         endPoint: .bottomTrailing
     )
 
+}
+
+enum QuotaViewTypography {
+    // Keep the status-panel type scale independent of the glass material so
+    // clear and frosted modes always present the same information hierarchy.
+    static let menuTitle = AstaSans.semiBold(16)
+    static let menuSubtitle = AstaSans.medium(12.5)
+    static let navigationTitle = AstaSans.semiBold(15)
+    static let status = AstaSans.semiBold(12.5)
+    static let sectionLabel = AstaSans.semiBold(13)
+    static let body = AstaSans.medium(13.5)
+    static let bodyStrong = AstaSans.semiBold(13.5)
+    static let small = AstaSans.medium(12.5)
+    static let smallStrong = AstaSans.semiBold(12.5)
+    static let tiny = AstaSans.medium(11.5)
+    static let heroValue = AstaSans.semiBold(34)
+    static let resetValue = AstaSans.semiBold(54)
+    static let ringValue = AstaSans.semiBold(20)
+    static let toolbar = AstaSans.medium(13)
+    static let primaryAction = AstaSans.semiBold(14)
 }
 
 enum QuotaViewGlassMode: String, CaseIterable, Identifiable {
@@ -138,10 +159,9 @@ private struct QuotaViewMenuContentBackground: View {
                     )
                 }
             } else {
-                // MenuBarExtra already owns the native glass surface. Keeping
-                // the clear mode free of an additional wash lets that single
-                // system layer sample the wallpaper without adding a second
-                // rounded edge.
+                // The AppKit panel already owns the clear glass surface.
+                // Keeping this layer transparent leaves the sampled
+                // background unobstructed.
                 Color.clear
             }
         }
@@ -158,6 +178,134 @@ private struct QuotaViewMenuContentModifier: ViewModifier {
     }
 }
 
+private enum QuotaViewReadabilityRole {
+    case primary
+    case secondary
+    case tertiary
+
+    var semanticColor: Color {
+        switch self {
+        case .primary:
+            .primary
+        case .secondary:
+            .secondary
+        case .tertiary:
+            Color(nsColor: .tertiaryLabelColor)
+        }
+    }
+}
+
+private struct QuotaViewReadableForegroundModifier: ViewModifier {
+    let role: QuotaViewReadabilityRole
+
+    func body(content: Content) -> some View {
+        // System label colors participate in macOS vibrancy and respond to
+        // appearance and accessibility contrast settings. Avoid replacing
+        // them with fixed black/white values or hand-authored halos.
+        content.foregroundStyle(role.semanticColor)
+    }
+}
+
+private struct QuotaViewColoredForegroundModifier: ViewModifier {
+    let color: Color
+
+    func body(content: Content) -> some View {
+        content.foregroundStyle(color)
+    }
+}
+
+private struct QuotaViewSeparatorModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content.overlay(Color(nsColor: .separatorColor))
+    }
+}
+
+enum QuotaViewButtonInteractionKind {
+    case compact
+    case regular
+}
+
+private struct QuotaViewInteractiveButtonStyle: ButtonStyle {
+    let kind: QuotaViewButtonInteractionKind
+
+    func makeBody(configuration: Configuration) -> some View {
+        QuotaViewInteractiveButtonBody(
+            label: configuration.label,
+            isPressed: configuration.isPressed,
+            kind: kind
+        )
+    }
+}
+
+private struct QuotaViewInteractiveButtonBody<Label: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.isEnabled) private var isEnabled
+
+    let label: Label
+    let isPressed: Bool
+    let kind: QuotaViewButtonInteractionKind
+
+    @State private var isHovering = false
+
+    var body: some View {
+        label
+            .background(
+                interactionOverlayColor,
+                in: RoundedRectangle(
+                    cornerRadius: 12,
+                    style: .continuous
+                )
+            )
+            .scaleEffect(scale)
+            .opacity(isEnabled ? 1 : 0.55)
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.14),
+                value: isHovering
+            )
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.08),
+                value: isPressed
+            )
+            .onHover { hovering in
+                isHovering = isEnabled && hovering
+            }
+            .onChange(of: isEnabled) {
+                if !isEnabled {
+                    isHovering = false
+                }
+            }
+    }
+
+    private var scale: CGFloat {
+        guard !reduceMotion, isEnabled else { return 1 }
+
+        if isPressed {
+            return kind == .compact ? 0.94 : 0.985
+        }
+        if isHovering, kind == .compact {
+            return 1.04
+        }
+        return 1
+    }
+
+    private var interactionOverlayColor: Color {
+        guard isEnabled else { return .clear }
+
+        if isPressed {
+            return Color.black.opacity(
+                colorScheme == .light ? 0.10 : 0.18
+            )
+        }
+        if isHovering {
+            return Color.white.opacity(
+                colorScheme == .light ? 0.16 : 0.10
+            )
+        }
+        return .clear
+    }
+}
+
 private struct CodexGlassModifier: ViewModifier {
     @Environment(\.quotaViewGlassMode) private var glassMode
 
@@ -169,34 +317,28 @@ private struct CodexGlassModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
+            let glass = glassMode == .clear
+                ? Glass.clear.interactive(interactive)
+                : Glass.regular
+                    .tint(tintColor?.opacity(tintOpacity))
+                    .interactive(interactive)
+
             content
                 .glassEffect(
-                    Glass.regular
-                        .tint(
-                            tintColor?.opacity(
-                                tintOpacity
-                                * (glassMode == .clear ? 0.6 : 1)
-                            )
-                        )
-                        .interactive(interactive),
+                    glass,
                     in: RoundedRectangle(
                         cornerRadius: cornerRadius,
                         style: .continuous
                     )
                 )
-                .shadow(
-                    color: CodexTheme.accent.opacity(
-                        (interactive ? 0.13 : 0.07)
-                        * (glassMode == .clear ? 0.55 : 1)
-                    ),
-                    radius: (interactive ? 12 : 8)
-                        * (glassMode == .clear ? 0.55 : 1),
-                    y: 4
-                )
         } else {
+            let material: Material = glassMode == .clear
+                ? .thinMaterial
+                : .regularMaterial
+
             content
                 .background(
-                    .regularMaterial,
+                    material,
                     in: RoundedRectangle(
                         cornerRadius: cornerRadius,
                         style: .continuous
@@ -208,12 +350,11 @@ private struct CodexGlassModifier: ViewModifier {
                         style: .continuous
                     )
                     .stroke(
-                        (tintColor ?? CodexTheme.accent).opacity(
-                            max(
-                                tintOpacity
-                                * (glassMode == .clear ? 0.6 : 1),
-                                0.08
-                            )
+                        (
+                            glassMode == .clear
+                                ? Color.primary.opacity(0.10)
+                                : (tintColor ?? CodexTheme.accent)
+                                    .opacity(max(tintOpacity, 0.08))
                         ),
                         lineWidth: 1
                     )
@@ -223,8 +364,42 @@ private struct CodexGlassModifier: ViewModifier {
 }
 
 extension View {
+    func quotaViewInteractiveButton(
+        _ kind: QuotaViewButtonInteractionKind = .regular
+    ) -> some View {
+        buttonStyle(
+            QuotaViewInteractiveButtonStyle(kind: kind)
+        )
+    }
+
     func quotaViewMenuContentSurface() -> some View {
         modifier(QuotaViewMenuContentModifier())
+    }
+
+    func quotaViewPrimaryText() -> some View {
+        modifier(
+            QuotaViewReadableForegroundModifier(role: .primary)
+        )
+    }
+
+    func quotaViewSecondaryText() -> some View {
+        modifier(
+            QuotaViewReadableForegroundModifier(role: .secondary)
+        )
+    }
+
+    func quotaViewTertiaryText() -> some View {
+        modifier(
+            QuotaViewReadableForegroundModifier(role: .tertiary)
+        )
+    }
+
+    func quotaViewColoredForeground(_ color: Color) -> some View {
+        modifier(QuotaViewColoredForegroundModifier(color: color))
+    }
+
+    func quotaViewSeparator() -> some View {
+        modifier(QuotaViewSeparatorModifier())
     }
 
     func codexGlass(

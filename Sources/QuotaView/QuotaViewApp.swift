@@ -1,44 +1,44 @@
+import AppKit
 import SwiftUI
 
 @main
 @MainActor
 struct QuotaViewApp: App {
-    @StateObject private var store: CodexStatusStore
-    @StateObject private var preferences: AppPreferences
-
-    init() {
-        let statusStore = CodexStatusStore()
-        let appPreferences = AppPreferences()
-        _store = StateObject(wrappedValue: statusStore)
-        _preferences = StateObject(wrappedValue: appPreferences)
-        statusStore.start()
-    }
+    @NSApplicationDelegateAdaptor(QuotaViewAppDelegate.self)
+    private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(
-                store: store,
-                preferences: preferences
-            )
-            .environment(\.locale, preferences.locale)
-            .environment(
-                \.quotaViewGlassMode,
-                preferences.glassMode
-            )
-        } label: {
-            MenuBarStatusLabel(
-                store: store,
-                preferences: preferences
-            )
-        }
-        .menuBarExtraStyle(.window)
-
         Settings {
             SettingsView(
-                store: store,
-                preferences: preferences
+                store: appDelegate.store,
+                preferences: appDelegate.preferences
             )
-                .environment(\.locale, preferences.locale)
+            .environment(\.locale, appDelegate.preferences.locale)
         }
+    }
+}
+
+@MainActor
+final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
+    let store = CodexStatusStore()
+    let preferences = AppPreferences()
+
+    private var menuBarController: MenuBarPanelController?
+
+    func applicationDidFinishLaunching(
+        _ notification: Notification
+    ) {
+        AstaSansFontRegistrar.registerBundledFonts()
+        store.start()
+        menuBarController = MenuBarPanelController(
+            store: store,
+            preferences: preferences
+        )
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(
+        _ sender: NSApplication
+    ) -> Bool {
+        false
     }
 }

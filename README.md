@@ -4,30 +4,35 @@
 
 # QuotaView
 
-QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.3 starts with the locally signed-in Codex account, with support for more AI providers planned.
+QuotaView is a native macOS menu bar app that puts AI service quotas, usage, balances, and reset times in one place. Version 0.1.5 starts with the locally signed-in Codex account, with support for more AI providers planned.
 
 QuotaView does not scrape web pages or read, copy, or store login credentials from `~/.codex`. It starts the local `codex app-server` process and reads account data through its official JSON-RPC interface.
 
 ## Download
 
-Download `QuotaView-v0.1.3.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
+Download `QuotaView-v0.1.5.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
 
-The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The v0.1.3 download is signed with an Apple Development certificate but is not notarized. If macOS blocks the first launch, right-click `QuotaView.app` in Finder and choose **Open**.
+The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The v0.1.5 download is signed with an Apple Development certificate but is not notarized. If macOS blocks the first launch, right-click `QuotaView.app` in Finder and choose **Open**.
 
 ## Features
 
 - Shows whether the current AI service is available, near its limit, or exhausted.
-- Displays used and remaining quota percentages for the current window.
+- Displays the live subscription, weekly used quota, and remaining percentage.
 - Shows the countdown to the next quota reset.
 - Separates plan quota from additional Credits balance.
 - Presents available quota reset credits as a dedicated action.
 - Includes a quota reset detail view, risk acknowledgement, and final confirmation.
 - Keeps quota reset in demo mode without calling the real consume endpoint.
-- Offers frosted and clear native glass appearances with light/dark adaptation;
-  macOS 14–15 retain a Material fallback.
+- Uses a compact native status item and a dynamically sized custom menu panel.
+- Offers frosted and clear glass appearances with light/dark adaptation;
+  macOS 26 uses native Liquid Glass and macOS 14–15 retain a Material fallback.
 - Uses QuotaView's blue-violet visual identity throughout the interface.
-- Lets you choose which values appear in the menu bar label and popover.
-- Includes a native Settings window with system-aware or fixed light/dark appearance.
+- Lets you choose which values appear in the menu bar and which of the six
+  content sections appear in the panel.
+- Includes a redesigned native Settings window with Menu Bar, Popover,
+  Appearance, Language, and General sections.
+- Uses the current macOS accent color for native settings controls.
+- Supports system-aware or fixed light/dark appearance.
 - Supports system-aware or fixed Simplified Chinese and English interfaces.
 - Displays recent daily and lifetime token usage.
 - Refreshes automatically every 60 seconds and supports manual refresh.
@@ -88,7 +93,7 @@ The build script creates a Universal Xcode Release build with the complete asset
 
 ```text
 dist/QuotaView.app
-dist/QuotaView-v0.1.3.zip
+dist/QuotaView-v0.1.5.zip
 ```
 
 Without additional options, the script prefers an installed Developer ID Application identity, then an Apple Development identity, and falls back to an ad-hoc signature with Hardened Runtime. To choose an identity explicitly:
@@ -154,15 +159,18 @@ account/usage/read
 
 Credits and remaining plan quota are separate concepts and are never combined in the UI.
 
-Version 0.1.3 implements the quota reset interaction and safety confirmations but does not send `account/rateLimitResetCredit/consume`. A future implementation should add idempotency keys, explicit result handling, and protocol compatibility tests before enabling real quota resets.
+Version 0.1.5 implements the quota reset interaction and safety confirmations but does not send `account/rateLimitResetCredit/consume`. A future implementation should add idempotency keys, explicit result handling, and protocol compatibility tests before enabling real quota resets.
 
 ## Project Structure
 
 ```text
 Sources/
-├── QuotaView/              # SwiftUI menu bar UI and state
+├── QuotaView/              # SwiftUI views, settings, and AppKit menu panel
 ├── QuotaViewCore/          # Provider client, executable locator, and models
 └── QuotaViewProbe/         # Read-only command-line probe
+Resources/
+├── Assets.xcassets/        # App, menu bar, and interface artwork
+└── Fonts/                  # Bundled Asta Sans font files
 Tests/
 └── QuotaViewCoreTests/     # Model mapping and process communication tests
 ```

@@ -22,6 +22,11 @@
 		B1000000000000000000000D /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* AppPreferences.swift */; };
 		B1000000000000000000000E /* CodexTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* CodexTheme.swift */; };
 		B1000000000000000000000F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SettingsView.swift */; };
+		B10000000000000000000010 /* MenuBarPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* MenuBarPanelController.swift */; };
+		B10000000000000000000011 /* AstaSansFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* AstaSansFont.swift */; };
+		B10000000000000000000012 /* QuotaViewFigmaMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* QuotaViewFigmaMenu.swift */; };
+		B10000000000000000000013 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000017 /* Fonts */; };
+		B10000000000000000000014 /* QuotaViewFigmaResetMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +80,11 @@
 		F10000000000000000000011 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* CodexTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTheme.swift; sourceTree = "<group>"; };
 		F10000000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F10000000000000000000014 /* MenuBarPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPanelController.swift; sourceTree = "<group>"; };
+		F10000000000000000000015 /* AstaSansFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstaSansFont.swift; sourceTree = "<group>"; };
+		F10000000000000000000016 /* QuotaViewFigmaMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewFigmaMenu.swift; sourceTree = "<group>"; };
+		F10000000000000000000017 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
+		F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewFigmaResetMenu.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,6 +143,10 @@
 				F10000000000000000000011 /* AppPreferences.swift */,
 				F10000000000000000000012 /* CodexTheme.swift */,
 				F10000000000000000000013 /* SettingsView.swift */,
+				F10000000000000000000014 /* MenuBarPanelController.swift */,
+				F10000000000000000000015 /* AstaSansFont.swift */,
+				F10000000000000000000016 /* QuotaViewFigmaMenu.swift */,
+				F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */,
 			);
 			path = QuotaView;
 			sourceTree = "<group>";
@@ -160,6 +174,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000000D /* Assets.xcassets */,
+				F10000000000000000000017 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -290,6 +305,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
+				B10000000000000000000013 /* Fonts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,6 +336,10 @@
 				B1000000000000000000000D /* AppPreferences.swift in Sources */,
 				B1000000000000000000000E /* CodexTheme.swift in Sources */,
 				B1000000000000000000000F /* SettingsView.swift in Sources */,
+				B10000000000000000000010 /* MenuBarPanelController.swift in Sources */,
+				B10000000000000000000011 /* AstaSansFont.swift in Sources */,
+				B10000000000000000000012 /* QuotaViewFigmaMenu.swift in Sources */,
+				B10000000000000000000014 /* QuotaViewFigmaResetMenu.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,29 +4,32 @@
 
 # QuotaView
 
-QuotaView 是一款原生 macOS 菜单栏应用，用一个界面集中展示 AI 服务的额度、用量、余额和重置时间。0.1.3 版本首先支持读取本机已登录的 Codex 账户，后续计划适配更多 AI 服务。
+QuotaView 是一款原生 macOS 菜单栏应用，用一个界面集中展示 AI 服务的额度、用量、余额和重置时间。0.1.5 版本首先支持读取本机已登录的 Codex 账户，后续计划适配更多 AI 服务。
 
 QuotaView 不会抓取网页，也不会读取、复制或保存 `~/.codex` 中的登录凭据。它会启动本地 `codex app-server` 进程，并通过其官方 JSON-RPC 接口读取账户数据。
 
 ## 下载
 
-前往 [GitHub Releases](https://github.com/Duoasa/QuotaView/releases) 下载 `QuotaView-v0.1.3.zip`，解压后打开 `QuotaView.app`。
+前往 [GitHub Releases](https://github.com/Duoasa/QuotaView/releases) 下载 `QuotaView-v0.1.5.zip`，解压后打开 `QuotaView.app`。
 
-Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 Intel Mac。v0.1.3 使用 Apple Development 证书签名，但尚未完成公证。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。
+Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 Intel Mac。v0.1.5 使用 Apple Development 证书签名，但尚未完成公证。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。
 
 ## 功能
 
 - 显示当前 AI 服务是否可用、接近额度上限或额度已用尽。
-- 显示当前周期内已用和剩余额度百分比。
+- 显示当前订阅、本周已用额度和剩余百分比。
 - 显示距离下次额度重置的倒计时。
 - 分别展示套餐额度和额外 Credits 余额。
 - 将可用的额度重置次数显示为独立操作。
 - 提供额度重置详情、风险确认和最终确认流程。
 - 额度重置保持演示模式，不会调用真实的消费接口。
-- 提供磨砂和清透两种原生玻璃效果，并自动适配浅色与深色模式；macOS 14–15 使用 Material 兼容方案。
+- 使用紧凑的原生状态栏入口和可随内容动态调整高度的自定义面板。
+- 提供磨砂和清透两种玻璃效果，并自动适配浅色与深色模式；macOS 26 使用原生 Liquid Glass，macOS 14–15 使用 Material 兼容方案。
 - 在整个界面中使用 QuotaView 的蓝紫色视觉风格。
-- 可自定义菜单栏标签和弹窗中显示的数据。
-- 提供原生设置窗口，可跟随系统或固定使用浅色、深色外观。
+- 可自定义菜单栏内容，以及面板中六个内容区域的显示状态。
+- 提供重新设计的原生设置窗口，包含菜单栏、面板内容、外观、语言和通用五个页面。
+- 原生设置控件会跟随当前 macOS 系统强调色。
+- 支持跟随系统或固定使用浅色、深色外观。
 - 支持跟随系统或固定使用简体中文、英文界面。
 - 显示近期每日和累计 Token 用量。
 - 每 60 秒自动刷新，也支持手动刷新。
@@ -87,7 +90,7 @@ open dist/QuotaView.app
 
 ```text
 dist/QuotaView.app
-dist/QuotaView-v0.1.3.zip
+dist/QuotaView-v0.1.5.zip
 ```
 
 在没有额外参数时，脚本会优先使用已安装的 Developer ID Application 身份，其次使用 Apple Development 身份，最后使用带 Hardened Runtime 的 ad-hoc 签名。若要明确指定签名身份：
@@ -153,15 +156,18 @@ account/usage/read
 
 Credits 与套餐剩余额度是两个独立概念，界面不会将它们合并。
 
-0.1.3 版本已经实现额度重置交互和安全确认，但不会发送 `account/rateLimitResetCredit/consume` 请求。未来启用真实额度重置前，应加入幂等键、明确的结果处理和协议兼容性测试。
+0.1.5 版本已经实现额度重置交互和安全确认，但不会发送 `account/rateLimitResetCredit/consume` 请求。未来启用真实额度重置前，应加入幂等键、明确的结果处理和协议兼容性测试。
 
 ## 项目结构
 
 ```text
 Sources/
-├── QuotaView/              # SwiftUI 菜单栏界面与状态
+├── QuotaView/              # SwiftUI 界面、设置与 AppKit 菜单面板
 ├── QuotaViewCore/          # 服务客户端、可执行文件查找与数据模型
 └── QuotaViewProbe/         # 只读命令行探针
+Resources/
+├── Assets.xcassets/        # App、菜单栏与界面资源
+└── Fonts/                  # 内置 Asta Sans 字体文件
 Tests/
 └── QuotaViewCoreTests/     # 模型映射与进程通信测试
 ```

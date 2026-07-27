@@ -30,6 +30,15 @@ final class CodexStatusStore: ObservableObject {
         return "QuotaView 正在连接"
     }
 
+    var hasCurrentCodexStatus: Bool {
+        snapshot != nil && errorMessage == nil
+    }
+
+    var hasAvailableResetCredit: Bool {
+        hasCurrentCodexStatus
+            && snapshot?.canUseResetCredit == true
+    }
+
     func start() {
         guard pollingTask == nil else { return }
 
