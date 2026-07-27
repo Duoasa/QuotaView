@@ -16,6 +16,8 @@ QuotaView 不会抓取网页，也不会读取、复制或保存 `~/.codex` 中�
 
 前往 [GitHub Releases](https://github.com/Duoasa/QuotaView/releases) 下载 `QuotaView-v0.1.5.zip`，解压后打开 `QuotaView.app`。
 
+当前提供的是 v0.1.5 Build 6 热更新，修复了可用状态标签的背景形状和颜色向外晕染问题。
+
 Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 Intel Mac。v0.1.5 使用 Apple Development 证书签名，但尚未完成公证。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。
 
 ## 功能

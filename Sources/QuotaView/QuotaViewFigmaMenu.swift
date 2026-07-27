@@ -30,6 +30,8 @@ struct QuotaViewFigmaMenu: View {
         static let summaryInset: CGFloat = 16
         static let detailsInset: CGFloat = 12
         static let contentWidth: CGFloat = 234
+        static let availabilityBadgeHeight: CGFloat = 18
+        static let availabilityBadgeCornerRadius: CGFloat = 6
     }
 
     private enum Palette {
@@ -399,37 +401,19 @@ struct QuotaViewFigmaMenu: View {
             .foregroundStyle(availabilityTextColor)
             .lineLimit(1)
             .frame(height: 9)
-            .padding(4.5)
+            .padding(.horizontal, 5)
+            .frame(height: Layout.availabilityBadgeHeight)
             .background {
-                ZStack {
-                    FigmaBackdropBlur(
-                        radius: 3.75,
-                        cornerRadius: 12,
-                        tintColor: NSColor(availabilitySurfaceColor)
-                            .withAlphaComponent(0.20)
-                    )
-
-                    RoundedRectangle(
-                        cornerRadius: 12,
-                        style: .continuous
-                    )
-                    .fill(
-                        Color.black.opacity(0.001)
-                            .shadow(
-                                .inner(
-                                    color: Color.black.opacity(0.12),
-                                    radius: 30,
-                                    x: -3.75,
-                                    y: -3
-                                )
-                            )
-                    )
-                }
+                RoundedRectangle(
+                    cornerRadius: Layout.availabilityBadgeCornerRadius,
+                    style: .continuous
+                )
+                .fill(availabilitySurfaceColor.opacity(0.20))
                 .allowsHitTesting(false)
             }
             .overlay {
                 RoundedRectangle(
-                    cornerRadius: 12,
+                    cornerRadius: Layout.availabilityBadgeCornerRadius,
                     style: .continuous
                 )
                 .strokeBorder(

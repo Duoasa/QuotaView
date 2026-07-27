@@ -23,6 +23,9 @@ Baseline result: **Passed**
 0.1.5 native Settings-window redesign:
 **Awaiting product-owner review**
 
+0.1.5 Build 6 availability-badge hotfix:
+**Awaiting product-owner review**
+
 Per the 0.1.5 workflow, implementation validation covers code, state
 transitions, tests, and builds. Final visual and interaction review is
 performed by the product owner.
@@ -158,6 +161,10 @@ The implementation screenshots used a 370 × 510 pt Retina viewport. Dynamic quo
   failed status data is red and Unavailable. The unavailable summary replaces
   subscription and percentage values with em dashes instead of presenting a
   false zero-quota state.
+- Build 6 gives the status capsule a fixed 18 pt height and 6 pt continuous
+  corner radius. Its state color is drawn directly by one rounded rectangle;
+  the capsule no longer uses `CIGaussianBlur`, preventing the fill from
+  spreading beyond the intended shape.
 - The rounded Figma drop shadow is the only custom outer shadow; the native
   rectangular `NSPanel` shadow remains disabled.
 - Functional mappings and tooltips remain unchanged in both material modes.

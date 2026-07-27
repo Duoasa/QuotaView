@@ -16,6 +16,8 @@ QuotaView does not scrape web pages or read, copy, or store login credentials fr
 
 Download `QuotaView-v0.1.5.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
 
+The current v0.1.5 download is Build 6, a hotfix that corrects the availability badge shape and removes color bleeding around its background.
+
 The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The v0.1.5 download is signed with an Apple Development certificate but is not notarized. If macOS blocks the first launch, right-click `QuotaView.app` in Finder and choose **Open**.
 
 ## Features
