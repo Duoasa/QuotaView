@@ -8,6 +8,10 @@ QuotaView 是一款原生 macOS 菜单栏应用，用一个界面集中展示 AI
 
 QuotaView 不会抓取网页，也不会读取、复制或保存 `~/.codex` 中的登录凭据。它会启动本地 `codex app-server` 进程，并通过其官方 JSON-RPC 接口读取账户数据。
 
+## 应用预览
+
+![QuotaView 应用预览](Resources/QuotaView-Preview.jpg)
+
 ## 下载
 
 前往 [GitHub Releases](https://github.com/Duoasa/QuotaView/releases) 下载 `QuotaView-v0.1.5.zip`，解压后打开 `QuotaView.app`。

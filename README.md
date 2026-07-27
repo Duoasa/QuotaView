@@ -8,6 +8,10 @@ QuotaView is a native macOS menu bar app that puts AI service quotas, usage, bal
 
 QuotaView does not scrape web pages or read, copy, or store login credentials from `~/.codex`. It starts the local `codex app-server` process and reads account data through its official JSON-RPC interface.
 
+## Preview
+
+![QuotaView app preview](Resources/QuotaView-Preview.jpg)
+
 ## Download
 
 Download `QuotaView-v0.1.5.zip` from [GitHub Releases](https://github.com/Duoasa/QuotaView/releases), unzip it, and open `QuotaView.app`.
