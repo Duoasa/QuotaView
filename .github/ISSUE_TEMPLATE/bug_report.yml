@@ -1,0 +1,89 @@
+name: Bug report
+description: Report a reproducible QuotaView problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve QuotaView. Do not include credentials, authentication tokens, or an unredacted `~/.codex` file.
+
+  - type: input
+    id: version
+    attributes:
+      label: QuotaView version
+      description: Find this in the release filename or app information.
+      placeholder: "0.1.5 (Build 6)"
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 15.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hardware
+    attributes:
+      label: Mac hardware
+      options:
+        - Apple Silicon
+        - Intel
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: codex_source
+    attributes:
+      label: Codex installation
+      options:
+        - ChatGPT app
+        - Homebrew
+        - Custom executable path
+        - PATH
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open QuotaView
+        2. Click ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Optional. Remove personal information, tokens, account responses, and local paths before posting.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety check
+      options:
+        - label: I have removed credentials, tokens, and other sensitive account data.
+          required: true
