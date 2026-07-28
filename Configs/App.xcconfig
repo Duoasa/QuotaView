@@ -2,8 +2,12 @@
 
 PRODUCT_NAME = QuotaView
 PRODUCT_BUNDLE_IDENTIFIER = com.quotaview.menubar
-MARKETING_VERSION = 0.1.5
-CURRENT_PROJECT_VERSION = 6
+MARKETING_VERSION = 0.2.0
+CURRENT_PROJECT_VERSION = 1
+
+// Reserved until Apple Developer Program approval and a dedicated widget target.
+QUOTAVIEW_APP_GROUP_ID =
+QUOTAVIEW_WIDGET_BUNDLE_ID =
 
 GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_CFBundleDisplayName = QuotaView

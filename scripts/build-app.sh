@@ -10,6 +10,7 @@ configuration="Release"
 dist_dir="${project_dir}/dist"
 info_plist="${project_dir}/Support/Info.plist"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
+build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${info_plist}")"
 release_name="QuotaView-v${version}"
 staging_dir="$(mktemp -d "/tmp/quotaview-package.XXXXXX")"
 verification_dir="$(mktemp -d "/tmp/quotaview-verify.XXXXXX")"
@@ -116,9 +117,17 @@ built_version="$(
         -c 'Print :CFBundleShortVersionString' \
         "${staging_app}/Contents/Info.plist"
 )"
+built_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleVersion' \
+        "${staging_app}/Contents/Info.plist"
+)"
 
-if [[ "${built_version}" != "${version}" ]]; then
-    print -u2 "Version mismatch: expected ${version}, built ${built_version}"
+if [[ "${built_version}" != "${version}" ]] \
+    || [[ "${built_build_number}" != "${build_number}" ]]; then
+    print -u2 \
+        "Version mismatch: expected ${version} (${build_number}), " \
+        "built ${built_version} (${built_build_number})"
     exit 4
 fi
 
@@ -138,6 +147,24 @@ if [[ " ${architectures} " != *" arm64 "* ]] \
     print -u2 "Expected a universal binary, found: ${architectures}"
     exit 4
 fi
+
+for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
+    framework_name="${framework:t:r}"
+    framework_binary="${framework}/Versions/Current/${framework_name}"
+    if [[ ! -f "${framework_binary}" ]]; then
+        print -u2 "Missing framework executable: ${framework_binary}"
+        exit 4
+    fi
+
+    framework_architectures="$(lipo -archs "${framework_binary}")"
+    if [[ " ${framework_architectures} " != *" arm64 "* ]] \
+        || [[ " ${framework_architectures} " != *" x86_64 "* ]]; then
+        print -u2 \
+            "Expected universal ${framework_name}, " \
+            "found: ${framework_architectures}"
+        exit 4
+    fi
+done
 
 if [[ -n "${notary_profile}" ]]; then
     notary_zip="${staging_dir}/${release_name}-notary.zip"
@@ -171,6 +198,9 @@ codesign \
     --strict \
     --verbose=4 \
     "${verification_dir}/QuotaView.app"
+staging_zip_sha256="$(
+    shasum -a 256 "${staging_zip}" | awk '{print $1}'
+)"
 
 if [[ -d "${destination_app}" ]]; then
     previous_app="${dist_dir}/QuotaView.previous.$(date +%Y%m%d%H%M%S).app"
@@ -180,9 +210,24 @@ fi
 mv "${staging_app}" "${destination_app}"
 mv -f "${staging_zip}" "${destination_zip}"
 
+codesign \
+    --verify \
+    --deep \
+    --strict \
+    --verbose=4 \
+    "${destination_app}"
+destination_zip_sha256="$(
+    shasum -a 256 "${destination_zip}" | awk '{print $1}'
+)"
+if [[ "${destination_zip_sha256}" != "${staging_zip_sha256}" ]]; then
+    print -u2 "Release archive changed while moving into dist."
+    exit 4
+fi
+
 print "Built ${destination_app}"
 print "Archived ${destination_zip}"
 print "Architectures: ${architectures}"
+print "SHA-256: ${destination_zip_sha256}"
 
 if [[ "${signing_identity}" == "-" ]]; then
     print "Signature: ad-hoc with Hardened Runtime"

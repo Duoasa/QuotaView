@@ -2,72 +2,159 @@ import XCTest
 @testable import QuotaViewCore
 
 final class CodexModelsTests: XCTestCase {
-    func testSnapshotMapsRateLimitAndUsageFields() throws {
-        let rateLimits = try decodeRateLimits(
+    func testProviderMapsCurrentAndHistoricalUsage() throws {
+        let now = Date(timeIntervalSince1970: 1_785_000_000)
+        let result = try makeResult(
             usedPercent: 34,
             reachedType: nil,
-            resetCredits: 2
-        )
-        let usage = try decodeUsage()
-        let now = Date(timeIntervalSince1970: 1_785_000_000)
-
-        let snapshot = CodexSnapshot.make(
-            rateLimits: rateLimits,
-            usage: usage,
+            resetCredits: 2,
             now: now
         )
+        let snapshot = result.snapshot
+        let primary = try XCTUnwrap(snapshot.rateWindows.first)
+        let usedFraction = try XCTUnwrap(primary.usedFraction)
+        let remainingFraction = try XCTUnwrap(
+            primary.remainingFraction
+        )
 
-        XCTAssertEqual(snapshot.availability, .ready)
-        XCTAssertEqual(snapshot.planType, "plus")
-        XCTAssertEqual(snapshot.usedPercent, 34)
-        XCTAssertEqual(snapshot.remainingPercent, 66)
-        XCTAssertEqual(snapshot.windowDurationMinutes, 10_080)
+        XCTAssertEqual(snapshot.availability, .available)
+        XCTAssertEqual(snapshot.plan?.rawValue, "plus")
+        XCTAssertEqual(usedFraction, 0.34, accuracy: 0.0001)
         XCTAssertEqual(
-            snapshot.resetsAt,
+            remainingFraction,
+            0.66,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(primary.quotaRisk, .normal)
+        XCTAssertEqual(
+            primary.resetsAt,
             Date(timeIntervalSince1970: 1_785_303_228)
         )
-        XCTAssertEqual(snapshot.creditBalance, "0")
-        XCTAssertFalse(snapshot.hasCredits)
-        XCTAssertEqual(snapshot.availableResetCredits, 2)
-        XCTAssertTrue(snapshot.canUseResetCredit)
-        XCTAssertEqual(snapshot.availableResetCreditsAfterOne, 1)
-        XCTAssertEqual(snapshot.lifetimeTokens, 123_456)
-        XCTAssertEqual(snapshot.recentDailyDate, "2026-07-25")
-        XCTAssertEqual(snapshot.recentDailyTokens, 2_500)
-        XCTAssertEqual(snapshot.lastUpdatedAt, now)
+        XCTAssertEqual(
+            count(
+                CodexDomainCatalog.resetCreditsID,
+                in: snapshot
+            ),
+            2
+        )
+        XCTAssertEqual(
+            count(
+                CodexDomainCatalog.lifetimeTokensID,
+                in: snapshot
+            ),
+            123_456
+        )
+        XCTAssertEqual(result.historicalObservations.count, 2)
+        XCTAssertEqual(
+            result.historicalObservations.last?.source,
+            .providerHistoricalBucket
+        )
+        XCTAssertEqual(
+            result.historicalObservations.last?.value,
+            .count(2_500)
+        )
+        XCTAssertEqual(snapshot.capturedAt, now)
     }
 
-    func testSnapshotMarksHighUsageAsLimited() throws {
-        let rateLimits = try decodeRateLimits(
+    func testProviderMarksHighUsageAsWarning() throws {
+        let result = try makeResult(
             usedPercent: 91,
             reachedType: nil,
             resetCredits: 0
         )
 
-        let snapshot = CodexSnapshot.make(
-            rateLimits: rateLimits,
-            usage: try decodeUsage()
+        XCTAssertEqual(
+            result.snapshot.rateWindows.first?.quotaRisk,
+            .warning
         )
-
-        XCTAssertEqual(snapshot.availability, .limited)
-        XCTAssertEqual(snapshot.remainingPercent, 9)
-        XCTAssertFalse(snapshot.canUseResetCredit)
-        XCTAssertEqual(snapshot.availableResetCreditsAfterOne, 0)
     }
 
-    func testSnapshotMarksBackendLimitAsExhausted() throws {
-        let rateLimits = try decodeRateLimits(
+    func testProviderMarksBackendLimitAsExhausted() throws {
+        let result = try makeResult(
             usedPercent: 72,
             reachedType: "rate_limit_reached",
             resetCredits: 0
         )
 
-        let snapshot = CodexSnapshot.make(
+        XCTAssertEqual(
+            result.snapshot.rateWindows.first?.quotaRisk,
+            .exhausted
+        )
+    }
+
+    func testMissingPrimaryWindowIsNotConvertedToZero() throws {
+        let rateLimits = try JSONDecoder().decode(
+            AccountRateLimitsResponse.self,
+            from: Data(
+                """
+                {
+                  "rateLimits": {
+                    "limitId": "codex",
+                    "primary": null,
+                    "secondary": null,
+                    "credits": null,
+                    "individualLimit": null,
+                    "spendControlReached": false,
+                    "planType": "plus",
+                    "rateLimitReachedType": null
+                  },
+                  "rateLimitsByLimitId": null,
+                  "rateLimitResetCredits": null
+                }
+                """.utf8
+            )
+        )
+        let payload = CodexProviderPayload(
             rateLimits: rateLimits,
-            usage: try decodeUsage()
+            usage: nil,
+            capturedAt: Date(),
+            optionalIssues: []
         )
 
-        XCTAssertEqual(snapshot.availability, .exhausted)
+        XCTAssertThrowsError(
+            try CodexProviderAdapter.makeResult(payload: payload)
+        ) { error in
+            XCTAssertEqual(
+                error as? ProviderError,
+                .protocolViolation
+            )
+        }
+    }
+
+    func testOutOfRangeUsageIsRejected() throws {
+        XCTAssertThrowsError(
+            try makeResult(
+                usedPercent: 101,
+                reachedType: nil,
+                resetCredits: 0
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ProviderError,
+                .protocolViolation
+            )
+        }
+    }
+
+    private func makeResult(
+        usedPercent: Int,
+        reachedType: String?,
+        resetCredits: Int,
+        now: Date = Date(timeIntervalSince1970: 1_785_000_000)
+    ) throws -> ProviderFetchResult {
+        let payload = CodexProviderPayload(
+            rateLimits: try decodeRateLimits(
+                usedPercent: usedPercent,
+                reachedType: reachedType,
+                resetCredits: resetCredits
+            ),
+            usage: try decodeUsage(),
+            capturedAt: now,
+            optionalIssues: []
+        )
+        return try CodexProviderAdapter.makeResult(
+            payload: payload
+        )
     }
 
     private func decodeRateLimits(
@@ -75,7 +162,9 @@ final class CodexModelsTests: XCTestCase {
         reachedType: String?,
         resetCredits: Int
     ) throws -> AccountRateLimitsResponse {
-        let reachedValue = reachedType.map { "\"\($0)\"" } ?? "null"
+        let reachedValue = reachedType.map {
+            "\"\($0)\""
+        } ?? "null"
         let json = """
         {
           "rateLimits": {
@@ -132,5 +221,17 @@ final class CodexModelsTests: XCTestCase {
             AccountUsageResponse.self,
             from: Data(json.utf8)
         )
+    }
+
+    private func count(
+        _ id: MetricID,
+        in snapshot: ProviderSnapshot
+    ) -> Int64? {
+        guard case .count(let value) = snapshot.currentMetrics
+            .first(where: { $0.definitionID == id })?
+            .value else {
+            return nil
+        }
+        return value
     }
 }

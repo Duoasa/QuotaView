@@ -56,7 +56,7 @@ enum QuotaViewGlassMode: String, CaseIterable, Identifiable {
 }
 
 private struct QuotaViewGlassModeKey: EnvironmentKey {
-    static let defaultValue = QuotaViewGlassMode.frosted
+    static let defaultValue = QuotaViewGlassMode.clear
 }
 
 extension EnvironmentValues {
