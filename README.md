@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0-build.3/QuotaView-v0.2.0-build.3.zip"><strong>Download QuotaView v0.2.0 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0-build.4/QuotaView-v0.2.0-build.4.zip"><strong>Download QuotaView v0.2.0 Build 4</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -44,14 +44,15 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.2.0-build.3.zip` from the [v0.2.0 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3).
+2. Download `QuotaView-v0.2.0-build.4.zip` from the [v0.2.0 Build 4 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.0 Build 3 is a small UI hot update on QuotaView's refactored core. It
-> uses an ad-hoc Hardened Runtime signature and is not notarized. If
-> macOS blocks the first launch, right-click `QuotaView.app` in Finder and
-> choose **Open**. Developer ID signing and notarization are on the roadmap.
+> v0.2.0 Build 4 fixes the launch-time framework validation failure in the
+> withdrawn Build 3 package. The fallback package uses an ad-hoc signature
+> without Hardened Runtime and is not notarized. If macOS blocks the first
+> launch, right-click `QuotaView.app` in Finder and choose **Open**.
+> Developer ID signing and notarization are on the roadmap.
 
 The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The first account request after launching from Finder may take 20–30 seconds; later refreshes are usually much faster.
 
@@ -80,7 +81,7 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 v0.2.0 is the first official release built on QuotaView's refactored core.
 
-### Build 3 hot update
+### Build 4 hot update
 
 - Refines buttons, the quota-reset entry and action, the subscription tag,
   and the Codex connection-status label from the latest UI1/UI2 designs.
@@ -88,6 +89,8 @@ v0.2.0 is the first official release built on QuotaView's refactored core.
 - Fixes the connection-status label so its 18 pt height keeps a 6 pt corner
   radius instead of collapsing into a pill shape.
 - Keeps reset-credit display on the live Codex data path with no debug fixture.
+- Fixes the downloaded app failing before launch because an ad-hoc Hardened
+  Runtime host could not load its embedded `QuotaViewCore` framework.
 
 ### Core release
 
@@ -180,7 +183,7 @@ chmod +x scripts/build-app.sh
 open dist/QuotaView.app
 ```
 
-The build script prefers a Developer ID Application identity, then an Apple Development identity, and falls back to an ad-hoc signature with Hardened Runtime. For a notarized public build:
+The build script prefers a Developer ID Application identity, then an Apple Development identity. Those Team ID-bearing identities keep Hardened Runtime enabled. When neither identity is available, the script falls back to an ad-hoc signature without Hardened Runtime so the embedded framework remains loadable. Only Developer ID Application builds can use the notarization path:
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \

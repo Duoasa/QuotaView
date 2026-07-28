@@ -80,6 +80,18 @@ rg -n 'DEBUG-ONLY-MOCK|DEBUG MOCK|仅用于调试' Sources
 Debug fixtures owned by automated tests may remain only when they are passed
 explicitly by the test and cannot become an application runtime default.
 
+### Release-signing gate
+
+The app embeds `QuotaViewCore.framework`. A Team ID-bearing Apple signing
+identity may enable Hardened Runtime when the app and framework are signed
+with the same identity. The ad-hoc fallback must not enable Hardened Runtime
+because it has no Team ID and macOS Library Validation would reject the
+embedded framework at launch.
+
+For release changes, verify both the extracted archive signature and an actual
+launch of the freshly extracted app. `codesign --verify --deep --strict` checks
+bundle integrity but does not prove that `dyld` can load embedded frameworks.
+
 ## Compatibility principles
 
 - Treat Credits and remaining plan quota as separate values.

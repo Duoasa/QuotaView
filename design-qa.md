@@ -29,6 +29,9 @@ Baseline result: **Passed**
 0.2.0 Build 3 UI1/UI2 component refinement:
 **Release authorized; full visual matrix not separately recorded**
 
+0.2.0 Build 4 release-runtime hotfix:
+**No UI change; automated build/runtime validation only**
+
 Per the 0.1.5 workflow, implementation validation covers code, state
 transitions, tests, and builds. Final visual and interaction review is
 performed by the product owner.

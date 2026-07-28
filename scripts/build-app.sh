@@ -92,13 +92,12 @@ xattr -cr "${staging_app}"
 signing_args=(
     --force
     --sign "${signing_identity}"
-    --options runtime
 )
 
 if [[ "${signing_identity}" == "-" ]]; then
     signing_args+=(--timestamp=none)
 else
-    signing_args+=(--timestamp)
+    signing_args+=(--options runtime --timestamp)
 fi
 
 for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
@@ -111,6 +110,19 @@ done
 
 codesign "${signing_args[@]}" "${staging_app}"
 codesign --verify --deep --strict --verbose=4 "${staging_app}"
+
+signature_details="$(codesign -dv --verbose=4 "${staging_app}" 2>&1)"
+if [[ "${signing_identity}" == "-" ]]; then
+    if print -r -- "${signature_details}" | grep -q 'flags=.*runtime'; then
+        print -u2 \
+            "Ad-hoc builds must not enable Hardened Runtime; " \
+            "embedded frameworks would fail Library Validation at launch."
+        exit 4
+    fi
+elif ! print -r -- "${signature_details}" | grep -q 'flags=.*runtime'; then
+    print -u2 "Signed release is missing the Hardened Runtime flag."
+    exit 4
+fi
 
 built_version="$(
     /usr/libexec/PlistBuddy \
@@ -231,7 +243,7 @@ print "Architectures: ${architectures}"
 print "SHA-256: ${destination_zip_sha256}"
 
 if [[ "${signing_identity}" == "-" ]]; then
-    print "Signature: ad-hoc with Hardened Runtime"
+    print "Signature: ad-hoc without Hardened Runtime"
     print "Warning: this signature has no trusted developer identity."
 else
     print "Signature: ${signing_identity}"
