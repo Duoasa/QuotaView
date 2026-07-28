@@ -267,9 +267,8 @@ NOTARY_PROFILE="<keychain-profile>" \
 ```
 
 Apple Developer 账号仍在审批时，不得把 Apple Development 或 ad-hoc
-签名描述成可公开分发的 Developer ID 签名。若审批前必须发布测试版，
-应标记为 GitHub Pre-release，并在 Release Notes 中明确说明未公证及
-Gatekeeper 限制。
+签名描述成 Developer ID 签名。若在审批前发布正式版本，Release Notes
+必须明确说明实际签名方式、未公证状态及 Gatekeeper 限制。
 
 脚本成功后预期生成：
 
@@ -338,8 +337,8 @@ xcrun stapler validate \
    `v0.2.0`；
 2. 等待收口提交进入远程 `main` 且 CI 通过，记录最终 commit SHA；
 3. 从这个最终 commit 构建正式包，不使用其他工作区状态；
-4. 正式版完成 Developer ID 签名、公证和 Staple；审批前发布的
-   Pre-release 使用 ad-hoc Hardened Runtime 并完成 ZIP 解包验签；
+4. 正式版优先完成 Developer ID 签名、公证和 Staple；审批前发布的
+   v0.2.0 正式版使用 ad-hoc Hardened Runtime 并完成 ZIP 解包验签；
 5. 产品所有者运行最终解包 App，完成发布候选验收；
 6. 计算最终 ZIP SHA-256；
 7. 在同一个最终 commit 创建 annotated tag `v0.2.0`；
@@ -390,7 +389,8 @@ SHA-256:
 ```
 
 如果正式包尚未完成 Developer ID 公证，必须在正文开头增加醒目的
-“Pre-release / Not notarized”说明，不得使用暗示已通过 Gatekeeper 的表述。
+“Not notarized / ad-hoc signature”说明，不得使用暗示已通过 Gatekeeper
+的表述。
 
 ## 11. 当前 Git 工作区
 
@@ -402,7 +402,7 @@ SHA-256:
   `subtract-frosted-glass-icon-transparent.png` 未跟踪且未被代码引用；
 - `docs/reference/` 保持未跟踪，不属于本次发布范围；
 - `dist/` 已生成 ad-hoc Hardened Runtime 签名、未公证的
-  `QuotaView-v0.2.0.zip` Pre-release 候选；
+  `QuotaView-v0.2.0.zip` 正式发行候选；
 - 视觉与交互状态仍为“等待用户验收”。
 
 在明确提交范围前，不要执行 reset、checkout、clean、删除文件或覆盖

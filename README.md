@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="Latest release" src="https://img.shields.io/badge/release-v0.2.0--pre--release-orange"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -48,10 +48,10 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 is a pre-release with an ad-hoc Hardened Runtime signature
-> and is not notarized. If macOS blocks the first launch, right-click
-> `QuotaView.app` in Finder and choose **Open**. Developer ID signing and
-> notarization are on the roadmap.
+> v0.2.0 Build 1 is the first official release built on QuotaView's refactored
+> core. It uses an ad-hoc Hardened Runtime signature and is not notarized. If
+> macOS blocks the first launch, right-click `QuotaView.app` in Finder and
+> choose **Open**. Developer ID signing and notarization are on the roadmap.
 
 The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The first account request after launching from Finder may take 20–30 seconds; later refreshes are usually much faster.
 
@@ -77,6 +77,8 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
 
 ## What's new in 0.2.0
+
+v0.2.0 is the first official release built on QuotaView's refactored core.
 
 - A normalized domain and static provider registry prepare QuotaView for more
   official AI data sources without adding a plugin runtime.

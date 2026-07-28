@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="最新版本" src="https://img.shields.io/badge/release-v0.2.0--pre--release-orange"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -48,9 +48,10 @@ QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 是使用 ad-hoc Hardened Runtime 签名、尚未完成公证的
-> Pre-release。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击
-> `QuotaView.app`，然后选择**打开**。Developer ID 签名与公证已列入路线图。
+> v0.2.0 Build 1 是 QuotaView 完成核心重构后的首个正式发行版。当前构建
+> 使用 ad-hoc Hardened Runtime 签名，尚未完成公证。如果 macOS 首次启动
+> 时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。
+> Developer ID 签名与公证已列入路线图。
 
 Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 Intel Mac。从 Finder 启动后的首次账户请求可能需要 20–30 秒，后续刷新通常会快很多。
 
@@ -76,6 +77,8 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 原生设置窗口包含菜单栏、面板内容、外观、语言和通用选项
 
 ## 0.2.0 更新内容
+
+v0.2.0 是 QuotaView 完成核心重构后的首个正式发行版。
 
 - 引入标准化 Domain 与静态 Provider Registry，为接入更多官方 AI 数据源
   做好准备，同时不增加动态插件运行层。
