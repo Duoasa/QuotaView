@@ -226,7 +226,9 @@ xcodebuild -quiet \
 | ZIP | 7,629,478 B | 7,990,649 B | +4.73% |
 | App 主可执行文件 | 3,747,544 B | 3,907,464 B | +4.27% |
 
-当前验证产物位于 `/private/tmp`，不是正式发布件，不应直接上传 GitHub。
+随后已从合并后的 `main` 使用 ad-hoc Hardened Runtime 签名生成
+`dist/QuotaView-v0.2.0.zip`。脚本会在打包前后核对 ZIP SHA-256，并对
+ZIP 解包结果执行 deep + strict 验签。正式 SHA-256 以最终上传资产为准。
 
 尚未完成：
 
@@ -234,9 +236,7 @@ xcodebuild -quiet \
 - 空闲 15 分钟 CPU、唤醒次数和常驻内存；
 - 视觉与交互验收；
 - Developer ID 签名；
-- 公证和 Staple；
-- 正式 ZIP 解包验签；
-- 正式 ZIP SHA-256。
+- 公证和 Staple。
 
 ## 7. 签名和打包
 
@@ -338,7 +338,8 @@ xcrun stapler validate \
    `v0.2.0`；
 2. 等待收口提交进入远程 `main` 且 CI 通过，记录最终 commit SHA；
 3. 从这个最终 commit 构建正式包，不使用其他工作区状态；
-4. 完成 Developer ID 签名、公证、Staple 和 ZIP 解包验签；
+4. 正式版完成 Developer ID 签名、公证和 Staple；审批前发布的
+   Pre-release 使用 ad-hoc Hardened Runtime 并完成 ZIP 解包验签；
 5. 产品所有者运行最终解包 App，完成发布候选验收；
 6. 计算最终 ZIP SHA-256；
 7. 在同一个最终 commit 创建 annotated tag `v0.2.0`；
@@ -393,18 +394,16 @@ SHA-256:
 
 ## 11. 当前 Git 工作区
 
-- 当前分支：`codex/optimize-github-page`
-- 当前 HEAD：`332e6eb96503053947c533b673ae9bf5d7e839c5`
-- 上游：`origin/codex/optimize-github-page`
-- 检查时 HEAD 与上游提交计数为 `0 / 0`；
-- 工作区存在大量尚未提交的 0.2.0 修改；
-- 14 个 Asset Catalog `Contents.json` 改动已经暂存，属于任务开始前
-  已存在的用户改动，本轮没有重置；
-- 0.2.0 的核心源码、测试、文档和配置目前大多尚未暂存；
-- `AGENTS.md`、`HANDOFF.md`、`docs/` 和多个新源码目录当前仍是未跟踪；
+- 0.2.0 核心源码、测试、双语 README 和设计文档已通过 PR #3 合并；
+- 发布产物移动后验签强化已通过 PR #4 合并；
+- GitHub Actions 两次均通过；
+- 当前仅有发布签名说明的收口改动等待合并；
 - `subtract-frosted-glass-icon.png` 与
   `subtract-frosted-glass-icon-transparent.png` 未跟踪且未被代码引用；
-- `dist/` 当前保留 0.1.5 Build 6，不包含正式 0.2.0 ZIP。
+- `docs/reference/` 保持未跟踪，不属于本次发布范围；
+- `dist/` 已生成 ad-hoc Hardened Runtime 签名、未公证的
+  `QuotaView-v0.2.0.zip` Pre-release 候选；
+- 视觉与交互状态仍为“等待用户验收”。
 
 在明确提交范围前，不要执行 reset、checkout、clean、删除文件或覆盖
 发布资产。

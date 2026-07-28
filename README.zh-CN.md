@@ -48,7 +48,7 @@ QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 是使用 Apple Development 证书签名、尚未完成公证的
+> v0.2.0 Build 1 是使用 ad-hoc Hardened Runtime 签名、尚未完成公证的
 > Pre-release。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击
 > `QuotaView.app`，然后选择**打开**。Developer ID 签名与公证已列入路线图。
 

@@ -48,7 +48,7 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 is a pre-release signed with an Apple Development certificate
+> v0.2.0 Build 1 is a pre-release with an ad-hoc Hardened Runtime signature
 > and is not notarized. If macOS blocks the first launch, right-click
 > `QuotaView.app` in Finder and choose **Open**. Developer ID signing and
 > notarization are on the roadmap.
