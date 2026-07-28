@@ -5,7 +5,7 @@
 <h1 align="center">QuotaView</h1>
 
 <p align="center">
-  See your Codex quota, Credits balance, token usage, and reset time from the macOS menu bar.
+  A simple, lightweight way to see your Codex quota, Credits, token usage, and reset time from the macOS menu bar.
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ![QuotaView app preview](Resources/QuotaView-Preview.jpg)
 
-QuotaView is a focused, native macOS menu bar app for the Codex account already signed in on your Mac. It shows the information you need before a limit interrupts your work, without scraping web pages or reading login credentials from `~/.codex`.
+QuotaView is a simple, lightweight, native macOS menu bar app for the Codex account already signed in on your Mac. It keeps the information you need within easy reach before a limit interrupts your work, without clutter, web scraping, or reading login credentials from `~/.codex`.
 
 ## Why QuotaView
 
@@ -37,7 +37,8 @@ QuotaView is a focused, native macOS menu bar app for the Codex account already 
 | --- | --- |
 | **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability without leaving your current app. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
-| **Native macOS** | Built with SwiftUI and AppKit for a compact menu bar experience, not a browser wrapper. |
+| **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
+| **Lightweight** | Built natively with SwiftUI and AppKit, with no embedded browser runtime. |
 | **Made to fit** | Choose what appears in the menu bar and which sections appear in the panel. |
 
 ## Quick start

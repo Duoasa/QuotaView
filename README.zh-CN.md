@@ -5,7 +5,7 @@
 <h1 align="center">QuotaView</h1>
 
 <p align="center">
-  在 macOS 菜单栏直接查看 Codex 额度、Credits、Token 用量和重置时间。
+  简洁、轻量地在 macOS 菜单栏查看 Codex 额度、Credits、Token 用量和重置时间。
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ![QuotaView 应用预览](Resources/QuotaView-Preview.jpg)
 
-QuotaView 是一款专注于 Codex 的原生 macOS 菜单栏应用，使用本机已经登录的 Codex 账户。它让你在额度打断工作之前及时看到关键信息，不抓取网页，也不读取 `~/.codex` 中的登录凭据。
+QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机已经登录的 Codex 账户。它以克制、无干扰的方式，让你在额度打断工作之前及时看到关键信息；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
 
 ## 为什么选择 QuotaView
 
@@ -37,7 +37,8 @@ QuotaView 是一款专注于 Codex 的原生 macOS 菜单栏应用，使用本�
 | --- | --- |
 | **一眼掌握** | 无需离开当前应用，即可查看已用与剩余额度、重置倒计时、Credits 和可用状态。 |
 | **本地连接** | 通过 JSON-RPC 与本机启动的 `codex app-server` 进程通信。 |
-| **原生 macOS** | 使用 SwiftUI 和 AppKit 构建紧凑的菜单栏体验，不是网页套壳。 |
+| **简洁设计** | 专注必要的额度信息，以紧凑、无冗余的界面降低干扰。 |
+| **轻量原生** | 使用 SwiftUI 和 AppKit 原生构建，不包含嵌入式浏览器运行层。 |
 | **按需显示** | 可以选择菜单栏显示的数值，以及面板中需要出现的内容区域。 |
 
 ## 快速开始
