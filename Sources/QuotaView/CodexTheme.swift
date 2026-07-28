@@ -220,9 +220,23 @@ private struct QuotaViewSeparatorModifier: ViewModifier {
     }
 }
 
-enum QuotaViewButtonInteractionKind {
+enum QuotaViewButtonInteractionKind: Equatable {
     case compact
     case regular
+    case reset
+
+    var cornerRadius: CGFloat {
+        switch self {
+        case .compact, .regular:
+            12
+        case .reset:
+            8
+        }
+    }
+
+    var isCompact: Bool {
+        self == .compact
+    }
 }
 
 private struct QuotaViewInteractiveButtonStyle: ButtonStyle {
@@ -253,7 +267,7 @@ private struct QuotaViewInteractiveButtonBody<Label: View>: View {
             .background(
                 interactionOverlayColor,
                 in: RoundedRectangle(
-                    cornerRadius: 12,
+                    cornerRadius: kind.cornerRadius,
                     style: .continuous
                 )
             )
@@ -281,9 +295,9 @@ private struct QuotaViewInteractiveButtonBody<Label: View>: View {
         guard !reduceMotion, isEnabled else { return 1 }
 
         if isPressed {
-            return kind == .compact ? 0.94 : 0.985
+            return kind.isCompact ? 0.94 : 0.985
         }
-        if isHovering, kind == .compact {
+        if isHovering, kind.isCompact {
             return 1.04
         }
         return 1
@@ -298,6 +312,11 @@ private struct QuotaViewInteractiveButtonBody<Label: View>: View {
             )
         }
         if isHovering {
+            if kind == .reset {
+                return Color.red.opacity(
+                    colorScheme == .light ? 0.08 : 0.10
+                )
+            }
             return Color.white.opacity(
                 colorScheme == .light ? 0.16 : 0.10
             )

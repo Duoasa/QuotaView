@@ -3,7 +3,7 @@
 PRODUCT_NAME = QuotaView
 PRODUCT_BUNDLE_IDENTIFIER = com.quotaview.menubar
 MARKETING_VERSION = 0.2.0
-CURRENT_PROJECT_VERSION = 1
+CURRENT_PROJECT_VERSION = 3
 
 // Reserved until Apple Developer Program approval and a dedicated widget target.
 QUOTAVIEW_APP_GROUP_ID =

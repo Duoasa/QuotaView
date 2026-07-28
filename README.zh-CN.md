@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0/QuotaView-v0.2.0.zip"><strong>下载 QuotaView v0.2.0</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0-build.3/QuotaView-v0.2.0-build.3.zip"><strong>下载 QuotaView v0.2.0 Build 3</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -44,11 +44,11 @@ QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.2.0 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0) 下载 `QuotaView-v0.2.0.zip`。
+2. 前往 [v0.2.0 Build 3 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3) 下载 `QuotaView-v0.2.0-build.3.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 是 QuotaView 完成核心重构后的首个正式发行版。当前构建
+> v0.2.0 Build 3 是基于 QuotaView 重构核心的小型 UI 热更新。当前构建
 > 使用 ad-hoc Hardened Runtime 签名，尚未完成公证。如果 macOS 首次启动
 > 时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。
 > Developer ID 签名与公证已列入路线图。
@@ -79,6 +79,17 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 ## 0.2.0 更新内容
 
 v0.2.0 是 QuotaView 完成核心重构后的首个正式发行版。
+
+### Build 3 热更新
+
+- 按最新 UI1/UI2 精修按钮、额度重置入口与操作、订阅 Tag 和 Codex
+  连接状态标签。
+- 更新浅色外观功能图标和 macOS 状态栏图标。
+- 修复连接状态标签，使其在 `18 pt` 高度下保持 `6 pt` 圆角，不再退化为
+  橄榄球形。
+- 重置额度继续读取真实 Codex 数据，不包含调试虚拟值。
+
+### 核心版本
 
 - 引入标准化 Domain 与静态 Provider Registry，为接入更多官方 AI 数据源
   做好准备，同时不增加动态插件运行层。
