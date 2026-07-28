@@ -2,35 +2,41 @@
 
 更新日期：2026-07-29
 工作区：`/Users/sukduoasa/Documents/widget`
-当前分支：`agent/release-0.2.0-build-3`
-当前 HEAD：`19de39b8fab776dc743f409357ffefb1ef767d0f`
-发布分支尚未设置上游；基线 `origin/main` 检查时 ahead/behind 为 `0 / 0`
+当前分支：`agent/fix-release-runtime-build-4`
+当前基线：`origin/main` 的 `e8e8dad6e1accca431722289cd28c0f1df10ebe0`
+分支上游：`origin/main`
 远程：`https://github.com/Duoasa/QuotaView.git`
 
 ## 1. 当前结论
 
-QuotaView 0.2.0 已完成底层重构并正式发布。当前工作区位于发布后的
-`main`，正在准备 **0.2.0 Build 3 UI 细节迭代**，尚未提交、打 tag 或
-发布。
+QuotaView 0.2.0 Build 3 已完成 UI 细节迭代并发布，但从 GitHub 下载后会在
+界面初始化前崩溃。崩溃报告确认：打包脚本对无 Team ID 的 ad-hoc App 和
+`QuotaViewCore.framework` 强制启用 Hardened Runtime，导致 macOS Library
+Validation 拒绝加载内嵌 Framework。Build 3 必须在 Build 4 验证发布后从
+GitHub 删除。
 
-本轮发布候选包含：
+当前正在准备 **0.2.0 Build 4 运行时热修复**，候选包含：
 
-- 使用用户提供的新 SVG 替换 macOS 状态栏图标；
-- 按 Figma Page UI 的 UI1/UI2 更新功能按钮、重置入口卡片、重置按钮、
-  订阅类型 Tag 和 Codex 数据连接状态标签；
-- 同步浅色外观的返回、退出、刷新、打开 Codex 和设置按钮 SVG；
-- 同步 Default、Hover、Pressed、Disabled 和 Reduce Motion 交互状态；
-- 将 `18 pt` 高的数据连接状态标签固定为 `6 pt` 连续圆角，修复
-  `12 pt` 圆角被系统钳制后呈现橄榄球形的问题；
-- 移除用于 UI 调试的 3 次虚拟重置额度及全部 DEBUG 展示，恢复仅从
-  最新有效 `availableResetCredits` 读取真实数据。
+- 保留 Build 3 的全部 UI1/UI2 细节、状态栏图标与真实重置额度数据改动；
+- 仅在使用 Developer ID Application 或 Apple Development 身份时启用
+  Hardened Runtime；
+- 回退到 ad-hoc 签名时关闭 Hardened Runtime，保证内嵌
+  `QuotaViewCore.framework` 可以被 `dyld` 加载；
+- 在打包脚本中断言可信签名必须包含 runtime 标志、ad-hoc 签名不得包含；
+- 将 Build Number 更新为 `4`，生成独立资产
+  `QuotaView-v0.2.0-build.4.zip`；
+- 更新中英文 README 和贡献规范，不再把 ad-hoc 回退描述为 Hardened
+  Runtime 构建。
 
-代码审查、28 项测试、`git diff --check` 和最终 Universal Release 无签名
-构建均已通过。当前候选仍有以下发布门禁：
+28 项测试、`git diff --check`、Universal Release 打包、ZIP 解包验签和
+真实启动烟雾测试均已通过。Build 4 从 ZIP 全新解压后的进程持续存活
+3 秒并由测试脚本正常终止；没有出现 Build 3 的 `fatalDyldError`。
+当前候选仍有以下发布门禁：
 
-- Marketing Version 为 `0.2.0`，Build Number 已更新为 `3`；
+- Marketing Version 为 `0.2.0`，Build Number 已更新为 `4`；
 - 尚未形成最终干净 commit；
 - 尚未完成 PR 合并、tag 和 GitHub Release。
+- Build 4 发布并回下载验证后，尚需删除 Build 3 Release 与 tag。
 
 产品所有者已明确授权发布本次 GitHub 热更新。完整视觉验收矩阵没有单独
 记录，因此不得把矩阵状态写成“已通过”；发布授权本身不等同于逐项视觉
@@ -38,43 +44,42 @@ QuotaView 0.2.0 已完成底层重构并正式发布。当前工作区位于发�
 
 下一位接手者的首要任务：
 
-1. 运行当前源码，完成 0.2.0 Build 3 UI 与状态栏图标视觉验收；
-2. 从最终 commit 重新运行测试、Universal Release、签名和资产检查；
-3. 只暂存本文件第 9 节列出的发布候选文件，排除用户未跟踪参考文件；
-4. 推送发布分支并通过 PR 合并到 `main`；
-5. 使用唯一 tag `v0.2.0-build.3`，不得移动或覆盖现有 `v0.2.0`。
+1. 精确暂存 Build 4 修复文件，排除用户未跟踪参考文件；
+2. 推送发布分支并通过 PR 合并到 `main`；
+3. 使用唯一 tag `v0.2.0-build.4`，不得移动或覆盖现有 `v0.2.0`；
+4. 发布并回下载验证 Build 4 ZIP；
+5. 最后删除损坏的 Build 3 Release 和 `v0.2.0-build.3` tag。
 
-## 2. 当前正式 Release
+## 2. Build 4 正式 Release 记录
 
-- Release：`v0.2.0`
+- Release：`v0.2.0-build.4`
 - Release 名称：
-  `QuotaView 0.2.0 — First Official Release After the Core Refactor`
+  `QuotaView 0.2.0 (Build 4) — Launch Reliability Hotfix`
 - 状态：正式 Release，非 Draft，非 Pre-release
-- 发布时间：2026-07-28 23:46（Asia/Shanghai）
+- 发布时间：以 GitHub Release 页面为准
 - Release URL：
-  `https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0`
-- Tag commit：`d46f9231e974f0fa615963976eb885c23f02560a`
-- 当前 `main` HEAD：
-  `19de39b8fab776dc743f409357ffefb1ef767d0f`
+  `https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4`
+- Tag commit：以 `v0.2.0-build.4` 为准
 - Marketing Version：`0.2.0`
-- Build Number：`1`
+- Build Number：`4`
 - Bundle Identifier：`com.quotaview.menubar`
 - 最低系统版本：macOS 14
 - 架构：Universal `arm64 + x86_64`
-- Release 资产：`QuotaView-v0.2.0.zip`
-- 资产大小：`8,021,537 B`
+- Release 资产：`QuotaView-v0.2.0-build.4.zip`
+- 资产大小：`8,032,585 B`
 - SHA-256：
-  `f14936120a1b884a95ca4e5150b70ababd5e40c1566ac78c0f26e716cb746bb0`
-- 签名：ad-hoc + Hardened Runtime
+  `ab59fe031f6bf6693115968c5a0dc3ca4ea7051e5fefdab2b5cb293f8361aca0`
+- 签名：ad-hoc，不启用 Hardened Runtime
 - 公证：未完成
 
-本地 `dist/QuotaView-v0.2.0.zip` 的 SHA-256 与 Release Notes 中记录的值
-一致。
+本地 `dist/QuotaView-v0.2.0-build.4.zip` 已完成 ZIP 解包、deep + strict
+验签和真实启动烟雾测试。App 与 Framework 的签名标志均为
+`flags=0x2(adhoc)`，不包含 `runtime`。
 
-Release Notes 已明确说明未使用 Developer ID、未公证以及可能出现的
-Gatekeeper 首次启动限制。不得把该版本描述成 Developer ID 公证发行版。
+Release Notes 必须明确说明未使用 Developer ID、未公证以及可能出现的
+Gatekeeper 首次启动限制。不得把 Build 4 描述成 Developer ID 公证发行版。
 
-## 3. 0.2.0 Build 3 发布候选改动
+## 3. 0.2.0 Build 4 发布改动
 
 ### Figma 来源
 
@@ -155,31 +160,64 @@ CodexProviderAdapter
 数据。额度重置写操作仍保持 Demo，不调用
 `account/rateLimitResetCredit/consume`。
 
+### Build 3 启动失败与 Build 4 修复
+
+Build 3 从 GitHub 下载后可以通过 Gatekeeper 手动授权，但启动时会在状态栏
+项目建立之前退出。系统崩溃报告为 `DYLD / Library missing`，实际原因不是
+Framework 文件缺失，而是：
+
+```text
+QuotaView.app
+  ad-hoc + Hardened Runtime，无 Team ID
+QuotaViewCore.framework
+  ad-hoc + Hardened Runtime，无 Team ID
+→ Library Validation 拒绝加载内嵌 Framework
+```
+
+`codesign --verify --deep --strict` 只能确认签名与 Bundle 完整性，不能证明
+`dyld` 能在 Hardened Runtime 下加载动态 Framework，因此 Build 3 的发布
+前检查出现了假阴性。
+
+Build 4 将签名策略改为：
+
+- Developer ID Application / Apple Development：保留 Hardened Runtime
+  与时间戳；
+- ad-hoc 回退：不启用 Hardened Runtime、不使用时间戳；
+- 打包时解析最终 App 签名标志，发现签名模式与 runtime 标志不一致立即
+  失败。
+
+从 Build 4 ZIP 全新解压的 App 已在沙箱外直接启动，进程持续存活 3 秒，
+随后由烟雾测试脚本正常终止。该测试没有产生 `fatalDyldError`。
+
 ### 已完成验证
 
 - `swift test`：28 项通过，0 失败；
-- Universal Release 无签名构建：成功；
+- Universal Release 构建与 ad-hoc 打包：成功；
 - App 架构：`x86_64 arm64`；
-- 构建内版本：`0.2.0 (3)`；
+- Framework 架构：`x86_64 arm64`；
+- 构建内版本：`0.2.0 (4)`；
 - `git diff --check`：通过；
 - 更新的 SVG 均通过 XML 校验；
 - `Assets.car`、`AppIcon.icns` 和三款 Asta Sans 字体均存在；
 - 更新的 Figma SVG 保留矢量表示；
 - 未发现真实 reset consume 调用；
 - 未新增截图、自动展开、自动点击或 UI QA 入口。
+- ZIP 解包后 App 与 Framework 均为 `flags=0x2(adhoc)`，不含 runtime；
+- ZIP 解包后 `codesign --verify --deep --strict` 通过；
+- ZIP 解包后的 App 真实启动并持续存活 3 秒，没有 DYLD 加载失败。
 
 最终发布候选：
 
 ```text
-dist/QuotaView-v0.2.0-build.3.zip
+dist/QuotaView-v0.2.0-build.4.zip
 ```
 
-- 大小：`8,032,590 B`
+- 大小：`8,032,585 B`
 - SHA-256：
-  `86c9a56e8be48f83a2520239a811f1914a71330f1ce4692df765188af57a6f6d`
-- 签名：ad-hoc + Hardened Runtime
+  `ab59fe031f6bf6693115968c5a0dc3ca4ea7051e5fefdab2b5cb293f8361aca0`
+- 签名：ad-hoc，不启用 Hardened Runtime
 - 公证：未执行
-- ZIP 解包后 deep + strict 验签：通过
+- ZIP 解包后 deep + strict 验签和启动烟雾测试：通过
 
 旧 `dist/QuotaView-v0.2.0.zip` 仍为 `8,021,537 B`，SHA-256 仍为
 `f14936120a1b884a95ca4e5150b70ababd5e40c1566ac78c0f26e716cb746bb0`，
@@ -350,22 +388,13 @@ Tests/QuotaViewCoreTests/
 检查时状态：
 
 ```text
-## agent/release-0.2.0-build-3
+## agent/fix-release-runtime-build-4...origin/main
  M AGENTS.md
- M Configs/App.xcconfig
  M CONTRIBUTING.md
+ M Configs/App.xcconfig
  M HANDOFF.md
  M README.md
  M README.zh-CN.md
- M Resources/Assets.xcassets/QuotaViewFigmaBackLight.imageset/QuotaViewFigmaBackLight.svg
- M Resources/Assets.xcassets/QuotaViewFigmaOpenCodexLight.imageset/QuotaViewFigmaOpenCodexLight.svg
- M Resources/Assets.xcassets/QuotaViewFigmaPowerLight.imageset/QuotaViewFigmaPowerLight.svg
- M Resources/Assets.xcassets/QuotaViewFigmaSettingsLight.imageset/QuotaViewFigmaSettingsLight.svg
- M Resources/Assets.xcassets/QuotaViewFigmaSyncLight.imageset/QuotaViewFigmaSyncLight.svg
- M Resources/Assets.xcassets/QuotaViewMenuIcon.imageset/QuotaView.svg
- M Sources/QuotaView/CodexTheme.swift
- M Sources/QuotaView/QuotaViewFigmaMenu.swift
- M Sources/QuotaView/QuotaViewFigmaResetMenu.swift
  M Support/Info.plist
  M design-qa.md
  M scripts/build-app.sh
@@ -375,23 +404,14 @@ Tests/QuotaViewCoreTests/
 ?? subtract-frosted-glass-icon.png
 ```
 
-已跟踪且属于 0.2.0 Build 3 发布候选的修改：
+已跟踪且属于 0.2.0 Build 4 发布候选的修改：
 
 - `AGENTS.md`
-- `Configs/App.xcconfig`
 - `CONTRIBUTING.md`
+- `Configs/App.xcconfig`
 - `HANDOFF.md`
 - `README.md`
 - `README.zh-CN.md`
-- `Resources/Assets.xcassets/QuotaViewFigmaBackLight.imageset/QuotaViewFigmaBackLight.svg`
-- `Resources/Assets.xcassets/QuotaViewFigmaOpenCodexLight.imageset/QuotaViewFigmaOpenCodexLight.svg`
-- `Resources/Assets.xcassets/QuotaViewFigmaPowerLight.imageset/QuotaViewFigmaPowerLight.svg`
-- `Resources/Assets.xcassets/QuotaViewFigmaSettingsLight.imageset/QuotaViewFigmaSettingsLight.svg`
-- `Resources/Assets.xcassets/QuotaViewFigmaSyncLight.imageset/QuotaViewFigmaSyncLight.svg`
-- `Resources/Assets.xcassets/QuotaViewMenuIcon.imageset/QuotaView.svg`
-- `Sources/QuotaView/CodexTheme.swift`
-- `Sources/QuotaView/QuotaViewFigmaMenu.swift`
-- `Sources/QuotaView/QuotaViewFigmaResetMenu.swift`
 - `Support/Info.plist`
 - `design-qa.md`
 - `scripts/build-app.sh`
@@ -403,7 +423,7 @@ Tests/QuotaViewCoreTests/
 - `subtract-frosted-glass-icon-transparent.png`
 - `subtract-frosted-glass-icon.png`
 
-这些未跟踪内容不属于 0.2.0 Build 3 发布候选。不要执行 `git clean`、
+这些未跟踪内容不属于 0.2.0 Build 4 发布候选。不要执行 `git clean`、
 reset、checkout 或批量删除，也不要在宽范围 `git add .` 中误加入。
 
 `Sources/QuotaView/QuotaViewApp.swift`、`CodexStatusStore.swift`、
@@ -427,39 +447,42 @@ reset、checkout 或批量删除，也不要在宽范围 `git add .` 中误加�
 
 不得在没有产品所有者结论时把视觉结果记录为“已通过”。
 
-### 0.2.0 Build 3 发布
+### 0.2.0 Build 4 发布
 
 `v0.2.0` 已对应 0.2.0 Build 1 正式发布。Marketing Version 保持
-`0.2.0` 时，Build 3 必须使用新的 tag 和资产名，不得覆盖原 tag、原 ZIP
-或原 Release。视觉验收通过后：
+`0.2.0` 时，Build 4 必须使用新的 tag 和资产名，不得覆盖原 tag、原 ZIP
+或原 Release。发布顺序：
 
 1. 确认 `CFBundleShortVersionString` 为 `0.2.0`、`CFBundleVersion`
-   为 `3`；
+   为 `4`；
 2. 再次确认生产源码没有任何虚拟额度或 DEBUG 标记；
 3. 精确暂存第 9 节列出的候选文件；
 4. 检查 staged diff，确认未加入四项用户未跟踪内容；
 5. 创建最终 commit，并从该 commit 运行 `swift test`；
 6. 构建 `arm64 + x86_64` Universal Release；
 7. 检查版本号、`AppIcon.icns`、`Assets.car`、全部更新 SVG 和 Asta Sans；
-8. 生成唯一资产 `QuotaView-v0.2.0-build.3.zip`，完成签名、ZIP 解包
-    验签和 SHA-256；
+8. 生成唯一资产 `QuotaView-v0.2.0-build.4.zip`，完成签名、ZIP 解包
+   验签、真实启动烟雾测试和 SHA-256；
 9. 推送发布分支，创建 PR 并等待 CI；
-10. PR 合并到 `main` 后创建新 tag `v0.2.0-build.3`；
-11. 推送 tag，创建新的 GitHub Release 并上传 Build 3 ZIP。
+10. PR 合并到 `main` 后创建新 tag `v0.2.0-build.4`；
+11. 推送 tag，创建新的 GitHub Release 并上传 Build 4 ZIP；
+12. 从 GitHub 回下载资产，复核大小、SHA-256、签名标志和真实启动；
+13. Build 4 验证完成后删除损坏的 Build 3 Release 和
+    `v0.2.0-build.3` tag。
 
 Apple Developer 审批完成前，如果继续使用 ad-hoc 签名，Release Notes
 必须明确说明未公证和 Gatekeeper 限制。
 
-`scripts/build-app.sh` 已改为将 Build Number 写入产物名称；Build 3
-预期生成 `QuotaView-v0.2.0-build.3.zip`，不会覆盖现有
+`scripts/build-app.sh` 已将 Build Number 写入产物名称；Build 4
+生成 `QuotaView-v0.2.0-build.4.zip`，不会覆盖现有
 `dist/QuotaView-v0.2.0.zip`。
 
-### 0.2.0 Build 3 Release Notes 要点
+### 0.2.0 Build 4 Release Notes 要点
 
 建议标题：
 
 ```text
-QuotaView 0.2.0 (Build 3) — UI Detail and Interaction Update
+QuotaView 0.2.0 (Build 4) — Launch Reliability Hotfix
 ```
 
 正文至少说明：
@@ -470,6 +493,10 @@ QuotaView 0.2.0 (Build 3) — UI Detail and Interaction Update
 - 保留 Universal Apple Silicon / Intel 和 macOS 14+ 支持；
 - 重置额度显示来自真实 Codex 数据，不包含调试虚拟值；
 - 额度重置操作仍为本地 Demo，不调用真实 consume 接口；
+- 修复 Build 3 下载包因 ad-hoc Hardened Runtime Library Validation
+  导致内嵌 Framework 无法加载的问题；
+- Build 4 的 ad-hoc 回退不启用 Hardened Runtime，Developer ID /
+  Apple Development 签名仍启用；
 - 最终 ZIP SHA-256；
 - 实际签名与公证状态。
 
@@ -534,7 +561,7 @@ lipo -archs \
 ```
 
 前两个 `rg` 命令在当前产品边界下必须没有匹配；发布版本应显示
-`0.2.0`、Build Number `3` 和 `x86_64 arm64`。
+`0.2.0`、Build Number `4` 和 `x86_64 arm64`。
 
 ### 工作区检查
 
@@ -552,7 +579,8 @@ git diff --cached --name-only
 2. 运行 `git status --short --branch`；
 3. 确认 `main` 与 `origin/main` 的 ahead/behind；
 4. 不清理用户未跟踪文件；
-5. 先完成 0.2.0 Build 3 UI 和状态栏图标的用户视觉验收；
+5. 保持 Build 3 已实现的 UI 和状态栏图标，不把 Build 4 运行时修复描述为
+   新的视觉验收；
 6. 确认连接状态标签继续使用 `18 pt` 高、`6 pt` 圆角；
 7. 确认重置额度只来自真实 `availableResetCredits`；
 8. 不因 SourceKit 红线复制或移动 Domain 类型；
@@ -560,6 +588,7 @@ git diff --cached --name-only
 10. UI、资源或发布改动必须运行 Universal Xcode Release；
 11. 用户确认前视觉状态保持“等待用户验收”；
 12. 不接入真实额度重置 consume 接口；
-13. 使用唯一的 `v0.2.0-build.3` tag 和带 Build Number 的 ZIP，不覆盖
+13. 使用唯一的 `v0.2.0-build.4` tag 和带 Build Number 的 ZIP，不覆盖
     `v0.2.0` tag 或 Build 1 Release 资产；
-14. 不把 ad-hoc 签名描述成 Developer ID 公证发布。
+14. 不把 ad-hoc 签名描述成 Developer ID 公证发布；
+15. Build 4 发布并回下载验证后，再删除 Build 3 Release 与 tag。
