@@ -26,6 +26,9 @@ Baseline result: **Passed**
 0.1.5 Build 6 availability-badge hotfix:
 **Awaiting product-owner review**
 
+0.2.0 Build 3 UI1/UI2 component refinement:
+**Release authorized; full visual matrix not separately recorded**
+
 Per the 0.1.5 workflow, implementation validation covers code, state
 transitions, tests, and builds. Final visual and interaction review is
 performed by the product owner.
@@ -122,13 +125,14 @@ The implementation screenshots used a 370 × 510 pt Retina viewport. Dynamic quo
   labels use medium or semibold weights.
 - Dark and light Figma menus use their specified 12% white and 12% black
   separators.
-- In light appearance, the overview reset card uses a 12% black border and
-  the reset-detail primary button uses a 20% black border. Dark appearance
-  retains the matching-opacity white borders.
+- The overview reset card uses a 12% white border in both appearances. The
+  reset-detail primary button uses a red 16% border in both appearances.
 - The overview reset card renders its Figma drop shadow from an explicit
-  rounded Core Animation shadow path at radius 15 and black 20%. Dark
-  appearance retains x 0 / y 18; light appearance uses x 0 / y 6 so the
-  shadow stays attached to the card instead of reading as a gray slab.
+  rounded Core Animation shadow path at radius 20 and y 4. Dark appearance
+  uses black 20%; light appearance uses black 12%.
+- The reset-detail primary button is 234 × 32 pt with an 8 pt continuous
+  radius, red 12% fill, red 16% y-4/radius-20 outer shadow, and red 12%
+  (-2,-2)/radius-10 inner shadow.
 - All 12 interactive controls keep their Figma materials, exported icons,
   fills, borders, shadows, dimensions, corner radii, and layout in both glass
   modes. A shared SwiftUI `ButtonStyle` adds only state feedback.
@@ -140,6 +144,8 @@ The implementation screenshots used a 370 × 510 pt Retina viewport. Dynamic quo
   Reduce Motion disables scale and transition animation while preserving
   the static hover and pressed overlays.
 - Functional icons use the exact exported Figma SVG assets.
+- UI2 light 24 pt function buttons use a 20% white fill and a 4% black
+  (-2,-2)/radius-5 inner shadow. UI1 dark function-button assets are unchanged.
 - The reset-detail ticket row repeats one exact ticket crop for
   `availableResetCredits`; zero credits shows no tickets, and counts wider
   than the original six-ticket strip scale uniformly into its design width.
@@ -161,10 +167,10 @@ The implementation screenshots used a 370 × 510 pt Retina viewport. Dynamic quo
   failed status data is red and Unavailable. The unavailable summary replaces
   subscription and percentage values with em dashes instead of presenting a
   false zero-quota state.
-- Build 6 gives the status capsule a fixed 18 pt height and 6 pt continuous
-  corner radius. Its state color is drawn directly by one rounded rectangle;
-  the capsule no longer uses `CIGaussianBlur`, preventing the fill from
-  spreading beyond the intended shape.
+- The UI1/UI2 status label has a fixed 18 pt height and 6 pt continuous
+  radius. Its state surface uses 20% semantic color, a 3.75 pt clipped
+  background blur, and a 12% black inner shadow. It has no outer glow or
+  shadow.
 - The rounded Figma drop shadow is the only custom outer shadow; the native
   rectangular `NSPanel` shadow remains disabled.
 - Functional mappings and tooltips remain unchanged in both material modes.
@@ -262,14 +268,14 @@ The Page 3 overview uses the Asta Sans weights, sizes, line heights, tracking,
 and fixed white/75%-white hierarchy exported by node `1:712`. The same
 overview hierarchy is rendered in clear and frosted modes.
 
-The Page 3 light overview is sourced from node `10:122`. It preserves the
+The UI2 light overview is sourced from node `25:1471`. It preserves the
 same 258 × 431 pt geometry and interaction mapping while changing only the
 appearance tokens, local borders, status treatment, and function-icon assets.
 AppKit's application appearance is the single light/dark authority; SwiftUI
 content and the clear-glass chrome both update from that effective appearance.
 
-The Page 3 UI2 quota-reset screen is sourced from dark node `10:181` and light
-node `10:333`. Both use a fixed 258 × 473 pt layout. The available reset-credit
+The quota-reset screen is sourced from UI1 node `10:181` and UI2 node
+`25:1524`. Both use a fixed 258 × 473 pt layout. The available reset-credit
 count, current remaining quota, post-reset remaining count, and update time
 come from `CodexSnapshot`. Back, sync, Open Codex, settings, and reset
 confirmation actions are wired to the existing application flow.
@@ -316,8 +322,13 @@ item follows it. The reset entry appears only when its preference is enabled,
 the latest status fetch is valid, and `availableResetCredits` is greater than
 zero.
 
+The temporary three-credit UI fixture has been removed. The reset entry,
+ticket count, button state, and derived remaining count now read only the
+latest valid live `availableResetCredits` value. The general temporary-data
+gate remains documented in `CONTRIBUTING.md` and `AGENTS.md`.
+
 The latest Page 3 implementation was checked against the design-context and
-metadata values for nodes `1:712`, `10:122`, `10:181`, and `10:333`;
+metadata values for nodes `1:712`, `25:1471`, `10:181`, and `25:1524`;
 automated screenshot or interaction QA was not performed, per the repository
 rule. Visual and interaction acceptance is waiting for the product owner.
 

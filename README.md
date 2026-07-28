@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0/QuotaView-v0.2.0.zip"><strong>Download QuotaView v0.2.0</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0-build.3/QuotaView-v0.2.0-build.3.zip"><strong>Download QuotaView v0.2.0 Build 3</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -44,12 +44,12 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.2.0.zip` from the [v0.2.0 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0).
+2. Download `QuotaView-v0.2.0-build.3.zip` from the [v0.2.0 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.3).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.0 Build 1 is the first official release built on QuotaView's refactored
-> core. It uses an ad-hoc Hardened Runtime signature and is not notarized. If
+> v0.2.0 Build 3 is a small UI hot update on QuotaView's refactored core. It
+> uses an ad-hoc Hardened Runtime signature and is not notarized. If
 > macOS blocks the first launch, right-click `QuotaView.app` in Finder and
 > choose **Open**. Developer ID signing and notarization are on the roadmap.
 
@@ -79,6 +79,17 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 ## What's new in 0.2.0
 
 v0.2.0 is the first official release built on QuotaView's refactored core.
+
+### Build 3 hot update
+
+- Refines buttons, the quota-reset entry and action, the subscription tag,
+  and the Codex connection-status label from the latest UI1/UI2 designs.
+- Updates the light-appearance function icons and the macOS menu bar icon.
+- Fixes the connection-status label so its 18 pt height keeps a 6 pt corner
+  radius instead of collapsing into a pill shape.
+- Keeps reset-credit display on the live Codex data path with no debug fixture.
+
+### Core release
 
 - A normalized domain and static provider registry prepare QuotaView for more
   official AI data sources without adding a plugin runtime.

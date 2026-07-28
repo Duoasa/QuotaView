@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import QuotaViewCore
 import SwiftUI
@@ -27,6 +28,7 @@ struct QuotaViewFigmaResetMenu: View {
         static let ticketIconHeight: CGFloat = 16
         static let ticketSpacing: CGFloat = 8
         static let ticketStripMaxWidth: CGFloat = 176.744
+        static let resetButtonCornerRadius: CGFloat = 8
     }
 
     private enum Palette {
@@ -313,34 +315,52 @@ struct QuotaViewFigmaResetMenu: View {
                 )
                 .contentShape(
                     RoundedRectangle(
-                        cornerRadius: 12,
+                        cornerRadius: Layout.resetButtonCornerRadius,
                         style: .continuous
                     )
                 )
         }
-        .quotaViewInteractiveButton()
+        .quotaViewInteractiveButton(.reset)
         .background {
-            RoundedRectangle(
-                cornerRadius: 12,
-                style: .continuous
-            )
-            .fill(
-                resetButtonFillColor.shadow(
-                    .inner(
-                        color: Color.black.opacity(0.12),
-                        radius: 30,
-                        x: -3.75,
-                        y: -3
-                    )
+            ZStack {
+                QuotaViewFigmaDropShadow(
+                    cornerRadius: Layout.resetButtonCornerRadius,
+                    color: .red,
+                    opacity: 0.16,
+                    radius: 20,
+                    offset: CGSize(width: 0, height: 4)
                 )
-            )
+
+                QuotaViewFigmaBackdropBlur(
+                    radius: 10,
+                    cornerRadius: Layout.resetButtonCornerRadius,
+                    tintColor: NSColor.white.withAlphaComponent(0.04)
+                )
+
+                RoundedRectangle(
+                    cornerRadius: Layout.resetButtonCornerRadius,
+                    style: .continuous
+                )
+                .fill(
+                    Color.red.opacity(0.12)
+                        .shadow(
+                            .inner(
+                                color: Color.red.opacity(0.12),
+                                radius: 10,
+                                x: -2,
+                                y: -2
+                            )
+                        )
+                )
+            }
+            .allowsHitTesting(false)
             .overlay {
                 RoundedRectangle(
-                    cornerRadius: 12,
+                    cornerRadius: Layout.resetButtonCornerRadius,
                     style: .continuous
                 )
                 .strokeBorder(
-                    resetButtonStrokeColor,
+                    Color.red.opacity(0.16),
                     lineWidth: 1
                 )
             }
@@ -441,30 +461,16 @@ struct QuotaViewFigmaResetMenu: View {
 
     private var demoFillColor: Color {
         isLightAppearance
-            ? Color.black.opacity(0.13)
+            ? Color.black.opacity(0.04)
             : Color.white.opacity(0.13)
     }
 
     private var demoStrokeColor: Color {
-        isLightAppearance
-            ? Color.black.opacity(0.24)
-            : Color.white.opacity(0.24)
-    }
-
-    private var resetButtonFillColor: Color {
-        isLightAppearance
-            ? Color.white.opacity(0.16)
-            : Color.black.opacity(0.16)
-    }
-
-    private var resetButtonStrokeColor: Color {
-        isLightAppearance
-            ? Color.black.opacity(0.20)
-            : Color.white.opacity(0.20)
+        Color.white.opacity(0.24)
     }
 
     private var canResetQuota: Bool {
-        store.snapshot?.canUseResetCredit == true
+        store.hasAvailableResetCredit
     }
 
     private var availableResetCredits: Int {
@@ -502,7 +508,7 @@ struct QuotaViewFigmaResetMenu: View {
     }
 
     private var resetActionCaption: String {
-        if store.snapshot == nil {
+        if !store.hasCurrentCodexStatus {
             return store.errorMessage == nil
                 ? copy.text("正在加载额度数据…", "Loading quota data…")
                 : copy.text("额度数据不可用", "Quota data unavailable")

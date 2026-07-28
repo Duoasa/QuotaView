@@ -65,9 +65,9 @@ struct QuotaViewFigmaMenu: View {
             blue: 63.0 / 255.0
         )
         static let lightAvailableGreen = Color(
-            red: 20.0 / 255.0,
-            green: 151.0 / 255.0,
-            blue: 52.0 / 255.0
+            red: 0,
+            green: 139.0 / 255.0,
+            blue: 34.0 / 255.0
         )
         static let danger = Color(
             red: 1,
@@ -265,7 +265,7 @@ struct QuotaViewFigmaMenu: View {
             .frame(height: 9)
             .padding(4.5)
             .background(
-                Color.white.opacity(0.60),
+                Color.white.opacity(0.80),
                 in: RoundedRectangle(
                     cornerRadius: 6,
                     style: .continuous
@@ -277,7 +277,7 @@ struct QuotaViewFigmaMenu: View {
                     style: .continuous
                 )
                 .strokeBorder(
-                    Color.white.opacity(0.24),
+                    subscriptionBadgeStrokeColor,
                     lineWidth: 0.5
                 )
             }
@@ -404,11 +404,29 @@ struct QuotaViewFigmaMenu: View {
             .padding(.horizontal, 5)
             .frame(height: Layout.availabilityBadgeHeight)
             .background {
-                RoundedRectangle(
-                    cornerRadius: Layout.availabilityBadgeCornerRadius,
-                    style: .continuous
-                )
-                .fill(availabilitySurfaceColor.opacity(0.20))
+                ZStack {
+                    QuotaViewFigmaBackdropBlur(
+                        radius: 3.75,
+                        cornerRadius: Layout.availabilityBadgeCornerRadius,
+                        tintColor: availabilityBackdropTint
+                    )
+
+                    RoundedRectangle(
+                        cornerRadius: Layout.availabilityBadgeCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(
+                        Color.black.opacity(0.001)
+                            .shadow(
+                                .inner(
+                                    color: Color.black.opacity(0.12),
+                                    radius: 30,
+                                    x: -3.75,
+                                    y: -3
+                                )
+                            )
+                    )
+                }
                 .allowsHitTesting(false)
             }
             .overlay {
@@ -553,20 +571,21 @@ struct QuotaViewFigmaMenu: View {
                 )
             )
         }
-        .quotaViewInteractiveButton()
+        .quotaViewInteractiveButton(.regular)
         .background {
             ZStack {
-                FigmaCardDropShadow(
+                QuotaViewFigmaDropShadow(
                     cornerRadius: 12,
-                    opacity: 0.20,
-                    radius: 15,
-                    offset: resetCardShadowOffset
+                    color: .black,
+                    opacity: resetCardShadowOpacity,
+                    radius: 20,
+                    offset: CGSize(width: 0, height: 4)
                 )
 
-                FigmaBackdropBlur(
+                QuotaViewFigmaBackdropBlur(
                     radius: 10,
                     cornerRadius: 12,
-                    tintColor: NSColor.white.withAlphaComponent(0.16)
+                    tintColor: NSColor.white.withAlphaComponent(0.12)
                 )
 
                 RoundedRectangle(
@@ -577,10 +596,10 @@ struct QuotaViewFigmaMenu: View {
                     Color.black.opacity(0.001)
                         .shadow(
                             .inner(
-                                color: Color.black.opacity(0.12),
-                                radius: 30,
-                                x: -3.75,
-                                y: -3
+                                color: Color.black.opacity(0.05),
+                                radius: 10,
+                                x: -2,
+                                y: -2
                             )
                         )
                 )
@@ -680,16 +699,17 @@ struct QuotaViewFigmaMenu: View {
     }
 
     private var resetCardStrokeColor: Color {
-        isLightAppearance
-            ? Color.black.opacity(0.12)
-            : Color.white.opacity(0.12)
+        Color.white.opacity(0.12)
     }
 
-    private var resetCardShadowOffset: CGSize {
-        CGSize(
-            width: 0,
-            height: isLightAppearance ? 6 : 18
-        )
+    private var resetCardShadowOpacity: CGFloat {
+        isLightAppearance ? 0.12 : 0.20
+    }
+
+    private var subscriptionBadgeStrokeColor: Color {
+        isLightAppearance
+            ? Color.black.opacity(0.12)
+            : Color.white.opacity(0.24)
     }
 
     private var remainingPercent: Int {
@@ -784,6 +804,23 @@ struct QuotaViewFigmaMenu: View {
         return hasCodexStatus
             ? Palette.lightAvailableGreen
             : Palette.lightUnavailableRed
+    }
+
+    private var availabilityBackdropTint: NSColor {
+        if hasCodexStatus {
+            return NSColor(
+                red: 0,
+                green: 1,
+                blue: 63.0 / 255.0,
+                alpha: 0.20
+            )
+        }
+        return NSColor(
+            red: 1,
+            green: 69.0 / 255.0,
+            blue: 58.0 / 255.0,
+            alpha: 0.20
+        )
     }
 
     private var visibleItems: [PanelItem] {
@@ -1032,15 +1069,17 @@ struct QuotaViewFigmaMenu: View {
     }
 }
 
-private struct FigmaCardDropShadow: NSViewRepresentable {
+struct QuotaViewFigmaDropShadow: NSViewRepresentable {
     let cornerRadius: CGFloat
+    let color: NSColor
     let opacity: CGFloat
     let radius: CGFloat
     let offset: CGSize
 
-    func makeNSView(context: Context) -> FigmaCardDropShadowView {
-        FigmaCardDropShadowView(
+    func makeNSView(context: Context) -> QuotaViewFigmaCardShadowView {
+        QuotaViewFigmaCardShadowView(
             cornerRadius: cornerRadius,
+            color: color,
             opacity: opacity,
             radius: radius,
             offset: offset
@@ -1048,11 +1087,12 @@ private struct FigmaCardDropShadow: NSViewRepresentable {
     }
 
     func updateNSView(
-        _ nsView: FigmaCardDropShadowView,
+        _ nsView: QuotaViewFigmaCardShadowView,
         context: Context
     ) {
         nsView.update(
             cornerRadius: cornerRadius,
+            color: color,
             opacity: opacity,
             radius: radius,
             offset: offset
@@ -1060,13 +1100,14 @@ private struct FigmaCardDropShadow: NSViewRepresentable {
     }
 }
 
-private final class FigmaCardDropShadowView: NSView {
+final class QuotaViewFigmaCardShadowView: NSView {
     private var cornerRadius: CGFloat
 
     override var isOpaque: Bool { false }
 
     init(
         cornerRadius: CGFloat,
+        color: NSColor,
         opacity: CGFloat,
         radius: CGFloat,
         offset: CGSize
@@ -1078,6 +1119,7 @@ private final class FigmaCardDropShadowView: NSView {
         layer?.masksToBounds = false
         update(
             cornerRadius: cornerRadius,
+            color: color,
             opacity: opacity,
             radius: radius,
             offset: offset
@@ -1096,12 +1138,13 @@ private final class FigmaCardDropShadowView: NSView {
 
     func update(
         cornerRadius: CGFloat,
+        color: NSColor,
         opacity: CGFloat,
         radius: CGFloat,
         offset: CGSize
     ) {
         self.cornerRadius = cornerRadius
-        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowColor = color.cgColor
         layer?.shadowOpacity = Float(opacity)
         layer?.shadowRadius = radius
         layer?.shadowOffset = CGSize(
@@ -1121,13 +1164,13 @@ private final class FigmaCardDropShadowView: NSView {
     }
 }
 
-private struct FigmaBackdropBlur: NSViewRepresentable {
+struct QuotaViewFigmaBackdropBlur: NSViewRepresentable {
     let radius: CGFloat
     let cornerRadius: CGFloat
     let tintColor: NSColor
 
-    func makeNSView(context: Context) -> FigmaBackdropBlurView {
-        FigmaBackdropBlurView(
+    func makeNSView(context: Context) -> QuotaViewFigmaBackdropBlurView {
+        QuotaViewFigmaBackdropBlurView(
             radius: radius,
             cornerRadius: cornerRadius,
             tintColor: tintColor
@@ -1135,7 +1178,7 @@ private struct FigmaBackdropBlur: NSViewRepresentable {
     }
 
     func updateNSView(
-        _ nsView: FigmaBackdropBlurView,
+        _ nsView: QuotaViewFigmaBackdropBlurView,
         context: Context
     ) {
         nsView.update(
@@ -1146,7 +1189,7 @@ private struct FigmaBackdropBlur: NSViewRepresentable {
     }
 }
 
-private final class FigmaBackdropBlurView: NSView {
+final class QuotaViewFigmaBackdropBlurView: NSView {
     override var isOpaque: Bool { false }
 
     init(

@@ -57,6 +57,29 @@ swift test
 
 Do not add real account responses, credentials, tokens, signing identities, or local machine paths to tests or fixtures.
 
+### Temporary debug-data gate
+
+Temporary UI data must be isolated behind an explicit Debug-only injection,
+visibly identified in the interface, and searchable with a stable marker.
+Use `DEBUG-ONLY-MOCK` for any future temporary runtime injection.
+
+Before any commit or GitHub push:
+
+1. remove every `DEBUG-ONLY-MOCK` runtime injection;
+2. restore the affected component to the live `CodexStatusStore` presentation;
+3. remove visible `DEBUG`, `DEBUG MOCK`, and “仅用于调试” labels that describe
+   the removed mock;
+4. verify the reset entry is again controlled only by the latest valid
+   `availableResetCredits` value;
+5. run the following check and require no production-source matches:
+
+```bash
+rg -n 'DEBUG-ONLY-MOCK|DEBUG MOCK|仅用于调试' Sources
+```
+
+Debug fixtures owned by automated tests may remain only when they are passed
+explicitly by the test and cannot become an application runtime default.
+
 ## Compatibility principles
 
 - Treat Credits and remaining plan quota as separate values.
