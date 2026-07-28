@@ -1,12 +1,14 @@
 import Foundation
 
 public actor CodexAppServerClient {
-    public enum ClientError: LocalizedError {
+    public enum ClientError: LocalizedError, Equatable {
         case executableNotFound
         case launchFailed(String)
         case connectionClosed
         case invalidMessage
         case requestTimedOut(String)
+        case messageTooLarge
+        case cancelled
         case server(code: Int?, message: String)
 
         public var errorDescription: String? {
@@ -21,6 +23,10 @@ public actor CodexAppServerClient {
                 "Codex 返回了无法识别的数据。"
             case .requestTimedOut(let method):
                 "读取 \(method) 超时。"
+            case .messageTooLarge:
+                "Codex 返回的数据超过安全大小限制。"
+            case .cancelled:
+                "Codex 状态读取已取消。"
             case .server(_, let message):
                 "Codex 返回错误：\(message)"
             }
@@ -33,42 +39,88 @@ public actor CodexAppServerClient {
     }
 
     private let executablePath: String?
+    private let startupTimeoutNanoseconds: UInt64
     private let requestTimeoutNanoseconds: UInt64
+    private let maximumLineBytes: Int
     private var process: Process?
     private var inputHandle: FileHandle?
     private var outputTask: Task<Void, Never>?
     private var errorTask: Task<Void, Never>?
     private var pending: [Int: PendingRequest] = [:]
     private var nextRequestID = 1
+    private var connectionGeneration: UInt64 = 0
     private var initialized = false
     private var lastStandardError = ""
 
     public init(
         executablePath: String? = CodexExecutableLocator.locate(),
-        requestTimeoutSeconds: TimeInterval = 45
+        startupTimeoutSeconds: TimeInterval = 45,
+        requestTimeoutSeconds: TimeInterval = 15,
+        maximumLineBytes: Int = 1_048_576
     ) {
         self.executablePath = executablePath
-        self.requestTimeoutNanoseconds = UInt64(max(requestTimeoutSeconds, 1) * 1_000_000_000)
+        self.startupTimeoutNanoseconds = UInt64(
+            max(startupTimeoutSeconds, 1) * 1_000_000_000
+        )
+        self.requestTimeoutNanoseconds = UInt64(
+            max(requestTimeoutSeconds, 1) * 1_000_000_000
+        )
+        self.maximumLineBytes = max(maximumLineBytes, 1_024)
     }
 
-    public func fetchSnapshot(now: Date = Date()) async throws -> CodexSnapshot {
+    public func fetchPayload(
+        now: Date = Date(),
+        includeUsage: Bool = true
+    ) async throws -> CodexProviderPayload {
         try await connectIfNeeded()
+
+        guard includeUsage else {
+            let rateLimits: AccountRateLimitsResponse
+            do {
+                rateLimits = try await request(
+                    method: "account/rateLimits/read"
+                )
+            } catch {
+                stop()
+                throw error
+            }
+            return CodexProviderPayload(
+                rateLimits: rateLimits,
+                usage: nil,
+                capturedAt: now,
+                optionalIssues: []
+            )
+        }
 
         async let rateLimits: AccountRateLimitsResponse = request(
             method: "account/rateLimits/read"
         )
-        async let usage: AccountUsageResponse = request(
+        async let optionalUsage: AccountUsageResponse? = try? await request(
             method: "account/usage/read"
         )
 
-        return try await CodexSnapshot.make(
-            rateLimits: rateLimits,
-            usage: usage,
-            now: now
+        let resolvedRateLimits: AccountRateLimitsResponse
+        do {
+            resolvedRateLimits = try await rateLimits
+        } catch {
+            stop()
+            throw error
+        }
+        let resolvedUsage = await optionalUsage
+        let optionalIssues: [SanitizedErrorSummary] = resolvedUsage == nil
+            ? [SanitizedErrorSummary("account/usage/read unavailable")]
+            : []
+
+        return CodexProviderPayload(
+            rateLimits: resolvedRateLimits,
+            usage: resolvedUsage,
+            capturedAt: now,
+            optionalIssues: optionalIssues
         )
     }
 
     public func stop() {
+        connectionGeneration &+= 1
         outputTask?.cancel()
         errorTask?.cancel()
         outputTask = nil
@@ -116,29 +168,47 @@ public actor CodexAppServerClient {
         self.process = process
         self.inputHandle = standardInput.fileHandleForWriting
         self.lastStandardError = ""
+        let connectionGeneration = self.connectionGeneration
 
         let outputHandle = standardOutput.fileHandleForReading
         let outputStream = Self.dataStream(from: outputHandle)
         let outputClient = self
+        let maximumLineBytes = self.maximumLineBytes
         outputTask = Task.detached(priority: .utility) {
-            await Self.readLines(from: outputStream) { line in
-                await outputClient.handleOutputLine(line)
+            do {
+                try await Self.readLines(
+                    from: outputStream,
+                    maximumLineBytes: maximumLineBytes
+                ) { line in
+                    await outputClient.handleOutputLine(line)
+                }
+                await outputClient.handleConnectionClosed(
+                    generation: connectionGeneration
+                )
+            } catch {
+                await outputClient.handleOversizedOutput(
+                    generation: connectionGeneration
+                )
             }
-            await outputClient.handleConnectionClosed()
         }
 
         let errorHandle = standardError.fileHandleForReading
         let errorStream = Self.dataStream(from: errorHandle)
         let errorClient = self
         errorTask = Task.detached(priority: .utility) {
-            await Self.readLines(from: errorStream) { line in
+            try? await Self.readLines(
+                from: errorStream,
+                maximumLineBytes: maximumLineBytes
+            ) { line in
                 await errorClient.recordStandardError(line)
             }
         }
 
         process.terminationHandler = { [weak self] _ in
             Task {
-                await self?.handleConnectionClosed()
+                await self?.handleConnectionClosed(
+                    generation: connectionGeneration
+                )
             }
         }
 
@@ -149,10 +219,11 @@ public actor CodexAppServerClient {
                     "clientInfo": [
                         "name": "quotaview",
                         "title": "QuotaView",
-                        "version": "0.1.5"
+                        "version": "0.2.0"
                     ]
                 ],
-                includeNullParams: false
+                includeNullParams: false,
+                timeoutNanoseconds: startupTimeoutNanoseconds
             )
             try sendNotification(method: "initialized", params: [:])
             initialized = true
@@ -170,12 +241,14 @@ public actor CodexAppServerClient {
     private func request<Response: Decodable>(
         method: String,
         params: [String: Any]? = nil,
-        includeNullParams: Bool = true
+        includeNullParams: Bool = true,
+        timeoutNanoseconds: UInt64? = nil
     ) async throws -> Response {
         let resultData = try await requestData(
             method: method,
             params: params,
-            includeNullParams: includeNullParams
+            includeNullParams: includeNullParams,
+            timeoutNanoseconds: timeoutNanoseconds
         )
 
         do {
@@ -188,7 +261,8 @@ public actor CodexAppServerClient {
     private func requestData(
         method: String,
         params: [String: Any]?,
-        includeNullParams: Bool
+        includeNullParams: Bool,
+        timeoutNanoseconds: UInt64?
     ) async throws -> Data {
         guard process?.isRunning == true, inputHandle != nil else {
             throw ClientError.connectionClosed
@@ -196,36 +270,42 @@ public actor CodexAppServerClient {
 
         let id = nextRequestID
         nextRequestID += 1
+        let timeout = timeoutNanoseconds ?? requestTimeoutNanoseconds
 
-        return try await withCheckedThrowingContinuation { continuation in
-            pending[id] = PendingRequest(
-                method: method,
-                continuation: continuation
-            )
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pending[id] = PendingRequest(
+                    method: method,
+                    continuation: continuation
+                )
 
-            do {
-                var message: [String: Any] = [
-                    "method": method,
-                    "id": id
-                ]
+                do {
+                    var message: [String: Any] = [
+                        "method": method,
+                        "id": id
+                    ]
 
-                if let params {
-                    message["params"] = params
-                } else if includeNullParams {
-                    message["params"] = NSNull()
+                    if let params {
+                        message["params"] = params
+                    } else if includeNullParams {
+                        message["params"] = NSNull()
+                    }
+
+                    try writeMessage(message)
+                } catch {
+                    pending.removeValue(forKey: id)
+                    continuation.resume(throwing: error)
+                    return
                 }
 
-                try writeMessage(message)
-            } catch {
-                pending.removeValue(forKey: id)
-                continuation.resume(throwing: error)
-                return
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: timeout)
+                    await self?.expireRequest(id: id)
+                }
             }
-
-            let timeout = requestTimeoutNanoseconds
-            Task { [weak self] in
-                try? await Task.sleep(nanoseconds: timeout)
-                await self?.expireRequest(id: id)
+        } onCancel: { [weak self] in
+            Task {
+                await self?.cancelRequest(id: id)
             }
         }
     }
@@ -298,15 +378,42 @@ public actor CodexAppServerClient {
         )
     }
 
-    private func recordStandardError(_ line: String) {
-        guard !line.isEmpty else { return }
-        lastStandardError = line
+    private func cancelRequest(id: Int) {
+        guard let request = pending.removeValue(forKey: id) else {
+            return
+        }
+        request.continuation.resume(
+            throwing: ClientError.cancelled
+        )
     }
 
-    private func handleConnectionClosed() {
-        guard process != nil else { return }
+    private func recordStandardError(_ line: String) {
+        guard !line.isEmpty else { return }
+        lastStandardError = String(line.prefix(4_096))
+    }
+
+    private func handleConnectionClosed(
+        generation: UInt64
+    ) {
+        guard generation == connectionGeneration,
+              process != nil
+        else {
+            return
+        }
         initialized = false
         failAllPending(with: ClientError.connectionClosed)
+    }
+
+    private func handleOversizedOutput(
+        generation: UInt64
+    ) {
+        guard generation == connectionGeneration,
+              process != nil
+        else {
+            return
+        }
+        failAllPending(with: ClientError.messageTooLarge)
+        stop()
     }
 
     private func failAllPending(with error: Error) {
@@ -338,16 +445,30 @@ public actor CodexAppServerClient {
         }
     }
 
+    private enum LineReadError: Error {
+        case lineTooLarge
+    }
+
     private nonisolated static func readLines(
         from stream: AsyncStream<Data>,
+        maximumLineBytes: Int,
         onLine: @escaping @Sendable (String) async -> Void
-    ) async {
+    ) async throws {
         var buffer = Data()
 
         for await chunk in stream {
             buffer.append(chunk)
 
+            if buffer.count > maximumLineBytes,
+               !buffer.prefix(maximumLineBytes).contains(0x0A) {
+                throw LineReadError.lineTooLarge
+            }
+
             while let newlineIndex = buffer.firstIndex(of: 0x0A) {
+                guard newlineIndex <= maximumLineBytes else {
+                    throw LineReadError.lineTooLarge
+                }
+
                 var lineData = Data(buffer[..<newlineIndex])
                 buffer.removeSubrange(...newlineIndex)
 
@@ -361,7 +482,12 @@ public actor CodexAppServerClient {
             }
         }
 
-        if !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) {
+        guard buffer.count <= maximumLineBytes else {
+            throw LineReadError.lineTooLarge
+        }
+
+        if !buffer.isEmpty,
+           let line = String(data: buffer, encoding: .utf8) {
             await onLine(line)
         }
     }

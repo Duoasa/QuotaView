@@ -989,12 +989,14 @@ struct QuotaViewFigmaMenu: View {
         return copy.text("\(minutes)分", "\(minutes)m")
     }
 
-    private func creditBalance(_ snapshot: CodexSnapshot?) -> String {
+    private func creditBalance(
+        _ snapshot: CurrentCodexPresentation?
+    ) -> String {
         guard let snapshot else { return "—" }
         if snapshot.unlimitedCredits {
             return copy.text("无限", "Unlimited")
         }
-        return snapshot.creditBalance ?? "0"
+        return snapshot.creditBalance ?? "—"
     }
 
     private func compactTokenCount(_ count: Int64?) -> String {

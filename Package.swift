@@ -9,12 +9,29 @@ let package = Package(
     ],
     products: [
         .library(name: "QuotaViewCore", targets: ["QuotaViewCore"]),
+        .library(
+            name: "QuotaViewWidgetContract",
+            targets: ["QuotaViewWidgetContract"]
+        ),
+        .library(
+            name: "QuotaViewFutureContracts",
+            targets: ["QuotaViewFutureContracts"]
+        ),
         .executable(name: "QuotaView", targets: ["QuotaView"]),
         .executable(name: "QuotaViewProbe", targets: ["QuotaViewProbe"])
     ],
     targets: [
         .target(
             name: "QuotaViewCore",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(
+            name: "QuotaViewWidgetContract",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(
+            name: "QuotaViewFutureContracts",
+            dependencies: ["QuotaViewCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
@@ -29,7 +46,12 @@ let package = Package(
         ),
         .testTarget(
             name: "QuotaViewCoreTests",
-            dependencies: ["QuotaViewCore"],
+            dependencies: [
+                "QuotaViewCore",
+                "QuotaViewWidgetContract",
+                "QuotaViewFutureContracts",
+                "QuotaView"
+            ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]

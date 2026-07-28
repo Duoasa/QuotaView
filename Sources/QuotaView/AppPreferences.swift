@@ -57,8 +57,8 @@ final class AppPreferences: ObservableObject {
         static let followsSystemAppearance = "preferences.appearance.followsSystem"
         static let customAppearance = "preferences.appearance.custom"
         // Keep the previous key so older installations migrate without
-        // creating a second preference. Legacy preset names normalize to
-        // the default frosted mode.
+        // creating a second preference. Unknown legacy preset names
+        // normalize to the current default clear mode.
         static let glassMode = "preferences.appearance.glassPreset"
         static let followsSystemLanguage = "preferences.language.followsSystem"
         static let customLanguage = "preferences.language.custom"
@@ -199,7 +199,7 @@ final class AppPreferences: ObservableObject {
         ) ?? .dark
         glassMode = QuotaViewGlassMode(
             rawValue: defaults.string(forKey: Key.glassMode) ?? ""
-        ) ?? .frosted
+        ) ?? .clear
         followsSystemLanguage = defaults.storedBool(
             forKey: Key.followsSystemLanguage,
             defaultValue: true

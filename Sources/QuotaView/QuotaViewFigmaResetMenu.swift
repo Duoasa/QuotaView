@@ -472,8 +472,10 @@ struct QuotaViewFigmaResetMenu: View {
     }
 
     private var availableResetCreditsText: String {
-        guard let snapshot = store.snapshot else { return "—" }
-        return String(snapshot.availableResetCredits)
+        guard let count = store.snapshot?.availableResetCredits else {
+            return "—"
+        }
+        return String(count)
     }
 
     private var resetCreditsAvailableLabel: String {

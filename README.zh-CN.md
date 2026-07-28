@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/latest"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0"><img alt="最新版本" src="https://img.shields.io/badge/release-v0.2.0--pre--release-orange"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/latest"><strong>下载最新版本</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0/QuotaView-v0.2.0.zip"><strong>下载 QuotaView v0.2.0</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -44,11 +44,13 @@ QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [GitHub Releases](https://github.com/Duoasa/QuotaView/releases/latest) 下载 `QuotaView-v0.1.5.zip`。
+2. 前往 [v0.2.0 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0) 下载 `QuotaView-v0.2.0.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> 当前 v0.1.5 Build 6 使用 Apple Development 证书签名，但尚未完成公证。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击 `QuotaView.app`，然后选择**打开**。Developer ID 签名与公证已列入路线图。
+> v0.2.0 Build 1 是使用 Apple Development 证书签名、尚未完成公证的
+> Pre-release。如果 macOS 首次启动时拦截应用，请在 Finder 中右键点击
+> `QuotaView.app`，然后选择**打开**。Developer ID 签名与公证已列入路线图。
 
 Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 Intel Mac。从 Finder 启动后的首次账户请求可能需要 20–30 秒，后续刷新通常会快很多。
 
@@ -73,6 +75,19 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 支持简体中文和英文界面
 - 原生设置窗口包含菜单栏、面板内容、外观、语言和通用选项
 
+## 0.2.0 更新内容
+
+- 引入标准化 Domain 与静态 Provider Registry，为接入更多官方 AI 数据源
+  做好准备，同时不增加动态插件运行层。
+- 新的刷新协调器使用 generation、revision 与账户作用域，避免旧请求覆盖
+  较新的账户状态。
+- App Server 请求增加有界输出、独立的启动/请求超时，并隔离可选用量请求
+  的失败。
+- 同时关闭两个 Token 区域后，不再请求 Token 用量。
+- 以独立、轻量的契约预留历史、图表、通知与未来 WidgetKit 扩展，本版本
+  不会因此增加后台任务。
+- 保持现有紧凑界面、双语体验与默认只读的安全边界。
+
 ## 隐私设计
 
 QuotaView **不会**：
@@ -82,6 +97,10 @@ QuotaView **不会**：
 - 保存完整账户响应或身份认证 Token。
 
 QuotaView 会启动本地 `codex app-server` 进程，并通过 JSON-RPC 请求账户数据。它只会在自己的 macOS 偏好设置域中保存最近一次成功刷新时间、可用状态、简短错误摘要和显示偏好。
+
+0.2.0 默认只读，不包含真实账户操作执行器；额度重置仍是本地 Demo。
+底层只为未来“用户单独授权后的官方账户操作”预留独立边界，数据刷新不能
+隐式触发任何写操作。
 
 本地诊断命令：
 
@@ -107,7 +126,8 @@ QuotaView 会按以下顺序查找 Codex 可执行文件：
 
 ## 当前限制
 
-- 0.1.5 版本仅支持 Codex，后续计划适配更多 AI 服务。
+- 0.2.0 当前仍只支持 Codex，后续通过静态 Provider Registry 接入更多
+  官方数据源。
 - 额度重置界面仍是安全演示，不会调用 `account/rateLimitResetCredit/consume`。
 - App Server Schema 可能随本机安装的 Codex 版本变化。
 - 当前提供下载的构建尚未完成公证。
@@ -148,7 +168,7 @@ open dist/QuotaView.app
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
-NOTARY_PROFILE="QuotaView-notary" \
+NOTARY_PROFILE="<keychain-profile>" \
 ./scripts/build-app.sh
 ```
 
@@ -162,7 +182,7 @@ NOTARY_PROFILE="QuotaView-notary" \
 initialize
 initialized
 account/rateLimits/read
-account/usage/read
+account/usage/read  # 仅在任一 Token 区域开启时请求
 ```
 
 | 界面数据 | App Server 字段 |
@@ -182,13 +202,15 @@ Credits 与套餐剩余额度是两个独立概念，界面不会将它们合并
 ```text
 Sources/
 ├── QuotaView/              # SwiftUI 界面、设置与 AppKit 菜单面板
-├── QuotaViewCore/          # 账户模型和 App Server 通信层
+├── QuotaViewCore/          # Domain、Provider、刷新与账户操作边界
+├── QuotaViewFutureContracts/# 不随 App 链接的历史、图表、显示与通知契约
+├── QuotaViewWidgetContract/# 只依赖 Foundation 的有界 Widget 快照契约
 └── QuotaViewProbe/         # 只读命令行探针
 Resources/
 ├── Assets.xcassets/        # 应用、菜单栏和界面资源
 └── Fonts/                  # 内置 Asta Sans 字体文件
 Tests/
-└── QuotaViewCoreTests/     # 模型映射和进程通信测试
+└── QuotaViewCoreTests/     # Domain、应用行为、进程与契约测试
 ```
 
 ## 路线图
@@ -198,6 +220,7 @@ Tests/
 - [ ] 历史趋势和额度提醒
 - [ ] 基于 App Group 的 WidgetKit 扩展
 - [ ] 适配更多 AI 服务
+- [ ] 用户单独授权后的官方账户操作
 - [ ] Developer ID 签名、公证和自动更新
 
 ## 反馈与贡献

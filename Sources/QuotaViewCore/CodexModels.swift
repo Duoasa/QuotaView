@@ -19,7 +19,7 @@ public struct RateLimitSnapshot: Decodable, Sendable {
 }
 
 public struct RateLimitWindow: Decodable, Sendable {
-    public let usedPercent: Int
+    public let usedPercent: Int?
     public let windowDurationMins: Int?
     public let resetsAt: Int?
 }
@@ -70,83 +70,21 @@ public struct AccountTokenUsageDailyBucket: Decodable, Sendable {
     public let tokens: Int64
 }
 
-public struct CodexSnapshot: Equatable, Sendable {
-    public enum Availability: String, Equatable, Sendable {
-        case ready
-        case limited
-        case exhausted
+public struct CodexProviderPayload: Sendable {
+    public let rateLimits: AccountRateLimitsResponse
+    public let usage: AccountUsageResponse?
+    public let capturedAt: Date
+    public let optionalIssues: [SanitizedErrorSummary]
 
-        public var displayName: String {
-            switch self {
-            case .ready: "可用"
-            case .limited: "接近限额"
-            case .exhausted: "额度已耗尽"
-            }
-        }
-    }
-
-    public let availability: Availability
-    public let planType: String
-    public let usedPercent: Int
-    public let remainingPercent: Int
-    public let windowDurationMinutes: Int?
-    public let resetsAt: Date?
-    public let creditBalance: String?
-    public let hasCredits: Bool
-    public let unlimitedCredits: Bool
-    public let availableResetCredits: Int
-    public let lifetimeTokens: Int64?
-    public let recentDailyTokens: Int64?
-    public let recentDailyDate: String?
-    public let lastUpdatedAt: Date
-
-    public var canUseResetCredit: Bool {
-        availableResetCredits > 0
-    }
-
-    public var availableResetCreditsAfterOne: Int {
-        max(0, availableResetCredits - 1)
-    }
-
-    public static func make(
-        rateLimits response: AccountRateLimitsResponse,
-        usage: AccountUsageResponse,
-        now: Date = Date()
-    ) -> CodexSnapshot {
-        let limits = response.rateLimitsByLimitId?["codex"] ?? response.rateLimits
-        let used = min(max(limits.primary?.usedPercent ?? 0, 0), 100)
-        let reached = limits.rateLimitReachedType != nil || limits.spendControlReached == true
-        let availability: Availability
-
-        if reached || used >= 100 {
-            availability = .exhausted
-        } else if used >= 85 {
-            availability = .limited
-        } else {
-            availability = .ready
-        }
-
-        let latestDailyBucket = usage.dailyUsageBuckets?
-            .sorted { $0.startDate < $1.startDate }
-            .last
-
-        return CodexSnapshot(
-            availability: availability,
-            planType: limits.planType ?? "unknown",
-            usedPercent: used,
-            remainingPercent: max(0, 100 - used),
-            windowDurationMinutes: limits.primary?.windowDurationMins,
-            resetsAt: limits.primary?.resetsAt.map {
-                Date(timeIntervalSince1970: TimeInterval($0))
-            },
-            creditBalance: limits.credits?.balance,
-            hasCredits: limits.credits?.hasCredits ?? false,
-            unlimitedCredits: limits.credits?.unlimited ?? false,
-            availableResetCredits: response.rateLimitResetCredits?.availableCount ?? 0,
-            lifetimeTokens: usage.summary.lifetimeTokens,
-            recentDailyTokens: latestDailyBucket?.tokens,
-            recentDailyDate: latestDailyBucket?.startDate,
-            lastUpdatedAt: now
-        )
+    public init(
+        rateLimits: AccountRateLimitsResponse,
+        usage: AccountUsageResponse?,
+        capturedAt: Date,
+        optionalIssues: [SanitizedErrorSummary]
+    ) {
+        self.rateLimits = rateLimits
+        self.usage = usage
+        self.capturedAt = capturedAt
+        self.optionalIssues = optionalIssues
     }
 }

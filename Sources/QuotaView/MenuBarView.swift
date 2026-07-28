@@ -279,9 +279,12 @@ struct MenuBarView: View {
     }
 
     private func completeDemoReset() {
-        // The live account/rateLimitResetCredit/consume call remains
-        // intentionally deferred until the product flow is complete.
-        isShowingFinalConfirmation = false
+        Task {
+            guard await store.performDemoReset() else {
+                return
+            }
+            isShowingFinalConfirmation = false
+        }
     }
 
     private func dismissFinalConfirmation() {

@@ -1,23 +1,70 @@
-import QuotaViewCore
+import Combine
 import Foundation
+import QuotaViewCore
 import SwiftUI
 
 @MainActor
 final class CodexStatusStore: ObservableObject {
-    @Published private(set) var snapshot: CodexSnapshot?
+    @Published private(set) var snapshot: CurrentCodexPresentation?
+    @Published private(set) var providerState: ProviderLoadState
     @Published private(set) var isRefreshing = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var operationAvailability:
+        AccountOperationAvailability = .demoOnly
 
-    private let client: CodexAppServerClient
+    private let coordinator: RefreshCoordinator
+    private let providerID: ProviderID
+    private let projector: CurrentCodexPresentationProjector
     private let diagnostics: UserDefaults
+    private let demoExecutor: any QuotaActionExecutor
     private var pollingTask: Task<Void, Never>?
+    private var demandCancellable: AnyCancellable?
 
     init(
-        client: CodexAppServerClient = CodexAppServerClient(),
-        diagnostics: UserDefaults = .standard
+        provider: (any UsageProviderAdapter)? = nil,
+        preferences: AppPreferences? = nil,
+        diagnostics: UserDefaults = .standard,
+        projector: CurrentCodexPresentationProjector =
+            CurrentCodexPresentationProjector(),
+        demoExecutor: any QuotaActionExecutor =
+            DemoQuotaActionExecutor()
     ) {
-        self.client = client
+        let provider = provider ?? CodexProviderAdapter()
+        let showsTokenUsage = preferences.map {
+            $0.showDailyTokens || $0.showLifetimeTokens
+        } ?? true
+        let plan = Self.makeDemandPlan(
+            providerID: provider.descriptor.id,
+            includesTokenUsage: showsTokenUsage
+        )
+
+        self.coordinator = RefreshCoordinator(
+            provider: provider,
+            demand: plan
+        )
+        self.providerID = provider.descriptor.id
+        self.providerState = .idle(lastSnapshot: nil)
         self.diagnostics = diagnostics
+        self.projector = projector
+        self.demoExecutor = demoExecutor
+
+        if let preferences {
+            demandCancellable = Publishers.CombineLatest(
+                preferences.$showDailyTokens,
+                preferences.$showLifetimeTokens
+            )
+            .map { $0 || $1 }
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] includesTokenUsage in
+                Task { @MainActor in
+                    await self?.updateDemand(
+                        includesTokenUsage: includesTokenUsage
+                    )
+                }
+            }
+        }
     }
 
     var accessibilityStatus: String {
@@ -40,33 +87,137 @@ final class CodexStatusStore: ObservableObject {
     }
 
     func start() {
-        guard pollingTask == nil else { return }
+        guard pollingTask == nil else {
+            return
+        }
 
         pollingTask = Task { [weak self] in
+            let clock = ContinuousClock()
+            var nextTick = clock.now
+            var isFirstRefresh = true
+
             while !Task.isCancelled {
-                await self?.refresh()
-                try? await Task.sleep(for: .seconds(60))
+                await self?.refresh(
+                    reason: isFirstRefresh ? .startup : .background,
+                    policy: .coalesce
+                )
+                isFirstRefresh = false
+
+                nextTick += .seconds(60)
+                let now = clock.now
+                if nextTick <= now {
+                    nextTick = now + .seconds(60)
+                }
+
+                do {
+                    try await clock.sleep(until: nextTick)
+                } catch {
+                    break
+                }
             }
         }
     }
 
-    func refresh() async {
-        guard !isRefreshing else { return }
+    func refresh(
+        reason: RefreshReason = .manual,
+        policy: RefreshReplacementPolicy = .replace
+    ) async {
+        let previous = providerState.latestSnapshot
+        providerState = .refreshing(previous: previous)
         isRefreshing = true
-        defer { isRefreshing = false }
 
-        do {
-            snapshot = try await client.fetchSnapshot()
+        let outcome = await coordinator.requestRefresh(
+            reason: reason,
+            policy: policy
+        )
+
+        switch outcome {
+        case .applied(let result, _):
+            guard let presentation =
+                    projector.makePresentation(from: result)
+            else {
+                applyFailure(
+                    .protocolViolation,
+                    previous: previous
+                )
+                break
+            }
+
+            providerState = .available(result.snapshot)
+            snapshot = presentation
             errorMessage = nil
-            recordSuccess(snapshot)
-        } catch {
-            errorMessage = error.localizedDescription
-            recordFailure(error)
+            recordSuccess(presentation)
+
+        case .failed(let error, _):
+            applyFailure(error, previous: previous)
+
+        case .disabled:
+            applyFailure(
+                .unavailable,
+                previous: previous
+            )
+
+        case .stopped:
+            snapshot = nil
+            errorMessage = nil
+            providerState = .idle(lastSnapshot: previous)
+
+        case .discarded:
+            break
+        }
+
+        isRefreshing = await coordinator.isRefreshing
+        if !isRefreshing,
+           case .refreshing(let previous) = providerState {
+            providerState = .idle(lastSnapshot: previous)
         }
     }
 
-    private func recordSuccess(_ snapshot: CodexSnapshot?) {
-        guard let snapshot else { return }
+    func performDemoReset() async -> Bool {
+        guard operationAvailability == .demoOnly,
+              hasAvailableResetCredit
+        else {
+            return false
+        }
+
+        let request = QuotaActionRequest(
+            providerID: CodexDomainCatalog.providerID,
+            windowID: CodexDomainCatalog.primaryRateWindowID
+        )
+        let result = await demoExecutor.execute(
+            request,
+            authorization: .demo
+        )
+
+        guard case .simulated(let receipt) = result else {
+            return false
+        }
+        return receipt.isSimulation
+    }
+
+    func stop() async {
+        pollingTask?.cancel()
+        pollingTask = nil
+        await coordinator.stop()
+        isRefreshing = false
+    }
+
+    private func applyFailure(
+        _ error: ProviderError,
+        previous: ProviderSnapshot?
+    ) {
+        providerState = .unavailable(
+            previous: previous,
+            error: error
+        )
+        snapshot = nil
+        errorMessage = error.localizedDescription
+        recordFailure(error)
+    }
+
+    private func recordSuccess(
+        _ snapshot: CurrentCodexPresentation
+    ) {
         diagnostics.set(
             snapshot.lastUpdatedAt.timeIntervalSince1970,
             forKey: "diagnostics.lastSuccessAt"
@@ -79,8 +230,12 @@ final class CodexStatusStore: ObservableObject {
             snapshot.availability.rawValue,
             forKey: "diagnostics.lastAvailability"
         )
-        diagnostics.removeObject(forKey: "diagnostics.lastError")
-        diagnostics.removeObject(forKey: "diagnostics.lastErrorAt")
+        diagnostics.removeObject(
+            forKey: "diagnostics.lastError"
+        )
+        diagnostics.removeObject(
+            forKey: "diagnostics.lastErrorAt"
+        )
     }
 
     private func recordFailure(_ error: Error) {
@@ -91,6 +246,63 @@ final class CodexStatusStore: ObservableObject {
         diagnostics.set(
             Date().timeIntervalSince1970,
             forKey: "diagnostics.lastErrorAt"
+        )
+    }
+
+    private func updateDemand(
+        includesTokenUsage: Bool
+    ) async {
+        let plan = Self.makeDemandPlan(
+            providerID: providerID,
+            includesTokenUsage: includesTokenUsage
+        )
+        await coordinator.updateDemand(plan)
+        await refresh(
+            reason: .configurationChanged,
+            policy: .replace
+        )
+    }
+
+    private static func makeDemandPlan(
+        providerID: ProviderID,
+        includesTokenUsage: Bool
+    ) -> ProviderDemandPlan {
+        var panelCapabilities: ProviderCapabilities = [
+            .rateWindows,
+            .balances,
+            .resetCredits
+        ]
+        if includesTokenUsage {
+            panelCapabilities.formUnion([
+                .currentUsage,
+                .historicalUsage
+            ])
+        }
+
+        let demandPlanner = DataDemandPlanner()
+        let demands = [
+            ConsumerDemand(
+                consumer: .menuBar,
+                providerID: providerID,
+                capabilities: [.rateWindows],
+                freshness: .interactive
+            ),
+            ConsumerDemand(
+                consumer: .panel,
+                providerID: providerID,
+                capabilities: panelCapabilities,
+                freshness: .interactive
+            )
+        ]
+
+        return demandPlanner.plans(
+            for: demands,
+            enabledProviders: [providerID]
+        )[providerID] ?? ProviderDemandPlan(
+            providerID: providerID,
+            capabilities: panelCapabilities,
+            freshness: .interactive,
+            consumers: [.menuBar, .panel]
         )
     }
 }

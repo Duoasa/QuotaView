@@ -20,10 +20,18 @@ struct QuotaViewApp: App {
 
 @MainActor
 final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
-    let store = CodexStatusStore()
-    let preferences = AppPreferences()
+    let store: CodexStatusStore
+    let preferences: AppPreferences
 
     private var menuBarController: MenuBarPanelController?
+    private var isPreparingTermination = false
+
+    override init() {
+        let preferences = AppPreferences()
+        self.preferences = preferences
+        self.store = CodexStatusStore(preferences: preferences)
+        super.init()
+    }
 
     func applicationDidFinishLaunching(
         _ notification: Notification
@@ -40,5 +48,20 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         _ sender: NSApplication
     ) -> Bool {
         false
+    }
+
+    func applicationShouldTerminate(
+        _ sender: NSApplication
+    ) -> NSApplication.TerminateReply {
+        guard !isPreparingTermination else {
+            return .terminateLater
+        }
+
+        isPreparingTermination = true
+        Task {
+            await store.stop()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 }
