@@ -210,6 +210,7 @@ fi
 mv "${staging_app}" "${destination_app}"
 mv -f "${staging_zip}" "${destination_zip}"
 
+xattr -cr "${destination_app}"
 codesign \
     --verify \
     --deep \
