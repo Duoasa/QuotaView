@@ -723,8 +723,8 @@ private final class QuotaViewLiquidGlassSurface: NSView {
 }
 
 private enum FigmaClearGlassSpec {
-    // QuotaView Page 3 node 1:712 is the production menu size:
-    // 258 × 431 pt. Its values map one-to-one to AppKit points.
+    // QuotaView Page UI node 1:712 is the production overview size:
+    // 274 × 433 pt. Its values map one-to-one to AppKit points.
     static let cornerRadius: CGFloat = 21
     static let darkFillOpacity: CGFloat = 0.20
     static let lightFillOpacity: CGFloat = 0.26

@@ -1,8 +1,57 @@
 import Foundation
 
+public enum QuotaViewWidgetConfiguration {
+    public static let kind = "QuotaViewUsageWidget"
+    public static let defaultAppGroupIdentifier =
+        "group.com.quotaview.shared"
+    public static let snapshotFileName = "QuotaViewWidgetSnapshot.json"
+    public static let snapshotLifetime: TimeInterval = 15 * 60
+    public static let minimumTimelineReloadInterval: TimeInterval = 5 * 60
+}
+
 public enum WidgetDataAvailability: String, Codable, Sendable {
     case available
     case unavailable
+}
+
+/// Converts Codex app-server plan identifiers into the current public names
+/// used by OpenAI. Unknown values deliberately stay undisclosed instead of
+/// being presented as an invented subscription name.
+public enum OpenAIPlanDisplayName {
+    public static func resolve(_ rawValue: String?) -> String? {
+        guard let rawValue else {
+            return nil
+        }
+
+        let normalized = rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(with: Locale(identifier: "en_US_POSIX"))
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+
+        switch normalized {
+        case "free":
+            return "Free"
+        case "go":
+            return "Go"
+        case "plus":
+            return "Plus"
+        case "prolite", "pro_lite", "pro_5x":
+            return "Pro 5x"
+        case "pro", "pro_20x":
+            return "Pro 20x"
+        case "team", "self_serve_business_usage_based", "business":
+            return "Business"
+        case "enterprise_cbp_usage_based", "enterprise":
+            return "Enterprise"
+        case "edu", "education":
+            return "Edu"
+        case "api", "api_key":
+            return "API Key"
+        default:
+            return nil
+        }
+    }
 }
 
 public struct WidgetQuotaWindow: Codable, Equatable, Sendable {
@@ -38,6 +87,12 @@ public struct WidgetAuxiliaryMetric:
     }
 }
 
+public enum WidgetAuxiliaryMetricIdentifier {
+    public static let creditsBalance = "credits-balance"
+    public static let todayTokens = "today-tokens"
+    public static let lifetimeTokens = "lifetime-tokens"
+}
+
 public struct ProviderWidgetPayload:
     Codable, Equatable, Sendable {
     public let providerID: String
@@ -59,7 +114,7 @@ public struct ProviderWidgetPayload:
         self.displayName = displayName
         self.plan = plan
         self.primaryWindow = primaryWindow
-        self.auxiliaryMetrics = Array(auxiliaryMetrics.prefix(2))
+        self.auxiliaryMetrics = Array(auxiliaryMetrics.prefix(3))
         self.availableResetCredits = availableResetCredits
     }
 }
@@ -191,7 +246,14 @@ public struct WidgetSnapshotCodec: Sendable {
               provider.providerID.utf8.count <= 128,
               !provider.displayName.isEmpty,
               provider.displayName.utf8.count <= 128,
-              provider.auxiliaryMetrics.count <= 2,
+              provider.auxiliaryMetrics.count <= 3,
+              provider.auxiliaryMetrics.allSatisfy({
+                  !$0.id.isEmpty
+                      && $0.id.utf8.count <= 64
+                      && !$0.label.isEmpty
+                      && $0.label.utf8.count <= 64
+                      && $0.formattedValue.utf8.count <= 64
+              }),
               provider.availableResetCredits.map({ $0 >= 0 }) ?? true
         else {
             throw WidgetSnapshotCodecError.invalidPayload
@@ -204,5 +266,35 @@ public struct WidgetSnapshotCodec: Sendable {
         guard fractions.allSatisfy({ (0...1).contains($0) }) else {
             throw WidgetSnapshotCodecError.invalidPayload
         }
+    }
+}
+
+public struct WidgetSnapshotFileStore: Sendable {
+    public let fileURL: URL
+    public let codec: WidgetSnapshotCodec
+
+    public init(
+        containerURL: URL,
+        codec: WidgetSnapshotCodec = WidgetSnapshotCodec()
+    ) {
+        self.fileURL = containerURL.appendingPathComponent(
+            QuotaViewWidgetConfiguration.snapshotFileName,
+            isDirectory: false
+        )
+        self.codec = codec
+    }
+
+    public func write(
+        _ snapshot: QuotaViewWidgetSnapshot
+    ) throws {
+        let data = try codec.encode(snapshot)
+        try data.write(to: fileURL, options: .atomic)
+    }
+
+    public func read(
+        now: Date
+    ) throws -> QuotaViewWidgetSnapshot {
+        let data = try Data(contentsOf: fileURL)
+        return try codec.decode(data, now: now)
     }
 }

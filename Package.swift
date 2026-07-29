@@ -36,7 +36,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "QuotaView",
-            dependencies: ["QuotaViewCore"],
+            dependencies: [
+                "QuotaViewCore",
+                "QuotaViewWidgetContract"
+            ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
