@@ -14,17 +14,17 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.2.0 (Build 4)` |
-| Git tag | `v0.2.0-build.4` |
-| Tag commit | `8a76b5725b616091e2841a8eae232f58168d6674` |
-| GitHub Release | [QuotaView 0.2.0 (Build 4) — Launch Reliability Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4) |
-| Release 资产 | `QuotaView-v0.2.0-build.4.zip` |
-| 资产大小 | `8,032,585 bytes` |
-| SHA-256 | `ab59fe031f6bf6693115968c5a0dc3ca4ea7051e5fefdab2b5cb293f8361aca0` |
+| 最新推荐版本 | `0.2.1 (Build 1)` |
+| Git tag | `v0.2.1` |
+| Tag commit | `56aa71dd9f4013412f90c75e0c282a610e87d14e` |
+| GitHub Release | [QuotaView 0.2.1 — Native Widgets](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1) |
+| Release 资产 | `QuotaView-v0.2.1.zip` |
+| 资产大小 | `10,907,231 bytes` |
+| SHA-256 | `99e7fb951d4abd6475204c059f1e16481dac8be4c3b72e6b19889fc54737521b` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
-| 签名 | ad-hoc，不启用 Hardened Runtime |
-| 公证 | 未完成 |
+| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
+| 公证 | Apple Accepted，已 Staple；Submission `e211abde-be96-47eb-a5ca-50ec1df7f260` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
 
 ### 版本定位规则
@@ -35,26 +35,82 @@
 4. 如本文件、`HANDOFF.md` 与生产代码中的版本号不一致，以用户当前指令和
    生产代码为准，并在同一任务内同步修正两份文档。
 5. 不得把已撤回版本重新标记为最新版本，也不得移动已有正式 tag。
-6. 如果 Marketing Version 继续保持 `0.2.0`，下一次发布的 Build Number
-   必须大于 `4`，并使用唯一的 tag 与 ZIP 文件名；是否升级 Marketing
+6. 如果 Marketing Version 继续保持 `0.2.1`，下一次发布的 Build Number
+   必须大于 `1`，并使用唯一的 tag 与 ZIP 文件名；是否升级 Marketing
    Version 由用户在新迭代中决定。
 
 ## 版本总览
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.2.0 (Build 4)` | 2026-07-29 | **当前最新** | UI 热更新与下载版启动可靠性修复 |
+| `0.2.1 (Build 1)` | 2026-07-30 | **当前最新** | 原生 WidgetKit 小组件与 Developer ID 公证分发 |
+| `0.2.0 (Build 4)` | 2026-07-29 | 历史正式版 | UI 热更新与下载版启动可靠性修复 |
 | `0.2.0 (Build 3)` | 2026-07-29 | **已撤回并删除** | UI1/UI2 组件细节迭代；发布包存在 Framework 加载故障 |
 | `0.2.0` | 2026-07-28 | 历史正式版 | 核心架构重构后的首个正式版本 |
 | `0.1.5 (Build 6)` | 2026-07-27 | 历史正式版 | 原生菜单面板、玻璃外观、设置窗口和状态标签热修复 |
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.2.1 (Build 1)
+
+Tag：`v0.2.1`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+
+发布提交：
+`56aa71dd9f4013412f90c75e0c282a610e87d14e`
+
+主要特性：
+
+- 新增原生 WidgetKit 扩展，支持 macOS 小号与中号小组件；
+- 小组件展示本周额度、重置时间、Credits、今日与累计 Token、订阅方案和
+  连接状态；
+- 主 App 通过正式 App Group 写入最小、脱敏且会过期的快照，Widget
+  不访问网络、认证凭据或 Codex App Server；
+- 更新菜单面板、进度条、连接状态与局部 Liquid Glass 细节；
+- 订阅类型统一映射到 OpenAI 官方方案名称，未知值和不可用状态使用
+  破折号，不伪造数据；
+- README 中英文版本使用新的产品预览图，并同步 0.2.1 下载入口与更新
+  说明；
+- 继续保持只读边界；额度重置仍为本地 Demo，不调用真实消费接口。
+
+发布资产：
+
+- 文件名：`QuotaView-v0.2.1.zip`
+- 大小：`10,907,231 bytes`
+- SHA-256：
+  `99e7fb951d4abd6475204c059f1e16481dac8be4c3b72e6b19889fc54737521b`
+- App、`QuotaViewCore.framework` 与 Widget Extension 均为 Universal
+  `x86_64 arm64`
+- App 与 Widget 均为 `0.2.1 (1)`
+
+签名与公证：
+
+- App 与 Widget 均使用
+  `Developer ID Application: Chenchen Xu (BUUH229D5Q)`；
+- Team ID 为 `BUUH229D5Q`，启用 Hardened Runtime 和可信时间戳；
+- Apple notarization 状态为 `Accepted`，Submission ID：
+  `e211abde-be96-47eb-a5ca-50ec1df7f260`；
+- 公证票据已 Staple，`spctl` 返回
+  `accepted / source=Notarized Developer ID`。
+
+验证记录：
+
+- 本地与 GitHub Actions 的 33 项测试均通过；
+- 无签名 Universal Xcode Release 构建通过；
+- 最终 ZIP 全新解压后通过 `codesign --verify --deep --strict`、
+  `stapler validate` 与 `spctl --assess`；
+- 为解压 App 加入下载隔离属性后，Gatekeeper 仍正常接受；
+- 本地最终包与 GitHub 回下载资产逐字节一致；
+- GitHub 回下载 App 的真实启动烟雾测试持续 5 秒，没有
+  `fatalDyldError`、Framework 加载或签名错误；
+- 最终视觉与交互矩阵仍等待产品所有者验收，不在本记录中提前标记通过。
+
 ## 0.2.0 (Build 4)
 
 Tag：`v0.2.0-build.4`
 
-状态：当前最新正式 Release。
+状态：历史正式 Release，已由 0.2.1 取代为推荐下载版本。
 
 主要特性：
 
