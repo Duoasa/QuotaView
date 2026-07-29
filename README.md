@@ -27,7 +27,10 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-![QuotaView app preview](Resources/QuotaView-Preview.jpg)
+<p align="center">
+  <img src="Resources/QuotaView-Preview.jpg" alt="QuotaView dark appearance preview" width="49%">
+  <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView light appearance preview" width="49%">
+</p>
 
 QuotaView is a simple, lightweight, native macOS menu bar app for the Codex account already signed in on your Mac. It keeps the information you need within easy reach before a limit interrupts your work, without clutter, web scraping, or reading login credentials from `~/.codex`.
 

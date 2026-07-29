@@ -27,7 +27,10 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-![QuotaView 应用预览](Resources/QuotaView-Preview.jpg)
+<p align="center">
+  <img src="Resources/QuotaView-Preview.jpg" alt="QuotaView 深色外观预览" width="49%">
+  <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView 浅色外观预览" width="49%">
+</p>
 
 QuotaView 是一款简洁、轻量的原生 macOS 菜单栏应用，使用本机已经登录的 Codex 账户。它以克制、无干扰的方式，让你在额度打断工作之前及时看到关键信息；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
 
