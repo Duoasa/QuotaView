@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.0-build.4/QuotaView-v0.2.0-build.4.zip"><strong>Download QuotaView v0.2.0 Build 4</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.1/QuotaView-v0.2.1.zip"><strong>Download QuotaView v0.2.1</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -35,7 +35,7 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 
 | | |
 | --- | --- |
-| **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability without leaving your current app. |
+| **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
 | **Lightweight** | Built natively with SwiftUI and AppKit, with no embedded browser runtime. |
@@ -44,15 +44,14 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.2.0-build.4.zip` from the [v0.2.0 Build 4 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.0-build.4).
+2. Download `QuotaView-v0.2.1.zip` from the [v0.2.1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.0 Build 4 fixes the launch-time framework validation failure in the
-> withdrawn Build 3 package. The fallback package uses an ad-hoc signature
-> without Hardened Runtime and is not notarized. If macOS blocks the first
-> launch, right-click `QuotaView.app` in Finder and choose **Open**.
-> Developer ID signing and notarization are on the roadmap.
+> v0.2.1 is signed with a Developer ID certificate, notarized by Apple, and
+> stapled for offline Gatekeeper verification. It can be opened normally after
+> unzipping, without using the Finder right-click workaround required by older
+> unsigned builds.
 
 The universal app supports macOS 14 or later on both Apple Silicon and Intel Macs. The first account request after launching from Finder may take 20–30 seconds; later refreshes are usually much faster.
 
@@ -76,35 +75,23 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - System-aware or fixed light/dark appearance
 - English and Simplified Chinese interfaces
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
+- Native WidgetKit widgets in Small and Medium sizes
 
-## What's new in 0.2.0
+## What's new in 0.2.1
 
-v0.2.0 is the first official release built on QuotaView's refactored core.
+v0.2.1 brings QuotaView's most useful data to native macOS widgets while
+preserving the app's simple, lightweight, and privacy-conscious design.
 
-### Build 4 hot update
-
-- Refines buttons, the quota-reset entry and action, the subscription tag,
-  and the Codex connection-status label from the latest UI1/UI2 designs.
-- Updates the light-appearance function icons and the macOS menu bar icon.
-- Fixes the connection-status label so its 18 pt height keeps a 6 pt corner
-  radius instead of collapsing into a pill shape.
-- Keeps reset-credit display on the live Codex data path with no debug fixture.
-- Fixes the downloaded app failing before launch because an ad-hoc Hardened
-  Runtime host could not load its embedded `QuotaViewCore` framework.
-
-### Core release
-
-- A normalized domain and static provider registry prepare QuotaView for more
-  official AI data sources without adding a plugin runtime.
-- A generation- and revision-aware refresh coordinator prevents stale requests
-  from overwriting newer account state.
-- App Server requests now use bounded output, separate startup/request timeouts,
-  and isolated optional usage failures.
-- Token usage is not requested when both token sections are disabled.
-- Foundation-only contracts prepare history, charts, notifications, and a
-  future WidgetKit extension without adding background work to this build.
-- The existing compact interface, bilingual experience, and read-only safety
-  boundary remain unchanged.
+- Adds native Small and Medium WidgetKit widgets for weekly quota, reset time,
+  Credits, token usage, plan, and connection state.
+- Shares only a minimal, sanitized, expiring snapshot through the App Group.
+  Widgets never access credentials, the network, or the Codex App Server.
+- Refreshes the menu panel, progress display, connection indicator, and local
+  Liquid Glass details with a denser, data-first layout.
+- Normalizes subscription labels to official OpenAI plan names and shows a
+  stable unavailable state instead of inventing values when data is missing.
+- Ships as a Universal app signed with Developer ID, notarized by Apple, and
+  stapled so the downloaded app opens normally on macOS.
 
 ## Privacy by design
 
@@ -116,10 +103,14 @@ QuotaView does **not**:
 
 QuotaView starts the local `codex app-server` process and requests account data over JSON-RPC. It stores only the latest successful refresh time, availability state, a short error summary, and display preferences in its own macOS preferences domain.
 
-Version 0.2.0 is read-only by default and contains no live account-operation
+Version 0.2.1 is read-only by default and contains no live account-operation
 executor. The quota reset flow remains a local demo. The architecture reserves
 separate, explicitly authorized official operations for a future release
 without allowing refreshes to trigger side effects.
+
+The main app writes only a bounded, sanitized snapshot to its App Group for the
+WidgetKit extension. The snapshot contains no authentication token, cookie,
+account identifier, complete server response, or usage history.
 
 For local diagnostics:
 
@@ -145,11 +136,10 @@ QuotaView looks for the Codex executable in this order:
 
 ## Current limitations
 
-- Version 0.2.0 currently supports Codex only; more official providers are
+- Version 0.2.1 currently supports Codex only; more official providers are
   planned through the static provider registry.
 - The quota reset interface is a safety-focused demo and does not call `account/rateLimitResetCredit/consume`.
 - The App Server schema can vary with the installed Codex version.
-- The current downloadable build is not notarized.
 
 ## Build and test
 
@@ -224,6 +214,7 @@ Sources/
 ├── QuotaViewCore/          # Domain, providers, refresh, and account-operation boundary
 ├── QuotaViewFutureContracts/# Unlinked history, chart, display, and notification contracts
 ├── QuotaViewWidgetContract/# Foundation-only bounded widget snapshot contract
+├── QuotaViewWidget/        # Native Small and Medium WidgetKit extension
 └── QuotaViewProbe/         # Read-only command-line probe
 Resources/
 ├── Assets.xcassets/        # App, menu bar, and interface artwork
@@ -237,10 +228,11 @@ Tests/
 - [ ] Active task status and real-time notifications
 - [ ] Launch at login with `ServiceManagement`
 - [ ] Historical trends and quota alerts
-- [ ] WidgetKit extension backed by an App Group
+- [x] WidgetKit extension backed by an App Group
 - [ ] More AI providers
 - [ ] Separately authorized official account operations
-- [ ] Developer ID signing, notarization, and automatic updates
+- [x] Developer ID signing and notarization
+- [ ] Automatic updates
 
 ## Feedback and contributions
 

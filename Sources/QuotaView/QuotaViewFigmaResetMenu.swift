@@ -4,7 +4,7 @@ import QuotaViewCore
 import SwiftUI
 
 struct QuotaViewFigmaResetMenu: View {
-    nonisolated static let designSize = CGSize(width: 258, height: 473)
+    nonisolated static let designSize = CGSize(width: 274, height: 473)
 
     @ObservedObject var store: CodexStatusStore
     @Environment(\.colorScheme) private var colorScheme
@@ -23,7 +23,7 @@ struct QuotaViewFigmaResetMenu: View {
         static let heroHeight: CGFloat = 128
         static let detailsHeight: CGFloat = 249
         static let footerHeight: CGFloat = 48
-        static let contentWidth: CGFloat = 234
+        static let contentWidth: CGFloat = 250
         static let ticketIconWidth: CGFloat = 22.7907
         static let ticketIconHeight: CGFloat = 16
         static let ticketSpacing: CGFloat = 8
@@ -46,6 +46,16 @@ struct QuotaViewFigmaResetMenu: View {
         )
         static let darkSeparator = Color.white.opacity(0.12)
         static let lightSeparator = Color.black.opacity(0.12)
+        static let connected = Color(
+            red: 0,
+            green: 213.0 / 255.0,
+            blue: 67.0 / 255.0
+        )
+        static let disconnected = Color(
+            red: 1,
+            green: 69.0 / 255.0,
+            blue: 58.0 / 255.0
+        )
     }
 
     var body: some View {
@@ -331,10 +341,10 @@ struct QuotaViewFigmaResetMenu: View {
                     offset: CGSize(width: 0, height: 4)
                 )
 
-                QuotaViewFigmaBackdropBlur(
-                    radius: 10,
+                QuotaViewFigmaLocalGlass(
+                    frostRadius: 10.5,
                     cornerRadius: Layout.resetButtonCornerRadius,
-                    tintColor: NSColor.white.withAlphaComponent(0.04)
+                    tintColor: NSColor.red.withAlphaComponent(0.12)
                 )
 
                 RoundedRectangle(
@@ -342,10 +352,10 @@ struct QuotaViewFigmaResetMenu: View {
                     style: .continuous
                 )
                 .fill(
-                    Color.red.opacity(0.12)
+                    Color.black.opacity(0.001)
                         .shadow(
                             .inner(
-                                color: Color.red.opacity(0.12),
+                                color: Color.red.opacity(0.32),
                                 radius: 10,
                                 x: -2,
                                 y: -2
@@ -374,15 +384,28 @@ struct QuotaViewFigmaResetMenu: View {
 
     private var footer: some View {
         HStack(spacing: 0) {
-            Text(copy.text("更新于 \(updatedTime)", "Update \(updatedTime)"))
-                .font(
-                    AstaSans.regular(
-                        isLightAppearance ? 10 : 10.5
+            HStack(spacing: 8) {
+                Text(
+                    copy.text(
+                        "更新于 \(updatedTime)",
+                        "Update \(updatedTime)"
                     )
                 )
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
-                .frame(height: 16)
+                    .font(
+                        AstaSans.regular(
+                            isLightAppearance ? 10 : 10.5
+                        )
+                    )
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(1)
+                    .frame(height: 16)
+
+                Circle()
+                    .fill(connectionIndicatorColor)
+                    .frame(width: 5, height: 5)
+                    .help(connectionStatusText)
+                    .accessibilityLabel(connectionStatusText)
+            }
 
             Spacer(minLength: 6)
 
@@ -471,6 +494,23 @@ struct QuotaViewFigmaResetMenu: View {
 
     private var canResetQuota: Bool {
         store.hasAvailableResetCredit
+    }
+
+    private var connectionIndicatorColor: Color {
+        store.hasCurrentCodexStatus
+            ? Palette.connected
+            : Palette.disconnected
+    }
+
+    private var connectionStatusText: String {
+        copy.text(
+            store.hasCurrentCodexStatus
+                ? "Codex 数据连接可用"
+                : "Codex 数据连接不可用",
+            store.hasCurrentCodexStatus
+                ? "Codex data connection available"
+                : "Codex data connection unavailable"
+        )
     }
 
     private var availableResetCredits: Int {

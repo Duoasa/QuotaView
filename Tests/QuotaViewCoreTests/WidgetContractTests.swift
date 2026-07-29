@@ -3,6 +3,36 @@ import XCTest
 @testable import QuotaViewWidgetContract
 
 final class WidgetContractTests: XCTestCase {
+    func testOfficialOpenAIPlanNamesCoverCodexPlanIdentifiers() {
+        let expectedNames = [
+            "free": "Free",
+            "go": "Go",
+            "plus": "Plus",
+            "prolite": "Pro 5x",
+            "pro": "Pro 20x",
+            "team": "Business",
+            "self_serve_business_usage_based": "Business",
+            "business": "Business",
+            "enterprise_cbp_usage_based": "Enterprise",
+            "enterprise": "Enterprise",
+            "edu": "Edu"
+        ]
+
+        for (rawValue, expectedName) in expectedNames {
+            XCTAssertEqual(
+                OpenAIPlanDisplayName.resolve(rawValue),
+                expectedName
+            )
+        }
+        XCTAssertEqual(
+            OpenAIPlanDisplayName.resolve("  PRO-LITE  "),
+            "Pro 5x"
+        )
+        XCTAssertNil(OpenAIPlanDisplayName.resolve("unknown"))
+        XCTAssertNil(OpenAIPlanDisplayName.resolve("future_plan"))
+        XCTAssertNil(OpenAIPlanDisplayName.resolve(nil))
+    }
+
     func testCodecRoundTripsBoundedSnapshot() throws {
         let now = Date(timeIntervalSince1970: 1_785_000_000)
         let snapshot = makeSnapshot(now: now)
@@ -97,9 +127,21 @@ final class WidgetContractTests: XCTestCase {
                 ),
                 auxiliaryMetrics: [
                     WidgetAuxiliaryMetric(
-                        id: "credits",
-                        label: "Credits",
+                        id: WidgetAuxiliaryMetricIdentifier
+                            .creditsBalance,
+                        label: "Credits 余额",
                         formattedValue: "10"
+                    ),
+                    WidgetAuxiliaryMetric(
+                        id: WidgetAuxiliaryMetricIdentifier.todayTokens,
+                        label: "今日 Tokens",
+                        formattedValue: "42K"
+                    ),
+                    WidgetAuxiliaryMetric(
+                        id: WidgetAuxiliaryMetricIdentifier
+                            .lifetimeTokens,
+                        label: "累计 Tokens",
+                        formattedValue: "9M"
                     )
                 ],
                 availableResetCredits: 2

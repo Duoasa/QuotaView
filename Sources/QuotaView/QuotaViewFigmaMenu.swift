@@ -1,10 +1,12 @@
 import AppKit
-import CoreImage
 import QuotaViewCore
+#if canImport(QuotaViewWidgetContract)
+import QuotaViewWidgetContract
+#endif
 import SwiftUI
 
 struct QuotaViewFigmaMenu: View {
-    nonisolated static let designSize = CGSize(width: 258, height: 431)
+    nonisolated static let designSize = CGSize(width: 274, height: 433)
 
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
@@ -20,7 +22,7 @@ struct QuotaViewFigmaMenu: View {
     private enum Layout {
         static let width = QuotaViewFigmaMenu.designSize.width
         static let headerHeight: CGFloat = 48
-        static let summaryHeight: CGFloat = 115
+        static let summaryHeight: CGFloat = 117
         static let footerHeight: CGFloat = 48
         static let metricRowHeight: CGFloat = 36
         static let resetCardHeight: CGFloat = 51
@@ -29,9 +31,11 @@ struct QuotaViewFigmaMenu: View {
         static let headerInset: CGFloat = 12
         static let summaryInset: CGFloat = 16
         static let detailsInset: CGFloat = 12
-        static let contentWidth: CGFloat = 234
-        static let availabilityBadgeHeight: CGFloat = 18
-        static let availabilityBadgeCornerRadius: CGFloat = 6
+        static let contentWidth: CGFloat = 250
+        static let progressHeight: CGFloat = 8
+        static let progressTrackCornerRadius: CGFloat = 6
+        static let progressOuterCornerRadius: CGFloat = 4
+        static let progressInnerCornerRadius: CGFloat = 2
     }
 
     private enum Palette {
@@ -59,25 +63,15 @@ struct QuotaViewFigmaMenu: View {
             green: 0.80,
             blue: 0
         )
-        static let availableGreen = Color(
+        static let connected = Color(
             red: 0,
-            green: 1,
-            blue: 63.0 / 255.0
-        )
-        static let lightAvailableGreen = Color(
-            red: 0,
-            green: 139.0 / 255.0,
-            blue: 34.0 / 255.0
+            green: 213.0 / 255.0,
+            blue: 67.0 / 255.0
         )
         static let danger = Color(
             red: 1,
             green: 69.0 / 255.0,
             blue: 58.0 / 255.0
-        )
-        static let lightUnavailableRed = Color(
-            red: 179.0 / 255.0,
-            green: 38.0 / 255.0,
-            blue: 30.0 / 255.0
         )
     }
 
@@ -203,13 +197,9 @@ struct QuotaViewFigmaMenu: View {
     }
 
     private var summary: some View {
-        VStack(spacing: 9) {
+        VStack(alignment: .trailing, spacing: 9) {
             HStack(alignment: .top, spacing: 6) {
-                subscriptionBadge
-
-                Spacer(minLength: 6)
-
-                VStack(alignment: .trailing, spacing: 3) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(copy.text("本周剩余", "Weekly Remaining"))
                         .font(AstaSans.regular(10.5))
                         .foregroundStyle(secondaryTextColor)
@@ -224,87 +214,54 @@ struct QuotaViewFigmaMenu: View {
                         .lineLimit(1)
                         .frame(height: 24)
                 }
+
+                Spacer(minLength: 6)
+
+                Text(subscriptionLabel)
+                    .font(AstaSans.semiBold(10.5))
+                    .foregroundStyle(primaryTextColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(height: 16)
+                    .accessibilityLabel(
+                        copy.text(
+                            "Codex 订阅：\(subscriptionLabel)",
+                            "Codex subscription: \(subscriptionLabel)"
+                        )
+                    )
             }
             .frame(height: 43)
 
             progressBar
 
-            HStack(spacing: 6) {
-                Text(usedPercentLabel)
-                    .font(AstaSans.regular(10.5))
-                    .foregroundStyle(secondaryTextColor)
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                    .frame(height: 16)
-
-                Spacer(minLength: 6)
-
-                availabilityBadge
-            }
-            .frame(height: 18)
+            Text(usedPercentLabel)
+                .font(AstaSans.regular(10.5))
+                .foregroundStyle(secondaryTextColor)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .frame(height: 16)
         }
-        .padding(.horizontal, Layout.summaryInset)
-        .padding(.vertical, 12)
+        .padding(Layout.summaryInset)
         .frame(width: Layout.width, height: Layout.summaryHeight)
-        .overlay(alignment: .bottom) {
-            if summaryShowsSeparator {
-                Rectangle()
-                    .fill(separatorColor)
-                    .frame(height: 0.5)
-                    .padding(.horizontal, Layout.detailsInset)
-            }
-        }
-    }
-
-    private var subscriptionBadge: some View {
-        Text(subscriptionLabel)
-            .font(AstaSans.semiBold(9))
-            .foregroundStyle(Color.black)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
-            .frame(height: 9)
-            .padding(4.5)
-            .background(
-                Color.white.opacity(0.80),
-                in: RoundedRectangle(
-                    cornerRadius: 6,
-                    style: .continuous
-                )
-            )
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: 6,
-                    style: .continuous
-                )
-                .strokeBorder(
-                    subscriptionBadgeStrokeColor,
-                    lineWidth: 0.5
-                )
-            }
-            .accessibilityLabel(
-                copy.text(
-                    "Codex 订阅：\(subscriptionLabel)",
-                    "Codex subscription: \(subscriptionLabel)"
-                )
-            )
     }
 
     private var progressBar: some View {
         GeometryReader { proxy in
-            let showsBothSegments = progressUsedPercent > 0
-                && progressUsedPercent < 100
+            let showsBothSegments = progressRemainingPercent > 0
+                && progressRemainingPercent < 100
             let segmentGap: CGFloat = showsBothSegments ? 1 : 0
             let segmentWidth = max(0, proxy.size.width - segmentGap)
-            let usedWidth = segmentWidth * CGFloat(progressUsedPercent) / 100
-            let remainingWidth = segmentWidth - usedWidth
+            let remainingWidth =
+                segmentWidth * CGFloat(progressRemainingPercent) / 100
+            let usedWidth = segmentWidth - remainingWidth
 
             ZStack {
                 RoundedRectangle(
-                    cornerRadius: 6,
+                    cornerRadius: Layout.progressTrackCornerRadius,
                     style: .continuous
                 )
                 .fill(
-                    Color.black.opacity(0.12)
+                    Color.black.opacity(0.16)
                         .shadow(
                             .inner(
                                 color: Color.black.opacity(0.12),
@@ -314,133 +271,89 @@ struct QuotaViewFigmaMenu: View {
                             )
                         )
                 )
-                .overlay {
-                    RoundedRectangle(
-                        cornerRadius: 6,
-                        style: .continuous
-                    )
-                    .strokeBorder(
-                        Color.white.opacity(0.12),
-                        lineWidth: 1
-                    )
-                }
 
-                HStack(spacing: segmentGap) {
-                    if usedWidth > 0 {
-                        if showsBothSegments {
-                            UnevenRoundedRectangle(
-                                cornerRadii: .init(
-                                    topLeading: 6,
-                                    bottomLeading: 6,
-                                    bottomTrailing: 2,
-                                    topTrailing: 2
-                                ),
-                                style: .continuous
-                            )
-                            .fill(
-                                Color.white.opacity(
-                                    isLightAppearance ? 0.64 : 0.32
+                if hasCodexStatus {
+                    HStack(spacing: segmentGap) {
+                        if remainingWidth > 0 {
+                            if showsBothSegments {
+                                UnevenRoundedRectangle(
+                                    cornerRadii: .init(
+                                        topLeading:
+                                            Layout.progressOuterCornerRadius,
+                                        bottomLeading:
+                                            Layout.progressOuterCornerRadius,
+                                        bottomTrailing:
+                                            Layout.progressInnerCornerRadius,
+                                        topTrailing:
+                                            Layout.progressInnerCornerRadius
+                                    ),
+                                    style: .continuous
                                 )
-                            )
-                            .frame(width: usedWidth)
-                        } else {
-                            RoundedRectangle(
-                                cornerRadius: 6,
-                                style: .continuous
-                            )
-                            .fill(
-                                Color.white.opacity(
-                                    isLightAppearance ? 0.64 : 0.32
+                                .fill(remainingQuotaColor)
+                                .frame(width: remainingWidth)
+                            } else {
+                                RoundedRectangle(
+                                    cornerRadius:
+                                        Layout.progressOuterCornerRadius,
+                                    style: .continuous
                                 )
-                            )
-                            .frame(width: usedWidth)
+                                .fill(remainingQuotaColor)
+                                .frame(width: remainingWidth)
+                            }
                         }
-                    }
 
-                    if remainingWidth > 0 {
-                        if showsBothSegments {
-                            UnevenRoundedRectangle(
-                                cornerRadii: .init(
-                                    topLeading: 2,
-                                    bottomLeading: 2,
-                                    bottomTrailing: 6,
-                                    topTrailing: 6
-                                ),
-                                style: .continuous
-                            )
-                            .fill(remainingQuotaColor.opacity(0.32))
-                            .frame(width: remainingWidth)
-                        } else {
-                            RoundedRectangle(
-                                cornerRadius: 6,
-                                style: .continuous
-                            )
-                            .fill(remainingQuotaColor.opacity(0.32))
-                            .frame(width: remainingWidth)
+                        if usedWidth > 0 {
+                            if showsBothSegments {
+                                UnevenRoundedRectangle(
+                                    cornerRadii: .init(
+                                        topLeading:
+                                            Layout.progressInnerCornerRadius,
+                                        bottomLeading:
+                                            Layout.progressInnerCornerRadius,
+                                        bottomTrailing:
+                                            Layout.progressOuterCornerRadius,
+                                        topTrailing:
+                                            Layout.progressOuterCornerRadius
+                                    ),
+                                    style: .continuous
+                                )
+                                .fill(progressUsedColor)
+                                .frame(width: usedWidth)
+                            } else {
+                                RoundedRectangle(
+                                    cornerRadius:
+                                        Layout.progressOuterCornerRadius,
+                                    style: .continuous
+                                )
+                                .fill(progressUsedColor)
+                                .frame(width: usedWidth)
+                            }
                         }
                     }
                 }
             }
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: 6,
+                    cornerRadius: Layout.progressTrackCornerRadius,
                     style: .continuous
                 )
             )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: Layout.progressTrackCornerRadius,
+                    style: .continuous
+                )
+                .strokeBorder(
+                    Color.white.opacity(0.12),
+                    lineWidth: 1
+                )
+            }
         }
-        .frame(height: 12)
+        .frame(height: Layout.progressHeight)
         .accessibilityLabel(
             copy.text("本周额度", "Weekly quota")
         )
         .accessibilityValue(progressAccessibilityValue)
-    }
-
-    private var availabilityBadge: some View {
-        Text(availabilityText)
-            .font(AstaSans.semiBold(9))
-            .foregroundStyle(availabilityTextColor)
-            .lineLimit(1)
-            .frame(height: 9)
-            .padding(.horizontal, 5)
-            .frame(height: Layout.availabilityBadgeHeight)
-            .background {
-                ZStack {
-                    QuotaViewFigmaBackdropBlur(
-                        radius: 3.75,
-                        cornerRadius: Layout.availabilityBadgeCornerRadius,
-                        tintColor: availabilityBackdropTint
-                    )
-
-                    RoundedRectangle(
-                        cornerRadius: Layout.availabilityBadgeCornerRadius,
-                        style: .continuous
-                    )
-                    .fill(
-                        Color.black.opacity(0.001)
-                            .shadow(
-                                .inner(
-                                    color: Color.black.opacity(0.12),
-                                    radius: 30,
-                                    x: -3.75,
-                                    y: -3
-                                )
-                            )
-                    )
-                }
-                .allowsHitTesting(false)
-            }
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: Layout.availabilityBadgeCornerRadius,
-                    style: .continuous
-                )
-                .strokeBorder(
-                    availabilitySurfaceColor.opacity(
-                        isLightAppearance ? 0.50 : 0.12
-                    ),
-                    lineWidth: 0.5
-                )
-            }
     }
 
     private var details: some View {
@@ -582,10 +495,10 @@ struct QuotaViewFigmaMenu: View {
                     offset: CGSize(width: 0, height: 4)
                 )
 
-                QuotaViewFigmaBackdropBlur(
-                    radius: 10,
+                QuotaViewFigmaLocalGlass(
+                    frostRadius: 10.5,
                     cornerRadius: 12,
-                    tintColor: NSColor.white.withAlphaComponent(0.12)
+                    tintColor: resetCardTintColor
                 )
 
                 RoundedRectangle(
@@ -628,11 +541,24 @@ struct QuotaViewFigmaMenu: View {
 
     private var footer: some View {
         HStack(spacing: 0) {
-            Text(copy.text("更新于 \(updatedTime)", "Update \(updatedTime)"))
-                .font(AstaSans.regular(10.5))
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
-                .frame(height: 16)
+            HStack(spacing: 8) {
+                Text(
+                    copy.text(
+                        "更新于 \(updatedTime)",
+                        "Update \(updatedTime)"
+                    )
+                )
+                    .font(AstaSans.regular(10.5))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(1)
+                    .frame(height: 16)
+
+                Circle()
+                    .fill(connectionIndicatorColor)
+                    .frame(width: 5, height: 5)
+                    .help(connectionStatusText)
+                    .accessibilityLabel(connectionStatusText)
+            }
 
             Spacer(minLength: 6)
 
@@ -641,6 +567,7 @@ struct QuotaViewFigmaMenu: View {
                     figmaIcon("QuotaViewFigmaSync")
                 }
                 .quotaViewInteractiveButton(.compact)
+                .disabled(store.isRefreshing)
                 .help(copy.text("同步", "Sync"))
                 .accessibilityLabel(copy.text("同步", "Sync"))
 
@@ -706,10 +633,10 @@ struct QuotaViewFigmaMenu: View {
         isLightAppearance ? 0.12 : 0.20
     }
 
-    private var subscriptionBadgeStrokeColor: Color {
-        isLightAppearance
-            ? Color.black.opacity(0.12)
-            : Color.white.opacity(0.24)
+    private var resetCardTintColor: NSColor {
+        (
+            isLightAppearance ? NSColor.white : NSColor.black
+        ).withAlphaComponent(0.12)
     }
 
     private var remainingPercent: Int {
@@ -734,10 +661,7 @@ struct QuotaViewFigmaMenu: View {
             return "—"
         }
 
-        return rawPlan
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "-", with: " ")
-            .uppercased(with: Locale(identifier: "en_US_POSIX"))
+        return OpenAIPlanDisplayName.resolve(rawPlan) ?? "—"
     }
 
     private var remainingPercentLabel: String {
@@ -754,8 +678,10 @@ struct QuotaViewFigmaMenu: View {
         )
     }
 
-    private var progressUsedPercent: Int {
-        hasCodexStatus ? usedPercent : 0
+    private var progressRemainingPercent: Int {
+        hasCodexStatus
+            ? min(max(remainingPercent, 0), 100)
+            : 0
     }
 
     private var remainingQuotaColor: Color {
@@ -773,6 +699,10 @@ struct QuotaViewFigmaMenu: View {
         }
     }
 
+    private var progressUsedColor: Color {
+        Color.white.opacity(0.32)
+    }
+
     private var progressAccessibilityValue: String {
         guard hasCodexStatus else {
             return copy.text("不可用", "Unavailable")
@@ -787,39 +717,18 @@ struct QuotaViewFigmaMenu: View {
         store.snapshot?.availableResetCredits ?? 0
     }
 
-    private var availabilityText: String {
-        hasCodexStatus
-            ? copy.text("可用", "Available")
-            : copy.text("不可用", "Unavailable")
+    private var connectionIndicatorColor: Color {
+        hasCodexStatus ? Palette.connected : Palette.danger
     }
 
-    private var availabilitySurfaceColor: Color {
-        hasCodexStatus ? Palette.availableGreen : Palette.danger
-    }
-
-    private var availabilityTextColor: Color {
-        guard isLightAppearance else {
-            return availabilitySurfaceColor
-        }
-        return hasCodexStatus
-            ? Palette.lightAvailableGreen
-            : Palette.lightUnavailableRed
-    }
-
-    private var availabilityBackdropTint: NSColor {
-        if hasCodexStatus {
-            return NSColor(
-                red: 0,
-                green: 1,
-                blue: 63.0 / 255.0,
-                alpha: 0.20
-            )
-        }
-        return NSColor(
-            red: 1,
-            green: 69.0 / 255.0,
-            blue: 58.0 / 255.0,
-            alpha: 0.20
+    private var connectionStatusText: String {
+        copy.text(
+            hasCodexStatus
+                ? "Codex 数据连接可用"
+                : "Codex 数据连接不可用",
+            hasCodexStatus
+                ? "Codex data connection available"
+                : "Codex data connection unavailable"
         )
     }
 
@@ -910,23 +819,6 @@ struct QuotaViewFigmaMenu: View {
             }
             return false
         }
-    }
-
-    private var summaryShowsSeparator: Bool {
-        guard let index = visibleItems.firstIndex(where: {
-            if case .info(.usageSummary) = $0 {
-                return true
-            }
-            return false
-        }) else {
-            return false
-        }
-
-        return hasFollowingItem(
-            of: .info,
-            after: index,
-            in: visibleItems
-        )
     }
 
     private var detailItems: [PanelItem] {
@@ -1164,44 +1056,62 @@ final class QuotaViewFigmaCardShadowView: NSView {
     }
 }
 
-struct QuotaViewFigmaBackdropBlur: NSViewRepresentable {
-    let radius: CGFloat
+struct QuotaViewFigmaLocalGlass: NSViewRepresentable {
+    @Environment(\.quotaViewGlassMode) private var glassMode
+
+    let frostRadius: CGFloat
     let cornerRadius: CGFloat
     let tintColor: NSColor
 
-    func makeNSView(context: Context) -> QuotaViewFigmaBackdropBlurView {
-        QuotaViewFigmaBackdropBlurView(
-            radius: radius,
+    func makeNSView(context: Context) -> QuotaViewFigmaLocalGlassView {
+        QuotaViewFigmaLocalGlassView(
+            mode: glassMode,
+            frostRadius: frostRadius,
             cornerRadius: cornerRadius,
             tintColor: tintColor
         )
     }
 
     func updateNSView(
-        _ nsView: QuotaViewFigmaBackdropBlurView,
+        _ nsView: QuotaViewFigmaLocalGlassView,
         context: Context
     ) {
         nsView.update(
-            radius: radius,
+            mode: glassMode,
+            frostRadius: frostRadius,
             cornerRadius: cornerRadius,
             tintColor: tintColor
         )
     }
 }
 
-final class QuotaViewFigmaBackdropBlurView: NSView {
+final class QuotaViewFigmaLocalGlassView: NSView {
+    private let effectView: NSView
+    private let tintView = NSView()
+
     override var isOpaque: Bool { false }
 
     init(
-        radius: CGFloat,
+        mode: QuotaViewGlassMode,
+        frostRadius: CGFloat,
         cornerRadius: CGFloat,
         tintColor: NSColor
     ) {
+        if #available(macOS 26.0, *) {
+            effectView = NSGlassEffectView()
+        } else {
+            effectView = NSVisualEffectView()
+        }
         super.init(frame: .zero)
         wantsLayer = true
-        layerUsesCoreImageFilters = true
+        layer?.masksToBounds = true
+        effectView.wantsLayer = true
+        tintView.wantsLayer = true
+        addSubview(effectView)
+        addSubview(tintView)
         update(
-            radius: radius,
+            mode: mode,
+            frostRadius: frostRadius,
             cornerRadius: cornerRadius,
             tintColor: tintColor
         )
@@ -1212,18 +1122,38 @@ final class QuotaViewFigmaBackdropBlurView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layout() {
+        super.layout()
+        effectView.frame = bounds
+        tintView.frame = bounds
+    }
+
     func update(
-        radius: CGFloat,
+        mode: QuotaViewGlassMode,
+        frostRadius: CGFloat,
         cornerRadius: CGFloat,
         tintColor: NSColor
     ) {
-        let blur = CIFilter(name: "CIGaussianBlur")
-        blur?.setValue(radius, forKey: kCIInputRadiusKey)
-
-        layer?.backgroundFilters = blur.map { [$0] } ?? []
-        layer?.backgroundColor = tintColor.cgColor
         layer?.cornerRadius = cornerRadius
         layer?.cornerCurve = .continuous
-        layer?.masksToBounds = true
+        effectView.layer?.cornerRadius = cornerRadius
+        effectView.layer?.cornerCurve = .continuous
+        effectView.layer?.masksToBounds = true
+        tintView.layer?.cornerRadius = cornerRadius
+        tintView.layer?.cornerCurve = .continuous
+        tintView.layer?.masksToBounds = true
+        tintView.layer?.backgroundColor = tintColor.cgColor
+
+        if #available(macOS 26.0, *),
+           let glassView = effectView as? NSGlassEffectView {
+            glassView.cornerRadius = cornerRadius
+            glassView.style = mode == .clear ? .clear : .regular
+            glassView.tintColor = .clear
+        } else if let materialView = effectView as? NSVisualEffectView {
+            materialView.material = .underWindowBackground
+            materialView.blendingMode = .withinWindow
+            materialView.state = .active
+            materialView.alphaValue = min(max(frostRadius / 10.5, 0), 1)
+        }
     }
 }

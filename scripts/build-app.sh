@@ -9,14 +9,21 @@ scheme="QuotaView"
 configuration="Release"
 dist_dir="${project_dir}/dist"
 info_plist="${project_dir}/Support/Info.plist"
+app_entitlements="${project_dir}/Support/QuotaView.entitlements"
+widget_entitlements="${project_dir}/Support/QuotaViewWidget.entitlements"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
 build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${info_plist}")"
-release_name="QuotaView-v${version}-build.${build_number}"
+if [[ "${build_number}" == "1" ]]; then
+    release_name="QuotaView-v${version}"
+else
+    release_name="QuotaView-v${version}-build.${build_number}"
+fi
 staging_dir="$(mktemp -d "/tmp/quotaview-package.XXXXXX")"
 verification_dir="$(mktemp -d "/tmp/quotaview-verify.XXXXXX")"
 derived_data="${staging_dir}/DerivedData"
 built_app="${derived_data}/Build/Products/${configuration}/QuotaView.app"
 staging_app="${staging_dir}/QuotaView.app"
+widget_extension="${staging_app}/Contents/PlugIns/QuotaViewWidgetExtension.appex"
 destination_app="${dist_dir}/QuotaView.app"
 staging_zip="${staging_dir}/${release_name}.zip"
 destination_zip="${dist_dir}/${release_name}.zip"
@@ -89,6 +96,11 @@ fi
 /usr/bin/ditto "${built_app}" "${staging_app}"
 xattr -cr "${staging_app}"
 
+if [[ ! -d "${widget_extension}" ]]; then
+    print -u2 "Missing embedded widget extension: ${widget_extension}"
+    exit 3
+fi
+
 signing_args=(
     --force
     --sign "${signing_identity}"
@@ -108,20 +120,46 @@ for library in "${staging_app}"/Contents/Frameworks/*.dylib(N); do
     codesign "${signing_args[@]}" "${library}"
 done
 
-codesign "${signing_args[@]}" "${staging_app}"
+for framework in "${widget_extension}"/Contents/Frameworks/*.framework(N); do
+    codesign "${signing_args[@]}" "${framework}"
+done
+
+for library in "${widget_extension}"/Contents/Frameworks/*.dylib(N); do
+    codesign "${signing_args[@]}" "${library}"
+done
+
+codesign \
+    "${signing_args[@]}" \
+    --entitlements "${widget_entitlements}" \
+    "${widget_extension}"
+codesign \
+    "${signing_args[@]}" \
+    --entitlements "${app_entitlements}" \
+    "${staging_app}"
 codesign --verify --deep --strict --verbose=4 "${staging_app}"
 
 signature_details="$(codesign -dv --verbose=4 "${staging_app}" 2>&1)"
+widget_signature_details="$(
+    codesign -dv --verbose=4 "${widget_extension}" 2>&1
+)"
 if [[ "${signing_identity}" == "-" ]]; then
-    if print -r -- "${signature_details}" | grep -q 'flags=.*runtime'; then
+    if print -r -- "${signature_details}" | grep -q 'flags=.*runtime' \
+        || print -r -- "${widget_signature_details}" \
+            | grep -q 'flags=.*runtime'; then
         print -u2 \
             "Ad-hoc builds must not enable Hardened Runtime; " \
-            "embedded frameworks would fail Library Validation at launch."
+            "embedded code would fail Library Validation at launch."
         exit 4
     fi
-elif ! print -r -- "${signature_details}" | grep -q 'flags=.*runtime'; then
-    print -u2 "Signed release is missing the Hardened Runtime flag."
-    exit 4
+else
+    if ! print -r -- "${signature_details}" \
+        | grep -q 'flags=.*runtime' \
+        || ! print -r -- "${widget_signature_details}" \
+            | grep -q 'flags=.*runtime'; then
+        print -u2 \
+            "Signed app or widget is missing the Hardened Runtime flag."
+        exit 4
+    fi
 fi
 
 built_version="$(
@@ -134,12 +172,54 @@ built_build_number="$(
         -c 'Print :CFBundleVersion' \
         "${staging_app}/Contents/Info.plist"
 )"
+widget_version="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleShortVersionString' \
+        "${widget_extension}/Contents/Info.plist"
+)"
+widget_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleVersion' \
+        "${widget_extension}/Contents/Info.plist"
+)"
+widget_bundle_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleIdentifier' \
+        "${widget_extension}/Contents/Info.plist"
+)"
+widget_extension_point="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :NSExtension:NSExtensionPointIdentifier' \
+        "${widget_extension}/Contents/Info.plist"
+)"
 
 if [[ "${built_version}" != "${version}" ]] \
     || [[ "${built_build_number}" != "${build_number}" ]]; then
     print -u2 \
         "Version mismatch: expected ${version} (${build_number}), " \
         "built ${built_version} (${built_build_number})"
+    exit 4
+fi
+
+if [[ "${widget_version}" != "${version}" ]] \
+    || [[ "${widget_build_number}" != "${build_number}" ]]; then
+    print -u2 \
+        "Widget version mismatch: expected ${version} (${build_number}), " \
+        "built ${widget_version} (${widget_build_number})"
+    exit 4
+fi
+
+if [[ "${widget_bundle_identifier}" \
+        != "com.quotaview.menubar.widget" ]]; then
+    print -u2 \
+        "Unexpected widget bundle identifier: ${widget_bundle_identifier}"
+    exit 4
+fi
+
+if [[ "${widget_extension_point}" \
+        != "com.apple.widgetkit-extension" ]]; then
+    print -u2 \
+        "Unexpected widget extension point: ${widget_extension_point}"
     exit 4
 fi
 
@@ -153,10 +233,22 @@ done
 architectures="$(
     lipo -archs "${staging_app}/Contents/MacOS/QuotaView"
 )"
+widget_architectures="$(
+    lipo -archs \
+        "${widget_extension}/Contents/MacOS/QuotaViewWidgetExtension"
+)"
 
 if [[ " ${architectures} " != *" arm64 "* ]] \
     || [[ " ${architectures} " != *" x86_64 "* ]]; then
     print -u2 "Expected a universal binary, found: ${architectures}"
+    exit 4
+fi
+
+if [[ " ${widget_architectures} " != *" arm64 "* ]] \
+    || [[ " ${widget_architectures} " != *" x86_64 "* ]]; then
+    print -u2 \
+        "Expected a universal widget binary, found: " \
+        "${widget_architectures}"
     exit 4
 fi
 
@@ -177,6 +269,23 @@ for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
         exit 4
     fi
 done
+
+app_entitlement_details="$(
+    codesign -d --entitlements - "${staging_app}" 2>&1
+)"
+widget_entitlement_details="$(
+    codesign -d --entitlements - "${widget_extension}" 2>&1
+)"
+if [[ "${app_entitlement_details}" \
+        != *"group.com.quotaview.shared"* ]] \
+    || [[ "${widget_entitlement_details}" \
+        != *"group.com.quotaview.shared"* ]] \
+    || [[ "${widget_entitlement_details}" \
+        != *"com.apple.security.app-sandbox"* ]]; then
+    print -u2 \
+        "App Group or widget sandbox entitlements are missing."
+    exit 4
+fi
 
 if [[ -n "${notary_profile}" ]]; then
     notary_zip="${staging_dir}/${release_name}-notary.zip"
@@ -223,6 +332,12 @@ mv "${staging_app}" "${destination_app}"
 mv -f "${staging_zip}" "${destination_zip}"
 
 xattr -cr "${destination_app}"
+for packaged_bundle in \
+    "${destination_app}" \
+    "${destination_app}"/Contents/Frameworks/*.framework(N) \
+    "${destination_app}"/Contents/PlugIns/*.appex(N); do
+    xattr -d com.apple.FinderInfo "${packaged_bundle}" 2>/dev/null || true
+done
 codesign \
     --verify \
     --deep \
@@ -240,6 +355,7 @@ fi
 print "Built ${destination_app}"
 print "Archived ${destination_zip}"
 print "Architectures: ${architectures}"
+print "Widget architectures: ${widget_architectures}"
 print "SHA-256: ${destination_zip_sha256}"
 
 if [[ "${signing_identity}" == "-" ]]; then

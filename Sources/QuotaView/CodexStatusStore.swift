@@ -17,8 +17,11 @@ final class CodexStatusStore: ObservableObject {
     private let projector: CurrentCodexPresentationProjector
     private let diagnostics: UserDefaults
     private let demoExecutor: any QuotaActionExecutor
+    private let widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter
+    private weak var preferences: AppPreferences?
     private var pollingTask: Task<Void, Never>?
     private var demandCancellable: AnyCancellable?
+    private var widgetLocaleCancellable: AnyCancellable?
 
     init(
         provider: (any UsageProviderAdapter)? = nil,
@@ -27,7 +30,8 @@ final class CodexStatusStore: ObservableObject {
         projector: CurrentCodexPresentationProjector =
             CurrentCodexPresentationProjector(),
         demoExecutor: any QuotaActionExecutor =
-            DemoQuotaActionExecutor()
+            DemoQuotaActionExecutor(),
+        widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter? = nil
     ) {
         let provider = provider ?? CodexProviderAdapter()
         let showsTokenUsage = preferences.map {
@@ -47,6 +51,9 @@ final class CodexStatusStore: ObservableObject {
         self.diagnostics = diagnostics
         self.projector = projector
         self.demoExecutor = demoExecutor
+        self.widgetSnapshotWriter =
+            widgetSnapshotWriter ?? QuotaViewWidgetSnapshotWriter()
+        self.preferences = preferences
 
         if let preferences {
             demandCancellable = Publishers.CombineLatest(
@@ -63,6 +70,17 @@ final class CodexStatusStore: ObservableObject {
                         includesTokenUsage: includesTokenUsage
                     )
                 }
+            }
+
+            widgetLocaleCancellable = Publishers.CombineLatest3(
+                preferences.$followsSystemLanguage,
+                preferences.$customLanguage,
+                preferences.$systemLocaleRevision
+            )
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _, _, _ in
+                self?.publishWidgetSnapshot()
             }
         }
     }
@@ -147,6 +165,7 @@ final class CodexStatusStore: ObservableObject {
             snapshot = presentation
             errorMessage = nil
             recordSuccess(presentation)
+            publishWidgetSnapshot()
 
         case .failed(let error, _):
             applyFailure(error, previous: previous)
@@ -213,6 +232,7 @@ final class CodexStatusStore: ObservableObject {
         snapshot = nil
         errorMessage = error.localizedDescription
         recordFailure(error)
+        publishWidgetSnapshot()
     }
 
     private func recordSuccess(
@@ -292,6 +312,18 @@ final class CodexStatusStore: ObservableObject {
                 providerID: providerID,
                 capabilities: panelCapabilities,
                 freshness: .interactive
+            ),
+            ConsumerDemand(
+                consumer: .widget,
+                providerID: providerID,
+                capabilities: [
+                    .rateWindows,
+                    .balances,
+                    .currentUsage,
+                    .historicalUsage,
+                    .resetCredits
+                ],
+                freshness: .background
             )
         ]
 
@@ -302,7 +334,18 @@ final class CodexStatusStore: ObservableObject {
             providerID: providerID,
             capabilities: panelCapabilities,
             freshness: .interactive,
-            consumers: [.menuBar, .panel]
+            consumers: [.menuBar, .panel, .widget]
+        )
+    }
+
+    private func publishWidgetSnapshot() {
+        let localeIdentifier = preferences?.resolvedLanguage
+            .localeIdentifier
+            ?? AppPreferences.Language.systemResolved.localeIdentifier
+        widgetSnapshotWriter.publish(
+            presentation: snapshot,
+            isAvailable: hasCurrentCodexStatus,
+            localeIdentifier: localeIdentifier
         )
     }
 }

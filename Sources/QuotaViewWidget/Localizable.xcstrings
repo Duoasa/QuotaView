@@ -1,0 +1,26 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "—" : {
+
+    },
+    "%" : {
+
+    },
+    "Codex quota status at a glance." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随时查看 Codex 额度状态。"
+          }
+        }
+      }
+    },
+    "QuotaView" : {
+
+    }
+  },
+  "version" : "1.0"
+}

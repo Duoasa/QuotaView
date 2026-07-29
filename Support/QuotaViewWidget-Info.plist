@@ -3,32 +3,31 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>zh_CN</string>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
     <string>QuotaView</string>
     <key>CFBundleExecutable</key>
-    <string>QuotaView</string>
+    <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
-    <string>com.quotaview.menubar</string>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>QuotaView</string>
+    <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
-    <string>APPL</string>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.1</string>
+    <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
+    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
+    </dict>
     <key>QuotaViewAppGroupIdentifier</key>
-    <string>group.com.quotaview.shared</string>
+    <string>$(QUOTAVIEW_APP_GROUP_ID)</string>
 </dict>
 </plist>

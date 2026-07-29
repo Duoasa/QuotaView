@@ -94,7 +94,7 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testTokenSettingsRemoveOptionalUsageDemand() async {
+    func testWidgetKeepsOptionalUsageDemandForDetailedMetrics() async {
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -124,14 +124,17 @@ final class AppBehaviorTests: XCTestCase {
         let request = await recorder.lastRequest
 
         XCTAssertNotNil(request)
-        XCTAssertFalse(
-            request?.capabilities.contains(.currentUsage) ?? true
+        XCTAssertTrue(
+            request?.capabilities.contains(.currentUsage) ?? false
         )
-        XCTAssertFalse(
-            request?.capabilities.contains(.historicalUsage) ?? true
+        XCTAssertTrue(
+            request?.capabilities.contains(.historicalUsage) ?? false
         )
         XCTAssertTrue(
             request?.capabilities.contains(.rateWindows) ?? false
+        )
+        XCTAssertTrue(
+            request?.capabilities.contains(.balances) ?? false
         )
         await store.stop()
     }

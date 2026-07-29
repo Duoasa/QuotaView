@@ -202,7 +202,7 @@ struct MenuBarView: View {
                 .padding(.top, 4)
             }
             .padding(16)
-            .frame(width: 234)
+            .frame(width: 250)
             .background {
                 ZStack {
                     RoundedRectangle(

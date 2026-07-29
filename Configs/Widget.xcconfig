@@ -1,0 +1,20 @@
+#include "Shared.xcconfig"
+
+PRODUCT_NAME = QuotaViewWidgetExtension
+QUOTAVIEW_WIDGET_BUNDLE_ID = com.quotaview.menubar.widget
+PRODUCT_BUNDLE_IDENTIFIER = $(QUOTAVIEW_WIDGET_BUNDLE_ID)
+MARKETING_VERSION = 0.2.1
+CURRENT_PROJECT_VERSION = 1
+
+QUOTAVIEW_APP_GROUP_ID = group.com.quotaview.shared
+
+GENERATE_INFOPLIST_FILE = NO
+INFOPLIST_FILE = Support/QuotaViewWidget-Info.plist
+CODE_SIGN_ENTITLEMENTS = Support/QuotaViewWidget.entitlements
+
+ENABLE_APP_SANDBOX = YES
+ENABLE_HARDENED_RUNTIME = YES
+REGISTER_APP_GROUPS = YES
+APPLICATION_EXTENSION_API_ONLY = YES
+SKIP_INSTALL = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
