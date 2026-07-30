@@ -7,7 +7,7 @@
 当前生产分支：`main`
 
 当前发布提交与生产基线：
-`56aa71dd9f4013412f90c75e0c282a610e87d14e`
+`041c698ae9755d458fa9f111e4ac74e9711048b9`
 
 远程：`https://github.com/Duoasa/QuotaView.git`
 
@@ -21,17 +21,15 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.2.1 (Build 1)` |
-| tag | `v0.2.1` |
-| 发布提交 | `56aa71dd9f4013412f90c75e0c282a610e87d14e` |
-| Release | [QuotaView 0.2.1 — Native Widgets](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1) |
-| 资产 | `QuotaView-v0.2.1.zip` |
-| SHA-256 | `99e7fb951d4abd6475204c059f1e16481dac8be4c3b72e6b19889fc54737521b` |
+| 最新推荐版本 | `0.3.1 (Build 1)` |
+| tag | `v0.3.1` |
+| 发布提交 | `041c698ae9755d458fa9f111e4ac74e9711048b9` |
+| Release | [QuotaView 0.3.1 — Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) |
+| 资产 | `QuotaView-v0.3.1.zip` |
+| SHA-256 | `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
 
-`0.2.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
-GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由产品
-所有者定位为 `0.3.1 (Build 1)`，但尚未创建 tag、Release 或发布资产，
-不得把它写成公开 Latest。
+`0.3.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
+GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
 
 文档职责：
 
@@ -40,7 +38,7 @@ GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由
 - `AGENTS.md`：长期产品、设计、实现和发布约束；
 - `design-qa.md`：视觉验收历史。
 
-## 1. 0.3.1 当前开发状态
+## 1. 0.3.1 正式发布状态
 
 ### 版本定位
 
@@ -49,8 +47,8 @@ GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由
 | Marketing Version | `0.3.1` |
 | Build Number | `1` |
 | 开发主题 | Codex 灵动岛正式接入 |
-| 发布状态 | 正式候选已签名、公证并 Staple；无 tag、无 Release |
-| 公开 Latest | 仍为 `0.2.1 (Build 1)` |
+| 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
+| 公开 Latest | `0.3.1 (Build 1)` |
 
 ### 已实现
 
@@ -123,11 +121,11 @@ GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由
 - `AppIcon.icns`、`Assets.car` 与 Asta Sans 字体均存在；
 - `scripts/build-app.sh` 语法检查通过，并已加入 Helper 签名、Hardened
   Runtime 与 Universal 架构门禁；
-- 正式候选包已使用
+- 正式发布包已使用
   `Developer ID Application: Chenchen Xu (BUUH229D5Q)` 签名并启用
   Hardened Runtime；Apple 公证状态为 `Accepted`，Submission ID 为
   `2b125886-a3dc-4734-a139-280a08302e5c`，App 已完成 Staple；
-- 正式候选资产为 `dist/QuotaView-v0.3.1.zip`，大小
+- 正式资产为 `QuotaView-v0.3.1.zip`，大小
   `11,443,295 bytes`，SHA-256
   `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d`；
 - 最终 ZIP 全新解压后通过 `codesign --verify --deep --strict`、
@@ -168,25 +166,27 @@ GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由
 - 简体中文 / English；
 - Reduce Motion / Increase Contrast / VoiceOver。
 
-### GitHub 发布准备（候选，尚未发布）
+### GitHub 发布完成
 
 2026-07-30 已通过 GitHub 远端核对：
 
-- GitHub Latest 仍为 `v0.2.1`，非 Draft、非 Pre-release；
-- 远端不存在 `v0.3.1` tag，Release 列表中也没有 `0.3.1`；
-- `v0.2.1` 仍只有正式资产 `QuotaView-v0.2.1.zip`，大小
-  `10,907,231 bytes`；
-- README 中英文下载入口仍正确指向 `v0.2.1`，发布 `0.3.1` 前不得提前
-  改成尚不存在的下载地址。
+- GitHub Latest 为 `v0.3.1`，非 Draft、非 Pre-release；
+- `v0.3.1` tag 精确指向
+  `041c698ae9755d458fa9f111e4ac74e9711048b9`；
+- Release 只有正式资产 `QuotaView-v0.3.1.zip`，大小
+  `11,443,295 bytes`；
+- README 中英文下载入口均指向 `v0.3.1`，Codex 灵动岛截图位于更新说明
+  开头。
 
-拟使用的 GitHub Release 元数据：
+实际 GitHub Release 元数据：
 
-| 项目 | 候选值 |
+| 项目 | 发布值 |
 |---|---|
 | Tag | `v0.3.1` |
 | Release 标题 | `QuotaView 0.3.1 — Codex Island` |
 | Release 类型 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 目标提交 | 待创建；当前 `HEAD` 为 `b4cf5d33825396d6b8465a8466565148f00cb1f0`，工作区仍有未提交修改 |
+| 目标提交 | `041c698ae9755d458fa9f111e4ac74e9711048b9` |
+| Release URL | <https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1> |
 | 上传资产 | `QuotaView-v0.3.1.zip` |
 | 最终大小 / SHA-256 | `11,443,295 bytes` / `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
 | 公证 | Apple Accepted，已 Staple；Submission `2b125886-a3dc-4734-a139-280a08302e5c` |
@@ -227,7 +227,8 @@ paths. Hook trust is never bypassed.
 - macOS 14 or later
 - A Codex version with Hooks support
 
-The final SHA-256 checksum will be published with the notarized release asset.
+SHA-256:
+`ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d`
 ```
 
 发布检查清单：
@@ -238,22 +239,22 @@ The final SHA-256 checksum will be published with the notarized release asset.
   `x86_64 arm64`；
 - [x] Developer ID 签名与 Hardened Runtime 已通过全新解压验证；
 - [x] 产品所有者认可当前设置流程完整性；
-- [ ] 审查工作区提交范围，避免把 Prototype、参考图和其他用户资料误纳入；
+- [x] 审查工作区提交范围；Prototype、参考文档和其他用户资料未纳入；
 - [x] 产品所有者明确要求发布 0.3.1；剩余视觉矩阵仍等待逐项验收，不
   提前记录为“已通过”；
 - [x] 使用 `NOTARY_PROFILE` 重新构建，完成 Apple 公证与 Staple；
 - [x] 对最终 ZIP 全新解压并完成 `codesign`、`stapler`、`spctl`、版本、
   架构、资源和真实启动烟雾测试；
 - [x] 更新本节最终资产大小与 SHA-256；
-- [ ] 创建发布提交并推送，确认 tag 精确指向该提交；
-- [ ] 创建 `v0.3.1` Release，上传唯一最终 ZIP，并设为 Latest；
-- [ ] 同步 README 中英文下载入口、`VERSION_HISTORY.md` 与本文件的公开
+- [x] 创建发布提交并推送，确认 tag 精确指向该提交；
+- [x] 创建 `v0.3.1` Release，上传唯一最终 ZIP，并设为 Latest；
+- [x] 同步 README 中英文下载入口、`VERSION_HISTORY.md` 与本文件的公开
   Latest；
-- [ ] 从 GitHub 回下载资产，逐字节核对并再次执行验签和启动测试。
+- [x] 从 GitHub 回下载资产，逐字节核对并再次执行验签和启动测试。
 
-当前已经生成可用于正式发布的 0.3.1 Developer ID 签名、公证并 Staple
-候选包。尚未创建发布提交、tag 或 GitHub Release，公开 Latest 仍为
-0.2.1；README 的 0.3.1 下载入口必须与 Release 在同一发布流程中生效。
+0.3.1 已通过 PR [#12](https://github.com/Duoasa/QuotaView/pull/12)
+合并并正式发布。GitHub 回下载资产与本地最终 ZIP 逐字节一致；回下载 App
+通过签名、公证、Gatekeeper 和 5 秒真实启动复核。
 
 ## 2. 0.2.1 正式发布
 
@@ -396,29 +397,15 @@ CodexProviderAdapter
 
 ## 6. Git 工作区
 
-0.2.1 源码已通过 PR #9 合并，发布 tag 指向：
+0.3.1 源码、测试、README、灵动岛截图和产品文档已通过 PR
+[#12](https://github.com/Duoasa/QuotaView/pull/12) 合并，发布 tag 指向：
 
 ```text
-56aa71dd9f4013412f90c75e0c282a610e87d14e
+041c698ae9755d458fa9f111e4ac74e9711048b9
 ```
 
-0.3.1 当前修改尚未提交、未建 tag、未发布。后续提交或发布前继续从
-当前工作区核对变更，不得误清理未跟踪参考资料。
-
-当前 0.3.1 功能源码和测试包含新的未跟踪文件，发布提交前必须显式审查并
-纳入必要文件，尤其是：
-
-```text
-Sources/QuotaView/CodexActivityIsland.swift
-Sources/QuotaView/CodexActivityRuntime.swift
-Sources/QuotaViewActivityHook/main.swift
-Sources/QuotaViewCore/CodexActivityModels.swift
-Tests/QuotaViewCoreTests/CodexActivityModelsTests.swift
-docs/design/quotaview-codex-activity-widget-product.md
-```
-
-以下未跟踪 Prototype 与参考资料的提交范围尚未确认，默认不得擅自纳入
-发布提交：
+以下未跟踪 Prototype 与参考资料未进入 0.3.1 发布提交，所有权和后续提交
+范围仍未确认，默认不得擅自纳入：
 
 ```text
 Prototypes/
@@ -472,17 +459,16 @@ GitHub 回下载再次验证。
 
 ## 8. 文档联动
 
-0.2.1 已在同一发布任务内完成：
+0.3.1 已在同一发布任务内完成：
 
-1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.2.1；
+1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.3.1；
 2. 在版本总览和版本详情中记录 tag、发布提交、Release URL、资产名、
    大小、SHA-256、签名、公证和验证结论；
-3. 将本文件当时的版本入口、发布、验证与完成状态由候选状态更新为
-   发布事实；
-4. 更新 README 下载入口；
+3. 将本文件的版本入口、发布、验证与完成状态由候选状态更新为发布事实；
+4. 更新 README 中英文下载入口、Codex 灵动岛重点文案和预览图；
 5. 确认 GitHub Release Notes 只有一份英文源正文；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
-`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.2.1`。已撤回的
+`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1`。已撤回的
 `0.2.0 Build 3` 继续只保留历史记录，不得恢复为下载或开发基线。
