@@ -27,6 +27,29 @@
 | 公证 | Apple Accepted，已 Staple；Submission `e211abde-be96-47eb-a5ca-50ec1df7f260` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
 
+> 当前工作区的开发版本为 `0.3.1 (Build 1)`，功能定位为 Codex 灵动岛。
+> 该版本尚未创建 tag、Release 或正式发布资产，因此不进入下方公开
+> 版本总览，也不改变 `0.2.1` 的 Latest 身份。开发与验证状态见
+> [HANDOFF.md](HANDOFF.md#1-031-当前开发状态)。
+
+### 0.3.1 待发布候选（不属于公开版本历史）
+
+| 项目 | 当前候选状态 |
+|---|---|
+| Marketing Version / Build | `0.3.1 (Build 1)` |
+| 计划 tag | `v0.3.1`，远端尚不存在 |
+| 计划 Release | `QuotaView 0.3.1 — Codex Island` |
+| 当前本地候选资产 | `dist/QuotaView-v0.3.1.zip` |
+| 当前候选大小 | `11,443,295 bytes` |
+| 当前候选 SHA-256 | `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
+| 签名 | Developer ID + Hardened Runtime，全新解压验签通过 |
+| 公证 | Apple Accepted，已 Staple；Submission `2b125886-a3dc-4734-a139-280a08302e5c` |
+| Git 状态 | 发布提交待创建；tag / Release / README 下载入口均未变更 |
+
+当前大小与 SHA-256 标识已签名、公证并 Staple 的最终候选包。完整发布
+门禁、英文 Release Notes 草案与剩余发布项见
+[HANDOFF.md](HANDOFF.md#github-发布准备候选尚未发布)。
+
 ### 版本定位规则
 
 1. 新会话先读取 [HANDOFF.md](HANDOFF.md) 顶部的“版本定位入口”。
@@ -35,9 +58,9 @@
 4. 如本文件、`HANDOFF.md` 与生产代码中的版本号不一致，以用户当前指令和
    生产代码为准，并在同一任务内同步修正两份文档。
 5. 不得把已撤回版本重新标记为最新版本，也不得移动已有正式 tag。
-6. 如果 Marketing Version 继续保持 `0.2.1`，下一次发布的 Build Number
-   必须大于 `1`，并使用唯一的 tag 与 ZIP 文件名；是否升级 Marketing
-   Version 由用户在新迭代中决定。
+6. 当前开发 Marketing Version 已由产品所有者定位为 `0.3.1`，但只有
+   完成正式签名、公证、资产验证和 Release 后才能加入版本总览并切换
+   Latest；必须使用唯一的 tag 与 ZIP 文件名。
 
 ## 版本总览
 

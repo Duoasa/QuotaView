@@ -29,8 +29,9 @@
 | SHA-256 | `99e7fb951d4abd6475204c059f1e16481dac8be4c3b72e6b19889fc54737521b` |
 
 `0.2.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
-GitHub Release 和 Latest 切换。下一版本尚未定位，不得提前写入版本号或
-发布状态。
+GitHub Release 和 Latest 切换。当前工作区的下一开发版本已经由产品
+所有者定位为 `0.3.1 (Build 1)`，但尚未创建 tag、Release 或发布资产，
+不得把它写成公开 Latest。
 
 文档职责：
 
@@ -39,7 +40,222 @@ GitHub Release 和 Latest 切换。下一版本尚未定位，不得提前写入
 - `AGENTS.md`：长期产品、设计、实现和发布约束；
 - `design-qa.md`：视觉验收历史。
 
-## 1. 0.2.1 正式发布
+## 1. 0.3.1 当前开发状态
+
+### 版本定位
+
+| 项目 | 当前值 |
+|---|---|
+| Marketing Version | `0.3.1` |
+| Build Number | `1` |
+| 开发主题 | Codex 灵动岛正式接入 |
+| 发布状态 | 正式候选已签名、公证并 Staple；无 tag、无 Release |
+| 公开 Latest | 仍为 `0.2.1 (Build 1)` |
+
+### 已实现
+
+- 将独立 Metal Demo 重构进 QuotaView 主 App，不再依赖 Debug 控制器；
+- 使用 Codex 官方 Hooks 覆盖 `SessionStart`、`SessionEnd`、
+  `UserPromptSubmit`、工具、批准、上下文压缩、子任务和 `Stop` 事件；
+- 新增独立签名辅助程序 `QuotaViewActivityHook`，嵌入
+  `Contents/Helpers`；
+- 辅助程序只转发哈希会话标识、工作区末级名称、事件、工具类别、
+  SessionStart 来源与时间，不转发提示词、命令、参数、输出或记录路径；
+- 主 App 优先通过权限为 `0600`、带随机令牌的 Unix Socket 接收脱敏
+  事件；当 Codex 沙盒拒绝 Unix Socket 时，Helper 自动回退到当前用户
+  独占的 `/tmp` 原子文件队列，目录权限为 `0700`、事件文件为 `0600`，
+  主 App 仍执行随机令牌、文件所有者、类型、大小与时效校验；
+- 通过 App Server `thread/list` 匹配当前会话名称；界面不展示
+  `thread.preview`；
+- 实现最大态、紧凑态和隐藏三阶段状态机：完成后 20 秒紧凑，完成满
+  120 秒隐藏，新事件立即重新展开；
+- 保留 Demo 中已确认的 Metal 流体球、状态配色、上下文白色挤压、
+  三行真实字形居中、尾部缩略和操作文案扫光；
+- 新增设置页一键安装编排：检测 Codex 版本与 Hooks 功能，必要时执行
+  官方 `codex features enable hooks`，更新固定路径 Helper，合并用户级
+  Hook，并自动打开 Codex CLI；用户等待 CLI 首次加载完成，等待
+  QuotaView 自动输入 `/hooks` 并进入 Hooks 页面后再按 `T`，随后
+  QuotaView 自动识别确认结果并关闭临时 CLI；
+- 设置页改为新手向单步引导，默认隐藏 Codex 版本、Hooks、本地桥接和
+  诊断路径等技术信息；
+- 用户点击“连接 Codex”时立即显示最大态“未连接 Codex”，不再等待安装
+  或首个 Hook；完成信任、重启并收到第一条真实 `UserPromptSubmit` 后，
+  自动切换为真实活动状态；
+- 连接状态拆分为未安装、已安装等待重启、等待信任、等待首个事件、
+  已连接和连接异常；只有当前固定 Hook 定义产生的第一条真实
+  `UserPromptSubmit` 才建立“已连接”证据；
+- 打开审查页时记录 Codex Desktop 进程标识，重启前丢弃设置 CLI 产生的
+  事件，避免首次配置过程被误判为已连接；
+- 安全确认启动器不再使用固定延迟或输入提示符单一信号，而是等待输入
+  提示符出现且终端输出连续稳定 3 秒后发送 `/hooks`；审查页未出现时
+  有界重试，官方“Trust all”页面出现前不转发用户按键；
+- 用户实际按下 `T` 且 Codex 输出确认结果后，启动器通过权限隔离的本地
+  信号通知 QuotaView；设置页自动进入“等待重启”，并提供一次
+  “重新启动 Codex”操作；
+- 桥接消息同时校验随机令牌与固定命令派生的安装标识，旧 Codex 进程或
+  旧 Helper 的残留事件不能越过重启/信任门禁；
+- Helper 固定安装到
+  `~/Library/Application Support/QuotaView/Helpers/QuotaViewActivityHook`，
+  后续应用移动或常规升级不改变 Hook 命令路径；已启用用户在后续启动时
+  自动更新 Helper 和校正配置；
+- Hook 安装保留既有配置并创建备份；配置结构无效时拒绝覆盖；QuotaView
+  自动进入 Codex `/hooks` 页面，但不会代替用户按 `T` 或绕过信任；
+- Helper 连接失败时同时写入统一日志和权限隔离的本地诊断日志，内容只含
+  时间、错误代码与回退结果，不含会话或任务业务数据；
+- App、Widget、Helper 和设置中的 Marketing Version 已更新为
+  `0.3.1`，Build Number 保持 `1`。
+
+产品与实现依据：
+
+- [Codex 灵动岛产品文档](docs/design/quotaview-codex-activity-widget-product.md)
+- [OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)
+- [OpenAI Codex App Server](https://learn.chatgpt.com/docs/app-server)
+
+### 当前验证
+
+- `swift test`：52 项通过，0 失败；
+- 无签名 Universal Xcode Release 构建通过；
+- App、Widget Extension 与 `QuotaViewActivityHook` 均为
+  `x86_64 arm64`；
+- 最终 App Bundle 中 Helper 位于
+  `Contents/Helpers/QuotaViewActivityHook`；
+- App 为 `0.3.1 (1)`；
+- `AppIcon.icns`、`Assets.car` 与 Asta Sans 字体均存在；
+- `scripts/build-app.sh` 语法检查通过，并已加入 Helper 签名、Hardened
+  Runtime 与 Universal 架构门禁；
+- 正式候选包已使用
+  `Developer ID Application: Chenchen Xu (BUUH229D5Q)` 签名并启用
+  Hardened Runtime；Apple 公证状态为 `Accepted`，Submission ID 为
+  `2b125886-a3dc-4734-a139-280a08302e5c`，App 已完成 Staple；
+- 正式候选资产为 `dist/QuotaView-v0.3.1.zip`，大小
+  `11,443,295 bytes`，SHA-256
+  `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d`；
+- 最终 ZIP 全新解压后通过 `codesign --verify --deep --strict`、
+  `stapler validate` 与 `spctl --assess`；加入下载隔离属性后 Gatekeeper
+  返回 `accepted / source=Notarized Developer ID`，真实启动烟雾测试
+  持续 5 秒；
+- Hook 映射、压缩恢复、事件乱序、20 秒 / 120 秒收起、Codex 环境检测、
+  必要时启用 Hooks、固定路径 Helper、重复安装、卸载、既有配置保留、
+  无效配置拒绝、真实 `UserPromptSubmit` 连接门禁、重启前设置 CLI 事件
+  拒绝、私有启动器真实 PTY `/hooks` 输入、CLI 首次加载与输出稳定等待、
+  审查页有界重试和文件队列令牌校验均有自动化测试；
+- 真实 `codex exec` 临时会话已触发
+  `SessionStart → UserPromptSubmit → Stop`，所有 Hook 均返回 Completed；
+- 已从系统 Sandbox 日志确认旧故障是 Helper 访问 Unix Socket 被
+  `deny network-outbound`，本轮文件队列回退不要求扩大 Codex 权限，也
+  不改变现有 Hook 命令，因此无需重新安装或重新信任；
+- 临时虚拟数据、自动展开、自动点击、截图与 UI QA 入口搜索无匹配；
+- `git diff --check` 通过。
+
+产品所有者已确认：
+
+- 当前新手向设置流程“比较完整”，可以作为 `0.3.1` 发布候选的功能流程
+  基线；
+- 流程包含点击连接后立即出现“未连接 Codex”，明确引导等待 CLI 首次加载、
+  等待自动输入 `/hooks` 并进入 Hooks 页面后再按 `T`，以及重启与首个
+  真实 `UserPromptSubmit` 变为“已连接”。
+
+以上确认只表示设置流程方向与完整性得到认可，不替代正式发布包的最终
+实机烟雾测试，也不代表以下视觉、语言与辅助功能矩阵已经通过。
+
+等待产品所有者验收：
+
+- 新手向“Codex 灵动岛”设置页六种连接状态的最终布局、折叠详情、长文案
+  适配和按钮交互；
+- 完成后 20 秒进入紧凑态、完成满 120 秒隐藏的实机时序；
+- 最大态 / 紧凑态的最终视觉、居中、截断和过渡；
+- 各状态颜色、流体速度与上下文压缩效果；
+- 简体中文 / English；
+- Reduce Motion / Increase Contrast / VoiceOver。
+
+### GitHub 发布准备（候选，尚未发布）
+
+2026-07-30 已通过 GitHub 远端核对：
+
+- GitHub Latest 仍为 `v0.2.1`，非 Draft、非 Pre-release；
+- 远端不存在 `v0.3.1` tag，Release 列表中也没有 `0.3.1`；
+- `v0.2.1` 仍只有正式资产 `QuotaView-v0.2.1.zip`，大小
+  `10,907,231 bytes`；
+- README 中英文下载入口仍正确指向 `v0.2.1`，发布 `0.3.1` 前不得提前
+  改成尚不存在的下载地址。
+
+拟使用的 GitHub Release 元数据：
+
+| 项目 | 候选值 |
+|---|---|
+| Tag | `v0.3.1` |
+| Release 标题 | `QuotaView 0.3.1 — Codex Island` |
+| Release 类型 | 正式 Release、Latest、非 Draft、非 Pre-release |
+| 目标提交 | 待创建；当前 `HEAD` 为 `b4cf5d33825396d6b8465a8466565148f00cb1f0`，工作区仍有未提交修改 |
+| 上传资产 | `QuotaView-v0.3.1.zip` |
+| 最终大小 / SHA-256 | `11,443,295 bytes` / `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
+| 公证 | Apple Accepted，已 Staple；Submission `2b125886-a3dc-4734-a139-280a08302e5c` |
+
+GitHub Release Notes 使用以下单份英文源正文；GitHub 界面负责翻译，不再
+额外维护一份中文 Release 正文：
+
+```markdown
+QuotaView 0.3.1 introduces Codex Island, a native macOS activity surface that
+shows Codex status with a live Metal-rendered fluid sphere.
+
+## What's new
+
+- Added expanded, compact, and hidden Codex Island states with smooth
+  transitions and status-specific motion and color.
+- Added live Codex lifecycle tracking through official Hooks, including tool
+  use, permission requests, context compaction, subagents, completion, and
+  failures.
+- Added a guided one-click setup flow in Settings. QuotaView installs and
+  updates its fixed-path helper, preserves existing hooks, opens the official
+  `/hooks` review page, and asks for the one trust confirmation required by
+  Codex.
+- Added clear connection states, immediate “Codex not connected” feedback,
+  automatic restart guidance, and real-event verification before reporting a
+  successful connection.
+- Codex Island compacts 20 seconds after completion and hides after 2 minutes;
+  new activity expands it immediately.
+
+## Privacy and security
+
+QuotaView forwards only a hashed session identifier, the last workspace path
+component, event type, coarse tool category, session source, and timestamp. It
+does not collect prompts, commands, arguments, tool output, or transcript
+paths. Hook trust is never bypassed.
+
+## Requirements
+
+- macOS 14 or later
+- A Codex version with Hooks support
+
+The final SHA-256 checksum will be published with the notarized release asset.
+```
+
+发布检查清单：
+
+- [x] 版本号为 `0.3.1 (Build 1)`；
+- [x] `swift test` 52 项通过；
+- [x] Universal App、Widget、Helper 与 Framework 均包含
+  `x86_64 arm64`；
+- [x] Developer ID 签名与 Hardened Runtime 已通过全新解压验证；
+- [x] 产品所有者认可当前设置流程完整性；
+- [ ] 审查工作区提交范围，避免把 Prototype、参考图和其他用户资料误纳入；
+- [x] 产品所有者明确要求发布 0.3.1；剩余视觉矩阵仍等待逐项验收，不
+  提前记录为“已通过”；
+- [x] 使用 `NOTARY_PROFILE` 重新构建，完成 Apple 公证与 Staple；
+- [x] 对最终 ZIP 全新解压并完成 `codesign`、`stapler`、`spctl`、版本、
+  架构、资源和真实启动烟雾测试；
+- [x] 更新本节最终资产大小与 SHA-256；
+- [ ] 创建发布提交并推送，确认 tag 精确指向该提交；
+- [ ] 创建 `v0.3.1` Release，上传唯一最终 ZIP，并设为 Latest；
+- [ ] 同步 README 中英文下载入口、`VERSION_HISTORY.md` 与本文件的公开
+  Latest；
+- [ ] 从 GitHub 回下载资产，逐字节核对并再次执行验签和启动测试。
+
+当前已经生成可用于正式发布的 0.3.1 Developer ID 签名、公证并 Staple
+候选包。尚未创建发布提交、tag 或 GitHub Release，公开 Latest 仍为
+0.2.1；README 的 0.3.1 下载入口必须与 Release 在同一发布流程中生效。
+
+## 2. 0.2.1 正式发布
 
 ### 版本与目标
 
@@ -87,7 +303,7 @@ GitHub Release 和 Latest 切换。下一版本尚未定位，不得提前写入
 - Release 构建不得包含调试虚拟数据、自动展开、自动点击、截图或 UI QA
   入口。
 
-## 2. 当前验证状态
+## 3. 0.2.1 验证状态
 
 已完成：
 
@@ -125,7 +341,7 @@ GitHub Release 和 Latest 切换。下一版本尚未定位，不得提前写入
 
 视觉与交互矩阵在用户明确确认前不得记录为“已通过”。
 
-## 3. 发布完成状态
+## 4. 0.2.1 发布完成状态
 
 钥匙串中已确认存在：
 
@@ -156,7 +372,7 @@ GitHub Release 和 Latest 切换。下一版本尚未定位，不得提前写入
 如 Marketing Version 保持 `0.2.1` 但需要发布热修复，必须增加 Build
 Number，并为 tag 和 ZIP 加入唯一 Build 标识。
 
-## 4. 当前实现边界
+## 5. 0.2.1 实现边界
 
 数据链路：
 
@@ -178,7 +394,7 @@ CodexProviderAdapter
 - 菜单与 Widget 的详细视觉令牌以 `AGENTS.md` 和对应 Figma 节点为准；
 - 不增加第二层主面板玻璃，不接入真实额度重置接口。
 
-## 5. Git 工作区
+## 6. Git 工作区
 
 0.2.1 源码已通过 PR #9 合并，发布 tag 指向：
 
@@ -186,12 +402,26 @@ CodexProviderAdapter
 56aa71dd9f4013412f90c75e0c282a610e87d14e
 ```
 
-发布后的版本记录同步在独立文档提交中完成；下一次开发应从最新
-`origin/main` 新建 `codex/` 分支。
+0.3.1 当前修改尚未提交、未建 tag、未发布。后续提交或发布前继续从
+当前工作区核对变更，不得误清理未跟踪参考资料。
 
-以下未跟踪参考资料不属于 0.2.1 发布资产，不得擅自纳入提交：
+当前 0.3.1 功能源码和测试包含新的未跟踪文件，发布提交前必须显式审查并
+纳入必要文件，尤其是：
 
 ```text
+Sources/QuotaView/CodexActivityIsland.swift
+Sources/QuotaView/CodexActivityRuntime.swift
+Sources/QuotaViewActivityHook/main.swift
+Sources/QuotaViewCore/CodexActivityModels.swift
+Tests/QuotaViewCoreTests/CodexActivityModelsTests.swift
+docs/design/quotaview-codex-activity-widget-product.md
+```
+
+以下未跟踪 Prototype 与参考资料的提交范围尚未确认，默认不得擅自纳入
+发布提交：
+
+```text
+Prototypes/
 docs/reference/
 quotaview-blurred-gradient-background-2k.png
 subtract-frosted-glass-icon-transparent.png
@@ -201,7 +431,7 @@ subtract-frosted-glass-icon.png
 不得使用 `git clean`、`git reset --hard` 或 `git checkout --` 清理用户
 文件。
 
-## 6. 发布门禁
+## 7. 发布门禁
 
 发布前至少执行：
 
@@ -240,14 +470,15 @@ lipo -archs \
 仅验签不足以证明可发布。必须全新解压并进行真实启动测试；发布后还要从
 GitHub 回下载再次验证。
 
-## 7. 文档联动
+## 8. 文档联动
 
 0.2.1 已在同一发布任务内完成：
 
 1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.2.1；
 2. 在版本总览和版本详情中记录 tag、发布提交、Release URL、资产名、
    大小、SHA-256、签名、公证和验证结论；
-3. 将本文件第 0、1、2、3 节由候选状态更新为发布事实；
+3. 将本文件当时的版本入口、发布、验证与完成状态由候选状态更新为
+   发布事实；
 4. 更新 README 下载入口；
 5. 确认 GitHub Release Notes 只有一份英文源正文；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。

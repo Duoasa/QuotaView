@@ -13,6 +13,7 @@ final class MenuBarPanelController: NSObject {
 
     private let store: CodexStatusStore
     private let preferences: AppPreferences
+    private let activityRuntime: CodexActivityRuntime
 
     private var statusItem: NSStatusItem?
     private var panel: QuotaViewMenuPanel?
@@ -35,10 +36,12 @@ final class MenuBarPanelController: NSObject {
 
     init(
         store: CodexStatusStore,
-        preferences: AppPreferences
+        preferences: AppPreferences,
+        activityRuntime: CodexActivityRuntime
     ) {
         self.store = store
         self.preferences = preferences
+        self.activityRuntime = activityRuntime
         super.init()
 
         configureStatusItem()
@@ -566,7 +569,8 @@ final class MenuBarPanelController: NSObject {
         } else {
             let rootView = QuotaViewSettingsWindowRoot(
                 store: store,
-                preferences: preferences
+                preferences: preferences,
+                activityRuntime: activityRuntime
             )
             let hostingController = NSHostingController(
                 rootView: rootView
@@ -634,11 +638,13 @@ private struct MenuBarPanelRoot: View {
 private struct QuotaViewSettingsWindowRoot: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    @ObservedObject var activityRuntime: CodexActivityRuntime
 
     var body: some View {
         SettingsView(
             store: store,
-            preferences: preferences
+            preferences: preferences,
+            activityRuntime: activityRuntime
         )
         .environment(\.locale, preferences.locale)
     }

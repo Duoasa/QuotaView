@@ -5,18 +5,18 @@
 <h1 align="center">QuotaView</h1>
 
 <p align="center">
-  A simple, lightweight way to see your Codex quota, Credits, token usage, and reset time from the macOS menu bar.
+  A simple, lightweight macOS companion for Codex quota and live task activity.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.2.1/QuotaView-v0.2.1.zip"><strong>Download QuotaView v0.2.1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1/QuotaView-v0.3.1.zip"><strong>Download QuotaView v0.3.1</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -32,12 +32,13 @@
   <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView light appearance preview" width="49%">
 </p>
 
-QuotaView is a simple, lightweight, native macOS menu bar app for the Codex account already signed in on your Mac. It keeps the information you need within easy reach before a limit interrupts your work, without clutter, web scraping, or reading login credentials from `~/.codex`.
+QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. Its new **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep quota, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
 
 ## Why QuotaView
 
 | | |
 | --- | --- |
+| **Codex Island** | Follow thinking, tool use, approvals, context compaction, subagents, completion, and failures through a live Metal-rendered activity surface. |
 | **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
@@ -47,11 +48,11 @@ QuotaView is a simple, lightweight, native macOS menu bar app for the Codex acco
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.2.1.zip` from the [v0.2.1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.2.1).
+2. Download `QuotaView-v0.3.1.zip` from the [v0.3.1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.2.1 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.1 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -70,6 +71,8 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 ## Native experience
 
+- Codex Island with expanded and compact states, a live Metal fluid sphere,
+  status-aware color and motion, and automatic dismissal after completion
 - Compact status item with a dynamically sized menu panel
 - Automatic refresh every 60 seconds and manual refresh
 - Configurable menu bar values and six optional panel sections
@@ -80,21 +83,29 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
 
-## What's new in 0.2.1
+## What's new in 0.3.1: Codex Island
 
-v0.2.1 brings QuotaView's most useful data to native macOS widgets while
-preserving the app's simple, lightweight, and privacy-conscious design.
+v0.3.1 introduces **Codex Island**, QuotaView's biggest update yet: a native,
+real-time macOS activity surface for Codex.
 
-- Adds native Small and Medium WidgetKit widgets for weekly quota, reset time,
-  Credits, token usage, plan, and connection state.
-- Shares only a minimal, sanitized, expiring snapshot through the App Group.
-  Widgets never access credentials, the network, or the Codex App Server.
-- Refreshes the menu panel, progress display, connection indicator, and local
-  Liquid Glass details with a denser, data-first layout.
-- Normalizes subscription labels to official OpenAI plan names and shows a
-  stable unavailable state instead of inventing values when data is missing.
-- Ships as a Universal app signed with Developer ID, notarized by Apple, and
-  stapled so the downloaded app opens normally on macOS.
+<p align="center">
+  <img src="Resources/QuotaView-Codex-Island.png" alt="QuotaView Codex Island showing a completed task" width="100%">
+</p>
+
+- Shows thinking, work, tool use, permission requests, context compaction,
+  subagents, completion, and failures through a live Metal-rendered fluid
+  sphere with state-specific motion and color.
+- Expands immediately for new activity, compacts 20 seconds after completion,
+  and hides after two minutes.
+- Adds a guided setup flow that detects Hooks support, installs and updates the
+  fixed-path QuotaView helper, preserves existing Hooks, and opens Codex's
+  official trust review.
+- Reports a successful connection only after Codex has been restarted and a
+  real prompt event arrives from the trusted Hook.
+- Keeps prompts, commands, arguments, tool output, and transcript paths private.
+  Only minimal, sanitized lifecycle metadata is forwarded locally.
+- Continues to include the native Small and Medium WidgetKit widgets introduced
+  in v0.2.1.
 
 ## Privacy by design
 
@@ -106,7 +117,7 @@ QuotaView does **not**:
 
 QuotaView starts the local `codex app-server` process and requests account data over JSON-RPC. It stores only the latest successful refresh time, availability state, a short error summary, and display preferences in its own macOS preferences domain.
 
-Version 0.2.1 is read-only by default and contains no live account-operation
+Version 0.3.1 is read-only by default and contains no live account-operation
 executor. The quota reset flow remains a local demo. The architecture reserves
 separate, explicitly authorized official operations for a future release
 without allowing refreshes to trigger side effects.
@@ -114,6 +125,12 @@ without allowing refreshes to trigger side effects.
 The main app writes only a bounded, sanitized snapshot to its App Group for the
 WidgetKit extension. The snapshot contains no authentication token, cookie,
 account identifier, complete server response, or usage history.
+
+Codex Island uses official Codex Hooks and a signed local helper. It forwards
+only hashed session identifiers, the final workspace path component, event
+type, coarse tool category, session source, and timestamp. It never forwards
+prompts, commands, arguments, tool output, or transcript paths, and it never
+bypasses the official Hook trust confirmation.
 
 For local diagnostics:
 
@@ -139,7 +156,7 @@ QuotaView looks for the Codex executable in this order:
 
 ## Current limitations
 
-- Version 0.2.1 currently supports Codex only; more official providers are
+- Version 0.3.1 currently supports Codex only; more official providers are
   planned through the static provider registry.
 - The quota reset interface is a safety-focused demo and does not call `account/rateLimitResetCredit/consume`.
 - The App Server schema can vary with the installed Codex version.
@@ -214,6 +231,7 @@ Credits and remaining plan quota are separate concepts and are never combined in
 ```text
 Sources/
 ├── QuotaView/              # SwiftUI views, settings, and AppKit menu panel
+├── QuotaViewActivityHook/  # Signed, privacy-preserving Codex Hook helper
 ├── QuotaViewCore/          # Domain, providers, refresh, and account-operation boundary
 ├── QuotaViewFutureContracts/# Unlinked history, chart, display, and notification contracts
 ├── QuotaViewWidgetContract/# Foundation-only bounded widget snapshot contract
@@ -228,7 +246,7 @@ Tests/
 
 ## Roadmap
 
-- [ ] Active task status and real-time notifications
+- [x] Codex Island live task status
 - [ ] Launch at login with `ServiceManagement`
 - [ ] Historical trends and quota alerts
 - [x] WidgetKit extension backed by an App Group
