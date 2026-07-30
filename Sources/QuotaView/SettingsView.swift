@@ -25,16 +25,19 @@ enum SettingsWindowMetrics {
 struct SettingsView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    @ObservedObject var activityRuntime: CodexActivityRuntime
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: SettingsPage? = .menuBar
     @State private var updatePlaceholderVisible = false
+    @State private var codexActivityDetailsExpanded = false
 
     private var copy: AppCopy { preferences.copy }
 
     private enum SettingsPage: String, CaseIterable, Identifiable {
         case menuBar
         case popover
+        case codexActivity
         case appearance
         case language
         case general
@@ -45,6 +48,7 @@ struct SettingsView: View {
             switch self {
             case .menuBar: "menubar.rectangle"
             case .popover: "rectangle.on.rectangle"
+            case .codexActivity: "waveform.path.ecg.rectangle"
             case .appearance: "circle.lefthalf.filled"
             case .language: "globe"
             case .general: "gearshape"
@@ -57,6 +61,8 @@ struct SettingsView: View {
                 copy.text("菜单栏", "Menu Bar")
             case .popover:
                 copy.text("面板内容", "Popover")
+            case .codexActivity:
+                copy.text("Codex 灵动岛", "Codex Island")
             case .appearance:
                 copy.text("外观", "Appearance")
             case .language:
@@ -77,6 +83,11 @@ struct SettingsView: View {
                 copy.text(
                     "管理 QuotaView 主面板中的数据和操作。",
                     "Manage the data and actions shown in the QuotaView popover."
+                )
+            case .codexActivity:
+                copy.text(
+                    "配置 Codex 灵动岛连接与状态显示。",
+                    "Configure the Codex island connection and status display."
                 )
             case .appearance:
                 copy.text(
@@ -179,6 +190,8 @@ struct SettingsView: View {
                     menuBarSettings
                 case .popover:
                     popoverSettings
+                case .codexActivity:
+                    codexActivitySettings
                 case .appearance:
                     appearanceSettings
                 case .language:
@@ -442,6 +455,150 @@ struct SettingsView: View {
         }
     }
 
+    private var codexActivitySettings: some View {
+        VStack(spacing: 16) {
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text(
+                        "Codex 灵动岛",
+                        "Codex Island"
+                    ),
+                    subtitle: codexActivityConnectionSubtitle
+                ) {
+                    HStack(spacing: 10) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(codexActivityConnectionColor)
+                                .frame(width: 5, height: 5)
+                                .accessibilityHidden(true)
+
+                            Text(codexActivityConnectionStatusTitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+
+                        Button {
+                            switch activityRuntime.connectionStatus {
+                            case .notInstalled, .abnormal:
+                                activityRuntime.enableCodexActivity()
+                            case .installedNeedsRestart:
+                                activityRuntime.restartCodex()
+                            case .awaitingTrust:
+                                activityRuntime.openCodexSecurityReview()
+                            case .awaitingFirstEvent, .connected:
+                                activityRuntime.disableCodexActivity()
+                            }
+                        } label: {
+                            if activityRuntime.isConfiguring
+                                || activityRuntime.isOpeningSecurityReview
+                            {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .frame(minWidth: 92)
+                            } else {
+                                Text(codexActivityActionTitle)
+                                    .frame(minWidth: 92)
+                            }
+                        }
+                        .nativeSettingsActionStyle()
+                        .controlSize(.small)
+                        .disabled(
+                            activityRuntime.isConfiguring
+                                || activityRuntime.isOpeningSecurityReview
+                        )
+                        .help(codexActivityActionHelp)
+                        .accessibilityLabel(codexActivityActionTitle)
+                    }
+                }
+
+                if codexActivityShowsNextStep {
+                    NativeSettingsDivider()
+
+                    NativeSettingsRow(
+                        title: codexActivityNextStepTitle,
+                        subtitle: codexActivityNextStepSubtitle
+                    ) {}
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsNote(
+                    text: copy.text(
+                        "首次连接只需进行一次 Codex 安全确认。QuotaView 不读取提示词、命令正文、工具输出或会话记录。",
+                        "First-time setup requires one Codex security review. QuotaView does not read prompts, command text, tool output, or transcripts."
+                    )
+                )
+
+                NativeSettingsDivider()
+
+                DisclosureGroup(
+                    isExpanded: $codexActivityDetailsExpanded
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        LabeledContent(
+                            copy.text("Codex 版本", "Codex version"),
+                            value: codexEnvironmentSubtitle
+                        )
+                        LabeledContent(
+                            copy.text("活动支持", "Activity support"),
+                            value: codexHooksFeatureTitle
+                        )
+                        LabeledContent(
+                            copy.text("本地连接", "Local connection"),
+                            value: codexActivityBridgeStatusTitle
+                        )
+                        Text(codexActivityBridgeSubtitle)
+                            .foregroundStyle(.tertiary)
+                        Text(copy.text(
+                            "诊断日志：\(activityRuntime.diagnosticLogPath)",
+                            "Diagnostic log: \(activityRuntime.diagnosticLogPath)"
+                        ))
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 10)
+                } label: {
+                    Text(copy.text("连接详情", "Connection Details"))
+                        .font(.body.weight(.medium))
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 11)
+            }
+
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text(
+                        "自适应显示",
+                        "Adaptive presentation"
+                    ),
+                    subtitle: copy.text(
+                        "任务活动时展开；完成 20 秒后缩为最小态，完成满 2 分钟后隐藏。任何新活动都会立即重新展开。",
+                        "Expands during activity, compacts 20 seconds after completion, and hides two minutes after completion. New activity expands it immediately."
+                    )
+                ) {
+                    Text(copy.text("自动", "Automatic"))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsNote(
+                    text: copy.text(
+                        "开启“减少动态效果”时，窗口与球体使用静态状态反馈。",
+                        "When Reduce Motion is enabled, the window and orb use static state feedback."
+                    )
+                )
+            }
+        }
+        .onAppear {
+            activityRuntime.refreshConnectionStatus()
+        }
+    }
+
     private var languageSettings: some View {
         NativeSettingsCard {
             NativeSettingsRow(
@@ -567,7 +724,7 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.2.0"
+        ) as? String ?? "0.3.1"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "1"
@@ -703,6 +860,244 @@ struct SettingsView: View {
                 "浅色模式使用中性亮色提光，降低背景干扰并保留清透质感。",
                 "Light mode applies neutral brightening to reduce background interference while preserving clear glass."
             )
+        }
+    }
+
+    private var codexActivityActionTitle: String {
+        if activityRuntime.isConfiguring {
+            return copy.text("正在准备", "Preparing")
+        }
+        if activityRuntime.isOpeningSecurityReview {
+            return copy.text("正在打开", "Opening")
+        }
+        return switch activityRuntime.connectionStatus {
+        case .notInstalled:
+            copy.text("连接 Codex", "Connect Codex")
+        case .abnormal:
+            copy.text("修复连接", "Fix Connection")
+        case .installedNeedsRestart:
+            copy.text("重新启动 Codex", "Restart Codex")
+        case .awaitingTrust:
+            copy.text("打开安全确认", "Open Security Review")
+        case .awaitingFirstEvent, .connected:
+            copy.text("停用", "Disable")
+        }
+    }
+
+    private var codexActivityActionHelp: String {
+        return switch activityRuntime.connectionStatus {
+        case .installedNeedsRestart:
+            copy.text(
+                "安全确认已完成；重新启动 Codex 以激活连接。",
+                "The security review is complete. Restart Codex to activate the connection."
+            )
+        case .awaitingTrust:
+            copy.text(
+                "等待 CLI 首次加载完成并自动进入 Hooks 页面后，再按 T。",
+                "Wait for the CLI to finish loading and enter the Hooks page before pressing T."
+            )
+        case .awaitingFirstEvent, .connected:
+            copy.text(
+                "停用 Codex 灵动岛连接。",
+                "Disable the Codex island connection."
+            )
+        case .notInstalled, .abnormal:
+            copy.text(
+                "自动准备 Codex 连接，并立即显示未连接状态的灵动岛。",
+                "Prepare the Codex connection automatically and show the disconnected activity island immediately."
+            )
+        }
+    }
+
+    private var codexActivityConnectionSubtitle: String {
+        if activityRuntime.isConfiguring
+            || activityRuntime.isOpeningSecurityReview
+        {
+            return copy.text(
+                "正在自动准备连接，并立即显示“未连接 Codex”的灵动岛。",
+                "Preparing the connection automatically and showing the Codex Not Connected island immediately."
+            )
+        }
+
+        return switch activityRuntime.connectionStatus {
+        case .notInstalled:
+            copy.text(
+                "连接后会立即呼出灵动岛，并自动完成连接准备。",
+                "Connecting immediately shows the island and prepares the connection automatically."
+            )
+        case .installedNeedsRestart:
+            copy.text(
+                "安全确认已经完成；点击一次即可安全退出并重新打开 Codex。",
+                "The security review is complete. Restart Codex here with one click."
+            )
+        case .awaitingTrust:
+            copy.text(
+                "等待 CLI 完成首次加载；QuotaView 自动输入 /hooks 并进入 Hooks 页面后，再按 T。",
+                "Wait for the CLI to finish its first load. Press T only after QuotaView enters /hooks and opens the Hooks page."
+            )
+        case .awaitingFirstEvent:
+            copy.text(
+                "重启已经完成；发送一条新的 Codex 消息完成连接。",
+                "Restart is complete. Send a new Codex message to finish connecting."
+            )
+        case .connected:
+            copy.text(
+                "连接已激活，灵动岛会实时显示 Codex 当前状态。",
+                "The connection is active and the island now reflects the current Codex status."
+            )
+        case .abnormal(let message):
+            message
+        }
+    }
+
+    private var codexActivityConnectionStatusTitle: String {
+        if activityRuntime.isConfiguring
+            || activityRuntime.isOpeningSecurityReview
+        {
+            return copy.text("正在准备", "Preparing")
+        }
+
+        return switch activityRuntime.connectionStatus {
+        case .notInstalled:
+            copy.text("未启用", "Not Enabled")
+        case .installedNeedsRestart, .awaitingTrust:
+            copy.text("需要安全确认", "Security Review Needed")
+        case .awaitingFirstEvent:
+            copy.text("等待第一条消息", "Waiting for First Message")
+        case .connected:
+            copy.text("已连接", "Connected")
+        case .abnormal:
+            copy.text("需要处理", "Needs Attention")
+        }
+    }
+
+    private var codexActivityConnectionColor: Color {
+        if activityRuntime.isConfiguring
+            || activityRuntime.isOpeningSecurityReview
+        {
+            return Color(nsColor: .systemBlue)
+        }
+
+        return switch activityRuntime.connectionStatus {
+        case .connected:
+            Color(nsColor: .systemGreen)
+        case .installedNeedsRestart,
+             .awaitingTrust,
+             .awaitingFirstEvent:
+            Color(nsColor: .systemOrange)
+        case .abnormal:
+            Color(nsColor: .systemRed)
+        case .notInstalled:
+            Color(nsColor: .tertiaryLabelColor)
+        }
+    }
+
+    private var codexEnvironmentSubtitle: String {
+        activityRuntime.codexVersion ?? copy.text(
+            "正在检测 Codex 版本…",
+            "Detecting the Codex version…"
+        )
+    }
+
+    private var codexHooksFeatureTitle: String {
+        switch activityRuntime.hooksFeatureStatus {
+        case .checking:
+            copy.text("检测中", "Checking")
+        case .enabled:
+            copy.text("Hooks 已启用", "Hooks Enabled")
+        case .disabled:
+            copy.text("Hooks 未启用", "Hooks Disabled")
+        case .unavailable:
+            copy.text("Hooks 不可用", "Hooks Unavailable")
+        }
+    }
+
+    private var codexActivityShowsNextStep: Bool {
+        switch activityRuntime.connectionStatus {
+        case .installedNeedsRestart, .awaitingTrust, .awaitingFirstEvent:
+            true
+        case .notInstalled, .connected, .abnormal:
+            false
+        }
+    }
+
+    private var codexActivityNextStepTitle: String {
+        switch activityRuntime.connectionStatus {
+        case .installedNeedsRestart:
+            copy.text(
+                "重新启动 Codex",
+                "Restart Codex"
+            )
+        case .awaitingTrust:
+            copy.text(
+                "等待 Hooks 页面，再按 T",
+                "Wait for Hooks, Then Press T"
+            )
+        case .awaitingFirstEvent:
+            copy.text("发送一条新消息", "Send a New Message")
+        case .notInstalled, .connected, .abnormal:
+            ""
+        }
+    }
+
+    private var codexActivityNextStepSubtitle: String {
+        switch activityRuntime.connectionStatus {
+        case .installedNeedsRestart:
+            copy.text(
+                "QuotaView 会安全退出并重新打开 Codex；重新启动后无需再次配置。",
+                "QuotaView safely quits and reopens Codex. No further setup is needed after restart."
+            )
+        case .awaitingTrust:
+            copy.text(
+                "请先等待 CLI 完成首次加载。QuotaView 会自动输入 /hooks；只有看到 Hooks 页面和“Press t to trust all”提示后再按 T，不要在普通输入框中提前按键。",
+                "Wait for the CLI to finish its first load. QuotaView enters /hooks automatically. Press T only after the Hooks page shows “Press t to trust all”; do not press it in the normal prompt."
+            )
+        case .awaitingFirstEvent:
+            copy.text(
+                "不会发送测试数据；收到重启后的第一条真实消息时，灵动岛会自动切换为活动状态。",
+                "No test data is sent. The island switches to its active state after the first real message following restart."
+            )
+        case .notInstalled, .connected, .abnormal:
+            ""
+        }
+    }
+
+    private var codexActivityBridgeSubtitle: String {
+        switch activityRuntime.bridgeStatus {
+        case .listening:
+            copy.text(
+                "通过当前用户的本地 Unix Socket 接收脱敏事件；受限时自动回退到权限隔离的本地队列。",
+                "Receives sanitized events through a current-user Unix socket and automatically falls back to a permission-isolated local queue when restricted."
+            )
+        case .stopped:
+            copy.text(
+                "事件桥接尚未启动。",
+                "The event bridge is not running."
+            )
+        case .failed(let message):
+            message
+        }
+    }
+
+    private var codexActivityBridgeStatusTitle: String {
+        switch activityRuntime.bridgeStatus {
+        case .listening:
+            copy.text("监听中", "Listening")
+        case .stopped:
+            copy.text("已停止", "Stopped")
+        case .failed:
+            copy.text("不可用", "Unavailable")
+        }
+    }
+
+    private var codexActivityBridgeColor: Color {
+        switch activityRuntime.bridgeStatus {
+        case .listening:
+            Color(nsColor: .systemGreen)
+        case .stopped:
+            Color(nsColor: .tertiaryLabelColor)
+        case .failed:
+            Color(nsColor: .systemRed)
         }
     }
 }

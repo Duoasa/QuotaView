@@ -42,6 +42,7 @@ public actor CodexAppServerClient {
     private let startupTimeoutNanoseconds: UInt64
     private let requestTimeoutNanoseconds: UInt64
     private let maximumLineBytes: Int
+    private let clientVersion: String
     private var process: Process?
     private var inputHandle: FileHandle?
     private var outputTask: Task<Void, Never>?
@@ -56,7 +57,10 @@ public actor CodexAppServerClient {
         executablePath: String? = CodexExecutableLocator.locate(),
         startupTimeoutSeconds: TimeInterval = 45,
         requestTimeoutSeconds: TimeInterval = 15,
-        maximumLineBytes: Int = 1_048_576
+        maximumLineBytes: Int = 1_048_576,
+        clientVersion: String = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String ?? "0.3.1"
     ) {
         self.executablePath = executablePath
         self.startupTimeoutNanoseconds = UInt64(
@@ -66,6 +70,7 @@ public actor CodexAppServerClient {
             max(requestTimeoutSeconds, 1) * 1_000_000_000
         )
         self.maximumLineBytes = max(maximumLineBytes, 1_024)
+        self.clientVersion = clientVersion
     }
 
     public func fetchPayload(
@@ -117,6 +122,31 @@ public actor CodexAppServerClient {
             capturedAt: now,
             optionalIssues: optionalIssues
         )
+    }
+
+    public func fetchThreadDisplayName(
+        matchingSessionHash sessionHash: String
+    ) async throws -> String? {
+        try await connectIfNeeded()
+
+        let response: ThreadListResponse
+        do {
+            response = try await request(
+                method: "thread/list",
+                params: [
+                    "limit": 100,
+                    "useStateDbOnly": true
+                ],
+                includeNullParams: false
+            )
+        } catch {
+            stop()
+            throw error
+        }
+
+        return response.data.first {
+            $0.matches(sessionHash: sessionHash)
+        }?.privacySafeDisplayName
     }
 
     public func stop() {
@@ -219,7 +249,7 @@ public actor CodexAppServerClient {
                     "clientInfo": [
                         "name": "quotaview",
                         "title": "QuotaView",
-                        "version": "0.2.0"
+                        "version": clientVersion
                     ]
                 ],
                 includeNullParams: false,
@@ -237,6 +267,10 @@ public actor CodexAppServerClient {
     }
 
     private struct EmptyResult: Decodable {}
+
+    private struct ThreadListResponse: Decodable {
+        let data: [CodexThreadMetadata]
+    }
 
     private func request<Response: Decodable>(
         method: String,

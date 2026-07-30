@@ -11,7 +11,8 @@ struct QuotaViewApp: App {
         Settings {
             SettingsView(
                 store: appDelegate.store,
-                preferences: appDelegate.preferences
+                preferences: appDelegate.preferences,
+                activityRuntime: appDelegate.activityRuntime
             )
             .environment(\.locale, appDelegate.preferences.locale)
         }
@@ -22,6 +23,7 @@ struct QuotaViewApp: App {
 final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     let store: CodexStatusStore
     let preferences: AppPreferences
+    let activityRuntime: CodexActivityRuntime
 
     private var menuBarController: MenuBarPanelController?
     private var isPreparingTermination = false
@@ -30,6 +32,9 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         let preferences = AppPreferences()
         self.preferences = preferences
         self.store = CodexStatusStore(preferences: preferences)
+        self.activityRuntime = CodexActivityRuntime(
+            preferences: preferences
+        )
         super.init()
     }
 
@@ -38,9 +43,11 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     ) {
         AstaSansFontRegistrar.registerBundledFonts()
         store.start()
+        activityRuntime.start()
         menuBarController = MenuBarPanelController(
             store: store,
-            preferences: preferences
+            preferences: preferences,
+            activityRuntime: activityRuntime
         )
     }
 
@@ -59,7 +66,9 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
 
         isPreparingTermination = true
         Task {
-            await store.stop()
+            async let stopStatus: Void = store.stop()
+            async let stopActivity: Void = activityRuntime.stop()
+            _ = await (stopStatus, stopActivity)
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
