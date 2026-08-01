@@ -130,7 +130,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 - 全部内容显示时高度为 `433 pt`；关闭可配置内容后按可见内容动态缩短。
 - 内容宽度为 `250 pt`。
 - Header：`48 pt`。
-- 周额度概览：`117 pt`。
+- 周期额度概览：`117 pt`。
 - 指标行：每行 `36 pt`。
 - 额度重置入口：`51 pt`。
 - Footer：`48 pt`。
@@ -156,7 +156,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 - 额度数字使用 Asta Sans Semibold `32 pt`，百分号独立使用
   Semibold `16 pt`，不能把整个 `64%` 作为同字号字符串渲染。
 - 额度、说明、进度和倒计时四行使用统一 `8 pt` 垂直间距；深色外观的
-  “本周剩余”使用 Regular `11 pt`，浅色外观使用 Regular `10 pt`。
+  “本周期剩余”使用 Regular `11 pt`，浅色外观使用 Regular `10 pt`。
 - 订阅标签文字为 Semibold `9 pt`，容器为 `4 pt` 连续圆角、
   `0.5 pt` 描边、`4 pt` 内边距；显示文本继续使用 OpenAI 官方方案名称，
   不得照搬 Figma 中的静态 `PLUS`。
@@ -228,7 +228,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 | 用途 | 字体 |
 |---|---|
 | 主面板/重置页标题 | Asta Sans Semibold `15 pt`，tracking `-0.15` |
-| 本周剩余数值 | Semibold `21 pt`，tracking `-0.21` |
+| 本周期剩余数值 | Semibold `21 pt`，tracking `-0.21` |
 | 重置次数 Hero | Semibold `32 pt`，tracking `-0.32` |
 | 指标标题和值 | Semibold / Regular `10.5 pt` |
 | 辅助标签和更新时间 | Regular `10–10.5 pt` |
@@ -357,7 +357,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 
 - 数据来自 `CodexSnapshot.planType`，不得硬编码 `PLUS`。
 - 空值、`unknown` 或无有效状态时显示破折号。
-- 文字位于周额度概览右上角，使用 Asta Sans Semibold `10.5 pt` 和主文字
+- 文字位于周期额度概览右上角，使用 Asta Sans Semibold `10.5 pt` 和主文字
   颜色，不绘制标签背景。
 - 显示名称必须按 OpenAI 官方名称归一：`Free`、`Go`、`Plus`、
   `Pro 5x`、`Pro 20x`、`Business`、`Enterprise`、`Edu`。
@@ -367,7 +367,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 
 ### 指标列表与分隔线
 
-- 周额度概览是独立信息区，不绘制底部分隔线；普通指标属于 `info` 内容。
+- 周期额度概览是独立信息区，不绘制底部分隔线；普通指标属于 `info` 内容。
 - 额度重置入口属于 `interactive` 内容。
 - `info` 项只在下方仍有另一个 `info` 项时显示分隔线。
 - 最后一个 `info` 项不能仅因为下面存在重置入口而绘制分隔线。

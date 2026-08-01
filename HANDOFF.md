@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-07-30
+更新日期：2026-08-01
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -30,6 +30,104 @@
 
 `0.3.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
 GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
+
+2026-08-01：本地 `0.3.1 (Build 2)` Widget 热修复候选已完成实现与
+安装验证。macOS
+系统日志确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
+`SystemPolicyAppData` 拒绝读取 `group.com.quotaview.shared`。Build 2 将
+App Group 迁移为团队前缀 `BUUH229D5Q.com.quotaview.shared`，符合未嵌入
+provisioning profile 的公证 App 共享容器要求。`swift test` 共 `53` 项
+通过，Universal Release 构建和 Developer ID 签名验证通过；App、Widget
+与 Helper 均为 `x86_64 arm64`。安装后新容器写入有效快照，Widget 时间线
+成功归档，内核不再出现共享快照读取拒绝；视觉结果等待产品所有者验收。
+正式发布资产已完成 Apple 公证和 Staple，但尚未上传 GitHub，不得提前
+改写 GitHub Latest、tag、Release URL 或公开资产记录。
+
+Build 2 将主面板与 Widget 的额度标题从“本周剩余”统一调整为“本周期
+剩余”，英文使用两词 `Period Remaining`，以兼容 Codex 的 5 小时、7 天
+及后续可变用量周期；Tooltip、VoiceOver 与实现内部命名同步使用周期语义。
+
+### 0.3.1 Build 2 GitHub 发布候选
+
+目标发布元数据：
+
+| 项目 | 候选值 |
+|---|---|
+| Marketing Version | `0.3.1` |
+| Build Number | `2` |
+| 建议 tag | `v0.3.1-build.2` |
+| 建议 Release 标题 | `QuotaView 0.3.1 Build 2 — Widget Hotfix` |
+| 最终资产名 | `QuotaView-v0.3.1-build.2.zip` |
+| App Group | `BUUH229D5Q.com.quotaview.shared` |
+| 最低系统版本 | macOS 14 |
+| 架构 | Universal `arm64 + x86_64` |
+
+本地正式发布资产（尚未上传 GitHub）：
+
+| 项目 | 当前值 |
+|---|---|
+| 文件 | `dist/QuotaView-v0.3.1-build.2.zip` |
+| 大小 | `11,443,325 bytes` |
+| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
+| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，Hardened Runtime |
+| 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
+
+正式 ZIP 已在全新目录解压、附加隔离属性并通过
+`codesign --verify --deep --strict`、`stapler validate`、`spctl`、版本、
+架构、资源与真实启动烟雾测试；App、Widget 与 Helper 均包含
+`x86_64 arm64`，App 与 Widget entitlement 均包含团队前缀 App Group。
+
+GitHub Release Notes 使用以下单份英文源正文；GitHub 界面负责翻译：
+
+```markdown
+QuotaView 0.3.1 Build 2 is a focused hotfix for WidgetKit data sharing and
+variable Codex quota periods.
+
+## Fixed
+
+- Restored Small and Medium widget data for notarized direct downloads by
+  migrating the shared container to the team-prefixed App Group
+  `BUUH229D5Q.com.quotaview.shared`.
+- Renamed “Weekly Remaining” to “Period Remaining” so the interface works for
+  5-hour, 7-day, and future variable quota periods. The Simplified Chinese
+  title is now “本周期剩余”.
+- Added a release packaging check that rejects a non-team-prefixed App Group
+  unless the app embeds a provisioning profile.
+
+## Requirements
+
+- macOS 14 or later
+- A Codex version with Hooks support
+```
+
+Build 2 发布检查清单：
+
+- [x] 源码、App 与 Widget 版本统一为 `0.3.1 (Build 2)`；
+- [x] App Group 迁移为 `BUUH229D5Q.com.quotaview.shared`，并加入打包门禁；
+- [x] 主面板与 Widget 使用“本周期剩余” / 两词 `Period Remaining`；
+- [x] `swift test` 53 项通过，0 失败；
+- [x] Universal Xcode Release 构建通过；
+- [x] Developer ID 本地候选签名、全新解压验签、版本、架构、资源和
+  entitlement 检查通过；
+- [x] 新共享容器写入有效快照，Widget 时间线成功归档，内核没有新的
+  `SystemPolicyAppData` 读取拒绝；
+- [ ] 产品所有者确认小号 / 中号、深色 / 浅色和中英文最终视觉；
+- [x] 使用 `NOTARY_PROFILE` 生成无 `candidate` 后缀的最终资产，完成 Apple
+  公证与 Staple；
+- [x] 对最终 ZIP 全新解压并执行 `codesign`、`stapler`、`spctl`、版本、
+  架构、资源、隔离属性和真实启动烟雾测试；
+- [x] 将最终资产大小、SHA-256 和 Submission ID 同步到本文件；发布提交、
+  `VERSION_HISTORY.md` 与 README 中英文版本待 Release 建立后同步；
+- [ ] 创建发布提交，使用唯一 tag `v0.3.1-build.2`，上传唯一正式 ZIP，
+  将 GitHub Latest 切换到 Build 2；
+- [ ] 从 GitHub 回下载资产，逐字节核对并再次验签和启动测试。
+
+2026-08-01：宣传片摄录专用的本地 `0.3.2 Demo` 已结束使用；灵动岛已
+恢复为完成后 `20` 秒紧凑、
+完成满 `120` 秒隐藏的正式时序。摄录 ZIP 仅作为本地产物保留，不属于当前
+源码版本，也没有 tag、Release 或 GitHub Latest。恢复后 `swift test` 共
+`52` 项通过、`0` 项失败；Universal Xcode Release 无签名构建通过，App、
+Widget 与 Helper 均包含 `x86_64 arm64`。视觉与实机时序等待产品所有者验收。
 
 文档职责：
 

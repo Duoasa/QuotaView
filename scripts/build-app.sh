@@ -13,6 +13,11 @@ app_entitlements="${project_dir}/Support/QuotaView.entitlements"
 widget_entitlements="${project_dir}/Support/QuotaViewWidget.entitlements"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
 build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${info_plist}")"
+app_group_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewAppGroupIdentifier' \
+        "${info_plist}"
+)"
 if [[ "${build_number}" == "1" ]]; then
     release_name="QuotaView-v${version}"
 else
@@ -303,13 +308,21 @@ widget_entitlement_details="$(
     codesign -d --entitlements - "${widget_extension}" 2>&1
 )"
 if [[ "${app_entitlement_details}" \
-        != *"group.com.quotaview.shared"* ]] \
+        != *"${app_group_identifier}"* ]] \
     || [[ "${widget_entitlement_details}" \
-        != *"group.com.quotaview.shared"* ]] \
+        != *"${app_group_identifier}"* ]] \
     || [[ "${widget_entitlement_details}" \
         != *"com.apple.security.app-sandbox"* ]]; then
     print -u2 \
         "App Group or widget sandbox entitlements are missing."
+    exit 4
+fi
+
+if [[ "${app_group_identifier}" != "BUUH229D5Q."* ]] \
+    && [[ ! -f "${staging_app}/Contents/embedded.provisionprofile" ]]; then
+    print -u2 \
+        "Notarized direct distribution requires a team-prefixed App Group " \
+        "or an embedded provisioning profile."
     exit 4
 fi
 

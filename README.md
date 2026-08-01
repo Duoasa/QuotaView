@@ -62,7 +62,7 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 ## What it shows
 
 - Current plan and service availability
-- Weekly used quota and remaining percentage
+- Period usage and remaining percentage
 - Countdown to the next quota reset
 - Plan quota and additional Credits as separate values
 - Available quota reset credits

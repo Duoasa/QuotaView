@@ -31,6 +31,14 @@
 > 验证与发布记录见
 > [HANDOFF.md](HANDOFF.md#1-031-正式发布状态)。
 
+> 2026-08-01 已确认公开 Build 1 的 Widget 在 Developer ID 直接分发环境
+> 中会被 `SystemPolicyAppData` 拒绝读取未带团队前缀的 App Group，导致小号
+> 与中号小组件显示“额度数据不可用”。本地 `0.3.1 (Build 2)` 热修复候选
+> 已迁移到 `BUUH229D5Q.com.quotaview.shared`，并将当前额度标题统一为
+> “本周期剩余” / `Period Remaining`。在 Build 2 完成公证并创建独立
+> Release 前，本节继续保留已经发生的 Build 1 公开发布事实；候选元数据、
+> 验证结果和发布清单见 [HANDOFF.md](HANDOFF.md#031-build-2-github-发布候选)。
+
 ### 版本定位规则
 
 1. 新会话先读取 [HANDOFF.md](HANDOFF.md) 顶部的“版本定位入口”。

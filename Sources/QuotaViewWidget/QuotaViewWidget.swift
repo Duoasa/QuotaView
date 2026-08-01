@@ -299,10 +299,10 @@ struct QuotaViewWidgetView: View {
 
             Text(
                 data.isAvailable
-                    ? copy.weeklyRemaining
+                    ? copy.periodRemaining
                     : copy.unavailable
             )
-            .font(AstaSans.regular(weeklyLabelFontSize))
+            .font(AstaSans.regular(periodLabelFontSize))
             .foregroundStyle(palette.secondaryText)
             .lineLimit(1)
             .minimumScaleFactor(0.75)
@@ -389,7 +389,7 @@ struct QuotaViewWidgetView: View {
             )
     }
 
-    private var weeklyLabelFontSize: CGFloat {
+    private var periodLabelFontSize: CGFloat {
         colorScheme == .dark ? 11 : 10
     }
 
@@ -722,8 +722,8 @@ private struct WidgetCopy {
         locale = Locale(identifier: localeIdentifier)
     }
 
-    var weeklyRemaining: String {
-        text("本周剩余", "Weekly Remaining")
+    var periodRemaining: String {
+        text("本周期剩余", "Period Remaining")
     }
 
     var nextReset: String {
@@ -805,8 +805,8 @@ private struct WidgetCopy {
         lifetimeTokens: String
     ) -> String {
         text(
-            "QuotaView，Codex 数据连接可用，本周剩余 \(remainingPercent)%，下次重置 \(resetText)，Credits 余额 \(creditsBalance)，今日 Tokens \(todayTokens)，累计 Tokens \(lifetimeTokens)",
-            "QuotaView, Codex data connection available, \(remainingPercent) percent remaining this week, next reset \(resetText), credits balance \(creditsBalance), today tokens \(todayTokens), lifetime tokens \(lifetimeTokens)"
+            "QuotaView，Codex 数据连接可用，本周期剩余 \(remainingPercent)%，下次重置 \(resetText)，Credits 余额 \(creditsBalance)，今日 Tokens \(todayTokens)，累计 Tokens \(lifetimeTokens)",
+            "QuotaView, Codex data connection available, \(remainingPercent) percent remaining in the current period, next reset \(resetText), credits balance \(creditsBalance), today tokens \(todayTokens), lifetime tokens \(lifetimeTokens)"
         )
     }
 
