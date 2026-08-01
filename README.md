@@ -98,7 +98,7 @@ v0.3.1 introduces **Codex Island**, QuotaView's biggest update yet: a native,
 real-time macOS activity surface for Codex.
 
 <p align="center">
-  <img src="Resources/QuotaView-Codex-Island.png" alt="QuotaView Codex Island showing a completed task" width="100%">
+  <img src="Resources/QuotaView-Codex-Island.gif" alt="Animated QuotaView Codex Island status demo" width="100%">
 </p>
 
 - Shows thinking, work, tool use, permission requests, context compaction,
