@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-01
+更新日期：2026-08-02
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -557,16 +557,17 @@ GitHub 回下载再次验证。
 
 ## 8. 文档联动
 
-0.3.1 已在同一发布任务内完成：
+0.3.1 Build 2 已在发布与后续 README 资源维护中完成：
 
-1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.3.1；
+1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 `0.3.1 (Build 2)`；
 2. 在版本总览和版本详情中记录 tag、发布提交、Release URL、资产名、
    大小、SHA-256、签名、公证和验证结论；
 3. 将本文件的版本入口、发布、验证与完成状态由候选状态更新为发布事实；
-4. 更新 README 中英文下载入口、Codex 灵动岛重点文案和预览图；
+4. 更新 README 中英文下载入口、Codex 灵动岛重点文案，并于 2026-08-02
+   将静态预览图替换为动画 GIF；
 5. 确认 GitHub Release Notes 只有一份英文源正文；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
-`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1`。已撤回的
+`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1-build.2`。已撤回的
 `0.2.0 Build 3` 继续只保留历史记录，不得恢复为下载或开发基线。

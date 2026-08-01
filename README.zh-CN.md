@@ -96,7 +96,7 @@ v0.3.1 带来 QuotaView 至今最大的一次更新：原生、实时的
 **Codex 灵动岛**。
 
 <p align="center">
-  <img src="Resources/QuotaView-Codex-Island.png" alt="QuotaView Codex 灵动岛任务完成状态" width="100%">
+  <img src="Resources/QuotaView-Codex-Island.gif" alt="QuotaView Codex 灵动岛状态动画演示" width="100%">
 </p>
 
 - 通过实时 Metal 流体球展示思考、工作、工具调用、权限确认、上下文压缩、
