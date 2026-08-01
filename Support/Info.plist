@@ -19,7 +19,7 @@
     <key>CFBundleShortVersionString</key>
     <string>0.3.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -29,6 +29,6 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>QuotaViewAppGroupIdentifier</key>
-    <string>group.com.quotaview.shared</string>
+    <string>BUUH229D5Q.com.quotaview.shared</string>
 </dict>
 </plist>

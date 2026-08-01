@@ -200,7 +200,7 @@ struct QuotaViewFigmaMenu: View {
         VStack(alignment: .trailing, spacing: 9) {
             HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(copy.text("本周剩余", "Weekly Remaining"))
+                    Text(copy.text("本周期剩余", "Period Remaining"))
                         .font(AstaSans.regular(10.5))
                         .foregroundStyle(secondaryTextColor)
                         .lineLimit(1)
@@ -351,7 +351,7 @@ struct QuotaViewFigmaMenu: View {
         }
         .frame(height: Layout.progressHeight)
         .accessibilityLabel(
-            copy.text("本周额度", "Weekly quota")
+            copy.text("本周期额度", "Period quota")
         )
         .accessibilityValue(progressAccessibilityValue)
     }

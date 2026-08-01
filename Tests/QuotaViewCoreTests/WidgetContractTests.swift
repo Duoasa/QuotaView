@@ -3,6 +3,13 @@ import XCTest
 @testable import QuotaViewWidgetContract
 
 final class WidgetContractTests: XCTestCase {
+    func testDefaultAppGroupUsesDeveloperTeamPrefix() {
+        XCTAssertEqual(
+            QuotaViewWidgetConfiguration.defaultAppGroupIdentifier,
+            "BUUH229D5Q.com.quotaview.shared"
+        )
+    }
+
     func testOfficialOpenAIPlanNamesCoverCodexPlanIdentifiers() {
         let expectedNames = [
             "free": "Free",
