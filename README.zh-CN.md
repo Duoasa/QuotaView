@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1/QuotaView-v0.3.1.zip"><strong>下载 QuotaView v0.3.1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1-build.2/QuotaView-v0.3.1-build.2.zip"><strong>下载 QuotaView v0.3.1 Build 2</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -48,11 +48,11 @@ QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.3.1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) 下载 `QuotaView-v0.3.1.zip`。
+2. 前往 [v0.3.1 Build 2 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) 下载 `QuotaView-v0.3.1-build.2.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.3.1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
+> v0.3.1 Build 2 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
 > 可在解压后正常打开，不再需要旧版未签名构建所使用的 Finder 右键打开
 > 方式。
 
@@ -81,6 +81,14 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 支持简体中文和英文界面
 - 原生设置窗口包含菜单栏、面板内容、外观、语言和通用选项
 - 提供小号与中号两种原生 WidgetKit 小组件
+
+## 0.3.1 Build 2 小组件热修复
+
+- 使用 macOS 直接分发所需的团队前缀共享 App Group，恢复已公证下载版的
+  小号与中号 Widget 数据。
+- 将 App、小组件、Tooltip 和辅助功能文案中的“本周剩余”统一改为“本周期
+  剩余”，兼容 Codex 的可变额度周期。
+- 新增发布打包门禁，避免不兼容的 App Group 配置进入公证分发包。
 
 ## 0.3.1 最大更新：Codex 灵动岛
 
