@@ -1,6 +1,15 @@
 # QuotaView 0.2.0 底层重构实施报告
 
-> 状态：代码与无签名 Universal Release 验证完成
+> 文档编号：`QV-EVIDENCE-CORE-0.2.0-001`
+>
+> 文档类型：SDD 历史实施与验证证据
+>
+> 规格状态：`Archived`
+>
+> 交付状态：`Released`
+>
+> 状态：0.2.0 代码与无签名 Universal Release 验证完成；本文不再驱动
+> 当前实现
 >
 > 日期：2026-07-28
 > 执行依据：

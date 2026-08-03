@@ -1,5 +1,16 @@
 # QuotaView Interface Design QA
 
+> 文档编号：`QV-EVIDENCE-DESIGN-QA-001`
+>
+> 文档类型：SDD 生产视觉与交互验收证据
+>
+> 证据状态：`Active`（持续维护）
+>
+> 当前生产基线：QuotaView `0.3.1 (Build 2)`
+>
+> 证据边界：下方各版本结论按实际产品所有者反馈分别保留；未明确确认的
+> 项目继续标记为等待验收，不得由历史 Passed 推导为当前全矩阵通过。
+
 Baseline result: **Passed**
 
 0.1.5 clear-glass material result: **Passed — product-owner review**

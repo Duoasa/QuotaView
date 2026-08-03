@@ -2,13 +2,18 @@
 
 > 文档编号：`QV-PRODUCT-ACTIVITY-ISLAND-001`
 >
-> 文档状态：0.3.1 实现基线；等待产品所有者视觉与交互验收
+> 文档类型：SDD 已发布功能规格（Released Feature Specification）
 >
-> 开发版本：QuotaView `0.3.1 (Build 2)`
+> 规格状态：`Accepted`
 >
-> 当前公开基线：QuotaView `0.3.1 (Build 1)`
+> 交付状态：`Released`
 >
-> 更新日期：2026-08-01
+> 当前公开基线：QuotaView `0.3.1 (Build 2)`
+>
+> 验证状态：自动化、签名、公证与发布验证完成；完整视觉与交互矩阵仍等待
+> 产品所有者逐项确认
+>
+> 更新日期：2026-08-04
 >
 > 适用平台：macOS 14 及以上
 
@@ -38,6 +43,11 @@ Codex App Server thread/list
 
 不使用 Codex Desktop 私有 IPC，不读取或修改 Codex 任务内容，也不接入
 任何账户写操作。
+
+本规格描述已经发布的单任务生产基线。正在 Demo 调试的多任务扩展由
+[`QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001`](./quotaview-codex-activity-island-multitask.md)
+独立管理；在其交付状态进入生产实现前，不得用多任务 Demo 改写本文的现行
+生产事实。
 
 ## ACTIVITY-01. 状态集
 
@@ -323,6 +333,8 @@ QuotaView 收到当前固定 Hook 定义产生的第一条真实
 
 ## ACTIVITY-09. 参考依据
 
+- [QuotaView SDD 规格索引](../specs/README.md)
+- [Codex 灵动岛多任务扩展规格](./quotaview-codex-activity-island-multitask.md)
 - [OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)
 - [OpenAI Codex App Server](https://learn.chatgpt.com/docs/app-server)
 - [QuotaView WidgetKit 方案](./quotaview-widgetkit-solution.md)

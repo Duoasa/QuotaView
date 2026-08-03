@@ -7,7 +7,36 @@ Thanks for helping improve QuotaView. Bug reports, Codex compatibility reports, 
 - Search existing issues before opening a new one.
 - Use the issue forms for bugs and feature requests.
 - Open an issue before starting a large behavioral or architectural change.
+- Read the [SDD specification index](docs/specs/README.md) and the specification
+  that owns the affected behavior.
 - Never post authentication tokens, login credentials, or an unredacted `~/.codex` file.
+
+## Specification-driven development
+
+QuotaView uses Specification-Driven Development (SDD). Product behavior,
+architecture, implementation evidence, release history, and current work have
+separate documents and must not be treated as interchangeable.
+
+Before implementation:
+
+1. identify the owning Spec ID and Requirement ID in
+   [`docs/specs/README.md`](docs/specs/README.md);
+2. update the specification first when behavior, scope, privacy, accessibility,
+   fallback behavior, or acceptance criteria change;
+3. keep exploratory work in `Prototypes/` until production implementation is
+   explicitly authorized;
+4. do not treat an accepted Demo as production implementation or a completed
+   implementation as authorization to publish.
+
+The standard lifecycle and exit criteria are documented in
+[`docs/specs/DEVELOPMENT_PROCESS.md`](docs/specs/DEVELOPMENT_PROCESS.md).
+Small fixes may reuse an existing Requirement ID. When a change has no spec
+impact, the pull request must state `Spec impact: None` and explain why.
+
+The current production baseline is `0.3.1 (Build 2)`. The current multi-task
+Codex Island work remains an isolated `Prototype`; it must not be moved into
+`Sources/`, assigned a release version, or described as released without a
+separate explicit decision.
 
 ## Development setup
 
@@ -41,19 +70,27 @@ swift run QuotaViewProbe
 
 Keep pull requests focused and explain:
 
+- the Spec ID and Requirement ID, or why the change has no spec impact;
+- the current specification and delivery states;
 - the problem being solved;
 - the behavior before and after the change;
 - the tests you ran;
+- the product-owner acceptance status when visual or interaction behavior changes;
 - any Codex App Server schema assumptions;
 - any user-facing strings or privacy implications.
 
 For user-facing changes, update both `README.md` and `README.zh-CN.md` when the documented behavior changes. Keep English and Simplified Chinese interface strings aligned.
 
-Before opening a pull request:
+Before opening a pull request that changes source, resources, configuration, or
+build scripts:
 
 ```bash
 swift test
 ```
+
+A Markdown-only change may skip `swift test` when it does not touch production
+behavior, but the pull request must say that it is docs-only and still run link,
+consistency, and `git diff --check` validation.
 
 Do not add real account responses, credentials, tokens, signing identities, or local machine paths to tests or fixtures.
 

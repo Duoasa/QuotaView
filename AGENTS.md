@@ -1,7 +1,7 @@
 # QuotaView 项目执行与设计规范
 
 本文件约束后续所有针对 QuotaView 的代码、界面和发布任务。除非用户在
-当前任务中明确要求改变产品方向，否则实现应保持与当前 0.2.0 Build 4
+当前任务中明确要求改变产品方向，否则实现应保持与当前 0.3.1 Build 2
 一致。
 
 ## 规范来源与优先级
@@ -12,9 +12,10 @@
 2. 当前生产代码中的真实状态、尺寸和功能约束
 3. `VERSION_HISTORY.md` 中的当前最新版本与历史发布事实
 4. `HANDOFF.md` 中的当前工作区、已完成事项与下一次迭代状态
-5. `design-qa.md`
-6. Figma 节点 `1:712`、`25:1471`、`10:181`、`25:1524`
-7. 本文件中的通用设计规则
+5. `docs/specs/README.md` 中登记的当前已接受规格
+6. `design-qa.md`
+7. Figma 节点 `1:712`、`25:1471`、`10:181`、`25:1524`
+8. 本文件中的通用设计规则
 
 `VERSION_HISTORY.md` 只负责版本身份、Release、tag、历史特性和撤回记录，
 不得用其中的历史实现覆盖当前生产代码。`HANDOFF.md` 负责当前工作状态和
@@ -29,10 +30,13 @@
 3. 按其中的相对链接打开
    `VERSION_HISTORY.md#当前最新版本`，确认最新推荐版本、Build Number、
    tag、Release、资产和发布提交；
-4. 回到 `HANDOFF.md`，继续读取当前结论、验证状态、工作区边界和下一次
-   迭代入口；
-5. 仅在任务涉及视觉验收历史时读取 `design-qa.md`；
-6. 只有满足下方 CodexBar 门禁时，才读取 CodexBar 参考文档。
+4. 打开 `docs/specs/README.md`，确认当前迭代、规格状态、交付状态和对应
+   Requirement ID；
+5. 读取当前任务对应的唯一规格，再回到 `HANDOFF.md` 继续读取当前结论、
+   验证状态、工作区边界和下一次迭代入口；
+6. 仅在任务涉及视觉验收历史时读取 `design-qa.md` 或对应 Prototype 的
+   Design QA；
+7. 只有满足下方 CodexBar 门禁时，才读取 CodexBar 参考文档。
 
 文档职责必须保持清晰：
 
@@ -40,7 +44,45 @@
 - `HANDOFF.md`：当前生产状态、已完成事项、未完成事项、工作区和下一步；
 - `VERSION_HISTORY.md`：当前最新版本指针、公开历史版本、各版本特性、
   撤回原因和替代版本；
+- `docs/specs/README.md`：SDD 唯一规格索引、当前迭代和追踪矩阵；
+- `docs/specs/DEVELOPMENT_PROCESS.md`：SDD 状态模型、阶段出口、对话协议和
+  PR 门禁；
+- `docs/design/*.md`：具体产品、架构与功能规格；
 - `design-qa.md`：视觉验收历史和等待产品所有者确认的矩阵。
+
+## SDD 规格驱动开发门禁
+
+QuotaView 使用 Specification-Driven Development（SDD）。规格状态、交付
+状态与发布状态必须分开维护，不能把“规格已接受”“Demo 已确认”“生产实现
+完成”或“正式发布”混写成同一个“已完成”。
+
+统一规格状态为：`Draft`、`Review`、`Accepted`、`Superseded`、
+`Archived`。统一交付状态为：`Discovery`、`Prototype`、`Planned`、
+`Implementing`、`Verifying`、`Released`。具体定义以
+`docs/specs/README.md` 为准。
+
+所有新增功能、行为变化和架构变化必须：
+
+1. 先在 SDD 索引中定位或创建唯一 Spec ID；
+2. 使用稳定 Requirement ID 定义范围、不变量、失败/降级语义和可验证的
+   验收条件；
+3. 在进入生产实现前将规格状态推进到 `Accepted`，并取得与当前阶段相符的
+   用户授权；
+4. 需要探索时将 Prototype 隔离在 `Prototypes/` 或系统临时目录，不得把
+   Demo 证据冒充生产完成证据；
+5. 实现时建立“Requirement ID → 生产源码 → 自动化测试 → 产品验收”追踪；
+6. 发现规格缺口或冲突时先同步规格，不得用实现细节静默改变产品语义；
+7. 只有完成正式发布门禁后才能把交付状态写为 `Released`。
+
+小型缺陷、文案或文档修复可以复用既有 Requirement ID；若确实不影响规格，
+PR 必须写明 `Spec impact: None` 及理由。涉及已冻结方向、从 `Prototype`
+迁入生产、改变版本号或发布，必须由用户明确授权，不得从一般性的“继续”或
+“采用”中推断。
+
+当前生产基线、当前迭代及其阶段必须以 `docs/specs/README.md`、
+`HANDOFF.md`、`VERSION_HISTORY.md` 和生产配置交叉核对。当前多任务灵动岛
+工作的默认阶段是 `Prototype`；在用户明确授权进入 `Implementing` 前，不得
+迁入 `Sources/`，也不得自行指定发布版本。
 
 版本与交接文档必须双向联动：
 
@@ -49,6 +91,8 @@
 - `VERSION_HISTORY.md` 必须回链 `HANDOFF.md`；
 - 每次发布、撤回版本、删除 tag 或改变 GitHub Latest 时，必须同步更新
   两份文档；
+- 每次改变当前迭代、规格状态或交付状态时，必须同步更新
+  `docs/specs/README.md` 与 `HANDOFF.md`；
 - 同步内容至少包括最新版本、Build Number、tag、发布提交、Release URL、
   资产名、大小、SHA-256、签名、公证状态、验证结论和替代版本；
 - README 下载链接与 GitHub Release Notes 也必须同时核对；

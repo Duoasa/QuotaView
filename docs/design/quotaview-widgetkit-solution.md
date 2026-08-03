@@ -1,10 +1,14 @@
 # QuotaView 原生 WidgetKit 接入设计
 
 > 文档编号：`QV-DESIGN-WIDGET-001`<br>
-> 状态：方案已确认，尚未实施<br>
-> 依赖：`QV-DESIGN-CORE-001` Phase 0–2<br>
-> 基线版本：QuotaView `0.1.5 (Build 6)`<br>
+> 文档类型：SDD 已发布架构/功能规格<br>
+> 规格状态：`Accepted`<br>
+> 交付状态：`Released`（0.2.1 首次发布；0.3.1 Build 2 共享容器热修复）<br>
+> 依赖：`QV-EXEC-CORE-002` Phase 0–2<br>
+> 原始设计基线：QuotaView `0.1.5 (Build 6)`<br>
+> 当前生产基线：QuotaView `0.3.1 (Build 2)`<br>
 > 编写日期：2026-07-28<br>
+> SDD 状态更新：2026-08-04<br>
 > 适用平台：macOS 14 及以上<br>
 > 参考实现：CodexBar，固定分析版本
 > `dd029db4cb17811edd5805d952c5d5fc23395be3`
@@ -19,8 +23,11 @@
 - “按 `WIDGET-11` 修改 Xcode 工程”；
 - “按 `WIDGET-13` 做发布验证”。
 
-本文档不表示 Widget 已经存在，也不授权修改代码、签名、配置或发布流程。
-开始实现前仍需按项目根目录 `AGENTS.md` 重新检查当前代码和产品约束。
+本文档最初用于 Widget 实施前设计；Widget 已在 `0.2.1` 进入生产，并在
+`0.3.1 (Build 2)` 完成 Developer ID 直接分发所需的团队前缀 App Group
+热修复。本文现作为现行架构、数据语义和回归验收规格维护，不得再把
+“尚未实施”解释为当前状态。任何后续修改仍需先按项目根目录 `AGENTS.md`
+与 [SDD 规格索引](../specs/README.md) 核对当前代码和产品约束。
 
 核心架构、Provider、刷新、历史、通知与操作模式见
 [`quotaview-core-architecture-evolution.md`](./quotaview-core-architecture-evolution.md)。

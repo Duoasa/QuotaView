@@ -1,10 +1,13 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-02
+更新日期：2026-08-04
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
 当前生产分支：`main`
+
+当前工作区 HEAD：
+`739ee59`（README Codex Island 动画预览合并提交）
 
 当前发布提交与生产基线：
 `3119171f45163fe45d68a4f774a0488968f14fd7`
@@ -45,6 +48,41 @@ Gatekeeper 和真实启动复核。
 Build 2 将主面板与 Widget 的额度标题从“本周剩余”统一调整为“本周期
 剩余”，英文使用两词 `Period Remaining`，以兼容 Codex 的 5 小时、7 天
 及后续可变用量周期；Tooltip、VoiceOver 与实现内部命名同步使用周期语义。
+
+## 0.1 当前 SDD 迭代
+
+SDD 唯一规格索引：
+
+**[docs/specs/README.md → 当前状态快照](docs/specs/README.md#2-当前状态快照)**
+
+当前开发状态与公开生产版本必须分开理解：
+
+| 项目 | 当前值 |
+|---|---|
+| 公开生产基线 | `0.3.1 (Build 2)`，已发布且保持不变 |
+| 当前进行中工作 | Codex 灵动岛多任务适配 |
+| 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
+| 规格状态 | `Accepted`：固定单岛方向和当前 Demo 视觉/交互基线已确认 |
+| 交付状态 | `Prototype`：正在独立 Demo 中调试 |
+| Prototype | `Prototypes/CodexActivityMultiTaskDemo/` |
+| 生产源码 | 尚未迁入多任务实现，仍为 `0.3.1 (Build 2)` 单任务基线 |
+| 生产测试与验收 | 尚未开始；Prototype 测试不能作为生产完成证据 |
+| 目标版本 | 未指定；不得自行使用 `0.3.2`、新 Build、tag 或 Release |
+
+当前允许继续 Demo 调试、规格澄清、Prototype 测试和 Demo QA 记录。固定
+单岛、右侧任务列表、最大态 `496 × 152 pt`、紧凑态 `52 pt`、最小 AX
+标题读取与不控制 Codex 等已接受方向继续有效；调试不得静默改变这些方向。
+
+只有产品所有者后续明确授权“迁入生产”后，交付状态才能从 `Prototype`
+切换到 `Implementing` 并修改 `Sources/`。生产实现完成也不等于授权发布；
+版本号、签名、公证、tag 和 Release 仍需要独立的发布指令。
+
+当前规格与执行流程：
+
+- [多任务灵动岛规格](docs/design/quotaview-codex-activity-island-multitask.md)
+- [SDD 开发流程](docs/specs/DEVELOPMENT_PROCESS.md)
+- [多任务 Demo 说明](Prototypes/CodexActivityMultiTaskDemo/README.md)
+- [多任务 Demo Design QA](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)
 
 ## 1. 0.3.1 Build 2 正式发布状态
 
@@ -134,6 +172,8 @@ Widget 与 Helper 均包含 `x86_64 arm64`。视觉与实机时序等待产品�
 - `HANDOFF.md`：当前开发状态、验证结论和发布入口；
 - `VERSION_HISTORY.md`：公开版本、tag、Release、资产与撤回记录；
 - `AGENTS.md`：长期产品、设计、实现和发布约束；
+- `docs/specs/README.md`：SDD 唯一规格索引、当前迭代和追踪矩阵；
+- `docs/specs/DEVELOPMENT_PROCESS.md`：SDD 阶段、出口与对话协议；
 - `design-qa.md`：视觉验收历史。
 
 ## 1.1 0.3.1 Build 1 历史发布状态
@@ -495,18 +535,38 @@ CodexProviderAdapter
 
 ## 6. Git 工作区
 
-0.3.1 源码、测试、README、灵动岛截图和产品文档已通过 PR
-[#12](https://github.com/Duoasa/QuotaView/pull/12) 合并，发布 tag 指向：
+`0.3.1 (Build 1)` 的源码、测试、README、灵动岛截图和产品文档通过 PR
+[#12](https://github.com/Duoasa/QuotaView/pull/12) 合并，历史 tag `v0.3.1`
+指向：
 
 ```text
 041c698ae9755d458fa9f111e4ac74e9711048b9
 ```
 
-以下未跟踪 Prototype 与参考资料未进入 0.3.1 发布提交，所有权和后续提交
-范围仍未确认，默认不得擅自纳入：
+当前生产发布 tag `v0.3.1-build.2` 指向：
 
 ```text
-Prototypes/
+3119171f45163fe45d68a4f774a0488968f14fd7
+```
+
+当前 `main` HEAD 为后续 README 动画资源维护提交 `739ee59`，没有改变
+App 的 `0.3.1 (Build 2)` 版本身份或上述 Release tag。
+
+以下当前 SDD 迭代文件未进入 `0.3.1 (Build 2)` 发布提交。用户已在
+2026-08-04 确认多任务适配是当前进行中工作，允许在本地继续维护，但本次
+文档升级不等于授权 `git add`、commit、push 或迁入生产：
+
+```text
+docs/specs/
+docs/design/quotaview-codex-activity-island-multitask.md
+Prototypes/CodexActivityMultiTaskDemo/
+```
+
+以下其他未跟踪 Prototype、参考资料与图片不属于本次 SDD 升级范围，默认
+不得擅自纳入：
+
+```text
+Prototypes/CodexActivityMetalDemo/
 docs/reference/
 quotaview-blurred-gradient-background-2k.png
 subtract-frosted-glass-icon-transparent.png
