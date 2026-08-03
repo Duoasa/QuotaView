@@ -50,6 +50,24 @@
 - `docs/design/*.md`：具体产品、架构与功能规格；
 - `design-qa.md`：视觉验收历史和等待产品所有者确认的矩阵。
 
+### 文档时态、正式边界与防陈旧规则
+
+- 正式 SDD 文档系统只包含已经由 Git 跟踪、并在
+  `docs/specs/README.md` 注册或路由的 Markdown。未跟踪的 Prototype、图片、
+  外部参考或个人草稿不参与权重判断，也不得静默驱动生产实现；
+- `HANDOFF.md` 不固化会随每次提交变化的 `main` HEAD。当前分支与提交必须
+  通过 `git status --short --branch`、`git branch --show-current` 和
+  `git rev-parse HEAD` 读取；已经发布的 tag、发布提交和资产校验值可以持久
+  记录；
+- 历史报告、旧版实施计划和发布规格中的“当前”“后续”“待实现”等表述，
+  必须标明所指版本或时间。文档顶部的当前实施状态或校准附录优先于历史
+  正文中的实施时态；
+- 已发布规格若保留实施前计划，必须补充当前生产映射、已完成阶段和未实施
+  阶段，不能让未来时态覆盖已经存在的代码，也不能把预留接口写成已交付；
+- 当前工作调用链固定为：`AGENTS.md` → `HANDOFF.md` 版本入口 →
+  `VERSION_HISTORY.md` 当前版本 → `docs/specs/README.md` → 当前唯一规格 →
+  对应验证证据。任何旁路文档只能提供参考，不能越级覆盖生产事实。
+
 ## SDD 规格驱动开发门禁
 
 QuotaView 使用 Specification-Driven Development（SDD）。规格状态、交付

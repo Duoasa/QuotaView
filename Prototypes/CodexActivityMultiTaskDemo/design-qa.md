@@ -234,11 +234,17 @@ require product-owner inspection in the running app.
 
 ## Follow-up Polish
 
-- Deferred until later development. Do not change the frozen Demo without a
-  new explicit product-owner instruction.
+- Product-direction changes remain deferred: do not change the frozen fixed
+  island, task rail, dimensions, privacy boundary, or interaction direction
+  without a new explicit product-owner instruction.
+- Demo debugging may continue when it fixes an implementation defect, aligns
+  the Prototype with the accepted specification, or adds Prototype-only test
+  evidence without changing those frozen directions.
 
 Formal screenshot-comparison evidence remains unavailable under the project
-policy, so the automated Design QA gate remains blocked even though the product
-owner accepted and froze the live Demo.
+policy. That limitation blocks only an automated screenshot-comparison claim;
+it does not invalidate the product owner's accepted live-Demo baseline and does
+not block continued Prototype debugging.
 
-final result: blocked
+final result: accepted Demo baseline; automated screenshot comparison unavailable;
+production verification not started

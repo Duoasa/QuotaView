@@ -235,7 +235,7 @@ account/usage/read  # only when either token section is enabled
 
 Credits and remaining plan quota are separate concepts and are never combined in the UI.
 
-## Project structure
+## Production source structure
 
 ```text
 Sources/
@@ -266,6 +266,6 @@ Tests/
 
 ## Feedback and contributions
 
-Bug reports, compatibility reports, and focused feature proposals are welcome. Start with the [issue templates](https://github.com/Duoasa/QuotaView/issues/new/choose), and read [CONTRIBUTING.md](CONTRIBUTING.md) before preparing a code change.
+Bug reports, compatibility reports, and focused feature proposals are welcome. Start with the [issue templates](https://github.com/Duoasa/QuotaView/issues/new/choose). Before preparing a code change, read the [SDD specification index](docs/specs/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Please never include authentication tokens, credentials, or an unredacted `~/.codex` file in an issue.

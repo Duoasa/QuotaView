@@ -38,6 +38,10 @@
 任何发布状态仍以项目根目录的 `HANDOFF.md`、`VERSION_HISTORY.md` 与
 [SDD 规格索引](../specs/README.md) 为准。
 
+本规格及其 Demo 自提交 `f603c38` 起已由 Git 跟踪并进入 `main`；这里的
+“进入 main”仅表示规格与隔离 Prototype 可被持续协作，不表示多任务实现
+已经进入生产 `Sources/`，也不改变 `0.3.1 (Build 2)` 的发布资产。
+
 ## MULTITASK-00.1 SDD 状态与授权边界
 
 本规格的产品方向和当前 Demo 视觉基线已经接受，因此规格状态为
@@ -490,7 +494,7 @@ Metal 状态过渡，但不得恢复竖向分隔线、增加常驻背层卡片�
 | `MT-MOTION-001` | 玻璃 morph、滚轮、流光与 Reduce Motion 测试；Demo QA | — | — | Demo 基线已确认 |
 | `MT-PRIVACY-001` | `MULTITASK-03` 隔离探针结论 | — | — | 生产权限链路待实现 |
 | `MT-A11Y-001` | VoiceOver Press 和 Reduce Motion Demo 行为 | — | — | 生产矩阵待验收 |
-| `MT-VERIFY-001` | Prototype XCTest 与 Demo Design QA | — | — | 不得标记生产完成 |
+| `MT-VERIFY-001` | Prototype XCTest 37 项通过；Demo Design QA | — | — | 不得标记生产完成 |
 
 破折号表示尚未进入生产实施，不是遗漏。交付状态切换为 `Implementing` 后，
 必须用真实路径和测试名称替换这些空项，并同步

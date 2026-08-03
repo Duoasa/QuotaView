@@ -51,6 +51,10 @@ swift run --package-path Prototypes/CodexActivityMultiTaskDemo
 swift test --package-path Prototypes/CodexActivityMultiTaskDemo
 ```
 
+2026-08-04 当前自动化结果：`37` 项测试通过，`0` 失败。该结果只证明隔离
+Prototype 的布局、状态和动效契约，不是生产 `Sources/`、Release 构建或
+生产视觉验收证据。
+
 ## 视觉验证边界
 
 - 单任务继续复用原 Demo 的动态尺寸和内容结构；

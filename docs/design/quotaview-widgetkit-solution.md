@@ -4,6 +4,7 @@
 > 文档类型：SDD 已发布架构/功能规格<br>
 > 规格状态：`Accepted`<br>
 > 交付状态：`Released`（0.2.1 首次发布；0.3.1 Build 2 共享容器热修复）<br>
+> 文档版本：`2.1`<br>
 > 依赖：`QV-EXEC-CORE-002` Phase 0–2<br>
 > 原始设计基线：QuotaView `0.1.5 (Build 6)`<br>
 > 当前生产基线：QuotaView `0.3.1 (Build 2)`<br>
@@ -29,6 +30,26 @@
 “尚未实施”解释为当前状态。任何后续修改仍需先按项目根目录 `AGENTS.md`
 与 [SDD 规格索引](../specs/README.md) 核对当前代码和产品约束。
 
+### WIDGET-00.1 当前生产映射
+
+| 项目 | `0.3.1 (Build 2)` 当前事实 |
+|---|---|
+| Team | `BUUH229D5Q` |
+| 主应用 Bundle ID | `com.quotaview.menubar` |
+| Widget Bundle ID | `com.quotaview.menubar.widget` |
+| App Group | `BUUH229D5Q.com.quotaview.shared` |
+| Extension Target / Product | `QuotaViewWidgetExtension` / `QuotaViewWidgetExtension.appex` |
+| 共享 Contract | `Sources/QuotaViewWidgetContract/WidgetSnapshot.swift` |
+| 主应用投影与写入 | `Sources/QuotaView/QuotaViewWidgetSnapshotWriter.swift` |
+| Extension 实现 | `Sources/QuotaViewWidget/QuotaViewWidget.swift` |
+| 配置与权限 | `Configs/App.xcconfig`、`Configs/Widget.xcconfig`、`Support/*.entitlements` |
+| 当前版本 | 主应用与 Extension 均为 `0.3.1 (2)` |
+| 发布验证 | Universal、Developer ID、Apple 公证、Staple、真实安装与共享容器通过；视觉仍等待产品所有者验收 |
+
+Build 2 的当前映射优先于本文保留的首版候选代码和实施步骤。后文凡使用
+“建议”“新增”“后续”等原始实施措辞，均应结合本表和相应章节的完成状态
+理解，不能解释为 Widget 尚未进入生产。
+
 核心架构、Provider、刷新、历史、通知与操作模式见
 [`quotaview-core-architecture-evolution.md`](./quotaview-core-architecture-evolution.md)。
 
@@ -36,7 +57,7 @@
 
 ## WIDGET-01. 结论
 
-QuotaView 应采用与 CodexBar 同类的原生 WidgetKit 架构：
+QuotaView 当前采用与 CodexBar 同类的原生 WidgetKit 架构：
 
 > 主应用读取官方状态、生成脱敏快照并原子写入 App Group；Widget Extension
 > 只读取该快照、生成时间线并显示。
@@ -75,7 +96,8 @@ QuotaView 应采用与 CodexBar 同类的原生 WidgetKit 架构：
 6. 快照过期、损坏、版本未知时有稳定占位状态；
 7. 不影响菜单栏 UI、刷新性能和当前功能；
 8. 保持 Universal `arm64 + x86_64` 打包；
-9. 保持 Extension 体积小，不重复 Asta 字体和主应用资源。
+9. 保持 Extension 体积小，只包含已确认的 Asta Sans 字体和 Widget 专用
+   资源，不复制主应用完整 Asset Catalog。
 
 ### WIDGET-02.2 非目标
 
@@ -105,7 +127,7 @@ sequenceDiagram
 
     App->>Official: 只读状态请求
     Official-->>App: ProviderSnapshot
-    App->>Projector: 标准化当前状态 + Widget 设置
+    App->>Projector: 当前 Presentation + 可用性 + 语言
     Projector-->>App: Sanitized WidgetSnapshot
     App->>Group: 原子写入 JSON
     App->>Center: 内容签名变化时 reloadTimelines
@@ -149,55 +171,52 @@ Token 或操作授权。
 
 ## WIDGET-04. Target 与代码边界
 
-### WIDGET-04.1 建议 Target
+### WIDGET-04.1 当前 Target
 
 ```text
 QuotaView.app
 ├── QuotaView
 ├── QuotaViewCore
-└── QuotaViewWidgetShared
+└── QuotaViewWidgetContract
 
-QuotaViewWidget.appex
-└── QuotaViewWidgetShared
+QuotaViewWidgetExtension.appex
+├── QuotaViewWidget
+└── QuotaViewWidgetContract
 ```
 
-`QuotaViewWidgetShared` 必须是 Extension-safe：
+`QuotaViewWidgetContract` 是 Extension-safe 边界：
 
 - 依赖 Foundation；
-- 如有必要，只在 Extension 侧直接依赖 SwiftUI/WidgetKit；
 - 不依赖 AppKit；
 - 不依赖 `QuotaViewCore` 的 Provider 实现；
 - 不使用 `Process`、Security、Keychain 或网络；
-- 不包含 Asta 字体和主应用 Asset Catalog；
 - 不引用写操作协议。
 
-### WIDGET-04.2 建议目录
+SwiftUI、WidgetKit、Asta Sans 注册和 Widget 专用资源只存在于 Extension
+Target，不进入 Contract。主应用侧的 Projector/Writer 也不编译进 Extension。
+
+### WIDGET-04.2 当前目录
 
 ```text
-Sources/QuotaViewWidgetShared/
-├── QuotaViewWidgetSnapshot.swift
-├── QuotaViewWidgetSnapshotStore.swift
-├── QuotaViewWidgetSnapshotProjector.swift
-├── QuotaViewWidgetSchedule.swift
-└── QuotaViewWidgetCopy.swift
+Sources/QuotaViewWidgetContract/
+└── WidgetSnapshot.swift
 
-WidgetExtension/
-├── Info.plist
-├── QuotaViewWidget.entitlements
-└── Sources/
-    ├── QuotaViewWidgetBundle.swift
-    ├── QuotaViewUsageWidget.swift
-    ├── QuotaViewUsageProvider.swift
-    ├── QuotaViewUsageEntry.swift
-    └── Views/
-        ├── QuotaViewUsageSmallView.swift
-        ├── QuotaViewUsageMediumView.swift
-        └── QuotaViewWidgetUnavailableView.swift
+Sources/QuotaView/
+└── QuotaViewWidgetSnapshotWriter.swift
+
+Sources/QuotaViewWidget/
+├── QuotaViewWidget.swift
+├── Localizable.xcstrings
+└── WidgetAssets.xcassets/
+
+Configs/Widget.xcconfig
+Support/QuotaViewWidget-Info.plist
+Support/QuotaViewWidget.entitlements
 ```
 
-如果共享代码继续由 Swift Package 构建，`Package.swift` 只新增一个小型
-library product。Extension Target 仍需加入 Xcode 工程，因为 Swift Package
-本身不能替代 `.appex` 的宿主嵌入、entitlements 和签名配置。
+`Package.swift` 已提供小型 `QuotaViewWidgetContract` library product；
+`QuotaView.xcodeproj` 提供真正的 Extension Target、宿主嵌入、entitlements
+和签名配置。Swift Package 不能替代 `.appex` 的这些职责。
 
 ### WIDGET-04.3 禁止依赖
 
@@ -217,79 +236,70 @@ library product。Extension Target 仍需加入 Xcode 工程，因为 Swift Pack
 
 ### WIDGET-05.1 顶层结构
 
-首版建议结构：
+当前 schema 1 顶层结构：
 
 ```swift
 public struct QuotaViewWidgetSnapshot: Codable, Equatable, Sendable {
+    public static let currentSchemaVersion = 1
+
     public let schemaVersion: Int
     public let generatedAt: Date
     public let expiresAt: Date
-    public let locale: WidgetLocale
-    public let appearancePolicy: WidgetAppearancePolicy
-    public let dataStatus: WidgetDataStatus
-    public let payload: UsagePayload?
+    public let updatedAt: Date?
+    public let localeIdentifier: String
+    public let availability: WidgetDataAvailability
+    public let provider: ProviderWidgetPayload?
 }
 ```
 
-其中：
+可用性只有两个值：
 
 ```swift
-public enum WidgetDataStatus: String, Codable, Sendable {
+public enum WidgetDataAvailability: String, Codable, Sendable {
     case available
     case unavailable
 }
-
-public enum WidgetLocale: String, Codable, Sendable {
-    case simplifiedChinese = "zh-Hans"
-    case english = "en"
-}
-
-public enum WidgetAppearancePolicy: String, Codable, Sendable {
-    case system
-}
 ```
 
-Widget 外观始终跟随 WidgetKit/System。`appearancePolicy` 首版保留为
-`.system`，避免把主应用浅色/深色强制设置错误地应用到桌面 Widget。
+Widget 外观始终跟随 WidgetKit/System，快照不保存主应用的浅色/深色偏好。
+`localeIdentifier` 由主应用写入当前解析后的语言标识。
 
-### WIDGET-05.2 UsagePayload
+### WIDGET-05.2 Provider payload
 
 ```swift
-public struct UsagePayload: Codable, Equatable, Sendable {
+public struct ProviderWidgetPayload: Codable, Equatable, Sendable {
     public let providerID: String
-    public let providerDisplayName: String
-    public let planDisplayName: String?
-    public let primaryWindow: WindowPayload?
-    public let secondaryMetrics: [MetricPayload]
+    public let displayName: String
+    public let plan: String?
+    public let primaryWindow: WidgetQuotaWindow?
+    public let auxiliaryMetrics: [WidgetAuxiliaryMetric]
     public let availableResetCredits: Int?
-    public let updatedAt: Date
 }
 
-public struct WindowPayload: Codable, Equatable, Sendable {
-    public let title: String
+public struct WidgetQuotaWindow: Codable, Equatable, Sendable {
+    public let usedFraction: Double?
     public let remainingFraction: Double?
     public let resetsAt: Date?
 }
 
-public struct MetricPayload: Codable, Equatable, Identifiable, Sendable {
+public struct WidgetAuxiliaryMetric: Codable, Equatable, Identifiable, Sendable {
     public let id: String
-    public let title: String
-    public let formattedValue: String?
-    public let numericFraction: Double?
+    public let label: String
+    public let formattedValue: String
 }
 ```
 
-首版快照只投影 Widget 实际显示的数据。不要为了“以后可能用到”把完整
-`ProviderSnapshot` 编码进共享容器。
+当前最多保留三个辅助指标，标识为 Credits、今日 Tokens 和累计 Tokens；
+Widget 只投影实际显示的数据，不把完整 `ProviderSnapshot` 编码进共享容器。
 
 ### WIDGET-05.3 可用性语义
 
 主应用生成快照时：
 
-- 最新 Provider 状态有效：`dataStatus = .available`，写入 payload；
-- 最新请求失败：`dataStatus = .unavailable`，`payload = nil`；
-- 从未获得有效快照：`dataStatus = .unavailable`，`payload = nil`；
-- 应用设置关闭 Provider：`dataStatus = .unavailable`，`payload = nil`；
+- 最新 Provider 状态有效：`availability = .available`，写入 provider；
+- 最新请求失败：`availability = .unavailable`，`provider = nil`；
+- 从未获得有效快照：`availability = .unavailable`，`provider = nil`；
+- 应用设置关闭 Provider：`availability = .unavailable`，`provider = nil`；
 - 必需字段缺失：保持可选字段为空，不伪造 `0`；
 - 过期判断由 Extension 根据 `expiresAt` 再执行一次。
 
@@ -303,8 +313,9 @@ public struct MetricPayload: Codable, Equatable, Identifiable, Sendable {
 - `expiresAt`：超过后 Widget 必须显示不可用；
 - `resetsAt`：额度窗口官方重置时间，可空。
 
-建议首版 `expiresAt` 为成功快照 `updatedAt + 35 分钟`，比最大普通时间线
-间隔稍长。该数值应作为共享常量并可测试，不在多个 Target 中重复硬编码。
+当前 `expiresAt` 使用共享常量 `snapshotLifetime = 15 分钟`；Timeline 最短
+重读间隔使用 `minimumTimelineReloadInterval = 5 分钟`。两者均定义在
+`QuotaViewWidgetConfiguration`，不在多个 Target 中重复硬编码。
 
 ### WIDGET-05.5 Schema 版本
 
@@ -314,10 +325,9 @@ public struct MetricPayload: Codable, Equatable, Identifiable, Sendable {
 static let currentSchemaVersion = 1
 ```
 
-解码策略：
+当前解码策略：
 
 - 版本 `1`：正常读取；
-- 缺少版本的预发布测试文件：只在显式 legacy decoder 中读取；
 - 未来较新版本：返回 unsupported，不猜测字段；
 - 损坏文件：返回 corrupt；
 - 任何错误均转换为稳定不可用 entry，不让 Extension 崩溃。
@@ -326,12 +336,12 @@ static let currentSchemaVersion = 1
 
 - 新增可选字段可维持当前版本；
 - 删除、改名、改变单位或语义必须升级版本；
-- 至少保留前一个已发布版本的读取适配器；
+- 只有发布了新 schema 后，才为仍需兼容的上一生产 schema 增加显式适配器；
 - 快照写入与 Extension 发布必须在同一 App 版本中协调。
 
 ### WIDGET-05.6 大小与隐私
 
-首版 JSON 目标小于 `16 KB`，硬上限建议 `64 KB`。投影器必须过滤：
+首版 JSON 目标小于 `16 KB`，硬上限为 `64 KB`。投影器必须过滤：
 
 - 账户邮箱、用户名、组织真实 ID；
 - 访问 Token、Cookie、Keychain 引用；
@@ -347,19 +357,20 @@ static let currentSchemaVersion = 1
 ### WIDGET-06.1 App Group ID
 
 主应用和 Extension 必须使用同一个、在 Apple Developer 配置中登记的
-Application Group。建议定义一个构建变量：
+Application Group。当前构建变量为：
 
 ```text
 QUOTAVIEW_APP_GROUP_ID
 ```
 
-生产值在开发者 Team 确定后固定，推荐语义为：
+当前生产值已经固定为：
 
 ```text
-<TeamIdentifierPrefix>com.quotaview.menubar.shared
+BUUH229D5Q.com.quotaview.shared
 ```
 
-不要在两个 Target 中分别拼接，也不要假设开发 Team ID。构建时把同一个值：
+Team ID 为 `BUUH229D5Q`。该值由 App/Widget xcconfig 提供，并在 Build 2 的
+Developer ID 直接分发环境中通过真实共享容器验证。构建时把同一个值：
 
 1. 写入两个 Target 的 `com.apple.security.application-groups` entitlement；
 2. 写入两个 bundle 的 `QuotaViewAppGroupID` Info.plist key；
@@ -371,14 +382,14 @@ QUOTAVIEW_APP_GROUP_ID
 
 ### WIDGET-06.2 Bundle ID
 
-建议：
+当前生产 Bundle ID：
 
 ```text
 主应用：com.quotaview.menubar
 Widget：com.quotaview.menubar.widget
 ```
 
-最终 ID 必须与现有签名和发布账户一致，不能只修改源码字符串。
+任何后续修改必须同步签名和发布配置，不能只修改源码字符串。
 
 ### WIDGET-06.3 Entitlements
 
@@ -404,14 +415,15 @@ Widget Extension 至少使用：
 
 Extension 不添加网络客户端、用户文件或 Keychain entitlement。
 
-主应用当前是否启用 Sandbox 是独立发布决策；为了 App Group 不应顺便扩大或
-改变其既有权限模型。
+主应用当前保持 `ENABLE_APP_SANDBOX = NO`，Extension 使用
+`ENABLE_APP_SANDBOX = YES`。为了 App Group 不得顺便改变这一既有发布权限
+模型。
 
 ### WIDGET-06.4 存储文件
 
 ```text
 App Group Container/
-└── quotaview-widget-snapshot-v1.json
+└── QuotaViewWidgetSnapshot.json
 ```
 
 写入：
@@ -421,8 +433,8 @@ let data = try encoder.encode(snapshot)
 try data.write(to: url, options: [.atomic])
 ```
 
-编码使用 ISO 8601 日期。原子写入可防止 Extension 在主应用写到一半时读取
-到截断 JSON。
+编码使用 `millisecondsSince1970` 日期和排序键。原子写入可防止 Extension
+在主应用写到一半时读取到截断 JSON。
 
 ### WIDGET-06.5 失败与回退
 
@@ -436,14 +448,18 @@ try data.write(to: url, options: [.atomic])
 
 ### WIDGET-06.6 签名限制
 
-App Group 是签名能力。当前无签名/ad-hoc Release 构建可以验证编译、架构、
-嵌入和基本 bundle 结构，但不能作为真实 App Group 跨进程共享的最终验收。
+App Group 是签名能力。`0.3.1 (Build 2)` 已完成主应用、Widget 和 Helper
+的 Developer ID 签名，Apple 公证与 Staple，以及安装后的真实 App Group
+写入和 Widget 时间线读取验证。
+
+后续无签名/ad-hoc Release 构建仍只能验证编译、架构、嵌入和基本 bundle
+结构，不能替代已签名版本的跨进程共享回归验收。
 
 真实 Widget 数据共享至少需要：
 
 - 主应用和 Extension 使用同一 Team；
 - App Group 已在开发者配置中登记；
-- 两个 Target 的 provisioning/签名包含相同 entitlement；
+- 两个 Target 的最终签名包含相同 App Group entitlement；
 - 嵌套 `.appex` 使用与主应用兼容的签名；
 - 在签名构建上做一次真实桌面 Widget 验收。
 
@@ -457,10 +473,13 @@ App Group 是签名能力。当前无签名/ad-hoc Release 构建可以验证编
 
 - Provider 刷新成功；
 - Provider 刷新失败并使最新状态变为不可用；
-- Provider、语言或 Widget 显示设置变化；
+- 当前状态重新发布时携带最新解析语言；
 - 应用启动并恢复到一个可判定状态；
 - Provider 被关闭；
 - 窗口重置后新数据到达。
+
+当前没有独立 Widget 显示设置。语言偏好变化是否需要立即触发一次额外写入，
+仍属于 `WIDGET-12 Step 5` 的待验证项。
 
 不要在每次 SwiftUI body 计算、倒计时每秒变化或无关设置变化时写文件。
 
@@ -469,9 +488,9 @@ App Group 是签名能力。当前无签名/ad-hoc Release 构建可以验证编
 ```swift
 struct QuotaViewWidgetSnapshotProjector {
     func makeSnapshot(
-        state: ProviderLoadState,
-        preferences: WidgetPreferences,
-        locale: WidgetLocale,
+        presentation: CurrentCodexPresentation?,
+        isAvailable: Bool,
+        localeIdentifier: String,
         now: Date
     ) -> QuotaViewWidgetSnapshot
 }
@@ -482,7 +501,7 @@ Projector 是纯函数：
 - 不访问磁盘；
 - 不调用 Provider；
 - 不调用 WidgetCenter；
-- 不读取系统语言以外的全局单例；
+- 不读取全局单例；
 - 所有输入显式传入；
 - 可以完整做单元测试。
 
@@ -492,15 +511,9 @@ Projector 是纯函数：
 稳定签名：
 
 ```text
-schemaVersion
-locale
-dataStatus
-providerID
-planDisplayName
-remaining percentage bucket / exact shown value
-reset timestamp
-visible metric values
-available reset credits
+availability
+localeIdentifier
+provider payload（plan、额度窗口、辅助指标、重置次数）
 ```
 
 不把 `generatedAt` 单独作为签名输入，否则每次刷新都会强制重载。
@@ -508,9 +521,9 @@ available reset credits
 流程：
 
 1. 生成快照；
-2. 与上次保存的 presentation signature 比较；
-3. 文件内容需要更新时原子写入；
-4. 只有签名变化或快照从新鲜变为即将失效时调用 WidgetCenter；
+2. 每次 `publish` 原子写入最新快照；
+3. 与进程内上一次 reload signature 比较；
+4. 签名变化或距离上次 reload 已满 5 分钟时调用 WidgetCenter；
 5. 首版只有一个 kind，可调用
    `WidgetCenter.shared.reloadTimelines(ofKind:)`，无需 `reloadAllTimelines()`。
 
@@ -531,17 +544,14 @@ available reset credits
 ### WIDGET-08.1 Entry
 
 ```swift
-struct QuotaViewUsageEntry: TimelineEntry {
+struct QuotaViewWidgetEntry: TimelineEntry {
     let date: Date
-    let state: QuotaViewWidgetViewState
+    let snapshot: QuotaViewWidgetSnapshot?
+    let isPlaceholder: Bool
 }
 ```
 
-`QuotaViewWidgetViewState` 是已经适合渲染的值类型，至少包含：
-
-- `.available(UsageViewData)`；
-- `.unavailable(UnavailableReason)`；
-- `.placeholder`。
+视图根据 `snapshot` 与 `isPlaceholder` 渲染有效、不可用或 Gallery 占位状态。
 
 ### WIDGET-08.2 Placeholder
 
@@ -563,57 +573,20 @@ struct QuotaViewUsageEntry: TimelineEntry {
 
 ### WIDGET-08.4 Timeline 算法
 
-```swift
-func timeline(now: Date, snapshot: QuotaViewWidgetSnapshot?) -> Timeline {
-    guard let snapshot else {
-        return Timeline(
-            entries: [.unavailable(at: now, reason: .noSnapshot)],
-            policy: .after(now + 15.minutes)
-        )
-    }
-
-    guard snapshot.schemaVersionIsSupported else {
-        return Timeline(
-            entries: [.unavailable(at: now, reason: .unsupportedSchema)],
-            policy: .after(now + 30.minutes)
-        )
-    }
-
-    guard snapshot.dataStatus == .available,
-          let payload = snapshot.payload,
-          snapshot.expiresAt > now
-    else {
-        return Timeline(
-            entries: [.unavailable(at: now, reason: .staleOrUnavailable)],
-            policy: .after(now + 15.minutes)
-        )
-    }
-
-    var dates = [now]
-    if let reset = payload.primaryWindow?.resetsAt,
-       reset > now,
-       reset <= now + 30.minutes {
-        dates.append(reset + 1.second)
-    }
-    dates.append(min(now + 15.minutes, snapshot.expiresAt))
-
-    return Timeline(
-        entries: uniqueSorted(dates).map { entry(at: $0, snapshot: snapshot) },
-        policy: .after(min(now + 30.minutes, snapshot.expiresAt))
-    )
-}
-```
+当前 Timeline 每次只生成一个 entry。下一次重读日期为快照到期时间，并
+限制在“从现在起至少 5 分钟、至多 15 分钟”的范围内；无快照时按 15 分钟
+重读。重置时间用于显示，不单独生成秒级 entry。
 
 ### WIDGET-08.5 调度边界
 
 | 场景 | 建议 |
 |---|---|
-| 普通有效快照 | 约 15 分钟检查 |
+| 普通有效快照 | 在快照到期点检查 |
 | 最小主动间隔 | 不低于 5 分钟 |
-| 最大普通间隔 | 不超过 30 分钟 |
-| 30 分钟内即将重置 | 添加 `reset + 1 秒` entry |
+| 最大普通间隔 | 不超过 15 分钟 |
+| 临近重置 | 当前不增加独立 entry，由下一次 Timeline 重读更新 |
 | 快照过期 | 在过期点进入不可用 |
-| 无快照/不可用 | 15–30 分钟后检查 |
+| 无快照/不可用 | 15 分钟后检查 |
 
 WidgetKit 可能合并、延迟或忽略建议时间，UI 文案不能声称“实时”或保证精确
 倒计时。重置倒计时应使用系统相对时间文本，让系统在无需完整 timeline
@@ -638,8 +611,8 @@ Timeline Provider 不能：
 ### WIDGET-09.1 Widget 定义
 
 ```text
-Kind: com.quotaview.widget.usage
-Display name: QuotaView Usage / QuotaView 额度
+Kind: QuotaViewUsageWidget
+Display name: QuotaView
 Families: systemSmall, systemMedium
 Configuration: StaticConfiguration
 ```
@@ -658,16 +631,17 @@ Configuration: StaticConfiguration
 │        67%         │
 │      本周期剩余     │
 │                    │
-│ 2天后重置     PLUS │
+│ 2天后重置     Plus │
 └────────────────────┘
 ```
 
 显示：
 
 - QuotaView 标识；
-- 数据可用状态文字；
+- `5 × 5 pt` 连接状态圆点及辅助功能标签；
 - 主窗口剩余百分比；
-- 主窗口标题；
+- “本周期剩余”标签；
+- 用量进度条；
 - 相对重置时间；
 - 可选计划名称。
 
@@ -695,15 +669,12 @@ Configuration: StaticConfiguration
 
 显示：
 
-- Provider 显示名；
-- 数据可用状态；
-- 主窗口百分比和进度；
-- 最多两个由设置选择的辅助指标；
-- 相对重置时间；
-- 可选可用重置次数；
-- 相对更新时间。
+- 左栏 QuotaView 标识、主窗口百分比、计划、周期标签、进度和重置倒计时；
+- 右栏连接状态圆点；
+- 右栏四行固定指标：下次重置、Credits 余额、今日 Tokens、累计 Tokens。
 
-辅助指标必须来自快照的 `secondaryMetrics`，Extension 不读取主应用设置。
+辅助指标来自快照的 `auxiliaryMetrics`，Extension 不读取主应用设置；当前
+尚未提供用户自定义 Widget 指标选择。
 
 ### WIDGET-09.4 不可用状态
 
@@ -729,10 +700,10 @@ Configuration: StaticConfiguration
 
 ### WIDGET-09.5 视觉边界
 
-Widget 使用系统原生视觉：
+Widget 使用系统原生容器与 QuotaView 已确认的紧凑数据排版：
 
 - `.containerBackground(for: .widget)`；
-- 系统字体；
+- 打包的 Asta Sans 用于已确认的数据、标签与指标字号；
 - `.primary`、`.secondary` 和语义状态色；
 - 系统动态圆角与内边距；
 - 深浅色跟随 WidgetKit；
@@ -741,7 +712,6 @@ Widget 使用系统原生视觉：
 不复制：
 
 - 主面板 258 pt 固定尺寸；
-- Asta Sans；
 - `NSGlassEffectView`；
 - 自定义 Liquid Glass 填充与阴影；
 - 主应用透明面板背景；
@@ -757,11 +727,11 @@ Widget 使用系统原生视觉：
 ### WIDGET-10.1 本地化
 
 QuotaView 支持应用内语言设置，Widget 不能依赖主应用进程中的 `AppCopy`。
-推荐：
+当前实现：
 
-- 主应用把最终 `WidgetLocale` 写入快照；
-- `QuotaViewWidgetCopy` 在共享 Target 中提供有限的 Widget 文案；
-- `followSystem` 由主应用解析为当时的 `zh-Hans` 或 `en`；
+- 主应用把最终 `localeIdentifier` 写入快照；
+- `WidgetCopy` 在 Extension 内提供有限的中英文文案；
+- `followSystem` 由主应用解析为当时的 locale identifier；
 - 系统语言变化后，主应用下次启动/激活时重写快照并 reload；
 - 日期和相对时间使用固定 locale 的 Foundation formatter 或 SwiftUI
   系统格式；
@@ -804,12 +774,13 @@ Widget 文案必须覆盖：
 
 ### WIDGET-11.1 Xcode Target
 
-在现有 `QuotaView.xcodeproj` 中新增：
+当前 `QuotaView.xcodeproj` 已包含：
 
 - Product Type：App Extension；
-- Product：`QuotaViewWidget.appex`；
-- Sources：`WidgetExtension/Sources`；
-- Dependency：`QuotaViewWidgetShared`；
+- Target：`QuotaViewWidgetExtension`；
+- Product：`QuotaViewWidgetExtension.appex`；
+- Sources：`Sources/QuotaViewWidget`；
+- Dependency：`QuotaViewWidgetContract`；
 - Frameworks：SwiftUI、WidgetKit；
 - Deployment Target：macOS 14；
 - `APPLICATION_EXTENSION_API_ONLY = YES`；
@@ -817,11 +788,11 @@ Widget 文案必须覆盖：
 - 独立 Info.plist 和 entitlements；
 - 与主应用一致的版本和 Build。
 
-主应用新增：
+主应用已包含：
 
 - 对 Widget Extension Target 的依赖；
 - “Embed App Extensions” Copy Files Phase；
-- 目标路径 `Contents/PlugIns/QuotaViewWidget.appex`；
+- 目标路径 `Contents/PlugIns/QuotaViewWidgetExtension.appex`；
 - App Group entitlement。
 
 ### WIDGET-11.2 Info.plist
@@ -844,12 +815,12 @@ Extension 至少包含：
 
 ### WIDGET-11.3 Package.swift
 
-建议添加：
+当前已提供：
 
 ```swift
 .library(
-    name: "QuotaViewWidgetShared",
-    targets: ["QuotaViewWidgetShared"]
+    name: "QuotaViewWidgetContract",
+    targets: ["QuotaViewWidgetContract"]
 )
 ```
 
@@ -858,7 +829,7 @@ Extension 至少包含：
 
 ### WIDGET-11.4 build-app.sh
 
-现有脚本后续需要增加：
+现有 `scripts/build-app.sh` 已执行并必须持续保持：
 
 1. 构建 Extension 的 Universal Release；
 2. 校验 `arm64 x86_64`；
@@ -885,12 +856,22 @@ Extension 至少包含：
 
 ---
 
-## WIDGET-12. 实施顺序
+## WIDGET-12. 实施顺序与当前完成状态
 
-### Step 1：纯共享协议
+| Step | 当前状态 |
+|---|---|
+| Step 1 | 已完成：Contract、codec、文件存储、调度常量、过期与大小验证已发布 |
+| Step 2 | 已完成：主应用 Projector/Writer 与签名节流已发布 |
+| Step 3 | 已完成：Small/Medium StaticConfiguration Extension 已发布 |
+| Step 4 | 已完成：Build 2 已通过签名、嵌入、公证与真实共享容器验证 |
+| Step 5 | 部分完成：快照包含解析后的语言和不可用状态；专用指标选择、精确值隐私设置及语言偏好变化的即时重写验收尚未交付 |
 
-- 创建 `QuotaViewWidgetShared`；
-- 实现快照、Projector、Store 抽象和 Schedule 纯函数；
+下方保留原始退出标准作为回归门禁，不表示已完成 Step 需要重新实施。
+
+### Step 1：纯共享协议（已完成）
+
+- 创建 `QuotaViewWidgetContract`；
+- 实现快照、codec、文件 Store 和 Schedule 常量；
 - 使用临时目录测试；
 - 不添加 Extension Target。
 
@@ -900,7 +881,7 @@ Extension 至少包含：
 - 缺失值不变成 0；
 - 版本、过期和损坏测试通过。
 
-### Step 2：主应用写入
+### Step 2：主应用写入（已完成）
 
 - 在标准化状态稳定后接入 Projector；
 - 原子写入；
@@ -914,13 +895,12 @@ Extension 至少包含：
 - 写入失败不影响当前功能；
 - 无高频 I/O。
 
-### Step 3：Extension MVP
+### Step 3：Extension MVP（已完成）
 
 - 添加 Widget Target；
 - 实现 StaticConfiguration；
 - 实现 Small/Medium；
 - 实现 placeholder/unavailable；
-- 设置固定 `widgetURL`。
 
 退出标准：
 
@@ -928,7 +908,7 @@ Extension 至少包含：
 - Preview 和测试不需要真实账户；
 - 所有状态布局稳定。
 
-### Step 4：签名、嵌入和发布
+### Step 4：签名、嵌入和发布（已完成）
 
 - 配置真实 App Group；
 - 配置两个 Target entitlement；
@@ -943,12 +923,12 @@ Extension 至少包含：
 - 主应用刷新后 Widget 最终更新；
 - 视觉与交互标记为等待用户验收。
 
-### Step 5：设置整合
+### Step 5：设置整合（部分完成）
 
-- 增加 Widget 指标选择；
-- 增加精确值隐私设置；
-- 语言变更后重写快照；
-- Provider 禁用后写 unavailable。
+- 已完成：快照投影解析后的语言，Provider 不可用时写 unavailable；
+- 未完成：专用 Widget 指标选择；
+- 未完成：精确值隐私设置；
+- 待验证并按需补齐：语言偏好变化后不等待下一次普通状态更新即可重写快照。
 
 退出标准：
 
@@ -964,50 +944,21 @@ Extension 至少包含：
 
 #### 快照
 
-- schema v1 编解码；
-- ISO 8601 日期；
-- 未知新版本；
-- 损坏 JSON；
-- 文件不存在；
-- 原子覆盖；
-- `expiresAt` 边界；
-- JSON 大小上限；
-- 敏感字段扫描。
+- 默认 App Group 使用 Developer Team 前缀；
+- OpenAI 方案名称归一与未知值隐藏；
+- schema v1 有界编解码（毫秒时间戳）；
+- 过期与未知 schema 拒绝；
+- 超过 `64 KB` 的 payload 拒绝。
 
 #### Projector
 
-- 有效状态；
-- 最新请求失败；
-- 从未有快照；
-- 缺失百分比；
-- 缺失 plan；
-- 无重置次数；
-- Provider 禁用；
-- 中文、英文、跟随系统；
-- Widget 指标筛选；
-- 不伪造 `0%`。
+- 只发布脱敏 Widget 字段；
+- 不可用时不保留 Provider 数据；
+- 可选指标缺失时使用稳定占位，不伪造 `0`；
+- 原子写入，并按签名或 5 分钟间隔限制 Timeline reload。
 
-#### Timeline
-
-- 无快照；
-- 有效快照；
-- 已过期；
-- 即将过期；
-- 30 分钟内重置；
-- 重置时间已经过去；
-- 重复日期去重；
-- 下一刷新不早于最小间隔；
-- 下一刷新不晚于有效期；
-- 系统当前时间变化。
-
-#### 变更签名
-
-- 只有 `generatedAt` 改变时不 reload；
-- 百分比显示值变化时 reload；
-- 状态由 available 变 unavailable 时 reload；
-- 语言变化时 reload；
-- 隐藏指标变化时 reload；
-- 文件写入失败时不 reload。
+当前自动化未把 `TimelineProvider` 调度拆成独立纯函数测试；5–15 分钟边界
+由代码审查和 Extension 构建覆盖。若后续改变调度算法，应先补独立测试。
 
 ### WIDGET-13.2 静态安全检查
 
@@ -1019,8 +970,10 @@ Extension 至少包含：
 - Cookie；
 - `account/rateLimitResetCredit/consume`；
 - SQLite 历史访问；
-- 网络请求；
-- Asta 字体副本。
+- 网络请求。
+
+Asta Sans 与 Widget 专用图标是当前已确认资源，不属于禁止项；检查目标是
+不复制完整主应用 Asset Catalog 或无关资源。
 
 ### WIDGET-13.3 构建检查
 
@@ -1028,7 +981,7 @@ Extension 至少包含：
 QuotaView.app/
 └── Contents/
     └── PlugIns/
-        └── QuotaViewWidget.appex/
+        └── QuotaViewWidgetExtension.appex/
 ```
 
 验证：
@@ -1056,7 +1009,7 @@ QuotaView.app/
 | 生命周期 | 首次添加 / 主应用刷新 / 主应用退出 / 系统重启 |
 | 时间 | 普通刷新 / 临近重置 / 重置后 / 夏令时或时区变化 |
 | 辅助功能 | VoiceOver / Dynamic Type / Increase Contrast |
-| 隐私 | 隐藏精确值 / 桌面截图不含账户身份 |
+| 隐私 | 不显示账户身份；精确值隐藏设置尚未交付 |
 
 Codex 负责构建、代码和自动化验证；最终系统视觉与交互结果标记为
 “等待用户验收”。
@@ -1067,7 +1020,7 @@ Codex 负责构建、代码和自动化验证；最终系统视觉与交互结�
 
 | 失败 | 用户结果 | 系统行为 |
 |---|---|---|
-| 主应用未运行且无快照 | 打开 QuotaView 获取数据 | 15–30 分钟后检查 |
+| 主应用未运行且无快照 | 打开 QuotaView 获取数据 | 15 分钟后检查 |
 | 最新 Provider 刷新失败 | 不可用、数值破折号 | 不显示旧值为当前值 |
 | 快照过期 | 数据已过期 | 等待主应用下次写入 |
 | JSON 损坏 | 无法读取 | 不崩溃，不删除其他共享数据 |
@@ -1096,8 +1049,8 @@ Codex 负责构建、代码和自动化验证；最终系统视觉与交互结�
 
 ### WIDGET-15.2 体积预算
 
-- Extension 不复制 Asta Sans；
-- 不复制主应用完整 Asset Catalog；
+- Extension 只打包已确认的 Asta Sans 字体文件；
+- 不复制主应用完整 Asset Catalog，只保留 Widget 专用图标资源；
 - 图标优先使用小型专用资源或系统允许的模板资源；
 - 不引入第三方依赖；
 - Release 时单独报告 `.appex` 大小；
@@ -1153,7 +1106,7 @@ QuotaView 应复制其进程隔离和快照共享的工程方法，而不是复�
 
 ### 历史或趋势 Widget
 
-- `CORE-08` 历史库稳定；
+- `EXEC-08` 历史库稳定；
 - 主应用生成有限的聚合点并写入快照；
 - Extension 不直接打开历史数据库；
 - 快照仍满足大小上限；
@@ -1168,20 +1121,19 @@ QuotaView 应复制其进程隔离和快照共享的工程方法，而不是复�
 
 ---
 
-## WIDGET-18. 暂缓决策
+## WIDGET-18. 当前暂缓决策
 
-以下问题在真正开始 Widget 实施前确认：
+Team、App Group、Bundle ID、专用资源、Small/Medium、15 分钟过期时长、
+签名和发布渠道均已在当前生产版本确定。仍未交付、需要另行规格化的项目：
 
-- Apple Developer Team 与最终 App Group ID；
-- Widget 专用图标资源；
-- Small/Medium 的最终视觉稿；
-- 精确额度隐私开关是否进入首版；
-- Medium 默认显示哪两个辅助指标；
-- 点击 Widget 打开概览还是数据详情；
-- 首版 `expiresAt` 的最终时长；
-- 系统签名构建和发布渠道。
+- 专用 Widget 指标选择；
+- 精确额度隐私开关；
+- 点击 Widget 后的固定深链路由；
+- 第二 Provider 上线后的 Provider 选择；
+- History 发布后的有限趋势 Widget。
 
-这些不改变“主应用写脱敏快照，Extension 只读”的核心方案。
+这些未来决策不改变“主应用写脱敏快照，Extension 只读”的核心方案，也
+不得在未实现前写成当前设置能力。
 
 ---
 
@@ -1189,11 +1141,11 @@ QuotaView 应复制其进程隔离和快照共享的工程方法，而不是复�
 
 - 核心架构：
   [`quotaview-core-architecture-evolution.md`](./quotaview-core-architecture-evolution.md)
-- 本地 CodexBar 详细分析：
-  [`codexbar-macos-design-reference.md`](../reference/codexbar-macos-design-reference.md)
+- 本地 CodexBar 详细分析：外部未跟踪参考
+  `docs/reference/codexbar-macos-design-reference.md`，仅按 `AGENTS.md` 门禁读取；
 - CodexBar 仓库：[steipete/CodexBar](https://github.com/steipete/CodexBar)
 - 参考提交：`dd029db4cb17811edd5805d952c5d5fc23395be3`
-- 重点参考源文件：
+- 固定 CodexBar 提交中的重点参考路径（不是 QuotaView 本地路径）：
   - `Sources/CodexBarCore/WidgetSnapshot.swift`
   - `Sources/CodexBarCore/AppGroupSupport.swift`
   - `Sources/CodexBar/UsageStore+WidgetSnapshot.swift`

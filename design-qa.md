@@ -11,6 +11,16 @@
 > 证据边界：下方各版本结论按实际产品所有者反馈分别保留；未明确确认的
 > 项目继续标记为等待验收，不得由历史 Passed 推导为当前全矩阵通过。
 
+本文件只维护生产主面板、重置流程、设置窗口及相关已发布界面的视觉/交互
+历史。`Baseline result: Passed` 和各旧版本结论只对其记录的版本与范围有效，
+不代表 `0.3.1 (Build 2)` 的完整外观、语言、数据状态和辅助功能矩阵已通过。
+
+灵动岛证据按功能路由：已发布单任务行为与等待验收项见
+[`QV-PRODUCT-ACTIVITY-ISLAND-001`](docs/design/quotaview-codex-activity-widget-product.md#activity-08-031-验证边界)；
+当前多任务 Demo 的视觉与交互记录见
+[`QV-EVIDENCE-MULTITASK-DEMO-QA-001`](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)。
+Prototype 结论不能回填为生产 App 验收。
+
 Baseline result: **Passed**
 
 0.1.5 clear-glass material result: **Passed — product-owner review**

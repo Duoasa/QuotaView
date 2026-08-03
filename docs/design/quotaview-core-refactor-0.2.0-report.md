@@ -12,8 +12,17 @@
 > 当前实现
 >
 > 日期：2026-07-28
+>
 > 执行依据：
 > [`quotaview-core-architecture-evolution.md`](./quotaview-core-architecture-evolution.md)
+
+## 0. 历史时态说明
+
+本文中的“当前”“本版”“后续”均指 `0.2.0` 实施与验证时点。此后 Widget
+Extension 已在 `0.2.1` 发布，当前生产版本已推进到 `0.3.1 (Build 2)`；
+因此本文只能证明当时 Phase 0–2 与 Widget Contract 的交付事实，不能覆盖
+当前生产代码、当前 SDD 状态或最新发布文档。当前状态以
+[SDD 规格索引](../specs/README.md)、`HANDOFF.md` 和生产代码为准。
 
 ## 1. 本版范围
 

@@ -227,7 +227,7 @@ account/usage/read  # 仅在任一 Token 区域开启时请求
 
 Credits 与套餐剩余额度是两个独立概念，界面不会将它们合并。
 
-## 项目结构
+## 生产源码结构
 
 ```text
 Sources/
@@ -258,6 +258,6 @@ Tests/
 
 ## 反馈与贡献
 
-欢迎提交 Bug、兼容性报告和目标明确的功能建议。请先使用 [Issue 模板](https://github.com/Duoasa/QuotaView/issues/new/choose)，准备代码改动前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+欢迎提交 Bug、兼容性报告和目标明确的功能建议。请先使用 [Issue 模板](https://github.com/Duoasa/QuotaView/issues/new/choose)，准备代码改动前请阅读 [SDD 规格索引](docs/specs/README.md) 和 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 请勿在 Issue 中包含身份认证 Token、登录凭据或未经脱敏的 `~/.codex` 文件。

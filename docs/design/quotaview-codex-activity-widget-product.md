@@ -320,6 +320,11 @@ QuotaView 收到当前固定 Hook 定义产生的第一条真实
 - Helper、App 与 Widget 的 Universal 架构；
 - 0.3.1 (Build 1) 版本信息。
 
+上列 Build 1 项是单任务灵动岛首次发布时的历史自动化范围。当前生产版本
+为 `0.3.1 (Build 2)`；Build 2 只修复 Widget App Group 并统一“本周期剩余”
+文案，没有改变本规格的单任务灵动岛状态机、Hook 映射或收起时序。Build 2
+的签名、资产与发布证据以 `HANDOFF.md` 和 `VERSION_HISTORY.md` 为准。
+
 以下项目继续等待产品所有者运行应用后验收：
 
 - 最大态 / 紧凑态的最终尺寸、居中和截断；
@@ -338,4 +343,5 @@ QuotaView 收到当前固定 Hook 定义产生的第一条真实
 - [OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)
 - [OpenAI Codex App Server](https://learn.chatgpt.com/docs/app-server)
 - [QuotaView WidgetKit 方案](./quotaview-widgetkit-solution.md)
-- [CodexBar macOS 设计参考](../reference/codexbar-macos-design-reference.md)
+- CodexBar macOS 设计参考：本地外部参考
+  `docs/reference/codexbar-macos-design-reference.md`，仅按 `AGENTS.md` 门禁读取

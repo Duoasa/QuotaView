@@ -6,11 +6,11 @@
 
 当前生产分支：`main`
 
-当前工作区 HEAD：
-`739ee59`（README Codex Island 动画预览合并提交）
-
 当前发布提交与生产基线：
 `3119171f45163fe45d68a4f774a0488968f14fd7`
+
+当前开发提交不在本文固化；每次会话使用 `git branch --show-current` 和
+`git rev-parse HEAD` 读取，避免 Handoff 在合并后立即陈旧。
 
 远程：`https://github.com/Duoasa/QuotaView.git`
 
@@ -65,6 +65,7 @@ SDD 唯一规格索引：
 | 规格状态 | `Accepted`：固定单岛方向和当前 Demo 视觉/交互基线已确认 |
 | 交付状态 | `Prototype`：正在独立 Demo 中调试 |
 | Prototype | `Prototypes/CodexActivityMultiTaskDemo/` |
+| Prototype 验证 | `swift test --package-path Prototypes/CodexActivityMultiTaskDemo`：37 项通过，0 失败；Demo 基线已由产品所有者确认 |
 | 生产源码 | 尚未迁入多任务实现，仍为 `0.3.1 (Build 2)` 单任务基线 |
 | 生产测试与验收 | 尚未开始；Prototype 测试不能作为生产完成证据 |
 | 目标版本 | 未指定；不得自行使用 `0.3.2`、新 Build、tag 或 Release |
@@ -519,7 +520,7 @@ Number，并为 tag 和 ZIP 加入唯一 Build 标识。
 CodexProviderAdapter
 → CodexStatusStore
 → sanitized WidgetSnapshot JSON
-→ group.com.quotaview.shared
+→ BUUH229D5Q.com.quotaview.shared
 → QuotaViewWidgetExtension
 ```
 
@@ -549,12 +550,13 @@ CodexProviderAdapter
 3119171f45163fe45d68a4f774a0488968f14fd7
 ```
 
-当前 `main` HEAD 为后续 README 动画资源维护提交 `739ee59`，没有改变
-App 的 `0.3.1 (Build 2)` 版本身份或上述 Release tag。
+当前开发提交必须从 Git 读取，不能由本文中的可变哈希判断。开发分支上的
+文档、README 或 Prototype 提交不会改变 App 的 `0.3.1 (Build 2)` 版本身份，
+也不会移动上述 Release tag。
 
-以下当前 SDD 迭代文件未进入 `0.3.1 (Build 2)` 发布提交。用户已在
-2026-08-04 确认多任务适配是当前进行中工作，允许在本地继续维护，但本次
-文档升级不等于授权 `git add`、commit、push 或迁入生产：
+以下 SDD 迭代文件自提交 `f603c38` 起已由 Git 跟踪并进入 `main`，用于支持
+当前多任务 Prototype 开发；它们不在 `0.3.1 (Build 2)` 发布提交或发布资产
+内，也不代表多任务功能已迁入生产：
 
 ```text
 docs/specs/
@@ -562,8 +564,9 @@ docs/design/quotaview-codex-activity-island-multitask.md
 Prototypes/CodexActivityMultiTaskDemo/
 ```
 
-以下其他未跟踪 Prototype、参考资料与图片不属于本次 SDD 升级范围，默认
-不得擅自纳入：
+以下本地未跟踪 Prototype、外部参考与图片不属于正式 SDD 文档系统，默认
+不得读取、修改、提交或用作生产实现依据；只有用户针对相应对象明确授权，
+并满足适用门禁后才能纳入：
 
 ```text
 Prototypes/CodexActivityMetalDemo/

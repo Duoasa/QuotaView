@@ -6,9 +6,9 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Released`（0.2.0 已实施 Phase 1–2；后续 Phase 按门禁推进）
+> 交付状态：`Released`（仅 Phase 0–2、4A–4B；Phase 3、5–7 不在已发布范围）
 >
-> 文档版本：`2.0`
+> 文档版本：`2.1`
 >
 > 原始设计基线：QuotaView `0.1.5 (Build 6)`
 >
@@ -44,14 +44,33 @@
 本文档替代本文件此前的 `QV-DESIGN-CORE-001` 内容。原生 Widget 的具体
 实现细节继续参考
 [`quotaview-widgetkit-solution.md`](./quotaview-widgetkit-solution.md)，
-但两份文档冲突时以本文档为准；进入 Widget 实施阶段前，必须先按
-`EXEC-10` 修订该专项文档中的共享 Target、App Group 和多 Provider
-快照边界。
+但两份文档冲突时，通用依赖与隐私边界以本文档为准，已发布 Target、路径、
+App Group 和构建事实以专项文档的当前生产映射与生产代码为准。
 
 本文档描述“应当怎样实施”，各阶段的实际完成情况以
 [`quotaview-core-refactor-0.2.0-report.md`](./quotaview-core-refactor-0.2.0-report.md)
 为准。Phase 1–2 的完成不授权当前版本接入真实账户写操作。所有代码、
 配置、资源、签名和发布工作仍须遵守项目根目录 `AGENTS.md`。
+
+### EXEC-00.1 当前实施状态
+
+下表是截至 `0.3.1 (Build 2)` 的生产校准结果，优先于本文保留的原始实施
+计划时态：
+
+| Phase | 当前状态 | 已发生事实 / 当前边界 |
+|---|---|---|
+| Phase 0 | 已完成自动化基线 | `0.2.0` 补齐行为测试；当前完整视觉矩阵仍不能由历史结论推导 |
+| Phase 1 | 已发布 | `0.2.0` 完成采集可靠性、超时、生命周期与并发收敛 |
+| Phase 2 | 已发布 | `0.2.0` 完成 Domain、Provider、兼容投影、Demand 与 Demo 操作边界 |
+| Phase 3 | 未进入生产 | 仅有未链接的 Future Contracts；SQLite History、Charts 与动态指标设置未交付 |
+| Phase 4A | 已发布 | `0.2.0` 建立 `QuotaViewWidgetContract`、快照与纯逻辑测试 |
+| Phase 4B | 已发布 | `0.2.1` 发布 Widget Extension；`0.3.1 Build 2` 修复直接分发 App Group |
+| Phase 5 | 未开始 | 没有第二个生产 Provider，也没有模型/Agent 生产展示 |
+| Phase 6 | 未开始 | 没有生产通知调度或通知设置 |
+| Phase 7 | 未授权、未开始 | 额度重置继续为 Demo；不存在真实 consume 路径 |
+
+未开始的 Phase 仍是方向规格，不构成实施授权。当前唯一进行中的产品迭代
+是多任务灵动岛 Prototype，与本架构 Phase 状态分开维护。
 
 ---
 
@@ -185,9 +204,13 @@ QuotaView 负责运行模型、托管 Agent、保存会话内容或读取 Prompt
 
 ---
 
-## EXEC-03. 当前基线与先修问题
+## EXEC-03. 0.1.5 历史基线与先修问题
 
-### EXEC-03.1 当前结构
+本节记录本文在 `0.1.5 (Build 6)` 编写时观察到的重构前结构与问题，只用于
+解释 Phase 1–2 的设计动机，不描述 `0.3.1 (Build 2)` 当前源码。问题的当前
+完成状态以 `EXEC-00.1`、生产代码和实施报告为准。
+
+### EXEC-03.1 0.1.5 历史结构
 
 ```text
 QuotaView
@@ -205,9 +228,9 @@ QuotaView
 └── QuotaViewTests
 ```
 
-### EXEC-03.2 已确认的当前问题
+### EXEC-03.2 0.1.5 当时确认的问题
 
-| 问题 | 当前表现 | 必须解决的阶段 |
+| 问题 | `0.1.5` 当时表现 | 必须解决的阶段 |
 |---|---|---|
 | 缺失主窗口被解释为 0 | `usedPercent ?? 0` | Phase 1 |
 | 无刷新发布世代 | 旧请求可能覆盖新状态 | Phase 1 |
@@ -218,7 +241,7 @@ QuotaView
 | AppDelegate 无对称 stop | 退出清理依赖进程自然结束 | Phase 1 |
 | Store 职责集中 | 多数据和 Provider 后复杂度失控 | Phase 2 |
 | 设置为固定 Bool | 不能自然扩展任意指标 | Phase 3 |
-| 当前测试只覆盖少量 Core 行为 | 无法证明 UI 功能完整保留 | Phase 0 起 |
+| 当时测试只覆盖少量 Core 行为 | 无法证明 UI 功能完整保留 | Phase 0 起 |
 
 这些问题应渐进修复，不进行一次性重写。
 
@@ -274,31 +297,28 @@ flowchart TD
 9. 未实现模块只有类型、协议和无副作用默认实现，不创建后台生命周期；
 10. 外层功能不能反向改变 Domain 的隐私语义。
 
-### EXEC-04.3 物理组织原则
+### EXEC-04.3 当前物理组织与原则
 
-第一阶段继续使用现有 `QuotaViewCore`，通过目录和访问控制建立边界，不立即
-拆出大量 Framework：
+当前生产代码继续使用较小、扁平的 `QuotaViewCore`，通过 Target、文件职责
+和访问控制建立边界，没有为了文档中的概念层级创建大量空目录：
 
 ```text
 Sources/
 ├── QuotaViewCore/
-│   ├── Domain/
-│   ├── Providers/
-│   │   └── Codex/
-│   ├── Refresh/
-│   ├── History/
-│   ├── Notifications/
-│   └── AccountOperations/
-├── QuotaView/
-│   ├── Presentation/
-│   ├── Views/
-│   ├── Settings/
-│   └── App/
-└── QuotaViewWidgetContract/       # Widget 阶段再建立
-
-WidgetExtension/                   # Apple 能力就绪后再建立
-└── Sources/
+│   ├── DomainModels.swift
+│   ├── ProviderArchitecture.swift
+│   ├── CodexProviderAdapter.swift
+│   ├── RefreshCoordinator.swift
+│   └── AccountOperations.swift
+├── QuotaView/                     # Presentation、Store、Views、Settings、App
+├── QuotaViewFutureContracts/      # 未链接的未来 History/Chart/Notification 契约
+├── QuotaViewWidgetContract/       # Foundation-only 共享快照
+└── QuotaViewWidget/               # WidgetKit Extension 实现
 ```
+
+Phase 3、5、6 未实施，因此当前 `QuotaViewCore` 中没有生产 History、Charts、
+第二 Provider 或 Notification 子系统。未来实施时可以按职责建立目录，但不得
+把 `QuotaViewFutureContracts` 的预留类型视为已交付能力。
 
 只有以下情况才新增 Target：
 
@@ -985,9 +1005,9 @@ Provider
 - 一个 Usage Widget；
 - Small 和 Medium；
 - `StaticConfiguration`；
-- 系统字体、系统语义表面；
+- 系统 Widget 容器与语义表面，配合已确认的 Asta Sans 数据排版；
 - 无 Provider、历史和操作能力；
-- 无 Asta 字体副本；
+- 只打包 Widget 使用的 Asta Sans 与专用资源，不复制完整主应用资源；
 - 无主面板 Liquid Glass 复制。
 
 ### EXEC-10.2 必须修正的 Target 边界
@@ -1052,43 +1072,28 @@ Widget Extension
 未来 `AppIntentConfiguration` 不能在只有单 Provider payload 时声称支持
 多 Provider 选择。采用哪一种在第二 Provider 稳定后决定。
 
-### EXEC-10.5 Apple Developer 预留
+### EXEC-10.5 当前签名与 App Group 生产配置
 
-开发者账号仍在审批期间，当前只建立配置位，不猜测 Team ID：
-
-```text
-QUOTAVIEW_APP_GROUP_ID
-QUOTAVIEW_WIDGET_BUNDLE_ID
-DEVELOPMENT_TEAM
-CODE_SIGN_STYLE
-```
-
-推荐生产 App Group 语义：
+`0.3.1 (Build 2)` 已使用以下确定值完成 Developer ID 直接分发、Apple
+公证、Staple 和真实共享容器验证：
 
 ```text
-group.com.quotaview.menubar.shared
+DEVELOPMENT_TEAM = BUUH229D5Q
+主应用 Bundle ID = com.quotaview.menubar
+Widget Bundle ID = com.quotaview.menubar.widget
+App Group = BUUH229D5Q.com.quotaview.shared
 ```
 
-最终值必须在 Apple Developer 配置中登记，并由主应用与 Extension 使用
-同一个 entitlement。不得同时混用 `group.` 注册格式与 Team-ID 前缀格式。
+唯一配置源位于 `Configs/Shared.xcconfig`、`Configs/App.xcconfig`、
+`Configs/Widget.xcconfig`，两侧 entitlement 分别位于
+`Support/QuotaView.entitlements` 和 `Support/QuotaViewWidget.entitlements`。
+主应用保持非 Sandbox，Extension 启用 App Sandbox；不得为了共享容器改变
+这一既有发布边界。
 
-账号审批完成前可以：
-
-- 实现 Contract；
-- 使用临时目录测试 codec/store；
-- 编译不依赖真实 App Group 的纯逻辑；
-- 预留 xcconfig key；
-- 设计 Extension Target 文件结构。
-
-账号审批完成后才能完成：
-
-- 注册 App Group 与 Widget Bundle ID；
-- 配置 provisioning；
-- 建立真实 entitlements；
-- 签名主应用与 `.appex`；
-- 验证共享容器；
-- 验证系统发现 Widget；
-- 完成真实桌面 Widget 验收。
+Developer ID 直接分发包未嵌入 provisioning profile，因此不能恢复 Build 1
+使用过的 `group.com.quotaview.shared`。后续若修改 Team、Bundle ID 或 App
+Group，必须作为发布配置变更重新完成签名、共享容器、系统发现、公证、安装
+和回下载验证。
 
 ### EXEC-10.6 Widget 调度边界
 
@@ -1268,6 +1273,9 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 
 ## EXEC-13. 分阶段实施
 
+以下各节保留原始工作项和退出标准，用于追溯及后续未实施阶段。完成情况
+必须读取 `EXEC-00.1`，不能从这里的命令式或未来时态推断当前状态。
+
 ### Phase 0：行为、性能和 UI 契约
 
 工作：
@@ -1369,7 +1377,7 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 
 ### Phase 4B：签名 Widget Extension
 
-等待 Apple Developer 能力就绪：
+本阶段已在 `0.2.1` 完成，并在 `0.3.1 (Build 2)` 校准共享容器。原始工作项：
 
 - 注册 App Group 和 Widget Bundle ID；
 - 添加 Extension Target；
@@ -1535,28 +1543,24 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 
 ---
 
-## EXEC-16. 建议文件地图
+## EXEC-16. 当前生产文件地图
 
-实施时以最新生产代码为准：
-
-| 目的 | 建议位置 |
+| 目的 | 当前生产位置 |
 |---|---|
-| Domain IDs 与状态 | `Sources/QuotaViewCore/Domain/` |
-| Metric 定义与 Observation | `Sources/QuotaViewCore/Domain/Metrics/` |
-| Provider 协议与 descriptor | `Sources/QuotaViewCore/Providers/` |
-| Codex Adapter | `Sources/QuotaViewCore/Providers/Codex/` |
-| Refresh Coordinator | `Sources/QuotaViewCore/Refresh/` |
-| Demand Planner | `Sources/QuotaViewCore/Refresh/DataDemandPlanner.swift` |
-| History | `Sources/QuotaViewCore/History/` |
-| Notification Engine/State | `Sources/QuotaViewCore/Notifications/` |
-| Account Operation 协议 | `Sources/QuotaViewCore/AccountOperations/` |
-| Demo Executor | `Sources/QuotaView/AccountOperations/` |
-| 当前 UI 投影 | `Sources/QuotaView/Presentation/` |
-| Metric/Chart Catalog | `Sources/QuotaView/Presentation/Catalogs/` |
-| Data Detail | `Sources/QuotaView/Views/DataDetail/` |
-| Widget Contract | `Sources/QuotaViewWidgetContract/` |
-| App Widget Projector/Writer | `Sources/QuotaView/Widget/` |
-| Widget Extension | `WidgetExtension/Sources/` |
+| Domain IDs、状态、Metric 与 Observation | `Sources/QuotaViewCore/DomainModels.swift` |
+| Provider 协议、Registry 与 Demand Planner | `Sources/QuotaViewCore/ProviderArchitecture.swift` |
+| Codex Adapter | `Sources/QuotaViewCore/CodexProviderAdapter.swift` |
+| Refresh Coordinator | `Sources/QuotaViewCore/RefreshCoordinator.swift` |
+| Account Operation 协议与 Demo/Unavailable Executor | `Sources/QuotaViewCore/AccountOperations.swift` |
+| 当前 UI 投影 | `Sources/QuotaView/CurrentCodexPresentation.swift` |
+| 当前 Store | `Sources/QuotaView/CodexStatusStore.swift` |
+| 未链接的未来契约 | `Sources/QuotaViewFutureContracts/FutureCapabilityContracts.swift` |
+| Widget Contract | `Sources/QuotaViewWidgetContract/WidgetSnapshot.swift` |
+| App Widget Projector/Writer | `Sources/QuotaView/QuotaViewWidgetSnapshotWriter.swift` |
+| Widget Extension | `Sources/QuotaViewWidget/QuotaViewWidget.swift` |
+
+History、Chart Catalog、Data Detail、第二 Provider 和 Notification Engine
+当前没有生产位置；进入相应 Phase 后再更新本表，不能预先声称存在。
 
 ---
 
@@ -1595,7 +1599,7 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 - Metric 缺少单位/语义，Chart 只能猜测聚合；
 - Provider 禁用后仍有任务或进程；
 - Widget 需要链接 Provider/Core Process 实现；
-- App Group、Bundle ID、Team 或 provisioning 未确认；
+- Widget 的 App Group、Bundle ID、Team 或最终签名 entitlement 不一致；
 - 旧用户设置无法可靠迁移；
 - 重构导致当前 UI 明显变化但未取得用户确认；
 - 真实操作缺少官方幂等或结果核对能力；
@@ -1605,9 +1609,10 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 
 ---
 
-## EXEC-19. 开始实施时的顺序
+## EXEC-19. 原始首次实施顺序
 
-首次实施应严格按以下顺序：
+以下顺序记录 0.2.0 重构启动时的门禁；Phase 0–2 和 4A–4B 已完成，不应在
+新会话中重新解释为尚未开始。未实施阶段仍需重新核对生产事实和用户授权：
 
 1. 重新检查生产代码与工作区；
 2. 完成 Phase 0 行为和性能基线；
@@ -1615,7 +1620,7 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 4. 验证当前 UI 和功能；
 5. 再进入 Phase 2 Domain 与兼容投影；
 6. Phase 2 稳定后才开始 History、Widget Contract 或第二 Provider；
-7. Apple Developer 审批完成前不阻塞 Phase 4A；
+7. Widget 能力未就绪时不阻塞 Phase 4A（该条件现已完成）；
 8. 真实账户操作始终保持未开始。
 
 任何阶段开始前都应重新确认上游 Codex App Server schema、当前版本号和
@@ -1627,8 +1632,8 @@ Phase 0 记录基线后，将具体数值写入同阶段测试报告。后续阶
 
 - Widget 专项方案：
   [`quotaview-widgetkit-solution.md`](./quotaview-widgetkit-solution.md)
-- CodexBar 固定版本分析：
-  [`codexbar-macos-design-reference.md`](../reference/codexbar-macos-design-reference.md)
+- CodexBar 固定版本分析：本地外部参考
+  `docs/reference/codexbar-macos-design-reference.md`，仅按 `AGENTS.md` 门禁读取；
 - 项目执行规则：`AGENTS.md`
 - 当前交接：`HANDOFF.md`
 - 视觉记录：`design-qa.md`

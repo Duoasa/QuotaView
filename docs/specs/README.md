@@ -30,6 +30,17 @@
 当前工作区、完成事项和阻塞项仍由 [HANDOFF.md](../../HANDOFF.md) 维护。
 本文件不得把计划、Prototype 或候选构建写成已经发布。
 
+### 1.1 正式文档边界
+
+正式 SDD 系统只接纳已经由 Git 跟踪、且在本注册表或阅读路由中具有明确
+职责的 Markdown。当前 SDD 治理、规格和多任务 Demo 文档自提交 `f603c38`
+起已进入 `main`，但多任务代码仍只存在于隔离 Prototype，二者不能混写。
+
+以下本地对象默认排除在正式调用链外：未跟踪的旧
+`Prototypes/CodexActivityMetalDemo/`、受 `AGENTS.md` 门禁约束的未跟踪
+`docs/reference/`，以及未跟踪图片。它们不是当前规格或验收证据；除非用户
+明确授权相应对象并完成注册，不得读取后直接影响生产实现。
+
 ## 2. 当前状态快照
 
 | 维度 | 当前事实 |
@@ -41,6 +52,7 @@
 | 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
 | 规格状态 | `Accepted`：固定单岛、多任务列表和 Demo 视觉基线已确认 |
 | 交付状态 | `Prototype`：正在独立 Demo 中调试 |
+| Prototype 自动化 | 37 项测试通过，0 失败（2026-08-04）；不能替代生产测试 |
 | 生产源码状态 | 未开始迁移；`Sources/` 仍为单任务生产实现 |
 | 发布目标 | 未指定；不得自行命名为 `0.3.2` 或创建 Build/tag/Release |
 | 当前验收 | Demo 基线已有产品所有者确认；生产实现验收尚未开始 |
@@ -91,7 +103,7 @@
 | `QV-PRODUCT-ACTIVITY-ISLAND-001` | [单任务灵动岛产品规格](../design/quotaview-codex-activity-widget-product.md) | 已发布功能规格 | `Accepted` | `Released` | `0.3.1` 单任务生产行为基线 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 当前功能规格 | `Accepted` | `Prototype` | 当前唯一进行中的产品迭代 |
 | `QV-DESIGN-WIDGET-001` | [WidgetKit 接入规格](../design/quotaview-widgetkit-solution.md) | 架构/功能规格 | `Accepted` | `Released` | Widget 数据、Target 与验证边界 |
-| `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（Phase 1–2） | 当前核心架构不变量和后续演进门禁 |
+| `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（仅 Phase 0–2、4A–4B） | 当前核心架构不变量；Phase 3、5–7 尚未实施 |
 | `QV-EVIDENCE-CORE-0.2.0-001` | [0.2.0 重构报告](../design/quotaview-core-refactor-0.2.0-report.md) | 验证证据 | `Archived` | `Released` | 历史实施与测试证据 |
 | `QV-EVIDENCE-DESIGN-QA-001` | [主项目 Design QA](../../design-qa.md) | 验收证据 | — | — | 生产视觉验收历史，证据状态 `Active` |
 | `QV-EVIDENCE-MULTITASK-DEMO-QA-001` | [多任务 Demo Design QA](../../Prototypes/CodexActivityMultiTaskDemo/design-qa.md) | Prototype 验收证据 | — | `Prototype` | Demo 视觉、交互与调试记录 |
@@ -100,6 +112,7 @@
 
 - `README.md` / `README.zh-CN.md`：公开产品说明；
 - `CONTRIBUTING.md`：外部协作和提交入口；
+- `.github/pull_request_template.md`：SDD 变更、验证和发布影响的 PR 证据表；
 - `HANDOFF.md`：当前实施与工作区状态；
 - `VERSION_HISTORY.md`：已发生的发布历史；
 - `docs/reference/`：按门禁读取的外部参考，不具有 QuotaView 决策权；
@@ -120,7 +133,7 @@
 | `MT-MOTION-001` | 任务列、玻璃选择态、Metal 与 Reduce Motion | Demo 测试 + Demo QA | Demo 基线已确认；生产待验收 |
 | `MT-PRIVACY-001` | 最小 AX 标题读取、禁止控制或完整扫描 | `MULTITASK-03/09/10` | 隔离验证完成；生产未实现 |
 | `MT-A11Y-001` | VoiceOver、Increase Contrast、Reduce Motion | `MULTITASK-11/13` | Demo 部分覆盖；生产待验收 |
-| `MT-VERIFY-001` | 自动化、Release 构建、视觉矩阵 | `MULTITASK-13` | Prototype 测试存在；生产验证未开始 |
+| `MT-VERIFY-001` | 自动化、Release 构建、视觉矩阵 | `MULTITASK-13` | Prototype 37 项测试通过；生产验证未开始 |
 
 进入 `Implementing` 后，每个 Requirement ID 必须补充生产源码位置、生产
 测试名称和验证结果；在此之前不得把 Prototype 测试当作生产完成证据。
@@ -144,7 +157,11 @@
 - `0.3.1 (Build 2)` 必须同时与生产配置、`HANDOFF.md` 和
   `VERSION_HISTORY.md` 一致；
 - 当前迭代、规格状态和交付状态必须同时与 `HANDOFF.md` 一致；
+- 当前开发分支和 HEAD 必须从 Git 实时读取，不得在 Handoff 中维护会随提交
+  失效的哈希；
 - Prototype 不得出现在 `VERSION_HISTORY.md` 的正式版本总览中；
+- 历史实施计划中的“当前”“后续”只在其标明的版本时点成立；当前状态表和
+  生产代码优先，未实施阶段不得因文档保留而被写成已交付；
 - 修改规格状态、交付状态、范围、不变量或验收条件时，必须同步更新本索引；
 - 完成发布时，必须按 `AGENTS.md` 同步 Handoff、版本历史、README、Release
   Notes 和资产验证事实；
