@@ -511,7 +511,15 @@ func visibleRailTasks(
     return Array(tasks.dropFirst(start).prefix(limit))
 }
 
+func taskRailRowCapacity(
+    currentCapacity: Int,
+    taskCount: Int
+) -> Int {
+    max(max(currentCapacity, 0), max(taskCount, 0))
+}
+
 let demoIslandAnchorGap: CGFloat = 12
+let demoMaximumTaskCount = 8
 
 func anchoredIslandFrame(
     size: NSSize,
@@ -2652,7 +2660,7 @@ private final class TaskRailView: NSView {
     private let typeLabel = CenteredSingleLineTextView()
     private let rowsViewport = NSView()
     private let rowsContentView = NSView()
-    private let rows = (0..<4).map { _ in RailTaskRowView() }
+    private var rows = (0..<4).map { _ in RailTaskRowView() }
     private let selectionMorphView = TaskRailSelectionMorphView()
     private let viewportMask = CAGradientLayer()
     private let overflowLabel = CenteredSingleLineTextView()
@@ -2834,10 +2842,11 @@ private final class TaskRailView: NSView {
         let oldSelectionAccent = currentSelectionAccent
         let shouldAnimate = animated && hasConfiguredRows
 
+        ensureRowCapacity(for: tasks.count)
         let primaryIndex = tasks.firstIndex {
             $0.id == primaryID
         } ?? 0
-        currentTasks = Array(tasks.prefix(rows.count))
+        currentTasks = tasks
         totalTaskCount = tasks.count
         currentPrimaryID = primaryID
         windowStart = railWindowStart(
@@ -2926,6 +2935,21 @@ private final class TaskRailView: NSView {
     func setReduceMotion(_ enabled: Bool) {
         reduceMotion = enabled
         rows.forEach { $0.setReduceMotion(enabled) }
+    }
+
+    private func ensureRowCapacity(for taskCount: Int) {
+        let requiredCapacity = taskRailRowCapacity(
+            currentCapacity: rows.count,
+            taskCount: taskCount
+        )
+        guard requiredCapacity > rows.count else { return }
+
+        for _ in rows.count..<requiredCapacity {
+            let row = RailTaskRowView()
+            row.setReduceMotion(reduceMotion)
+            rows.append(row)
+            rowsContentView.addSubview(row)
+        }
     }
 
     private func selectionLineFrame() -> NSRect {
@@ -3822,7 +3846,7 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
 
     private var taskRows: [TaskEditorRowView] = []
     private var allTasks: [DemoTask]
-    private var taskCount = 3
+    private var taskCount = demoMaximumTaskCount
     private var primaryID = 0
 
     override init() {
@@ -3846,11 +3870,31 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
                 id: 3,
                 name: "整理版本交接文档",
                 state: .completed
+            ),
+            DemoTask(
+                id: 4,
+                name: "优化任务切换动效",
+                state: .compactingContext
+            ),
+            DemoTask(
+                id: 5,
+                name: "检查辅助功能降级",
+                state: .standby
+            ),
+            DemoTask(
+                id: 6,
+                name: "处理任务同步异常",
+                state: .error
+            ),
+            DemoTask(
+                id: 7,
+                name: "等待数据重新连接",
+                state: .unavailable
             )
         ]
         allTasks = initialTasks
         island = IslandPanelController(
-            initialTasks: Array(initialTasks.prefix(3)),
+            initialTasks: initialTasks,
             primaryID: 0
         )
 
@@ -3859,7 +3903,7 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
                 x: 0,
                 y: 0,
                 width: 720,
-                height: 430
+                height: 590
             ),
             styleMask: [
                 .titled,
@@ -3871,12 +3915,12 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
         )
 
         taskCountControl = NSSegmentedControl(
-            labels: ["1", "2", "3", "4"],
+            labels: (1...demoMaximumTaskCount).map(String.init),
             trackingMode: .selectOne,
             target: nil,
             action: nil
         )
-        taskCountControl.selectedSegment = 2
+        taskCountControl.selectedSegment = demoMaximumTaskCount - 1
 
         reduceMotionCheckbox = NSButton(
             checkboxWithTitle: "减少动态",
@@ -3909,12 +3953,22 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
         controlWindow.isReleasedWhenClosed = false
         controlWindow.delegate = self
         controlWindow.center()
-        controlWindow.setFrameOrigin(
-            NSPoint(
-                x: controlWindow.frame.origin.x,
-                y: max(70, controlWindow.frame.origin.y - 150)
+        if let visibleFrame = controlWindow.screen?.visibleFrame
+            ?? NSScreen.main?.visibleFrame {
+            let maximumOriginY = visibleFrame.maxY
+                - controlWindow.frame.height
+                - IslandPresentationMode.multiTaskMainCardPanelSize.height
+                - demoIslandAnchorGap
+            controlWindow.setFrameOrigin(
+                NSPoint(
+                    x: controlWindow.frame.origin.x,
+                    y: max(
+                        visibleFrame.minY + 8,
+                        min(controlWindow.frame.origin.y, maximumOriginY)
+                    )
+                )
             )
-        )
+        }
 
         let root = NSView(frame: controlWindow.contentView?.bounds ?? .zero)
         root.autoresizingMask = [.width, .height]
@@ -3931,7 +3985,7 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
 
         let subtitle = NSTextField(
             wrappingLabelWithString:
-                "纯模拟数据：编辑 1–4 个任务并独立选择状态，点击“切换”观察主任务内容、右侧滚轮任务列与 Metal 球同步更新。"
+                "纯模拟数据：编辑 1–8 个任务并独立选择状态，点击“切换”观察主任务内容、右侧滚轮任务列与 Metal 球同步更新。"
         )
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = .secondaryLabelColor
@@ -3954,7 +4008,7 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
         rowsStack.orientation = .vertical
         rowsStack.alignment = .leading
         rowsStack.spacing = 8
-        for index in 0..<4 {
+        for index in 0..<demoMaximumTaskCount {
             let row = TaskEditorRowView(index: index)
             row.onNameChange = { [weak self] index, name in
                 self?.updateTaskName(at: index, name: name)
@@ -4044,7 +4098,7 @@ private final class DemoCoordinator: NSObject, NSWindowDelegate {
                 constant: 24
             ),
             countRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            taskCountControl.widthAnchor.constraint(equalToConstant: 168),
+            taskCountControl.widthAnchor.constraint(equalToConstant: 336),
             rowsStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor),
             optionsRow.widthAnchor.constraint(equalTo: stack.widthAnchor),

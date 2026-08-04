@@ -31,23 +31,51 @@ final class CodexActivityStore: ObservableObject {
     nonisolated static let compactDelay: TimeInterval = 20
     nonisolated static let hiddenDelayAfterCompact: TimeInterval = 100
 
-    @Published private(set) var snapshot: CodexActivitySnapshot?
+    struct TaskState: Equatable, Identifiable {
+        let sessionHash: String
+        var snapshot: CodexActivitySnapshot
+        var resolvedThreadTitle: String?
+        var presentation: CodexActivityPresentation
+
+        var id: String { sessionHash }
+    }
+
+    @Published private(set) var tasks: [TaskState] = []
+    @Published private(set) var primarySessionHash: String?
     @Published private(set) var presentation:
         CodexActivityPresentation = .hidden
-    @Published private(set) var resolvedThreadTitle: String?
+
+    var snapshot: CodexActivitySnapshot? {
+        primaryTask?.snapshot
+    }
+
+    var resolvedThreadTitle: String? {
+        primaryTask?.resolvedThreadTitle
+    }
+
+    var primaryTask: TaskState? {
+        guard let primarySessionHash else { return nil }
+        return tasks.first { $0.sessionHash == primarySessionHash }
+    }
+
+    var resolvedTaskTitles: [String] {
+        tasks.compactMap(\.resolvedThreadTitle)
+    }
 
     var stateDidChange: (() -> Void)?
 
     private let titleClient: CodexAppServerClient
     private let compactDelayNanoseconds: UInt64
     private let hiddenDelayNanoseconds: UInt64
-    private var inactivityTask: Task<Void, Never>?
-    private var titleTask: Task<Void, Never>?
-    private var titleTaskSessionHash: String?
+    private var inactivityTasks: [String: Task<Void, Never>] = [:]
+    private var titleTasks: [String: Task<Void, Never>] = [:]
     private var titleCache: [String: String] = [:]
     private var titleAttemptedAt: [String: Date] = [:]
     private var latestEventAtBySession: [String: Date] = [:]
-    private var revision: UInt64 = 0
+    private var revisions: [String: UInt64] = [:]
+    private var focusedSessionHash: String?
+    private var keepsFocusedPrimary = false
+    private var manuallyExpanded = false
 
     init(
         titleClient: CodexAppServerClient = CodexAppServerClient(),
@@ -76,43 +104,35 @@ final class CodexActivityStore: ObservableObject {
             return
         }
         latestEventAtBySession[event.sessionHash] = event.occurredAt
-        if let snapshot,
-           event.sessionHash != snapshot.sessionHash,
-           event.occurredAt < snapshot.occurredAt
-        {
-            return
-        }
 
-        revision &+= 1
-        let eventRevision = revision
-        inactivityTask?.cancel()
+        let eventRevision = (revisions[event.sessionHash] ?? 0) &+ 1
+        revisions[event.sessionHash] = eventRevision
+        inactivityTasks[event.sessionHash]?.cancel()
+        inactivityTasks[event.sessionHash] = nil
+        manuallyExpanded = false
 
         if CodexActivityReducer.shouldHideImmediately(after: event) {
-            if snapshot?.sessionHash == event.sessionHash {
-                snapshot = nextSnapshot
-                presentation = .hidden
-                resolvedThreadTitle = nil
-                notifyChange()
-            }
-            titleCache.removeValue(forKey: event.sessionHash)
-            titleAttemptedAt.removeValue(forKey: event.sessionHash)
-            if titleTaskSessionHash == event.sessionHash {
-                titleTask?.cancel()
-                titleTask = nil
-                titleTaskSessionHash = nil
-            }
+            removeTask(sessionHash: event.sessionHash)
             return
         }
 
-        if snapshot?.sessionHash != event.sessionHash {
-            titleTask?.cancel()
-            titleTask = nil
-            titleTaskSessionHash = nil
+        if let index = taskIndex(for: event.sessionHash) {
+            tasks[index].snapshot = nextSnapshot
+            tasks[index].presentation = .expanded
+            tasks[index].resolvedThreadTitle = titleCache[event.sessionHash]
+        } else {
+            tasks.append(
+                TaskState(
+                    sessionHash: event.sessionHash,
+                    snapshot: nextSnapshot,
+                    resolvedThreadTitle: titleCache[event.sessionHash],
+                    presentation: .expanded
+                )
+            )
         }
-        snapshot = nextSnapshot
-        resolvedThreadTitle = titleCache[event.sessionHash]
-        presentation = .expanded
-        notifyChange()
+
+        choosePrimaryTask()
+        recomputePresentationAndNotify()
 
         resolveTitleIfNeeded(
             for: event.sessionHash,
@@ -120,16 +140,71 @@ final class CodexActivityStore: ObservableObject {
         )
 
         if CodexActivityReducer.shouldStartInactivityCycle(after: event) {
-            scheduleInactivityCycle(revision: eventRevision)
+            scheduleInactivityCycle(
+                sessionHash: event.sessionHash,
+                revision: eventRevision
+            )
         }
     }
 
+    func focusTask(matchingResolvedTitle title: String) {
+        let normalizedTitle = title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !normalizedTitle.isEmpty else { return }
+
+        let matches = tasks.filter {
+            $0.resolvedThreadTitle == normalizedTitle
+        }
+        guard matches.count == 1 else { return }
+
+        focusTask(sessionHash: matches[0].sessionHash)
+    }
+
+    func focusTask(sessionHash: String) {
+        guard tasks.contains(where: {
+            $0.sessionHash == sessionHash
+        }) else {
+            return
+        }
+        focusedSessionHash = sessionHash
+        keepsFocusedPrimary = true
+        guard primarySessionHash != sessionHash else { return }
+        primarySessionHash = sessionHash
+        notifyChange()
+    }
+
+    func releaseFocusedTask() {
+        guard focusedSessionHash != nil || keepsFocusedPrimary else {
+            return
+        }
+        focusedSessionHash = nil
+        keepsFocusedPrimary = false
+        let previousPrimary = primarySessionHash
+        choosePrimaryTask()
+        if previousPrimary != primarySessionHash {
+            notifyChange()
+        }
+    }
+
+    func expandCompactDetail() {
+        guard tasks.count > 1, presentation == .compact else { return }
+        manuallyExpanded = true
+        presentation = .expanded
+        notifyChange()
+    }
+
     func hide() {
-        revision &+= 1
-        inactivityTask?.cancel()
-        titleTask?.cancel()
-        titleTask = nil
-        titleTaskSessionHash = nil
+        revisions = revisions.mapValues { $0 &+ 1 }
+        inactivityTasks.values.forEach { $0.cancel() }
+        titleTasks.values.forEach { $0.cancel() }
+        inactivityTasks.removeAll()
+        titleTasks.removeAll()
+        tasks.removeAll()
+        primarySessionHash = nil
+        focusedSessionHash = nil
+        keepsFocusedPrimary = false
+        manuallyExpanded = false
         presentation = .hidden
         notifyChange()
     }
@@ -144,7 +219,7 @@ final class CodexActivityStore: ObservableObject {
         revision: UInt64
     ) {
         guard titleCache[sessionHash] == nil,
-              titleTaskSessionHash != sessionHash
+              titleTasks[sessionHash] == nil
         else {
             return
         }
@@ -155,54 +230,162 @@ final class CodexActivityStore: ObservableObject {
         }
 
         titleAttemptedAt[sessionHash] = Date()
-        titleTaskSessionHash = sessionHash
-        titleTask = Task { [weak self, titleClient] in
+        titleTasks[sessionHash] = Task { [weak self, titleClient] in
             let title = try? await titleClient.fetchThreadDisplayName(
                 matchingSessionHash: sessionHash
             )
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self else { return }
-                self.titleTask = nil
-                self.titleTaskSessionHash = nil
-                guard self.snapshot?.sessionHash == sessionHash else {
+                self.titleTasks[sessionHash] = nil
+                guard let index = self.taskIndex(for: sessionHash) else {
                     return
                 }
                 if let title {
                     self.titleCache[sessionHash] = title
+                    self.tasks[index].resolvedThreadTitle = title
                 }
-                self.resolvedThreadTitle = title
-                if self.revision >= revision {
+                if (self.revisions[sessionHash] ?? 0) >= revision {
                     self.notifyChange()
                 }
             }
         }
     }
 
-    private func scheduleInactivityCycle(revision: UInt64) {
-        inactivityTask = Task { [weak self] in
+    private func scheduleInactivityCycle(
+        sessionHash: String,
+        revision: UInt64
+    ) {
+        inactivityTasks[sessionHash] = Task { [weak self] in
             guard let self else { return }
             do {
                 try await Task.sleep(
                     nanoseconds: compactDelayNanoseconds
                 )
-                guard !Task.isCancelled, self.revision == revision else {
+                guard !Task.isCancelled,
+                      self.revisions[sessionHash] == revision,
+                      let index = self.taskIndex(for: sessionHash)
+                else {
                     return
                 }
-                presentation = .compact
-                notifyChange()
+                self.tasks[index].presentation = .compact
+                self.recomputePresentationAndNotify()
 
                 try await Task.sleep(
                     nanoseconds: hiddenDelayNanoseconds
                 )
-                guard !Task.isCancelled, self.revision == revision else {
+                guard !Task.isCancelled,
+                      self.revisions[sessionHash] == revision
+                else {
                     return
                 }
-                presentation = .hidden
-                notifyChange()
+                self.removeTask(sessionHash: sessionHash)
             } catch {
                 return
             }
+        }
+    }
+
+    private func taskIndex(for sessionHash: String) -> Int? {
+        tasks.firstIndex { $0.sessionHash == sessionHash }
+    }
+
+    private func choosePrimaryTask() {
+        if let focusedSessionHash,
+           tasks.contains(where: { $0.sessionHash == focusedSessionHash })
+        {
+            primarySessionHash = focusedSessionHash
+            return
+        }
+
+        if keepsFocusedPrimary,
+           let primarySessionHash,
+           tasks.contains(where: { $0.sessionHash == primarySessionHash })
+        {
+            return
+        }
+
+        let current = primarySessionHash.flatMap { sessionHash in
+            tasks.first { $0.sessionHash == sessionHash }
+        }
+        let candidate = tasks.max { lhs, rhs in
+            let lhsPriority = Self.automaticPriority(lhs.snapshot.state)
+            let rhsPriority = Self.automaticPriority(rhs.snapshot.state)
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
+            }
+            return lhs.snapshot.occurredAt < rhs.snapshot.occurredAt
+        }
+
+        guard let candidate else {
+            primarySessionHash = nil
+            return
+        }
+
+        guard let current else {
+            primarySessionHash = candidate.sessionHash
+            return
+        }
+
+        let currentPriority = Self.automaticPriority(current.snapshot.state)
+        let candidatePriority = Self.automaticPriority(
+            candidate.snapshot.state
+        )
+        if candidatePriority > currentPriority {
+            primarySessionHash = candidate.sessionHash
+        } else if candidatePriority == currentPriority,
+                  candidate.snapshot.occurredAt
+                    > current.snapshot.occurredAt
+        {
+            primarySessionHash = candidate.sessionHash
+        }
+    }
+
+    private func removeTask(sessionHash: String) {
+        inactivityTasks[sessionHash]?.cancel()
+        inactivityTasks[sessionHash] = nil
+        titleTasks[sessionHash]?.cancel()
+        titleTasks[sessionHash] = nil
+        titleCache.removeValue(forKey: sessionHash)
+        titleAttemptedAt.removeValue(forKey: sessionHash)
+        tasks.removeAll { $0.sessionHash == sessionHash }
+
+        if focusedSessionHash == sessionHash {
+            focusedSessionHash = nil
+            keepsFocusedPrimary = false
+        }
+        if primarySessionHash == sessionHash {
+            primarySessionHash = nil
+        }
+        choosePrimaryTask()
+        recomputePresentationAndNotify()
+    }
+
+    private func recomputePresentationAndNotify() {
+        if tasks.isEmpty {
+            presentation = .hidden
+            manuallyExpanded = false
+        } else if manuallyExpanded
+                    || tasks.contains(where: {
+                        $0.presentation == .expanded
+                    })
+        {
+            presentation = .expanded
+        } else {
+            presentation = .compact
+        }
+        notifyChange()
+    }
+
+    private nonisolated static func automaticPriority(
+        _ state: CodexActivityVisualState
+    ) -> Int {
+        switch state {
+        case .awaitingConfirmation: 5
+        case .error: 4
+        case .thinking, .working, .compactingContext: 3
+        case .completed: 2
+        case .standby, .unavailable, .disconnectedCodex: 1
         }
     }
 
@@ -222,6 +405,8 @@ final class CodexActivityRuntime: ObservableObject {
     @Published private(set) var codexVersion: String?
     @Published private(set) var isConfiguring = false
     @Published private(set) var isOpeningSecurityReview = false
+    @Published private(set) var focusTrackingStatus:
+        CodexActivityFocusTrackingStatus = .disabled
 
     let store: CodexActivityStore
 
@@ -232,12 +417,14 @@ final class CodexActivityRuntime: ObservableObject {
     private let installer: CodexActivityHookInstaller
     private let environmentInspector: CodexActivityEnvironmentInspector
     private let securityReviewLauncher: CodexSecurityReviewLauncher
+    private let focusedTaskTitleReader = CodexFocusedTaskTitleReader()
     private var island: CodexActivityIslandPanelController?
     private var preferenceCancellable: AnyCancellable?
     private var accessibilityCancellable: AnyCancellable?
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
     private var securityReviewObservationTask: Task<Void, Never>?
+    private var focusPollingTask: Task<Void, Never>?
     private var setupIslandRequested = false
 
     private enum DefaultsKey {
@@ -295,12 +482,14 @@ final class CodexActivityRuntime: ObservableObject {
 
         store.stateDidChange = { [weak self] in
             self?.render()
+            self?.synchronizeFocusTracking()
         }
         preferenceCancellable = preferences.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 Task { @MainActor in
                     self?.render()
+                    self?.synchronizeFocusTracking()
                 }
             }
         accessibilityCancellable = NotificationCenter.default.publisher(
@@ -363,7 +552,16 @@ final class CodexActivityRuntime: ObservableObject {
         bridgeStatus = isListening
             ? .listening
             : .failed(failures.joined(separator: " "))
+        synchronizeFocusTracking()
         reconcileOnLaunch()
+    }
+
+    func setFollowCurrentTaskEnabled(_ enabled: Bool) {
+        preferences.followCurrentCodexTask = enabled
+        if enabled {
+            _ = focusedTaskTitleReader.requestAccess()
+        }
+        synchronizeFocusTracking()
     }
 
     func enableCodexActivity() {
@@ -549,6 +747,8 @@ final class CodexActivityRuntime: ObservableObject {
     func stop() async {
         setupTask?.cancel()
         securityReviewObservationTask?.cancel()
+        focusPollingTask?.cancel()
+        focusPollingTask = nil
         bridge.stop()
         fileBridge.stop()
         bridgeStatus = .stopped
@@ -905,42 +1105,94 @@ final class CodexActivityRuntime: ObservableObject {
             return
         }
 
-        guard let snapshot = store.snapshot,
-              store.presentation != .hidden
+        guard let primaryTask = store.primaryTask,
+              store.presentation != .hidden,
+              !store.tasks.isEmpty
         else {
             island?.hide()
             return
         }
 
-        let title = store.resolvedThreadTitle
-            ?? snapshot.workspaceName.map { "Codex · \($0)" }
-            ?? "Codex"
         let copy = CodexActivityCopy(
             language: preferences.resolvedLanguage
         )
-        let renderState = CodexActivityRenderState(
-            visualState: snapshot.state,
-            windowTitle: title,
-            statusTitle: copy.statusTitle(for: snapshot.state),
-            operation: copy.operation(
-                for: snapshot.operationKey
-            ),
-            accessibilityLabel: copy.accessibilityLabel(
-                windowTitle: title,
-                statusTitle: copy.statusTitle(for: snapshot.state),
-                operation: copy.operation(for: snapshot.operationKey)
+        let renderTasks = store.tasks.map { task in
+            let title = task.resolvedThreadTitle
+                ?? task.snapshot.workspaceName.map { "Codex · \($0)" }
+                ?? "Codex"
+            let statusTitle = copy.statusTitle(
+                for: task.snapshot.state
             )
+            let operation = copy.operation(
+                for: task.snapshot.operationKey
+            )
+            return CodexActivityRenderState(
+                sessionHash: task.sessionHash,
+                visualState: task.snapshot.state,
+                windowTitle: title,
+                statusTitle: statusTitle,
+                operation: operation,
+                accessibilityLabel: copy.accessibilityLabel(
+                    windowTitle: title,
+                    statusTitle: statusTitle,
+                    operation: operation
+                )
+            )
+        }
+        let primarySessionHash = primaryTask.sessionHash
+        let primaryIndex = renderTasks.firstIndex {
+            $0.sessionHash == primarySessionHash
+        } ?? 0
+        let railStart = codexActivityRailWindowStart(
+            tasks: renderTasks,
+            primarySessionHash: primarySessionHash
+        )
+        let hiddenBefore = railStart
+        let hiddenAfter = max(
+            0,
+            renderTasks.count
+                - railStart
+                - CodexActivityTaskRailMetrics.visibleRowCount
+        )
+        let cluster = CodexActivityClusterRenderState(
+            tasks: renderTasks,
+            primarySessionHash: primarySessionHash,
+            taskRailTitle: copy.taskRailTitle,
+            taskCounterText: copy.taskCounterText(
+                current: primaryIndex + 1,
+                total: renderTasks.count
+            ),
+            overflowText: copy.taskOverflowText(
+                hiddenBefore: hiddenBefore,
+                hiddenAfter: hiddenAfter
+            ),
+            compactCountText: copy.compactTaskCountText(
+                renderTasks.count
+            ),
+            accessibilityLabel: copy.clusterAccessibilityLabel(
+                taskCount: renderTasks.count,
+                primaryTitle: renderTasks[primaryIndex].windowTitle,
+                attentionCount: renderTasks.filter {
+                    $0.visualState == .awaitingConfirmation
+                        || $0.visualState == .error
+                }.count
+            ),
+            compactExpandLabel: copy.expandTaskDetailsLabel,
+            compactExpandHelp: copy.expandTaskDetailsHelp
         )
         let presentation: CodexActivityIslandPresentation =
             store.presentation == .compact ? .compact : .expanded
 
         if island == nil {
             island = CodexActivityIslandPanelController(
-                initialState: renderState
+                initialCluster: cluster,
+                onExpandRequested: { [weak store] in
+                    store?.expandCompactDetail()
+                }
             )
         }
         island?.update(
-            renderState: renderState,
+            cluster: cluster,
             presentationMode: presentation,
             presentationAccessibilityValue:
                 copy.presentationAccessibilityValue(presentation),
@@ -948,6 +1200,73 @@ final class CodexActivityRuntime: ObservableObject {
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion
         )
+    }
+
+    private func synchronizeFocusTracking() {
+        guard preferences.followCurrentCodexTask else {
+            focusPollingTask?.cancel()
+            focusPollingTask = nil
+            focusTrackingStatus = .disabled
+            store.releaseFocusedTask()
+            return
+        }
+
+        guard focusedTaskTitleReader.isTrusted else {
+            if focusTrackingStatus == .permissionRequired,
+               focusPollingTask != nil {
+                return
+            }
+            focusPollingTask?.cancel()
+            focusTrackingStatus = .permissionRequired
+            store.releaseFocusedTask()
+            focusPollingTask = Task { [weak self] in
+                while let self, !Task.isCancelled {
+                    if self.focusedTaskTitleReader.isTrusted {
+                        self.focusPollingTask = nil
+                        self.synchronizeFocusTracking()
+                        return
+                    }
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            }
+            return
+        }
+
+        focusTrackingStatus = .tracking
+        guard focusPollingTask == nil else { return }
+        focusPollingTask = Task { [weak self] in
+            while let self, !Task.isCancelled {
+                await self.resolveFocusedCodexTaskIfNeeded()
+                try? await Task.sleep(nanoseconds: 650_000_000)
+            }
+        }
+    }
+
+    private func resolveFocusedCodexTaskIfNeeded() async {
+        guard preferences.followCurrentCodexTask else { return }
+        guard focusedTaskTitleReader.isTrusted else {
+            synchronizeFocusTracking()
+            return
+        }
+        guard store.tasks.count > 1,
+              let application = NSWorkspace.shared.frontmostApplication,
+              application.bundleIdentifier == "com.openai.codex"
+        else {
+            return
+        }
+
+        let knownTitles = store.resolvedTaskTitles
+        guard !knownTitles.isEmpty else { return }
+        let processIdentifier = application.processIdentifier
+        let reader = focusedTaskTitleReader
+        let title = await Task.detached(priority: .utility) {
+            reader.currentTaskTitle(
+                processIdentifier: processIdentifier,
+                matching: knownTitles
+            )
+        }.value
+        guard let title, !Task.isCancelled else { return }
+        store.focusTask(matchingResolvedTitle: title)
     }
 
     private var shouldRenderDisconnectedIsland: Bool {
@@ -968,6 +1287,7 @@ final class CodexActivityRuntime: ObservableObject {
             isConfiguring: isConfiguring || isOpeningSecurityReview
         )
         let renderState = CodexActivityRenderState(
+            sessionHash: "quotaview-connection",
             visualState: .disconnectedCodex,
             windowTitle: "QuotaView",
             statusTitle: statusTitle,
@@ -978,14 +1298,31 @@ final class CodexActivityRuntime: ObservableObject {
                 operation: operation
             )
         )
+        let cluster = CodexActivityClusterRenderState(
+            tasks: [renderState],
+            primarySessionHash: renderState.sessionHash,
+            taskRailTitle: copy.taskRailTitle,
+            taskCounterText: copy.taskCounterText(
+                current: 1,
+                total: 1
+            ),
+            overflowText: "",
+            compactCountText: copy.compactTaskCountText(1),
+            accessibilityLabel: renderState.accessibilityLabel,
+            compactExpandLabel: copy.expandTaskDetailsLabel,
+            compactExpandHelp: copy.expandTaskDetailsHelp
+        )
 
         if island == nil {
             island = CodexActivityIslandPanelController(
-                initialState: renderState
+                initialCluster: cluster,
+                onExpandRequested: { [weak store] in
+                    store?.expandCompactDetail()
+                }
             )
         }
         island?.update(
-            renderState: renderState,
+            cluster: cluster,
             presentationMode: .expanded,
             presentationAccessibilityValue:
                 copy.presentationAccessibilityValue(.expanded),
@@ -1172,6 +1509,80 @@ private struct CodexActivityCopy {
         case .english:
             "\(windowTitle), status: \(statusTitle), "
                 + "current operation: \(operation)"
+        }
+    }
+
+    var taskRailTitle: String {
+        switch language {
+        case .simplifiedChinese: "任务"
+        case .english: "Tasks"
+        }
+    }
+
+    func taskCounterText(current: Int, total: Int) -> String {
+        "\(current)/\(total)"
+    }
+
+    func taskOverflowText(
+        hiddenBefore: Int,
+        hiddenAfter: Int
+    ) -> String {
+        switch language {
+        case .simplifiedChinese:
+            switch (hiddenBefore, hiddenAfter) {
+            case (0, 0): ""
+            case (0, _): "后 \(hiddenAfter)"
+            case (_, 0): "前 \(hiddenBefore)"
+            default: "前 \(hiddenBefore) · 后 \(hiddenAfter)"
+            }
+        case .english:
+            switch (hiddenBefore, hiddenAfter) {
+            case (0, 0): ""
+            case (0, _): "\(hiddenAfter) after"
+            case (_, 0): "\(hiddenBefore) before"
+            default: "\(hiddenBefore) before · \(hiddenAfter) after"
+            }
+        }
+    }
+
+    func compactTaskCountText(_ count: Int) -> String {
+        switch language {
+        case .simplifiedChinese: "共 \(count) 项"
+        case .english: "\(count) Tasks"
+        }
+    }
+
+    func clusterAccessibilityLabel(
+        taskCount: Int,
+        primaryTitle: String,
+        attentionCount: Int
+    ) -> String {
+        switch language {
+        case .simplifiedChinese:
+            return "共 \(taskCount) 个任务，当前任务：\(primaryTitle)"
+                + (attentionCount > 0
+                    ? "，\(attentionCount) 个任务需要注意"
+                    : "")
+        case .english:
+            return "\(taskCount) tasks, current task: \(primaryTitle)"
+                + (attentionCount > 0
+                    ? ", \(attentionCount) need attention"
+                    : "")
+        }
+    }
+
+    var expandTaskDetailsLabel: String {
+        switch language {
+        case .simplifiedChinese: "展开任务详情"
+        case .english: "Expand Task Details"
+        }
+    }
+
+    var expandTaskDetailsHelp: String {
+        switch language {
+        case .simplifiedChinese: "将紧凑态灵动岛展开为多任务详情。"
+        case .english:
+            "Expands the compact island to show multitask details."
         }
     }
 

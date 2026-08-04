@@ -83,6 +83,38 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
 
+## 0.3.2 Preview 1: Multi-task Codex Island
+
+> [!NOTE]
+> 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
+> Island behavior. v0.3.1 Build 2 remains the recommended stable version and
+> the default download.
+
+The core multi-task workflow is now available in one fixed Codex Island:
+
+- Tracks multiple concurrent Codex sessions with independent status,
+  lifecycle, completion, and cleanup.
+- Adds a three-row task rail, a continuous sliding window for longer task
+  lists, task counts, and a compact multi-task summary.
+- Selects a primary task through stable priority arbitration while preventing
+  ordinary background events from unnecessarily taking over the Island.
+- Adds an optional “Follow Current Codex Task” mode that performs bounded,
+  read-only Accessibility title matching and falls back automatically when a
+  confident match is unavailable.
+- Preserves the existing live Metal status surface, native glass transitions,
+  compact/expanded states, Reduce Motion behavior, and accessibility actions.
+
+Known preview limitations:
+
+- Event-to-Island response can still feel delayed depending on Hook delivery,
+  local scheduling, and the current Codex task state.
+- Current-task following is title-based. It can lag or miss when titles are
+  unresolved, duplicated, changed quickly, or affected by Codex UI changes.
+- Task switching, title marquee behavior, and compact/expanded transition
+  rhythm still need experience and performance refinement.
+- This build is intended for preview validation. Use v0.3.1 Build 2 when stable
+  behavior is more important than multi-task support.
+
 ## 0.3.1 Build 2 widget hotfix
 
 - Restores Small and Medium widget data in notarized direct downloads by using

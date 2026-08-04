@@ -532,6 +532,51 @@ struct SettingsView: View {
 
                 NativeSettingsDivider()
 
+                NativeSettingsRow(
+                    title: copy.text(
+                        "跟随当前 Codex 任务",
+                        "Follow Current Codex Task"
+                    ),
+                    subtitle: copy.text(
+                        "只读取 Codex 当前任务标题，用于在多个活动任务之间同步灵动岛；不会读取提示词、回复、命令或工具内容，也不会操作 Codex。",
+                        "Reads only the current Codex task title to keep the island synchronized across active tasks. It does not read prompts, responses, commands, or tool content, and never controls Codex."
+                    )
+                ) {
+                    Toggle(
+                        copy.text(
+                            "跟随当前 Codex 任务",
+                            "Follow Current Codex Task"
+                        ),
+                        isOn: Binding(
+                            get: {
+                                preferences.followCurrentCodexTask
+                            },
+                            set: {
+                                activityRuntime
+                                    .setFollowCurrentTaskEnabled($0)
+                            }
+                        )
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                }
+
+                if activityRuntime.focusTrackingStatus
+                    == .permissionRequired
+                {
+                    NativeSettingsDivider()
+
+                    NativeSettingsNote(
+                        text: copy.text(
+                            "需要在“系统设置 → 隐私与安全性 → 辅助功能”中允许 QuotaView。未授权时，多任务仍使用安全的自动优先级降级。",
+                            "Allow QuotaView in System Settings → Privacy & Security → Accessibility. Without permission, multitasking safely falls back to automatic priority."
+                        )
+                    )
+                }
+
+                NativeSettingsDivider()
+
                 DisclosureGroup(
                     isExpanded: $codexActivityDetailsExpanded
                 ) {
@@ -724,14 +769,20 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.1"
+        ) as? String ?? "0.3.2"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "1"
+        let isPreview = Bundle.main.object(
+            forInfoDictionaryKey: "QuotaViewReleaseChannel"
+        ) as? String == "preview"
+        let channelSuffix = isPreview
+            ? copy.text(" · 预览版", " · Preview")
+            : ""
         return copy.text(
             "版本 \(version)（\(build)）",
             "Version \(version) (\(build))"
-        )
+        ) + channelSuffix
     }
 
     private var menuBarPreview: some View {

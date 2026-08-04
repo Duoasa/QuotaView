@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-04
+更新日期：2026-08-05
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -33,6 +33,9 @@
 
 `0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
 GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
+它同时被封存为 `0.3.2 Preview 1` 整个开发周期的稳定回滚基线；回滚使用
+不可移动 tag `v0.3.1-build.2`、上述发布提交和已核验 Release 资产，不从
+当前开发分支或候选包恢复。
 
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
 确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
@@ -63,20 +66,23 @@ SDD 唯一规格索引：
 | 当前进行中工作 | Codex 灵动岛多任务适配 |
 | 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
 | 规格状态 | `Accepted`：固定单岛方向和当前 Demo 视觉/交互基线已确认 |
-| 交付状态 | `Prototype`：正在独立 Demo 中调试 |
+| 交付状态 | `Verifying`：核心生产实现、自动化和状态轮播已通过，正在完成预览版发布门禁 |
 | Prototype | `Prototypes/CodexActivityMultiTaskDemo/` |
-| Prototype 验证 | `swift test --package-path Prototypes/CodexActivityMultiTaskDemo`：37 项通过，0 失败；Demo 基线已由产品所有者确认 |
-| 生产源码 | 尚未迁入多任务实现，仍为 `0.3.1 (Build 2)` 单任务基线 |
-| 生产测试与验收 | 尚未开始；Prototype 测试不能作为生产完成证据 |
-| 目标版本 | 未指定；不得自行使用 `0.3.2`、新 Build、tag 或 Release |
+| Prototype 验证 | `swift test --package-path Prototypes/CodexActivityMultiTaskDemo`：38 项通过，0 失败；当前 8 任务调试界面等待产品所有者验收 |
+| 生产源码 | 已迁入按 `sessionHash` 隔离的任务注册表、自动优先级、可选当前任务跟随、固定单岛任务列和紧凑态入口 |
+| 生产测试与验收 | `swift test`：60 项通过、0 失败；Universal Xcode Release、静态门禁和 Developer ID 本地签名候选包通过；产品所有者已确认一次生产实机状态轮播通过，其余视觉/交互矩阵继续验收 |
+| 状态轮播验收 | `2026-08-05` 在已安装的 `0.3.2 Preview 1` 上通过本地认证 Hook 依次验证待命、思考、工作、压缩上下文、等待确认、已完成与 SessionEnd 清理；产品所有者结论：通过；测试事件标题明确标记 `DEBUG-ONLY-MOCK`，源码无残留 |
+| 本地验收候选包 | `dist/QuotaView-v0.3.2-preview.1.zip`；SHA-256 `b74bb5efe46b82992f60fe629edeffabe8eb30842b97a8adb8dfe023e8838909`；Developer ID 签名、未公证；已安装并从 `/Applications/QuotaView.app` 运行 |
+| 目标版本 | `0.3.2 (Build 1) Preview 1`；发布已获授权，计划 tag `v0.3.2-preview.1`，尚未创建 Release |
+| 稳定回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
 
-当前允许继续 Demo 调试、规格澄清、Prototype 测试和 Demo QA 记录。固定
-单岛、右侧任务列表、最大态 `496 × 152 pt`、紧凑态 `52 pt`、最小 AX
-标题读取与不控制 Codex 等已接受方向继续有效；调试不得静默改变这些方向。
-
-只有产品所有者后续明确授权“迁入生产”后，交付状态才能从 `Prototype`
-切换到 `Implementing` 并修改 `Sources/`。生产实现完成也不等于授权发布；
-版本号、签名、公证、tag 和 Release 仍需要独立的发布指令。
+用户已于 `2026-08-05` 明确授权迁入生产并指定 `0.3.2 Preview 1`，并在
+状态轮播通过后授权按预览版发布。固定单岛、右侧任务列表、最大态
+`496 × 152 pt`、紧凑态 `52 pt`、最小 AX 标题读取与不控制 Codex 等冻结
+方向继续有效。当前版本基本完成多任务支持，但响应速度、当前任务跟随、
+任务切换与收展节奏仍需优化，因此不得标记为稳定版。当前只生成了
+Developer ID 本地验收签名包；完成公证、tag、GitHub Pre-release 和回下载
+验证后才能把交付状态写为 `Released`。
 
 当前规格与执行流程：
 
@@ -84,6 +90,48 @@ SDD 唯一规格索引：
 - [SDD 开发流程](docs/specs/DEVELOPMENT_PROCESS.md)
 - [多任务 Demo 说明](Prototypes/CodexActivityMultiTaskDemo/README.md)
 - [多任务 Demo Design QA](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)
+
+## 0.2 0.3.2 Preview 1 Release Notes 源文
+
+GitHub Pre-release 使用以下单份英文源正文；GitHub 界面负责翻译：
+
+```markdown
+QuotaView 0.3.2 Preview 1 brings the core multi-task workflow to Codex Island.
+It is an early-access release for validating the experience; v0.3.1 Build 2
+remains the recommended stable version and GitHub Latest release.
+
+## What's new
+
+- Track multiple concurrent Codex sessions in one fixed Island, with
+  independent status, lifecycle, completion, and cleanup.
+- Use a three-row task rail, a continuous sliding window for longer task
+  lists, task counts, and a compact multi-task summary.
+- Keep a stable primary task through priority arbitration so ordinary
+  background events do not unnecessarily take over the Island.
+- Optionally follow the current Codex task through bounded, read-only
+  Accessibility title matching with a safe automatic fallback.
+- Preserve the existing live Metal status surface, native glass transitions,
+  compact/expanded states, Reduce Motion behavior, and accessibility actions.
+
+## Known preview limitations
+
+- Event-to-Island response can still feel delayed depending on Hook delivery,
+  local scheduling, and the current Codex task state.
+- Current-task following is title-based and can lag or miss when titles are
+  unresolved, duplicated, changed quickly, or affected by Codex UI changes.
+- Task switching, title marquee behavior, and compact/expanded transition
+  rhythm still need experience and performance refinement.
+
+## Stability recommendation
+
+This build is intended for preview validation. Use v0.3.1 Build 2 when stable
+behavior is more important than multi-task support.
+
+## Requirements
+
+- macOS 14 or later
+- A Codex version with Hooks support
+```
 
 ## 1. 0.3.1 Build 2 正式发布状态
 

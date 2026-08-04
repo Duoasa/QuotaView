@@ -112,6 +112,10 @@ Demo 被确认不代表已进入生产，生产实现完成也不代表已经发
 只有用户明确授权发布后执行。必须遵守 `AGENTS.md` 的签名、公证、资产、
 tag、Release、回下载和双文档联动门禁。
 
+进入任何新版本发布流程前，先按 `AGENTS.md#稳定版本封存与回滚基线` 核验
+并登记上一稳定版。预发布版本默认保留上一稳定版为 GitHub Latest 与 README
+默认下载，不移动或覆盖稳定 tag 和资产。
+
 出口：
 
 - `VERSION_HISTORY.md` 记录已发生的发布事实；
@@ -180,18 +184,12 @@ MT-DATA-001 和 MT-SELECT-001，不改版本号、不发布。
 
 ## 5. 当前多任务迭代的下一出口
 
-当前 `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` 的交付状态是
-`Prototype`。在用户后续明确授权前，允许的工作是：
+`QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` 已于 `2026-08-05` 获得生产
+实施授权，当前交付状态为 `Implementing`，目标版本为
+`0.3.2 Preview 1`。当前可以修改生产 `Sources/`、生产测试、版本配置和
+预发布构建脚本，但不得把尚未完成的 tag、Release 或资产写成发布事实。
 
-- 继续调试独立 Demo；
-- 修正 Demo 与已接受规格之间的偏差；
-- 完善 Prototype 测试和 Demo QA 证据；
-- 澄清生产数据模型、权限与降级策略；
-- 更新规格和追踪矩阵。
-
-当前阶段的出口不是发布，而是由产品所有者明确作出以下决定之一：
-
-1. 继续 Prototype；
-2. 修改并重新确认规格；
-3. 授权进入 `Implementing`；
-4. 终止或归档该方向。
+当前阶段出口是完成代码审查、生产自动化测试、Universal Release 构建、
+隐私与调试入口检查后进入 `Verifying`。产品所有者完成生产 App 的视觉、
+交互、语言和辅助功能验收，并再次明确授权发布后，才能执行签名、公证、
+tag、GitHub Pre-release 与回下载验证。
