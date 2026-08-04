@@ -29,15 +29,31 @@
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
 | 稳定基线状态 | `0.3.2 Preview 1` 整个开发周期的封存回滚基线 |
 
+当前公开预览版：
+
+| 项目 | 当前值 |
+|---|---|
+| 最新预览版本 | `0.3.2 (Build 1) Preview 1` |
+| Git tag | `v0.3.2-preview.1` |
+| Tag commit | `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
+| GitHub Release | [QuotaView 0.3.2 Preview 1 — Multi-task Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
+| Release 资产 | `QuotaView-v0.3.2-preview.1.zip` |
+| 资产大小 | `11,543,516 bytes` |
+| SHA-256 | `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587` |
+| 最低系统版本 | macOS 14 |
+| 架构 | Universal `arm64 + x86_64` |
+| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
+| 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
+| 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
+
 > 当前生产版本为 `0.3.1 (Build 2)`。该热修复保留 Codex 灵动岛，并恢复
 > Developer ID 直接分发环境中的 Widget 数据共享。开发、验证与发布记录见
 > [HANDOFF.md](HANDOFF.md#1-031-build-2-正式发布状态)。
 
-> 当前正在进行的“Codex 灵动岛多任务适配”已进入生产 `Verifying`。
-> 产品所有者已确认按 `0.3.2 Preview 1` 的预览边界发布，并要求公开记录
-> 响应速度与当前任务跟随仍需优化；尚未创建 tag 或 GitHub Pre-release，因此
-> 不进入本文件的版本总览。`0.3.1 (Build 2)` 继续作为公开稳定版、Latest
-> 与封存回滚基线。开发状态以
+> “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
+> `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
+> 不足，因此该版本不晋升为稳定版。`0.3.1 (Build 2)` 继续作为公开稳定版、
+> GitHub Latest、README 默认下载与封存回滚基线。当前状态以
 > [SDD 当前状态快照](docs/specs/README.md#2-当前状态快照) 为准。
 
 ### 版本定位规则
@@ -58,6 +74,7 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
+| `0.3.2 (Build 1) Preview 1` | 2026-08-05 | **当前预览版** | Codex 灵动岛多任务支持与可选当前任务跟随 |
 | `0.3.1 (Build 2)` | 2026-08-01 | **当前最新** | Widget 共享容器热修复与可变额度周期文案 |
 | `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
 | `0.2.1 (Build 1)` | 2026-07-30 | 历史正式版 | 原生 WidgetKit 小组件与 Developer ID 公证分发 |
@@ -67,6 +84,52 @@
 | `0.1.5 (Build 6)` | 2026-07-27 | 历史正式版 | 原生菜单面板、玻璃外观、设置窗口和状态标签热修复 |
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
+
+## 0.3.2 (Build 1) Preview 1
+
+Tag：`v0.3.2-preview.1`
+
+状态：当前公开预览版、非 Draft、非 Latest；`0.3.1 (Build 2)` 继续作为
+推荐稳定版与 GitHub Latest。
+
+发布提交：
+`f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c`
+
+主要特性：
+
+- 在一个固定 Codex 灵动岛内同时跟踪多个会话，并分别维护状态、生命周期、
+  完成与清理；
+- 新增三行任务列、连续滑动窗口、任务总数和紧凑态多任务摘要；
+- 使用稳定优先级仲裁主任务，减少普通后台事件对当前任务的无必要抢占；
+- 新增可选的当前 Codex 任务跟随，通过有界、只读的辅助功能标题匹配实现，
+  无法高置信度匹配时安全自动降级；
+- 保留实时 Metal 状态表面、原生玻璃切换、最大态/紧凑态、Reduce Motion
+  和辅助功能操作。
+
+预览版已知不足：
+
+- 事件到灵动岛的响应速度仍可能受 Hook 传递、本机调度和当前任务状态影响；
+- 当前任务跟随基于标题，标题未解析、重复、快速变化或 Codex UI 调整时
+  可能滞后或未命中；
+- 任务切换、长标题跑马灯及最大态/紧凑态切换节奏仍需继续优化。
+
+发布资产：
+
+- 文件名：`QuotaView-v0.3.2-preview.1.zip`
+- 大小：`11,543,516 bytes`
+- SHA-256：
+  `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587`
+- App、Widget Extension 与 `QuotaViewActivityHook` 均为 Universal
+  `x86_64 arm64`，App 与 Widget 为 `0.3.2 (1)`、渠道 `preview`
+- Developer ID 签名：`Developer ID Application: Chenchen Xu
+  (BUUH229D5Q)`，启用 Hardened Runtime
+- Apple 公证：Accepted，已 Staple；Submission
+  `47c6d413-465f-4632-b7d2-1e48ed03f9a0`
+- GitHub 回下载资产与本地正式包逐字节一致，并再次通过 `codesign`、
+  `stapler` 与 `spctl` 验证
+
+Release：
+[QuotaView 0.3.2 Preview 1 — Multi-task Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
 ## 0.3.1 (Build 2)
 

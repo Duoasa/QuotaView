@@ -6,8 +6,11 @@
 
 当前生产分支：`main`
 
-当前发布提交与生产基线：
+当前稳定发布提交与生产基线：
 `3119171f45163fe45d68a4f774a0488968f14fd7`
+
+当前预览发布提交：
+`f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c`
 
 当前开发提交不在本文固化；每次会话使用 `git branch --show-current` 和
 `git rev-parse HEAD` 读取，避免 Handoff 在合并后立即陈旧。
@@ -30,6 +33,19 @@
 | Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
 | 资产 | `QuotaView-v0.3.1-build.2.zip` |
 | SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
+
+当前公开预览版为：
+
+| 项目 | 当前值 |
+|---|---|
+| 最新预览版本 | `0.3.2 (Build 1) Preview 1` |
+| tag | `v0.3.2-preview.1` |
+| 发布提交 | `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
+| Release | [QuotaView 0.3.2 Preview 1 — Multi-task Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
+| 资产 | `QuotaView-v0.3.2-preview.1.zip`，`11,543,516 bytes` |
+| SHA-256 | `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587` |
+| 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
+| 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
 `0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
 GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
@@ -63,26 +79,26 @@ SDD 唯一规格索引：
 | 项目 | 当前值 |
 |---|---|
 | 公开生产基线 | `0.3.1 (Build 2)`，已发布且保持不变 |
-| 当前进行中工作 | Codex 灵动岛多任务适配 |
+| 当前进行中工作 | `0.3.2 Preview 1` 已发布；响应速度与任务跟随优化待后续迭代 |
 | 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
 | 规格状态 | `Accepted`：固定单岛方向和当前 Demo 视觉/交互基线已确认 |
-| 交付状态 | `Verifying`：核心生产实现、自动化和状态轮播已通过，正在完成预览版发布门禁 |
+| 交付状态 | `Released`：签名、公证、tag、Pre-release 与回下载验证已完成 |
 | Prototype | `Prototypes/CodexActivityMultiTaskDemo/` |
 | Prototype 验证 | `swift test --package-path Prototypes/CodexActivityMultiTaskDemo`：38 项通过，0 失败；当前 8 任务调试界面等待产品所有者验收 |
 | 生产源码 | 已迁入按 `sessionHash` 隔离的任务注册表、自动优先级、可选当前任务跟随、固定单岛任务列和紧凑态入口 |
-| 生产测试与验收 | `swift test`：60 项通过、0 失败；Universal Xcode Release、静态门禁和 Developer ID 本地签名候选包通过；产品所有者已确认一次生产实机状态轮播通过，其余视觉/交互矩阵继续验收 |
+| 生产测试与验收 | `swift test`：60 项通过、0 失败；Universal Xcode Release、静态门禁、Developer ID 签名、Apple 公证、Staple 与 GitHub 回下载验证通过；产品所有者已确认一次生产实机状态轮播通过，其余视觉/交互矩阵作为预览版后续优化证据 |
 | 状态轮播验收 | `2026-08-05` 在已安装的 `0.3.2 Preview 1` 上通过本地认证 Hook 依次验证待命、思考、工作、压缩上下文、等待确认、已完成与 SessionEnd 清理；产品所有者结论：通过；测试事件标题明确标记 `DEBUG-ONLY-MOCK`，源码无残留 |
-| 本地验收候选包 | `dist/QuotaView-v0.3.2-preview.1.zip`；SHA-256 `b74bb5efe46b82992f60fe629edeffabe8eb30842b97a8adb8dfe023e8838909`；Developer ID 签名、未公证；已安装并从 `/Applications/QuotaView.app` 运行 |
-| 目标版本 | `0.3.2 (Build 1) Preview 1`；发布已获授权，计划 tag `v0.3.2-preview.1`，尚未创建 Release |
+| 正式预览资产 | `dist/QuotaView-v0.3.2-preview.1.zip`；`11,543,516 bytes`；SHA-256 `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587`；Developer ID 签名、Apple 公证并已 Staple |
+| 已发布版本 | `0.3.2 (Build 1) Preview 1` / `v0.3.2-preview.1` / [GitHub Pre-release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
 | 稳定回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
 
 用户已于 `2026-08-05` 明确授权迁入生产并指定 `0.3.2 Preview 1`，并在
 状态轮播通过后授权按预览版发布。固定单岛、右侧任务列表、最大态
 `496 × 152 pt`、紧凑态 `52 pt`、最小 AX 标题读取与不控制 Codex 等冻结
 方向继续有效。当前版本基本完成多任务支持，但响应速度、当前任务跟随、
-任务切换与收展节奏仍需优化，因此不得标记为稳定版。当前只生成了
-Developer ID 本地验收签名包；完成公证、tag、GitHub Pre-release 和回下载
-验证后才能把交付状态写为 `Released`。
+任务切换与收展节奏仍需优化，因此不得标记为稳定版。最终资产已经完成
+Developer ID 签名、Apple 公证、Staple、GitHub Pre-release 上传与回下载
+逐字节复核；`0.3.1 (Build 2)` 继续保持 GitHub Latest 和 README 默认下载。
 
 当前规格与执行流程：
 

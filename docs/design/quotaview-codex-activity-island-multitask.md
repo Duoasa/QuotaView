@@ -6,7 +6,7 @@
 >
 > 规格状态：`Accepted`（固定单岛结构、视觉与动效 Demo 基线已确认）
 >
-> 交付状态：`Verifying`（`0.3.2 Preview 1` 发布门禁）
+> 交付状态：`Released`（`0.3.2 Preview 1`）
 >
 > 依赖基线：QuotaView `0.3.1 (Build 2)`
 >
@@ -39,28 +39,28 @@
 本文记录产品所有者已确认的 Demo 基线及其生产映射。用户已于
 `2026-08-05` 明确授权迁入生产，并指定 `0.3.2 Preview 1` 为目标版本；
 产品所有者已接受当前多任务能力及响应速度、当前任务跟随仍需优化的预览
-边界，并授权发布 `0.3.2 Preview 1`。当前实现、测试和构建仍不代表已经
-对外发布。任何发布状态仍以项目根目录的
+边界，并授权发布 `0.3.2 Preview 1`。该版本已通过签名、公证、Staple、
+tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态以项目根目录的
 `HANDOFF.md`、`VERSION_HISTORY.md` 与 [SDD 规格索引](../specs/README.md)
 为准。
 
-本规格及其 Demo 自提交 `f603c38` 起已由 Git 跟踪。生产实现位于
-`codex/0.3.2-preview.1` 开发分支；公开稳定版与回滚基线继续是
+本规格及其 Demo 自提交 `f603c38` 起已由 Git 跟踪。生产实现已合并至
+`main`，发布 tag 为 `v0.3.2-preview.1`；公开稳定版与回滚基线继续是
 `v0.3.1-build.2`，当前工作不得移动该 tag 或覆盖其发布资产。
 
 ## MULTITASK-00.1 SDD 状态与授权边界
 
 本规格的产品方向和当前 Demo 视觉基线已经接受，因此规格状态为
-`Accepted`；交付已进入 `Verifying`。这两个状态不得合并解释：
+`Accepted`；交付已进入 `Released`。这两个状态不得合并解释：
 
-- 当前可以按 Requirement ID 修改生产 `Sources/`、生产测试、版本配置、
-  构建脚本，以及继续维护独立 Demo 证据；
+- 当前生产行为已由 `v0.3.2-preview.1` 固化；后续生产修改必须进入新的
+  迭代、Build、tag 和发布资产；
 - 当前 Demo 控制面板提供 `1–8` 个纯模拟任务并默认展示八项，用于验证
   三行任务视窗在更长列表中的连续滚动；这不构成生产任务数量上限；
 - Demo fixture、控制面板、自动状态轮转与临时 QA 入口不得进入生产；
 - Prototype 测试与生产测试必须继续分开记录；
-- 已授权目标身份为 `0.3.2 (Build 1) Preview 1`，并已授权创建最终 tag、
-  签名、公证和 GitHub Pre-release；
+- `0.3.2 (Build 1) Preview 1` 已完成最终 tag、签名、公证、GitHub
+  Pre-release 与回下载验证；
 - 调试若需要改变 `MULTITASK-14` 的冻结项，必须先取得产品所有者确认并
   更新规格；
 - 只有完成生产自动化、Universal Release 和代码门禁后，交付状态才能进入
@@ -508,10 +508,10 @@ Metal 状态过渡，但不得恢复竖向分隔线、增加常驻背层卡片�
 | `MT-A11Y-001` | VoiceOver Press 和 Reduce Motion Demo | `CodexActivityIsland.swift`、`SettingsView.swift` | 生产编译与状态测试 | 标签、Press 与 Reduce Motion 已接入；矩阵待验收 |
 | `MT-VERIFY-001` | Prototype XCTest 38 项通过；Demo Design QA | 上述生产路径 | `swift test` 60 项通过、0 失败；Universal Release、静态门禁、Developer ID 本地签名候选包和六状态实机轮播通过 | 其余实机产品验收继续进行 |
 
-当前追踪已进入 `Verifying`。生产构建、静态门禁、本地签名候选包与核心
-状态轮播已经通过；响应速度、当前任务跟随、任务切换与收展节奏作为预览版
-已知不足继续优化。签名、公证、tag、GitHub Pre-release 和回下载验证完成
-前，不得提前写成 `Released`。
+当前追踪已进入 `Released`。生产构建、静态门禁、核心状态轮播、Developer
+ID 签名、Apple 公证、Staple、tag、GitHub Pre-release 和回下载验证已经
+通过；响应速度、当前任务跟随、任务切换与收展节奏作为预览版已知不足进入
+后续优化，不得把本版本改写为稳定版。
 
 ## MULTITASK-14. 变更控制
 
