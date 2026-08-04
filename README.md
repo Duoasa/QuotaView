@@ -90,6 +90,8 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 > Island behavior. v0.3.1 Build 2 remains the recommended stable version and
 > the default download.
 
+[Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
+
 The core multi-task workflow is now available in one fixed Codex Island:
 
 - Tracks multiple concurrent Codex sessions with independent status,

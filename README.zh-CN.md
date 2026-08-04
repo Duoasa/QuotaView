@@ -88,6 +88,8 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 > 0.3.2 Preview 1 是用于验证 Codex 灵动岛多任务体验的抢先预览版。
 > v0.3.1 Build 2 继续作为推荐稳定版和默认下载版本。
 
+[下载 QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
+
 当前版本已经在一个固定灵动岛内基本实现完整的多任务工作流：
 
 - 同时跟踪多个 Codex 会话，并分别维护状态、生命周期、完成与清理；
