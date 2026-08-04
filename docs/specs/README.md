@@ -6,13 +6,13 @@
 >
 > 规格状态：`Accepted`
 >
-> 生效日期：2026-08-04
+> 生效日期：2026-08-05
 >
 > 当前生产基线：QuotaView `0.3.1 (Build 2)`
 >
 > 当前进行中工作：Codex 灵动岛多任务适配
 >
-> 当前交付阶段：`Prototype`（独立 Demo 调试）
+> 当前交付阶段：`Verifying`（`0.3.2 Preview 1` 发布门禁）
 
 ## 1. 本文件的职责
 
@@ -34,7 +34,8 @@
 
 正式 SDD 系统只接纳已经由 Git 跟踪、且在本注册表或阅读路由中具有明确
 职责的 Markdown。当前 SDD 治理、规格和多任务 Demo 文档自提交 `f603c38`
-起已进入 `main`，但多任务代码仍只存在于隔离 Prototype，二者不能混写。
+起已进入 `main`；用户于 `2026-08-05` 授权将多任务能力迁入生产，当前生产
+实现位于独立预览分支，仍不得把未完成的构建写成已发布。
 
 以下本地对象默认排除在正式调用链外：未跟踪的旧
 `Prototypes/CodexActivityMetalDemo/`、受 `AGENTS.md` 门禁约束的未跟踪
@@ -47,23 +48,27 @@
 |---|---|
 | 公开生产版本 | `0.3.1 (Build 2)` |
 | 生产版本状态 | 已发布；GitHub Latest；Developer ID 签名并完成 Apple 公证 |
-| 生产代码版本 | `MARKETING_VERSION = 0.3.1`，`CURRENT_PROJECT_VERSION = 2` |
+| 当前开发代码版本 | `MARKETING_VERSION = 0.3.2`，`CURRENT_PROJECT_VERSION = 1`，渠道 `preview` |
 | 当前迭代 | Codex 灵动岛多任务适配 |
 | 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
 | 规格状态 | `Accepted`：固定单岛、多任务列表和 Demo 视觉基线已确认 |
-| 交付状态 | `Prototype`：正在独立 Demo 中调试 |
-| Prototype 自动化 | 37 项测试通过，0 失败（2026-08-04）；不能替代生产测试 |
-| 生产源码状态 | 未开始迁移；`Sources/` 仍为单任务生产实现 |
-| 发布目标 | 未指定；不得自行命名为 `0.3.2` 或创建 Build/tag/Release |
-| 当前验收 | Demo 基线已有产品所有者确认；生产实现验收尚未开始 |
+| 交付状态 | `Verifying`：核心实现、自动化和状态轮播已通过，正在完成预览版发布门禁 |
+| Prototype 自动化 | 38 项测试通过，0 失败（2026-08-04）；不能替代生产测试 |
+| 生产源码状态 | 已接入任务注册表、独立生命周期、自动优先级、可选 AX 标题跟随、固定任务列和紧凑态入口 |
+| 生产自动化 | `swift test` 60 项通过、0 失败（2026-08-05）；Universal Xcode Release、静态门禁和 Developer ID 本地签名候选包通过，App、Widget、Hook、Core 均为 `x86_64 arm64` |
+| 本地验收候选包 | `dist/QuotaView-v0.3.2-preview.1.zip`；Developer ID 签名、未公证；已安装运行，仅用于产品验收 |
+| 发布目标 | `0.3.2 (Build 1) Preview 1`；发布已获授权，计划 tag `v0.3.2-preview.1`，尚未创建 |
+| 稳定回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| 当前验收 | Demo 基线已有产品所有者确认；`2026-08-05` 生产实机六状态轮播与 SessionEnd 清理已由产品所有者确认通过；语言、Widget 状态共享、辅助功能及完整交互矩阵继续验收 |
 
 ### 当前迭代边界
 
 - Prototype 位于
   [`Prototypes/CodexActivityMultiTaskDemo`](../../Prototypes/CodexActivityMultiTaskDemo/README.md)，
   与生产 Target 隔离；
-- 当前允许继续进行 Demo 调试、规格澄清和 Prototype 自动化测试；
-- 未经用户明确指令，不得把多任务实现迁入 `Sources/`；
+- 当前允许按已接受规格修改生产 `Sources/`、测试、版本配置和预发布构建脚本；
+- 用户已明确授权创建 `v0.3.2-preview.1` 与 GitHub Pre-release；在签名、
+  公证、资产验证和 Release 实际完成前，不得把计划资产写成发布事实；
 - Demo 的冻结产品方向继续有效；调试可以修复实现偏差，但改变固定单岛、
   尺寸、任务列、隐私或交互方向必须先更新规格并取得产品所有者确认；
 - 当前工作不得改变 `0.3.1 (Build 2)` 的发布事实。
@@ -101,7 +106,7 @@
 |---|---|---|---|---|---|
 | `QV-GOVERNANCE-001` | [AGENTS.md](../../AGENTS.md) | 治理规范 | `Accepted` | — | 长期产品、实现、验证与发布约束 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-001` | [单任务灵动岛产品规格](../design/quotaview-codex-activity-widget-product.md) | 已发布功能规格 | `Accepted` | `Released` | `0.3.1` 单任务生产行为基线 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 当前功能规格 | `Accepted` | `Prototype` | 当前唯一进行中的产品迭代 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 当前功能规格 | `Accepted` | `Verifying` | `0.3.2 Preview 1` 发布门禁 |
 | `QV-DESIGN-WIDGET-001` | [WidgetKit 接入规格](../design/quotaview-widgetkit-solution.md) | 架构/功能规格 | `Accepted` | `Released` | Widget 数据、Target 与验证边界 |
 | `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（仅 Phase 0–2、4A–4B） | 当前核心架构不变量；Phase 3、5–7 尚未实施 |
 | `QV-EVIDENCE-CORE-0.2.0-001` | [0.2.0 重构报告](../design/quotaview-core-refactor-0.2.0-report.md) | 验证证据 | `Archived` | `Released` | 历史实施与测试证据 |
@@ -125,18 +130,19 @@
 
 | Requirement ID | 规格范围 | 当前证据 | 当前结论 |
 |---|---|---|---|
-| `MT-SCOPE-001` | 单一 `NSPanel`、单任务行为不回归 | Demo + `MULTITASK-01/06/14` | Demo 已覆盖；生产未开始 |
-| `MT-DATA-001` | 按 `sessionHash` 隔离任务与生命周期 | `MULTITASK-04/12/13` | 规格已接受；生产未实现 |
-| `MT-SELECT-001` | 用户焦点优先与自动降级仲裁 | `MULTITASK-05/07/09` | Demo 展示已覆盖；真实数据链路待实现 |
-| `MT-UI-001` | `496 × 152 pt` 固定最大态与任务列 | Demo 测试 + Demo QA | Demo 基线已确认 |
-| `MT-UI-002` | `52 pt` 紧凑态与“共 N 项”展开 | Demo 测试 + Demo QA | Demo 基线已确认 |
-| `MT-MOTION-001` | 任务列、玻璃选择态、Metal 与 Reduce Motion | Demo 测试 + Demo QA | Demo 基线已确认；生产待验收 |
-| `MT-PRIVACY-001` | 最小 AX 标题读取、禁止控制或完整扫描 | `MULTITASK-03/09/10` | 隔离验证完成；生产未实现 |
-| `MT-A11Y-001` | VoiceOver、Increase Contrast、Reduce Motion | `MULTITASK-11/13` | Demo 部分覆盖；生产待验收 |
-| `MT-VERIFY-001` | 自动化、Release 构建、视觉矩阵 | `MULTITASK-13` | Prototype 37 项测试通过；生产验证未开始 |
+| `MT-SCOPE-001` | 单一 `NSPanel`、单任务行为不回归 | `CodexActivityIsland.swift` + 生产测试 | 单/多任务共用单一生产面板；待实机验收 |
+| `MT-DATA-001` | 按 `sessionHash` 隔离任务与生命周期 | `CodexActivityStore` + 交错/结束/计时测试 | 首版生产实现完成，自动化通过 |
+| `MT-SELECT-001` | 用户焦点优先与自动降级仲裁 | `CodexActivityStore` + `CodexFocusedTaskTitleReader.swift` | 自动优先级与可选标题跟随已实现；待真实 Codex 验收 |
+| `MT-UI-001` | `496 × 152 pt` 固定最大态与任务列 | `CodexActivityIsland.swift` + 连续窗口测试 | 首版生产实现完成；等待视觉验收 |
+| `MT-UI-002` | `52 pt` 紧凑态与“共 N 项”展开 | 动态宽度、跑马灯和 Press 入口 | 首版生产实现完成；等待交互验收 |
+| `MT-MOTION-001` | 任务列、玻璃选择态、Metal 与 Reduce Motion | 生产任务列、选择玻璃、跑马灯和静态降级 | 六状态生产实机轮播通过；Reduce Motion 与完整节奏矩阵继续验收 |
+| `MT-PRIVACY-001` | 最小 AX 标题读取、禁止控制或完整扫描 | 有界顶部标题区读取器 + 设置说明 | 已实现只读降级；待权限授予/撤销实机验收 |
+| `MT-A11Y-001` | VoiceOver、Increase Contrast、Reduce Motion | 生产 AX 标签、Press、Reduce Motion | 首版实现完成；等待产品矩阵验收 |
+| `MT-VERIFY-001` | 自动化、Release 构建、视觉矩阵 | 60 项生产测试、Universal Release、静态门禁、本地签名候选包与六状态实机轮播通过 | 其余产品验收待完成 |
 
-进入 `Implementing` 后，每个 Requirement ID 必须补充生产源码位置、生产
-测试名称和验证结果；在此之前不得把 Prototype 测试当作生产完成证据。
+以上为 `Verifying` 阶段证据。产品所有者已接受以预览版公开当前能力与
+不足；只有签名、公证、tag、GitHub Pre-release 和回下载验证全部完成后，
+才能把当前结果写成 `Released`。
 
 ## 6. 阅读路由
 
@@ -154,8 +160,9 @@
 
 ## 7. 一致性规则
 
-- `0.3.1 (Build 2)` 必须同时与生产配置、`HANDOFF.md` 和
-  `VERSION_HISTORY.md` 一致；
+- `0.3.1 (Build 2)` 必须继续作为公开稳定版与回滚基线出现在
+  `HANDOFF.md`、`VERSION_HISTORY.md` 和 README；开发配置可以按明确授权
+  使用 `0.3.2 (Build 1) Preview 1`，但不得提前改变公开 Latest；
 - 当前迭代、规格状态和交付状态必须同时与 `HANDOFF.md` 一致；
 - 当前开发分支和 HEAD 必须从 Git 实时读取，不得在 Handoff 中维护会随提交
   失效的哈希；

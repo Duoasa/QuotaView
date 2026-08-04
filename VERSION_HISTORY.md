@@ -27,13 +27,17 @@
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
 | 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
+| 稳定基线状态 | `0.3.2 Preview 1` 整个开发周期的封存回滚基线 |
 
 > 当前生产版本为 `0.3.1 (Build 2)`。该热修复保留 Codex 灵动岛，并恢复
 > Developer ID 直接分发环境中的 Widget 数据共享。开发、验证与发布记录见
 > [HANDOFF.md](HANDOFF.md#1-031-build-2-正式发布状态)。
 
-> 当前正在进行的“Codex 灵动岛多任务适配”仍处于独立 `Prototype` Demo
-> 调试阶段，不是新的公开版本，也不进入本文件的版本总览。其状态以
+> 当前正在进行的“Codex 灵动岛多任务适配”已进入生产 `Verifying`。
+> 产品所有者已确认按 `0.3.2 Preview 1` 的预览边界发布，并要求公开记录
+> 响应速度与当前任务跟随仍需优化；尚未创建 tag 或 GitHub Pre-release，因此
+> 不进入本文件的版本总览。`0.3.1 (Build 2)` 继续作为公开稳定版、Latest
+> 与封存回滚基线。开发状态以
 > [SDD 当前状态快照](docs/specs/README.md#2-当前状态快照) 为准。
 
 ### 版本定位规则
@@ -47,6 +51,8 @@
 6. 不得把已撤回版本重新标记为最新版本，也不得移动已有正式 tag。
 7. 新版本只有完成正式签名、公证、资产验证和 Release 后才能加入版本总览
    并切换 Latest；必须使用唯一的 tag 与 ZIP 文件名。
+8. 启动新版本发布流程前，先封存上一稳定版的 tag、提交与已核验资产；
+   Preview、Beta 或 RC 默认不得替换稳定版 Latest 或 README 默认下载。
 
 ## 版本总览
 
@@ -406,3 +412,6 @@ Tag：`v0.1.0`
 - GitHub Release Notes 使用单份英文源文，避免与 GitHub 自动翻译产生
   重复内容。
 - 不移动或覆盖已发布 tag；热更新使用新的 Build Number、tag 和资产名。
+- 每个新版本周期必须在开发开始时把上一稳定版登记为回滚基线；基线至少
+  包含不可移动 tag、完整提交 SHA、Release URL、资产名、大小、SHA-256、
+  签名和公证证据。新版本晋升为稳定版后才更新下一周期基线。

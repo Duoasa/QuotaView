@@ -60,7 +60,7 @@ public actor CodexAppServerClient {
         maximumLineBytes: Int = 1_048_576,
         clientVersion: String = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.1"
+        ) as? String ?? "0.3.2"
     ) {
         self.executablePath = executablePath
         self.startupTimeoutNanoseconds = UInt64(

@@ -6,11 +6,36 @@ import QuotaViewCore
 import simd
 
 struct CodexActivityRenderState: Equatable {
+    let sessionHash: String
     let visualState: CodexActivityVisualState
     let windowTitle: String
     let statusTitle: String
     let operation: String
     let accessibilityLabel: String
+}
+
+struct CodexActivityClusterRenderState: Equatable {
+    let tasks: [CodexActivityRenderState]
+    let primarySessionHash: String
+    let taskRailTitle: String
+    let taskCounterText: String
+    let overflowText: String
+    let compactCountText: String
+    let accessibilityLabel: String
+    let compactExpandLabel: String
+    let compactExpandHelp: String
+
+    var primary: CodexActivityRenderState {
+        tasks.first { $0.sessionHash == primarySessionHash }
+            ?? tasks[0]
+    }
+
+    var attentionCount: Int {
+        tasks.filter {
+            $0.visualState == .awaitingConfirmation
+                || $0.visualState == .error
+        }.count
+    }
 }
 
 enum CodexActivityIslandPresentation: Int, CaseIterable {
@@ -22,6 +47,14 @@ enum CodexActivityIslandPresentation: Int, CaseIterable {
     static let compactOrbInset: CGFloat = 12
     static let compactTextGap: CGFloat = 14
     static let compactTitleFontSize: CGFloat = 14
+    static let compactTitleMinimumWidth: CGFloat = 44
+    static let compactTitleMaximumWidth: CGFloat = 128
+    static let compactSeparatorWidth: CGFloat = 12
+    static let compactCountWidth: CGFloat = 54
+    static let compactCountLeadingGap: CGFloat = 12
+    static let compactCountTrailing: CGFloat = 12
+    static let multiTaskPanelSize = NSSize(width: 496, height: 152)
+    static let taskRailWidth: CGFloat = 144
     static let shadowRadius: CGFloat = 7
     static let shadowVerticalOffset: CGFloat = -2
 
@@ -45,18 +78,96 @@ enum CodexActivityIslandPresentation: Int, CaseIterable {
     }
 
     func panelSize(for state: CodexActivityVisualState) -> NSSize {
+        panelSize(
+            for: state,
+            taskCount: 1,
+            taskTitle: "",
+            statusTitle: ""
+        )
+    }
+
+    func panelSize(
+        for state: CodexActivityVisualState,
+        taskCount: Int,
+        taskTitle: String,
+        statusTitle: String
+    ) -> NSSize {
         switch self {
         case .expanded:
-            state.activityWindowSize
+            return taskCount > 1
+                ? Self.multiTaskPanelSize
+                : state.activityWindowSize
         case .compact:
-            NSSize(
-                width: Self.compactSurfaceSize.width
-                    + Self.panelInset * 2,
+            guard taskCount > 1 else {
+                return NSSize(
+                    width: Self.compactSurfaceSize.width
+                        + Self.panelInset * 2,
+                    height: Self.compactSurfaceSize.height
+                        + Self.panelInset * 2
+                )
+            }
+            let font = activityFont(
+                "AstaSans-SemiBold",
+                size: Self.compactTitleFontSize,
+                fallbackWeight: .semibold
+            )
+            let statusWidth = ceil(
+                statusTitle.size(withAttributes: [.font: font]).width
+            ) + 2
+            let measuredTitleWidth = ceil(
+                taskTitle.size(withAttributes: [.font: font]).width
+            ) + 18
+            let titleWidth = min(
+                Self.compactTitleMaximumWidth,
+                max(Self.compactTitleMinimumWidth, measuredTitleWidth)
+            )
+            let surfaceWidth = Self.compactOrbLeading
+                + Self.compactOrbDiameter
+                + Self.compactTextGap
+                + statusWidth
+                + Self.compactSeparatorWidth
+                + titleWidth
+                + Self.compactCountLeadingGap
+                + Self.compactCountWidth
+                + Self.compactCountTrailing
+            return NSSize(
+                width: surfaceWidth + Self.panelInset * 2,
                 height: Self.compactSurfaceSize.height
                     + Self.panelInset * 2
             )
         }
     }
+}
+
+enum CodexActivityTaskRailMetrics {
+    static let visibleRowCount = 3
+    static let width: CGFloat = 144
+    static let leadingPadding: CGFloat = 12
+    static let trailingPadding: CGFloat = 24
+    static let rowHeight: CGFloat = 20
+    static let rowStep: CGFloat = 23
+    static let markerLeading: CGFloat = 10
+    static let markerDotSize: CGFloat = 5
+    static let markerToNameGap: CGFloat = 9
+}
+
+func codexActivityRailWindowStart(
+    tasks: [CodexActivityRenderState],
+    primarySessionHash: String,
+    limit: Int = CodexActivityTaskRailMetrics.visibleRowCount
+) -> Int {
+    guard limit > 0,
+          tasks.count > limit,
+          let primaryIndex = tasks.firstIndex(where: {
+              $0.sessionHash == primarySessionHash
+          })
+    else {
+        return 0
+    }
+    return min(
+        max(0, primaryIndex - limit + 1),
+        tasks.count - limit
+    )
 }
 
 private extension CodexActivityVisualState {
@@ -584,6 +695,174 @@ private final class ActivitySingleLineTextView: NSView {
             animation,
             forKey: Self.shimmerAnimationKey
         )
+    }
+}
+
+private final class ActivityCompactMarqueeTextView: NSView {
+    private static let animationKey = "compact-task-title-marquee"
+    private static let edgeInset: CGFloat = 8
+    private static let repeatGap: CGFloat = 28
+
+    private let contentView = NSView()
+    private let primaryLabel = ActivitySingleLineTextView()
+    private let repeatedLabel = ActivitySingleLineTextView()
+    private let edgeFadeMask = CAGradientLayer()
+    private var reduceMotion = false
+    private var active = false
+    private var animationSignature = ""
+
+    var stringValue = "" {
+        didSet {
+            primaryLabel.stringValue = stringValue
+            repeatedLabel.stringValue = stringValue
+            animationSignature = ""
+            needsLayout = true
+        }
+    }
+
+    var font = NSFont.systemFont(ofSize: 13) {
+        didSet {
+            primaryLabel.font = font
+            repeatedLabel.font = font
+            animationSignature = ""
+            needsLayout = true
+        }
+    }
+
+    var textColor = NSColor.labelColor {
+        didSet {
+            primaryLabel.textColor = textColor
+            repeatedLabel.textColor = textColor
+        }
+    }
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.masksToBounds = true
+
+        contentView.wantsLayer = true
+        addSubview(contentView)
+        contentView.addSubview(primaryLabel)
+        contentView.addSubview(repeatedLabel)
+
+        edgeFadeMask.colors = [
+            NSColor.clear.cgColor,
+            NSColor.black.cgColor,
+            NSColor.black.cgColor,
+            NSColor.clear.cgColor
+        ]
+        edgeFadeMask.locations = [0, 0.08, 0.92, 1]
+        edgeFadeMask.startPoint = CGPoint(x: 0, y: 0.5)
+        edgeFadeMask.endPoint = CGPoint(x: 1, y: 0.5)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        let textWidth = ceil(
+            stringValue.size(withAttributes: [.font: font]).width
+        ) + 2
+        let availableWidth = max(
+            0,
+            bounds.width - Self.edgeInset * 2
+        )
+        let shouldScroll = active
+            && !reduceMotion
+            && textWidth > availableWidth
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        edgeFadeMask.frame = bounds
+        if shouldScroll {
+            let cycleWidth = textWidth + Self.repeatGap
+            contentView.frame = NSRect(
+                x: Self.edgeInset,
+                y: 0,
+                width: cycleWidth + textWidth,
+                height: bounds.height
+            )
+            primaryLabel.frame = NSRect(
+                x: 0,
+                y: 0,
+                width: textWidth,
+                height: bounds.height
+            )
+            repeatedLabel.frame = NSRect(
+                x: cycleWidth,
+                y: 0,
+                width: textWidth,
+                height: bounds.height
+            )
+            repeatedLabel.isHidden = false
+            layer?.mask = edgeFadeMask
+        } else {
+            contentView.frame = NSRect(
+                x: Self.edgeInset,
+                y: 0,
+                width: availableWidth,
+                height: bounds.height
+            )
+            primaryLabel.frame = contentView.bounds
+            repeatedLabel.isHidden = true
+            layer?.mask = nil
+        }
+        CATransaction.commit()
+
+        updateAnimation(
+            shouldScroll: shouldScroll,
+            textWidth: textWidth
+        )
+    }
+
+    func setReduceMotion(_ enabled: Bool) {
+        guard reduceMotion != enabled else { return }
+        reduceMotion = enabled
+        animationSignature = ""
+        needsLayout = true
+    }
+
+    func setActive(_ enabled: Bool) {
+        guard active != enabled else { return }
+        active = enabled
+        animationSignature = ""
+        needsLayout = true
+    }
+
+    private func updateAnimation(
+        shouldScroll: Bool,
+        textWidth: CGFloat
+    ) {
+        let signature = [
+            stringValue,
+            String(format: "%.2f", bounds.width),
+            shouldScroll ? "scroll" : "static"
+        ].joined(separator: "|")
+        guard signature != animationSignature else { return }
+        animationSignature = signature
+        contentView.layer?.removeAnimation(forKey: Self.animationKey)
+        contentView.layer?.setAffineTransform(.identity)
+
+        guard shouldScroll, let layer = contentView.layer else { return }
+        let distance = textWidth + Self.repeatGap
+        let animation = CABasicAnimation(
+            keyPath: "transform.translation.x"
+        )
+        animation.fromValue = 0
+        animation.toValue = -distance
+        animation.duration = max(
+            5.6,
+            CFTimeInterval(distance / 24)
+        )
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        layer.add(animation, forKey: Self.animationKey)
     }
 }
 
@@ -1481,6 +1760,418 @@ private final class ActivityIslandSurfaceView: NSView {
     }
 }
 
+private final class ActivityTaskRailRowView: NSView {
+    private let marker = NSView()
+    private let titleLabel = ActivitySingleLineTextView()
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+
+        marker.wantsLayer = true
+        addSubview(marker)
+
+        titleLabel.font = activityFont(
+            "AstaSans-Medium",
+            size: 10.5,
+            fallbackWeight: .medium
+        )
+        addSubview(titleLabel)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        titleLabel.frame = NSRect(
+            x: 24,
+            y: 0,
+            width: max(
+                0,
+                bounds.width
+                    - 24
+                    - CodexActivityTaskRailMetrics.trailingPadding
+            ),
+            height: bounds.height
+        )
+    }
+
+    func configure(
+        task: CodexActivityRenderState,
+        isPrimary: Bool,
+        isEdge: Bool,
+        reduceMotion: Bool,
+        animated: Bool
+    ) {
+        titleLabel.stringValue = task.windowTitle
+        titleLabel.textColor = NSColor.white.withAlphaComponent(
+            isPrimary ? 0.96 : 0.58
+        )
+        titleLabel.shimmerEnabled = !isPrimary
+            && (
+                task.visualState == .thinking
+                    || task.visualState == .working
+            )
+        titleLabel.setReduceMotion(reduceMotion)
+
+        let markerWidth = CodexActivityTaskRailMetrics.markerDotSize
+        let markerHeight: CGFloat = isPrimary ? 12 : markerWidth
+        marker.frame = NSRect(
+            x: CodexActivityTaskRailMetrics.markerLeading,
+            y: (bounds.height - markerHeight) / 2,
+            width: markerWidth,
+            height: markerHeight
+        )
+        marker.layer?.cornerRadius = markerWidth / 2
+        marker.layer?.backgroundColor =
+            task.visualState.activityAccentColor.cgColor
+
+        let targetAlpha: CGFloat = isPrimary
+            ? 1
+            : (isEdge ? 0.64 : 0.78)
+        let targetScale: CGFloat = isPrimary ? 1 : 0.96
+        if animated, !reduceMotion {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.5
+                context.timingFunction = CAMediaTimingFunction(
+                    name: .easeInEaseOut
+                )
+                animator().alphaValue = targetAlpha
+            }
+            let scale = CABasicAnimation(keyPath: "transform.scale")
+            scale.fromValue = layer?.presentation()?.value(
+                forKeyPath: "transform.scale"
+            ) ?? 1
+            scale.toValue = targetScale
+            scale.duration = 0.5
+            scale.timingFunction = CAMediaTimingFunction(
+                controlPoints: 0.22,
+                0.72,
+                0.22,
+                1
+            )
+            layer?.setAffineTransform(
+                CGAffineTransform(
+                    scaleX: targetScale,
+                    y: targetScale
+                )
+            )
+            layer?.add(scale, forKey: "task-wheel-scale")
+        } else {
+            alphaValue = targetAlpha
+            layer?.removeAnimation(forKey: "task-wheel-scale")
+            layer?.setAffineTransform(
+                CGAffineTransform(
+                    scaleX: targetScale,
+                    y: targetScale
+                )
+            )
+        }
+
+        setAccessibilityElement(true)
+        setAccessibilityRole(.staticText)
+        setAccessibilityLabel(task.accessibilityLabel)
+        setAccessibilityValue(isPrimary ? "primary" : "background")
+    }
+}
+
+private final class ActivityTaskRailSelectionGlassView: NSView {
+    private let glassSurface: NSView
+    private let fallbackTintView = NSView()
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        if #available(macOS 26.0, *) {
+            let glassView = NSGlassEffectView()
+            glassView.style = .clear
+            glassView.cornerRadius = 6
+            glassView.wantsLayer = true
+            glassSurface = glassView
+        } else {
+            let materialView = NSVisualEffectView()
+            materialView.material = .underWindowBackground
+            materialView.blendingMode = .withinWindow
+            materialView.state = .active
+            materialView.wantsLayer = true
+            materialView.layer?.cornerRadius = 6
+            materialView.layer?.cornerCurve = .continuous
+            materialView.layer?.masksToBounds = true
+            fallbackTintView.wantsLayer = true
+            materialView.addSubview(fallbackTintView)
+            glassSurface = materialView
+        }
+
+        super.init(frame: frameRect)
+        wantsLayer = true
+        addSubview(glassSurface)
+        setAccessibilityHidden(true)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        glassSurface.frame = bounds
+        fallbackTintView.frame = bounds
+    }
+
+    func setTint(_ accentColor: NSColor) {
+        let tint = accentColor.withAlphaComponent(0.10)
+        if #available(macOS 26.0, *),
+           let glassView = glassSurface as? NSGlassEffectView {
+            glassView.tintColor = tint
+        } else {
+            fallbackTintView.layer?.backgroundColor = tint.cgColor
+        }
+    }
+}
+
+private final class ActivityTaskRailView: NSView {
+    private let headerTitle = ActivitySingleLineTextView()
+    private let headerCounter = ActivitySingleLineTextView()
+    private let overflowLabel = ActivitySingleLineTextView()
+    private let selectionGlass = ActivityTaskRailSelectionGlassView()
+    private let rows = (0..<CodexActivityTaskRailMetrics.visibleRowCount)
+        .map { _ in ActivityTaskRailRowView() }
+
+    private var cluster: CodexActivityClusterRenderState?
+    private var previousPrimarySessionHash: String?
+    private var reduceMotion = false
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+
+        headerTitle.font = activityFont(
+            "AstaSans-Medium",
+            size: 10.5,
+            fallbackWeight: .medium
+        )
+        headerTitle.textColor = NSColor.white.withAlphaComponent(0.50)
+        headerCounter.font = headerTitle.font
+        headerCounter.textColor = NSColor.white.withAlphaComponent(0.72)
+        overflowLabel.font = activityFont(
+            "AstaSans-Regular",
+            size: 9.5,
+            fallbackWeight: .regular
+        )
+        overflowLabel.textColor = NSColor.white.withAlphaComponent(0.42)
+        overflowLabel.horizontalAlignment = .center
+
+        selectionGlass.alphaValue = 0
+        addSubview(selectionGlass)
+
+        addSubview(headerTitle)
+        addSubview(headerCounter)
+        rows.forEach(addSubview)
+        addSubview(overflowLabel)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        guard let cluster else { return }
+        let paginated = cluster.tasks.count
+            > CodexActivityTaskRailMetrics.visibleRowCount
+
+        if paginated {
+            let titleWidth = ceil(
+                cluster.taskRailTitle.size(
+                    withAttributes: [.font: headerTitle.font]
+                ).width
+            ) + 2
+            let counterWidth = ceil(
+                cluster.taskCounterText.size(
+                    withAttributes: [.font: headerCounter.font]
+                ).width
+            ) + 2
+            let groupWidth = titleWidth + 6 + counterWidth
+            let groupLeading = max(0, (bounds.width - groupWidth) / 2)
+            headerTitle.frame = NSRect(
+                x: groupLeading,
+                y: bounds.height - 26,
+                width: titleWidth,
+                height: 14
+            )
+            headerCounter.frame = NSRect(
+                x: groupLeading + titleWidth + 6,
+                y: bounds.height - 26,
+                width: counterWidth,
+                height: 14
+            )
+            overflowLabel.frame = NSRect(
+                x: 0,
+                y: 8,
+                width: bounds.width,
+                height: 12
+            )
+        } else {
+            headerTitle.frame = .zero
+            headerCounter.frame = .zero
+            overflowLabel.frame = .zero
+        }
+
+        let visibleCount = min(cluster.tasks.count, rows.count)
+        let rowsHeight = visibleCount > 0
+            ? CGFloat(visibleCount)
+                * CodexActivityTaskRailMetrics.rowStep - 3
+            : 0
+        let rowsBottom = paginated
+            ? CGFloat(31)
+            : max(0, (bounds.height - rowsHeight) / 2)
+        for index in rows.indices {
+            rows[index].frame = NSRect(
+                x: 0,
+                y: rowsBottom
+                    + CGFloat(max(visibleCount - index - 1, 0))
+                    * CodexActivityTaskRailMetrics.rowStep,
+                width: bounds.width,
+                height: CodexActivityTaskRailMetrics.rowHeight
+            )
+        }
+    }
+
+    func update(
+        cluster: CodexActivityClusterRenderState,
+        reduceMotion: Bool
+    ) {
+        let previousPrimary = previousPrimarySessionHash
+        self.cluster = cluster
+        self.reduceMotion = reduceMotion
+
+        headerTitle.stringValue = cluster.taskRailTitle
+        headerCounter.stringValue = cluster.taskCounterText
+        overflowLabel.stringValue = cluster.overflowText
+
+        let start = codexActivityRailWindowStart(
+            tasks: cluster.tasks,
+            primarySessionHash: cluster.primarySessionHash
+        )
+        let visible = Array(
+            cluster.tasks.dropFirst(start).prefix(rows.count)
+        )
+        let primaryChanged = previousPrimary != nil
+            && previousPrimary != cluster.primarySessionHash
+
+        for index in rows.indices {
+            guard index < visible.count else {
+                rows[index].isHidden = true
+                continue
+            }
+            rows[index].isHidden = false
+            rows[index].configure(
+                task: visible[index],
+                isPrimary:
+                    visible[index].sessionHash
+                    == cluster.primarySessionHash,
+                isEdge: visible.count == rows.count
+                    && (index == 0 || index == rows.count - 1),
+                reduceMotion: reduceMotion,
+                animated: primaryChanged
+            )
+        }
+
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+        animateSelectionGlassIfNeeded(
+            visibleTasks: visible,
+            primaryChanged: primaryChanged
+        )
+        previousPrimarySessionHash = cluster.primarySessionHash
+    }
+
+    private func animateSelectionGlassIfNeeded(
+        visibleTasks: [CodexActivityRenderState],
+        primaryChanged: Bool
+    ) {
+        guard primaryChanged,
+              !reduceMotion,
+              let index = visibleTasks.firstIndex(where: {
+                  $0.sessionHash == cluster?.primarySessionHash
+              })
+        else {
+            selectionGlass.alphaValue = 0
+            return
+        }
+
+        let targetRow = rows[index]
+        let targetFrame = NSRect(
+            x: 4,
+            y: targetRow.frame.midY - 10,
+            width: max(0, bounds.width - 28),
+            height: 20
+        )
+        let accent = visibleTasks[index].visualState.activityAccentColor
+        selectionGlass.setTint(accent)
+        selectionGlass.frame = NSRect(
+            x: 10,
+            y: targetFrame.midY - 6,
+            width: 5,
+            height: 12
+        )
+        selectionGlass.alphaValue = 0
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(
+                controlPoints: 0.22,
+                0.72,
+                0.22,
+                1
+            )
+            selectionGlass.animator().frame = targetFrame
+            selectionGlass.animator().alphaValue = 1
+        } completionHandler: { [weak self] in
+            guard let self else { return }
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.58
+                context.timingFunction = CAMediaTimingFunction(
+                    name: .easeInEaseOut
+                )
+                self.selectionGlass.animator().alphaValue = 0
+            }
+        }
+    }
+}
+
+private final class ActivityCompactCountHitView: NSView {
+    var onPress: (() -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .pointingHand)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onPress?()
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        onPress?()
+        return true
+    }
+}
+
 private final class ActivityIslandContentView: NSView {
     private let shadowHost = NSView()
     private let surface = ActivityIslandSurfaceView()
@@ -1488,14 +2179,25 @@ private final class ActivityIslandContentView: NSView {
     private let kickerLabel = ActivitySingleLineTextView()
     private let titleLabel = ActivitySingleLineTextView()
     private let compactTitleLabel = ActivitySingleLineTextView()
+    private let compactStatusLabel = ActivitySingleLineTextView()
+    private let compactTaskLabel = ActivityCompactMarqueeTextView()
+    private let compactCountLabel = ActivitySingleLineTextView()
+    private let compactCountHitView = ActivityCompactCountHitView()
     private let detailLabel = ActivitySingleLineTextView()
     private let statusDot = NSView()
+    private let taskRail = ActivityTaskRailView()
 
+    private var cluster: CodexActivityClusterRenderState
     private var renderState: CodexActivityRenderState
+    private var presentationMode:
+        CodexActivityIslandPresentation = .expanded
+    private var reduceMotion = false
 
     override var isOpaque: Bool { false }
 
-    init(initialState: CodexActivityRenderState) {
+    init(initialCluster: CodexActivityClusterRenderState) {
+        let initialState = initialCluster.primary
+        cluster = initialCluster
         renderState = initialState
         orbView = ActivityMetalOrbView(
             frame: .zero,
@@ -1547,6 +2249,25 @@ private final class ActivityIslandContentView: NSView {
         compactTitleLabel.horizontalAlignment = .center
         surface.addSubview(compactTitleLabel)
 
+        let compactFont = activityFont(
+            "AstaSans-SemiBold",
+            size: CodexActivityIslandPresentation.compactTitleFontSize,
+            fallbackWeight: .semibold
+        )
+        compactStatusLabel.font = compactFont
+        compactStatusLabel.textColor = .white
+        compactTaskLabel.font = compactFont
+        compactTaskLabel.textColor = .white
+        compactCountLabel.font = compactFont
+        compactCountLabel.textColor = .white
+        surface.addSubview(compactStatusLabel)
+        surface.addSubview(compactTaskLabel)
+        surface.addSubview(compactCountLabel)
+        compactTaskLabel.textColor = NSColor.white.withAlphaComponent(0.66)
+        compactCountLabel.horizontalAlignment = .center
+        compactCountLabel.textColor = NSColor.white.withAlphaComponent(0.72)
+        surface.addSubview(compactCountHitView)
+
         detailLabel.font = activityFont(
             "AstaSans-Regular",
             size: 11.5,
@@ -1558,7 +2279,14 @@ private final class ActivityIslandContentView: NSView {
         statusDot.layer?.cornerRadius = activityStatusDotSide / 2
         surface.addSubview(statusDot)
 
-        update(renderState: initialState)
+        surface.addSubview(taskRail)
+        surface.addSubview(
+            compactCountHitView,
+            positioned: .above,
+            relativeTo: taskRail
+        )
+
+        update(cluster: initialCluster)
     }
 
     @available(*, unavailable)
@@ -1577,6 +2305,7 @@ private final class ActivityIslandContentView: NSView {
         surface.frame = shadowHost.bounds
 
         let surfaceBounds = surface.bounds
+        let isMultiTask = cluster.tasks.count > 1
         shadowHost.layer?.shadowPath = CGPath(
             roundedRect: shadowHost.bounds,
             cornerWidth: min(34, shadowHost.bounds.height / 2),
@@ -1584,9 +2313,11 @@ private final class ActivityIslandContentView: NSView {
             transform: nil
         )
 
+        let expandedPanelHeight = isMultiTask
+            ? CodexActivityIslandPresentation.multiTaskPanelSize.height
+            : renderState.visualState.activityWindowSize.height
         let expandedSurfaceHeight = max(
-            renderState.visualState.activityWindowSize.height
-                - panelInset * 2,
+            expandedPanelHeight - panelInset * 2,
             CodexActivityIslandPresentation.compactSurfaceSize.height
         )
         let progress = activityExpansionProgress(
@@ -1633,9 +2364,12 @@ private final class ActivityIslandContentView: NSView {
             to: expandedTextStart,
             progress: progress
         )
+        let railReserve = isMultiTask
+            ? CodexActivityIslandPresentation.taskRailWidth * progress
+            : 0
         let textWidth = max(
             0,
-            surfaceBounds.width - textStart - 18
+            surfaceBounds.width - textStart - 18 - railReserve
         )
         let supportingAlpha = min(
             max((progress - 0.42) / 0.58, 0),
@@ -1657,7 +2391,22 @@ private final class ActivityIslandContentView: NSView {
         detailLabel.alphaValue = supportingAlpha
         statusDot.alphaValue = supportingAlpha
         titleLabel.alphaValue = expandedTitleAlpha
-        compactTitleLabel.alphaValue = compactTitleAlpha
+        compactTitleLabel.alphaValue = isMultiTask
+            ? 0
+            : compactTitleAlpha
+        compactStatusLabel.alphaValue = isMultiTask
+            ? compactTitleAlpha
+            : 0
+        compactTaskLabel.alphaValue = isMultiTask
+            ? compactTitleAlpha
+            : 0
+        compactCountLabel.alphaValue = isMultiTask
+            ? compactTitleAlpha
+            : 0
+        compactCountHitView.alphaValue = isMultiTask
+            ? compactTitleAlpha
+            : 0
+        taskRail.alphaValue = isMultiTask ? supportingAlpha : 0
 
         kickerLabel.frame = NSRect(
             x: textStart + 12,
@@ -1698,11 +2447,64 @@ private final class ActivityIslandContentView: NSView {
             ),
             height: surfaceBounds.height
         )
+        let compactStatusWidth = ceil(
+            renderState.statusTitle.size(
+                withAttributes: [.font: compactStatusLabel.font]
+            ).width
+        ) + 2
+        let compactStatusX =
+            CodexActivityIslandPresentation.compactOrbLeading
+            + CodexActivityIslandPresentation.compactOrbDiameter
+            + CodexActivityIslandPresentation.compactTextGap
+        let compactCountX = max(
+            compactStatusX + compactStatusWidth + 12,
+            surfaceBounds.width
+                - CodexActivityIslandPresentation.compactCountTrailing
+                - CodexActivityIslandPresentation.compactCountWidth
+        )
+        let compactTaskX = compactStatusX
+            + compactStatusWidth
+            + CodexActivityIslandPresentation.compactSeparatorWidth
+        let compactTaskWidth = max(
+            0,
+            compactCountX
+                - CodexActivityIslandPresentation.compactCountLeadingGap
+                - compactTaskX
+        )
+        compactStatusLabel.frame = NSRect(
+            x: compactStatusX,
+            y: 0,
+            width: compactStatusWidth,
+            height: surfaceBounds.height
+        )
+        compactTaskLabel.frame = NSRect(
+            x: compactTaskX,
+            y: 0,
+            width: compactTaskWidth,
+            height: surfaceBounds.height
+        )
+        compactCountLabel.frame = NSRect(
+            x: compactCountX,
+            y: 0,
+            width: CodexActivityIslandPresentation.compactCountWidth,
+            height: surfaceBounds.height
+        )
+        compactCountHitView.frame = compactCountLabel.frame
         detailLabel.frame = NSRect(
             x: textStart,
             y: textLayout.detailY,
             width: textWidth,
             height: activitySupportingLineHeight
+        )
+        taskRail.frame = NSRect(
+            x: max(
+                0,
+                surfaceBounds.width
+                    - CodexActivityIslandPresentation.taskRailWidth
+            ),
+            y: 0,
+            width: CodexActivityIslandPresentation.taskRailWidth,
+            height: surfaceBounds.height
         )
         shadowHost.layer?.shadowOpacity = Float(
             activityInterpolate(
@@ -1713,11 +2515,24 @@ private final class ActivityIslandContentView: NSView {
         )
     }
 
-    func update(renderState: CodexActivityRenderState) {
+    var onExpandRequested: (() -> Void)? {
+        didSet { compactCountHitView.onPress = onExpandRequested }
+    }
+
+    var allowsCompactInteraction: Bool {
+        presentationMode == .compact && cluster.tasks.count > 1
+    }
+
+    func update(cluster: CodexActivityClusterRenderState) {
+        self.cluster = cluster
+        let renderState = cluster.primary
         self.renderState = renderState
         kickerLabel.stringValue = renderState.windowTitle
         titleLabel.stringValue = renderState.statusTitle
         compactTitleLabel.stringValue = renderState.statusTitle
+        compactStatusLabel.stringValue = renderState.statusTitle
+        compactTaskLabel.stringValue = renderState.windowTitle
+        compactCountLabel.stringValue = cluster.compactCountText
         detailLabel.stringValue = renderState.operation
         let sweeps =
             renderState.visualState.activityShowsOperationSweep
@@ -1729,23 +2544,51 @@ private final class ActivityIslandContentView: NSView {
             renderState.visualState.activityAccentColor.cgColor
         orbView.setState(renderState.visualState)
         needsLayout = true
+        layoutSubtreeIfNeeded()
+        taskRail.update(
+            cluster: cluster,
+            reduceMotion: reduceMotion
+        )
+        compactTaskLabel.setActive(allowsCompactInteraction)
+        updateCompactInteraction()
 
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel(renderState.accessibilityLabel)
+        setAccessibilityLabel(cluster.accessibilityLabel)
     }
 
     func setReduceMotion(_ enabled: Bool) {
+        reduceMotion = enabled
         orbView.setReduceMotion(enabled)
         detailLabel.setReduceMotion(enabled)
+        compactTaskLabel.setReduceMotion(enabled)
+        taskRail.update(cluster: cluster, reduceMotion: enabled)
     }
 
     func setPresentationMode(
         _ mode: CodexActivityIslandPresentation,
         accessibilityValue: String
     ) {
+        presentationMode = mode
         needsLayout = true
         setAccessibilityValue(accessibilityValue)
+        compactTaskLabel.setActive(allowsCompactInteraction)
+        updateCompactInteraction()
+    }
+
+    private func updateCompactInteraction() {
+        let isEnabled = allowsCompactInteraction
+        taskRail.isHidden = presentationMode == .compact
+            || cluster.tasks.count <= 1
+        compactCountHitView.isHidden = !isEnabled
+        compactCountHitView.setAccessibilityElement(isEnabled)
+        compactCountHitView.setAccessibilityRole(.button)
+        compactCountHitView.setAccessibilityLabel(
+            isEnabled ? cluster.compactExpandLabel : nil
+        )
+        compactCountHitView.setAccessibilityHelp(
+            isEnabled ? cluster.compactExpandHelp : nil
+        )
     }
 }
 
@@ -1761,14 +2604,25 @@ final class CodexActivityIslandPanelController {
     private var presentationMode:
         CodexActivityIslandPresentation = .expanded
 
-    init(initialState: CodexActivityRenderState) {
+    init(
+        initialCluster: CodexActivityClusterRenderState,
+        onExpandRequested: @escaping () -> Void
+    ) {
+        let initialState = initialCluster.primary
         content = ActivityIslandContentView(
-            initialState: initialState
+            initialCluster: initialCluster
+        )
+        content.onExpandRequested = onExpandRequested
+        let initialSize = CodexActivityIslandPresentation.expanded.panelSize(
+            for: initialState.visualState,
+            taskCount: initialCluster.tasks.count,
+            taskTitle: initialState.windowTitle,
+            statusTitle: initialState.statusTitle
         )
         panel = CodexActivityPanel(
             contentRect: NSRect(
                 origin: .zero,
-                size: initialState.visualState.activityWindowSize
+                size: initialSize
             ),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -1792,13 +2646,13 @@ final class CodexActivityIslandPanelController {
         panel.contentView = content
 
         positionPanel(
-            size: initialState.visualState.activityWindowSize,
+            size: initialSize,
             animated: false
         )
     }
 
     func update(
-        renderState: CodexActivityRenderState,
+        cluster: CodexActivityClusterRenderState,
         presentationMode: CodexActivityIslandPresentation,
         presentationAccessibilityValue: String,
         reduceMotion: Bool
@@ -1807,18 +2661,22 @@ final class CodexActivityIslandPanelController {
         self.presentationMode = presentationMode
 
         content.setReduceMotion(reduceMotion)
-        content.update(renderState: renderState)
+        content.update(cluster: cluster)
         content.setPresentationMode(
             presentationMode,
             accessibilityValue: presentationAccessibilityValue
         )
+        panel.ignoresMouseEvents = !content.allowsCompactInteraction
 
         let duration = modeChanged
             ? presentationMode.transitionDuration
             : 0.44
         positionPanel(
             size: presentationMode.panelSize(
-                for: renderState.visualState
+                for: cluster.primary.visualState,
+                taskCount: cluster.tasks.count,
+                taskTitle: cluster.primary.windowTitle,
+                statusTitle: cluster.primary.statusTitle
             ),
             animated: !reduceMotion,
             duration: duration
