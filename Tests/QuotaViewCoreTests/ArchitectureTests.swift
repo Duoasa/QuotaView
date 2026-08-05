@@ -95,9 +95,10 @@ final class ArchitectureTests: XCTestCase {
 
     func testCoalescedCallersReceiveTheSameAppliedGeneration() async {
         let calls = CallCounter()
+        let fetchGate = FetchGate()
         let provider = StubProvider { request in
             await calls.increment()
-            try await Task.sleep(for: .milliseconds(30))
+            await fetchGate.waitUntilReleased()
             return Self.makeFetchResult(
                 capturedAt: Date(
                     timeIntervalSince1970:
@@ -119,11 +120,14 @@ final class ArchitectureTests: XCTestCase {
             reason: .background,
             policy: .coalesce
         )
-        try? await Task.sleep(for: .milliseconds(5))
         async let second = coordinator.requestRefresh(
             reason: .background,
             policy: .coalesce
         )
+        for _ in 0..<100 {
+            await Task.yield()
+        }
+        await fetchGate.release()
 
         let firstOutcome = await first
         let secondOutcome = await second
@@ -425,6 +429,33 @@ private actor CallCounter {
 
     func increment() {
         value += 1
+    }
+}
+
+private actor FetchGate {
+    private var isReleased = false
+    private var continuations: [CheckedContinuation<Void, Never>] = []
+
+    func waitUntilReleased() async {
+        guard !isReleased else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            if isReleased {
+                continuation.resume()
+            } else {
+                continuations.append(continuation)
+            }
+        }
+    }
+
+    func release() {
+        isReleased = true
+        let pendingContinuations = continuations
+        continuations.removeAll()
+        for continuation in pendingContinuations {
+            continuation.resume()
+        }
     }
 }
 

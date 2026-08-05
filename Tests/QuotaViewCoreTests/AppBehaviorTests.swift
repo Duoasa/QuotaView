@@ -400,7 +400,11 @@ final class AppBehaviorTests: XCTestCase {
             )
         )
 
-        try? await Task.sleep(nanoseconds: 40_000_000)
+        for _ in 0..<200 where store.tasks.first(where: {
+            $0.sessionHash == "completed-session"
+        })?.presentation != .compact {
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
         XCTAssertEqual(store.tasks.count, 2)
         XCTAssertEqual(
             store.tasks.first {
