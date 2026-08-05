@@ -2,9 +2,13 @@
 
 更新日期：2026-08-06
 
-工作区：`/Users/sukduoasa/Documents/widget`
+集成工作区：`/Users/sukduoasa/Documents/widget`
 
-当前开发分支：`codex/app-store-v1.0.0a`
+集成分支：`codex/app-store-v1.0.0a`
+
+新 Codex 项目工作区：`/Users/sukduoasa/Documents/QuotaView-AppStore`
+
+新 Codex 项目分支：`codex/appstore-runtime-spike`
 
 当前稳定发布提交与 App Store 代码基座：
 `3119171f45163fe45d68a4f774a0488968f14fd7`
