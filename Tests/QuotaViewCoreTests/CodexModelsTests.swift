@@ -7,7 +7,6 @@ final class CodexModelsTests: XCTestCase {
         let result = try makeResult(
             usedPercent: 34,
             reachedType: nil,
-            resetCredits: 2,
             now: now
         )
         let snapshot = result.snapshot
@@ -32,13 +31,6 @@ final class CodexModelsTests: XCTestCase {
         )
         XCTAssertEqual(
             count(
-                CodexDomainCatalog.resetCreditsID,
-                in: snapshot
-            ),
-            2
-        )
-        XCTAssertEqual(
-            count(
                 CodexDomainCatalog.lifetimeTokensID,
                 in: snapshot
             ),
@@ -59,8 +51,7 @@ final class CodexModelsTests: XCTestCase {
     func testProviderMarksHighUsageAsWarning() throws {
         let result = try makeResult(
             usedPercent: 91,
-            reachedType: nil,
-            resetCredits: 0
+            reachedType: nil
         )
 
         XCTAssertEqual(
@@ -72,8 +63,7 @@ final class CodexModelsTests: XCTestCase {
     func testProviderMarksBackendLimitAsExhausted() throws {
         let result = try makeResult(
             usedPercent: 72,
-            reachedType: "rate_limit_reached",
-            resetCredits: 0
+            reachedType: "rate_limit_reached"
         )
 
         XCTAssertEqual(
@@ -98,8 +88,7 @@ final class CodexModelsTests: XCTestCase {
                     "planType": "plus",
                     "rateLimitReachedType": null
                   },
-                  "rateLimitsByLimitId": null,
-                  "rateLimitResetCredits": null
+                  "rateLimitsByLimitId": null
                 }
                 """.utf8
             )
@@ -125,8 +114,7 @@ final class CodexModelsTests: XCTestCase {
         XCTAssertThrowsError(
             try makeResult(
                 usedPercent: 101,
-                reachedType: nil,
-                resetCredits: 0
+                reachedType: nil
             )
         ) { error in
             XCTAssertEqual(
@@ -139,14 +127,12 @@ final class CodexModelsTests: XCTestCase {
     private func makeResult(
         usedPercent: Int,
         reachedType: String?,
-        resetCredits: Int,
         now: Date = Date(timeIntervalSince1970: 1_785_000_000)
     ) throws -> ProviderFetchResult {
         let payload = CodexProviderPayload(
             rateLimits: try decodeRateLimits(
                 usedPercent: usedPercent,
-                reachedType: reachedType,
-                resetCredits: resetCredits
+                reachedType: reachedType
             ),
             usage: try decodeUsage(),
             capturedAt: now,
@@ -159,8 +145,7 @@ final class CodexModelsTests: XCTestCase {
 
     private func decodeRateLimits(
         usedPercent: Int,
-        reachedType: String?,
-        resetCredits: Int
+        reachedType: String?
     ) throws -> AccountRateLimitsResponse {
         let reachedValue = reachedType.map {
             "\"\($0)\""
@@ -186,11 +171,7 @@ final class CodexModelsTests: XCTestCase {
             "planType": "plus",
             "rateLimitReachedType": \(reachedValue)
           },
-          "rateLimitsByLimitId": null,
-          "rateLimitResetCredits": {
-            "availableCount": \(resetCredits),
-            "credits": []
-          }
+          "rateLimitsByLimitId": null
         }
         """
 

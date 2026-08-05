@@ -25,7 +25,6 @@ final class MenuBarPanelController: NSObject {
     private var globalEventMonitor: Any?
     private var resizeWorkItem: DispatchWorkItem?
     private var panelAnchor: PanelAnchor?
-    private var isPresentingConfirmation = false
     private var glassSurfaceRequiresVisibleAttachment = true
     private var pendingGlassMode: QuotaViewGlassMode?
 
@@ -122,12 +121,6 @@ final class MenuBarPanelController: NSObject {
             preferences: preferences,
             openSettingsAction: { [weak self] in
                 self?.openSettings()
-            },
-            contentLayoutDidChange: { [weak self] in
-                self?.scheduleResize()
-            },
-            confirmationPresentationDidChange: { [weak self] isPresented in
-                self?.setConfirmationPresentationActive(isPresented)
             }
         )
         let hostingView = NSHostingView(rootView: rootView)
@@ -221,13 +214,6 @@ final class MenuBarPanelController: NSObject {
                 return event
             }
 
-            // The content-owned confirmation modal intentionally blocks
-            // panel dismissal until the user confirms, cancels, or presses
-            // Escape.
-            if self.isPresentingConfirmation {
-                return event
-            }
-
             if event.type == .keyDown, event.keyCode == 53 {
                 self.closePanel()
                 return nil
@@ -247,9 +233,6 @@ final class MenuBarPanelController: NSObject {
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
             Task { @MainActor in
-                guard self?.isPresentingConfirmation != true else {
-                    return
-                }
                 self?.closePanel()
             }
         }
@@ -431,16 +414,6 @@ final class MenuBarPanelController: NSObject {
         panelAnchor = nil
     }
 
-    private func setConfirmationPresentationActive(_ isActive: Bool) {
-        isPresentingConfirmation = isActive
-        guard let panel else { return }
-
-        if isActive {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            panel.makeKey()
-        }
-    }
-
     private func makePanelKeyForGlassPresentation() {
         guard let panel else { return }
 
@@ -617,17 +590,12 @@ private struct MenuBarPanelRoot: View {
     @ObservedObject var preferences: AppPreferences
 
     let openSettingsAction: () -> Void
-    let contentLayoutDidChange: () -> Void
-    let confirmationPresentationDidChange: (Bool) -> Void
 
     var body: some View {
         MenuBarView(
             store: store,
             preferences: preferences,
-            openSettingsAction: openSettingsAction,
-            contentLayoutDidChange: contentLayoutDidChange,
-            confirmationPresentationDidChange:
-                confirmationPresentationDidChange
+            openSettingsAction: openSettingsAction
         )
         .environment(\.locale, preferences.locale)
         .environment(\.quotaViewGlassMode, preferences.glassMode)

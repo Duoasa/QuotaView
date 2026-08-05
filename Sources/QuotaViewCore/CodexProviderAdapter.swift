@@ -33,11 +33,6 @@ public enum CodexDomainCatalog {
         namespace: "credits",
         name: "balance"
     )
-    public static let resetCreditsID = MetricID(
-        providerID: providerID,
-        namespace: "quota",
-        name: "reset-credits"
-    )
     public static let lifetimeTokensID = MetricID(
         providerID: providerID,
         namespace: "tokens",
@@ -79,16 +74,6 @@ public enum CodexDomainCatalog {
             allowedAggregations: [.latest, .minimum, .maximum],
             sensitivity: .privateUsage,
             defaultDisplayPriority: 2
-        ),
-        MetricDefinition(
-            id: resetCreditsID,
-            labelKey: "codex.quota.resetCredits",
-            valueKind: .count,
-            unit: .count,
-            semantic: .gauge,
-            allowedAggregations: [.latest, .minimum, .maximum],
-            sensitivity: .privateUsage,
-            defaultDisplayPriority: 3
         ),
         MetricDefinition(
             id: lifetimeTokensID,
@@ -235,20 +220,6 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
                 observedAt: capturedAt
             )
         ]
-
-        if let availableCount = payload.rateLimits
-            .rateLimitResetCredits?.availableCount {
-            guard availableCount >= 0 else {
-                throw ProviderError.protocolViolation
-            }
-            currentMetrics.append(
-                sample(
-                    id: CodexDomainCatalog.resetCreditsID,
-                    value: .count(Int64(availableCount)),
-                    observedAt: capturedAt
-                )
-            )
-        }
 
         let credits = limits.credits
         var balances: [Balance] = []

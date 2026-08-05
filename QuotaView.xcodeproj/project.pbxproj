@@ -26,11 +26,9 @@
 		B10000000000000000000011 /* AstaSansFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* AstaSansFont.swift */; };
 		B10000000000000000000012 /* QuotaViewFigmaMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* QuotaViewFigmaMenu.swift */; };
 		B10000000000000000000013 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000017 /* Fonts */; };
-		B10000000000000000000014 /* QuotaViewFigmaResetMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */; };
 		B10000000000000000000015 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* DomainModels.swift */; };
 		B10000000000000000000016 /* ProviderArchitecture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* ProviderArchitecture.swift */; };
 		B10000000000000000000017 /* RefreshCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001B /* RefreshCoordinator.swift */; };
-		B10000000000000000000018 /* AccountOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* AccountOperations.swift */; };
 		B10000000000000000000019 /* CodexProviderAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* CodexProviderAdapter.swift */; };
 		B1000000000000000000001A /* CurrentCodexPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001E /* CurrentCodexPresentation.swift */; };
 		B1000000000000000000001B /* ArchitectureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* ArchitectureTests.swift */; };
@@ -141,11 +139,9 @@
 		F10000000000000000000015 /* AstaSansFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstaSansFont.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* QuotaViewFigmaMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewFigmaMenu.swift; sourceTree = "<group>"; };
 		F10000000000000000000017 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
-		F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewFigmaResetMenu.swift; sourceTree = "<group>"; };
 		F10000000000000000000019 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
 		F1000000000000000000001A /* ProviderArchitecture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderArchitecture.swift; sourceTree = "<group>"; };
 		F1000000000000000000001B /* RefreshCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshCoordinator.swift; sourceTree = "<group>"; };
-		F1000000000000000000001C /* AccountOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountOperations.swift; sourceTree = "<group>"; };
 		F1000000000000000000001D /* CodexProviderAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProviderAdapter.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* CurrentCodexPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentCodexPresentation.swift; sourceTree = "<group>"; };
 		F1000000000000000000001F /* ArchitectureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchitectureTests.swift; sourceTree = "<group>"; };
@@ -244,7 +240,6 @@
 				F10000000000000000000014 /* MenuBarPanelController.swift */,
 				F10000000000000000000015 /* AstaSansFont.swift */,
 				F10000000000000000000016 /* QuotaViewFigmaMenu.swift */,
-				F10000000000000000000018 /* QuotaViewFigmaResetMenu.swift */,
 				F1000000000000000000001E /* CurrentCodexPresentation.swift */,
 				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
 				F1000000000000000000002C /* CodexActivityRuntime.swift */,
@@ -262,7 +257,6 @@
 				F10000000000000000000019 /* DomainModels.swift */,
 				F1000000000000000000001A /* ProviderArchitecture.swift */,
 				F1000000000000000000001B /* RefreshCoordinator.swift */,
-				F1000000000000000000001C /* AccountOperations.swift */,
 				F1000000000000000000001D /* CodexProviderAdapter.swift */,
 				F1000000000000000000002B /* CodexActivityModels.swift */,
 			);
@@ -567,7 +561,6 @@
 				B10000000000000000000010 /* MenuBarPanelController.swift in Sources */,
 				B10000000000000000000011 /* AstaSansFont.swift in Sources */,
 				B10000000000000000000012 /* QuotaViewFigmaMenu.swift in Sources */,
-				B10000000000000000000014 /* QuotaViewFigmaResetMenu.swift in Sources */,
 				B1000000000000000000001A /* CurrentCodexPresentation.swift in Sources */,
 				B1000000000000000000001C /* QuotaViewWidgetSnapshotWriter.swift in Sources */,
 				B1000000000000000000001D /* WidgetSnapshot.swift in Sources */,
@@ -586,7 +579,6 @@
 				B10000000000000000000015 /* DomainModels.swift in Sources */,
 				B10000000000000000000016 /* ProviderArchitecture.swift in Sources */,
 				B10000000000000000000017 /* RefreshCoordinator.swift in Sources */,
-				B10000000000000000000018 /* AccountOperations.swift in Sources */,
 				B10000000000000000000019 /* CodexProviderAdapter.swift in Sources */,
 				B10000000000000000000026 /* CodexActivityModels.swift in Sources */,
 			);

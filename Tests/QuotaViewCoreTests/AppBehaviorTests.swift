@@ -4,6 +4,39 @@ import XCTest
 @testable import QuotaViewCore
 
 final class AppBehaviorTests: XCTestCase {
+    func testAppStorePanelMaximumHeightExcludesQuotaResetFlow() {
+        XCTAssertEqual(QuotaViewFigmaMenu.designSize.width, 274)
+        XCTAssertEqual(QuotaViewFigmaMenu.designSize.height, 373)
+    }
+
+    func testAppVersionInfoFormatsLocalizedVersionAndBuild() {
+        let info = AppVersionInfo(
+            marketingVersion: "1.0.0",
+            buildNumber: "1"
+        )
+
+        XCTAssertEqual(
+            info.label(
+                copy: AppCopy(language: .simplifiedChinese)
+            ),
+            "版本 1.0.0（Build 1）"
+        )
+        XCTAssertEqual(
+            info.label(copy: AppCopy(language: .english)),
+            "Version 1.0.0 (Build 1)"
+        )
+    }
+
+    func testAppVersionInfoDoesNotInventMissingBundleValues() {
+        let info = AppVersionInfo(
+            marketingVersion: "  ",
+            buildNumber: nil
+        )
+
+        XCTAssertEqual(info.marketingVersion, "—")
+        XCTAssertEqual(info.buildNumber, "—")
+    }
+
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
@@ -715,7 +748,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showCreditBalance)
         XCTAssertTrue(preferences.showDailyTokens)
         XCTAssertTrue(preferences.showLifetimeTokens)
-        XCTAssertTrue(preferences.showResetAction)
         XCTAssertTrue(preferences.followsSystemAppearance)
         XCTAssertTrue(preferences.followsSystemLanguage)
         XCTAssertEqual(preferences.customAppearance, .dark)
@@ -805,7 +837,7 @@ final class AppBehaviorTests: XCTestCase {
         let recorder = FetchRequestRecorder()
         let provider = AppStubProvider { request in
             await recorder.record(request)
-            return Self.makeFetchResult(resetCredits: nil)
+            return Self.makeFetchResult()
         }
         let store = CodexStatusStore(
             provider: provider,
@@ -833,30 +865,6 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testDemoResetUsesSimulationBoundary() async {
-        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer {
-            defaults.removePersistentDomain(forName: suiteName)
-        }
-        let provider = AppStubProvider { _ in
-            Self.makeFetchResult(resetCredits: 2)
-        }
-        let store = CodexStatusStore(
-            provider: provider,
-            diagnostics: defaults
-        )
-
-        await store.refresh()
-
-        XCTAssertTrue(store.hasAvailableResetCredit)
-        XCTAssertEqual(store.operationAvailability, .demoOnly)
-        let didSimulate = await store.performDemoReset()
-        XCTAssertTrue(didSimulate)
-        await store.stop()
-    }
-
-    @MainActor
     func testMissingOptionalValuesRemainUnavailable() async {
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -864,7 +872,7 @@ final class AppBehaviorTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
         let provider = AppStubProvider { _ in
-            Self.makeFetchResult(resetCredits: nil)
+            Self.makeFetchResult()
         }
         let store = CodexStatusStore(
             provider: provider,
@@ -873,35 +881,9 @@ final class AppBehaviorTests: XCTestCase {
 
         await store.refresh()
 
-        XCTAssertNil(store.snapshot?.availableResetCredits)
         XCTAssertNil(store.snapshot?.creditBalance)
         XCTAssertNil(store.snapshot?.recentDailyTokens)
         XCTAssertNil(store.snapshot?.lifetimeTokens)
-        XCTAssertFalse(store.hasAvailableResetCredit)
-        await store.stop()
-    }
-
-    @MainActor
-    func testZeroResetCreditsDoNotExposeDemoAction() async {
-        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer {
-            defaults.removePersistentDomain(forName: suiteName)
-        }
-        let provider = AppStubProvider { _ in
-            Self.makeFetchResult(resetCredits: 0)
-        }
-        let store = CodexStatusStore(
-            provider: provider,
-            diagnostics: defaults
-        )
-
-        await store.refresh()
-
-        XCTAssertEqual(store.snapshot?.availableResetCredits, 0)
-        XCTAssertFalse(store.hasAvailableResetCredit)
-        let didSimulate = await store.performDemoReset()
-        XCTAssertFalse(didSimulate)
         await store.stop()
     }
 
@@ -917,7 +899,7 @@ final class AppBehaviorTests: XCTestCase {
             if await outcomes.shouldFail() {
                 throw ProviderError.unavailable
             }
-            return Self.makeFetchResult(resetCredits: 1)
+            return Self.makeFetchResult()
         }
         let store = CodexStatusStore(
             provider: provider,
@@ -939,9 +921,7 @@ final class AppBehaviorTests: XCTestCase {
         await store.stop()
     }
 
-    private static func makeFetchResult(
-        resetCredits: Int?
-    ) -> ProviderFetchResult {
+    private static func makeFetchResult() -> ProviderFetchResult {
         let capturedAt = Date(timeIntervalSince1970: 1_785_000_000)
         let window = RateWindow(
             id: CodexDomainCatalog.primaryRateWindowID,
@@ -954,18 +934,6 @@ final class AppBehaviorTests: XCTestCase {
             sourcePrecision: .providerRounded,
             quotaRisk: .normal
         )
-        var metrics: [MetricSample] = []
-        if let resetCredits {
-            metrics.append(
-                MetricSample(
-                    definitionID: CodexDomainCatalog.resetCreditsID,
-                    entity: CodexDomainCatalog.providerEntity,
-                    value: .count(Int64(resetCredits)),
-                    availability: .available,
-                    observedAt: capturedAt
-                )
-            )
-        }
         let snapshot = ProviderSnapshot(
             schemaVersion: 1,
             providerID: CodexDomainCatalog.providerID,
@@ -978,7 +946,7 @@ final class AppBehaviorTests: XCTestCase {
             ),
             rateWindows: [window],
             balances: [],
-            currentMetrics: metrics,
+            currentMetrics: [],
             models: [],
             agents: [],
             serviceHealth: .unknown

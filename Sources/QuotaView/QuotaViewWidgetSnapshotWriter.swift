@@ -78,9 +78,7 @@ struct QuotaViewWidgetSnapshotProjector {
                             presentation.lifetimeTokens
                         )
                     )
-                ],
-                availableResetCredits:
-                    presentation.availableResetCredits
+                ]
             )
         )
     }

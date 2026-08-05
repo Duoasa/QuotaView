@@ -64,14 +64,6 @@ struct QuotaViewProbe {
                 }
             }
 
-            print(
-                "Reset credits: "
-                + (count(
-                    CodexDomainCatalog.resetCreditsID,
-                    in: snapshot
-                ).map(String.init) ?? "unavailable")
-            )
-
             if let lifetime = count(
                 CodexDomainCatalog.lifetimeTokensID,
                 in: snapshot

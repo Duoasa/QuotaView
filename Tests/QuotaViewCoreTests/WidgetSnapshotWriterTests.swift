@@ -27,7 +27,6 @@ final class WidgetSnapshotWriterTests: XCTestCase {
         XCTAssertEqual(provider.plan, "Plus")
         XCTAssertEqual(window.usedFraction, 0.28)
         XCTAssertEqual(window.remainingFraction, 0.72)
-        XCTAssertEqual(provider.availableResetCredits, 2)
         XCTAssertEqual(
             provider.auxiliaryMetrics,
             [
@@ -58,6 +57,7 @@ final class WidgetSnapshotWriterTests: XCTestCase {
         XCTAssertFalse(encodedText.contains("lifetimeTokens"))
         XCTAssertFalse(encodedText.contains("recentDailyTokens"))
         XCTAssertFalse(encodedText.contains("creditBalance"))
+        XCTAssertFalse(encodedText.contains("availableResetCredits"))
         XCTAssertFalse(encodedText.contains("account"))
         XCTAssertFalse(encodedText.contains("authorization"))
         XCTAssertFalse(encodedText.contains("prompt"))
@@ -194,7 +194,6 @@ final class WidgetSnapshotWriterTests: XCTestCase {
             creditBalance: creditBalance,
             hasCredits: creditBalance != nil,
             unlimitedCredits: false,
-            availableResetCredits: 2,
             lifetimeTokens: lifetimeTokens,
             recentDailyTokens: recentDailyTokens,
             recentDailyDate: "2026-07-29",

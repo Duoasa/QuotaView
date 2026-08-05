@@ -226,38 +226,6 @@ final class ArchitectureTests: XCTestCase {
         )
     }
 
-    func testDemoExecutorRejectsNonDemoAuthorization() async {
-        let executor = DemoQuotaActionExecutor()
-        let request = QuotaActionRequest(
-            providerID: CodexDomainCatalog.providerID,
-            windowID: CodexDomainCatalog.primaryRateWindowID
-        )
-        let grant = OneShotAuthorization(
-            authorizationID: UUID(),
-            providerID: CodexDomainCatalog.providerID,
-            accountScopeID: "test",
-            expiresAt: Date().addingTimeInterval(60)
-        )
-
-        let demoResult = await executor.execute(
-            request,
-            authorization: .demo
-        )
-        let manualResult = await executor.execute(
-            request,
-            authorization: .manual(grant)
-        )
-
-        guard case .simulated(let receipt) = demoResult else {
-            return XCTFail("Demo authorization should simulate")
-        }
-        XCTAssertTrue(receipt.isSimulation)
-        XCTAssertEqual(
-            manualResult,
-            .rejected(.unsupportedAuthorization)
-        )
-    }
-
     func testStaticRegistryRejectsDuplicateProviderIDs() throws {
         let first = StubProvider { _ in Self.makeFetchResult() }
         let second = StubProvider { _ in Self.makeFetchResult() }

@@ -1,15 +1,75 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-01
+更新日期：2026-08-06
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
-当前生产分支：`main`
+当前开发分支：`codex/app-store-v1.0.0a`
 
-当前发布提交与生产基线：
-`041c698ae9755d458fa9f111e4ac74e9711048b9`
+当前稳定发布提交与 App Store 代码基座：
+`3119171f45163fe45d68a4f774a0488968f14fd7`
 
 远程：`https://github.com/Duoasa/QuotaView.git`
+
+当前进行中的 App Store 适配：
+
+| 项目 | 当前值 |
+|---|---|
+| 内部发行代号 | `QuotaView v1.0.0a` |
+| App Store 版本 | `1.0.0 (Build 1)` |
+| 发布渠道 | `appstore` |
+| 基座 | `0.3.1 (Build 2)` / `v0.3.1-build.2` |
+| 当前规格 | `QV-APPSTORE-RELEASE-1.0.0-001` |
+| 交付状态 | `Implementing` |
+| 发布状态 | 尚未提交 App Review，尚未发布 |
+| 当前验证 | 额度重置移除后 `swift test` 53 项及 Universal Release 通过；版本、渠道、架构与资源检查通过 |
+| 产品验收 | 通用页版本展示与移除重置后的 `373 pt` 主面板等待产品所有者运行确认 |
+
+规格入口：
+[docs/specs/README.md](docs/specs/README.md) →
+[App Store 发行适配规格](docs/design/quotaview-app-store-release-1.0.0.md)。
+
+新 Codex 项目的可执行交接入口：
+[docs/specs/APPSTORE_CODEX_PROJECT_HANDOFF.md](docs/specs/APPSTORE_CODEX_PROJECT_HANDOFF.md)。
+
+Codex 灵动岛 App Store 沙盒迁移的从属实施规格：
+[docs/design/quotaview-app-store-codex-island-plugin-bridge.md](docs/design/quotaview-app-store-codex-island-plugin-bridge.md)。
+
+基础额度与 OpenAI 登录 App Store 沙盒迁移的从属实施规格：
+[docs/design/quotaview-app-store-codex-account-runtime.md](docs/design/quotaview-app-store-codex-account-runtime.md)。
+
+2026-08-06：用户接受 App Store 版本使用最小 OpenAI 账户接入。基础额度不
+依赖灵动岛插件，改由 App Bundle 内固定版本、Universal、签名并继承沙盒的
+OpenAI Codex App Server Runtime 通过官方 ChatGPT Device Code 获取；凭证
+由 Runtime 保存在 macOS Keychain，不进入 Swift 状态、UserDefaults、App
+Group、日志、Widget 或 QuotaView 自有服务器。Runtime 使用独立容器 Home，
+不读取外部 `~/.codex`、项目、Prompt、线程或工具输出，并使用严格账户与
+额度 RPC 白名单。该方案已经固化但尚未开始源码实施，必须先通过 Runtime、
+登录、Keychain、真实额度一致性、双架构、进程回收和 App Store Archive
+技术 Spike。
+
+版本管理建议已经写入账户 Runtime 规格：为 App Store 创建独立 Codex
+项目/任务和同一 `Duoasa/QuotaView` 仓库的独立 Git worktree，不复制第二个
+QuotaView 主应用仓库；灵动岛插件继续使用独立仓库和独立版本。本轮交接目标
+为 `/Users/sukduoasa/Documents/QuotaView-AppStore` 与
+`codex/appstore-runtime-spike`；长期 `appstore/main` 分支和插件仓库仍未
+创建，必须在对应门禁满足后另行确认。
+
+2026-08-06：用户接受 Git Marketplace 双通道插件桥接方案。Preview 阶段
+由公开 Git 仓库分发 `QuotaView for Codex` 配套插件，未来公共目录版本从
+同一插件源码和协议发布；QuotaView 只通过用户选择目录的只读
+security-scoped bookmark 消费插件 `PLUGIN_DATA` 中的脱敏事件。详细阶段、
+删除边界、协议、验收与回滚要求已经固化，但尚未开始源码实施；当前
+`ENABLE_APP_SANDBOX = NO`、旧 Hook/Helper/Expect/Socket 链路和其他外部
+`Process` 阻断项仍未整改，不能据此声称可提交 App Review。
+
+2026-08-05：用户明确授权 App Store `1.0.0` 移除额度重置功能。当前分支已
+删除主面板入口、重置详情页、最终确认层、对应设置、Demo 执行器、Widget
+快照字段、Probe 输出和专用资源；“下次重置”倒计时与普通 Credits 余额
+继续保留为只读信息。源码残留搜索与 `swift test` 共 53 项通过；无签名
+Universal Xcode Release 构建通过，App、Widget、Framework 与 Helper 均为
+`x86_64 arm64`，产物为 `1.0.0 (Build 1)` / `appstore`，已编译资源与二进制
+无额度重置入口残留。
 
 ## 0. 版本定位入口
 
@@ -21,18 +81,19 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.1 (Build 1)` |
-| tag | `v0.3.1` |
-| 发布提交 | `041c698ae9755d458fa9f111e4ac74e9711048b9` |
-| Release | [QuotaView 0.3.1 — Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) |
-| 资产 | `QuotaView-v0.3.1.zip` |
-| SHA-256 | `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
+| 最新推荐版本 | `0.3.1 (Build 2)` |
+| tag | `v0.3.1-build.2` |
+| 发布提交 | `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
+| 资产 | `QuotaView-v0.3.1-build.2.zip` |
+| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
 
-`0.3.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
-GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
+`0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
+GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线和
+本轮 App Store 适配的不可移动代码基座。
 
-2026-08-01：本地 `0.3.1 (Build 2)` Widget 热修复候选已完成实现与
-安装验证。macOS
+2026-08-01：`0.3.1 (Build 2)` Widget 热修复已完成实现、安装验证和正式
+发布。macOS
 系统日志确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
 `SystemPolicyAppData` 拒绝读取 `group.com.quotaview.shared`。Build 2 将
 App Group 迁移为团队前缀 `BUUH229D5Q.com.quotaview.shared`，符合未嵌入
@@ -40,29 +101,28 @@ provisioning profile 的公证 App 共享容器要求。`swift test` 共 `53` �
 通过，Universal Release 构建和 Developer ID 签名验证通过；App、Widget
 与 Helper 均为 `x86_64 arm64`。安装后新容器写入有效快照，Widget 时间线
 成功归档，内核不再出现共享快照读取拒绝；视觉结果等待产品所有者验收。
-正式发布资产已完成 Apple 公证和 Staple，但尚未上传 GitHub，不得提前
-改写 GitHub Latest、tag、Release URL 或公开资产记录。
+正式发布资产已完成 Apple 公证、Staple、GitHub 上传和回下载复核。
 
 Build 2 将主面板与 Widget 的额度标题从“本周剩余”统一调整为“本周期
 剩余”，英文使用两词 `Period Remaining`，以兼容 Codex 的 5 小时、7 天
 及后续可变用量周期；Tooltip、VoiceOver 与实现内部命名同步使用周期语义。
 
-### 0.3.1 Build 2 GitHub 发布候选
+### 0.3.1 Build 2 发布归档
 
 目标发布元数据：
 
-| 项目 | 候选值 |
+| 项目 | 发布值 |
 |---|---|
 | Marketing Version | `0.3.1` |
 | Build Number | `2` |
-| 建议 tag | `v0.3.1-build.2` |
-| 建议 Release 标题 | `QuotaView 0.3.1 Build 2 — Widget Hotfix` |
+| tag | `v0.3.1-build.2` |
+| Release 标题 | `QuotaView 0.3.1 Build 2 — Widget Hotfix` |
 | 最终资产名 | `QuotaView-v0.3.1-build.2.zip` |
 | App Group | `BUUH229D5Q.com.quotaview.shared` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
 
-本地正式发布资产（尚未上传 GitHub）：
+正式发布资产：
 
 | 项目 | 当前值 |
 |---|---|
@@ -143,10 +203,10 @@ Widget 与 Helper 均包含 `x86_64 arm64`。视觉与实机时序等待产品�
 | 项目 | 当前值 |
 |---|---|
 | Marketing Version | `0.3.1` |
-| Build Number | `1` |
-| 开发主题 | Codex 灵动岛正式接入 |
+| Build Number | `2` |
+| 开发主题 | Codex 灵动岛 + Widget 共享容器热修复 |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 公开 Latest | `0.3.1 (Build 1)` |
+| 公开 Latest | `0.3.1 (Build 2)` |
 
 ### 已实现
 
@@ -568,5 +628,5 @@ GitHub 回下载再次验证。
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
-`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1`。已撤回的
+`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1-build.2`。已撤回的
 `0.2.0 Build 3` 继续只保留历史记录，不得恢复为下载或开发基线。

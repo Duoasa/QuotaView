@@ -9,14 +9,10 @@ final class CodexStatusStore: ObservableObject {
     @Published private(set) var providerState: ProviderLoadState
     @Published private(set) var isRefreshing = false
     @Published private(set) var errorMessage: String?
-    @Published private(set) var operationAvailability:
-        AccountOperationAvailability = .demoOnly
-
     private let coordinator: RefreshCoordinator
     private let providerID: ProviderID
     private let projector: CurrentCodexPresentationProjector
     private let diagnostics: UserDefaults
-    private let demoExecutor: any QuotaActionExecutor
     private let widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter
     private weak var preferences: AppPreferences?
     private var pollingTask: Task<Void, Never>?
@@ -29,8 +25,6 @@ final class CodexStatusStore: ObservableObject {
         diagnostics: UserDefaults = .standard,
         projector: CurrentCodexPresentationProjector =
             CurrentCodexPresentationProjector(),
-        demoExecutor: any QuotaActionExecutor =
-            DemoQuotaActionExecutor(),
         widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter? = nil
     ) {
         let provider = provider ?? CodexProviderAdapter()
@@ -50,7 +44,6 @@ final class CodexStatusStore: ObservableObject {
         self.providerState = .idle(lastSnapshot: nil)
         self.diagnostics = diagnostics
         self.projector = projector
-        self.demoExecutor = demoExecutor
         self.widgetSnapshotWriter =
             widgetSnapshotWriter ?? QuotaViewWidgetSnapshotWriter()
         self.preferences = preferences
@@ -97,11 +90,6 @@ final class CodexStatusStore: ObservableObject {
 
     var hasCurrentCodexStatus: Bool {
         snapshot != nil && errorMessage == nil
-    }
-
-    var hasAvailableResetCredit: Bool {
-        hasCurrentCodexStatus
-            && snapshot?.canUseResetCredit == true
     }
 
     func start() {
@@ -192,28 +180,6 @@ final class CodexStatusStore: ObservableObject {
         }
     }
 
-    func performDemoReset() async -> Bool {
-        guard operationAvailability == .demoOnly,
-              hasAvailableResetCredit
-        else {
-            return false
-        }
-
-        let request = QuotaActionRequest(
-            providerID: CodexDomainCatalog.providerID,
-            windowID: CodexDomainCatalog.primaryRateWindowID
-        )
-        let result = await demoExecutor.execute(
-            request,
-            authorization: .demo
-        )
-
-        guard case .simulated(let receipt) = result else {
-            return false
-        }
-        return receipt.isSimulation
-    }
-
     func stop() async {
         pollingTask?.cancel()
         pollingTask = nil
@@ -289,8 +255,7 @@ final class CodexStatusStore: ObservableObject {
     ) -> ProviderDemandPlan {
         var panelCapabilities: ProviderCapabilities = [
             .rateWindows,
-            .balances,
-            .resetCredits
+            .balances
         ]
         if includesTokenUsage {
             panelCapabilities.formUnion([
@@ -320,8 +285,7 @@ final class CodexStatusStore: ObservableObject {
                     .rateWindows,
                     .balances,
                     .currentUsage,
-                    .historicalUsage,
-                    .resetCredits
+                    .historicalUsage
                 ],
                 freshness: .background
             )

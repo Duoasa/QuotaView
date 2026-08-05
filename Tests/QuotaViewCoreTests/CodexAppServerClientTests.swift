@@ -39,13 +39,6 @@ final class CodexAppServerClientTests: XCTestCase {
         XCTAssertEqual(primary.remainingFraction, 0.62)
         XCTAssertEqual(
             count(
-                CodexDomainCatalog.resetCreditsID,
-                in: snapshot
-            ),
-            2
-        )
-        XCTAssertEqual(
-            count(
                 CodexDomainCatalog.lifetimeTokensID,
                 in: snapshot
             ),
@@ -171,7 +164,7 @@ final class CodexAppServerClientTests: XCTestCase {
               ;;
             *rateLimits*)
               sleep 0.05
-              printf '{"id":%s,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":38,"windowDurationMins":10080,"resetsAt":1785303228},"credits":{"hasCredits":false,"unlimited":false,"balance":"0"},"spendControlReached":false,"planType":"plus","rateLimitReachedType":null},"rateLimitsByLimitId":null,"rateLimitResetCredits":{"availableCount":2,"credits":[]}}}\\n' "$id"
+              printf '{"id":%s,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":38,"windowDurationMins":10080,"resetsAt":1785303228},"credits":{"hasCredits":false,"unlimited":false,"balance":"0"},"spendControlReached":false,"planType":"plus","rateLimitReachedType":null},"rateLimitsByLimitId":null}}\\n' "$id"
               ;;
             *usage*)
               sleep 0.05

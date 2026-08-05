@@ -6,14 +6,13 @@ import QuotaViewWidgetContract
 import SwiftUI
 
 struct QuotaViewFigmaMenu: View {
-    nonisolated static let designSize = CGSize(width: 274, height: 433)
+    nonisolated static let designSize = CGSize(width: 274, height: 373)
 
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
     @Environment(\.colorScheme) private var colorScheme
 
     let copy: AppCopy
-    let openResetAction: () -> Void
     let refreshAction: () -> Void
     let openCodexAction: () -> Void
     let openSettingsAction: () -> Void
@@ -25,8 +24,6 @@ struct QuotaViewFigmaMenu: View {
         static let summaryHeight: CGFloat = 117
         static let footerHeight: CGFloat = 48
         static let metricRowHeight: CGFloat = 36
-        static let resetCardHeight: CGFloat = 51
-        static let detailTypeSpacing: CGFloat = 9
         static let detailsBottomInset: CGFloat = 16
         static let headerInset: CGFloat = 12
         static let summaryInset: CGFloat = 16
@@ -81,11 +78,6 @@ struct QuotaViewFigmaMenu: View {
         let value: String
     }
 
-    private enum ContentType: Equatable {
-        case info
-        case interactive
-    }
-
     private enum InfoItem {
         case usageSummary
         case metric(Metric)
@@ -93,7 +85,6 @@ struct QuotaViewFigmaMenu: View {
 
     private enum PanelItem: Identifiable {
         case info(InfoItem)
-        case resetEntry
 
         var id: String {
             switch self {
@@ -101,17 +92,6 @@ struct QuotaViewFigmaMenu: View {
                 "usage-summary"
             case let .info(.metric(metric)):
                 metric.id
-            case .resetEntry:
-                "quota-reset"
-            }
-        }
-
-        var type: ContentType {
-            switch self {
-            case .info:
-                .info
-            case .resetEntry:
-                .interactive
             }
         }
     }
@@ -367,22 +347,10 @@ struct QuotaViewFigmaMenu: View {
                 case let .info(.metric(metric)):
                     metricRow(
                         metric,
-                        showsSeparator: hasFollowingItem(
-                            of: item.type,
-                            after: index,
-                            in: items
-                        )
+                        showsSeparator: index < items.count - 1
                     )
                 case .info(.usageSummary):
                     EmptyView()
-                case .resetEntry:
-                    resetCard
-                        .padding(
-                            .top,
-                            resetEntryNeedsTypeSpacing
-                                ? Layout.detailTypeSpacing
-                                : 0
-                        )
                 }
             }
         }
@@ -424,119 +392,6 @@ struct QuotaViewFigmaMenu: View {
             }
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private var resetCard: some View {
-        Button(action: openResetAction) {
-            HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(copy.text("额度重置", "Quota Reset"))
-                        .font(AstaSans.semiBold(10.5))
-                        .foregroundStyle(primaryTextColor)
-                        .lineLimit(1)
-                        .frame(height: 16)
-
-                    Text(
-                        copy.text(
-                            "重置符合条件的 Codex 用量周期",
-                            "Reset an eligible Codex usage cycle"
-                        )
-                    )
-                        .font(AstaSans.regular(9))
-                        .foregroundStyle(secondaryTextColor)
-                        .lineLimit(1)
-                        .frame(height: 14)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(availableResetCreditsLabel)
-                    .font(AstaSans.medium(9))
-                    .foregroundStyle(Color.black)
-                    .lineLimit(1)
-                    .frame(height: 9)
-                    .padding(4.5)
-                    .background(
-                        Color.white.opacity(0.80),
-                        in: RoundedRectangle(
-                            cornerRadius: 6,
-                            style: .continuous
-                        )
-                    )
-                    .overlay {
-                        RoundedRectangle(
-                            cornerRadius: 6,
-                            style: .continuous
-                        )
-                        .strokeBorder(
-                            Color.white.opacity(0.32),
-                            lineWidth: 0.75
-                        )
-                    }
-            }
-            .padding(.leading, 9)
-            .padding(.trailing, 14.25)
-            .padding(.vertical, 9)
-            .frame(width: Layout.contentWidth, height: 51)
-            .contentShape(
-                RoundedRectangle(
-                    cornerRadius: 12,
-                    style: .continuous
-                )
-            )
-        }
-        .quotaViewInteractiveButton(.regular)
-        .background {
-            ZStack {
-                QuotaViewFigmaDropShadow(
-                    cornerRadius: 12,
-                    color: .black,
-                    opacity: resetCardShadowOpacity,
-                    radius: 20,
-                    offset: CGSize(width: 0, height: 4)
-                )
-
-                QuotaViewFigmaLocalGlass(
-                    frostRadius: 10.5,
-                    cornerRadius: 12,
-                    tintColor: resetCardTintColor
-                )
-
-                RoundedRectangle(
-                    cornerRadius: 12,
-                    style: .continuous
-                )
-                .fill(
-                    Color.black.opacity(0.001)
-                        .shadow(
-                            .inner(
-                                color: Color.black.opacity(0.05),
-                                radius: 10,
-                                x: -2,
-                                y: -2
-                            )
-                        )
-                )
-            }
-            .allowsHitTesting(false)
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: 12,
-                    style: .continuous
-                )
-                .strokeBorder(
-                    resetCardStrokeColor,
-                    lineWidth: 1
-                )
-            }
-        }
-        .frame(width: Layout.contentWidth, height: 51)
-        .help(copy.text("打开额度重置", "Open quota reset"))
-        .accessibilityLabel(
-            copy.text(
-                "额度重置，\(availableResetCredits) 次可用",
-                "Quota Reset, \(availableResetCredits) Available"
-            )
-        )
     }
 
     private var footer: some View {
@@ -625,20 +480,6 @@ struct QuotaViewFigmaMenu: View {
             : Palette.darkSeparator
     }
 
-    private var resetCardStrokeColor: Color {
-        Color.white.opacity(0.12)
-    }
-
-    private var resetCardShadowOpacity: CGFloat {
-        isLightAppearance ? 0.12 : 0.20
-    }
-
-    private var resetCardTintColor: NSColor {
-        (
-            isLightAppearance ? NSColor.white : NSColor.black
-        ).withAlphaComponent(0.12)
-    }
-
     private var remainingPercent: Int {
         store.snapshot?.remainingPercent ?? 0
     }
@@ -711,10 +552,6 @@ struct QuotaViewFigmaMenu: View {
             "剩余 \(remainingPercent)%，已使用 \(usedPercent)%",
             "\(remainingPercent) percent remaining, \(usedPercent) percent used"
         )
-    }
-
-    private var availableResetCredits: Int {
-        store.snapshot?.availableResetCredits ?? 0
     }
 
     private var connectionIndicatorColor: Color {
@@ -800,16 +637,7 @@ struct QuotaViewFigmaMenu: View {
             )
         }
 
-        if showsResetEntry {
-            result.append(.resetEntry)
-        }
-
         return result
-    }
-
-    private var showsResetEntry: Bool {
-        preferences.showResetAction
-            && store.hasAvailableResetCredit
     }
 
     private var showsUsageSummary: Bool {
@@ -830,11 +658,6 @@ struct QuotaViewFigmaMenu: View {
         }
     }
 
-    private var resetEntryNeedsTypeSpacing: Bool {
-        visibleItems.contains { $0.type == .info }
-            && visibleItems.contains { $0.type == .interactive }
-    }
-
     private var menuHeight: CGFloat {
         Layout.headerHeight
             + (showsUsageSummary ? Layout.summaryHeight : 0)
@@ -847,35 +670,8 @@ struct QuotaViewFigmaMenu: View {
     ) -> CGFloat {
         guard !items.isEmpty else { return 0 }
 
-        let infoCount = items.filter { $0.type == .info }.count
-        let interactiveCount = items.filter {
-            $0.type == .interactive
-        }.count
-        let typeSpacing = resetEntryNeedsTypeSpacing
-            ? Layout.detailTypeSpacing
-            : 0
-
-        return CGFloat(infoCount) * Layout.metricRowHeight
-            + CGFloat(interactiveCount) * Layout.resetCardHeight
-            + typeSpacing
+        return CGFloat(items.count) * Layout.metricRowHeight
             + Layout.detailsBottomInset
-    }
-
-    private func hasFollowingItem(
-        of type: ContentType,
-        after index: Int,
-        in items: [PanelItem]
-    ) -> Bool {
-        items.dropFirst(index + 1).contains {
-            $0.type == type
-        }
-    }
-
-    private var availableResetCreditsLabel: String {
-        copy.text(
-            "\(availableResetCredits) 次可用",
-            "\(availableResetCredits) Available"
-        )
     }
 
     private var updatedTime: String {

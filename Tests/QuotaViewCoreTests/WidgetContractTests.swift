@@ -150,8 +150,7 @@ final class WidgetContractTests: XCTestCase {
                         label: "累计 Tokens",
                         formattedValue: "9M"
                     )
-                ],
-                availableResetCredits: 2
+                ]
             )
         )
     }

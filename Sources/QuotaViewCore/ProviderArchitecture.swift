@@ -14,15 +14,13 @@ public struct ProviderCapabilities: OptionSet, Hashable, Sendable {
     public static let modelBreakdown = Self(rawValue: 1 << 4)
     public static let agentBreakdown = Self(rawValue: 1 << 5)
     public static let serviceHealth = Self(rawValue: 1 << 6)
-    public static let resetCredits = Self(rawValue: 1 << 7)
     public static let officialActions = Self(rawValue: 1 << 8)
 
     public static let currentQuotaViewFeatures: Self = [
         .currentUsage,
         .rateWindows,
         .balances,
-        .historicalUsage,
-        .resetCredits
+        .historicalUsage
     ]
 }
 

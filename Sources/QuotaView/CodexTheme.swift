@@ -42,7 +42,6 @@ enum QuotaViewTypography {
     static let smallStrong = AstaSans.semiBold(12.5)
     static let tiny = AstaSans.medium(11.5)
     static let heroValue = AstaSans.semiBold(34)
-    static let resetValue = AstaSans.semiBold(54)
     static let ringValue = AstaSans.semiBold(20)
     static let toolbar = AstaSans.medium(13)
     static let primaryAction = AstaSans.semiBold(14)
@@ -223,15 +222,9 @@ private struct QuotaViewSeparatorModifier: ViewModifier {
 enum QuotaViewButtonInteractionKind: Equatable {
     case compact
     case regular
-    case reset
 
     var cornerRadius: CGFloat {
-        switch self {
-        case .compact, .regular:
-            12
-        case .reset:
-            8
-        }
+        12
     }
 
     var isCompact: Bool {
@@ -312,11 +305,6 @@ private struct QuotaViewInteractiveButtonBody<Label: View>: View {
             )
         }
         if isHovering {
-            if kind == .reset {
-                return Color.red.opacity(
-                    colorScheme == .light ? 0.08 : 0.10
-                )
-            }
             return Color.white.opacity(
                 colorScheme == .light ? 0.16 : 0.10
             )

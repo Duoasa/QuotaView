@@ -53,7 +53,6 @@ final class AppPreferences: ObservableObject {
         static let showCreditBalance = "preferences.panel.showCreditBalance"
         static let showDailyTokens = "preferences.panel.showDailyTokens"
         static let showLifetimeTokens = "preferences.panel.showLifetimeTokens"
-        static let showResetAction = "preferences.panel.showResetAction"
         static let followsSystemAppearance = "preferences.appearance.followsSystem"
         static let customAppearance = "preferences.appearance.custom"
         // Keep the previous key so older installations migrate without
@@ -97,10 +96,6 @@ final class AppPreferences: ObservableObject {
 
     @Published var showLifetimeTokens: Bool {
         didSet { defaults.set(showLifetimeTokens, forKey: Key.showLifetimeTokens) }
-    }
-
-    @Published var showResetAction: Bool {
-        didSet { defaults.set(showResetAction, forKey: Key.showResetAction) }
     }
 
     @Published var followsSystemAppearance: Bool {
@@ -184,10 +179,6 @@ final class AppPreferences: ObservableObject {
         )
         showLifetimeTokens = defaults.storedBool(
             forKey: Key.showLifetimeTokens,
-            defaultValue: true
-        )
-        showResetAction = defaults.storedBool(
-            forKey: Key.showResetAction,
             defaultValue: true
         )
         followsSystemAppearance = defaults.storedBool(

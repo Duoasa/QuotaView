@@ -3,7 +3,6 @@ import Foundation
 public struct AccountRateLimitsResponse: Decodable, Sendable {
     public let rateLimits: RateLimitSnapshot
     public let rateLimitsByLimitId: [String: RateLimitSnapshot]?
-    public let rateLimitResetCredits: RateLimitResetCreditsSummary?
 }
 
 public struct RateLimitSnapshot: Decodable, Sendable {
@@ -35,21 +34,6 @@ public struct SpendControlLimitSnapshot: Decodable, Sendable {
     public let used: String
     public let remainingPercent: Int
     public let resetsAt: Int
-}
-
-public struct RateLimitResetCreditsSummary: Decodable, Sendable {
-    public let availableCount: Int
-    public let credits: [RateLimitResetCredit]?
-}
-
-public struct RateLimitResetCredit: Decodable, Sendable {
-    public let id: String
-    public let resetType: String
-    public let status: String
-    public let grantedAt: Int
-    public let expiresAt: Int?
-    public let title: String?
-    public let description: String?
 }
 
 public struct AccountUsageResponse: Decodable, Sendable {

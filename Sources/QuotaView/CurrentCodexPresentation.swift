@@ -25,19 +25,11 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let creditBalance: String?
     let hasCredits: Bool
     let unlimitedCredits: Bool
-    let availableResetCredits: Int?
     let lifetimeTokens: Int64?
     let recentDailyTokens: Int64?
     let recentDailyDate: String?
     let lastUpdatedAt: Date
 
-    var canUseResetCredit: Bool {
-        availableResetCredits.map { $0 > 0 } ?? false
-    }
-
-    var availableResetCreditsAfterOne: Int {
-        max(0, (availableResetCredits ?? 0) - 1)
-    }
 }
 
 struct CurrentCodexPresentationProjector {
@@ -89,12 +81,6 @@ struct CurrentCodexPresentationProjector {
             creditBalance: decimalString(creditBalance?.value),
             hasCredits: creditBalance?.hasBalance ?? false,
             unlimitedCredits: creditBalance?.isUnlimited ?? false,
-            availableResetCredits: intValue(
-                metric(
-                    CodexDomainCatalog.resetCreditsID,
-                    in: snapshot
-                )
-            ),
             lifetimeTokens: int64Value(
                 metric(
                     CodexDomainCatalog.lifetimeTokensID,
@@ -128,16 +114,6 @@ struct CurrentCodexPresentationProjector {
             return nil
         }
         return count
-    }
-
-    private func intValue(_ value: MetricValue?) -> Int? {
-        guard let count = int64Value(value),
-              count <= Int64(Int.max),
-              count >= Int64(Int.min)
-        else {
-            return nil
-        }
-        return Int(count)
     }
 
     private func percent(from fraction: Double) -> Int {

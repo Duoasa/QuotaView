@@ -14,30 +14,28 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.1 (Build 1)` |
-| Git tag | `v0.3.1` |
-| Tag commit | `041c698ae9755d458fa9f111e4ac74e9711048b9` |
-| GitHub Release | [QuotaView 0.3.1 — Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) |
-| Release 资产 | `QuotaView-v0.3.1.zip` |
-| 资产大小 | `11,443,295 bytes` |
-| SHA-256 | `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
+| 最新推荐版本 | `0.3.1 (Build 2)` |
+| Git tag | `v0.3.1-build.2` |
+| Tag commit | `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| GitHub Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
+| Release 资产 | `QuotaView-v0.3.1-build.2.zip` |
+| 资产大小 | `11,443,325 bytes` |
+| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `2b125886-a3dc-4734-a139-280a08302e5c` |
+| 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
 
-> 当前生产版本为 `0.3.1 (Build 1)`，核心定位为 Codex 灵动岛。开发、
+> 当前生产版本为 `0.3.1 (Build 2)`，核心定位为 Codex 灵动岛和 Widget
+> 共享容器热修复。开发、
 > 验证与发布记录见
 > [HANDOFF.md](HANDOFF.md#1-031-正式发布状态)。
 
-> 2026-08-01 已确认公开 Build 1 的 Widget 在 Developer ID 直接分发环境
-> 中会被 `SystemPolicyAppData` 拒绝读取未带团队前缀的 App Group，导致小号
-> 与中号小组件显示“额度数据不可用”。本地 `0.3.1 (Build 2)` 热修复候选
-> 已迁移到 `BUUH229D5Q.com.quotaview.shared`，并将当前额度标题统一为
-> “本周期剩余” / `Period Remaining`。在 Build 2 完成公证并创建独立
-> Release 前，本节继续保留已经发生的 Build 1 公开发布事实；候选元数据、
-> 验证结果和发布清单见 [HANDOFF.md](HANDOFF.md#031-build-2-github-发布候选)。
+> `0.3.1 (Build 2)` 已迁移到团队前缀 App Group
+> `BUUH229D5Q.com.quotaview.shared`，并将当前额度标题统一为“本周期剩余” /
+> `Period Remaining`。该版本已经正式发布并作为 App Store `1.0.0`
+> 适配工作的不可移动代码基座。
 
 ### 版本定位规则
 
@@ -54,7 +52,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.3.1 (Build 1)` | 2026-07-30 | **当前最新** | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
+| `0.3.1 (Build 2)` | 2026-08-01 | **当前最新** | Widget 共享容器热修复与可变额度周期文案 |
+| `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
 | `0.2.1 (Build 1)` | 2026-07-30 | 历史正式版 | 原生 WidgetKit 小组件与 Developer ID 公证分发 |
 | `0.2.0 (Build 4)` | 2026-07-29 | 历史正式版 | UI 热更新与下载版启动可靠性修复 |
 | `0.2.0 (Build 3)` | 2026-07-29 | **已撤回并删除** | UI1/UI2 组件细节迭代；发布包存在 Framework 加载故障 |
@@ -63,11 +62,40 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.3.1 (Build 2)
+
+Tag：`v0.3.1-build.2`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+
+发布提交：
+`3119171f45163fe45d68a4f774a0488968f14fd7`
+
+主要变更：
+
+- 将 App 与 Widget Extension 的共享容器迁移为团队前缀 App Group
+  `BUUH229D5Q.com.quotaview.shared`；
+- 将主面板、Widget、Tooltip 与辅助功能文案统一为“本周期剩余” /
+  `Period Remaining`；
+- 新增直接分发 App Group 打包门禁。
+
+发布资产：
+
+- 文件名：`QuotaView-v0.3.1-build.2.zip`
+- 大小：`11,443,325 bytes`
+- SHA-256：
+  `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed`
+- Apple 公证：Accepted，已 Staple；Submission
+  `0ff9bf81-3570-4243-b3be-5d076b0f888c`
+
+Release：
+[QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2)
+
 ## 0.3.1 (Build 1)
 
 Tag：`v0.3.1`
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+状态：历史正式 Release，已由 `0.3.1 (Build 2)` 替代。
 
 发布提交：
 `041c698ae9755d458fa9f111e4ac74e9711048b9`

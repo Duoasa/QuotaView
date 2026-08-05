@@ -100,22 +100,19 @@ public struct ProviderWidgetPayload:
     public let plan: String?
     public let primaryWindow: WidgetQuotaWindow?
     public let auxiliaryMetrics: [WidgetAuxiliaryMetric]
-    public let availableResetCredits: Int?
 
     public init(
         providerID: String,
         displayName: String,
         plan: String?,
         primaryWindow: WidgetQuotaWindow?,
-        auxiliaryMetrics: [WidgetAuxiliaryMetric],
-        availableResetCredits: Int?
+        auxiliaryMetrics: [WidgetAuxiliaryMetric]
     ) {
         self.providerID = providerID
         self.displayName = displayName
         self.plan = plan
         self.primaryWindow = primaryWindow
         self.auxiliaryMetrics = Array(auxiliaryMetrics.prefix(3))
-        self.availableResetCredits = availableResetCredits
     }
 }
 
@@ -253,8 +250,7 @@ public struct WidgetSnapshotCodec: Sendable {
                       && !$0.label.isEmpty
                       && $0.label.utf8.count <= 64
                       && $0.formattedValue.utf8.count <= 64
-              }),
-              provider.availableResetCredits.map({ $0 >= 0 }) ?? true
+              })
         else {
             throw WidgetSnapshotCodecError.invalidPayload
         }

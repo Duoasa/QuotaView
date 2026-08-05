@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1/QuotaView-v0.3.1.zip"><strong>Download QuotaView v0.3.1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1-build.2/QuotaView-v0.3.1-build.2.zip"><strong>Download QuotaView v0.3.1 Build 2</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -48,11 +48,11 @@ QuotaView is a simple, lightweight, native macOS companion for the Codex account
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.1.zip` from the [v0.3.1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1).
+2. Download `QuotaView-v0.3.1-build.2.zip` from the [v0.3.1 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.1 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.1 Build 2 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.

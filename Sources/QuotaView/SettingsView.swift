@@ -22,6 +22,43 @@ enum SettingsWindowMetrics {
     }
 }
 
+struct AppVersionInfo: Equatable {
+    let marketingVersion: String
+    let buildNumber: String
+
+    init(marketingVersion: String?, buildNumber: String?) {
+        self.marketingVersion = Self.displayValue(marketingVersion)
+        self.buildNumber = Self.displayValue(buildNumber)
+    }
+
+    init(bundle: Bundle) {
+        self.init(
+            marketingVersion: bundle.object(
+                forInfoDictionaryKey: "CFBundleShortVersionString"
+            ) as? String,
+            buildNumber: bundle.object(
+                forInfoDictionaryKey: "CFBundleVersion"
+            ) as? String
+        )
+    }
+
+    func label(copy: AppCopy) -> String {
+        copy.text(
+            "版本 \(marketingVersion)（Build \(buildNumber)）",
+            "Version \(marketingVersion) (Build \(buildNumber))"
+        )
+    }
+
+    private static func displayValue(_ value: String?) -> String {
+        guard let value = value?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ), !value.isEmpty else {
+            return "—"
+        }
+        return value
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
@@ -29,7 +66,6 @@ struct SettingsView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: SettingsPage? = .menuBar
-    @State private var updatePlaceholderVisible = false
     @State private var codexActivityDetailsExpanded = false
 
     private var copy: AppCopy { preferences.copy }
@@ -101,8 +137,8 @@ struct SettingsView: View {
                 )
             case .general:
                 copy.text(
-                    "查看应用信息和软件更新状态。",
-                    "View app information and software update status."
+                    "查看应用信息和当前版本。",
+                    "View app information and the current version."
                 )
             }
         }
@@ -338,18 +374,6 @@ struct SettingsView: View {
                     "Show lifetime token usage for the current account."
                 ),
                 isOn: $preferences.showLifetimeTokens
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("额度重置入口", "Quota reset entry"),
-                subtitle: copy.text(
-                    "当存在可用的重置时，在主面板中显示额度重置页面入口。",
-                    "When a reset credit is available, show the quota-reset "
-                        + "entry in the main panel."
-                ),
-                isOn: $preferences.showResetAction
             )
 
             NativeSettingsDivider()
@@ -688,50 +712,13 @@ struct SettingsView: View {
                 .foregroundStyle(.tertiary)
                 .padding(.top, 10)
 
-            Button {
-                updatePlaceholderVisible = true
-            } label: {
-                Text(copy.text("检查更新…", "Check for Updates…"))
-                    .frame(minWidth: 112)
-            }
-            .nativeSettingsActionStyle()
-            .controlSize(.small)
-            .padding(.top, 22)
-
-            if updatePlaceholderVisible {
-                Text(
-                    copy.text(
-                        "自动更新服务将在正式发布前接入。",
-                        "The automatic update service will be connected before release."
-                    )
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 12)
-                .transition(.opacity)
-            }
-
             Spacer(minLength: 42)
         }
         .frame(maxWidth: .infinity, minHeight: 430)
-        .animation(
-            .easeOut(duration: 0.16),
-            value: updatePlaceholderVisible
-        )
     }
 
     private var versionAndBuildLabel: String {
-        let version = Bundle.main.object(
-            forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.1"
-        let build = Bundle.main.object(
-            forInfoDictionaryKey: "CFBundleVersion"
-        ) as? String ?? "1"
-        return copy.text(
-            "版本 \(version)（\(build)）",
-            "Version \(version) (\(build))"
-        )
+        AppVersionInfo(bundle: .main).label(copy: copy)
     }
 
     private var menuBarPreview: some View {
