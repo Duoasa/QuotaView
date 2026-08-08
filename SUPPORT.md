@@ -8,7 +8,7 @@ covers QuotaView 1.0.0 for the Mac App Store.
 
 - Developer: Chenchen Xu
 - Email: [fierceviking@163.com](mailto:fierceviking@163.com)
-- Issue tracker: [QuotaView Issues](https://github.com/Duoasa/QuotaView/issues)
+- Issue tracker: [QuotaView App Store Support](https://github.com/Duoasa/QuotaView-AppStore-Pages/issues)
 
 Do not include passwords, tokens, cookies, complete account responses,
 prompts, source code, or other confidential information. A macOS version,
@@ -63,7 +63,7 @@ QuotaView 1.0.0。
 
 - 开发者：Chenchen Xu
 - 邮箱：[fierceviking@163.com](mailto:fierceviking@163.com)
-- Issue Tracker：[QuotaView Issues](https://github.com/Duoasa/QuotaView/issues)
+- Issue Tracker：[QuotaView App Store 支持区](https://github.com/Duoasa/QuotaView-AppStore-Pages/issues)
 
 请勿提供密码、Token、Cookie、完整账号响应、提示词、源代码或其他机密信息。
 通常只需提供 macOS 版本、QuotaView 版本/Build Number、插件版本和精简的

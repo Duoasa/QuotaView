@@ -84,7 +84,7 @@ will be updated before release.
 
 The developer and copyright holder is Chenchen Xu. Privacy questions can be
 emailed to [fierceviking@163.com](mailto:fierceviking@163.com) or filed through
-the public [QuotaView issue tracker](https://github.com/Duoasa/QuotaView/issues).
+the public [QuotaView App Store support tracker](https://github.com/Duoasa/QuotaView-AppStore-Pages/issues).
 
 ---
 
@@ -158,4 +158,4 @@ QuotaView 是开发者工具，不以儿童为目标用户，也不会主动收�
 
 开发者与版权持有人是 Chenchen Xu。隐私问题可以发送至
 [fierceviking@163.com](mailto:fierceviking@163.com)，或通过公开的
-[QuotaView Issue Tracker](https://github.com/Duoasa/QuotaView/issues) 提交。
+[QuotaView App Store 支持区](https://github.com/Duoasa/QuotaView-AppStore-Pages/issues) 提交。
