@@ -27,7 +27,7 @@ fail() {
 
 extract_xcconfig_value() {
     local key="$1"
-    /usr/bin/awk -F '=' -v key="${key}" '
+    LC_ALL=C /usr/bin/awk -F '=' -v key="${key}" '
         function trim(value) {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
             return value
@@ -41,7 +41,7 @@ extract_xcconfig_value() {
 
 extract_table_value() {
     local field="$1"
-    /usr/bin/awk -F '|' -v field="${field}" '
+    LC_ALL=C /usr/bin/awk -F '|' -v field="${field}" '
         function trim(value) {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
             return value
@@ -58,7 +58,7 @@ extract_table_value() {
 extract_block() {
     local section="$1"
     local heading="$2"
-    /usr/bin/awk -v section="${section}" -v heading="${heading}" '
+    LC_ALL=C /usr/bin/awk -v section="${section}" -v heading="${heading}" '
         $0 == section {
             in_section = 1
             next

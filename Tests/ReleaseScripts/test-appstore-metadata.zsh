@@ -34,7 +34,7 @@ expect_failure() {
     fi
 }
 
-"${checker}" >/dev/null
+LC_ALL=en_US.UTF-8 "${checker}" >/dev/null
 expect_failure \
     "submission metadata still contains a placeholder" \
     "${source_metadata}" \
