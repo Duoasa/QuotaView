@@ -13,18 +13,25 @@ expect_failure() {
     local expected="$1"
     local fixture="$2"
     shift 2
-    local output
-    if output="$(
-        QUOTAVIEW_METADATA_FILE="${fixture}" \
-            "${checker}" "$@" 2>&1
-    )"; then
+    local output_file="${fixture_root}/failure-output-${RANDOM}-${RANDOM}.log"
+    local output exit_code
+
+    set +e
+    QUOTAVIEW_METADATA_FILE="${fixture}" \
+        "${checker}" "$@" >"${output_file}" 2>&1
+    exit_code=$?
+    set -e
+    output="$(/bin/cat "${output_file}")"
+
+    if (( exit_code == 0 )); then
         print -u2 "Expected metadata check to fail: ${expected}"
         exit 1
     fi
-    [[ "${output}" == *"${expected}"* ]] || {
+
+    if [[ "${output}" != *"${expected}"* ]]; then
         print -u2 "Unexpected metadata failure: ${output}"
         exit 1
-    }
+    fi
 }
 
 "${checker}" >/dev/null
