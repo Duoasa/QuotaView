@@ -97,7 +97,7 @@
 Reason API。独立源码、Manifest 与 Bundle 数量门禁会拒绝未经审计的类别
 漂移。当前源码和本轮 Universal 无签名 Release 已完成上述迁移；更早的
 Apple Distribution `.pkg` 只证明历史导出链路，不对应当前用量架构。由于
-App Store 定价、Preview 7 固定 Release、公开页面、内容权利和产品验收门禁
+App Store 定价、公开页面、内容权利和产品验收门禁
 尚未关闭，该候选包不是最终提交包，App Review 也尚未开始。
 
 Codex 灵动岛的安装、授权与事件传输采用已经接受的从属规格
@@ -106,12 +106,11 @@ Codex 灵动岛的安装、授权与事件传输采用已经接受的从属规�
 切换到 Codex 公共目录；QuotaView 只读取用户授权的插件 `PLUGIN_DATA`，
 不得继续修改 `~/.codex`、安装 Helper、控制 Terminal 或使用全局
 `/tmp` / Unix Socket。该链路已经实施并完成本地自动验证，公开仓库
-`Duoasa/QuotaView-for-Codex` 的活动事件版 `v1.0.0-preview.1` 已发布；支持
-`codex-usage-snapshot` 的 `1.0.0-preview.7` 已提交到公开仓库主分支，并完成
-mock、官方 app-server live 验证与隔离安装/卸载/重装，但尚未创建固定 tag
-或 GitHub Release。Preview 7 固定 Release
-和全新环境官方登录、安装、Hook 信任、用量、事件、配对、卸载与重装仍是
-发行门禁。
+`Duoasa/QuotaView-for-Codex` 的活动事件版 `v1.0.0-preview.1` 继续作为历史
+版本；支持 `codex-usage-snapshot` 的固定 `v1.0.0-preview.7` Pre-release
+已经发布。其 mock、官方 app-server live 验证、匿名固定 tag clone、隔离
+安装/卸载/重装、确定性资产、CI artifact 与公开资产回下载均通过；本机受信任
+安装实例持续产生脱敏事件和用量快照，且插件源码与固定 tag 一致。
 
 基础额度与沙盒迁移由
 [QV-APPSTORE-CODEX-USAGE-SNAPSHOT-BRIDGE-001](quotaview-app-store-codex-usage-snapshot-bridge.md)
@@ -190,6 +189,11 @@ Build 4 Universal 无签名 Release 已重新构建并通过 Bundle 审计：App
 `appstore`，包内没有 `.storekit`、
 `.xctest`、Runtime、CLI、Helper、Probe 或旧购买组件。
 
+插件状态切换为 `released` 后，Build 4 Apple Development 签名 Archive 已
+重新生成并通过同一 Bundle 审计；当前安装于 `/Applications` 的审核包使用
+同一签名身份、Team ID 与 App Group，Widget 唯一注册和数据读取正常。该包
+仍不是 App Store Distribution 提交包。
+
 Archive 导出前仍由 `scripts/check-appstore-bundle.sh` 复核最终 App 的版本、
 双架构、资源、隐私清单、禁止残留、签名和沙盒 entitlement；导出后由
 `scripts/check-appstore-export.sh` 检查 `.pkg` 签名、Team ID、Payload、大小
@@ -202,6 +206,6 @@ revision、清除旧主 App/Widget 快照，再从新授权目录刷新。普通
 读取错误可保留最后有效快照，但目录切换不得跨插件安装沿用旧数据。
 
 剩余门禁是 Paid Apps Agreement 与 App Store
-Connect `USD 4.99` 价格配置、Preview 7 固定 Release 与全新环境验收、
+Connect `USD 4.99` 价格配置、
 Content Rights、隐私政策和支持页公开、支持邮箱、最终提交包，以及产品所有者
 视觉与交互验收。

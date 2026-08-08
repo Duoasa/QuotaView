@@ -5,7 +5,7 @@
 以下外部门禁完成后，才可移除占位符并粘贴到 App Store Connect：
 
 - Paid Apps Agreement 生效且美国基准价格为 `USD 4.99`；
-- QuotaView for Codex 固定 Release 已发布，并从干净环境复验；
+- QuotaView for Codex 固定 Release 已发布并完成公开复验；
 - Privacy / Support URL 已公开，审核联系人已补齐；
 - 最终 Distribution Archive 和产品所有者验收通过。
 
@@ -57,8 +57,8 @@ data, tokens, cookies, and credentials.
 PLUGIN
 
 Public repository: https://github.com/Duoasa/QuotaView-for-Codex
-Fixed release/tag: [FIXED PLUGIN RELEASE TAG]
-Installation instructions: [FIXED PUBLIC INSTALLATION URL]
+Fixed release/tag: v1.0.0-preview.7
+Installation instructions: https://github.com/Duoasa/QuotaView-for-Codex/releases/tag/v1.0.0-preview.7
 
 QuotaView does not download, install, update, or execute the plugin. It only
 receives security-scoped read access to the user-selected folder. All UI and
@@ -71,9 +71,7 @@ metadata. If any step is unclear, contact: [REVIEW CONTACT].
 
 ## 提交前逐项替换
 
-- `[FIXED PLUGIN RELEASE TAG]`：必须是公开、不可变且已复验的 tag；当前
-  `preview.7` 候选尚未创建固定 tag/Release；
-- `[FIXED PUBLIC INSTALLATION URL]`：必须指向同一固定 Release 的公开说明；
+- 固定插件 tag 与公开安装地址已经替换为经过复验的 `v1.0.0-preview.7`；
 - `[REVIEW CONTACT]`：可在审核期间及时响应的姓名、邮箱和电话；
 - Notes 必须控制在 App Store Connect 当时的字符/字节限制内；
 - 审核人员如需 OpenAI/Codex 账号，应在官方 Codex 中登录，不得提供或暗示

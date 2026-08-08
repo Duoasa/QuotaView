@@ -207,6 +207,8 @@ HTTPS URL、本地化 URL 一致性、纯文本边界，以及 App Name / Bundle
 - [ ] 最终粘贴内容在 App Store Connect 再次核验；
 - [ ] App Privacy 答案发布，年龄分级和 Content Rights 问卷完成；
 - [ ] Paid Apps Agreement 生效，`USD 4.99` 基准价格和各地区价格完成；
+- [x] 固定 `v1.0.0-preview.7` 插件 Pre-release、匿名 clone、隔离安装和公开
+  资产回下载复验完成；
 - [ ] Review Notes 无占位符，官方 Codex + 固定插件 Release 能从干净 Mac
   完整复现；
 - [ ] 真实 Release 构建截图由产品所有者审核，不使用自动截图或 Debug 数据；

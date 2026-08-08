@@ -85,10 +85,10 @@ IAP”改为：
   立即隐藏灵动岛，但后台继续消费用量、连接状态和活动事件；
 - 断开、停止和插件重装时，旧异步读取、游标与展示状态不能跨修订或安装实例
   重新写回；
-- 公开插件仓库 `Duoasa/QuotaView-for-Codex` 的旧固定 tag
-  `v1.0.0-preview.1` 已发布；支持用量快照的 `preview.7` 候选已提交到公开
-  仓库主分支，并通过 mock/live 与隔离安装/卸载/重装验证，但尚未创建固定
-  tag 或 GitHub Release，不能写成固定发布版本；
+- 公开插件仓库 `Duoasa/QuotaView-for-Codex` 的固定
+  `v1.0.0-preview.7` Pre-release 已发布；支持用量快照的版本通过 mock/live、
+  匿名固定 tag clone、隔离安装/卸载/重装、确定性资产、CI artifact 与公开
+  资产回下载复验，主 App 插件状态为 `released`；
 - 双语 Privacy、Support、App Store Metadata 与 Review Notes 已切换为
   `Paid Upfront / USD 4.99 / all features included / no IAP`；
 - readiness、Bundle 与导出脚本已将 OAuth 门禁替换为脱敏用量快照门禁，并
@@ -133,16 +133,13 @@ git diff --check
 本轮 Apple Development 签名 Archive：
 
 ```text
-/private/tmp/QuotaView-Build4-SignedLocal-20260808/QuotaView.xcarchive
+/private/tmp/QuotaView-Build4-ReleasedPlugin-SignedLocal-20260808/QuotaView.xcarchive
 ```
 
 ## 5. 当前真实阻断
 
 - App Store Connect 尚未确认 Paid Apps Agreement，也未把 App 基准价格配置
   为 `USD 4.99`；因此 `QUOTAVIEW_APP_PRICE_STATUS` 必须保持 `pending`；
-- 支持脱敏用量快照的插件 `preview.7` 尚未发布固定 tag/Release；发布后还需
-  在全新 Codex 用户环境验证官方登录、安装、Hook 信任、配对、真实用量、
-  真实事件、诊断、卸载和重装；
 - App Review 对“付费第三方 App + 外部官方 Codex + 公开插件 + 本地脱敏
   数据”的 Content Rights 与 2.5.2/5.2.2 判断仍是外部审核风险；
 - Privacy Policy 与 Support URL 尚需公开，支持邮箱和审核联系人仍待确认；
@@ -156,13 +153,12 @@ git diff --check
 
 ## 6. 下一项任务
 
-1. 发布并固定支持 `usage.json` 的插件版本，在干净环境完成端到端复验；
-2. 在 App Store Connect 接受 Paid Apps Agreement，并将 QuotaView 基准价格
+1. 在 App Store Connect 接受 Paid Apps Agreement，并将 QuotaView 基准价格
    设置为 `USD 4.99`；实际配置完成后才把价格状态改为 `configured`；
-3. 完成 Content Rights 和审核风险材料，公开 Privacy / Support 页面；
-4. 由产品所有者完成浅/深色、中英文、无快照、用量可用/错误、插件各状态及
+2. 完成 Content Rights 和审核风险材料，公开 Privacy / Support 页面；
+3. 由产品所有者完成浅/深色、中英文、无快照、用量可用/错误、插件各状态及
    灵动岛交互验收；
-5. 价格、用量快照、插件和公开页面门禁全部关闭后，重新生成最终
+4. 价格、用量快照、插件和公开页面门禁全部关闭后，重新生成最终
    Archive/`.pkg` 并审计；上传和 App Review 提交仍需单独授权。
 
 任何外部门禁失败时，不得回退到 `auth.json`、Cookie、CLI、Runtime、网页
@@ -179,7 +175,8 @@ docs/design/quotaview-app-store-native-account-provider.md 和灵动岛插件桥
 没有 IAP、订阅或单独功能锁。OpenAI Support 已否决第三方原生 OAuth 路线；
 当前实现由公开伴侣插件调用官方 codex app-server，只向 QuotaView 提供本地
 脱敏 usage.json 和活动事件，QuotaView 自身无 OpenAI 凭证与 Network Client。
-下一步只处理插件固定 Release、App Store Connect 价格与内容权利、公开页面、
+插件固定 Preview 7 Release 已完成。下一步只处理 App Store Connect 价格与
+内容权利、公开页面、
 最终提交包和产品验收。不得恢复 StoreKit 灵动岛门禁、自有 OAuth、wham、
 auth.json、Cookie、Runtime、WebKit、Helper、网页解析或下载执行代码；不得
 改动 0.3.1 Build 2 稳定发布事实，不得在外部门禁未关闭时声称可提交审核。

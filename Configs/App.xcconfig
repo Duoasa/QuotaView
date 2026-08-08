@@ -18,7 +18,7 @@ QUOTAVIEW_APP_BASE_PRICE_USD = 4.99
 // pending -> configured after Pricing and Availability is set in App Store Connect.
 QUOTAVIEW_APP_PRICE_STATUS = pending
 QUOTAVIEW_CODEX_PLUGIN_GUIDE_URL = https:/$()/github.com/Duoasa/QuotaView-for-Codex
-QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS = candidate
+QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS = released
 QUOTAVIEW_CODEX_USAGE_SNAPSHOT_STATUS = validated
 QUOTAVIEW_PRIVACY_POLICY_URL = https:/$()/github.com/Duoasa/QuotaView/blob/main/PRIVACY.md
 // Keep draft until the policy is public and the support contact is final.

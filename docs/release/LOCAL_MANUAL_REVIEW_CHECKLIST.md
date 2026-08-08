@@ -151,8 +151,8 @@ QuotaView 已移除候选 OAuth Client、`quotaview://oauth/openai`、Keychain
 - Paid Apps Agreement 生效，并在 App Store Connect 将美国基准价格配置为
   `USD 4.99`，复核其他地区自动换算价格；
 - 隐私政策、支持页和受监控支持邮箱正式公开；
-- 发布支持用量快照的固定插件 Release，并从全新 Codex 用户环境完成官方
-  登录、插件安装、Hooks 信任、配对、真实用量、真实事件、卸载和重装；
+- 固定 `v1.0.0-preview.7` 插件 Pre-release、公开资产和隔离安装复验已完成；
+  App Review 前仍由产品所有者按公开说明完整走一遍人工复现；
 - 所有外部门禁关闭后重新生成最终 Distribution `.pkg`；
 - 经产品所有者单独授权后上传并提交 App Review。
 

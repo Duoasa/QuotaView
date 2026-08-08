@@ -42,8 +42,9 @@ Build 4 Apple Development 签名审核包；主 App 与 Widget 使用同一 Team
 注册已经清除，系统只保留正式 `com.quotaview.menubar.widget`，产品所有者已
 确认 Widget 可以读取数据。
 
-Build 4 的 Apple Development 签名 Archive 已生成于
-`/private/tmp/QuotaView-Build4-SignedLocal-20260808/QuotaView.xcarchive`；Bundle
+插件状态切换为 `released` 后，Build 4 的新 Apple Development 签名 Archive
+已生成于
+`/private/tmp/QuotaView-Build4-ReleasedPlugin-SignedLocal-20260808/QuotaView.xcarchive`；Bundle
 审计确认 App、Widget 与 Framework 均为 `arm64 + x86_64`，版本和渠道为
 `1.0.0 (4)` / `appstore`，签名与沙盒 entitlement 通过。该 Archive 只用于
 本机审核，不是 App Store Distribution 提交包。
@@ -84,13 +85,19 @@ Bundle 审计通过；视觉与真实 Codex 交互仍等待产品所有者验收
 审核包位于
 `/private/tmp/QuotaView-StopHook-Build3-20260808-1850/QuotaView.app`。
 
-对应插件工作区现为 `1.0.0-preview.7` 候选，新增
+对应插件 `1.0.0-preview.7` 已作为固定 Pre-release 发布，新增
 `codex-usage-snapshot` capability、mock app-server、原始字段泄漏负向测试和
 官方 app-server 真实只读验证，并包含上述 Stop 可靠性修复和面向 Codex Chat
-的安装说明。Preview 7 已提交并推送到公开仓库主分支，桥接测试、隔离安装、
-卸载、重装和本机真实数据诊断通过，但尚未创建固定 tag 或 GitHub Release。主 App
-的 `QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS` 因此仍为 `candidate`。公开
-`v1.0.0-preview.1` 仍是历史活动事件版本，不得当作当前用量能力的发布证据。
+的安装说明。不可变 annotated tag `v1.0.0-preview.7` 指向提交
+`4fc63ec5b680ee62d27ffe1a458680ab023315e3`；桥接测试、匿名固定 tag clone、
+隔离安装/卸载/重装、确定性资产、CI artifact 与公开资产回下载均通过。公开
+Pre-release 为
+`https://github.com/Duoasa/QuotaView-for-Codex/releases/tag/v1.0.0-preview.7`，
+资产 `QuotaView-for-Codex-v1.0.0-preview.7.tar.gz` 为 `367,897 bytes`，
+SHA-256 为
+`095924284087b7e0b45bf7a26fdbe7b6ca441e45f212b4dd8a040a99383c5a2b`。主 App
+的 `QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS` 已切换为 `released`。公开
+`v1.0.0-preview.1` 继续只作为历史活动事件版本记录。
 
 App Store Connect 与审核材料草案：
 [Review Notes](docs/release/APP_STORE_REVIEW_NOTES_DRAFT.md)、
@@ -98,7 +105,8 @@ App Store Connect 与审核材料草案：
 [App Store 元数据](docs/release/APP_STORE_METADATA_DRAFT.md)、
 [OpenAI 授权申请](docs/release/OPENAI_AUTHORIZATION_REQUEST_DRAFT.md)、
 [插件 Preview 1 Release 记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.1.md)、
-[插件 Preview 3 候选记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.3_DRAFT.md)。
+[插件 Preview 7 Release 记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.7.md)、
+[插件 Preview 3 历史候选记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.3_DRAFT.md)。
 
 产品所有者本机审核入口：
 [App Store 初步改造本机审核单](docs/release/LOCAL_MANUAL_REVIEW_CHECKLIST.md)。
@@ -118,8 +126,9 @@ Agreement 并配置 `USD 4.99`，完成前
 测试代码，也不重复执行已有充分证据的整套回归；只保留当前源码必要的构建、
 静态检查和交付审计。视觉、交互、真实账号及业务状态由产品所有者运行确认，
 在得到明确结论前继续标记为“等待用户验收”。付费 App 价格、Preview 7
-固定 Release、公开页面、内容权利、全新插件环境和最终提交包仍是以后单独
-授权的发行门禁，不阻塞本次本机初审
+固定 Release 原为以后单独授权的发行门禁；产品所有者本次已明确授权完成
+主 App Git 固化与 Preview 7 发布，因此该插件门禁现已关闭。公开页面、价格、
+内容权利、完整产品验收和最终提交包仍不阻塞本次本机初审
 交付。
 
 2026-08-08：首次使用且尚无有效 `usage.json` 时，状态栏面板会在

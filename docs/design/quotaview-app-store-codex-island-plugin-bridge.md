@@ -4,7 +4,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Implemented / Usage-capable Plugin Release Pending`
+> 交付状态：`Implemented / Preview 7 Released`
 >
 > 用户确认日期：2026-08-06；付费下载全功能方案确认日期：2026-08-08
 >
@@ -42,12 +42,13 @@ QuotaView 在 Mac App Store 采用 `USD 4.99` 付费下载，Codex 实时灵动�
 
 本规格的主应用代码和桥接协议已经实施；此前 StoreKit 门禁已于 2026-08-08
 删除。公开 `v1.0.0-preview.1` 仍是已验证的活动事件历史版本。
-`1.0.0-preview.7` 候选在此基础上加入 `codex-usage-snapshot`、官方
+固定 `v1.0.0-preview.7` 在此基础上加入 `codex-usage-snapshot`、官方
 `codex app-server` 两个只读调用、白名单 `usage.json`、泄漏负向测试和
-面向 Codex Chat 的安装说明；候选已提交到公开仓库主分支，并通过 mock、
-官方 app-server live 验证与隔离安装/卸载/重装，但尚未创建固定 tag 或
-GitHub Release。全新 Codex 环境的 Preview 7 固定 tag 安装、手动信任、官方登录、用量、
-事件、配对、卸载、重装和审核复现仍未完成。更早的 Apple Distribution
+面向 Codex Chat 的安装说明；该版本已作为公开 Pre-release 发布，并通过
+mock、官方 app-server live 验证、匿名固定 tag clone、隔离安装/卸载/重装、
+确定性资产、CI artifact 和公开资产回下载。当前受信任的本机安装实例持续
+产生脱敏事件与用量快照，且安装源码与固定 tag 一致。App Review 的完整人工
+复现与产品视觉矩阵仍待完成。更早的 Apple Distribution
 `.pkg` 不对应当前源码；外部门禁关闭后必须重新生成最终提交包。
 
 ## 2. 目标与非目标
@@ -655,7 +656,7 @@ Framework 的深度验签、沙盒 entitlement 与嵌入 profile 核对。因 OA
 当前已建立
 [App Review Notes](../release/APP_STORE_REVIEW_NOTES_DRAFT.md)、
 [App Privacy](../release/APP_STORE_PRIVACY_ANSWERS_DRAFT.md)、
-[插件 Release 记录与验收单](../release/PLUGIN_RELEASE_V1.0.0_PREVIEW.1.md)。其中仍有
+[Preview 7 插件 Release 记录与验收单](../release/PLUGIN_RELEASE_V1.0.0_PREVIEW.7.md)。其中仍有
 账号、正式授权、最终价格、公开隐私政策和审核联系人占位项，不得直接提交。
 
 ### Phase 7：公共目录迁移（后续版本）
@@ -830,12 +831,10 @@ v1、`512` 条本地轮转，以及 `Paid Upfront / USD 4.99 / all features incl
 
 对外发布和 App Review 前仍需确认：
 
-1. 从无本地 Marketplace/插件状态的新 Codex 环境完成固定 Release 安装、
-   Hook 信任、配对、真实事件、诊断、卸载和重装；
-2. 是否继续以 GitHub 仓库作为稳定安装入口，或上线自有永久帮助页；
-3. Preview 发布地区与支持邮箱；
-4. 公共目录提交采用个人还是企业身份；
-5. App Store Connect 的 `USD 4.99` 地区价格映射与 Family Sharing 选择。
+1. 是否继续以 GitHub 仓库作为稳定安装入口，或上线自有永久帮助页；
+2. Preview 发布地区与支持邮箱；
+3. 公共目录提交采用个人还是企业身份；
+4. App Store Connect 的 `USD 4.99` 地区价格映射与 Family Sharing 选择。
 
 这些事项不影响本地实现状态，但会阻塞 Preview 对外发布或 App Review。
 
