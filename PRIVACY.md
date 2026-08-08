@@ -2,9 +2,6 @@
 
 Effective date: August 8, 2026
 
-Status: Draft for QuotaView 1.0.0. This policy must be published at the URL
-embedded in the App Store build before submission.
-
 QuotaView is an independent, read-only macOS companion for Codex. It is not
 affiliated with or endorsed by OpenAI or Apple.
 
@@ -85,19 +82,15 @@ will be updated before release.
 
 ## Contact
 
-Privacy questions can be filed through the public
-[QuotaView issue tracker](https://github.com/Duoasa/QuotaView/issues). Before
-App Store submission, the developer must also add a monitored support email:
-`[SUPPORT EMAIL BEFORE PUBLICATION]`.
+The developer and copyright holder is Chenchen Xu. Privacy questions can be
+emailed to [fierceviking@163.com](mailto:fierceviking@163.com) or filed through
+the public [QuotaView issue tracker](https://github.com/Duoasa/QuotaView/issues).
 
 ---
 
 # QuotaView 隐私政策
 
 生效日期：2026 年 8 月 8 日
-
-状态：QuotaView 1.0.0 草案。提交 App Store 前，本政策必须发布到构建内
-写入的公开网址。
 
 QuotaView 是独立的 macOS Codex 只读伴侣应用，与 OpenAI、Apple 不存在
 隶属或官方背书关系。
@@ -163,7 +156,6 @@ QuotaView 是开发者工具，不以儿童为目标用户，也不会主动收�
 
 ## 联系方式
 
-隐私问题可以通过公开的
+开发者与版权持有人是 Chenchen Xu。隐私问题可以发送至
+[fierceviking@163.com](mailto:fierceviking@163.com)，或通过公开的
 [QuotaView Issue Tracker](https://github.com/Duoasa/QuotaView/issues) 提交。
-App Store 提交前还必须补充一个有人维护的支持邮箱：
-`[SUPPORT EMAIL BEFORE PUBLICATION]`。

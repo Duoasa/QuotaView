@@ -1,14 +1,13 @@
 # QuotaView Support
 
-Status: Draft
-
 QuotaView is a lightweight macOS menu-bar companion for viewing the official
 Codex user's sanitized usage snapshot and local task activity. This page
 covers QuotaView 1.0.0 for the Mac App Store.
 
 ## Contact
 
-- Email: [SUPPORT EMAIL BEFORE PUBLICATION]
+- Developer: Chenchen Xu
+- Email: [fierceviking@163.com](mailto:fierceviking@163.com)
 - Issue tracker: [QuotaView Issues](https://github.com/Duoasa/QuotaView/issues)
 
 Do not include passwords, tokens, cookies, complete account responses,
@@ -56,15 +55,14 @@ activity-event, Widget, folder-permission, and official Codex boundaries.
 
 # QuotaView 支持
 
-状态：草案
-
 QuotaView 是轻量的 macOS 菜单栏 Codex 伴侣应用，用于显示官方 Codex
 用户的脱敏用量快照和本地任务活动。本页适用于 Mac App Store 版
 QuotaView 1.0.0。
 
 ## 联系方式
 
-- 邮箱：[SUPPORT EMAIL BEFORE PUBLICATION]
+- 开发者：Chenchen Xu
+- 邮箱：[fierceviking@163.com](mailto:fierceviking@163.com)
 - Issue Tracker：[QuotaView Issues](https://github.com/Duoasa/QuotaView/issues)
 
 请勿提供密码、Token、Cookie、完整账号响应、提示词、源代码或其他机密信息。
