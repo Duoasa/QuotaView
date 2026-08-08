@@ -12,11 +12,6 @@
 		B10000000000000000000003 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* MenuBarView.swift */; };
 		B10000000000000000000004 /* QuotaViewCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; };
 		B10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* Assets.xcassets */; };
-		B10000000000000000000006 /* CodexAppServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* CodexAppServerClient.swift */; };
-		B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* CodexExecutableLocator.swift */; };
-		B10000000000000000000008 /* CodexModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* CodexModels.swift */; };
-		B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* CodexAppServerClientTests.swift */; };
-		B1000000000000000000000A /* CodexModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* CodexModelsTests.swift */; };
 		B1000000000000000000000B /* QuotaViewCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; };
 		B1000000000000000000000C /* QuotaViewCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B1000000000000000000000D /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* AppPreferences.swift */; };
@@ -29,7 +24,6 @@
 		B10000000000000000000015 /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* DomainModels.swift */; };
 		B10000000000000000000016 /* ProviderArchitecture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* ProviderArchitecture.swift */; };
 		B10000000000000000000017 /* RefreshCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001B /* RefreshCoordinator.swift */; };
-		B10000000000000000000019 /* CodexProviderAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* CodexProviderAdapter.swift */; };
 		B1000000000000000000001A /* CurrentCodexPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001E /* CurrentCodexPresentation.swift */; };
 		B1000000000000000000001B /* ArchitectureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* ArchitectureTests.swift */; };
 		B1000000000000000000001C /* QuotaViewWidgetSnapshotWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */; };
@@ -42,10 +36,17 @@
 		B10000000000000000000024 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000017 /* Fonts */; };
 		B10000000000000000000025 /* WidgetAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WidgetAssets.xcassets */; };
 		B10000000000000000000026 /* CodexActivityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* CodexActivityModels.swift */; };
-		B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* CodexActivityRuntime.swift */; };
 		B10000000000000000000028 /* CodexActivityIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIsland.swift */; };
-		B10000000000000000000029 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* main.swift */; };
-		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B1000000000000000000002B /* CodexPluginUsageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000030 /* CodexPluginUsageSnapshot.swift */; };
+		B1000000000000000000002C /* CodexPluginUsageProviderAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000031 /* CodexPluginUsageProviderAdapter.swift */; };
+		B1000000000000000000002E /* CodexPluginUsageProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* CodexPluginUsageProviderTests.swift */; };
+		B10000000000000000000030 /* CodexPluginBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* CodexPluginBridge.swift */; };
+		B10000000000000000000031 /* CodexDomainCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000036 /* CodexDomainCatalog.swift */; };
+		B10000000000000000000032 /* CodexActivityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000037 /* CodexActivityStore.swift */; };
+		B10000000000000000000033 /* CodexActivityCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000038 /* CodexActivityCopy.swift */; };
+		B10000000000000000000034 /* CodexPluginActivityRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000039 /* CodexPluginActivityRuntime.swift */; };
+		B10000000000000000000036 /* CodexPluginBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* CodexPluginBridgeTests.swift */; };
+		B10000000000000000000037 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003D /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,8 +75,8 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = E10000000000000000000001 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = A10000000000000000000005;
-			remoteInfo = QuotaViewActivityHook;
+			remoteGlobalIDString = A10000000000000000000001;
+			remoteInfo = QuotaView;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -102,28 +103,12 @@
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D20000000000000000000003 /* Embed Helpers */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
-			files = (
-				B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */,
-			);
-			name = "Embed Helpers";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		F10000000000000000000001 /* QuotaViewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* CodexStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexStatusStore.swift; sourceTree = "<group>"; };
 		F10000000000000000000003 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
-		F10000000000000000000004 /* CodexAppServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClient.swift; sourceTree = "<group>"; };
-		F10000000000000000000005 /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
-		F10000000000000000000006 /* CodexModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModels.swift; sourceTree = "<group>"; };
-		F10000000000000000000007 /* CodexAppServerClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClientTests.swift; sourceTree = "<group>"; };
-		F10000000000000000000008 /* CodexModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModelsTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000000000A /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Core.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Core.xcconfig; sourceTree = "<group>"; };
@@ -142,7 +127,6 @@
 		F10000000000000000000019 /* DomainModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainModels.swift; sourceTree = "<group>"; };
 		F1000000000000000000001A /* ProviderArchitecture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderArchitecture.swift; sourceTree = "<group>"; };
 		F1000000000000000000001B /* RefreshCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshCoordinator.swift; sourceTree = "<group>"; };
-		F1000000000000000000001D /* CodexProviderAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProviderAdapter.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* CurrentCodexPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentCodexPresentation.swift; sourceTree = "<group>"; };
 		F1000000000000000000001F /* ArchitectureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchitectureTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewWidgetSnapshotWriter.swift; sourceTree = "<group>"; };
@@ -157,10 +141,18 @@
 		F10000000000000000000029 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WidgetAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = WidgetAssets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000002B /* CodexActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityModels.swift; sourceTree = "<group>"; };
-		F1000000000000000000002C /* CodexActivityRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityRuntime.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* CodexActivityIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIsland.swift; sourceTree = "<group>"; };
-		F1000000000000000000002E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		F1000000000000000000002F /* QuotaViewActivityHook */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = QuotaViewActivityHook; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000030 /* CodexPluginUsageSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginUsageSnapshot.swift; sourceTree = "<group>"; };
+		F10000000000000000000031 /* CodexPluginUsageProviderAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginUsageProviderAdapter.swift; sourceTree = "<group>"; };
+		F10000000000000000000033 /* CodexPluginUsageProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginUsageProviderTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000035 /* CodexPluginBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginBridge.swift; sourceTree = "<group>"; };
+		F10000000000000000000036 /* CodexDomainCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDomainCatalog.swift; sourceTree = "<group>"; };
+		F10000000000000000000037 /* CodexActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityStore.swift; sourceTree = "<group>"; };
+		F10000000000000000000038 /* CodexActivityCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityCopy.swift; sourceTree = "<group>"; };
+		F10000000000000000000039 /* CodexPluginActivityRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginActivityRuntime.swift; sourceTree = "<group>"; };
+		F1000000000000000000003B /* CodexPluginBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexPluginBridgeTests.swift; sourceTree = "<group>"; };
+		F1000000000000000000003C /* AppBehaviorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBehaviorTests.swift; sourceTree = "<group>"; };
+		F1000000000000000000003D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,13 +186,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D10000000000000000000005 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -223,7 +208,6 @@
 				G10000000000000000000004 /* QuotaViewCore */,
 				G10000000000000000000009 /* QuotaViewWidgetContract */,
 				G1000000000000000000000A /* QuotaViewWidget */,
-				G1000000000000000000000C /* QuotaViewActivityHook */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -242,8 +226,10 @@
 				F10000000000000000000016 /* QuotaViewFigmaMenu.swift */,
 				F1000000000000000000001E /* CurrentCodexPresentation.swift */,
 				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
-				F1000000000000000000002C /* CodexActivityRuntime.swift */,
 				F1000000000000000000002D /* CodexActivityIsland.swift */,
+				F10000000000000000000037 /* CodexActivityStore.swift */,
+				F10000000000000000000038 /* CodexActivityCopy.swift */,
+				F10000000000000000000039 /* CodexPluginActivityRuntime.swift */,
 			);
 			path = QuotaView;
 			sourceTree = "<group>";
@@ -251,14 +237,14 @@
 		G10000000000000000000004 /* QuotaViewCore */ = {
 			isa = PBXGroup;
 			children = (
-				F10000000000000000000004 /* CodexAppServerClient.swift */,
-				F10000000000000000000005 /* CodexExecutableLocator.swift */,
-				F10000000000000000000006 /* CodexModels.swift */,
 				F10000000000000000000019 /* DomainModels.swift */,
 				F1000000000000000000001A /* ProviderArchitecture.swift */,
 				F1000000000000000000001B /* RefreshCoordinator.swift */,
-				F1000000000000000000001D /* CodexProviderAdapter.swift */,
 				F1000000000000000000002B /* CodexActivityModels.swift */,
+				F10000000000000000000030 /* CodexPluginUsageSnapshot.swift */,
+				F10000000000000000000031 /* CodexPluginUsageProviderAdapter.swift */,
+				F10000000000000000000035 /* CodexPluginBridge.swift */,
+				F10000000000000000000036 /* CodexDomainCatalog.swift */,
 			);
 			path = QuotaViewCore;
 			sourceTree = "<group>";
@@ -281,21 +267,14 @@
 			path = QuotaViewWidget;
 			sourceTree = "<group>";
 		};
-		G1000000000000000000000C /* QuotaViewActivityHook */ = {
-			isa = PBXGroup;
-			children = (
-				F1000000000000000000002E /* main.swift */,
-			);
-			path = QuotaViewActivityHook;
-			sourceTree = "<group>";
-		};
 		G10000000000000000000005 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				F10000000000000000000007 /* CodexAppServerClientTests.swift */,
-				F10000000000000000000008 /* CodexModelsTests.swift */,
 				F1000000000000000000001F /* ArchitectureTests.swift */,
 				F10000000000000000000023 /* WidgetSnapshotWriterTests.swift */,
+				F10000000000000000000033 /* CodexPluginUsageProviderTests.swift */,
+				F1000000000000000000003B /* CodexPluginBridgeTests.swift */,
+				F1000000000000000000003C /* AppBehaviorTests.swift */,
 			);
 			path = Tests/QuotaViewCoreTests;
 			sourceTree = "<group>";
@@ -327,6 +306,7 @@
 				F10000000000000000000025 /* QuotaView.entitlements */,
 				F10000000000000000000026 /* QuotaViewWidget.entitlements */,
 				F10000000000000000000027 /* QuotaViewWidget-Info.plist */,
+				F1000000000000000000003D /* PrivacyInfo.xcprivacy */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -338,7 +318,6 @@
 				F1000000000000000000000E /* QuotaViewCore.framework */,
 				F10000000000000000000010 /* QuotaViewTests.xctest */,
 				F10000000000000000000028 /* QuotaViewWidgetExtension.appex */,
-				F1000000000000000000002F /* QuotaViewActivityHook */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -355,14 +334,12 @@
 				D20000000000000000000001 /* Embed Frameworks */,
 				R10000000000000000000001 /* Resources */,
 				D20000000000000000000002 /* Embed App Extensions */,
-				D20000000000000000000003 /* Embed Helpers */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				T10000000000000000000001 /* PBXTargetDependency */,
 				T10000000000000000000003 /* PBXTargetDependency */,
-				T10000000000000000000004 /* PBXTargetDependency */,
 			);
 			name = QuotaView;
 			productName = QuotaView;
@@ -398,6 +375,7 @@
 			);
 			dependencies = (
 				T10000000000000000000002 /* PBXTargetDependency */,
+				T10000000000000000000004 /* PBXTargetDependency */,
 			);
 			name = QuotaViewTests;
 			productName = QuotaViewTests;
@@ -420,23 +398,6 @@
 			productName = QuotaViewWidgetExtension;
 			productReference = F10000000000000000000028 /* QuotaViewWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
-		};
-		A10000000000000000000005 /* QuotaViewActivityHook */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = L10000000000000000000006 /* Build configuration list for PBXNativeTarget "QuotaViewActivityHook" */;
-			buildPhases = (
-				S10000000000000000000005 /* Sources */,
-				D10000000000000000000005 /* Frameworks */,
-				R10000000000000000000005 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = QuotaViewActivityHook;
-			productName = QuotaViewActivityHook;
-			productReference = F1000000000000000000002F /* QuotaViewActivityHook */;
-			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -475,10 +436,6 @@
 							};
 						};
 					};
-					A10000000000000000000005 = {
-						CreatedOnToolsVersion = 26.6;
-						ProvisioningStyle = Automatic;
-					};
 				};
 			};
 			buildConfigurationList = L10000000000000000000001 /* Build configuration list for PBXProject "QuotaView" */;
@@ -499,7 +456,6 @@
 				A10000000000000000000002 /* QuotaViewCore */,
 				A10000000000000000000003 /* QuotaViewTests */,
 				A10000000000000000000004 /* QuotaViewWidgetExtension */,
-				A10000000000000000000005 /* QuotaViewActivityHook */,
 			);
 		};
 /* End PBXProject section */
@@ -511,6 +467,7 @@
 			files = (
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
+				B10000000000000000000037 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -538,13 +495,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		R10000000000000000000005 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -564,8 +514,10 @@
 				B1000000000000000000001A /* CurrentCodexPresentation.swift in Sources */,
 				B1000000000000000000001C /* QuotaViewWidgetSnapshotWriter.swift in Sources */,
 				B1000000000000000000001D /* WidgetSnapshot.swift in Sources */,
-				B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */,
 				B10000000000000000000028 /* CodexActivityIsland.swift in Sources */,
+				B10000000000000000000032 /* CodexActivityStore.swift in Sources */,
+				B10000000000000000000033 /* CodexActivityCopy.swift in Sources */,
+				B10000000000000000000034 /* CodexPluginActivityRuntime.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -573,14 +525,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,
-				B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */,
-				B10000000000000000000008 /* CodexModels.swift in Sources */,
 				B10000000000000000000015 /* DomainModels.swift in Sources */,
 				B10000000000000000000016 /* ProviderArchitecture.swift in Sources */,
 				B10000000000000000000017 /* RefreshCoordinator.swift in Sources */,
-				B10000000000000000000019 /* CodexProviderAdapter.swift in Sources */,
 				B10000000000000000000026 /* CodexActivityModels.swift in Sources */,
+				B1000000000000000000002B /* CodexPluginUsageSnapshot.swift in Sources */,
+				B1000000000000000000002C /* CodexPluginUsageProviderAdapter.swift in Sources */,
+				B10000000000000000000030 /* CodexPluginBridge.swift in Sources */,
+				B10000000000000000000031 /* CodexDomainCatalog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -588,9 +540,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */,
-				B1000000000000000000000A /* CodexModelsTests.swift in Sources */,
 				B1000000000000000000001B /* ArchitectureTests.swift in Sources */,
+				B1000000000000000000002E /* CodexPluginUsageProviderTests.swift in Sources */,
+				B10000000000000000000036 /* CodexPluginBridgeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -601,14 +553,6 @@
 				B10000000000000000000023 /* AstaSansFont.swift in Sources */,
 				B1000000000000000000001E /* WidgetSnapshot.swift in Sources */,
 				B1000000000000000000001F /* QuotaViewWidget.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		S10000000000000000000005 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B10000000000000000000029 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -632,7 +576,7 @@
 		};
 		T10000000000000000000004 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A10000000000000000000005 /* QuotaViewActivityHook */;
+			target = A10000000000000000000001 /* QuotaView */;
 			targetProxy = C10000000000000000000004 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -717,34 +661,6 @@
 			};
 			name = Release;
 		};
-		X1000000000000000000000B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_HARDENED_RUNTIME = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = macosx;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		X1000000000000000000000C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_HARDENED_RUNTIME = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = macosx;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -789,15 +705,6 @@
 			buildConfigurations = (
 				X10000000000000000000009 /* Debug */,
 				X1000000000000000000000A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		L10000000000000000000006 /* Build configuration list for PBXNativeTarget "QuotaViewActivityHook" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				X1000000000000000000000B /* Debug */,
-				X1000000000000000000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

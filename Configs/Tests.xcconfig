@@ -5,3 +5,5 @@ PRODUCT_BUNDLE_IDENTIFIER = com.quotaview.tests
 GENERATE_INFOPLIST_FILE = YES
 SKIP_INSTALL = YES
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @loader_path/Frameworks @loader_path/../Frameworks
+TEST_HOST = $(BUILT_PRODUCTS_DIR)/QuotaView.app/Contents/MacOS/QuotaView
+BUNDLE_LOADER = $(TEST_HOST)

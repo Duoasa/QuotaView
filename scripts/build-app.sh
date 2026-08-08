@@ -29,7 +29,6 @@ derived_data="${staging_dir}/DerivedData"
 built_app="${derived_data}/Build/Products/${configuration}/QuotaView.app"
 staging_app="${staging_dir}/QuotaView.app"
 widget_extension="${staging_app}/Contents/PlugIns/QuotaViewWidgetExtension.appex"
-activity_helper="${staging_app}/Contents/Helpers/QuotaViewActivityHook"
 destination_app="${dist_dir}/QuotaView.app"
 staging_zip="${staging_dir}/${release_name}.zip"
 destination_zip="${dist_dir}/${release_name}.zip"
@@ -107,11 +106,6 @@ if [[ ! -d "${widget_extension}" ]]; then
     exit 3
 fi
 
-if [[ ! -x "${activity_helper}" ]]; then
-    print -u2 "Missing embedded Codex activity helper: ${activity_helper}"
-    exit 3
-fi
-
 signing_args=(
     --force
     --sign "${signing_identity}"
@@ -139,8 +133,6 @@ for library in "${widget_extension}"/Contents/Frameworks/*.dylib(N); do
     codesign "${signing_args[@]}" "${library}"
 done
 
-codesign "${signing_args[@]}" "${activity_helper}"
-
 codesign \
     "${signing_args[@]}" \
     --entitlements "${widget_entitlements}" \
@@ -155,14 +147,9 @@ signature_details="$(codesign -dv --verbose=4 "${staging_app}" 2>&1)"
 widget_signature_details="$(
     codesign -dv --verbose=4 "${widget_extension}" 2>&1
 )"
-helper_signature_details="$(
-    codesign -dv --verbose=4 "${activity_helper}" 2>&1
-)"
 if [[ "${signing_identity}" == "-" ]]; then
     if print -r -- "${signature_details}" | grep -q 'flags=.*runtime' \
         || print -r -- "${widget_signature_details}" \
-            | grep -q 'flags=.*runtime' \
-        || print -r -- "${helper_signature_details}" \
             | grep -q 'flags=.*runtime'; then
         print -u2 \
             "Ad-hoc builds must not enable Hardened Runtime; " \
@@ -173,11 +160,9 @@ else
     if ! print -r -- "${signature_details}" \
         | grep -q 'flags=.*runtime' \
         || ! print -r -- "${widget_signature_details}" \
-            | grep -q 'flags=.*runtime' \
-        || ! print -r -- "${helper_signature_details}" \
             | grep -q 'flags=.*runtime'; then
         print -u2 \
-            "Signed app, widget, or activity helper is missing the Hardened Runtime flag."
+            "Signed app or widget is missing the Hardened Runtime flag."
         exit 4
     fi
 fi
@@ -257,10 +242,6 @@ widget_architectures="$(
     lipo -archs \
         "${widget_extension}/Contents/MacOS/QuotaViewWidgetExtension"
 )"
-helper_architectures="$(
-    lipo -archs "${activity_helper}"
-)"
-
 if [[ " ${architectures} " != *" arm64 "* ]] \
     || [[ " ${architectures} " != *" x86_64 "* ]]; then
     print -u2 "Expected a universal binary, found: ${architectures}"
@@ -272,14 +253,6 @@ if [[ " ${widget_architectures} " != *" arm64 "* ]] \
     print -u2 \
         "Expected a universal widget binary, found: " \
         "${widget_architectures}"
-    exit 4
-fi
-
-if [[ " ${helper_architectures} " != *" arm64 "* ]] \
-    || [[ " ${helper_architectures} " != *" x86_64 "* ]]; then
-    print -u2 \
-        "Expected a universal activity helper, found: " \
-        "${helper_architectures}"
     exit 4
 fi
 
@@ -309,12 +282,16 @@ widget_entitlement_details="$(
 )"
 if [[ "${app_entitlement_details}" \
         != *"${app_group_identifier}"* ]] \
+    || [[ "${app_entitlement_details}" \
+        != *"com.apple.security.app-sandbox"* ]] \
+    || [[ "${app_entitlement_details}" \
+        != *"com.apple.security.files.user-selected.read-only"* ]] \
     || [[ "${widget_entitlement_details}" \
         != *"${app_group_identifier}"* ]] \
     || [[ "${widget_entitlement_details}" \
         != *"com.apple.security.app-sandbox"* ]]; then
     print -u2 \
-        "App Group or widget sandbox entitlements are missing."
+        "Required App Store sandbox entitlements are missing."
     exit 4
 fi
 

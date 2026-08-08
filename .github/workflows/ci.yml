@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   test:
-    name: Swift tests
+    name: App and release checks
     runs-on: macos-26
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -29,3 +29,13 @@ jobs:
 
       - name: Run tests
         run: swift test
+
+      - name: Run App Store release script tests
+        run: |
+          zsh Tests/ReleaseScripts/test-appstore-gate-statuses.zsh
+          zsh Tests/ReleaseScripts/test-appstore-metadata.zsh
+          zsh Tests/ReleaseScripts/test-appstore-privacy-manifest.zsh
+          zsh Tests/ReleaseScripts/test-appstore-url-security.zsh
+
+      - name: Check App Store readiness
+        run: scripts/check-appstore-readiness.sh

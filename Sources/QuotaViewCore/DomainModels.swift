@@ -472,6 +472,7 @@ public enum ProviderStage: String, Codable, Sendable {
 public enum ProviderError: Error, Equatable, Sendable {
     case unavailable
     case notConfigured
+    case authenticationRequired
     case timedOut(stage: ProviderStage)
     case processExited(code: Int32?)
     case protocolViolation
@@ -487,7 +488,9 @@ extension ProviderError: LocalizedError {
         case .unavailable:
             "Codex 当前不可用。"
         case .notConfigured:
-            "找不到 Codex。请安装 ChatGPT/Codex，或通过 CODEX_EXECUTABLE 指定路径。"
+            "请安装并配对 QuotaView for Codex 插件。"
+        case .authenticationRequired:
+            "请先在官方 Codex 中登录 ChatGPT 账号。"
         case .timedOut:
             "读取 Codex 状态超时。"
         case .processExited(let code):

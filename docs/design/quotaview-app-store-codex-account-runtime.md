@@ -2,9 +2,9 @@
 
 > 文档编号：`QV-APPSTORE-CODEX-ACCOUNT-RUNTIME-001`
 >
-> 规格状态：`Accepted`
+> 规格状态：`Superseded`
 >
-> 交付状态：`Planned`
+> 交付状态：`Historical Phase 0 / No-Go`
 >
 > 用户确认日期：2026-08-06
 >
@@ -13,6 +13,13 @@
 > 依赖基线：QuotaView `0.3.1 (Build 2)`
 >
 > 目标版本：QuotaView `1.0.0 (Build 1)` / 内部代号 `v1.0.0a`
+
+> [!IMPORTANT]
+> 本规格已于 2026-08-06 被
+> [`QV-APPSTORE-NATIVE-ACCOUNT-PROVIDER-001`](quotaview-app-store-native-account-provider.md)
+> 替代。包内 Runtime Phase 0 的技术结果继续保留为历史证据，但约 436 MiB
+> Universal Runtime 不再进入 App Store 生产路线；本文后续内容不得作为
+> 当前实施指令。
 
 ## 1. 决策摘要
 

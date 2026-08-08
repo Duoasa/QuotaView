@@ -59,90 +59,143 @@ struct AppVersionInfo: Equatable {
     }
 }
 
+struct AppStorePublicLinkConfiguration: Equatable {
+    let status: String
+    let rawURL: String
+
+    init(status: String?, rawURL: String?) {
+        self.status = status?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ) ?? ""
+        self.rawURL = rawURL?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ) ?? ""
+    }
+
+    init(
+        bundle: Bundle,
+        statusKey: String,
+        urlKey: String
+    ) {
+        self.init(
+            status: bundle.object(
+                forInfoDictionaryKey: statusKey
+            ) as? String,
+            rawURL: bundle.object(
+                forInfoDictionaryKey: urlKey
+            ) as? String
+        )
+    }
+
+    var publishedURL: URL? {
+        guard status == "published",
+              !rawURL.isEmpty,
+              !rawURL.contains("["),
+              !rawURL.contains("]"),
+              let url = URL(string: rawURL),
+              url.scheme?.lowercased() == "https",
+              url.host?.isEmpty == false,
+              url.user == nil,
+              url.password == nil else {
+            return nil
+        }
+        return url
+    }
+}
+
+enum SettingsPage: String, CaseIterable, Identifiable {
+    case menuBar
+    case popover
+    case codexActivity
+    case appearance
+    case language
+    case general
+
+    var id: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .menuBar: "menubar.rectangle"
+        case .popover: "rectangle.on.rectangle"
+        case .codexActivity: "link"
+        case .appearance: "circle.lefthalf.filled"
+        case .language: "globe"
+        case .general: "gearshape"
+        }
+    }
+
+    func title(_ copy: AppCopy) -> String {
+        switch self {
+        case .menuBar:
+            copy.text("菜单栏", "Menu Bar")
+        case .popover:
+            copy.text("面板内容", "Popover")
+        case .codexActivity:
+            copy.text("连接与灵动岛", "Connection & Island")
+        case .appearance:
+            copy.text("外观", "Appearance")
+        case .language:
+            copy.text("语言", "Language")
+        case .general:
+            copy.text("通用", "General")
+        }
+    }
+
+    func subtitle(_ copy: AppCopy) -> String {
+        switch self {
+        case .menuBar:
+            copy.text(
+                "选择菜单栏中持续显示的信息。",
+                "Choose the information that remains visible in the menu bar."
+            )
+        case .popover:
+            copy.text(
+                "管理 QuotaView 主面板中的数据和操作。",
+                "Manage the data and actions shown in the QuotaView popover."
+            )
+        case .codexActivity:
+            copy.text(
+                "通过官方 Codex 登录和配套插件获取用量与任务状态。",
+                "Use official Codex sign-in and the companion plugin for usage and activity status."
+            )
+        case .appearance:
+            copy.text(
+                "设置窗口外观和状态栏面板的玻璃质感。",
+                "Set the window appearance and the menu panel's glass treatment."
+            )
+        case .language:
+            copy.text(
+                "选择 QuotaView 界面使用的语言。",
+                "Choose the language used throughout QuotaView."
+            )
+        case .general:
+            copy.text(
+                "查看应用信息、当前版本与隐私政策。",
+                "View app information, the current version, and privacy policy."
+            )
+        }
+    }
+}
+
+@MainActor
+final class SettingsNavigation: ObservableObject {
+    @Published var selection: SettingsPage? = .menuBar
+
+    func showConnectionAndIsland() {
+        selection = .codexActivity
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
     @ObservedObject var activityRuntime: CodexActivityRuntime
+    @ObservedObject var navigation: SettingsNavigation
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selection: SettingsPage? = .menuBar
     @State private var codexActivityDetailsExpanded = false
 
     private var copy: AppCopy { preferences.copy }
-
-    private enum SettingsPage: String, CaseIterable, Identifiable {
-        case menuBar
-        case popover
-        case codexActivity
-        case appearance
-        case language
-        case general
-
-        var id: String { rawValue }
-
-        var symbol: String {
-            switch self {
-            case .menuBar: "menubar.rectangle"
-            case .popover: "rectangle.on.rectangle"
-            case .codexActivity: "waveform.path.ecg.rectangle"
-            case .appearance: "circle.lefthalf.filled"
-            case .language: "globe"
-            case .general: "gearshape"
-            }
-        }
-
-        func title(_ copy: AppCopy) -> String {
-            switch self {
-            case .menuBar:
-                copy.text("菜单栏", "Menu Bar")
-            case .popover:
-                copy.text("面板内容", "Popover")
-            case .codexActivity:
-                copy.text("Codex 灵动岛", "Codex Island")
-            case .appearance:
-                copy.text("外观", "Appearance")
-            case .language:
-                copy.text("语言", "Language")
-            case .general:
-                copy.text("通用", "General")
-            }
-        }
-
-        func subtitle(_ copy: AppCopy) -> String {
-            switch self {
-            case .menuBar:
-                copy.text(
-                    "选择菜单栏中持续显示的信息。",
-                    "Choose the information that remains visible in the menu bar."
-                )
-            case .popover:
-                copy.text(
-                    "管理 QuotaView 主面板中的数据和操作。",
-                    "Manage the data and actions shown in the QuotaView popover."
-                )
-            case .codexActivity:
-                copy.text(
-                    "配置 Codex 灵动岛连接与状态显示。",
-                    "Configure the Codex island connection and status display."
-                )
-            case .appearance:
-                copy.text(
-                    "设置窗口外观和状态栏面板的玻璃质感。",
-                    "Set the window appearance and the menu panel's glass treatment."
-                )
-            case .language:
-                copy.text(
-                    "选择 QuotaView 界面使用的语言。",
-                    "Choose the language used throughout QuotaView."
-                )
-            case .general:
-                copy.text(
-                    "查看应用信息和当前版本。",
-                    "View app information and the current version."
-                )
-            }
-        }
-    }
 
     var body: some View {
         ZStack {
@@ -156,7 +209,7 @@ struct SettingsView: View {
                     .padding(.trailing, SettingsWindowMetrics.sidebarInset)
                     .padding(.vertical, SettingsWindowMetrics.sidebarInset)
 
-                settingsDetail(for: selection ?? .menuBar)
+                settingsDetail(for: navigation.selection ?? .menuBar)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -187,7 +240,7 @@ struct SettingsView: View {
 
     private var settingsSidebar: some View {
         VStack(spacing: 0) {
-            List(selection: $selection) {
+            List(selection: $navigation.selection) {
                 Section {
                     ForEach(SettingsPage.allCases) { page in
                         Label(
@@ -484,9 +537,52 @@ struct SettingsView: View {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text(
-                        "Codex 灵动岛",
-                        "Codex Island"
+                        "官方 Codex 账号",
+                        "Official Codex account"
                     ),
+                    subtitle: copy.text(
+                        "登录由 Codex 官方应用管理；QuotaView 不会获取或保存登录 Token。",
+                        "Sign-in is managed by the official Codex app; QuotaView never receives or stores sign-in tokens."
+                    )
+                ) {
+                    Button(copy.text("打开 Codex", "Open Codex")) {
+                        activityRuntime.openOfficialCodex()
+                    }
+                    .nativeSettingsActionStyle()
+                    .controlSize(.small)
+                    .help(copy.text(
+                        "打开官方 Codex 并完成登录",
+                        "Open official Codex and complete sign-in"
+                    ))
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text(
+                        "QuotaView for Codex 插件",
+                        "QuotaView for Codex plugin"
+                    ),
+                    subtitle: copy.text(
+                        "安装、启用与 Hooks 信任全部在 Codex 中完成。",
+                        "Installation, enablement, and Hooks trust are handled inside Codex."
+                    )
+                ) {
+                    Button(copy.text("安装指南", "Setup Guide")) {
+                        activityRuntime.openInstallationGuide()
+                    }
+                    .nativeSettingsActionStyle()
+                    .controlSize(.small)
+                    .help(copy.text("打开插件安装指南", "Open plugin setup guide"))
+                    .accessibilityLabel(
+                        copy.text("打开插件安装指南", "Open plugin setup guide")
+                    )
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text("只读数据目录", "Read-only data folder"),
                     subtitle: codexActivityConnectionSubtitle
                 ) {
                     HStack(spacing: 10) {
@@ -495,64 +591,31 @@ struct SettingsView: View {
                                 .fill(codexActivityConnectionColor)
                                 .frame(width: 5, height: 5)
                                 .accessibilityHidden(true)
-
                             Text(codexActivityConnectionStatusTitle)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         .accessibilityElement(children: .combine)
 
-                        Button {
+                        Button(codexActivityActionTitle) {
                             switch activityRuntime.connectionStatus {
-                            case .notInstalled, .abnormal:
-                                activityRuntime.enableCodexActivity()
-                            case .installedNeedsRestart:
-                                activityRuntime.restartCodex()
-                            case .awaitingTrust:
-                                activityRuntime.openCodexSecurityReview()
-                            case .awaitingFirstEvent, .connected:
-                                activityRuntime.disableCodexActivity()
-                            }
-                        } label: {
-                            if activityRuntime.isConfiguring
-                                || activityRuntime.isOpeningSecurityReview
-                            {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .frame(minWidth: 92)
-                            } else {
-                                Text(codexActivityActionTitle)
-                                    .frame(minWidth: 92)
+                            case .connected, .stale,
+                                 .pairedWaitingForEvent:
+                                activityRuntime.disconnectPluginData()
+                            case .notConfigured, .awaitingAuthorization,
+                                 .reauthorizationRequired, .incompatible,
+                                 .malformedData:
+                                activityRuntime
+                                    .choosePluginDataDirectory()
                             }
                         }
                         .nativeSettingsActionStyle()
                         .controlSize(.small)
-                        .disabled(
-                            activityRuntime.isConfiguring
-                                || activityRuntime.isOpeningSecurityReview
-                        )
-                        .help(codexActivityActionHelp)
+                        .disabled(activityRuntime.isAuthorizingDirectory)
+                        .help(codexActivityActionTitle)
                         .accessibilityLabel(codexActivityActionTitle)
                     }
                 }
-
-                if codexActivityShowsNextStep {
-                    NativeSettingsDivider()
-
-                    NativeSettingsRow(
-                        title: codexActivityNextStepTitle,
-                        subtitle: codexActivityNextStepSubtitle
-                    ) {}
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsNote(
-                    text: copy.text(
-                        "首次连接只需进行一次 Codex 安全确认。QuotaView 不读取提示词、命令正文、工具输出或会话记录。",
-                        "First-time setup requires one Codex security review. QuotaView does not read prompts, command text, tool output, or transcripts."
-                    )
-                )
 
                 NativeSettingsDivider()
 
@@ -561,25 +624,32 @@ struct SettingsView: View {
                 ) {
                     VStack(alignment: .leading, spacing: 10) {
                         LabeledContent(
-                            copy.text("Codex 版本", "Codex version"),
-                            value: codexEnvironmentSubtitle
+                            copy.text("插件版本", "Plugin version"),
+                            value: activityRuntime.pluginVersion ?? "—"
                         )
                         LabeledContent(
-                            copy.text("活动支持", "Activity support"),
-                            value: codexHooksFeatureTitle
+                            copy.text("分发渠道", "Distribution channel"),
+                            value: activityRuntime.distributionChannel ?? "—"
                         )
                         LabeledContent(
-                            copy.text("本地连接", "Local connection"),
-                            value: codexActivityBridgeStatusTitle
+                            copy.text("最近用量快照", "Latest usage snapshot"),
+                            value: codexActivityLastUsageTitle
                         )
-                        Text(codexActivityBridgeSubtitle)
-                            .foregroundStyle(.tertiary)
+                        LabeledContent(
+                            copy.text("最近事件", "Latest event"),
+                            value: codexActivityLastEventTitle
+                        )
+                        if let issue = activityRuntime.connectionIssue {
+                            Text(codexActivityIssueText(issue))
+                                .foregroundStyle(
+                                    codexActivityIssueColor(issue)
+                                )
+                        }
                         Text(copy.text(
-                            "诊断日志：\(activityRuntime.diagnosticLogPath)",
-                            "Diagnostic log: \(activityRuntime.diagnosticLogPath)"
+                            "QuotaView 只读取用户明确授权目录中的脱敏用量快照和活动事件；不会读取凭证或修改 Codex 配置。",
+                            "QuotaView only reads sanitized usage snapshots and activity events from the folder you explicitly authorize; it never reads credentials or modifies Codex settings."
                         ))
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
+                            .foregroundStyle(.tertiary)
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -590,9 +660,44 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.vertical, 11)
+
+                NativeSettingsDivider()
+
+                NativeSettingsNote(
+                    text: copy.text(
+                        "用量图表与 Codex 灵动岛均已包含在 QuotaView 中；完成官方 Codex 登录、安装插件并配对目录后即可使用。",
+                        "Usage charts and Codex Island are included with QuotaView. Sign in through official Codex, install the plugin, and pair its folder to use them."
+                    )
+                )
             }
 
             NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text("灵动岛", "Codex Island"),
+                    subtitle: copy.text(
+                        "显示 Codex 任务活动状态；关闭后仍会继续读取用量与连接数据。",
+                        "Show Codex task activity. Usage and connection data continue updating when it is off."
+                    )
+                ) {
+                    Toggle(
+                        copy.text("灵动岛", "Codex Island"),
+                        isOn: $preferences.showCodexIsland
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .help(copy.text(
+                        "开启或关闭 Codex 灵动岛",
+                        "Turn Codex Island on or off"
+                    ))
+                    .accessibilityLabel(copy.text(
+                        "灵动岛",
+                        "Codex Island"
+                    ))
+                }
+
+                NativeSettingsDivider()
+
                 NativeSettingsRow(
                     title: copy.text(
                         "自适应显示",
@@ -674,47 +779,165 @@ struct SettingsView: View {
     }
 
     private var generalSettings: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 42)
+        VStack(spacing: 22) {
+            VStack(spacing: 0) {
+                Spacer(minLength: 28)
 
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .shadow(
-                    color: Color.black.opacity(0.18),
-                    radius: 10,
-                    x: 0,
-                    y: 5
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+                    .shadow(
+                        color: Color.black.opacity(0.18),
+                        radius: 10,
+                        x: 0,
+                        y: 5
+                    )
+                    .accessibilityLabel(
+                        copy.text(
+                            "QuotaView 应用图标",
+                            "QuotaView app icon"
+                        )
+                    )
+
+                Text("QuotaView")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 18)
+
+                Text(
+                    copy.text(
+                        "本地 Codex 用量监视器",
+                        "Local Codex quota monitor"
+                    )
                 )
-                .accessibilityLabel(
-                    copy.text("QuotaView 应用图标", "QuotaView app icon")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+
+                Text(versionAndBuildLabel)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 10)
+
+                Spacer(minLength: 28)
+            }
+            .frame(maxWidth: .infinity, minHeight: 330)
+
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text("隐私政策", "Privacy policy"),
+                    subtitle: copy.text(
+                        "了解 QuotaView 如何处理账号、用量和本地插件数据。",
+                        "Learn how QuotaView handles account, usage, and local plugin data."
+                    )
+                ) {
+                    privacyPolicyControl
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text("支持", "Support"),
+                    subtitle: copy.text(
+                        "获取账号连接、额度、小组件、购买和灵动岛帮助。",
+                        "Get help with account connection, quota, widgets, purchases, and Codex Island."
+                    )
+                ) {
+                    supportControl
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var privacyPolicyControl: some View {
+        if let url = privacyPolicyConfiguration.publishedURL {
+            Link(destination: url) {
+                Label(
+                    copy.text("查看", "View"),
+                    systemImage: "arrow.up.right"
                 )
-
-            Text("QuotaView")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.primary)
-                .padding(.top, 18)
-
-            Text(
+            }
+            .controlSize(.small)
+            .help(copy.text("打开隐私政策", "Open privacy policy"))
+            .accessibilityLabel(
                 copy.text(
-                    "本地 Codex 用量监视器",
-                    "Local Codex quota monitor"
+                    "打开 QuotaView 隐私政策",
+                    "Open QuotaView privacy policy"
                 )
             )
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .padding(.top, 4)
-
-            Text(versionAndBuildLabel)
+        } else {
+            Text(copy.text("待发布", "Pending publication"))
                 .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 10)
-
-            Spacer(minLength: 42)
+                .foregroundStyle(.secondary)
+                .help(
+                    copy.text(
+                        "隐私政策公开发布后可在此查看。",
+                        "The privacy policy will be available here after publication."
+                    )
+                )
+                .accessibilityLabel(
+                    copy.text(
+                        "隐私政策尚未发布",
+                        "Privacy policy has not been published"
+                    )
+                )
         }
-        .frame(maxWidth: .infinity, minHeight: 430)
+    }
+
+    private var privacyPolicyConfiguration: AppStorePublicLinkConfiguration {
+        AppStorePublicLinkConfiguration(
+            bundle: .main,
+            statusKey: "QuotaViewPrivacyPolicyStatus",
+            urlKey: "QuotaViewPrivacyPolicyURL"
+        )
+    }
+
+    @ViewBuilder
+    private var supportControl: some View {
+        if let url = supportConfiguration.publishedURL {
+            Link(destination: url) {
+                Label(
+                    copy.text("查看", "View"),
+                    systemImage: "arrow.up.right"
+                )
+            }
+            .controlSize(.small)
+            .help(copy.text("打开支持页面", "Open support page"))
+            .accessibilityLabel(
+                copy.text(
+                    "打开 QuotaView 支持页面",
+                    "Open QuotaView support page"
+                )
+            )
+        } else {
+            Text(copy.text("待发布", "Pending publication"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .help(
+                    copy.text(
+                        "支持页面公开发布后可在此查看。",
+                        "Support will be available here after publication."
+                    )
+                )
+                .accessibilityLabel(
+                    copy.text(
+                        "支持页面尚未发布",
+                        "Support page has not been published"
+                    )
+                )
+        }
+    }
+
+    private var supportConfiguration: AppStorePublicLinkConfiguration {
+        AppStorePublicLinkConfiguration(
+            bundle: .main,
+            statusKey: "QuotaViewSupportStatus",
+            urlKey: "QuotaViewSupportURL"
+        )
     }
 
     private var versionAndBuildLabel: String {
@@ -851,241 +1074,209 @@ struct SettingsView: View {
     }
 
     private var codexActivityActionTitle: String {
-        if activityRuntime.isConfiguring {
-            return copy.text("正在准备", "Preparing")
-        }
-        if activityRuntime.isOpeningSecurityReview {
-            return copy.text("正在打开", "Opening")
+        if activityRuntime.isAuthorizingDirectory {
+            return copy.text("等待授权", "Authorizing")
         }
         return switch activityRuntime.connectionStatus {
-        case .notInstalled:
-            copy.text("连接 Codex", "Connect Codex")
-        case .abnormal:
-            copy.text("修复连接", "Fix Connection")
-        case .installedNeedsRestart:
-            copy.text("重新启动 Codex", "Restart Codex")
-        case .awaitingTrust:
-            copy.text("打开安全确认", "Open Security Review")
-        case .awaitingFirstEvent, .connected:
-            copy.text("停用", "Disable")
-        }
-    }
-
-    private var codexActivityActionHelp: String {
-        return switch activityRuntime.connectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "安全确认已完成；重新启动 Codex 以激活连接。",
-                "The security review is complete. Restart Codex to activate the connection."
-            )
-        case .awaitingTrust:
-            copy.text(
-                "等待 CLI 首次加载完成并自动进入 Hooks 页面后，再按 T。",
-                "Wait for the CLI to finish loading and enter the Hooks page before pressing T."
-            )
-        case .awaitingFirstEvent, .connected:
-            copy.text(
-                "停用 Codex 灵动岛连接。",
-                "Disable the Codex island connection."
-            )
-        case .notInstalled, .abnormal:
-            copy.text(
-                "自动准备 Codex 连接，并立即显示未连接状态的灵动岛。",
-                "Prepare the Codex connection automatically and show the disconnected activity island immediately."
-            )
+        case .connected, .stale, .pairedWaitingForEvent:
+            copy.text("断开", "Disconnect")
+        case .notConfigured, .awaitingAuthorization,
+             .reauthorizationRequired, .incompatible, .malformedData:
+            copy.text("选择目录", "Choose Folder")
         }
     }
 
     private var codexActivityConnectionSubtitle: String {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
+        if activityRuntime.isAuthorizingDirectory {
             return copy.text(
-                "正在自动准备连接，并立即显示“未连接 Codex”的灵动岛。",
-                "Preparing the connection automatically and showing the Codex Not Connected island immediately."
+                "等待你在系统面板中选择插件数据目录。",
+                "Waiting for you to choose the plugin data folder in the system panel."
             )
         }
 
         return switch activityRuntime.connectionStatus {
-        case .notInstalled:
+        case .notConfigured:
             copy.text(
-                "连接后会立即呼出灵动岛，并自动完成连接准备。",
-                "Connecting immediately shows the island and prepares the connection automatically."
+                "尚未授权插件的 PLUGIN_DATA 目录。",
+                "The plugin PLUGIN_DATA folder has not been authorized."
             )
-        case .installedNeedsRestart:
+        case .awaitingAuthorization:
             copy.text(
-                "安全确认已经完成；点击一次即可安全退出并重新打开 Codex。",
-                "The security review is complete. Restart Codex here with one click."
+                "需要在系统目录选择器中确认只读访问。",
+                "Confirm read-only access in the system folder picker."
             )
-        case .awaitingTrust:
+        case .pairedWaitingForEvent:
             copy.text(
-                "等待 CLI 完成首次加载；QuotaView 自动输入 /hooks 并进入 Hooks 页面后，再按 T。",
-                "Wait for the CLI to finish its first load. Press T only after QuotaView enters /hooks and opens the Hooks page."
-            )
-        case .awaitingFirstEvent:
-            copy.text(
-                "重启已经完成；发送一条新的 Codex 消息完成连接。",
-                "Restart is complete. Send a new Codex message to finish connecting."
+                "握手有效；请在 Codex 中完成登录并开始一个任务。",
+                "The handshake is valid; sign in through Codex and start a task."
             )
         case .connected:
             copy.text(
-                "连接已激活，灵动岛会实时显示 Codex 当前状态。",
-                "The connection is active and the island now reflects the current Codex status."
+                "最近收到了有效的脱敏 Codex 数据。",
+                "Valid sanitized Codex data was received recently."
             )
-        case .abnormal(let message):
-            message
+        case .stale:
+            copy.text(
+                "连接曾经可用，但最近没有新事件。",
+                "The connection worked before, but no recent event has arrived."
+            )
+        case .reauthorizationRequired:
+            copy.text("目录授权已失效，请重新选择。", "Folder access expired; choose it again.")
+        case .incompatible:
+            copy.text("插件协议与当前 App 版本不兼容。", "The plugin protocol is incompatible with this app version.")
+        case .malformedData:
+            activityRuntime.connectionIssue.map(codexActivityIssueText)
+                ?? copy.text(
+                    "插件数据无法验证。",
+                    "The plugin data could not be verified."
+                )
         }
     }
 
     private var codexActivityConnectionStatusTitle: String {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
+        if activityRuntime.isAuthorizingDirectory {
             return copy.text("正在准备", "Preparing")
         }
 
         return switch activityRuntime.connectionStatus {
-        case .notInstalled:
-            copy.text("未启用", "Not Enabled")
-        case .installedNeedsRestart, .awaitingTrust:
-            copy.text("需要安全确认", "Security Review Needed")
-        case .awaitingFirstEvent:
-            copy.text("等待第一条消息", "Waiting for First Message")
+        case .notConfigured:
+            copy.text("未配对", "Not Paired")
+        case .awaitingAuthorization:
+            copy.text("等待授权", "Awaiting Access")
+        case .pairedWaitingForEvent:
+            copy.text("等待事件", "Waiting for Event")
         case .connected:
             copy.text("已连接", "Connected")
-        case .abnormal:
-            copy.text("需要处理", "Needs Attention")
+        case .stale:
+            copy.text("连接过期", "Stale")
+        case .reauthorizationRequired:
+            copy.text("需要重新授权", "Access Required")
+        case .incompatible:
+            copy.text("版本不兼容", "Incompatible")
+        case .malformedData:
+            copy.text("数据异常", "Invalid Data")
         }
     }
 
+    private func codexActivityIssueText(
+        _ issue: CodexPluginConnectionIssue
+    ) -> String {
+        switch issue {
+        case .someMalformedEvents:
+            copy.text(
+                "部分格式异常的插件事件已被安全忽略。",
+                "Some malformed plugin events were safely ignored."
+            )
+        case .folderAuthorizationFailed:
+            copy.text(
+                "无法授权所选插件数据目录。",
+                "The selected plugin data folder could not be authorized."
+            )
+        case .bookmarkExpired:
+            copy.text(
+                "目录读取授权已失效，请重新选择。",
+                "Read access to the folder expired. Choose it again."
+            )
+        case .readFailed:
+            copy.text(
+                "无法读取已授权的插件数据。",
+                "The authorized plugin data could not be read."
+            )
+        case .validation(let error):
+            switch error {
+            case .oversized:
+                copy.text("插件数据文件过大。", "A plugin data file is too large.")
+            case .malformed:
+                copy.text("插件数据格式异常。", "The plugin data is malformed.")
+            case .wrongPlugin:
+                copy.text(
+                    "所选目录不属于 QuotaView for Codex。",
+                    "The selected folder does not belong to QuotaView for Codex."
+                )
+            case .incompatibleProtocol, .incompatibleEventSchema,
+                 .incompatibleUsageSchema:
+                copy.text(
+                    "插件版本与当前 QuotaView 不兼容。",
+                    "The plugin version is incompatible with this version of QuotaView."
+                )
+            case .invalidInstallationIdentifier, .missingCapability,
+                 .missingUsageCapability, .invalidMetadata:
+                copy.text("插件握手信息无效。", "The plugin handshake is invalid.")
+            case .installationMismatch, .sequenceMismatch:
+                copy.text(
+                    "插件事件与当前安装不匹配。",
+                    "The plugin event does not match the paired installation."
+                )
+            case .invalidActivityIdentifier, .invalidWorkspaceName:
+                copy.text(
+                    "插件事件包含不安全的元数据。",
+                    "The plugin event contains unsafe metadata."
+                )
+            case .eventExpired:
+                copy.text("插件事件已过期。", "The plugin event has expired.")
+            case .eventFromFuture:
+                copy.text(
+                    "插件事件时间戳无效。",
+                    "The plugin event timestamp is invalid."
+                )
+            case .usageSnapshotMissing:
+                copy.text(
+                    "插件尚未生成用量快照。",
+                    "The plugin has not generated a usage snapshot yet."
+                )
+            case .usageSnapshotExpired:
+                copy.text(
+                    "插件用量快照已过期。",
+                    "The plugin usage snapshot is out of date."
+                )
+            case .invalidUsageSnapshot:
+                copy.text(
+                    "插件用量快照格式异常。",
+                    "The plugin usage snapshot is invalid."
+                )
+            }
+        }
+    }
+
+    private func codexActivityIssueColor(
+        _ issue: CodexPluginConnectionIssue
+    ) -> Color {
+        issue == .someMalformedEvents
+            ? Color(nsColor: .systemOrange)
+            : Color(nsColor: .systemRed)
+    }
+
     private var codexActivityConnectionColor: Color {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
+        if activityRuntime.isAuthorizingDirectory {
             return Color(nsColor: .systemBlue)
         }
 
         return switch activityRuntime.connectionStatus {
         case .connected:
             Color(nsColor: .systemGreen)
-        case .installedNeedsRestart,
-             .awaitingTrust,
-             .awaitingFirstEvent:
+        case .awaitingAuthorization,
+             .pairedWaitingForEvent,
+             .stale:
             Color(nsColor: .systemOrange)
-        case .abnormal:
+        case .reauthorizationRequired, .incompatible, .malformedData:
             Color(nsColor: .systemRed)
-        case .notInstalled:
+        case .notConfigured:
             Color(nsColor: .tertiaryLabelColor)
         }
     }
 
-    private var codexEnvironmentSubtitle: String {
-        activityRuntime.codexVersion ?? copy.text(
-            "正在检测 Codex 版本…",
-            "Detecting the Codex version…"
-        )
+    private var codexActivityLastEventTitle: String {
+        activityRuntime.lastEventAt?.formatted(
+            date: .omitted,
+            time: .standard
+        ) ?? "—"
     }
 
-    private var codexHooksFeatureTitle: String {
-        switch activityRuntime.hooksFeatureStatus {
-        case .checking:
-            copy.text("检测中", "Checking")
-        case .enabled:
-            copy.text("Hooks 已启用", "Hooks Enabled")
-        case .disabled:
-            copy.text("Hooks 未启用", "Hooks Disabled")
-        case .unavailable:
-            copy.text("Hooks 不可用", "Hooks Unavailable")
-        }
-    }
-
-    private var codexActivityShowsNextStep: Bool {
-        switch activityRuntime.connectionStatus {
-        case .installedNeedsRestart, .awaitingTrust, .awaitingFirstEvent:
-            true
-        case .notInstalled, .connected, .abnormal:
-            false
-        }
-    }
-
-    private var codexActivityNextStepTitle: String {
-        switch activityRuntime.connectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "重新启动 Codex",
-                "Restart Codex"
-            )
-        case .awaitingTrust:
-            copy.text(
-                "等待 Hooks 页面，再按 T",
-                "Wait for Hooks, Then Press T"
-            )
-        case .awaitingFirstEvent:
-            copy.text("发送一条新消息", "Send a New Message")
-        case .notInstalled, .connected, .abnormal:
-            ""
-        }
-    }
-
-    private var codexActivityNextStepSubtitle: String {
-        switch activityRuntime.connectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "QuotaView 会安全退出并重新打开 Codex；重新启动后无需再次配置。",
-                "QuotaView safely quits and reopens Codex. No further setup is needed after restart."
-            )
-        case .awaitingTrust:
-            copy.text(
-                "请先等待 CLI 完成首次加载。QuotaView 会自动输入 /hooks；只有看到 Hooks 页面和“Press t to trust all”提示后再按 T，不要在普通输入框中提前按键。",
-                "Wait for the CLI to finish its first load. QuotaView enters /hooks automatically. Press T only after the Hooks page shows “Press t to trust all”; do not press it in the normal prompt."
-            )
-        case .awaitingFirstEvent:
-            copy.text(
-                "不会发送测试数据；收到重启后的第一条真实消息时，灵动岛会自动切换为活动状态。",
-                "No test data is sent. The island switches to its active state after the first real message following restart."
-            )
-        case .notInstalled, .connected, .abnormal:
-            ""
-        }
-    }
-
-    private var codexActivityBridgeSubtitle: String {
-        switch activityRuntime.bridgeStatus {
-        case .listening:
-            copy.text(
-                "通过当前用户的本地 Unix Socket 接收脱敏事件；受限时自动回退到权限隔离的本地队列。",
-                "Receives sanitized events through a current-user Unix socket and automatically falls back to a permission-isolated local queue when restricted."
-            )
-        case .stopped:
-            copy.text(
-                "事件桥接尚未启动。",
-                "The event bridge is not running."
-            )
-        case .failed(let message):
-            message
-        }
-    }
-
-    private var codexActivityBridgeStatusTitle: String {
-        switch activityRuntime.bridgeStatus {
-        case .listening:
-            copy.text("监听中", "Listening")
-        case .stopped:
-            copy.text("已停止", "Stopped")
-        case .failed:
-            copy.text("不可用", "Unavailable")
-        }
-    }
-
-    private var codexActivityBridgeColor: Color {
-        switch activityRuntime.bridgeStatus {
-        case .listening:
-            Color(nsColor: .systemGreen)
-        case .stopped:
-            Color(nsColor: .tertiaryLabelColor)
-        case .failed:
-            Color(nsColor: .systemRed)
-        }
+    private var codexActivityLastUsageTitle: String {
+        activityRuntime.lastUsageAt?.formatted(
+            date: .omitted,
+            time: .standard
+        ) ?? "—"
     }
 }
 
@@ -1419,10 +1610,10 @@ struct MenuBarStatusLabel: View {
     }
 
     private var accessibilityStatus: String {
-        if let error = store.errorMessage {
+        if let error = store.providerError {
             return copy.text(
-                "QuotaView：\(error)",
-                "QuotaView: \(error)"
+                "QuotaView：\(copy.providerErrorText(error))",
+                "QuotaView: \(copy.providerErrorText(error))"
             )
         }
         if let snapshot = store.snapshot {
@@ -1444,6 +1635,42 @@ struct MenuBarStatusLabel: View {
         case .ready: copy.text("可用", "Available")
         case .limited: copy.text("受限", "Limited")
         case .exhausted: copy.text("已用尽", "Exhausted")
+        }
+    }
+}
+
+private extension AppCopy {
+    func providerErrorText(_ error: ProviderError) -> String {
+        switch error {
+        case .unavailable:
+            text("Codex 用量服务当前不可用。", "Codex usage is currently unavailable.")
+        case .notConfigured:
+            text("尚未配对 Codex 插件数据目录。", "The Codex plugin data folder has not been paired.")
+        case .authenticationRequired:
+            text(
+                "请在官方 Codex 中登录 ChatGPT 账号。",
+                "Sign in to your ChatGPT account through official Codex."
+            )
+        case .timedOut:
+            text("读取 Codex 用量超时。", "The Codex usage request timed out.")
+        case .processExited:
+            text("Codex 数据进程意外退出。", "The Codex data process exited unexpectedly.")
+        case .protocolViolation:
+            text("Codex 返回了无法识别的数据。", "Codex returned an unrecognized response.")
+        case .unsupportedSchema:
+            text(
+                "当前 Codex 数据格式暂不受支持。",
+                "This Codex data format is not supported yet."
+            )
+        case .permissionDenied:
+            text("Codex 拒绝了只读用量请求。", "Codex denied the read-only usage request.")
+        case .cancelled:
+            text("Codex 用量刷新已取消。", "The Codex usage refresh was cancelled.")
+        case .transient:
+            text(
+                "Codex 用量暂时无法刷新，请稍后重试。",
+                "Codex usage could not be refreshed. Try again later."
+            )
         }
     }
 }

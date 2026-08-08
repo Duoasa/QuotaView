@@ -14,6 +14,7 @@ final class MenuBarPanelController: NSObject {
     private let store: CodexStatusStore
     private let preferences: AppPreferences
     private let activityRuntime: CodexActivityRuntime
+    private let settingsNavigation: SettingsNavigation
 
     private var statusItem: NSStatusItem?
     private var panel: QuotaViewMenuPanel?
@@ -36,11 +37,13 @@ final class MenuBarPanelController: NSObject {
     init(
         store: CodexStatusStore,
         preferences: AppPreferences,
-        activityRuntime: CodexActivityRuntime
+        activityRuntime: CodexActivityRuntime,
+        settingsNavigation: SettingsNavigation
     ) {
         self.store = store
         self.preferences = preferences
         self.activityRuntime = activityRuntime
+        self.settingsNavigation = settingsNavigation
         super.init()
 
         configureStatusItem()
@@ -119,8 +122,12 @@ final class MenuBarPanelController: NSObject {
         let rootView = MenuBarPanelRoot(
             store: store,
             preferences: preferences,
+            activityRuntime: activityRuntime,
             openSettingsAction: { [weak self] in
                 self?.openSettings()
+            },
+            openCodexConnectionSettingsAction: { [weak self] in
+                self?.openCodexConnectionSettings()
             }
         )
         let hostingView = NSHostingView(rootView: rootView)
@@ -543,7 +550,8 @@ final class MenuBarPanelController: NSObject {
             let rootView = QuotaViewSettingsWindowRoot(
                 store: store,
                 preferences: preferences,
-                activityRuntime: activityRuntime
+                activityRuntime: activityRuntime,
+                navigation: settingsNavigation
             )
             let hostingController = NSHostingController(
                 rootView: rootView
@@ -583,19 +591,29 @@ final class MenuBarPanelController: NSObject {
 
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
+
+    private func openCodexConnectionSettings() {
+        settingsNavigation.showConnectionAndIsland()
+        openSettings()
+    }
 }
 
 private struct MenuBarPanelRoot: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    @ObservedObject var activityRuntime: CodexActivityRuntime
 
     let openSettingsAction: () -> Void
+    let openCodexConnectionSettingsAction: () -> Void
 
     var body: some View {
         MenuBarView(
             store: store,
             preferences: preferences,
-            openSettingsAction: openSettingsAction
+            activityRuntime: activityRuntime,
+            openSettingsAction: openSettingsAction,
+            openCodexConnectionSettingsAction:
+                openCodexConnectionSettingsAction
         )
         .environment(\.locale, preferences.locale)
         .environment(\.quotaViewGlassMode, preferences.glassMode)
@@ -607,12 +625,14 @@ private struct QuotaViewSettingsWindowRoot: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
     @ObservedObject var activityRuntime: CodexActivityRuntime
+    @ObservedObject var navigation: SettingsNavigation
 
     var body: some View {
         SettingsView(
             store: store,
             preferences: preferences,
-            activityRuntime: activityRuntime
+            activityRuntime: activityRuntime,
+            navigation: navigation
         )
         .environment(\.locale, preferences.locale)
     }
@@ -698,7 +718,8 @@ private final class QuotaViewLiquidGlassSurface: NSView {
 
 private enum FigmaClearGlassSpec {
     // QuotaView Page UI node 1:712 is the production overview size:
-    // 274 × 433 pt. Its values map one-to-one to AppKit points.
+    // 274 × 373 pt after removing reset actions for the App Store build.
+    // Its values map one-to-one to AppKit points.
     static let cornerRadius: CGFloat = 21
     static let darkFillOpacity: CGFloat = 0.20
     static let lightFillOpacity: CGFloat = 0.26

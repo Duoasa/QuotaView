@@ -5,17 +5,25 @@ import QuotaViewWidgetContract
 #endif
 import SwiftUI
 
+enum MenuUsageConnectionPolicy {
+    static func showsPrompt(hasSnapshot: Bool) -> Bool {
+        !hasSnapshot
+    }
+}
+
 struct QuotaViewFigmaMenu: View {
     nonisolated static let designSize = CGSize(width: 274, height: 373)
 
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    @ObservedObject var activityRuntime: CodexActivityRuntime
     @Environment(\.colorScheme) private var colorScheme
 
     let copy: AppCopy
     let refreshAction: () -> Void
     let openCodexAction: () -> Void
     let openSettingsAction: () -> Void
+    let openCodexConnectionSettingsAction: () -> Void
     let quitAction: () -> Void
 
     private enum Layout {
@@ -177,6 +185,17 @@ struct QuotaViewFigmaMenu: View {
     }
 
     private var summary: some View {
+        Group {
+            if showsCodexConnectionPrompt {
+                codexConnectionSummary
+            } else {
+                usageSummary
+            }
+        }
+        .frame(width: Layout.width, height: Layout.summaryHeight)
+    }
+
+    private var usageSummary: some View {
         VStack(alignment: .trailing, spacing: 9) {
             HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -222,6 +241,63 @@ struct QuotaViewFigmaMenu: View {
                 .frame(height: 16)
         }
         .padding(Layout.summaryInset)
+        .frame(width: Layout.width, height: Layout.summaryHeight)
+    }
+
+    private var codexConnectionSummary: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(codexConnectionTitle)
+                    .font(AstaSans.semiBold(11.5))
+                    .foregroundStyle(primaryTextColor)
+                    .lineLimit(1)
+                    .frame(height: 16)
+
+                Text(codexConnectionSubtitle)
+                    .font(AstaSans.regular(10.5))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minHeight: 26, alignment: .topLeading)
+            }
+            .accessibilityElement(children: .combine)
+
+            Spacer(minLength: 6)
+
+            Button(action: openCodexConnectionSettingsAction) {
+                Text(codexConnectionActionTitle)
+                    .font(AstaSans.medium(10.5))
+                    .foregroundStyle(primaryTextColor)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 30)
+                    .background(
+                        codexConnectionButtonFill,
+                        in: RoundedRectangle(
+                            cornerRadius: 12,
+                            style: .continuous
+                        )
+                    )
+                    .overlay {
+                        RoundedRectangle(
+                            cornerRadius: 12,
+                            style: .continuous
+                        )
+                        .strokeBorder(separatorColor, lineWidth: 0.5)
+                    }
+                    .contentShape(
+                        RoundedRectangle(
+                            cornerRadius: 12,
+                            style: .continuous
+                        )
+                    )
+            }
+            .quotaViewInteractiveButton(.regular)
+            .help(codexConnectionActionHelp)
+            .accessibilityLabel(codexConnectionActionTitle)
+            .accessibilityHint(codexConnectionActionHelp)
+        }
+        .padding(.horizontal, Layout.summaryInset)
+        .padding(.vertical, 14)
         .frame(width: Layout.width, height: Layout.summaryHeight)
     }
 
@@ -480,6 +556,101 @@ struct QuotaViewFigmaMenu: View {
             : Palette.darkSeparator
     }
 
+    private var codexConnectionButtonFill: Color {
+        isLightAppearance
+            ? Color.black.opacity(0.05)
+            : Color.white.opacity(0.08)
+    }
+
+    private var showsCodexConnectionPrompt: Bool {
+        MenuUsageConnectionPolicy.showsPrompt(
+            hasSnapshot: store.hasCodexSnapshot
+        )
+    }
+
+    private var codexConnectionTitle: String {
+        switch activityRuntime.connectionStatus {
+        case .notConfigured:
+            copy.text("连接官方 Codex", "Connect official Codex")
+        case .awaitingAuthorization:
+            copy.text("正在授权数据目录", "Authorizing data folder")
+        case .reauthorizationRequired:
+            copy.text("重新授权 Codex 数据", "Reauthorize Codex data")
+        case .incompatible:
+            copy.text("需要更新 Codex 插件", "Codex plugin update required")
+        case .malformedData:
+            copy.text("Codex 数据不可用", "Codex data unavailable")
+        case .pairedWaitingForEvent, .connected, .stale:
+            if store.providerError == .authenticationRequired {
+                copy.text("请先登录官方 Codex", "Sign in to official Codex")
+            } else {
+                copy.text("等待 Codex 用量数据", "Waiting for Codex usage")
+            }
+        }
+    }
+
+    private var codexConnectionSubtitle: String {
+        switch activityRuntime.connectionStatus {
+        case .notConfigured:
+            copy.text(
+                "安装配套插件并授权只读数据目录。",
+                "Install the companion plugin and authorize its read-only data folder."
+            )
+        case .awaitingAuthorization:
+            copy.text(
+                "请在系统面板中选择插件的 PLUGIN_DATA 目录。",
+                "Choose the plugin PLUGIN_DATA folder in the system panel."
+            )
+        case .reauthorizationRequired:
+            copy.text(
+                "已保存的只读目录权限失效。",
+                "The saved read-only folder permission has expired."
+            )
+        case .incompatible:
+            copy.text(
+                "当前插件无法提供受支持的用量快照。",
+                "The current plugin cannot provide a supported usage snapshot."
+            )
+        case .malformedData:
+            copy.text(
+                "请在设置中重新配对或查看连接诊断。",
+                "Re-pair or review connection diagnostics in Settings."
+            )
+        case .pairedWaitingForEvent, .connected, .stale:
+            if store.providerError == .authenticationRequired {
+                copy.text(
+                    "在 ChatGPT 或 Codex 中完成登录后开始一个 Codex 任务。",
+                    "Sign in with ChatGPT in Codex, then start a Codex task."
+                )
+            } else {
+                copy.text(
+                    "插件会通过官方 Codex app-server 写入脱敏只读快照。",
+                    "The plugin writes a sanitized read-only snapshot through the official Codex app-server."
+                )
+            }
+        }
+    }
+
+    private var codexConnectionActionTitle: String {
+        switch activityRuntime.connectionStatus {
+        case .notConfigured:
+            copy.text("前往连接", "Connect Codex")
+        case .reauthorizationRequired:
+            copy.text("重新授权", "Reauthorize")
+        case .incompatible:
+            copy.text("查看更新指南", "View Update Guide")
+        default:
+            copy.text("打开连接与灵动岛", "Open Connection & Island")
+        }
+    }
+
+    private var codexConnectionActionHelp: String {
+        copy.text(
+            "打开设置中的连接与灵动岛页面",
+            "Open the Connection & Island page in Settings"
+        )
+    }
+
     private var remainingPercent: Int {
         store.snapshot?.remainingPercent ?? 0
     }
@@ -641,7 +812,7 @@ struct QuotaViewFigmaMenu: View {
     }
 
     private var showsUsageSummary: Bool {
-        visibleItems.contains {
+        showsCodexConnectionPrompt || visibleItems.contains {
             if case .info(.usageSummary) = $0 {
                 return true
             }

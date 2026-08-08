@@ -27,6 +27,7 @@ public struct ProviderCapabilities: OptionSet, Hashable, Sendable {
 public enum OfficialSourceKind: String, Codable, Sendable {
     case localCLI
     case localAppServer
+    case pluginSanitizedSnapshot
     case officialStatusAPI
 }
 

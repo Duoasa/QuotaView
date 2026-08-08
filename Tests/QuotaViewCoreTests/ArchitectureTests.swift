@@ -1,3 +1,4 @@
+#if SWIFT_PACKAGE
 import XCTest
 @testable import QuotaViewCore
 @testable import QuotaViewFutureContracts
@@ -410,3 +411,4 @@ private actor AccountScopeSequence {
         return values.removeFirst()
     }
 }
+#endif

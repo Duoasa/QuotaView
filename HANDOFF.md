@@ -1,6 +1,9 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-06
+当前稳定发布事实：
+**[VERSION_HISTORY.md → 当前最新版本](VERSION_HISTORY.md#当前最新版本)**。
+
+更新日期：2026-08-08
 
 集成工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -20,14 +23,30 @@
 | 项目 | 当前值 |
 |---|---|
 | 内部发行代号 | `QuotaView v1.0.0a` |
-| App Store 版本 | `1.0.0 (Build 1)` |
+| App Store 版本 | `1.0.0 (Build 4)` |
 | 发布渠道 | `appstore` |
 | 基座 | `0.3.1 (Build 2)` / `v0.3.1-build.2` |
 | 当前规格 | `QV-APPSTORE-RELEASE-1.0.0-001` |
 | 交付状态 | `Implementing` |
 | 发布状态 | 尚未提交 App Review，尚未发布 |
-| 当前验证 | 额度重置移除后 `swift test` 53 项及 Universal Release 通过；版本、渠道、架构与资源检查通过 |
-| 产品验收 | 通用页版本展示与移除重置后的 `373 pt` 主面板等待产品所有者运行确认 |
+| 当前验证 | `1.0.0 (Build 4)` 保持 App 自有 OAuth、Keychain、`wham` 端点和 Network Client 已移除；新增独立灵动岛显示偏好，关闭后继续读取用量、连接状态和活动事件；Swift 61 项、0 失败、1 项显式 live E2E 跳过；Universal 无签名 Release 与 Bundle 审计通过，App、Widget、Framework 均为 `arm64 + x86_64` |
+| 产品验收 | 产品所有者已确认真实插件目录连接成功、用量图表恢复、桌面 Widget 能读取数据且系统只显示一个 QuotaView Widget；`373 pt` 主面板、连接快捷入口、“连接与灵动岛”设置页、独立灵动岛开关和灵动岛完整视觉交互仍等待运行确认 |
+| 本机初审 | 初步改造已进入产品所有者手动审核；不上传、不发布，不为扩大覆盖面临时新增测试代码，只做必要构建与静态校验 |
+
+2026-08-08：产品所有者已完成基于本地脱敏快照的官方 Codex 连接，明确将
+当前未发布的 App Store 源码候选已晋升为 `1.0.0 (Build 4)`。该 Build 只晋升当前
+App/Widget 候选身份，不改变公开稳定版 `0.3.1 (Build 2)`，也不代表已经
+提交 App Review 或发布。产品所有者当前运行的是安装在 `/Applications` 的
+Build 4 Apple Development 签名审核包；主 App 与 Widget 使用同一 Team ID
+`BUUH229D5Q` 和 App Group `BUUH229D5Q.com.quotaview.shared`。旧 Demo Widget
+注册已经清除，系统只保留正式 `com.quotaview.menubar.widget`，产品所有者已
+确认 Widget 可以读取数据。
+
+Build 4 的 Apple Development 签名 Archive 已生成于
+`/private/tmp/QuotaView-Build4-SignedLocal-20260808/QuotaView.xcarchive`；Bundle
+审计确认 App、Widget 与 Framework 均为 `arm64 + x86_64`，版本和渠道为
+`1.0.0 (4)` / `appstore`，签名与沙盒 entitlement 通过。该 Archive 只用于
+本机审核，不是 App Store Distribution 提交包。
 
 规格入口：
 [docs/specs/README.md](docs/specs/README.md) →
@@ -39,40 +58,263 @@
 Codex 灵动岛 App Store 沙盒迁移的从属实施规格：
 [docs/design/quotaview-app-store-codex-island-plugin-bridge.md](docs/design/quotaview-app-store-codex-island-plugin-bridge.md)。
 
-基础额度与 OpenAI 登录 App Store 沙盒迁移的从属实施规格：
-[docs/design/quotaview-app-store-codex-account-runtime.md](docs/design/quotaview-app-store-codex-account-runtime.md)。
+基础额度与官方 Codex 登录边界的现行从属实施规格：
+[docs/design/quotaview-app-store-codex-usage-snapshot-bridge.md](docs/design/quotaview-app-store-codex-usage-snapshot-bridge.md)。
 
-2026-08-06：用户接受 App Store 版本使用最小 OpenAI 账户接入。基础额度不
-依赖灵动岛插件，改由 App Bundle 内固定版本、Universal、签名并继承沙盒的
-OpenAI Codex App Server Runtime 通过官方 ChatGPT Device Code 获取；凭证
-由 Runtime 保存在 macOS Keychain，不进入 Swift 状态、UserDefaults、App
-Group、日志、Widget 或 QuotaView 自有服务器。Runtime 使用独立容器 Home，
-不读取外部 `~/.codex`、项目、Prompt、线程或工具输出，并使用严格账户与
-额度 RPC 白名单。该方案已经固化但尚未开始源码实施，必须先通过 Runtime、
-登录、Keychain、真实额度一致性、双架构、进程回收和 App Store Archive
-技术 Spike。
+2026-08-08：OpenAI Support Case `12874203` 确认不能为 QuotaView 这类
+独立第三方原生 App 批准专用 OAuth Client，也不提供通用的
+ChatGPT/Codex 额度 OAuth 授权流。用户因此确认改造为：官方
+Codex 拥有登录与凭证，QuotaView for Codex 插件只调用官方
+`account/rateLimits/read` 与 `account/usage/read`，写入字段白名单的
+`usage.json`；QuotaView 仅通过用户授权目录只读消费。主 App 的
+OAuth/Keychain/私有 HTTP Provider 和 Network Client 已移除，`quotaview://`
+只保留 `pair` 用途。本机官方 Codex 真实快照已通过 QuotaView
+生产解码器，验证时未输出账号或用量内容。原生账户 Provider
+规格现为 `Superseded / Removed`，历史文字不得再驱动当前实施。
 
-版本管理建议已经写入账户 Runtime 规格：为 App Store 创建独立 Codex
-项目/任务和同一 `Duoasa/QuotaView` 仓库的独立 Git worktree，不复制第二个
-QuotaView 主应用仓库；灵动岛插件继续使用独立仓库和独立版本。本轮交接目标
-为 `/Users/sukduoasa/Documents/QuotaView-AppStore` 与
-`codex/appstore-runtime-spike`；长期 `appstore/main` 分支和插件仓库仍未
-创建，必须在对应门禁满足后另行确认。
+2026-08-08：修复灵动岛在任务结束后永久停留于 `PostToolUse`“思考中”的
+问题。插件 `Stop` Hook 现在使用官方 JSON 成功输出合同，并将
+`SessionStart` / `Stop` 的超时从 `3` 秒放宽至 `30` 秒，使同进程的五分钟
+用量刷新不会抢占结束事件合同；活动事件仍先于用量刷新写入。主 App 对
+`PostToolUse`、`PostCompact`、`SubagentStop` 增加 `120` 秒无新事件安全
+隐藏，不合成虚假完成状态，后续真实事件会取消兜底。真实 `Stop` 的
+“完成 → 20 秒紧凑 → 完成满 120 秒隐藏”时序保持不变。插件桥测试、隔离
+安装/卸载/重装、Swift 60 项和 Universal `1.0.0 (Build 3)` 无签名 Release
+Bundle 审计通过；视觉与真实 Codex 交互仍等待产品所有者验收。新的本机
+审核包位于
+`/private/tmp/QuotaView-StopHook-Build3-20260808-1850/QuotaView.app`。
 
-2026-08-06：用户接受 Git Marketplace 双通道插件桥接方案。Preview 阶段
+对应插件工作区现为 `1.0.0-preview.7` 候选，新增
+`codex-usage-snapshot` capability、mock app-server、原始字段泄漏负向测试和
+官方 app-server 真实只读验证，并包含上述 Stop 可靠性修复和面向 Codex Chat
+的安装说明。Preview 7 已提交并推送到公开仓库主分支，桥接测试、隔离安装、
+卸载、重装和本机真实数据诊断通过，但尚未创建固定 tag 或 GitHub Release。主 App
+的 `QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS` 因此仍为 `candidate`。公开
+`v1.0.0-preview.1` 仍是历史活动事件版本，不得当作当前用量能力的发布证据。
+
+App Store Connect 与审核材料草案：
+[Review Notes](docs/release/APP_STORE_REVIEW_NOTES_DRAFT.md)、
+[App Privacy](docs/release/APP_STORE_PRIVACY_ANSWERS_DRAFT.md)、
+[App Store 元数据](docs/release/APP_STORE_METADATA_DRAFT.md)、
+[OpenAI 授权申请](docs/release/OPENAI_AUTHORIZATION_REQUEST_DRAFT.md)、
+[插件 Preview 1 Release 记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.1.md)、
+[插件 Preview 3 候选记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.3_DRAFT.md)。
+
+产品所有者本机审核入口：
+[App Store 初步改造本机审核单](docs/release/LOCAL_MANUAL_REVIEW_CHECKLIST.md)。
+
+2026-08-08：用户明确将商业模式改为 Mac App Store 付费下载，基准价格
+`USD 4.99`，全部内置功能可用，不再单独付费解锁 Codex 灵动岛。当前实现已
+删除 StoreKit 商品、交易状态、购买/恢复界面、`.storekit` 本地配置、相关
+测试和发行门禁；配对插件后，新鲜有效事件可以直接驱动灵动岛，不依赖
+OpenAI 账号或 App 内购买资格。App Store Connect 尚需接受 Paid Apps
+Agreement 并配置 `USD 4.99`，完成前
+`QUOTAVIEW_APP_PRICE_STATUS = pending`。本次变更前生成的 Archive 和 `.pkg`
+只保留为历史导出证据，最终门禁关闭后必须重新构建。
+
+2026-08-08：用户明确将当前交付边界收口为“完成初步改造后由产品所有者
+手动审核”，Codex 不负责上传 App Store Connect、提交 App Review 或继续发布
+主 App / 插件版本。本阶段复用现有自动验证证据，不为了扩大覆盖面随意新增
+测试代码，也不重复执行已有充分证据的整套回归；只保留当前源码必要的构建、
+静态检查和交付审计。视觉、交互、真实账号及业务状态由产品所有者运行确认，
+在得到明确结论前继续标记为“等待用户验收”。付费 App 价格、Preview 7
+固定 Release、公开页面、内容权利、全新插件环境和最终提交包仍是以后单独
+授权的发行门禁，不阻塞本次本机初审
+交付。
+
+2026-08-08：首次使用且尚无有效 `usage.json` 时，状态栏面板会在
+原有 `117 pt` 用量概览区域显示本地化“Codex 连接”入口；入口
+关闭面板并精准选中设置的“连接与灵动岛”页。有效快照到达后自动
+恢复用量图表，并重新遵循“周期用量概览”显示偏好。视觉和交互
+等待产品所有者验收。
+
+2026-08-06：用户正式淘汰包内 Codex App Server Runtime 生产路线，改用
+全原生 Swift Account Provider。AI Usage Tracker 作为已经通过 Mac App
+Store 审核的真实案例，是沙盒、OAuth PKCE、Keychain、直接 HTTPS 用量与
+轻量包体的首要实践参考；CodexBar 只作为刷新并发、容错解码和 stale 快照的
+次要工程参考。QuotaView 自己完成登录、Token 刷新和登出，凭证只存自有
+Keychain；基础额度候选路径为 `wham/usage`，最近一天与累计 Token 候选路径
+为 `wham/profiles/me`。两条非公开路径必须先通过 QuotaView 自有回调和真实
+账号 Spike，不读取 `~/.codex/auth.json`、Cookie、浏览器数据或外部 Keychain，
+也不使用 CLI、Runtime、WebKit 或本地会话扫描作为回退。
+原生网络层会在跟随重定向之前验证 HTTPS、主机、有效端口和 URL 用户信息，
+Token、刷新请求体及 Authorization 不会先发送到不同 origin 再依赖最终响应
+校验补救。Access/Refresh/ID Token 还会执行大小、空白和控制字符校验，账号
+ID 在进入 HTTP Header 前也必须通过有界安全检查。账号恢复、连接、重新授权
+检查与断开共享单调修订号，旧 Keychain 查询或浏览器回调不能覆盖较新的断开
+状态。
+主动登出或账号切换还会先提高 Provider configuration revision，立即清空旧
+账号在主 App、Widget 和本地诊断中的额度快照，再用新凭证刷新；旧账号数据
+不会被普通网络失败的 stale 快照策略继续保留，新账号第一次返回也不会因旧
+`expectedAccountScope` 被丢弃。
+Release 账号 Runtime 现额外固定为 `approved-only`：OAuth Client 与 usage API
+只要任一不是 `approved`，即使 Keychain 残留 Debug 凭证，账号控制器也会在
+启动恢复和重新授权检查之前停止，Provider 同样不会读取凭证或发出网络请求；
+仅 Debug 配置显式使用 `candidate-allowed` 继续支持真实账号 Spike。该策略已
+写入最终 Info.plist，并由 readiness 与 Bundle 审计复核。
+
+此前 Runtime Phase 0 已从固定 `rust-v0.146.1` 完成双架构、Device Code、
+Keychain、真实额度和沙盒验证，但 Universal Runtime 约 434–437 MiB，与轻量
+定位冲突。该结果现已归档为历史 No-Go，不再等待包体或嵌套 Runtime Archive
+决策，也不得重新作为当前开发入口。完整证据仍保留在
+[Runtime Phase 0 报告](docs/spikes/APPSTORE_ACCOUNT_RUNTIME_PHASE0.md)。
+
+版本管理继续沿用：App Store 主应用使用同一 `Duoasa/QuotaView` 仓库的独立
+worktree，不复制第二个 QuotaView 主应用仓库；灵动岛插件使用独立 Git 仓库
+和独立版本。主应用工作区为
+`/Users/sukduoasa/Documents/QuotaView-AppStore`，分支为
+`codex/appstore-runtime-spike`。插件本地仓库已经创建在
+`/Users/sukduoasa/Documents/QuotaView-for-Codex`，首个版本为
+`1.0.0-preview.1`；本地 annotated tag `v1.0.0-preview.1` 已固定到提交
+`76262d40aded1e1c5f27168214762f41b382629f`。公开仓库
+`Duoasa/QuotaView-for-Codex` 已创建，`main` 与该固定 tag 已推送；GitHub
+branch/tag Actions 均通过，匿名 HTTPS 固定 tag 克隆、桥接测试与官方插件
+校验通过。固定 tag 的公开 Pre-release 已创建：
+`https://github.com/Duoasa/QuotaView-for-Codex/releases/tag/v1.0.0-preview.1`。
+确定性自定义资产文件大小
+`8,363 bytes`、SHA-256
+`ed03dbc8651e4dd73f8079216daf28365f8aa172a324de5f94ca02a1bd6afd55`；从
+GitHub Release 回下载后大小与 SHA-256 一致，并在全新临时目录完成插件清单、
+桥接测试及固定 tag 内容复验。无本地 Marketplace/插件状态的新 Codex 用户
+环境安装、Hook 信任、配对、真实事件、卸载和重装验收仍待完成。
+
+插件工作区另有未提交、未发布的 `1.0.0-preview.2` 本地候选：Hook、桥接脚本
+和 Setup Skill 已改为优先使用当前 Codex 官方 `PLUGIN_ROOT` / `PLUGIN_DATA`，
+并保留旧环境变量兼容；官方插件 validator、Skill validator、桥接测试、
+Shell 语法与差异检查均通过。当前用户的本地 Marketplace 安装缓存已更新到
+`preview.2`；两个新的 ephemeral Codex CLI 真实会话共生成 10 项连续事件，
+其中第二个会话实际执行一次只读 shell 工具，成对写入归类为 `shell` 的
+`PreToolUse` / `PostToolUse`，并通过 QuotaView 生产读取器的目录安全、
+manifest/status、序列和完整事件顺序端到端检查。数据目录/文件权限为
+`0700` / `0600`，敏感字段名扫描无命中。显式 E2E 脚本现为读取用户指定的
+外部 `PLUGIN_DATA` 加入 `swift test --disable-sandbox`，避免嵌套 SwiftPM
+sandbox 在受控构建环境中阻断生产读取器；同一 10 项真实事件已再次通过，
+脚本不会写入 Codex 配置或事件目录。该自动化使用已审计 Hook 的信任
+旁路，不等同于干净用户的手动 Hook 审阅、目录配对和视觉验收；公开安装与
+App Review Notes 仍固定在 `v1.0.0-preview.1`。另已在全新的隔离 Codex
+配置目录中从零添加本地候选 Marketplace，完成 `preview.2` 首次安装、启用、
+卸载和重装，重装缓存与候选源码逐文件一致；公开固定 tag 安装/升级仍需在
+候选发布后验证。插件仓库现已把该隔离流程固化为脚本，并新增固定 annotated
+tag 的确定性资产构建/解包复验与 CI artifact workflow；使用公开
+`v1.0.0-preview.1` 回归时重新得到原 `8,363 bytes` 和相同 SHA-256，证明工具
+不会改变既有发布资产。workflow 不会自动创建 GitHub Release。候选的提交、
+推送、新 tag、Release 和干净用户环境验收必须按
+[Preview 2 候选记录](docs/release/PLUGIN_RELEASE_V1.0.0_PREVIEW.2_DRAFT.md)
+另行完成。
+
+历史记录（已于 2026-08-08 的付费下载全功能决策取代）：2026-08-06 用户接受
+Git Marketplace 双通道插件桥接方案，并将 Codex
+实时灵动岛确定为 StoreKit 2 非消耗型 IAP 一次性永久解锁功能。基础额度、
+主面板、菜单栏和 Widget 不进入付费墙；公开插件可以在购买前安装并完成连接
+检查，但只有有效 StoreKit entitlement 可以消费实时事件并展示灵动岛。
+Preview 阶段
 由公开 Git 仓库分发 `QuotaView for Codex` 配套插件，未来公共目录版本从
 同一插件源码和协议发布；QuotaView 只通过用户选择目录的只读
-security-scoped bookmark 消费插件 `PLUGIN_DATA` 中的脱敏事件。详细阶段、
-删除边界、协议、验收与回滚要求已经固化，但尚未开始源码实施；当前
-`ENABLE_APP_SANDBOX = NO`、旧 Hook/Helper/Expect/Socket 链路和其他外部
-`Process` 阻断项仍未整改，不能据此声称可提交 App Review。
+security-scoped bookmark 消费插件 `PLUGIN_DATA` 中的脱敏事件。主 App 已
+启用 App Sandbox 与 Network Client，只申请用户所选目录只读访问；并加入
+不跟踪、不收集数据及 Required Reason API 的 `PrivacyInfo.xcprivacy`。旧
+Hook 安装器、Helper、Expect、Socket、`/tmp` 队列、外部 CLI 和 App Server
+链路均已从 App Store 生产目标移除。StoreKit 2 非消耗型购买、恢复购买、
+交易监听和 entitlement 门禁已接入；独立插件已通过官方 manifest 验证、
+本地桥接测试，并以 `quotaview@quotaview-preview` 安装启用；当前插件本地
+提交及本地 annotated tag 均指向
+`76262d40aded1e1c5f27168214762f41b382629f`。Release 配置不会内置未经正式
+授权的 OAuth Client ID；候选公共 Client 只用于 Debug，候选 usage/profile
+HTTPS 路径已经从生产 App 的代码接线上移到可审计构建配置。提交模式预检会在 OAuth
+Client 或 usage API 状态不是 `approved`、IAP 未达到 `submission-ready`
+（或后续版本的 `approved`）或插件状态不是 `released` 时失败。Debug Scheme 已加入只在测试环境使用的
+`QuotaView.storekit`，并通过 App-hosted StoreKit 商品加载和购买交易 2 项
+测试；本地测试价格不是最终售价，当前 Xcode StoreKitAgent 缺少测试证书，
+因此 verified entitlement、退款和撤销仍必须在 App Store Sandbox 复验。
+首个非消耗型 IAP 必须与 `1.0.0` 一起审核，Apple 不会在 App 获批前把商品
+标为 `Approved`；提交门禁因此使用内部 `submission-ready` 状态，后续已获批
+版本也接受 `approved`，不再形成 Archive 前要求 Apple 已批准的循环依赖。
+购买流程已使用单调状态修订号保护异步 entitlement 刷新；verified 购买与
+交易更新会先发布解锁或撤销状态，再调用 `finish()`。旧修订可以结束已验证
+交易，但不能覆盖较新的退款、撤销或未验证交易状态；首次商品加载也纳入
+购买互斥。修改后的 88 项 Swift 测试、五组发行 Shell 回归、App-hosted
+StoreKit 商品/交易 2 项和 Universal Release Bundle 审计均通过。
+插件桥运行时同样使用单调修订号约束异步目录读取：用户断开插件目录或 App
+停止监听后，旧读取的成功或失败结果都不得重新写回连接状态或驱动灵动岛；
+新修订目录可立即开始读取，不会被仍在途的旧修订阻塞。
+插件重装产生新安装实例时，旧实例的游标、最近事件时间和展示状态会先被清除；
+新实例尚无事件时保持等待状态，不能沿用旧实例的连接证据。
+StoreKit 接入后的全新 Universal Release 与 Xcode Analyze 已再次通过；正式
+App 仍为约 `27 MiB`，主 App、Widget 和 Framework 均为 `x86_64 arm64`，
+Bundle 内没有 `.storekit`、`.xctest`、Runtime、CLI、Helper 或 Probe。
+双语 [隐私政策草案](PRIVACY.md) 和 [支持页草案](SUPPORT.md) 已建立，通用
+设置页已加入两项原生入口；Release 产物写入各自 HTTPS 公开 URL 和 `draft`
+状态，只有页面合入公开分支、补齐受监控支持邮箱并把状态改为 `published`
+后才会启用入口并通过提交门禁。包内同时声明
+`ITSAppUsesNonExemptEncryption = NO`，对应只使用 Apple 系统 TLS、Keychain
+和 CryptoKit 的现行实现。App Review Notes、App Privacy、App Store 双语
+元数据、IAP 草案和插件 Release 记录已经建立。双语元数据现已加入独立自动
+校验并接入普通/提交 readiness：名称、副标题、宣传文本、描述、关键词 bytes、
+HTTPS URL、本地化一致性、App Name / Bundle ID、Draft 状态和占位符均会按
+Apple 当前限制失败关闭；当前草案和负向 Shell 回归通过。本地 StoreKit 商品
+也已修正原先超过 Apple 45 字符限制的中英文 Description，并加入 Product ID、
+Reference Name、Display Name、Description、插件依赖与非法配置负向回归；
+独立 IAP Review Notes 候选为 `1243 / 4000 bytes`，Product ID、基础功能
+免费、插件与恢复购买说明也纳入校验；App-hosted 商品/交易 2 项复验通过。
+主仓库 CI 与 PR 模板现已同时执行 Swift
+测试、五组发行 Shell 回归和普通 readiness；Privacy Manifest 回归会
+固定 `UserDefaults CA92.1`、用户所选目录元数据 `FileTimestamp 3B52.1`、无
+跟踪/无收集声明，并拒绝未审计源码类别或最终 Bundle 清单数量漂移；OAuth
+URL/ATS 回归固定完整 `quotaview://oauth/openai` 回调、唯一 `quotaview`
+Scheme、`Editor` 角色和零 ATS 例外。源码配置、运行时与最终 Bundle 必须一致；
+host/path 漂移时账号控制器会在读取 Keychain 前失败关闭。尚未关闭
+的发布门禁是
+OpenAI 对 QuotaView OAuth Client 和只读 usage API 的正式授权与真实账号验证、
+App Store Connect IAP 配置、插件全新环境验收、隐私政策与支持页公开/支持邮箱、
+最终提交包，以及产品所有者的视觉和交互验收。当前已加入
+`scripts/check-appstore-readiness.sh` 与 `scripts/build-appstore-archive.sh`，
+但后者会在这些外部门禁关闭前保持 fail-closed；通过门禁后也会在导出前调用
+`scripts/check-appstore-bundle.sh --submission`，复核最终包的版本、Universal
+架构、资源、禁止残留、签名和沙盒 entitlement，并在导出后调用
+`scripts/check-appstore-export.sh` 验证唯一 `.pkg` 的安装包签名、Team ID、
+Payload、大小和 SHA-256。导出审计会使用 `ditto` 从 component package
+恢复 AppleDouble/扩展属性后，对实际 Payload 内的主 App、Widget 与 Framework
+再次执行深度验签、Universal、沙盒 entitlement 和嵌入 profile 核对；最终
+Archive 流程使用 `--submission`，不会只验证外层 Installer。
+本机已有 Apple Distribution 证书；`build-appstore-archive.sh --signed-local`
+已在不允许自动
+provisioning、不导出、不上传的条件下完成签名 Archive，并通过 Universal、
+签名链和沙盒 entitlement 审计。Archive 首次暴露的应用类别缺失警告已通过
+声明 `public.app-category.developer-tools` 修复，复验不再出现该警告。随后在
+2026-08-07 的 OAuth 完整回调与 StoreKit 生命周期加固后，当前源码再次生成
+Apple Development 本地 Archive；沙盒外 `codesign --verify --deep --strict`
+确认主 App、Widget 与 QuotaViewCore 有效，Team ID 均为 `BUUH229D5Q`，主 App
+权限只包含 Sandbox、App Group、Network Client 和用户所选目录只读，Widget
+只包含 Sandbox 与同一 App Group。该无自动 provisioning 的开发型 Archive
+不含 embedded profile、没有导出，也不得冒充提交产物。随后在
+不允许 provisioning 更新的条件下尝试 App Store export，准确失败于
+`No profiles for 'com.quotaview.menubar' were found`。经用户明确授权后，Xcode
+创建并下载主 App 的 Mac Team Store profile
+`5ab922d3-9937-4cd0-882f-4e1a3de38e54`（有效期至
+`2027-08-06T12:56:46Z`），将主 App、Widget 与 Framework 重新签为
+Apple Distribution，并成功导出 `QuotaView.pkg`。安装包大小
+`11,787,190 bytes`，SHA-256
+`fbb16b30dfd26a1840c49f883f655976d8db339d1b462a2604c6586946ea15ac`；
+Installer → Apple WWDR G3 → Apple Root CA 信任链、Team ID、Payload 和禁止
+残留审计通过；实际解出的主 App、Widget 与 Framework 也通过 Apple
+Distribution 深度验签、Universal、沙盒/App Group/只读权限和嵌入 profile
+核对；Payload 只有主 App、Widget 和 QuotaViewCore 三个预期可执行文件，动态
+链接仅包含 QuotaViewCore、公开系统 Framework 与 `/usr/lib`，无私有 Framework
+或外部二进制依赖。源码门禁也未发现 Process/NSTask、WebKit、Sparkle、
+AppleScript、辅助功能或屏幕捕获路径。该包只证明 distribution export 链路
+可用；其后账号 Provider 又加入 Token 最终 origin、刷新账号范围和异常凭证
+fail-closed 加固，因此该 SHA-256 不再对应当前工作区源码，不能作为当前或
+最终提交包。该历史候选生成时，Release OAuth、App Store Connect IAP 和插件
+全新环境状态仍未批准，因此它不是可上传的最终提交
+包，也未上传 App Store Connect。
 
 2026-08-05：用户明确授权 App Store `1.0.0` 移除额度重置功能。当前分支已
 删除主面板入口、重置详情页、最终确认层、对应设置、Demo 执行器、Widget
 快照字段、Probe 输出和专用资源；“下次重置”倒计时与普通 Credits 余额
-继续保留为只读信息。源码残留搜索与 `swift test` 共 53 项通过；无签名
-Universal Xcode Release 构建通过，App、Widget、Framework 与 Helper 均为
-`x86_64 arm64`，产物为 `1.0.0 (Build 1)` / `appstore`，已编译资源与二进制
+继续保留为只读信息。源码残留搜索与当时 `swift test` 执行 77 项、0 失败、
+普通运行中显式 live 插件 E2E 1 项跳过，提供真实目录后的单独运行通过；无签名
+Universal Xcode Release 构建通过，App、Widget 与 Framework 均为
+`x86_64 arm64`，产物为 `1.0.0 (Build 3)` / `appstore`，已编译资源与二进制
 无额度重置入口残留。
 
 ## 0. 版本定位入口

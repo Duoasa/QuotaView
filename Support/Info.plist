@@ -16,10 +16,27 @@
     <string>QuotaView</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.quotaview.menubar.pairing</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>quotaview</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
+	<key>CFBundleVersion</key>
+	<string>4</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -30,7 +47,27 @@
     <string>NSApplication</string>
     <key>QuotaViewAppGroupIdentifier</key>
     <string>BUUH229D5Q.com.quotaview.shared</string>
+    <key>QuotaViewAppDistributionModel</key>
+    <string>$(QUOTAVIEW_APP_DISTRIBUTION_MODEL)</string>
+    <key>QuotaViewAppBasePriceUSD</key>
+    <string>$(QUOTAVIEW_APP_BASE_PRICE_USD)</string>
+    <key>QuotaViewAppPriceStatus</key>
+    <string>$(QUOTAVIEW_APP_PRICE_STATUS)</string>
     <key>QuotaViewReleaseChannel</key>
     <string>appstore</string>
+	<key>QuotaViewCodexPluginGuideURL</key>
+	<string>$(QUOTAVIEW_CODEX_PLUGIN_GUIDE_URL)</string>
+	<key>QuotaViewCodexPluginDistributionStatus</key>
+	<string>$(QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS)</string>
+	<key>QuotaViewCodexUsageSnapshotStatus</key>
+	<string>$(QUOTAVIEW_CODEX_USAGE_SNAPSHOT_STATUS)</string>
+	<key>QuotaViewPrivacyPolicyURL</key>
+	<string>$(QUOTAVIEW_PRIVACY_POLICY_URL)</string>
+	<key>QuotaViewPrivacyPolicyStatus</key>
+	<string>$(QUOTAVIEW_PRIVACY_POLICY_STATUS)</string>
+	<key>QuotaViewSupportURL</key>
+	<string>$(QUOTAVIEW_SUPPORT_URL)</string>
+	<key>QuotaViewSupportStatus</key>
+	<string>$(QUOTAVIEW_SUPPORT_STATUS)</string>
 </dict>
 </plist>

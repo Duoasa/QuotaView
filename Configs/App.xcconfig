@@ -3,16 +3,34 @@
 PRODUCT_NAME = QuotaView
 PRODUCT_BUNDLE_IDENTIFIER = com.quotaview.menubar
 MARKETING_VERSION = 1.0.0
-CURRENT_PROJECT_VERSION = 1
+CURRENT_PROJECT_VERSION = 4
 QUOTAVIEW_RELEASE_CHANNEL = appstore
 
 QUOTAVIEW_APP_GROUP_ID = BUUH229D5Q.com.quotaview.shared
 QUOTAVIEW_WIDGET_BUNDLE_ID = com.quotaview.menubar.widget
 
+// Authentication belongs exclusively to the official Codex host. QuotaView
+// has no OpenAI OAuth client, account credential store or usage endpoint.
+// QuotaView is sold once as a paid App Store download. Every bundled feature,
+// including Codex Island, is available without an in-app purchase gate.
+QUOTAVIEW_APP_DISTRIBUTION_MODEL = paid-upfront
+QUOTAVIEW_APP_BASE_PRICE_USD = 4.99
+// pending -> configured after Pricing and Availability is set in App Store Connect.
+QUOTAVIEW_APP_PRICE_STATUS = pending
+QUOTAVIEW_CODEX_PLUGIN_GUIDE_URL = https:/$()/github.com/Duoasa/QuotaView-for-Codex
+QUOTAVIEW_CODEX_PLUGIN_DISTRIBUTION_STATUS = candidate
+QUOTAVIEW_CODEX_USAGE_SNAPSHOT_STATUS = validated
+QUOTAVIEW_PRIVACY_POLICY_URL = https:/$()/github.com/Duoasa/QuotaView/blob/main/PRIVACY.md
+// Keep draft until the policy is public and the support contact is final.
+QUOTAVIEW_PRIVACY_POLICY_STATUS = draft
+QUOTAVIEW_SUPPORT_URL = https:/$()/github.com/Duoasa/QuotaView/blob/main/SUPPORT.md
+// Keep draft until the page is public and contains a monitored contact.
+QUOTAVIEW_SUPPORT_STATUS = draft
+
 GENERATE_INFOPLIST_FILE = NO
 INFOPLIST_FILE = Support/Info.plist
 
-ENABLE_APP_SANDBOX = NO
+ENABLE_APP_SANDBOX = YES
 ENABLE_HARDENED_RUNTIME = YES
 REGISTER_APP_GROUPS = YES
 CODE_SIGN_ENTITLEMENTS = Support/QuotaView.entitlements

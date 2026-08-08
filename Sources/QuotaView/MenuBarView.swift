@@ -4,29 +4,38 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    @ObservedObject var activityRuntime: CodexActivityRuntime
 
     private let openSettingsAction: () -> Void
+    private let openCodexConnectionSettingsAction: () -> Void
 
     private var copy: AppCopy { preferences.copy }
 
     init(
         store: CodexStatusStore,
         preferences: AppPreferences,
-        openSettingsAction: @escaping () -> Void = {}
+        activityRuntime: CodexActivityRuntime,
+        openSettingsAction: @escaping () -> Void = {},
+        openCodexConnectionSettingsAction: @escaping () -> Void = {}
     ) {
         self.store = store
         self.preferences = preferences
+        self.activityRuntime = activityRuntime
         self.openSettingsAction = openSettingsAction
+        self.openCodexConnectionSettingsAction =
+            openCodexConnectionSettingsAction
     }
 
     var body: some View {
         QuotaViewFigmaMenu(
             store: store,
             preferences: preferences,
+            activityRuntime: activityRuntime,
             copy: copy,
             refreshAction: refresh,
             openCodexAction: openCodex,
             openSettingsAction: showSettings,
+            openCodexConnectionSettingsAction: showCodexConnectionSettings,
             quitAction: quit
         )
     }
@@ -36,7 +45,13 @@ struct MenuBarView: View {
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
+    private func showCodexConnectionSettings() {
+        openCodexConnectionSettingsAction()
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
     private func refresh() {
+        activityRuntime.refreshConnectionStatus()
         Task {
             await store.refresh()
         }
@@ -47,14 +62,6 @@ struct MenuBarView: View {
     }
 
     private func openCodex() {
-        let chatGPTURL = URL(fileURLWithPath: "/Applications/ChatGPT.app")
-        guard FileManager.default.fileExists(atPath: chatGPTURL.path) else {
-            return
-        }
-
-        NSWorkspace.shared.openApplication(
-            at: chatGPTURL,
-            configuration: NSWorkspace.OpenConfiguration()
-        )
+        activityRuntime.openOfficialCodex()
     }
 }

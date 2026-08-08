@@ -8,7 +8,7 @@ final class CodexStatusStore: ObservableObject {
     @Published private(set) var snapshot: CurrentCodexPresentation?
     @Published private(set) var providerState: ProviderLoadState
     @Published private(set) var isRefreshing = false
-    @Published private(set) var errorMessage: String?
+    @Published private(set) var providerError: ProviderError?
     private let coordinator: RefreshCoordinator
     private let providerID: ProviderID
     private let projector: CurrentCodexPresentationProjector
@@ -20,14 +20,13 @@ final class CodexStatusStore: ObservableObject {
     private var widgetLocaleCancellable: AnyCancellable?
 
     init(
-        provider: (any UsageProviderAdapter)? = nil,
+        provider: any UsageProviderAdapter,
         preferences: AppPreferences? = nil,
         diagnostics: UserDefaults = .standard,
         projector: CurrentCodexPresentationProjector =
             CurrentCodexPresentationProjector(),
         widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter? = nil
     ) {
-        let provider = provider ?? CodexProviderAdapter()
         let showsTokenUsage = preferences.map {
             $0.showDailyTokens || $0.showLifetimeTokens
         } ?? true
@@ -79,8 +78,8 @@ final class CodexStatusStore: ObservableObject {
     }
 
     var accessibilityStatus: String {
-        if let errorMessage {
-            return "QuotaView：\(errorMessage)"
+        if providerError != nil {
+            return "QuotaView：Codex 数据连接不可用"
         }
         if let snapshot {
             return "Codex \(snapshot.availability.displayName)，剩余 \(snapshot.remainingPercent)%"
@@ -89,7 +88,15 @@ final class CodexStatusStore: ObservableObject {
     }
 
     var hasCurrentCodexStatus: Bool {
-        snapshot != nil && errorMessage == nil
+        snapshot != nil && providerError == nil
+    }
+
+    var hasCodexSnapshot: Bool {
+        snapshot != nil
+    }
+
+    var errorMessage: String? {
+        providerError?.localizedDescription
     }
 
     func start() {
@@ -151,7 +158,7 @@ final class CodexStatusStore: ObservableObject {
 
             providerState = .available(result.snapshot)
             snapshot = presentation
-            errorMessage = nil
+            providerError = nil
             recordSuccess(presentation)
             publishWidgetSnapshot()
 
@@ -166,7 +173,7 @@ final class CodexStatusStore: ObservableObject {
 
         case .stopped:
             snapshot = nil
-            errorMessage = nil
+            providerError = nil
             providerState = .idle(lastSnapshot: previous)
 
         case .discarded:
@@ -178,6 +185,23 @@ final class CodexStatusStore: ObservableObject {
            case .refreshing(let previous) = providerState {
             providerState = .idle(lastSnapshot: previous)
         }
+    }
+
+    /// Invalidates presentation data when the user authorizes, replaces or
+    /// disconnects the plugin data directory. A transient read error can keep
+    /// the last valid snapshot, but a new bookmark must never inherit data
+    /// from a previously paired plugin installation.
+    func pluginDataConfigurationDidChange() async {
+        await coordinator.configurationDidChange()
+        snapshot = nil
+        providerError = nil
+        providerState = .idle(lastSnapshot: nil)
+        clearPluginScopedDiagnostics()
+        publishWidgetSnapshot()
+        await refresh(
+            reason: .configurationChanged,
+            policy: .replace
+        )
     }
 
     func stop() async {
@@ -195,8 +219,11 @@ final class CodexStatusStore: ObservableObject {
             previous: previous,
             error: error
         )
-        snapshot = nil
-        errorMessage = error.localizedDescription
+        // Keep the last valid presentation visible while the connection dot
+        // and error state communicate that the newest refresh failed.
+        // This avoids replacing real quota data with a fabricated zero or a
+        // layout jump during transient plugin snapshot failures.
+        providerError = error
         recordFailure(error)
         publishWidgetSnapshot()
     }
@@ -233,6 +260,18 @@ final class CodexStatusStore: ObservableObject {
             Date().timeIntervalSince1970,
             forKey: "diagnostics.lastErrorAt"
         )
+    }
+
+    private func clearPluginScopedDiagnostics() {
+        for key in [
+            "diagnostics.lastSuccessAt",
+            "diagnostics.lastUsedPercent",
+            "diagnostics.lastAvailability",
+            "diagnostics.lastError",
+            "diagnostics.lastErrorAt"
+        ] {
+            diagnostics.removeObject(forKey: key)
+        }
     }
 
     private func updateDemand(

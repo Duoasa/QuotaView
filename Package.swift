@@ -17,12 +17,7 @@ let package = Package(
             name: "QuotaViewFutureContracts",
             targets: ["QuotaViewFutureContracts"]
         ),
-        .executable(name: "QuotaView", targets: ["QuotaView"]),
-        .executable(
-            name: "QuotaViewActivityHook",
-            targets: ["QuotaViewActivityHook"]
-        ),
-        .executable(name: "QuotaViewProbe", targets: ["QuotaViewProbe"])
+        .executable(name: "QuotaView", targets: ["QuotaView"])
     ],
     targets: [
         .target(
@@ -44,15 +39,6 @@ let package = Package(
                 "QuotaViewCore",
                 "QuotaViewWidgetContract"
             ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
-        ),
-        .executableTarget(
-            name: "QuotaViewProbe",
-            dependencies: ["QuotaViewCore"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
-        ),
-        .executableTarget(
-            name: "QuotaViewActivityHook",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

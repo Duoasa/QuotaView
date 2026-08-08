@@ -1,4 +1,5 @@
 import AppKit
+import QuotaViewCore
 import SwiftUI
 
 @main
@@ -12,7 +13,8 @@ struct QuotaViewApp: App {
             SettingsView(
                 store: appDelegate.store,
                 preferences: appDelegate.preferences,
-                activityRuntime: appDelegate.activityRuntime
+                activityRuntime: appDelegate.activityRuntime,
+                navigation: appDelegate.settingsNavigation
             )
             .environment(\.locale, appDelegate.preferences.locale)
         }
@@ -24,18 +26,40 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     let store: CodexStatusStore
     let preferences: AppPreferences
     let activityRuntime: CodexActivityRuntime
+    let settingsNavigation: SettingsNavigation
 
     private var menuBarController: MenuBarPanelController?
     private var isPreparingTermination = false
 
     override init() {
         let preferences = AppPreferences()
+        let usageSource = CodexPluginUsageSnapshotSource()
+        let settingsNavigation = SettingsNavigation()
         self.preferences = preferences
-        self.store = CodexStatusStore(preferences: preferences)
-        self.activityRuntime = CodexActivityRuntime(
+        self.settingsNavigation = settingsNavigation
+        self.store = CodexStatusStore(
+            provider: CodexPluginUsageProviderAdapter(
+                loadSnapshot: {
+                    try await usageSource.load()
+                }
+            ),
             preferences: preferences
         )
+        self.activityRuntime = CodexActivityRuntime(preferences: preferences)
         super.init()
+        activityRuntime.onBridgeConfigurationChanged = { [weak self] in
+            Task { @MainActor [weak self] in
+                await self?.store.pluginDataConfigurationDidChange()
+            }
+        }
+        activityRuntime.onUsageSnapshotChanged = { [weak self] in
+            Task { @MainActor [weak self] in
+                await self?.store.refresh(
+                    reason: .configurationChanged,
+                    policy: .replace
+                )
+            }
+        }
     }
 
     func applicationDidFinishLaunching(
@@ -47,7 +71,8 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         menuBarController = MenuBarPanelController(
             store: store,
             preferences: preferences,
-            activityRuntime: activityRuntime
+            activityRuntime: activityRuntime,
+            settingsNavigation: settingsNavigation
         )
     }
 
@@ -72,5 +97,16 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
+    }
+
+    func application(
+        _ application: NSApplication,
+        open urls: [URL]
+    ) {
+        guard let pairingURL = urls.first(where: {
+            $0.scheme?.lowercased() == "quotaview"
+                && $0.host?.lowercased() == "pair"
+        }) else { return }
+        activityRuntime.handlePairingURL(pairingURL)
     }
 }
