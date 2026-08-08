@@ -66,7 +66,7 @@ http_support_fixture="${fixture_root}/http-support.md"
     's#https://github\.com/Duoasa/QuotaView/blob/main/SUPPORT\.md#http://github.com/Duoasa/QuotaView/blob/main/SUPPORT.md#g' \
     "${http_support_fixture}"
 expect_failure \
-    "English support URL must use HTTPS" \
+    "support URL must use HTTPS" \
     "${http_support_fixture}"
 
 print "App Store metadata tests passed."
