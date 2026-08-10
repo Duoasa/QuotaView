@@ -15,37 +15,28 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.1 (Build 2)` |
-| Git tag | `v0.3.1-build.2` |
-| Tag commit | `3119171f45163fe45d68a4f774a0488968f14fd7` |
-| GitHub Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
-| Release 资产 | `QuotaView-v0.3.1-build.2.zip` |
-| 资产大小 | `11,443,325 bytes` |
-| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
+| 最新推荐版本 | `0.3.3 (Build 3)` |
+| Git tag | `v0.3.3` |
+| Tag commit | `a93a81af4f90610a57783ceb16a744f07e216c6a` |
+| GitHub Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
+| Release 资产 | `QuotaView-v0.3.3-build.3.zip` |
+| 资产大小 | `11,566,058 bytes` |
+| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
+| 公证 | Apple Accepted，已 Staple；Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
 
-待发布稳定候选（尚未计入“当前最新版本”）：
+上一稳定回滚基线：
 
-| 项目 | 候选值 |
+| 项目 | 封存值 |
 |---|---|
-| 目标版本 | `0.3.3 (Build 3)` |
-| 计划 tag | `v0.3.3` |
-| 计划 Release | `QuotaView 0.3.3 — Token Activity` |
-| 候选资产 | `QuotaView-v0.3.3-build.3.zip` |
-| 资产大小 | `11,566,058 bytes` |
-| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
-| 架构 | Universal `arm64 + x86_64` |
-| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
-| 候选状态 | 实现、产品手动验收、测试、签名与公证完成；等待合并、tag、Release 和 GitHub 回下载复核 |
-
-> 该候选在 Release 实际创建、设为 Latest 并完成 GitHub 回下载验证前，不得
-> 覆盖上方 `0.3.1 (Build 2)` 的已发布事实。完成后必须在同一发布流程中
-> 将本节、[HANDOFF.md](HANDOFF.md)、README 与 SDD 交付状态同步为正式值。
+| 版本 | `0.3.1 (Build 2)` |
+| tag / commit | `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
+| 资产 / SHA-256 | `QuotaView-v0.3.1-build.2.zip` / `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
+| 状态 | 不可移动历史正式版；发生 0.3.3 回滚时使用该 tag 与已核验资产 |
 
 当前公开预览版：
 
@@ -64,13 +55,12 @@
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-> 当前生产版本为 `0.3.1 (Build 2)`。该热修复保留 Codex 灵动岛，并恢复
-> Developer ID 直接分发环境中的 Widget 数据共享。开发、验证与发布记录见
-> [HANDOFF.md](HANDOFF.md#1-031-build-2-正式发布状态)。
+> 当前生产版本为 `0.3.3 (Build 3)`。本版在稳定单任务 Codex 灵动岛基础上
+> 新增 Token 活动图表；开发、验证与发布记录见 [HANDOFF.md](HANDOFF.md)。
 
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
-> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.3 稳定候选中。
+> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.3 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
 > [SDD 当前状态快照](docs/specs/README.md#2-当前状态快照) 为准。
@@ -91,8 +81,9 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
+| `0.3.3 (Build 3)` | 2026-08-11 | **当前最新** | Token 活动统计、单色方格图与顶部固定动态面板 |
 | `0.3.2 (Build 1) Preview 1` | 2026-08-05 | **当前预览版** | Codex 灵动岛多任务支持与可选当前任务跟随 |
-| `0.3.1 (Build 2)` | 2026-08-01 | **当前最新** | Widget 共享容器热修复与可变额度周期文案 |
+| `0.3.1 (Build 2)` | 2026-08-01 | 历史正式版 / 0.3.3 回滚基线 | Widget 共享容器热修复与可变额度周期文案 |
 | `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
 | `0.2.1 (Build 1)` | 2026-07-30 | 历史正式版 | 原生 WidgetKit 小组件与 Developer ID 公证分发 |
 | `0.2.0 (Build 4)` | 2026-07-29 | 历史正式版 | UI 热更新与下载版启动可靠性修复 |
@@ -102,11 +93,55 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.3.3 (Build 3)
+
+Tag：`v0.3.3`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+
+发布提交：
+`a93a81af4f90610a57783ceb16a744f07e216c6a`
+
+主要特性：
+
+- 在状态栏菜单的用量数据列表下方新增每日 Token 活动图表；
+- 默认显示最近一个月，并支持最近一周、三个月和全部可用历史；
+- 每行固定 16 个圆角方格，以左上虚线占位格补齐完整网格，真实日期从
+  右下角对齐；
+- 深色外观使用 `16% → 80%` 不透明白阶，浅色外观使用
+  `80% → 16%` 不透明灰阶；占位格保留低透明度；
+- Hover 0.5 秒后显示日期和紧凑 `K / M / B` Token 用量；
+- 切换周期时固定菜单顶部，只由下边缘平滑收缩或扩展；
+- 设置中提供 Token 活动图表显示/隐藏开关；
+- 保留 0.3.1 稳定单任务 Codex 灵动岛；不包含 0.3.2 Preview 的实验性
+  多任务生产实现。
+
+验证与发布资产：
+
+- `swift test`：57 项通过、0 失败；GitHub PR #20 CI 通过；
+- 文件名：`QuotaView-v0.3.3-build.3.zip`
+- 大小：`11,566,058 bytes`
+- SHA-256：
+  `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12`
+- App、Widget Extension、`QuotaViewActivityHook` 与 Core 均为 Universal
+  `x86_64 arm64`，App 与 Widget 为 `0.3.3 (3)`；
+- Developer ID：`Developer ID Application: Chenchen Xu (BUUH229D5Q)`，
+  启用 Hardened Runtime；
+- Apple 公证：Accepted，已 Staple；Submission
+  `2dd7f885-db01-4ec1-a4d3-fbd8156ab616`；
+- GitHub 回下载资产与本地公证包逐字节一致；重新通过 `codesign`、
+  `stapler`、`spctl`、隔离属性、版本、架构、资源和真实启动烟雾测试；
+- 产品所有者已手动确认图表观感、单色阶梯、0.5 秒 Tooltip 方向，以及
+  周期切换时面板顶部固定、上下收展无跳动。
+
+Release：
+[QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3)
+
 ## 0.3.2 (Build 1) Preview 1
 
 Tag：`v0.3.2-preview.1`
 
-状态：当前公开预览版、非 Draft、非 Latest；`0.3.1 (Build 2)` 继续作为
+状态：当前公开预览版、非 Draft、非 Latest；`0.3.3 (Build 3)` 是
 推荐稳定版与 GitHub Latest。
 
 发布提交：
@@ -152,7 +187,7 @@ Release：
 
 Tag：`v0.3.1-build.2`
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+状态：历史正式 Release、`0.3.3` 的封存回滚基线、非 Draft、非 Pre-release。
 
 发布提交：
 `3119171f45163fe45d68a4f774a0488968f14fd7`
