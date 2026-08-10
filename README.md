@@ -89,6 +89,10 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 QuotaView 0.3.3 adds a compact daily Token Activity chart directly below the
 usage metrics in the menu panel.
 
+<p align="center">
+  <img src="Resources/QuotaView-0.3.3-Token-Activity.png" alt="QuotaView 0.3.3 Token Activity chart, Codex Island, and desktop widget" width="100%">
+</p>
+
 - Switch between the last week, month, three months, and all available history;
   the last month is selected by default.
 - Read every range as a complete 16-column rounded-square grid. Leading

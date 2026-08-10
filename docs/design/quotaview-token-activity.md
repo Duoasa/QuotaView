@@ -6,7 +6,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`（`0.3.3 Build 3` 已完成实现、产品手动验收、签名与公证；等待 GitHub Release 和回下载验证）
+> 交付状态：`Released`（`v0.3.3`）
 >
 > 目标版本：QuotaView `0.3.3 (Build 3)`
 >
@@ -109,8 +109,10 @@
   `2dd7f885-db01-4ec1-a4d3-fbd8156ab616`；
 - 产品所有者已手动确认图表观感、单色阶梯和周期切换时顶部固定行为。
 
-在 GitHub `v0.3.3` Release、Latest 切换和回下载资产复核完成前，交付状态
-保持 `Verifying`；完成后才能改为 `Released`。
+正式发布已完成：tag `v0.3.3` 指向提交
+`a93a81af4f90610a57783ceb16a744f07e216c6a`；GitHub Release 为 Latest、
+非 Draft、非 Pre-release。回下载资产与本地公证包逐字节一致，并再次通过
+签名、Staple、Gatekeeper、版本、架构、资源、隔离属性与真实启动复核。
 
 ## TOKEN-ACTIVITY-08. 变更控制
 

@@ -87,6 +87,10 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Token 活动图表。
 
+<p align="center">
+  <img src="Resources/QuotaView-0.3.3-Token-Activity.png" alt="QuotaView 0.3.3 Token 活动图表、Codex 灵动岛与桌面小组件" width="100%">
+</p>
+
 - 支持最近一周、一个月、三个月和全部可用历史，默认显示最近一个月；
 - 每个周期都使用完整的 16 列圆角方格，左上角以虚线占位格补齐，真实日期
   从右下角对齐；

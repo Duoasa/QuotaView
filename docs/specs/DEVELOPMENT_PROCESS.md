@@ -178,22 +178,15 @@ MT-DATA-001 和 MT-SELECT-001，不改版本号、不发布。
 - 规格、代码和测试对同一行为的描述不一致；
 - 发布文档提前记录尚未发生的 tag、Release 或资产。
 
-## 5. 当前 Token 活动迭代的下一出口
+## 5. 当前 Token 活动迭代的归档结论
 
 `QV-PRODUCT-TOKEN-ACTIVITY-001` 的规格状态为 `Accepted`，交付状态为
-`Verifying`。实现、产品所有者手动验收、57 项测试、Universal Release、
-Developer ID 签名、Apple 公证与 Staple 已完成。
+`Released`。实现、产品所有者手动验收、57 项测试、PR #20 CI、Universal
+Release、Developer ID、Apple 公证、Staple、`v0.3.3`、GitHub Latest 和
+回下载复核全部完成。
 
-当前只允许完成发布门禁：
-
-1. PR CI 通过并合并 `main`；
-2. 从合并提交创建不可移动 `v0.3.3` tag；
-3. 上传唯一资产 `QuotaView-v0.3.3-build.3.zip`，创建非 Draft、非
-   Pre-release 的 GitHub Release 并设为 Latest；
-4. 从 GitHub 回下载资产并复核 SHA-256、签名、公证、架构、版本、资源和
-   真实启动；
-5. 将最终发布提交、Release URL 和验证结论同步到版本历史、Handoff 与 SDD，
-   再把交付状态改为 `Released`。
+下一次修改必须先建立新的迭代并使用新的 Build Number；不得继续复用
+`0.3.3 Build 3` 版本身份或移动 `v0.3.3` tag。
 
 0.3.2 Preview 的多任务实现保持独立 Pre-release 与本地归档状态，不进入
 本次稳定版；后续继续多任务开发必须建立新的迭代和 Build。
