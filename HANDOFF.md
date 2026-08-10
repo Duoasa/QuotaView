@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-04
+更新日期：2026-08-11
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -11,6 +11,9 @@
 
 当前预览发布提交：
 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c`
+
+当前稳定发布候选：`0.3.3 (Build 3)`。候选提交在合并后从 Git 实时读取，
+不得在 Release 创建前写成已发布提交。
 
 当前开发提交不在本文固化；每次会话使用 `git branch --show-current` 和
 `git rev-parse HEAD` 读取，避免 Handoff 在合并后立即陈旧。
@@ -50,6 +53,26 @@
 `0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
 GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
 
+`0.3.3 (Build 3)` 是已经由产品所有者选定的正式发布候选：
+
+| 项目 | 当前值 |
+|---|---|
+| Marketing / Build | `0.3.3 (3)` |
+| 目标 tag | `v0.3.3` |
+| 目标 Release | `QuotaView 0.3.3 — Token Activity` |
+| 候选资产 | `dist/QuotaView-v0.3.3-build.3.zip`，`11,566,058 bytes` |
+| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，Hardened Runtime |
+| 公证 | Apple Accepted，已 Staple；Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
+| 自动化 | `swift test` 57 项通过、0 失败；App、Widget、Helper、Core 均为 `x86_64 arm64` |
+| 待完成 | 合并 `main`、创建 `v0.3.3`、正式 Release、设为 Latest、GitHub 回下载复核和最终文档提交 |
+
+本候选新增每日 Token 活动图表：默认月视图，支持周/月/三个月/总计；完整
+16 列网格、右下对齐、0.5 秒紧凑 Tooltip、深浅五级不透明单色、设置开关，
+并在切换周期时固定菜单顶部、只由下边缘调整高度。产品所有者已明确确认
+最终视觉阶梯与收缩/扩展均无跳动；完整外观和辅助功能交叉矩阵仍不扩大为
+全量通过。
+
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
 确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
 `SystemPolicyAppData` 拒绝读取 `group.com.quotaview.shared`。Build 2 将
@@ -75,31 +98,27 @@ SDD 唯一规格索引：
 
 | 项目 | 当前值 |
 |---|---|
-| 公开生产基线 | `0.3.1 (Build 2)`，已发布且保持不变 |
-| 当前进行中工作 | `0.3.2 Preview 1` 已发布；响应速度与任务跟随优化待后续迭代 |
-| 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
-| 规格状态 | `Accepted`：固定单岛方向和当前 Demo 视觉/交互基线已确认 |
-| 交付状态 | `Released`：签名、公证、tag、Pre-release 与回下载验证已完成 |
-| Prototype | `Prototypes/CodexActivityMultiTaskDemo/` |
-| Prototype 验证 | `swift test --package-path Prototypes/CodexActivityMultiTaskDemo`：38 项通过，0 失败；当前 8 任务调试界面等待产品所有者验收 |
-| 生产源码 | 已迁入按 `sessionHash` 隔离的任务注册表、自动优先级、可选当前任务跟随、固定单岛任务列和紧凑态入口 |
-| 生产测试与验收 | `swift test`：60 项通过、0 失败；Universal Xcode Release、静态门禁、Developer ID 签名、Apple 公证、Staple 与 GitHub 回下载验证通过；产品所有者已确认一次生产实机状态轮播通过，其余视觉/交互矩阵作为预览版后续优化证据 |
-| 状态轮播验收 | `2026-08-05` 在已安装的 `0.3.2 Preview 1` 上通过本地认证 Hook 依次验证待命、思考、工作、压缩上下文、等待确认、已完成与 SessionEnd 清理；产品所有者结论：通过；测试事件标题明确标记 `DEBUG-ONLY-MOCK`，源码无残留 |
-| 正式预览资产 | `dist/QuotaView-v0.3.2-preview.1.zip`；`11,543,516 bytes`；SHA-256 `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587`；Developer ID 签名、Apple 公证并已 Staple |
-| 已发布版本 | `0.3.2 (Build 1) Preview 1` / `v0.3.2-preview.1` / [GitHub Pre-release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
-| 稳定回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| 公开生产基线 | 发布完成前仍为 `0.3.1 (Build 2)`；目标稳定版为 `0.3.3 (Build 3)` |
+| 当前进行中工作 | 0.3.3 Token 活动统计正式发布与回下载复核 |
+| 当前规格 | `QV-PRODUCT-TOKEN-ACTIVITY-001` |
+| 规格状态 | `Accepted` |
+| 交付状态 | `Verifying`：实现、产品验收、测试、签名、公证与 Staple 完成 |
+| 生产源码 | 稳定单任务灵动岛 + Token 活动图表；不包含 0.3.2 Preview 多任务生产实现 |
+| 生产测试与验收 | 57 项测试通过；产品所有者确认图表观感、单色阶梯、0.5 秒 Tooltip 与顶部固定的周期切换 |
+| 正式候选资产 | `QuotaView-v0.3.3-build.3.zip`；`11,566,058 bytes`；SHA-256 `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 独立预览版 | `0.3.2 Preview 1` / `v0.3.2-preview.1` 继续作为 GitHub Pre-release 供社区测试 |
+| 本地预览备份 | 分支 `codex/archive-0.3.2-preview.1-multitask-island`；worktree `.worktrees/QuotaView-0.3.2-preview.1-backup`；提交 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
+| 发布后回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
 
-用户已于 `2026-08-05` 明确授权迁入生产并指定 `0.3.2 Preview 1`，并在
-状态轮播通过后授权按预览版发布。固定单岛、右侧任务列表、最大态
-`496 × 152 pt`、紧凑态 `52 pt`、最小 AX 标题读取与不控制 Codex 等冻结
-方向继续有效。当前版本基本完成多任务支持，但响应速度、当前任务跟随、
-任务切换与收展节奏仍需优化，因此不得标记为稳定版。最终资产已经完成
-Developer ID 签名、Apple 公证、Staple、GitHub Pre-release 上传与回下载
-逐字节复核；`0.3.1 (Build 2)` 继续保持 GitHub Latest 和 README 默认下载。
+0.3.2 Preview 1 的固定单岛多任务方向与发布证据继续有效，但它只代表独立
+Pre-release。响应速度、当前任务跟随、任务切换与收展节奏仍需优化，因此
+未晋升为稳定版。公开 Release 和 tag 保持不变，本地完整生产实现已按上述
+归档分支/worktree 备份，供后续新版本继续开发参照。
 
 当前规格与执行流程：
 
-- [多任务灵动岛规格](docs/design/quotaview-codex-activity-island-multitask.md)
+- [Token 活动图表规格](docs/design/quotaview-token-activity.md)
+- [多任务灵动岛预览规格](docs/design/quotaview-codex-activity-island-multitask.md)
 - [SDD 开发流程](docs/specs/DEVELOPMENT_PROCESS.md)
 - [多任务 Demo 说明](Prototypes/CodexActivityMultiTaskDemo/README.md)
 - [多任务 Demo Design QA](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)

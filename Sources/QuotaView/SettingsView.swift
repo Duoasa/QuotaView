@@ -343,6 +343,18 @@ struct SettingsView: View {
             NativeSettingsDivider()
 
             preferenceToggle(
+                copy.text("Token 活动图表", "Token activity chart"),
+                subtitle: copy.text(
+                    "按日期显示 Token 活动，可切换周、月、三个月和总计。",
+                    "Show token activity by date for the week, month, "
+                        + "three months, or all available history."
+                ),
+                isOn: $preferences.showTokenActivity
+            )
+
+            NativeSettingsDivider()
+
+            preferenceToggle(
                 copy.text("额度重置入口", "Quota reset entry"),
                 subtitle: copy.text(
                     "当存在可用的重置时，在主面板中显示额度重置页面入口。",
@@ -724,7 +736,7 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.1"
+        ) as? String ?? "0.3.3"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "1"

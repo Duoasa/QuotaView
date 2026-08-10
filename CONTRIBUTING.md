@@ -33,10 +33,11 @@ The standard lifecycle and exit criteria are documented in
 Small fixes may reuse an existing Requirement ID. When a change has no spec
 impact, the pull request must state `Spec impact: None` and explain why.
 
-The current production baseline is `0.3.1 (Build 2)`. The current multi-task
-Codex Island work remains an isolated `Prototype`; it must not be moved into
-`Sources/`, assigned a release version, or described as released without a
-separate explicit decision.
+The current stable production baseline is `0.3.3 (Build 3)`. The released
+`0.3.2 Preview 1` multi-task Codex Island remains a separate public pre-release
+and an archived local reference; its production implementation is intentionally
+not part of the 0.3.3 stable source. Any renewed multi-task work requires a new
+iteration, version, build, and explicit product decision.
 
 ## Development setup
 

@@ -9,6 +9,12 @@
 > 交付状态：`Released`（`0.3.2 Preview 1`）
 >
 > 依赖基线：QuotaView `0.3.1 (Build 2)`
+
+> 当前校准（2026-08-11）：本规格定义的实现已由
+> `v0.3.2-preview.1` 固化并继续作为公开 Pre-release 供社区测试；其源码
+> 另存于本地分支 `codex/archive-0.3.2-preview.1-multitask-island`。由于体验
+> 尚不成熟，该多任务实现不包含在 `0.3.3 (Build 3)` 稳定版中。后文的
+> “当前生产行为”均指 0.3.2 Preview 发布行为，不代表 0.3.3 稳定源码映射。
 >
 > 冻结日期：2026-08-01
 >
@@ -41,8 +47,9 @@ tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态�
 为准。
 
 本规格及其 Demo 自提交 `f603c38` 起已由 Git 跟踪。生产实现已合并至
-`main`，发布 tag 为 `v0.3.2-preview.1`；公开稳定版与回滚基线继续是
-`v0.3.1-build.2`，当前工作不得移动该 tag 或覆盖其发布资产。
+`main`，发布 tag 为 `v0.3.2-preview.1`；随后稳定分支在准备 `0.3.3` 时移除
+该预览生产映射，但保留 tag、GitHub Pre-release 和本地归档分支。当前工作
+不得移动该 tag 或覆盖其发布资产。
 
 ## MULTITASK-00.1 SDD 状态与授权边界
 

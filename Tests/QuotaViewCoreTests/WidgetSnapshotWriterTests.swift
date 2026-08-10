@@ -198,6 +198,7 @@ final class WidgetSnapshotWriterTests: XCTestCase {
             lifetimeTokens: lifetimeTokens,
             recentDailyTokens: recentDailyTokens,
             recentDailyDate: "2026-07-29",
+            tokenActivity: [],
             lastUpdatedAt: now
         )
     }

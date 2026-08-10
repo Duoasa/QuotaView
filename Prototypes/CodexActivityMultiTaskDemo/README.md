@@ -7,12 +7,12 @@ macOS 视觉原型，用于验证冻结的“固定单岛多任务”方案：
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Prototype`（当前正在 Demo 调试）
+> 交付状态：`Released`（作为 `0.3.2 Preview 1` 的历史原型与验证参照）
 >
-> 基线状态：产品所有者已于 `2026-08-02` 确认当前视觉与交互方向为后续
-> 开发基线；用户于 `2026-08-04` 确认多任务适配为当前进行中工作。可以
-> 继续修正 Demo 与规格的偏差，但改变冻结方向必须先确认，也不得迁移到
-> QuotaView 生产代码。
+> 基线状态：产品所有者已于 `2026-08-02` 确认视觉与交互方向；对应生产
+> 实现于 `2026-08-05` 作为 `0.3.2 Preview 1` 发布。该预览版继续供社区
+> 测试并保留本地代码备份，但因体验尚不成熟，不包含在 `0.3.3 Build 3`
+> 稳定版中。后续开发必须建立新版本，不得直接把本原型当作当前生产源码。
 
 唯一规格：
 [QuotaView Codex 灵动岛多任务规格](../../docs/design/quotaview-codex-activity-island-multitask.md)。
@@ -51,7 +51,7 @@ swift run --package-path Prototypes/CodexActivityMultiTaskDemo
 swift test --package-path Prototypes/CodexActivityMultiTaskDemo
 ```
 
-2026-08-04 当前自动化结果：`37` 项测试通过，`0` 失败。该结果只证明隔离
+2026-08-04 最终记录：`38` 项测试通过，`0` 失败。该结果只证明隔离
 Prototype 的布局、状态和动效契约，不是生产 `Sources/`、Release 构建或
 生产视觉验收证据。
 

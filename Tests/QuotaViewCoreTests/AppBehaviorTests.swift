@@ -4,6 +4,61 @@ import XCTest
 @testable import QuotaViewCore
 
 final class AppBehaviorTests: XCTestCase {
+    @MainActor
+    func testTokenActivityHoverCancellationDoesNotPresentTooltip()
+        async {
+        let controller = TokenActivityHoverController()
+        var presentedCellID: Int?
+
+        controller.schedule(
+            cellID: 4,
+            delayNanoseconds: 20_000_000
+        ) {
+            presentedCellID = 4
+        }
+        controller.cancel()
+        try? await Task.sleep(nanoseconds: 40_000_000)
+
+        XCTAssertNil(presentedCellID)
+
+        controller.schedule(
+            cellID: 9,
+            delayNanoseconds: 20_000_000
+        ) {
+            presentedCellID = 9
+        }
+        try? await Task.sleep(nanoseconds: 40_000_000)
+
+        XCTAssertEqual(presentedCellID, 9)
+    }
+
+    func testMenuPanelResizeKeepsItsMenuBarAnchorStable() {
+        let visibleFrame = NSRect(
+            x: 0,
+            y: 0,
+            width: 1_440,
+            height: 875
+        )
+        let compact = MenuBarPanelGeometry.anchoredFrame(
+            size: NSSize(width: 310, height: 500),
+            centerX: 1_250,
+            visibleFrame: visibleFrame,
+            screenEdgeInset: 8,
+            menuBarGap: 6
+        )
+        let expanded = MenuBarPanelGeometry.anchoredFrame(
+            size: NSSize(width: 310, height: 620),
+            centerX: 1_250,
+            visibleFrame: visibleFrame,
+            screenEdgeInset: 8,
+            menuBarGap: 6
+        )
+
+        XCTAssertEqual(compact.maxY, expanded.maxY)
+        XCTAssertEqual(compact.maxY, visibleFrame.maxY - 6)
+        XCTAssertEqual(compact.minX, expanded.minX)
+    }
+
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
@@ -715,6 +770,8 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showCreditBalance)
         XCTAssertTrue(preferences.showDailyTokens)
         XCTAssertTrue(preferences.showLifetimeTokens)
+        XCTAssertTrue(preferences.showTokenActivity)
+        XCTAssertEqual(preferences.tokenActivityRange, .month)
         XCTAssertTrue(preferences.showResetAction)
         XCTAssertTrue(preferences.followsSystemAppearance)
         XCTAssertTrue(preferences.followsSystemLanguage)
@@ -753,6 +810,14 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.language.followsSystem"
         )
         savedDefaults.set(
+            false,
+            forKey: "preferences.panel.showTokenActivity"
+        )
+        savedDefaults.set(
+            AppPreferences.TokenActivityRange.total.rawValue,
+            forKey: "preferences.panel.tokenActivityRange"
+        )
+        savedDefaults.set(
             AppPreferences.Language.english.rawValue,
             forKey: "preferences.language.custom"
         )
@@ -764,6 +829,8 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(savedPreferences.glassMode, .frosted)
         XCTAssertFalse(savedPreferences.followsSystemLanguage)
         XCTAssertEqual(savedPreferences.customLanguage, .english)
+        XCTAssertFalse(savedPreferences.showTokenActivity)
+        XCTAssertEqual(savedPreferences.tokenActivityRange, .total)
 
         let legacySuiteName = "QuotaViewTests.\(UUID().uuidString)"
         let legacyDefaults = UserDefaults(suiteName: legacySuiteName)!
@@ -881,6 +948,138 @@ final class AppBehaviorTests: XCTestCase {
         await store.stop()
     }
 
+    func testHistoricalUsageProjectsSortedTokenActivity() throws {
+        let earlier = Date(timeIntervalSince1970: 1_784_160_000)
+        let later = earlier.addingTimeInterval(86_400)
+        let observations = [later, earlier].map { date in
+            MetricObservation(
+                definitionID: CodexDomainCatalog.dailyTokensID,
+                entity: CodexDomainCatalog.providerEntity,
+                value: .count(date == earlier ? 1_200 : 4_800),
+                interval: DateInterval(
+                    start: date,
+                    duration: 86_400
+                ),
+                observedAt: date,
+                receivedAt: later,
+                source: .providerHistoricalBucket,
+                precision: .exact
+            )
+        }
+        let result = Self.makeFetchResult(
+            resetCredits: nil,
+            historicalObservations: observations
+        )
+        let presentation = try XCTUnwrap(
+            CurrentCodexPresentationProjector()
+                .makePresentation(from: result)
+        )
+
+        XCTAssertEqual(
+            presentation.tokenActivity.map(\.date),
+            [earlier, later]
+        )
+        XCTAssertEqual(
+            presentation.tokenActivity.map(\.tokens),
+            [1_200, 4_800]
+        )
+    }
+
+    @MainActor
+    func testTokenActivityGridUsesLeadingPlaceholdersAndSixteenColumns()
+    throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let endDate = try XCTUnwrap(
+            DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 8,
+                day: 10
+            ).date
+        )
+        let earlierDate = try XCTUnwrap(
+            calendar.date(byAdding: .day, value: -39, to: endDate)
+        )
+        let activity = [
+            DailyTokenActivity(date: earlierDate, tokens: 9_000),
+            DailyTokenActivity(date: endDate, tokens: 3_000)
+        ]
+
+        for range in AppPreferences.TokenActivityRange.allCases {
+            let model = TokenActivityGridModel(
+                activity: activity,
+                range: range,
+                endingAt: endDate
+            )
+            let placeholderCount = model.cells
+                .prefix { $0.isPlaceholder }
+                .count
+
+            XCTAssertEqual(
+                model.cells.count,
+                model.rowCount * TokenActivityGridMetrics.columnCount
+            )
+            XCTAssertEqual(
+                placeholderCount,
+                model.cells.count - model.dayCount
+            )
+            XCTAssertFalse(
+                model.cells.dropFirst(placeholderCount).contains {
+                    $0.isPlaceholder
+                }
+            )
+        }
+
+        let week = TokenActivityGridModel(
+            activity: activity,
+            range: .week,
+            endingAt: endDate
+        )
+        XCTAssertEqual(week.dayCount, 7)
+        XCTAssertEqual(week.rowCount, 1)
+        XCTAssertEqual(week.cells.prefix { $0.isPlaceholder }.count, 9)
+        XCTAssertEqual(week.maximumTokens, 3_000)
+        XCTAssertEqual(TokenActivityGridMetrics.gridWidth, 237)
+        XCTAssertEqual(
+            TokenActivityGridMetrics.tooltipDelayNanoseconds,
+            500_000_000
+        )
+        XCTAssertEqual(
+            TokenActivityGridMetrics.sectionHeight(
+                rowCount: week.rowCount
+            ),
+            59
+        )
+
+        let month = TokenActivityGridModel(
+            activity: activity,
+            range: .month,
+            endingAt: endDate
+        )
+        XCTAssertEqual(month.dayCount, 31)
+        XCTAssertEqual(month.rowCount, 2)
+        XCTAssertEqual(month.cells.prefix { $0.isPlaceholder }.count, 1)
+        XCTAssertEqual(
+            TokenActivityGridMetrics.sectionHeight(
+                rowCount: month.rowCount
+            ),
+            74
+        )
+
+        let total = TokenActivityGridModel(
+            activity: activity,
+            range: .total,
+            endingAt: endDate
+        )
+        XCTAssertEqual(total.dayCount, 40)
+        XCTAssertEqual(total.rowCount, 3)
+        XCTAssertEqual(total.cells.prefix { $0.isPlaceholder }.count, 8)
+        XCTAssertEqual(total.maximumTokens, 9_000)
+    }
+
     @MainActor
     func testZeroResetCreditsDoNotExposeDemoAction() async {
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
@@ -940,7 +1139,8 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     private static func makeFetchResult(
-        resetCredits: Int?
+        resetCredits: Int?,
+        historicalObservations: [MetricObservation] = []
     ) -> ProviderFetchResult {
         let capturedAt = Date(timeIntervalSince1970: 1_785_000_000)
         let window = RateWindow(
@@ -985,7 +1185,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         return ProviderFetchResult(
             snapshot: snapshot,
-            historicalObservations: [],
+            historicalObservations: historicalObservations,
             diagnostics: SanitizedFetchDiagnostics(
                 sourceLabel: "test",
                 duration: 0,

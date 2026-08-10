@@ -2,6 +2,33 @@ import AppKit
 import Combine
 import SwiftUI
 
+enum MenuBarPanelGeometry {
+    static func anchoredFrame(
+        size: NSSize,
+        centerX: CGFloat,
+        visibleFrame: NSRect,
+        screenEdgeInset: CGFloat,
+        menuBarGap: CGFloat
+    ) -> NSRect {
+        var x = centerX - size.width / 2
+        x = max(
+            visibleFrame.minX + screenEdgeInset,
+            min(
+                x,
+                visibleFrame.maxX - size.width - screenEdgeInset
+            )
+        )
+
+        let y = visibleFrame.maxY - size.height - menuBarGap
+        return NSRect(
+            x: x.rounded(),
+            y: y.rounded(),
+            width: size.width,
+            height: size.height
+        )
+    }
+}
+
 @MainActor
 final class MenuBarPanelController: NSObject {
     private enum Metrics {
@@ -24,6 +51,11 @@ final class MenuBarPanelController: NSObject {
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
     private var resizeWorkItem: DispatchWorkItem?
+    private var resizeAnimationTimer: Timer?
+    private var resizeAnimationStartTime: TimeInterval = 0
+    private var resizeAnimationStartFrame = NSRect.zero
+    private var resizeAnimationTargetFrame: NSRect?
+    private var resizeAnimationFixedTop: CGFloat = 0
     private var panelAnchor: PanelAnchor?
     private var isPresentingConfirmation = false
     private var glassSurfaceRequiresVisibleAttachment = true
@@ -52,6 +84,7 @@ final class MenuBarPanelController: NSObject {
     }
 
     deinit {
+        resizeAnimationTimer?.invalidate()
         if let localEventMonitor {
             NSEvent.removeMonitor(localEventMonitor)
         }
@@ -126,6 +159,9 @@ final class MenuBarPanelController: NSObject {
             contentLayoutDidChange: { [weak self] in
                 self?.scheduleResize()
             },
+            prepareContentExpansion: { [weak self] height in
+                self?.resizePanel(toContentHeight: height)
+            },
             confirmationPresentationDidChange: { [weak self] isPresented in
                 self?.setConfirmationPresentationActive(isPresented)
             }
@@ -174,20 +210,16 @@ final class MenuBarPanelController: NSObject {
         store.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                DispatchQueue.main.async {
-                    self?.updateStatusItem()
-                    self?.scheduleResize()
-                }
+                self?.updateStatusItem()
+                self?.scheduleResize()
             }
             .store(in: &cancellables)
 
         preferences.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                DispatchQueue.main.async {
-                    self?.updateStatusItem()
-                    self?.scheduleResize()
-                }
+                self?.updateStatusItem()
+                self?.scheduleResize()
             }
             .store(in: &cancellables)
 
@@ -285,9 +317,6 @@ final class MenuBarPanelController: NSObject {
         )
         statusItem?.length = NSStatusItem.variableLength
 
-        if panel?.isVisible == true {
-            positionPanel()
-        }
     }
 
     private func requestGlassSurfaceUpdate(
@@ -422,6 +451,7 @@ final class MenuBarPanelController: NSObject {
     private func closePanel() {
         guard let panel, panel.isVisible else { return }
         resizeWorkItem?.cancel()
+        stopPanelResizeAnimation()
         if currentGlassMode == .clear {
             glassSurfaceRequiresVisibleAttachment = true
         }
@@ -460,10 +490,11 @@ final class MenuBarPanelController: NSObject {
             self?.resizePanelToFit()
         }
         resizeWorkItem = workItem
-        DispatchQueue.main.asyncAfter(
-            deadline: .now() + 0.04,
-            execute: workItem
-        )
+        // Coalesce changes until the next main-loop layout pass, but do not
+        // hold the old panel size for multiple visible frames. The previous
+        // fixed 40 ms delay let SwiftUI render the new chart row count inside
+        // the old window before AppKit caught up, which appeared as a jump.
+        DispatchQueue.main.async(execute: workItem)
     }
 
     private func resizePanelToFit() {
@@ -479,25 +510,135 @@ final class MenuBarPanelController: NSObject {
 
         fittingSize.width = Metrics.contentWidth
         let height = ceil(fittingSize.height)
+        resizePanel(toContentHeight: height)
+    }
+
+    private func resizePanel(toContentHeight height: CGFloat) {
+        guard let panel else { return }
+
+        setHostedContentHeight(height)
         let surfaceInsets = currentSurfaceInsets
-        let oldTop = panel.frame.maxY
-        panel.setContentSize(
-            NSSize(
-                width: Metrics.contentWidth
-                    + surfaceInsets.left
-                    + surfaceInsets.right,
-                height: height
-                    + surfaceInsets.top
-                    + surfaceInsets.bottom
-            )
+        let contentSize = NSSize(
+            width: Metrics.contentWidth
+                + surfaceInsets.left
+                + surfaceInsets.right,
+            height: height
+                + surfaceInsets.top
+                + surfaceInsets.bottom
         )
 
-        if panel.isVisible {
-            var frame = panel.frame
-            frame.origin.y = oldTop - frame.height
-            panel.setFrame(frame, display: true, animate: false)
-            positionPanel()
+        guard panel.isVisible else {
+            panel.setContentSize(contentSize)
+            return
         }
+
+        let frameSize = panel.frameRect(
+            forContentRect: NSRect(origin: .zero, size: contentSize)
+        ).size
+        guard let frame = anchoredPanelFrame(size: frameSize) else {
+            panel.setContentSize(contentSize)
+            return
+        }
+
+        if let activeTarget = resizeAnimationTargetFrame,
+           NSEqualRects(activeTarget, frame) {
+            return
+        }
+        guard !NSEqualRects(panel.frame, frame) else { return }
+
+        let reducesMotion = NSWorkspace.shared
+            .accessibilityDisplayShouldReduceMotion
+        guard !reducesMotion else {
+            stopPanelResizeAnimation()
+            panel.setFrame(frame, display: true, animate: false)
+            return
+        }
+
+        animatePanelBottomEdge(to: frame)
+    }
+
+    private func animatePanelBottomEdge(to requestedFrame: NSRect) {
+        guard let panel else { return }
+
+        stopPanelResizeAnimation()
+
+        let startFrame = panel.frame
+        let fixedTop = startFrame.maxY
+        var targetFrame = requestedFrame
+        targetFrame.origin.y = fixedTop - targetFrame.height
+
+        resizeAnimationStartTime = ProcessInfo.processInfo.systemUptime
+        resizeAnimationStartFrame = startFrame
+        resizeAnimationTargetFrame = targetFrame
+        resizeAnimationFixedTop = fixedTop
+
+        let timer = Timer(
+            timeInterval: 1.0 / 120.0,
+            target: self,
+            selector: #selector(advancePanelResizeAnimation(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+        timer.tolerance = 1.0 / 240.0
+        resizeAnimationTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+        advancePanelResizeAnimation(timer)
+    }
+
+    @objc
+    private func advancePanelResizeAnimation(_ timer: Timer) {
+        guard let panel,
+              let targetFrame = resizeAnimationTargetFrame
+        else {
+            stopPanelResizeAnimation()
+            return
+        }
+
+        let elapsed = ProcessInfo.processInfo.systemUptime
+            - resizeAnimationStartTime
+        let linearProgress = min(max(elapsed / 0.14, 0), 1)
+        let easedProgress = 1 - pow(1 - linearProgress, 3)
+
+        let width = interpolate(
+            from: resizeAnimationStartFrame.width,
+            to: targetFrame.width,
+            progress: easedProgress
+        )
+        let height = interpolate(
+            from: resizeAnimationStartFrame.height,
+            to: targetFrame.height,
+            progress: easedProgress
+        )
+        let x = interpolate(
+            from: resizeAnimationStartFrame.minX,
+            to: targetFrame.minX,
+            progress: easedProgress
+        )
+        let frame = NSRect(
+            x: x,
+            y: resizeAnimationFixedTop - height,
+            width: width,
+            height: height
+        )
+        panel.setFrame(frame, display: true, animate: false)
+
+        guard linearProgress >= 1 else { return }
+        panel.setFrame(targetFrame, display: true, animate: false)
+        stopPanelResizeAnimation()
+    }
+
+    private func stopPanelResizeAnimation() {
+        resizeAnimationTimer?.invalidate()
+        resizeAnimationTimer = nil
+        resizeAnimationTargetFrame = nil
+    }
+
+    private func interpolate(
+        from start: CGFloat,
+        to end: CGFloat,
+        progress: Double
+    ) -> CGFloat {
+        start + (end - start) * CGFloat(progress)
     }
 
     private var currentSurfaceInsets: NSEdgeInsets {
@@ -508,25 +649,36 @@ final class MenuBarPanelController: NSObject {
         return NSEdgeInsets()
     }
 
+    private func setHostedContentHeight(_ height: CGFloat) {
+        if #available(macOS 26.0, *),
+           let surface = surfaceView as? QuotaViewLiquidGlassSurface {
+            surface.setHostedContentHeight(height)
+            return
+        }
+
+        (surfaceView as? QuotaViewLegacyGlassSurface)?
+            .setHostedContentHeight(height)
+    }
+
     private func positionPanel() {
-        guard let panel, let panelAnchor else { return }
+        guard let panel,
+              let frame = anchoredPanelFrame(size: panel.frame.size)
+        else {
+            return
+        }
+        panel.setFrameOrigin(frame.origin)
+    }
 
-        let usableFrame = panelAnchor.screen.visibleFrame
-        var x = panelAnchor.centerX - panel.frame.width / 2
-        x = max(
-            usableFrame.minX + Metrics.screenEdgeInset,
-            min(
-                x,
-                usableFrame.maxX
-                    - panel.frame.width
-                    - Metrics.screenEdgeInset
-            )
+    private func anchoredPanelFrame(size: NSSize) -> NSRect? {
+        guard let panelAnchor else { return nil }
+
+        return MenuBarPanelGeometry.anchoredFrame(
+            size: size,
+            centerX: panelAnchor.centerX,
+            visibleFrame: panelAnchor.screen.visibleFrame,
+            screenEdgeInset: Metrics.screenEdgeInset,
+            menuBarGap: Metrics.menuBarGap
         )
-
-        let y = usableFrame.maxY
-            - panel.frame.height
-            - Metrics.menuBarGap
-        panel.setFrameOrigin(NSPoint(x: x.rounded(), y: y.rounded()))
     }
 
     private func capturePanelAnchor() {
@@ -618,20 +770,26 @@ private struct MenuBarPanelRoot: View {
 
     let openSettingsAction: () -> Void
     let contentLayoutDidChange: () -> Void
+    let prepareContentExpansion: (CGFloat) -> Void
     let confirmationPresentationDidChange: (Bool) -> Void
 
     var body: some View {
-        MenuBarView(
-            store: store,
-            preferences: preferences,
-            openSettingsAction: openSettingsAction,
-            contentLayoutDidChange: contentLayoutDidChange,
-            confirmationPresentationDidChange:
-                confirmationPresentationDidChange
-        )
+        VStack(spacing: 0) {
+            MenuBarView(
+                store: store,
+                preferences: preferences,
+                openSettingsAction: openSettingsAction,
+                contentLayoutDidChange: contentLayoutDidChange,
+                prepareContentExpansion: prepareContentExpansion,
+                confirmationPresentationDidChange:
+                    confirmationPresentationDidChange
+            )
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
         .environment(\.locale, preferences.locale)
         .environment(\.quotaViewGlassMode, preferences.glassMode)
-        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -672,6 +830,10 @@ private final class QuotaViewLiquidGlassSurface: NSView {
     var contentView: NSView? {
         get { compositionView.hostedContentView }
         set { compositionView.replaceHostedContentView(with: newValue) }
+    }
+
+    func setHostedContentHeight(_ height: CGFloat) {
+        compositionView.setHostedContentHeight(height)
     }
 
     init(
@@ -780,6 +942,7 @@ private final class QuotaViewGlassCompositionView: NSView {
     private let backdropBlurView: QuotaViewBackdropBlurView?
     private let chromeView: QuotaViewFigmaGlassChromeView?
     private(set) var hostedContentView: NSView?
+    private var hostedContentHeight: CGFloat?
 
     override var isFlipped: Bool { true }
 
@@ -810,7 +973,7 @@ private final class QuotaViewGlassCompositionView: NSView {
             addSubview(chromeView)
         }
         addSubview(contentView)
-        contentView.autoresizingMask = [.width, .height]
+        contentView.autoresizingMask = [.width]
     }
 
     @available(*, unavailable)
@@ -822,7 +985,19 @@ private final class QuotaViewGlassCompositionView: NSView {
         super.layout()
         backdropBlurView?.frame = bounds
         chromeView?.frame = bounds
-        hostedContentView?.frame = bounds
+        hostedContentView?.frame = NSRect(
+            x: bounds.minX,
+            y: bounds.minY,
+            width: bounds.width,
+            height: hostedContentHeight ?? bounds.height
+        )
+    }
+
+    func setHostedContentHeight(_ height: CGFloat) {
+        guard hostedContentHeight != height else { return }
+        hostedContentHeight = height
+        needsLayout = true
+        layoutSubtreeIfNeeded()
     }
 
     func replaceHostedContentView(with contentView: NSView?) {
@@ -833,7 +1008,7 @@ private final class QuotaViewGlassCompositionView: NSView {
         if let contentView {
             addSubview(contentView)
             contentView.frame = bounds
-            contentView.autoresizingMask = [.width, .height]
+            contentView.autoresizingMask = [.width]
         }
     }
 }
@@ -1019,6 +1194,7 @@ private final class QuotaViewLegacyGlassSurface: NSVisualEffectView {
 
     private let backdropBlurView: QuotaViewBackdropBlurView?
     private let hostedContentView: NSView
+    private var hostedContentHeight: CGFloat?
 
     init(
         contentView: NSView,
@@ -1047,7 +1223,7 @@ private final class QuotaViewLegacyGlassSurface: NSVisualEffectView {
             addSubview(backdropBlurView)
         }
         contentView.frame = bounds
-        contentView.autoresizingMask = [.width, .height]
+        contentView.autoresizingMask = [.width]
         addSubview(contentView)
     }
 
@@ -1059,7 +1235,20 @@ private final class QuotaViewLegacyGlassSurface: NSVisualEffectView {
     override func layout() {
         super.layout()
         backdropBlurView?.frame = bounds
-        hostedContentView.frame = bounds
+        let contentHeight = hostedContentHeight ?? bounds.height
+        hostedContentView.frame = NSRect(
+            x: bounds.minX,
+            y: bounds.maxY - contentHeight,
+            width: bounds.width,
+            height: contentHeight
+        )
+    }
+
+    func setHostedContentHeight(_ height: CGFloat) {
+        guard hostedContentHeight != height else { return }
+        hostedContentHeight = height
+        needsLayout = true
+        layoutSubtreeIfNeeded()
     }
 
     private static let roundedMask: NSImage = {

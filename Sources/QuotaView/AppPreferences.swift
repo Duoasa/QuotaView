@@ -44,6 +44,15 @@ final class AppPreferences: ObservableObject {
         case resetCountdown
     }
 
+    enum TokenActivityRange: String, CaseIterable, Identifiable {
+        case week
+        case month
+        case threeMonths
+        case total
+
+        var id: String { rawValue }
+    }
+
     private enum Key {
         static let showStatusIcon = "preferences.menuBar.showStatusIcon"
         static let showRemainingQuota = "preferences.menuBar.showRemainingQuota"
@@ -53,6 +62,10 @@ final class AppPreferences: ObservableObject {
         static let showCreditBalance = "preferences.panel.showCreditBalance"
         static let showDailyTokens = "preferences.panel.showDailyTokens"
         static let showLifetimeTokens = "preferences.panel.showLifetimeTokens"
+        static let showTokenActivity =
+            "preferences.panel.showTokenActivity"
+        static let tokenActivityRange =
+            "preferences.panel.tokenActivityRange"
         static let showResetAction = "preferences.panel.showResetAction"
         static let followsSystemAppearance = "preferences.appearance.followsSystem"
         static let customAppearance = "preferences.appearance.custom"
@@ -97,6 +110,24 @@ final class AppPreferences: ObservableObject {
 
     @Published var showLifetimeTokens: Bool {
         didSet { defaults.set(showLifetimeTokens, forKey: Key.showLifetimeTokens) }
+    }
+
+    @Published var showTokenActivity: Bool {
+        didSet {
+            defaults.set(
+                showTokenActivity,
+                forKey: Key.showTokenActivity
+            )
+        }
+    }
+
+    @Published var tokenActivityRange: TokenActivityRange {
+        didSet {
+            defaults.set(
+                tokenActivityRange.rawValue,
+                forKey: Key.tokenActivityRange
+            )
+        }
     }
 
     @Published var showResetAction: Bool {
@@ -186,6 +217,13 @@ final class AppPreferences: ObservableObject {
             forKey: Key.showLifetimeTokens,
             defaultValue: true
         )
+        showTokenActivity = defaults.storedBool(
+            forKey: Key.showTokenActivity,
+            defaultValue: true
+        )
+        tokenActivityRange = TokenActivityRange(
+            rawValue: defaults.string(forKey: Key.tokenActivityRange) ?? ""
+        ) ?? .month
         showResetAction = defaults.storedBool(
             forKey: Key.showResetAction,
             defaultValue: true
