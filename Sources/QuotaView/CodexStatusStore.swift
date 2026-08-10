@@ -35,7 +35,9 @@ final class CodexStatusStore: ObservableObject {
     ) {
         let provider = provider ?? CodexProviderAdapter()
         let showsTokenUsage = preferences.map {
-            $0.showDailyTokens || $0.showLifetimeTokens
+            $0.showDailyTokens
+                || $0.showLifetimeTokens
+                || $0.showTokenActivity
         } ?? true
         let plan = Self.makeDemandPlan(
             providerID: provider.descriptor.id,
@@ -56,11 +58,12 @@ final class CodexStatusStore: ObservableObject {
         self.preferences = preferences
 
         if let preferences {
-            demandCancellable = Publishers.CombineLatest(
+            demandCancellable = Publishers.CombineLatest3(
                 preferences.$showDailyTokens,
-                preferences.$showLifetimeTokens
+                preferences.$showLifetimeTokens,
+                preferences.$showTokenActivity
             )
-            .map { $0 || $1 }
+            .map { $0 || $1 || $2 }
             .removeDuplicates()
             .dropFirst()
             .receive(on: RunLoop.main)

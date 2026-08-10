@@ -1,6 +1,13 @@
 import Foundation
 import QuotaViewCore
 
+struct DailyTokenActivity: Equatable, Sendable, Identifiable {
+    let date: Date
+    let tokens: Int64
+
+    var id: Date { date }
+}
+
 struct CurrentCodexPresentation: Equatable, Sendable {
     enum Availability: String, Equatable, Sendable {
         case ready
@@ -29,6 +36,7 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let lifetimeTokens: Int64?
     let recentDailyTokens: Int64?
     let recentDailyDate: String?
+    let tokenActivity: [DailyTokenActivity]
     let lastUpdatedAt: Date
 
     var canUseResetCredit: Bool {
@@ -76,6 +84,9 @@ struct CurrentCodexPresentationProjector {
                 $0.definitionID == CodexDomainCatalog.dailyTokensID
             }
             .max(by: { $0.observedAt < $1.observedAt })
+        let tokenActivity = tokenActivity(
+            from: result.historicalObservations
+        )
 
         return CurrentCodexPresentation(
             availability: availability,
@@ -110,8 +121,33 @@ struct CurrentCodexPresentationProjector {
             recentDailyDate: latestDailyObservation.map {
                 Self.dailyDateFormatter.string(from: $0.observedAt)
             },
+            tokenActivity: tokenActivity,
             lastUpdatedAt: snapshot.capturedAt
         )
+    }
+
+    private func tokenActivity(
+        from observations: [MetricObservation]
+    ) -> [DailyTokenActivity] {
+        var valuesByDay: [Date: Int64] = [:]
+
+        for observation in observations
+        where observation.definitionID == CodexDomainCatalog.dailyTokensID {
+            guard case .count(let tokens) = observation.value,
+                  tokens >= 0
+            else {
+                continue
+            }
+
+            let sourceDate = observation.interval?.start
+                ?? observation.observedAt
+            let day = Self.utcCalendar.startOfDay(for: sourceDate)
+            valuesByDay[day] = tokens
+        }
+
+        return valuesByDay
+            .map { DailyTokenActivity(date: $0.key, tokens: $0.value) }
+            .sorted { $0.date < $1.date }
     }
 
     private func metric(
@@ -165,5 +201,12 @@ struct CurrentCodexPresentationProjector {
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
+    }()
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
     }()
 }

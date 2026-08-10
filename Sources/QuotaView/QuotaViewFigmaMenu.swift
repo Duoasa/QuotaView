@@ -5,6 +5,38 @@ import QuotaViewWidgetContract
 #endif
 import SwiftUI
 
+enum TokenActivityGridMetrics {
+    static let columnCount = 16
+    static let cellSize: CGFloat = 12
+    static let spacing: CGFloat = 3
+    static let horizontalInset: CGFloat = 6
+    static let headerHeight: CGFloat = 18
+    static let headerGridSpacing: CGFloat = 9
+    static let verticalInset: CGFloat = 10
+    static let tooltipDelayNanoseconds: UInt64 = 500_000_000
+    static let tooltipWidth: CGFloat = 146
+    static let tooltipHeight: CGFloat = 22
+
+    static var gridWidth: CGFloat {
+        CGFloat(columnCount) * cellSize
+            + CGFloat(columnCount - 1) * spacing
+    }
+
+    static func gridHeight(rowCount: Int) -> CGFloat {
+        let rows = max(rowCount, 1)
+        return CGFloat(rows) * cellSize
+            + CGFloat(rows - 1) * spacing
+    }
+
+    static func sectionHeight(rowCount: Int) -> CGFloat {
+        verticalInset
+            + headerHeight
+            + headerGridSpacing
+            + gridHeight(rowCount: rowCount)
+            + verticalInset
+    }
+}
+
 struct QuotaViewFigmaMenu: View {
     nonisolated static let designSize = CGSize(width: 274, height: 433)
 
@@ -89,6 +121,7 @@ struct QuotaViewFigmaMenu: View {
     private enum InfoItem {
         case usageSummary
         case metric(Metric)
+        case tokenActivity
     }
 
     private enum PanelItem: Identifiable {
@@ -101,6 +134,8 @@ struct QuotaViewFigmaMenu: View {
                 "usage-summary"
             case let .info(.metric(metric)):
                 metric.id
+            case .info(.tokenActivity):
+                "token-activity"
             case .resetEntry:
                 "quota-reset"
             }
@@ -375,6 +410,8 @@ struct QuotaViewFigmaMenu: View {
                     )
                 case .info(.usageSummary):
                     EmptyView()
+                case .info(.tokenActivity):
+                    tokenActivitySection
                 case .resetEntry:
                     resetCard
                         .padding(
@@ -424,6 +461,144 @@ struct QuotaViewFigmaMenu: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var tokenActivitySection: some View {
+        let model = tokenActivityGridModel
+
+        return VStack(spacing: TokenActivityGridMetrics.headerGridSpacing) {
+            HStack(spacing: 6) {
+                Text(copy.text("Token 活动", "Token Activity"))
+                    .font(AstaSans.semiBold(10.5))
+                    .foregroundStyle(primaryTextColor)
+                    .lineLimit(1)
+                    .frame(height: 16)
+
+                Spacer(minLength: 6)
+
+                HStack(spacing: 2) {
+                    ForEach(
+                        AppPreferences.TokenActivityRange.allCases
+                    ) { range in
+                        tokenActivityRangeButton(range)
+                    }
+                }
+            }
+            .frame(height: 18)
+
+            TokenActivityHeatmap(
+                model: model,
+                copy: copy,
+                primaryColor: primaryTextColor,
+                secondaryColor: secondaryTextColor
+            )
+            .frame(
+                width: TokenActivityGridMetrics.gridWidth,
+                height: TokenActivityGridMetrics.gridHeight(
+                    rowCount: model.rowCount
+                )
+            )
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(
+            .horizontal,
+            TokenActivityGridMetrics.horizontalInset
+        )
+        .padding(.vertical, TokenActivityGridMetrics.verticalInset)
+        .frame(
+            width: Layout.contentWidth,
+            height: TokenActivityGridMetrics.sectionHeight(
+                rowCount: model.rowCount
+            ),
+            alignment: .top
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private var tokenActivityGridModel: TokenActivityGridModel {
+        TokenActivityGridModel(
+            activity: store.snapshot?.tokenActivity ?? [],
+            range: preferences.tokenActivityRange,
+            endingAt: Date()
+        )
+    }
+
+    private var tokenActivitySectionHeight: CGFloat {
+        TokenActivityGridMetrics.sectionHeight(
+            rowCount: tokenActivityGridModel.rowCount
+        )
+    }
+
+    private func tokenActivityRangeButton(
+        _ range: AppPreferences.TokenActivityRange
+    ) -> some View {
+        let isSelected = preferences.tokenActivityRange == range
+
+        return Button {
+            preferences.tokenActivityRange = range
+        } label: {
+            Text(tokenActivityRangeLabel(range))
+                .font(
+                    isSelected
+                        ? AstaSans.semiBold(9)
+                        : AstaSans.regular(9)
+                )
+                .foregroundStyle(
+                    isSelected
+                        ? primaryTextColor
+                        : secondaryTextColor.opacity(0.72)
+                )
+                .lineLimit(1)
+                .frame(minWidth: 17, minHeight: 16)
+                .padding(.horizontal, 2)
+                .contentShape(
+                    RoundedRectangle(
+                        cornerRadius: 4,
+                        style: .continuous
+                    )
+                )
+        }
+        .quotaViewInteractiveButton(.regular)
+        .help(
+            copy.text(
+                "显示\(tokenActivityRangeAccessibilityLabel(range))统计",
+                "Show \(tokenActivityRangeAccessibilityLabel(range)) usage"
+            )
+        )
+        .accessibilityLabel(
+            tokenActivityRangeAccessibilityLabel(range)
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func tokenActivityRangeLabel(
+        _ range: AppPreferences.TokenActivityRange
+    ) -> String {
+        switch range {
+        case .week:
+            copy.text("周", "W")
+        case .month:
+            copy.text("月", "M")
+        case .threeMonths:
+            copy.text("三月", "3M")
+        case .total:
+            copy.text("总计", "All")
+        }
+    }
+
+    private func tokenActivityRangeAccessibilityLabel(
+        _ range: AppPreferences.TokenActivityRange
+    ) -> String {
+        switch range {
+        case .week:
+            copy.text("最近一周", "Last week")
+        case .month:
+            copy.text("最近一个月", "Last month")
+        case .threeMonths:
+            copy.text("最近三个月", "Last three months")
+        case .total:
+            copy.text("全部可用历史", "All available history")
+        }
     }
 
     private var resetCard: some View {
@@ -800,6 +975,10 @@ struct QuotaViewFigmaMenu: View {
             )
         }
 
+        if preferences.showTokenActivity {
+            result.append(.info(.tokenActivity))
+        }
+
         if showsResetEntry {
             result.append(.resetEntry)
         }
@@ -847,16 +1026,24 @@ struct QuotaViewFigmaMenu: View {
     ) -> CGFloat {
         guard !items.isEmpty else { return 0 }
 
-        let infoCount = items.filter { $0.type == .info }.count
-        let interactiveCount = items.filter {
-            $0.type == .interactive
-        }.count
         let typeSpacing = resetEntryNeedsTypeSpacing
             ? Layout.detailTypeSpacing
             : 0
 
-        return CGFloat(infoCount) * Layout.metricRowHeight
-            + CGFloat(interactiveCount) * Layout.resetCardHeight
+        let contentHeight = items.reduce(CGFloat.zero) { result, item in
+            switch item {
+            case .info(.usageSummary):
+                result
+            case .info(.metric):
+                result + Layout.metricRowHeight
+            case .info(.tokenActivity):
+                result + tokenActivitySectionHeight
+            case .resetEntry:
+                result + Layout.resetCardHeight
+            }
+        }
+
+        return contentHeight
             + typeSpacing
             + Layout.detailsBottomInset
     }
@@ -959,6 +1146,415 @@ struct QuotaViewFigmaMenu: View {
         return (formatter.string(from: magnitude as NSNumber) ?? "—")
             + suffix
     }
+}
+
+struct TokenActivityGridModel: Equatable {
+    struct Cell: Identifiable, Equatable {
+        let id: Int
+        let date: Date?
+        let tokens: Int64?
+
+        var isPlaceholder: Bool { date == nil }
+    }
+
+    let cells: [Cell]
+    let rowCount: Int
+    let dayCount: Int
+    let maximumTokens: Int64
+
+    init(
+        activity: [DailyTokenActivity],
+        range: AppPreferences.TokenActivityRange,
+        endingAt endDate: Date
+    ) {
+        let normalizedEnd = Self.utcCalendar.startOfDay(for: endDate)
+        let startDate = Self.rangeStartDate(
+            activity: activity,
+            range: range,
+            endingAt: normalizedEnd
+        )
+        var activityByDay: [Date: Int64] = [:]
+        for value in activity {
+            let day = Self.utcCalendar.startOfDay(for: value.date)
+            activityByDay[day] = value.tokens
+        }
+
+        var days: [(date: Date, tokens: Int64?)] = []
+        var date = startDate
+        while date <= normalizedEnd {
+            days.append((date, activityByDay[date]))
+            guard let nextDate = Self.utcCalendar.date(
+                byAdding: .day,
+                value: 1,
+                to: date
+            ) else {
+                break
+            }
+            date = nextDate
+        }
+
+        dayCount = days.count
+        rowCount = max(
+            1,
+            (dayCount + TokenActivityGridMetrics.columnCount - 1)
+                / TokenActivityGridMetrics.columnCount
+        )
+        let cellCount = rowCount * TokenActivityGridMetrics.columnCount
+        let placeholderCount = max(0, cellCount - dayCount)
+
+        var resolvedCells = (0..<placeholderCount).map {
+            Cell(id: $0, date: nil, tokens: nil)
+        }
+        resolvedCells.append(
+            contentsOf: days.enumerated().map { offset, day in
+                Cell(
+                    id: placeholderCount + offset,
+                    date: day.date,
+                    tokens: day.tokens
+                )
+            }
+        )
+        cells = resolvedCells
+        maximumTokens = days.compactMap(\.tokens).max() ?? 0
+    }
+
+    private static func rangeStartDate(
+        activity: [DailyTokenActivity],
+        range: AppPreferences.TokenActivityRange,
+        endingAt endDate: Date
+    ) -> Date {
+        switch range {
+        case .week:
+            return utcCalendar.date(
+                byAdding: .day,
+                value: -6,
+                to: endDate
+            ) ?? endDate
+        case .month:
+            return utcCalendar.date(
+                byAdding: .day,
+                value: -30,
+                to: endDate
+            ) ?? endDate
+        case .threeMonths:
+            return utcCalendar.date(
+                byAdding: .month,
+                value: -3,
+                to: endDate
+            ).flatMap {
+                utcCalendar.date(
+                    byAdding: .day,
+                    value: 1,
+                    to: $0
+                )
+            } ?? endDate
+        case .total:
+            return activity
+                .map { utcCalendar.startOfDay(for: $0.date) }
+                .filter { $0 <= endDate }
+                .min()
+                ?? utcCalendar.date(
+                    byAdding: .day,
+                    value: -30,
+                    to: endDate
+                )
+                ?? endDate
+        }
+    }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }()
+}
+
+private struct TokenActivityHeatmap: View {
+    let model: TokenActivityGridModel
+    let copy: AppCopy
+    let primaryColor: Color
+    let secondaryColor: Color
+
+    @State private var hoveredCellID: Int?
+    @State private var presentedTooltipCellID: Int?
+    @State private var pendingTooltipTask: Task<Void, Never>?
+
+    var body: some View {
+        LazyVGrid(
+            columns: Array(
+                repeating: GridItem(
+                    .fixed(TokenActivityGridMetrics.cellSize),
+                    spacing: TokenActivityGridMetrics.spacing
+                ),
+                count: TokenActivityGridMetrics.columnCount
+            ),
+            alignment: .trailing,
+            spacing: TokenActivityGridMetrics.spacing
+        ) {
+            ForEach(model.cells) { cell in
+                gridCell(cell)
+            }
+        }
+        .frame(
+            width: TokenActivityGridMetrics.gridWidth,
+            height: TokenActivityGridMetrics.gridHeight(
+                rowCount: model.rowCount
+            ),
+            alignment: .bottomTrailing
+        )
+        .accessibilityLabel(
+            copy.text("Token 活动统计图", "Token activity chart")
+        )
+        .onChange(of: model) { _, _ in
+            resetTooltip()
+        }
+        .onDisappear {
+            resetTooltip()
+        }
+    }
+
+    @ViewBuilder
+    private func gridCell(
+        _ cell: TokenActivityGridModel.Cell
+    ) -> some View {
+        if let date = cell.date {
+            dayCell(
+                id: cell.id,
+                date: date,
+                tokens: cell.tokens
+            )
+        } else {
+            placeholderCell
+        }
+    }
+
+    private var placeholderCell: some View {
+        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+            .fill(primaryColor.opacity(0.035))
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: 2.5,
+                    style: .continuous
+                )
+                .strokeBorder(
+                    secondaryColor.opacity(0.20),
+                    style: StrokeStyle(
+                        lineWidth: 0.75,
+                        dash: [2, 2]
+                    )
+                )
+            }
+            .frame(
+                width: TokenActivityGridMetrics.cellSize,
+                height: TokenActivityGridMetrics.cellSize
+            )
+            .accessibilityHidden(true)
+    }
+
+    private func dayCell(
+        id: Int,
+        date: Date,
+        tokens: Int64?
+    ) -> some View {
+        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+            .fill(cellColor(tokens))
+            .frame(
+                width: TokenActivityGridMetrics.cellSize,
+                height: TokenActivityGridMetrics.cellSize
+            )
+            .overlay(alignment: .top) {
+                if presentedTooltipCellID == id {
+                    tooltip(
+                        cellHelp(date: date, tokens: tokens),
+                        cellID: id
+                    )
+                }
+            }
+            .zIndex(presentedTooltipCellID == id ? 1 : 0)
+            .onHover { isHovering in
+                handleHover(isHovering, cellID: id)
+            }
+            .accessibilityLabel(dateLabel(date))
+            .accessibilityValue(tokenValueLabel(tokens))
+    }
+
+    private func tooltip(
+        _ text: String,
+        cellID: Int
+    ) -> some View {
+        Text(text)
+            .font(AstaSans.regular(9))
+            .foregroundStyle(Color(nsColor: .labelColor))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .frame(
+                width: TokenActivityGridMetrics.tooltipWidth,
+                height: TokenActivityGridMetrics.tooltipHeight
+            )
+            .background(
+                Color(nsColor: .controlBackgroundColor).opacity(0.98),
+                in: RoundedRectangle(
+                    cornerRadius: 5,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(
+                        Color(nsColor: .separatorColor),
+                        lineWidth: 0.5
+                    )
+            }
+            .offset(
+                x: tooltipHorizontalOffset(cellID: cellID),
+                y: -26
+            )
+            .accessibilityHidden(true)
+    }
+
+    private func tooltipHorizontalOffset(cellID: Int) -> CGFloat {
+        let column = cellID % TokenActivityGridMetrics.columnCount
+        let cellCenter = CGFloat(column)
+            * (
+                TokenActivityGridMetrics.cellSize
+                    + TokenActivityGridMetrics.spacing
+            )
+            + TokenActivityGridMetrics.cellSize / 2
+        let halfTooltip = TokenActivityGridMetrics.tooltipWidth / 2
+        let targetCenter = min(
+            max(cellCenter, halfTooltip),
+            TokenActivityGridMetrics.gridWidth - halfTooltip
+        )
+        return targetCenter - cellCenter
+    }
+
+    private func handleHover(
+        _ isHovering: Bool,
+        cellID: Int
+    ) {
+        pendingTooltipTask?.cancel()
+        pendingTooltipTask = nil
+
+        if isHovering {
+            hoveredCellID = cellID
+            presentedTooltipCellID = nil
+            pendingTooltipTask = Task { @MainActor in
+                do {
+                    try await Task.sleep(
+                        nanoseconds:
+                            TokenActivityGridMetrics
+                            .tooltipDelayNanoseconds
+                    )
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled,
+                      hoveredCellID == cellID
+                else {
+                    return
+                }
+                presentedTooltipCellID = cellID
+                pendingTooltipTask = nil
+            }
+        } else if hoveredCellID == cellID {
+            hoveredCellID = nil
+            presentedTooltipCellID = nil
+        }
+    }
+
+    private func resetTooltip() {
+        pendingTooltipTask?.cancel()
+        pendingTooltipTask = nil
+        hoveredCellID = nil
+        presentedTooltipCellID = nil
+    }
+
+    private func cellColor(_ tokens: Int64?) -> Color {
+        guard let tokens, tokens > 0 else {
+            return primaryColor.opacity(0.07)
+        }
+
+        let ratio = Double(tokens)
+            / Double(max(model.maximumTokens, 1))
+        let opacity: Double = switch ratio {
+        case ..<0.25: 0.22
+        case ..<0.50: 0.38
+        case ..<0.75: 0.58
+        default: 0.82
+        }
+        return primaryColor.opacity(opacity)
+    }
+
+    private func cellHelp(date: Date, tokens: Int64?) -> String {
+        "\(dateLabel(date)) · \(tokenValueLabel(tokens))"
+    }
+
+    private func dateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Self.utcCalendar
+        formatter.locale = Locale(
+            identifier: copy.language.localeIdentifier
+        )
+        formatter.timeZone = Self.utcCalendar.timeZone
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private func tokenValueLabel(_ tokens: Int64?) -> String {
+        guard let tokens else {
+            return copy.text("统计不可用", "Usage unavailable")
+        }
+
+        let formatted = compactTokenCount(tokens)
+        return copy.text(
+            "\(formatted) Tokens",
+            "\(formatted) tokens"
+        )
+    }
+
+    private func compactTokenCount(_ count: Int64) -> String {
+        if count == 0 {
+            return "0"
+        }
+        if abs(count) < 1_000 {
+            return count > 0 ? "<1K" : ">-1K"
+        }
+
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(
+            identifier: copy.language.localeIdentifier
+        )
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 0
+        formatter.usesGroupingSeparator = false
+
+        let magnitude: Double
+        let suffix: String
+        switch abs(count) {
+        case 1_000_000_000...:
+            magnitude = Double(count) / 1_000_000_000
+            suffix = "B"
+        case 1_000_000...:
+            magnitude = Double(count) / 1_000_000
+            suffix = "M"
+        default:
+            magnitude = Double(count) / 1_000
+            suffix = "K"
+        }
+
+        return (formatter.string(from: magnitude as NSNumber) ?? "—")
+            + suffix
+    }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }()
 }
 
 struct QuotaViewFigmaDropShadow: NSViewRepresentable {
