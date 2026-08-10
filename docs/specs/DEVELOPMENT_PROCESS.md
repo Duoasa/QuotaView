@@ -178,20 +178,22 @@ MT-DATA-001 和 MT-SELECT-001，不改版本号、不发布。
 - 规格、代码和测试对同一行为的描述不一致；
 - 发布文档提前记录尚未发生的 tag、Release 或资产。
 
-## 5. 当前多任务迭代的下一出口
+## 5. 当前 Token 活动迭代的下一出口
 
-当前 `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` 的交付状态是
-`Prototype`。在用户后续明确授权前，允许的工作是：
+`QV-PRODUCT-TOKEN-ACTIVITY-001` 的规格状态为 `Accepted`，交付状态为
+`Verifying`。实现、产品所有者手动验收、57 项测试、Universal Release、
+Developer ID 签名、Apple 公证与 Staple 已完成。
 
-- 继续调试独立 Demo；
-- 修正 Demo 与已接受规格之间的偏差；
-- 完善 Prototype 测试和 Demo QA 证据；
-- 澄清生产数据模型、权限与降级策略；
-- 更新规格和追踪矩阵。
+当前只允许完成发布门禁：
 
-当前阶段的出口不是发布，而是由产品所有者明确作出以下决定之一：
+1. PR CI 通过并合并 `main`；
+2. 从合并提交创建不可移动 `v0.3.3` tag；
+3. 上传唯一资产 `QuotaView-v0.3.3-build.3.zip`，创建非 Draft、非
+   Pre-release 的 GitHub Release 并设为 Latest；
+4. 从 GitHub 回下载资产并复核 SHA-256、签名、公证、架构、版本、资源和
+   真实启动；
+5. 将最终发布提交、Release URL 和验证结论同步到版本历史、Handoff 与 SDD，
+   再把交付状态改为 `Released`。
 
-1. 继续 Prototype；
-2. 修改并重新确认规格；
-3. 授权进入 `Implementing`；
-4. 终止或归档该方向。
+0.3.2 Preview 的多任务实现保持独立 Pre-release 与本地归档状态，不进入
+本次稳定版；后续继续多任务开发必须建立新的迭代和 Build。

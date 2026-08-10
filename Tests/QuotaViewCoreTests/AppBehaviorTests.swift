@@ -9,25 +9,37 @@ final class AppBehaviorTests: XCTestCase {
         async {
         let controller = TokenActivityHoverController()
         var presentedCellID: Int?
+        let cancelledPresentation = expectation(
+            description: "Cancelled hover does not present"
+        )
+        cancelledPresentation.isInverted = true
 
         controller.schedule(
             cellID: 4,
             delayNanoseconds: 20_000_000
         ) {
             presentedCellID = 4
+            cancelledPresentation.fulfill()
         }
         controller.cancel()
-        try? await Task.sleep(nanoseconds: 40_000_000)
+        await fulfillment(
+            of: [cancelledPresentation],
+            timeout: 0.1
+        )
 
         XCTAssertNil(presentedCellID)
 
+        let presented = expectation(
+            description: "Active hover presents"
+        )
         controller.schedule(
             cellID: 9,
             delayNanoseconds: 20_000_000
         ) {
             presentedCellID = 9
+            presented.fulfill()
         }
-        try? await Task.sleep(nanoseconds: 40_000_000)
+        await fulfillment(of: [presented], timeout: 1.0)
 
         XCTAssertEqual(presentedCellID, 9)
     }
