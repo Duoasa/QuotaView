@@ -48,7 +48,6 @@
 		B10000000000000000000028 /* CodexActivityIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIsland.swift */; };
 		B10000000000000000000029 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* main.swift */; };
 		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B1000000000000000000002B /* CodexFocusedTaskTitleReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000030 /* CodexFocusedTaskTitleReader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -166,7 +165,6 @@
 		F1000000000000000000002D /* CodexActivityIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIsland.swift; sourceTree = "<group>"; };
 		F1000000000000000000002E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F1000000000000000000002F /* QuotaViewActivityHook */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = QuotaViewActivityHook; sourceTree = BUILT_PRODUCTS_DIR; };
-		F10000000000000000000030 /* CodexFocusedTaskTitleReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexFocusedTaskTitleReader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -251,7 +249,6 @@
 				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
 				F1000000000000000000002C /* CodexActivityRuntime.swift */,
 				F1000000000000000000002D /* CodexActivityIsland.swift */,
-				F10000000000000000000030 /* CodexFocusedTaskTitleReader.swift */,
 			);
 			path = QuotaView;
 			sourceTree = "<group>";
@@ -576,7 +573,6 @@
 				B1000000000000000000001D /* WidgetSnapshot.swift in Sources */,
 				B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */,
 				B10000000000000000000028 /* CodexActivityIsland.swift in Sources */,
-				B1000000000000000000002B /* CodexFocusedTaskTitleReader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

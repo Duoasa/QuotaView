@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-05
+更新日期：2026-08-04
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
@@ -49,9 +49,6 @@
 
 `0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
 GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
-它同时被封存为 `0.3.2 Preview 1` 整个开发周期的稳定回滚基线；回滚使用
-不可移动 tag `v0.3.1-build.2`、上述发布提交和已核验 Release 资产，不从
-当前开发分支或候选包恢复。
 
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
 确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
@@ -106,48 +103,6 @@ Developer ID 签名、Apple 公证、Staple、GitHub Pre-release 上传与回下
 - [SDD 开发流程](docs/specs/DEVELOPMENT_PROCESS.md)
 - [多任务 Demo 说明](Prototypes/CodexActivityMultiTaskDemo/README.md)
 - [多任务 Demo Design QA](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)
-
-## 0.2 0.3.2 Preview 1 Release Notes 源文
-
-GitHub Pre-release 使用以下单份英文源正文；GitHub 界面负责翻译：
-
-```markdown
-QuotaView 0.3.2 Preview 1 brings the core multi-task workflow to Codex Island.
-It is an early-access release for validating the experience; v0.3.1 Build 2
-remains the recommended stable version and GitHub Latest release.
-
-## What's new
-
-- Track multiple concurrent Codex sessions in one fixed Island, with
-  independent status, lifecycle, completion, and cleanup.
-- Use a three-row task rail, a continuous sliding window for longer task
-  lists, task counts, and a compact multi-task summary.
-- Keep a stable primary task through priority arbitration so ordinary
-  background events do not unnecessarily take over the Island.
-- Optionally follow the current Codex task through bounded, read-only
-  Accessibility title matching with a safe automatic fallback.
-- Preserve the existing live Metal status surface, native glass transitions,
-  compact/expanded states, Reduce Motion behavior, and accessibility actions.
-
-## Known preview limitations
-
-- Event-to-Island response can still feel delayed depending on Hook delivery,
-  local scheduling, and the current Codex task state.
-- Current-task following is title-based and can lag or miss when titles are
-  unresolved, duplicated, changed quickly, or affected by Codex UI changes.
-- Task switching, title marquee behavior, and compact/expanded transition
-  rhythm still need experience and performance refinement.
-
-## Stability recommendation
-
-This build is intended for preview validation. Use v0.3.1 Build 2 when stable
-behavior is more important than multi-task support.
-
-## Requirements
-
-- macOS 14 or later
-- A Codex version with Hooks support
-```
 
 ## 1. 0.3.1 Build 2 正式发布状态
 

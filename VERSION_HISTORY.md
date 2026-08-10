@@ -27,7 +27,6 @@
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
 | 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 稳定基线状态 | `0.3.2 Preview 1` 整个开发周期的封存回滚基线 |
 
 当前公开预览版：
 
@@ -67,8 +66,6 @@
 6. 不得把已撤回版本重新标记为最新版本，也不得移动已有正式 tag。
 7. 新版本只有完成正式签名、公证、资产验证和 Release 后才能加入版本总览
    并切换 Latest；必须使用唯一的 tag 与 ZIP 文件名。
-8. 启动新版本发布流程前，先封存上一稳定版的 tag、提交与已核验资产；
-   Preview、Beta 或 RC 默认不得替换稳定版 Latest 或 README 默认下载。
 
 ## 版本总览
 
@@ -475,6 +472,3 @@ Tag：`v0.1.0`
 - GitHub Release Notes 使用单份英文源文，避免与 GitHub 自动翻译产生
   重复内容。
 - 不移动或覆盖已发布 tag；热更新使用新的 Build Number、tag 和资产名。
-- 每个新版本周期必须在开发开始时把上一稳定版登记为回滚基线；基线至少
-  包含不可移动 tag、完整提交 SHA、Release URL、资产名、大小、SHA-256、
-  签名和公证证据。新版本晋升为稳定版后才更新下一周期基线。

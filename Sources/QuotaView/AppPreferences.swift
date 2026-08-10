@@ -60,8 +60,6 @@ final class AppPreferences: ObservableObject {
         // creating a second preference. Unknown legacy preset names
         // normalize to the current default clear mode.
         static let glassMode = "preferences.appearance.glassPreset"
-        static let followCurrentCodexTask =
-            "preferences.codexActivity.followCurrentTask"
         static let followsSystemLanguage = "preferences.language.followsSystem"
         static let customLanguage = "preferences.language.custom"
     }
@@ -134,15 +132,6 @@ final class AppPreferences: ObservableObject {
         }
     }
 
-    @Published var followCurrentCodexTask: Bool {
-        didSet {
-            defaults.set(
-                followCurrentCodexTask,
-                forKey: Key.followCurrentCodexTask
-            )
-        }
-    }
-
     @Published var followsSystemLanguage: Bool {
         didSet {
             defaults.set(
@@ -211,10 +200,6 @@ final class AppPreferences: ObservableObject {
         glassMode = QuotaViewGlassMode(
             rawValue: defaults.string(forKey: Key.glassMode) ?? ""
         ) ?? .clear
-        followCurrentCodexTask = defaults.storedBool(
-            forKey: Key.followCurrentCodexTask,
-            defaultValue: false
-        )
         followsSystemLanguage = defaults.storedBool(
             forKey: Key.followsSystemLanguage,
             defaultValue: true

@@ -371,242 +371,8 @@ final class AppBehaviorTests: XCTestCase {
         )
 
         XCTAssertEqual(store.presentation, .hidden)
-        XCTAssertNil(store.snapshot)
-        XCTAssertTrue(store.tasks.isEmpty)
+        XCTAssertEqual(store.snapshot?.occurredAt, endedAt)
         await store.stop()
-    }
-
-    @MainActor
-    func testCodexActivityKeepsInterleavedSessionsIndependent() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil),
-            compactDelay: 0.02,
-            hiddenDelayAfterCompact: 0.20
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .stop,
-                sessionHash: "completed-session",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "working-session",
-                toolCategory: .fileEdit,
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-
-        for _ in 0..<200 where store.tasks.first(where: {
-            $0.sessionHash == "completed-session"
-        })?.presentation != .compact {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.tasks.count, 2)
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "completed-session"
-            }?.presentation,
-            .compact
-        )
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "working-session"
-            }?.presentation,
-            .expanded
-        )
-        XCTAssertEqual(store.presentation, .expanded)
-        XCTAssertEqual(store.primarySessionHash, "working-session")
-        await store.stop()
-    }
-
-    @MainActor
-    func testSessionEndRemovesOnlyItsOwnTask() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        for sessionHash in ["first", "second"] {
-            store.receive(
-                CodexActivityEvent(
-                    event: .preToolUse,
-                    sessionHash: sessionHash,
-                    occurredAt: now
-                )
-            )
-        }
-
-        store.receive(
-            CodexActivityEvent(
-                event: .sessionEnd,
-                sessionHash: "first",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-
-        XCTAssertEqual(store.tasks.map(\.sessionHash), ["second"])
-        XCTAssertEqual(store.primarySessionHash, "second")
-        XCTAssertEqual(store.presentation, .expanded)
-        await store.stop()
-    }
-
-    @MainActor
-    func testFocusedTaskDoesNotYieldToBackgroundAttention() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "focused",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "background",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-        store.focusTask(sessionHash: "focused")
-        store.receive(
-            CodexActivityEvent(
-                event: .permissionRequest,
-                sessionHash: "background",
-                occurredAt: now.addingTimeInterval(2)
-            )
-        )
-
-        XCTAssertEqual(store.primarySessionHash, "focused")
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "background"
-            }?.snapshot.state,
-            .awaitingConfirmation
-        )
-        await store.stop()
-    }
-
-    @MainActor
-    func testAutomaticFallbackPrefersAttentionThenRecentActivity() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "first",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .postToolUse,
-                sessionHash: "second",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-        XCTAssertEqual(store.primarySessionHash, "second")
-
-        store.receive(
-            CodexActivityEvent(
-                event: .permissionRequest,
-                sessionHash: "first",
-                occurredAt: now.addingTimeInterval(2)
-            )
-        )
-        XCTAssertEqual(store.primarySessionHash, "first")
-        await store.stop()
-    }
-
-    @MainActor
-    func testAllCompletedTasksCompactAsOneCluster() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil),
-            compactDelay: 0.02,
-            hiddenDelayAfterCompact: 0.20
-        )
-        for sessionHash in ["first", "second"] {
-            store.receive(
-                CodexActivityEvent(
-                    event: .stop,
-                    sessionHash: sessionHash
-                )
-            )
-        }
-
-        for _ in 0..<100 where store.presentation != .compact {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.presentation, .compact)
-        XCTAssertTrue(store.tasks.allSatisfy {
-            $0.presentation == .compact
-        })
-
-        store.expandCompactDetail()
-        XCTAssertEqual(store.presentation, .expanded)
-        await store.stop()
-    }
-
-    func testProductionTaskRailUsesContiguousThreeTaskWindow() {
-        let tasks = (0..<8).map { index in
-            CodexActivityRenderState(
-                sessionHash: "session-\(index)",
-                visualState: .working,
-                windowTitle: "Task \(index)",
-                statusTitle: "Working",
-                operation: "Running",
-                accessibilityLabel: "Task \(index), Working"
-            )
-        }
-
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-0"
-            ),
-            0
-        )
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-3"
-            ),
-            1
-        )
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-7"
-            ),
-            5
-        )
-    }
-
-    func testFocusedTaskReaderIsBoundedAndReadOnly() throws {
-        let repositoryRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let sourceURL = repositoryRoot
-            .appendingPathComponent("Sources/QuotaView")
-            .appendingPathComponent("CodexFocusedTaskTitleReader.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
-
-        XCTAssertTrue(source.contains("maximumTraversalDepth"))
-        XCTAssertTrue(source.contains("maximumVisitedElements"))
-        XCTAssertTrue(source.contains("kAXTitleAttribute"))
-        XCTAssertTrue(source.contains("kAXButtonRole"))
-        XCTAssertFalse(source.contains("AXUIElementPerformAction"))
-        XCTAssertFalse(source.contains("kAXValueAttribute"))
-        XCTAssertFalse(source.contains("CGEventPost"))
-        XCTAssertFalse(source.contains("kAXPressAction"))
     }
 
     func testCodexActivityHookInstallerPreservesExistingHooks() throws {
@@ -955,7 +721,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(preferences.customAppearance, .dark)
         XCTAssertEqual(preferences.customLanguage, .simplifiedChinese)
         XCTAssertEqual(preferences.glassMode, .clear)
-        XCTAssertFalse(preferences.followCurrentCodexTask)
         XCTAssertEqual(
             defaults.string(
                 forKey: "preferences.appearance.glassPreset"
@@ -988,10 +753,6 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.language.followsSystem"
         )
         savedDefaults.set(
-            true,
-            forKey: "preferences.codexActivity.followCurrentTask"
-        )
-        savedDefaults.set(
             AppPreferences.Language.english.rawValue,
             forKey: "preferences.language.custom"
         )
@@ -1003,7 +764,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(savedPreferences.glassMode, .frosted)
         XCTAssertFalse(savedPreferences.followsSystemLanguage)
         XCTAssertEqual(savedPreferences.customLanguage, .english)
-        XCTAssertTrue(savedPreferences.followCurrentCodexTask)
 
         let legacySuiteName = "QuotaViewTests.\(UUID().uuidString)"
         let legacyDefaults = UserDefaults(suiteName: legacySuiteName)!

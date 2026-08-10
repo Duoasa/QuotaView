@@ -38,9 +38,3 @@ List any Codex App Server schema assumptions, supported macOS changes, or privac
 State `None`, or list the required version, Handoff, version-history, README,
 asset, signing, notarization, tag, and Release updates. Do not record planned
 release work as completed.
-
-- [ ] For a new release cycle, the previous stable version is recorded as an
-  immutable rollback baseline with tag, commit, Release asset, SHA-256,
-  signing, and notarization evidence.
-- [ ] A Preview/Beta/RC leaves the stable GitHub Latest and README download
-  entry unchanged unless the product owner explicitly authorizes otherwise.
