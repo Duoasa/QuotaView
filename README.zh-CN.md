@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag&sort=semver"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1/QuotaView-v0.3.1.zip"><strong>下载 QuotaView v0.3.1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1-build.2/QuotaView-v0.3.1-build.2.zip"><strong>下载 QuotaView 0.3.1 Build 2</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -48,7 +48,7 @@ QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.3.1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) 下载 `QuotaView-v0.3.1.zip`。
+2. 前往 [0.3.1 Build 2 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) 下载 `QuotaView-v0.3.1-build.2.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
@@ -74,7 +74,7 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
   并在任务完成后自动收起
 - 紧凑的状态栏入口和可动态调整高度的菜单面板
 - 每 60 秒自动刷新，同时支持手动刷新
-- 可配置菜单栏数值和六个面板内容区域
+- 可配置菜单栏数值和七个面板内容区域
 - 提供磨砂和清透玻璃效果，并适配浅色与深色模式
 - macOS 26 使用原生 Liquid Glass，macOS 14–15 使用 Material 兼容方案
 - 支持跟随系统或固定使用浅色、深色外观

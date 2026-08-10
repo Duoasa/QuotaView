@@ -1,13 +1,15 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-01
+更新日期：2026-08-10
 
 工作区：`/Users/sukduoasa/Documents/widget`
 
-当前生产分支：`main`
+当前开发分支：`codex/0.3.1-build.6-hover-delay`
 
-当前发布提交与生产基线：
-`041c698ae9755d458fa9f111e4ac74e9711048b9`
+当前开发版本：`0.3.1 (Build 6)`
+
+当前公开生产基线：`0.3.1 (Build 2)`，发布提交
+`3119171f45163fe45d68a4f774a0488968f14fd7`
 
 远程：`https://github.com/Duoasa/QuotaView.git`
 
@@ -21,106 +23,77 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.1 (Build 1)` |
-| tag | `v0.3.1` |
-| 发布提交 | `041c698ae9755d458fa9f111e4ac74e9711048b9` |
-| Release | [QuotaView 0.3.1 — Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1) |
-| 资产 | `QuotaView-v0.3.1.zip` |
-| SHA-256 | `ff2417f40c8d5ad9e12c4c3c42101fb3e12e9e04c137c1bc6a42e2b56bf50e2d` |
+| 最新推荐版本 | `0.3.1 (Build 2)` |
+| tag | `v0.3.1-build.2` |
+| 发布提交 | `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
+| 资产 | `QuotaView-v0.3.1-build.2.zip` |
+| 大小 | `11,443,325 bytes` |
+| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
 
-`0.3.1 (Build 1)` 已完成 Developer ID 签名、Apple 公证、Staple、
-GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
+`0.3.1 (Build 2)` 已完成 Developer ID 签名、Apple 公证、Staple、
+GitHub Release、Latest 切换和回下载复核，是当前公开生产基线。其 App、
+Widget 与 Helper 均为 Universal `x86_64 arm64`，共享容器使用
+`BUUH229D5Q.com.quotaview.shared`。
 
-2026-08-01：本地 `0.3.1 (Build 2)` Widget 热修复候选已完成实现与
-安装验证。macOS
-系统日志确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
-`SystemPolicyAppData` 拒绝读取 `group.com.quotaview.shared`。Build 2 将
-App Group 迁移为团队前缀 `BUUH229D5Q.com.quotaview.shared`，符合未嵌入
-provisioning profile 的公证 App 共享容器要求。`swift test` 共 `53` 项
-通过，Universal Release 构建和 Developer ID 签名验证通过；App、Widget
-与 Helper 均为 `x86_64 arm64`。安装后新容器写入有效快照，Widget 时间线
-成功归档，内核不再出现共享快照读取拒绝；视觉结果等待产品所有者验收。
-正式发布资产已完成 Apple 公证和 Staple，但尚未上传 GitHub，不得提前
-改写 GitHub Latest、tag、Release URL 或公开资产记录。
-
-Build 2 将主面板与 Widget 的额度标题从“本周剩余”统一调整为“本周期
-剩余”，英文使用两词 `Period Remaining`，以兼容 Codex 的 5 小时、7 天
-及后续可变用量周期；Tooltip、VoiceOver 与实现内部命名同步使用周期语义。
-
-### 0.3.1 Build 2 GitHub 发布候选
-
-目标发布元数据：
-
-| 项目 | 候选值 |
-|---|---|
-| Marketing Version | `0.3.1` |
-| Build Number | `2` |
-| 建议 tag | `v0.3.1-build.2` |
-| 建议 Release 标题 | `QuotaView 0.3.1 Build 2 — Widget Hotfix` |
-| 最终资产名 | `QuotaView-v0.3.1-build.2.zip` |
-| App Group | `BUUH229D5Q.com.quotaview.shared` |
-| 最低系统版本 | macOS 14 |
-| 架构 | Universal `arm64 + x86_64` |
-
-本地正式发布资产（尚未上传 GitHub）：
+## 1. 0.3.1 Build 6 当前开发状态
 
 | 项目 | 当前值 |
 |---|---|
-| 文件 | `dist/QuotaView-v0.3.1-build.2.zip` |
-| 大小 | `11,443,325 bytes` |
-| SHA-256 | `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
-| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `0ff9bf81-3570-4243-b3be-5d076b0f888c` |
+| Marketing Version | `0.3.1` |
+| Build Number | `6` |
+| 开发主题 | Token 方格自定义 0.5 秒 Hover 提示 |
+| 开发分支 | `codex/0.3.1-build.6-hover-delay` |
+| 基线 tag | `v0.3.1-build.2` |
+| 基线提交 | `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| 发布状态 | 开发中；无 tag、无 Release，不改变公开 Latest |
 
-正式 ZIP 已在全新目录解压、附加隔离属性并通过
-`codesign --verify --deep --strict`、`stapler validate`、`spctl`、版本、
-架构、资源与真实启动烟雾测试；App、Widget 与 Helper 均包含
-`x86_64 arm64`，App 与 Widget entitlement 均包含团队前缀 App Group。
+当前实现：
 
-GitHub Release Notes 使用以下单份英文源正文；GitHub 界面负责翻译：
+- 直接使用 `account/usage/read` 已返回的每日 Token 历史桶，不引入 WebView、
+  Cookie、网页抓取或新的凭据读取；
+- 在主面板数据列表下方、额度重置入口上方增加 Token 活动热力图；
+- 默认展示最近一个月，右上角可切换最近一周、一个月、三个月与全部可用
+  历史，选择会持久化；
+- 深色外观只使用白色不同透明度，浅色外观只使用深色不同透明度，不使用
+  蓝色或任何彩色；
+- 图表没有独立卡片、第二层玻璃、渐变或投影，继续复用主面板现有排版、
+  间距、按钮状态和 Asta Sans；
+- 设置窗口新增“Token 活动图表”开关，默认开启；关闭后主面板按可见内容
+  动态缩短；
+- 每个日期单元提供本地化 Tooltip 和 VoiceOver 日期/Token 数值；无数据时
+  保持稳定布局并明确显示不可用状态；
+- 日期单元 Hover 与 VoiceOver 的 Token 用量使用 `K / M / B` 紧凑格式，
+  小于 `1K` 显示为 `<1K`，不展示完整精确数字；
+- 日期单元不再使用 macOS 系统 `.help` 延迟；鼠标稳定停留 `0.5` 秒后显示
+  自定义中性 Tooltip，移出或切换单元时立即取消并隐藏；
+- 周、月、三月与总计全部使用 `12 × 12 pt` 的标准圆角正方形，每行固定
+  `16` 格，横纵间距统一为 `3 pt`；
+- 有效日期连续右下对齐，左上补位格使用最浅中性底色和虚线描边；所有范围
+  均构成完整的 `16 × N` 方格表；
+- 图表区和状态栏菜单高度按实际行数联动：周为 1 行、月为 2 行、三月和
+  总计按日期数量向上取整；切换范围时重新测量面板，完整展示且不压缩方格；
+- 默认月视图的图表区高 `74 pt`，全部默认内容与额度重置入口出现时面板高
+  `507 pt`；隐藏图表后恢复原有高度逻辑。
 
-```markdown
-QuotaView 0.3.1 Build 2 is a focused hotfix for WidgetKit data sharing and
-variable Codex quota periods.
+当前验证：
 
-## Fixed
+- `swift test`：55 项通过，0 失败；
+- Universal Xcode Release 无签名构建通过；App 与 Widget 均为
+  `0.3.1 (Build 6)`，App、Widget、Helper 与 Framework 均包含
+  `x86_64 arm64`；`AppIcon.icns` 及 App / Widget `Assets.car` 完整；
+- `git diff --check`、临时 Debug 数据、截图 / UI QA 入口与真实额度重置
+  接口残留检查均通过；
+- 深色 / 浅色、中文 / 英文、范围切换和设置开关的视觉与交互结果：等待
+  产品所有者运行应用后验收，不提前记录为“已通过”。
 
-- Restored Small and Medium widget data for notarized direct downloads by
-  migrating the shared container to the team-prefixed App Group
-  `BUUH229D5Q.com.quotaview.shared`.
-- Renamed “Weekly Remaining” to “Period Remaining” so the interface works for
-  5-hour, 7-day, and future variable quota periods. The Simplified Chinese
-  title is now “本周期剩余”.
-- Added a release packaging check that rejects a non-team-prefixed App Group
-  unless the app embeds a provisioning profile.
+Build 3 至 Build 5 分别完成 Token 活动图表、紧凑 Hover 数值和 16 列方格表
+的本地验证，但都没有 commit、tag 或 Release；本次 Hover 延迟调整从
+Build 6 继续，不覆盖此前构建的识别身份。
 
-## Requirements
-
-- macOS 14 or later
-- A Codex version with Hooks support
-```
-
-Build 2 发布检查清单：
-
-- [x] 源码、App 与 Widget 版本统一为 `0.3.1 (Build 2)`；
-- [x] App Group 迁移为 `BUUH229D5Q.com.quotaview.shared`，并加入打包门禁；
-- [x] 主面板与 Widget 使用“本周期剩余” / 两词 `Period Remaining`；
-- [x] `swift test` 53 项通过，0 失败；
-- [x] Universal Xcode Release 构建通过；
-- [x] Developer ID 本地候选签名、全新解压验签、版本、架构、资源和
-  entitlement 检查通过；
-- [x] 新共享容器写入有效快照，Widget 时间线成功归档，内核没有新的
-  `SystemPolicyAppData` 读取拒绝；
-- [ ] 产品所有者确认小号 / 中号、深色 / 浅色和中英文最终视觉；
-- [x] 使用 `NOTARY_PROFILE` 生成无 `candidate` 后缀的最终资产，完成 Apple
-  公证与 Staple；
-- [x] 对最终 ZIP 全新解压并执行 `codesign`、`stapler`、`spctl`、版本、
-  架构、资源、隔离属性和真实启动烟雾测试；
-- [x] 将最终资产大小、SHA-256 和 Submission ID 同步到本文件；发布提交、
-  `VERSION_HISTORY.md` 与 README 中英文版本待 Release 建立后同步；
-- [ ] 创建发布提交，使用唯一 tag `v0.3.1-build.2`，上传唯一正式 ZIP，
-  将 GitHub Latest 切换到 Build 2；
-- [ ] 从 GitHub 回下载资产，逐字节核对并再次验签和启动测试。
+版本编号规则：本轮所有测试与候选构建统一为 `0.3.1 (Build 6)`；从下一次
+可识别的功能更新或重新构建开始，必须递增 Build Number。若正式发布，必须
+使用唯一 tag 和带 Build Number 的 ZIP，不覆盖 Build 2 的 tag 或资产。
 
 2026-08-01：宣传片摄录专用的本地 `0.3.2 Demo` 已结束使用；灵动岛已
 恢复为完成后 `20` 秒紧凑、
@@ -136,7 +109,7 @@ Widget 与 Helper 均包含 `x86_64 arm64`。视觉与实机时序等待产品�
 - `AGENTS.md`：长期产品、设计、实现和发布约束；
 - `design-qa.md`：视觉验收历史。
 
-## 1. 0.3.1 正式发布状态
+## 2. 0.3.1 Build 1 历史发布状态
 
 ### 版本定位
 
@@ -145,8 +118,8 @@ Widget 与 Helper 均包含 `x86_64 arm64`。视觉与实机时序等待产品�
 | Marketing Version | `0.3.1` |
 | Build Number | `1` |
 | 开发主题 | Codex 灵动岛正式接入 |
-| 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 公开 Latest | `0.3.1 (Build 1)` |
+| 发布状态 | 历史正式 Release、非 Draft、非 Pre-release |
+| 当前替代版本 | `0.3.1 (Build 2)` |
 
 ### 已实现
 
@@ -354,7 +327,7 @@ SHA-256:
 合并并正式发布。GitHub 回下载资产与本地最终 ZIP 逐字节一致；回下载 App
 通过签名、公证、Gatekeeper 和 5 秒真实启动复核。
 
-## 2. 0.2.1 正式发布
+## 3. 0.2.1 正式发布
 
 ### 版本与目标
 
@@ -402,7 +375,7 @@ SHA-256:
 - Release 构建不得包含调试虚拟数据、自动展开、自动点击、截图或 UI QA
   入口。
 
-## 3. 0.2.1 验证状态
+## 4. 0.2.1 验证状态
 
 已完成：
 
@@ -440,7 +413,7 @@ SHA-256:
 
 视觉与交互矩阵在用户明确确认前不得记录为“已通过”。
 
-## 4. 0.2.1 发布完成状态
+## 5. 0.2.1 发布完成状态
 
 钥匙串中已确认存在：
 
@@ -471,7 +444,7 @@ SHA-256:
 如 Marketing Version 保持 `0.2.1` 但需要发布热修复，必须增加 Build
 Number，并为 tag 和 ZIP 加入唯一 Build 标识。
 
-## 5. 0.2.1 实现边界
+## 6. 0.2.1 实现边界
 
 数据链路：
 
@@ -493,19 +466,23 @@ CodexProviderAdapter
 - 菜单与 Widget 的详细视觉令牌以 `AGENTS.md` 和对应 Figma 节点为准；
 - 不增加第二层主面板玻璃，不接入真实额度重置接口。
 
-## 6. Git 工作区
+## 7. Git 工作区
 
-0.3.1 源码、测试、README、灵动岛截图和产品文档已通过 PR
-[#12](https://github.com/Duoasa/QuotaView/pull/12) 合并，发布 tag 指向：
+当前分支从公开 Build 2 tag 创建，基线提交为：
 
 ```text
-041c698ae9755d458fa9f111e4ac74e9711048b9
+v0.3.1-build.2
+3119171f45163fe45d68a4f774a0488968f14fd7
 ```
+
+Build 3 的源码、测试、配置和文档修改尚未 commit、tag 或发布。公开 Build 2
+的 tag、Release 与 `dist/QuotaView-v0.3.1-build.2.zip` 不得被覆盖。
 
 以下未跟踪 Prototype 与参考资料未进入 0.3.1 发布提交，所有权和后续提交
 范围仍未确认，默认不得擅自纳入：
 
 ```text
+.worktrees/
 Prototypes/
 docs/reference/
 quotaview-blurred-gradient-background-2k.png
@@ -516,7 +493,7 @@ subtract-frosted-glass-icon.png
 不得使用 `git clean`、`git reset --hard` 或 `git checkout --` 清理用户
 文件。
 
-## 7. 发布门禁
+## 8. 发布门禁
 
 发布前至少执行：
 
@@ -555,11 +532,11 @@ lipo -archs \
 仅验签不足以证明可发布。必须全新解压并进行真实启动测试；发布后还要从
 GitHub 回下载再次验证。
 
-## 8. 文档联动
+## 9. 文档联动
 
-0.3.1 已在同一发布任务内完成：
+0.3.1 Build 2 已在同一发布任务内完成：
 
-1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.3.1；
+1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 0.3.1 Build 2；
 2. 在版本总览和版本详情中记录 tag、发布提交、Release URL、资产名、
    大小、SHA-256、签名、公证和验证结论；
 3. 将本文件的版本入口、发布、验证与完成状态由候选状态更新为发布事实；
@@ -568,5 +545,5 @@ GitHub 回下载再次验证。
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
-`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1`。已撤回的
+`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.1-build.2`。已撤回的
 `0.2.0 Build 3` 继续只保留历史记录，不得恢复为下载或开发基线。
