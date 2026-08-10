@@ -8,33 +8,17 @@ project_file="${project_dir}/QuotaView.xcodeproj"
 scheme="QuotaView"
 configuration="Release"
 dist_dir="${project_dir}/dist"
-app_xcconfig="${project_dir}/Configs/App.xcconfig"
+info_plist="${project_dir}/Support/Info.plist"
 app_entitlements="${project_dir}/Support/QuotaView.entitlements"
 widget_entitlements="${project_dir}/Support/QuotaViewWidget.entitlements"
-
-xcconfig_value() {
-    local key="$1"
-    local value
-    value="$(
-        sed -n \
-            "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*//p" \
-            "${app_xcconfig}" \
-            | tail -n 1
-    )"
-    if [[ -z "${value}" ]]; then
-        print -u2 "Missing ${key} in ${app_xcconfig}"
-        exit 2
-    fi
-    print -r -- "${value}"
-}
-
-version="$(xcconfig_value MARKETING_VERSION)"
-build_number="$(xcconfig_value CURRENT_PROJECT_VERSION)"
-release_channel="$(xcconfig_value QUOTAVIEW_RELEASE_CHANNEL)"
-app_group_identifier="$(xcconfig_value QUOTAVIEW_APP_GROUP_ID)"
-if [[ "${release_channel}" == "preview" ]]; then
-    release_name="QuotaView-v${version}-preview.${build_number}"
-elif [[ "${build_number}" == "1" ]]; then
+version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
+build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${info_plist}")"
+app_group_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewAppGroupIdentifier' \
+        "${info_plist}"
+)"
+if [[ "${build_number}" == "1" ]]; then
     release_name="QuotaView-v${version}"
 else
     release_name="QuotaView-v${version}-build.${build_number}"
@@ -218,18 +202,6 @@ widget_build_number="$(
         -c 'Print :CFBundleVersion' \
         "${widget_extension}/Contents/Info.plist"
 )"
-built_release_channel="$(
-    /usr/libexec/PlistBuddy \
-        -c 'Print :QuotaViewReleaseChannel' \
-        "${staging_app}/Contents/Info.plist" 2>/dev/null \
-        || print stable
-)"
-widget_release_channel="$(
-    /usr/libexec/PlistBuddy \
-        -c 'Print :QuotaViewReleaseChannel' \
-        "${widget_extension}/Contents/Info.plist" 2>/dev/null \
-        || print stable
-)"
 widget_bundle_identifier="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :CFBundleIdentifier' \
@@ -254,14 +226,6 @@ if [[ "${widget_version}" != "${version}" ]] \
     print -u2 \
         "Widget version mismatch: expected ${version} (${build_number}), " \
         "built ${widget_version} (${widget_build_number})"
-    exit 4
-fi
-
-if [[ "${built_release_channel}" != "${release_channel}" ]] \
-    || [[ "${widget_release_channel}" != "${release_channel}" ]]; then
-    print -u2 \
-        "Release channel mismatch: expected ${release_channel}, " \
-        "built app=${built_release_channel}, widget=${widget_release_channel}"
     exit 4
 fi
 
@@ -431,7 +395,6 @@ print "Built ${destination_app}"
 print "Archived ${destination_zip}"
 print "Architectures: ${architectures}"
 print "Widget architectures: ${widget_architectures}"
-print "Release channel: ${release_channel}"
 print "SHA-256: ${destination_zip_sha256}"
 
 if [[ "${signing_identity}" == "-" ]]; then

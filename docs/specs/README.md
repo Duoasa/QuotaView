@@ -6,13 +6,13 @@
 >
 > 规格状态：`Accepted`
 >
-> 生效日期：2026-08-05
+> 生效日期：2026-08-04
 >
-> 当前生产基线：QuotaView `0.3.1 (Build 2)`
+> 当前生产基线：QuotaView `0.3.3 (Build 3)` 发布候选
 >
-> 当前进行中工作：Codex 灵动岛多任务适配
+> 当前进行中工作：Token 活动统计正式发布
 >
-> 当前交付阶段：`Released`（`0.3.2 Preview 1`）
+> 当前交付阶段：`Verifying`（等待 `v0.3.3` Release 与回下载验证）
 
 ## 1. 本文件的职责
 
@@ -34,7 +34,8 @@
 
 正式 SDD 系统只接纳已经由 Git 跟踪、且在本注册表或阅读路由中具有明确
 职责的 Markdown。当前 SDD 治理、规格和多任务 Demo 文档自提交 `f603c38`
-起已进入 `main`；多任务生产实现已合并并作为 `0.3.2 Preview 1` 发布。
+起已进入 `main`；多任务生产实现已作为 `0.3.2 Preview 1` 发布，随后从
+`0.3.3` 稳定生产映射中移除并保留为公开 Pre-release 与本地归档参照。
 
 以下本地对象默认排除在正式调用链外：未跟踪的旧
 `Prototypes/CodexActivityMetalDemo/`、受 `AGENTS.md` 门禁约束的未跟踪
@@ -45,32 +46,29 @@
 
 | 维度 | 当前事实 |
 |---|---|
-| 公开生产版本 | `0.3.1 (Build 2)` |
-| 生产版本状态 | 已发布；GitHub Latest；Developer ID 签名并完成 Apple 公证 |
-| 当前开发代码版本 | `MARKETING_VERSION = 0.3.2`，`CURRENT_PROJECT_VERSION = 1`，渠道 `preview` |
-| 当前迭代 | `0.3.2 Preview 1` 已发布；响应速度与任务跟随优化待后续迭代 |
-| 当前规格 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` |
-| 规格状态 | `Accepted`：固定单岛、多任务列表和 Demo 视觉基线已确认 |
-| 交付状态 | `Released`：签名、公证、tag、Pre-release 与回下载验证已完成 |
-| Prototype 自动化 | 38 项测试通过，0 失败（2026-08-04）；不能替代生产测试 |
-| 生产源码状态 | 已接入任务注册表、独立生命周期、自动优先级、可选 AX 标题跟随、固定任务列和紧凑态入口 |
-| 生产自动化 | `swift test` 60 项通过、0 失败（2026-08-05）；Universal Xcode Release、静态门禁、Developer ID 签名、Apple 公证、Staple 与 GitHub 回下载验证通过，App、Widget、Hook、Core 均为 `x86_64 arm64` |
-| 正式预览资产 | `QuotaView-v0.3.2-preview.1.zip`；`11,543,516 bytes`；SHA-256 `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587`；Apple Accepted 并已 Staple |
-| 已发布版本 | `0.3.2 (Build 1) Preview 1` / `v0.3.2-preview.1` / [GitHub Pre-release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
-| 稳定回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
-| 当前验收 | Demo 基线已有产品所有者确认；`2026-08-05` 生产实机六状态轮播与 SessionEnd 清理已由产品所有者确认通过；语言、Widget 状态共享、辅助功能及完整交互矩阵继续验收 |
+| 目标生产版本 | `0.3.3 (Build 3)`；等待正式 Release 完成后成为 GitHub Latest |
+| 当前开发代码版本 | `MARKETING_VERSION = 0.3.3`，`CURRENT_PROJECT_VERSION = 3`，稳定渠道 |
+| 当前迭代 | 状态栏菜单 Token 活动统计正式发布 |
+| 当前规格 | `QV-PRODUCT-TOKEN-ACTIVITY-001` |
+| 规格状态 | `Accepted`：数据、网格、单色阶梯、Hover 与顶部锚定行为已确认 |
+| 交付状态 | `Verifying`：实现、手动验收、签名和 Apple 公证完成；等待 GitHub Release 与回下载验证 |
+| 生产源码状态 | 每日用量桶、周/月/三个月/总计、16 列网格、0.5 秒紧凑 Tooltip、设置开关和顶部固定动态面板已接入；0.3.2 多任务生产实现不包含在稳定源码中 |
+| 生产自动化 | `swift test` 57 项通过、0 失败；Universal Release、Developer ID 签名、Apple 公证 Accepted 与 Staple 通过，App、Widget、Hook、Core 均为 `x86_64 arm64` |
+| 正式候选资产 | `QuotaView-v0.3.3-build.3.zip`；`11,566,058 bytes`；SHA-256 `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12`；Apple Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
+| 独立预览版 | `0.3.2 (Build 1) Preview 1` / `v0.3.2-preview.1` / [GitHub Pre-release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)，继续保留供社区测试 |
+| 本地预览备份 | 分支 `codex/archive-0.3.2-preview.1-multitask-island`；worktree `.worktrees/QuotaView-0.3.2-preview.1-backup`；提交 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
+| 当前验收 | 产品所有者已确认 Token 图表观感、单色阶梯、0.5 秒 Tooltip 与周期切换顶部固定；完整外观/语言/辅助功能矩阵继续等待逐项验收 |
 
 ### 当前迭代边界
 
-- Prototype 位于
-  [`Prototypes/CodexActivityMultiTaskDemo`](../../Prototypes/CodexActivityMultiTaskDemo/README.md)，
-  与生产 Target 隔离；
-- 当前允许按已接受规格修改生产 `Sources/`、测试、版本配置和预发布构建脚本；
+- Token 活动图表的唯一规格为
+  [`QV-PRODUCT-TOKEN-ACTIVITY-001`](../design/quotaview-token-activity.md)；
+- 当前允许完成 0.3.3 Release、Latest 切换、回下载验证和最终发布记录；
 - `v0.3.2-preview.1`、公证资产和 GitHub Pre-release 已完成并视为不可移动
-  发布事实；后续优化必须使用新的迭代、Build、tag 和资产；
-- Demo 的冻结产品方向继续有效；调试可以修复实现偏差，但改变固定单岛、
-  尺寸、任务列、隐私或交互方向必须先更新规格并取得产品所有者确认；
-- 当前工作不得改变 `0.3.1 (Build 2)` 的发布事实。
+  发布事实；对应本地归档必须保留，后续优化使用新的迭代、Build、tag 和资产；
+- 0.3.2 Preview 的多任务生产代码不得进入 0.3.3 稳定版；单任务灵动岛继续
+  作为稳定行为；
+- 0.3.3 Build 3 之后任何源码变更必须使用新的 Build Number。
 
 ## 3. SDD 状态模型
 
@@ -105,12 +103,13 @@
 |---|---|---|---|---|---|
 | `QV-GOVERNANCE-001` | [AGENTS.md](../../AGENTS.md) | 治理规范 | `Accepted` | — | 长期产品、实现、验证与发布约束 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-001` | [单任务灵动岛产品规格](../design/quotaview-codex-activity-widget-product.md) | 已发布功能规格 | `Accepted` | `Released` | `0.3.1` 单任务生产行为基线 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 当前功能规格 | `Accepted` | `Released` | `0.3.2 Preview 1` 已发布行为基线 |
+| `QV-PRODUCT-TOKEN-ACTIVITY-001` | [Token 活动图表规格](../design/quotaview-token-activity.md) | 当前功能规格 | `Accepted` | `Verifying` | `0.3.3 Build 3` 正式发布与回下载验证 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 预览版功能规格 | `Accepted` | `Released` | `0.3.2 Preview 1` 独立预览行为基线；不映射到 0.3.3 稳定源码 |
 | `QV-DESIGN-WIDGET-001` | [WidgetKit 接入规格](../design/quotaview-widgetkit-solution.md) | 架构/功能规格 | `Accepted` | `Released` | Widget 数据、Target 与验证边界 |
-| `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（仅 Phase 0–2、4A–4B） | 当前核心架构不变量；Phase 3、5–7 尚未实施 |
+| `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（Phase 0–2、4A–4B；Phase 3 部分） | Token 活动使用官方每日桶；SQLite History 与 Phase 5–7 尚未实施 |
 | `QV-EVIDENCE-CORE-0.2.0-001` | [0.2.0 重构报告](../design/quotaview-core-refactor-0.2.0-report.md) | 验证证据 | `Archived` | `Released` | 历史实施与测试证据 |
 | `QV-EVIDENCE-DESIGN-QA-001` | [主项目 Design QA](../../design-qa.md) | 验收证据 | — | — | 生产视觉验收历史，证据状态 `Active` |
-| `QV-EVIDENCE-MULTITASK-DEMO-QA-001` | [多任务 Demo Design QA](../../Prototypes/CodexActivityMultiTaskDemo/design-qa.md) | Prototype 验收证据 | — | `Prototype` | Demo 视觉、交互与调试记录 |
+| `QV-EVIDENCE-MULTITASK-DEMO-QA-001` | [多任务 Demo Design QA](../../Prototypes/CodexActivityMultiTaskDemo/design-qa.md) | Prototype 验收证据 | — | `Released` | 0.3.2 Preview 的历史 Demo 视觉、交互与调试记录 |
 
 以下文件不是产品规格：
 
@@ -124,24 +123,21 @@
 
 ## 5. 当前迭代追踪矩阵
 
-当前多任务工作使用以下稳定 Requirement ID。详细定义与验收条件位于
-[多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md)。
+当前 Token 活动工作使用以下稳定 Requirement ID。详细定义与验收条件位于
+[Token 活动图表规格](../design/quotaview-token-activity.md)。
 
 | Requirement ID | 规格范围 | 当前证据 | 当前结论 |
 |---|---|---|---|
-| `MT-SCOPE-001` | 单一 `NSPanel`、单任务行为不回归 | `CodexActivityIsland.swift` + 生产测试 | 单/多任务共用单一生产面板；待实机验收 |
-| `MT-DATA-001` | 按 `sessionHash` 隔离任务与生命周期 | `CodexActivityStore` + 交错/结束/计时测试 | 首版生产实现完成，自动化通过 |
-| `MT-SELECT-001` | 用户焦点优先与自动降级仲裁 | `CodexActivityStore` + `CodexFocusedTaskTitleReader.swift` | 自动优先级与可选标题跟随已实现；待真实 Codex 验收 |
-| `MT-UI-001` | `496 × 152 pt` 固定最大态与任务列 | `CodexActivityIsland.swift` + 连续窗口测试 | 首版生产实现完成；等待视觉验收 |
-| `MT-UI-002` | `52 pt` 紧凑态与“共 N 项”展开 | 动态宽度、跑马灯和 Press 入口 | 首版生产实现完成；等待交互验收 |
-| `MT-MOTION-001` | 任务列、玻璃选择态、Metal 与 Reduce Motion | 生产任务列、选择玻璃、跑马灯和静态降级 | 六状态生产实机轮播通过；Reduce Motion 与完整节奏矩阵继续验收 |
-| `MT-PRIVACY-001` | 最小 AX 标题读取、禁止控制或完整扫描 | 有界顶部标题区读取器 + 设置说明 | 已实现只读降级；待权限授予/撤销实机验收 |
-| `MT-A11Y-001` | VoiceOver、Increase Contrast、Reduce Motion | 生产 AX 标签、Press、Reduce Motion | 首版实现完成；等待产品矩阵验收 |
-| `MT-VERIFY-001` | 自动化、Release 构建、视觉矩阵 | 60 项生产测试、Universal Release、静态门禁、六状态实机轮播、Apple 公证、Staple、Pre-release 与回下载验证通过 | 已按预览边界发布；其余产品矩阵进入后续优化证据 |
+| `TOKEN-ACTIVITY-01` | 官方每日桶与四个 UTC 范围 | `CurrentCodexPresentation` + 行为测试 | 实现完成，排序与日期边界通过 |
+| `TOKEN-ACTIVITY-02` | 完整 16 列网格与右下对齐 | `TokenActivityGridModel` + 网格测试 | 实现完成，产品所有者确认观感 |
+| `TOKEN-ACTIVITY-03` | 深浅五级不透明单色 | `TokenActivityCellPalette` + 代码审查 | 产品所有者确认 Build 3 阶梯；占位格保留透明度 |
+| `TOKEN-ACTIVITY-04` | 0.5 秒紧凑 Tooltip 与 AX | `TokenActivityHoverController` + Hover 测试 | 延迟、取消和 K/M/B 行为完成 |
+| `TOKEN-ACTIVITY-05` | 顶部固定的动态菜单尺寸 | `MenuBarPanelController` + 几何测试 | 收缩与扩展均由产品所有者确认不跳动 |
+| `TOKEN-ACTIVITY-06` | 设置开关、默认月与 Usage Demand | `AppPreferences`、`SettingsView` + 偏好测试 | 实现完成 |
+| `TOKEN-ACTIVITY-07` | 发布门禁 | 57 项测试、Universal、签名、公证、Staple | 等待 GitHub Release 与回下载验证后转 `Released` |
 
-以上为 `Released` 阶段证据。产品所有者已接受以预览版公开当前能力与
-不足；响应速度、当前任务跟随、任务切换与收展节奏仍是后续优化范围，不能
-据此把 `0.3.2 Preview 1` 改写为稳定版。
+0.3.2 Preview 的多任务 Requirement 与发布证据继续由其独立规格维护；不得
+用其 `Released` 状态推导多任务实现已进入 0.3.3 稳定版。
 
 ## 6. 阅读路由
 
@@ -159,9 +155,9 @@
 
 ## 7. 一致性规则
 
-- `0.3.1 (Build 2)` 必须继续作为公开稳定版、GitHub Latest 与回滚基线
-  出现在 `HANDOFF.md`、`VERSION_HISTORY.md` 和 README；已发布的
-  `0.3.2 Preview 1` 只能作为独立 Pre-release，不得改变稳定默认下载；
+- 完成发布后，`0.3.3 (Build 3)` 必须作为公开稳定版、GitHub Latest 与
+  默认下载出现在 `HANDOFF.md`、`VERSION_HISTORY.md` 和 README；已发布的
+  `0.3.2 Preview 1` 继续作为独立 Pre-release，不得进入稳定默认下载；
 - 当前迭代、规格状态和交付状态必须同时与 `HANDOFF.md` 一致；
 - 当前开发分支和 HEAD 必须从 Git 实时读取，不得在 Handoff 中维护会随提交
   失效的哈希；

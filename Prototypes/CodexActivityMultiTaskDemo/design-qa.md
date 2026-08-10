@@ -8,11 +8,12 @@
 >
 > 证据状态：`Active`
 >
-> 对应交付阶段：`Prototype`（当前正在 Demo 调试）
+> 对应交付阶段：`Released`（`0.3.2 Preview 1` 的历史 Prototype 证据）
 >
 > 证据边界：2026-08-02 的产品所有者确认只冻结 Demo 视觉与交互基线；
-> 2026-08-04 新增的八任务控制面板正在等待产品所有者验收。两者都不证明
-> 生产实现、生产构建或发布已经完成。
+> 后续生产实现已作为 `0.3.2 Preview 1` 发布，但本证据不等于稳定版验收。
+> 多任务实现不包含在 `0.3.3 Build 3` 稳定源码中，仍作为公开预览版与本地
+> 归档参照保留。
 
 ## Comparison Target
 
@@ -26,8 +27,8 @@
   retained below.
 - Rejected stacked-card reference: `2476 × 646 px`; retained only as the design
   direction that must not be implemented, without its local filesystem path.
-- Implementation: native macOS `CodexActivityMultiTaskDemo`, one-to-eight-task
-  controls with eight tasks selected by default, expanded state, dark appearance.
+- Implementation: native macOS `CodexActivityMultiTaskDemo`, four-task expanded
+  state, dark appearance.
 - Native design size: one fixed `496 × 152 pt` multi-task panel with a
   `144 pt` right-side task list. Compact height remains `52 pt`, while width
   follows the rendered status and title; its panel adds `10 pt` reserve on
@@ -62,7 +63,7 @@ require product-owner inspection in the running app.
   screenshot evidence.
 - Code and layout checks confirm that both the previous right-side mini-island
   design and the later full-size backing cards are absent; the foreground task
-  rail remains, and two to eight tasks use the same `496 × 152 pt` panel. The
+  rail remains, and two to four tasks use the same `496 × 152 pt` panel. The
   three-row rail now uses an ordered sliding window instead of replacing its
   last row with whichever overflow task is selected.
 - The expanded divider view has been removed. Compact content now reserves
@@ -192,16 +193,6 @@ require product-owner inspection in the running app.
     coverage.
 27. On `2026-08-02`, the product owner accepted the running native Demo as the
     frozen visual and interaction baseline for later development.
-28. On `2026-08-04`, the isolated control panel expanded from four to eight
-    editable fixtures. Eight tasks are selected by default; selecting the last
-    task moves the ordered viewport to `6–8`. Automated coverage passes, while
-    the enlarged control panel and live motion remain pending owner review.
-29. Product-owner evidence then exposed a row-pool regression: the header and
-    overflow counts used all eight tasks, but the render pool still retained
-    four rows, so selecting tasks five through eight could leave only one row
-    visible. The rail now expands its row pool to the complete fixture count
-    before layout and keeps all tasks in the ordered content model; visual and
-    motion confirmation remain pending owner review.
 
 ## Implementation Checklist
 
@@ -240,8 +231,6 @@ require product-owner inspection in the running app.
 - [x] Reuse the operation-text shimmer for unselected thinking/working tasks.
 - [x] Disable background-task shimmer for primary rows and Reduce Motion.
 - [x] Keep the Demo attached above and moving with the control window.
-- [x] Expose one to eight editable fixtures and keep the eighth task in a
-  contiguous `6–8` rail window when selected.
 - [x] Product owner froze the current silhouette, task-rail density, glass,
   spacing, and switching feedback as the later-development baseline.
 

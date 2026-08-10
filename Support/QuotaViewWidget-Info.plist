@@ -29,7 +29,5 @@
     </dict>
     <key>QuotaViewAppGroupIdentifier</key>
     <string>$(QUOTAVIEW_APP_GROUP_ID)</string>
-    <key>QuotaViewReleaseChannel</key>
-    <string>$(QUOTAVIEW_RELEASE_CHANNEL)</string>
 </dict>
 </plist>

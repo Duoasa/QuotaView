@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.1-build.2/QuotaView-v0.3.1-build.2.zip"><strong>Download QuotaView v0.3.1 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.3/QuotaView-v0.3.3-build.3.zip"><strong>Download QuotaView v0.3.3 Build 3</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -40,6 +40,7 @@ QuotaView is a simple, lightweight, native macOS companion for the Codex account
 | --- | --- |
 | **Codex Island** | Follow thinking, tool use, approvals, context compaction, subagents, completion, and failures through a live Metal-rendered activity surface. |
 | **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
+| **Token Activity** | Review daily token usage in a compact monochrome chart with week, month, three-month, and all-history ranges. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
 | **Lightweight** | Built natively with SwiftUI and AppKit, with no embedded browser runtime. |
@@ -48,11 +49,11 @@ QuotaView is a simple, lightweight, native macOS companion for the Codex account
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.1-build.2.zip` from the [v0.3.1 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2).
+2. Download `QuotaView-v0.3.3-build.3.zip` from the [v0.3.3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.1 Build 2 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.3 Build 3 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -75,7 +76,7 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
   status-aware color and motion, and automatic dismissal after completion
 - Compact status item with a dynamically sized menu panel
 - Automatic refresh every 60 seconds and manual refresh
-- Configurable menu bar values and six optional panel sections
+- Configurable menu bar values and seven optional panel sections
 - Frosted and clear glass appearances with light/dark adaptation
 - Native Liquid Glass on macOS 26 and a Material fallback on macOS 14–15
 - System-aware or fixed light/dark appearance
@@ -83,12 +84,33 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
 
+## What's new in 0.3.3: Token Activity
+
+QuotaView 0.3.3 adds a compact daily Token Activity chart directly below the
+usage metrics in the menu panel.
+
+- Switch between the last week, month, three months, and all available history;
+  the last month is selected by default.
+- Read every range as a complete 16-column rounded-square grid. Leading
+  placeholders keep the grid aligned while real dates fill from the bottom
+  right.
+- Distinguish usage through a high-contrast, five-step monochrome palette:
+  opaque white levels in Dark Mode and opaque grayscale levels in Light Mode.
+- Hover a day for 0.5 seconds to see its date and compact K/M/B token usage.
+- Keep the top of the menu fixed while the lower edge smoothly expands or
+  contracts for the selected range.
+- Show or hide the chart from Settings.
+
+The 0.3.2 Preview 1 multi-task Codex Island remains available separately for
+community testing. Its experimental multi-task implementation is not included
+in the stable 0.3.3 source.
+
 ## 0.3.2 Preview 1: Multi-task Codex Island
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.3.1 Build 2 remains the recommended stable version and
-> the default download.
+> Island behavior. v0.3.3 Build 3 is the recommended stable version and does
+> not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
@@ -114,7 +136,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.3.1 Build 2 when stable
+- This build is intended for preview validation. Use v0.3.3 Build 3 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix
@@ -160,7 +182,7 @@ QuotaView does **not**:
 
 QuotaView starts the local `codex app-server` process and requests account data over JSON-RPC. It stores only the latest successful refresh time, availability state, a short error summary, and display preferences in its own macOS preferences domain.
 
-Version 0.3.1 is read-only by default and contains no live account-operation
+Version 0.3.3 is read-only by default and contains no live account-operation
 executor. The quota reset flow remains a local demo. The architecture reserves
 separate, explicitly authorized official operations for a future release
 without allowing refreshes to trigger side effects.

@@ -8,7 +8,7 @@
 >
 > 生效日期：2026-08-04
 >
-> 当前生产基线：QuotaView `0.3.1 (Build 2)`
+> 当前生产基线：QuotaView `0.3.3 (Build 3)`
 
 ## 1. 核心原则
 
@@ -112,10 +112,6 @@ Demo 被确认不代表已进入生产，生产实现完成也不代表已经发
 只有用户明确授权发布后执行。必须遵守 `AGENTS.md` 的签名、公证、资产、
 tag、Release、回下载和双文档联动门禁。
 
-进入任何新版本发布流程前，先按 `AGENTS.md#稳定版本封存与回滚基线` 核验
-并登记上一稳定版。预发布版本默认保留上一稳定版为 GitHub Latest 与 README
-默认下载，不移动或覆盖稳定 tag 和资产。
-
 出口：
 
 - `VERSION_HISTORY.md` 记录已发生的发布事实；
@@ -182,14 +178,22 @@ MT-DATA-001 和 MT-SELECT-001，不改版本号、不发布。
 - 规格、代码和测试对同一行为的描述不一致；
 - 发布文档提前记录尚未发生的 tag、Release 或资产。
 
-## 5. 当前多任务迭代的下一出口
+## 5. 当前 Token 活动迭代的下一出口
 
-`QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` 已于 `2026-08-05` 获得生产
-实施授权，当前交付状态为 `Implementing`，目标版本为
-`0.3.2 Preview 1`。当前可以修改生产 `Sources/`、生产测试、版本配置和
-预发布构建脚本，但不得把尚未完成的 tag、Release 或资产写成发布事实。
+`QV-PRODUCT-TOKEN-ACTIVITY-001` 的规格状态为 `Accepted`，交付状态为
+`Verifying`。实现、产品所有者手动验收、57 项测试、Universal Release、
+Developer ID 签名、Apple 公证与 Staple 已完成。
 
-当前阶段出口是完成代码审查、生产自动化测试、Universal Release 构建、
-隐私与调试入口检查后进入 `Verifying`。产品所有者完成生产 App 的视觉、
-交互、语言和辅助功能验收，并再次明确授权发布后，才能执行签名、公证、
-tag、GitHub Pre-release 与回下载验证。
+当前只允许完成发布门禁：
+
+1. PR CI 通过并合并 `main`；
+2. 从合并提交创建不可移动 `v0.3.3` tag；
+3. 上传唯一资产 `QuotaView-v0.3.3-build.3.zip`，创建非 Draft、非
+   Pre-release 的 GitHub Release 并设为 Latest；
+4. 从 GitHub 回下载资产并复核 SHA-256、签名、公证、架构、版本、资源和
+   真实启动；
+5. 将最终发布提交、Release URL 和验证结论同步到版本历史、Handoff 与 SDD，
+   再把交付状态改为 `Released`。
+
+0.3.2 Preview 的多任务实现保持独立 Pre-release 与本地归档状态，不进入
+本次稳定版；后续继续多任务开发必须建立新的迭代和 Build。

@@ -9,6 +9,7 @@ struct MenuBarView: View {
 
     private let openSettingsAction: () -> Void
     private let contentLayoutDidChange: () -> Void
+    private let prepareContentExpansion: (CGFloat) -> Void
     private let confirmationPresentationDidChange: (Bool) -> Void
 
     @State private var route: Route = .overview
@@ -26,12 +27,14 @@ struct MenuBarView: View {
         preferences: AppPreferences,
         openSettingsAction: @escaping () -> Void = {},
         contentLayoutDidChange: @escaping () -> Void = {},
+        prepareContentExpansion: @escaping (CGFloat) -> Void = { _ in },
         confirmationPresentationDidChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.store = store
         self.preferences = preferences
         self.openSettingsAction = openSettingsAction
         self.contentLayoutDidChange = contentLayoutDidChange
+        self.prepareContentExpansion = prepareContentExpansion
         self.confirmationPresentationDidChange =
             confirmationPresentationDidChange
     }
@@ -45,6 +48,7 @@ struct MenuBarView: View {
                         store: store,
                         preferences: preferences,
                         copy: copy,
+                        prepareContentExpansion: prepareContentExpansion,
                         openResetAction: openResetDetails,
                         refreshAction: refresh,
                         openCodexAction: openCodex,

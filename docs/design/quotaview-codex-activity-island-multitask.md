@@ -9,8 +9,12 @@
 > 交付状态：`Released`（`0.3.2 Preview 1`）
 >
 > 依赖基线：QuotaView `0.3.1 (Build 2)`
->
-> 目标版本：QuotaView `0.3.2 (Build 1) Preview 1`
+
+> 当前校准（2026-08-11）：本规格定义的实现已由
+> `v0.3.2-preview.1` 固化并继续作为公开 Pre-release 供社区测试；其源码
+> 另存于本地分支 `codex/archive-0.3.2-preview.1-multitask-island`。由于体验
+> 尚不成熟，该多任务实现不包含在 `0.3.3 (Build 3)` 稳定版中。后文的
+> “当前生产行为”均指 0.3.2 Preview 发布行为，不代表 0.3.3 稳定源码映射。
 >
 > 冻结日期：2026-08-01
 >
@@ -20,9 +24,7 @@
 >
 > Demo 冻结确认日期：2026-08-02
 >
-> 生产实施授权日期：2026-08-05
->
-> SDD 状态更新：2026-08-05
+> SDD 状态更新：2026-08-04
 >
 > 适用平台：macOS 14 及以上
 
@@ -45,8 +47,9 @@ tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态�
 为准。
 
 本规格及其 Demo 自提交 `f603c38` 起已由 Git 跟踪。生产实现已合并至
-`main`，发布 tag 为 `v0.3.2-preview.1`；公开稳定版与回滚基线继续是
-`v0.3.1-build.2`，当前工作不得移动该 tag 或覆盖其发布资产。
+`main`，发布 tag 为 `v0.3.2-preview.1`；随后稳定分支在准备 `0.3.3` 时移除
+该预览生产映射，但保留 tag、GitHub Pre-release 和本地归档分支。当前工作
+不得移动该 tag 或覆盖其发布资产。
 
 ## MULTITASK-00.1 SDD 状态与授权边界
 
@@ -63,8 +66,7 @@ tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态�
   Pre-release 与回下载验证；
 - 调试若需要改变 `MULTITASK-14` 的冻结项，必须先取得产品所有者确认并
   更新规格；
-- 只有完成生产自动化、Universal Release 和代码门禁后，交付状态才能进入
-  `Verifying`；只有实际完成发布后才能写为 `Released`。
+- 只有用户明确授权“迁入生产”后，交付状态才能改为 `Implementing`。
 
 ## MULTITASK-00.2 Requirement 注册表
 
@@ -73,7 +75,7 @@ tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态�
 | `MT-SCOPE-001` | 只使用一个承载 `NSPanel`；单任务行为和视觉不回归 | 单/多任务共用一个生产面板，单任务回归矩阵通过 |
 | `MT-DATA-001` | 任务按 `sessionHash` 隔离状态、旧事件和 `20 / 120` 秒生命周期 | 交错事件、旧事件、独立计时和 `SessionEnd` 测试通过 |
 | `MT-SELECT-001` | 高置信度用户焦点优先；不可用时使用稳定自动降级 | 唯一匹配、重名、失配、前后台与优先级测试通过 |
-| `MT-UI-001` | 多任务最大态使用 `496 × 152 pt` 固定单岛和右侧任务列 | 2、3、4、8 与 4+ 任务布局测试及生产视觉验收通过 |
+| `MT-UI-001` | 多任务最大态使用 `496 × 152 pt` 固定单岛和右侧任务列 | 2、3、4、4+ 任务布局测试与生产视觉验收通过 |
 | `MT-UI-002` | 紧凑态固定 `52 pt` 高，自适应状态/标题并提供完整总数入口 | 长标题、中英文、展开、VoiceOver Press 与 Reduce Motion 通过 |
 | `MT-MOTION-001` | 任务列、玻璃选择态和 Metal 同步，Reduce Motion 静态降级 | 动效状态测试与产品所有者实机验收通过 |
 | `MT-PRIVACY-001` | AX 只读取当前标题；禁止 `AXPress`、输入注入和完整树扫描 | 权限、撤销、失配、日志脱敏和禁止调用搜索通过 |
@@ -88,8 +90,7 @@ tag、GitHub Pre-release 与回下载验证并正式对外发布。发布状态�
 - macOS 顶部继续只存在一个非激活、鼠标穿透的承载 `NSPanel`；
 - 单任务时完全保持现有最大态、紧凑态和隐藏规则；
 - 多任务时，单一主岛保持既有完整布局并在右侧显示任务列表；
-- 两个及以上任务共用同一个固定尺寸、固定外轮廓的主岛；隔离 Demo
-  当前提供最多八个任务用于视觉调试；
+- 两个到四个任务共用同一个固定尺寸、固定外轮廓的主岛；
 - 不绘制右侧小岛、背层卡片、堆叠边缘或其他仅用于装饰的任务容器；
 - 用户切换当前 Codex 任务时，直接同步主任务内容、任务列表选中态和
   Metal 状态，不对整张主岛卡片执行切换动画；
@@ -454,7 +455,7 @@ Metal 状态过渡，但不得恢复竖向分隔线、增加常驻背层卡片�
 - 标题唯一匹配、同名冲突、空标题和 App Server 不可用；
 - 辅助功能未授权、拒绝和运行中撤销；
 - 单任务布局与当前生产版本一致；
-- 两个、三个、四个、八个及超过四个任务的 `496 × 152 pt` 固定单岛布局；
+- 两个、三个、四个及超过四个任务的 `496 × 152 pt` 固定单岛布局；
 - 任务列从 `1–3` 到 `2–4` 的连续有序窗口，不得交替替换末行；
 - 任务列顶部、底部、左侧 `12 pt` 与右侧 `24 pt` 边距、`8 pt` 分区间距和
   独立底部提示区；
@@ -498,15 +499,15 @@ Metal 状态过渡，但不得恢复竖向分隔线、增加常驻背层卡片�
 
 | Requirement ID | Prototype 证据 | 生产源码 | 生产测试 | 当前状态 |
 |---|---|---|---|---|
-| `MT-SCOPE-001` | 固定面板与单任务 Demo 测试 | `Sources/QuotaView/CodexActivityIsland.swift` | `testProductionTaskRailUsesContiguousThreeTaskWindow` + 现有单任务测试 | 单一生产面板已接入；等待实机回归 |
-| `MT-DATA-001` | 仅使用展示 fixture | `Sources/QuotaView/CodexActivityRuntime.swift` 的 `CodexActivityStore` | `testCodexActivityKeepsInterleavedSessionsIndependent`、`testSessionEndRemovesOnlyItsOwnTask`、旧事件与计时测试 | 60 项生产测试通过 |
-| `MT-SELECT-001` | Demo 任务列选择 | `CodexActivityStore`、`CodexFocusedTaskTitleReader.swift` | `testFocusedTaskDoesNotYieldToBackgroundAttention`、`testAutomaticFallbackPrefersAttentionThenRecentActivity` | 首版实现完成；真实标题切换待验收 |
-| `MT-UI-001` | 固定尺寸、任务列和分页 Demo | `Sources/QuotaView/CodexActivityIsland.swift` | `testProductionTaskRailUsesContiguousThreeTaskWindow` | `496 × 152 pt` 与连续三行视窗已实现；待视觉验收 |
-| `MT-UI-002` | 紧凑态动态宽度与入口 Demo | `Sources/QuotaView/CodexActivityIsland.swift`、`CodexActivityStore.expandCompactDetail` | `testAllCompletedTasksCompactAsOneCluster` | `52 pt`、跑马灯和 Press 入口已实现；待交互验收 |
-| `MT-MOTION-001` | 玻璃 morph、滚轮、流光 Demo | `Sources/QuotaView/CodexActivityIsland.swift` | 生产编译 + Reduce Motion 分支审查 + 六状态实机轮播 | `2026-08-05` 待命、思考、工作、压缩上下文、等待确认、已完成及 SessionEnd 清理经产品所有者确认通过；Reduce Motion 与完整节奏矩阵继续验收 |
-| `MT-PRIVACY-001` | `MULTITASK-03` 隔离探针结论 | `CodexFocusedTaskTitleReader.swift`、`SettingsView.swift` | 有界读取与禁止控制静态门禁通过 | 只读取顶部候选按钮标题；未授权自动降级 |
-| `MT-A11Y-001` | VoiceOver Press 和 Reduce Motion Demo | `CodexActivityIsland.swift`、`SettingsView.swift` | 生产编译与状态测试 | 标签、Press 与 Reduce Motion 已接入；矩阵待验收 |
-| `MT-VERIFY-001` | Prototype XCTest 38 项通过；Demo Design QA | 上述生产路径 | `swift test` 60 项通过、0 失败；Universal Release、静态门禁、Developer ID 本地签名候选包和六状态实机轮播通过 | 其余实机产品验收继续进行 |
+| `MT-SCOPE-001` | `testMultiTaskExpandedPanelUsesFixedSingleIslandSize`、`testSingleTaskExpandedPanelKeepsExistingStateSize` | — | — | Demo 已覆盖；生产未开始 |
+| `MT-DATA-001` | 仅使用展示 fixture | — | — | 待生产实现 |
+| `MT-SELECT-001` | 任务列选择与可见窗口测试 | — | — | 真实焦点/仲裁待生产实现 |
+| `MT-UI-001` | 固定尺寸、任务列、分页和边距测试；Demo QA | — | — | Demo 基线已确认 |
+| `MT-UI-002` | `testCompactPresentationUsesAdaptiveWidthMetrics`、`testCompactTaskCountExpandsMultiTaskDetailOnly` | — | — | Demo 基线已确认 |
+| `MT-MOTION-001` | 玻璃 morph、滚轮、流光与 Reduce Motion 测试；Demo QA | — | — | Demo 基线已确认 |
+| `MT-PRIVACY-001` | `MULTITASK-03` 隔离探针结论 | — | — | 生产权限链路待实现 |
+| `MT-A11Y-001` | VoiceOver Press 和 Reduce Motion Demo 行为 | — | — | 生产矩阵待验收 |
+| `MT-VERIFY-001` | Prototype XCTest 37 项通过；Demo Design QA | — | — | 不得标记生产完成 |
 
 当前追踪已进入 `Released`。生产构建、静态门禁、核心状态轮播、Developer
 ID 签名、Apple 公证、Staple、tag、GitHub Pre-release 和回下载验证已经

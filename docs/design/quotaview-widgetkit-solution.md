@@ -7,7 +7,7 @@
 > 文档版本：`2.1`<br>
 > 依赖：`QV-EXEC-CORE-002` Phase 0–2<br>
 > 原始设计基线：QuotaView `0.1.5 (Build 6)`<br>
-> 当前生产基线：QuotaView `0.3.1 (Build 2)`<br>
+> 当前生产基线：QuotaView `0.3.3 (Build 3)`；本版未改变 WidgetKit 数据与界面契约<br>
 > 编写日期：2026-07-28<br>
 > SDD 状态更新：2026-08-04<br>
 > 适用平台：macOS 14 及以上<br>
@@ -32,7 +32,7 @@
 
 ### WIDGET-00.1 当前生产映射
 
-| 项目 | `0.3.1 (Build 2)` 当前事实 |
+| 项目 | `0.3.3 (Build 3)` 当前事实 |
 |---|---|
 | Team | `BUUH229D5Q` |
 | 主应用 Bundle ID | `com.quotaview.menubar` |
@@ -43,10 +43,10 @@
 | 主应用投影与写入 | `Sources/QuotaView/QuotaViewWidgetSnapshotWriter.swift` |
 | Extension 实现 | `Sources/QuotaViewWidget/QuotaViewWidget.swift` |
 | 配置与权限 | `Configs/App.xcconfig`、`Configs/Widget.xcconfig`、`Support/*.entitlements` |
-| 当前版本 | 主应用与 Extension 均为 `0.3.1 (2)` |
+| 当前版本 | 主应用与 Extension 均为 `0.3.3 (3)` |
 | 发布验证 | Universal、Developer ID、Apple 公证、Staple、真实安装与共享容器通过；视觉仍等待产品所有者验收 |
 
-Build 2 的当前映射优先于本文保留的首版候选代码和实施步骤。后文凡使用
+当前映射优先于本文保留的首版候选代码和实施步骤。后文凡使用
 “建议”“新增”“后续”等原始实施措辞，均应结合本表和相应章节的完成状态
 理解，不能解释为 Widget 尚未进入生产。
 

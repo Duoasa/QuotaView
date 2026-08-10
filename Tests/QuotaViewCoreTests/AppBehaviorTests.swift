@@ -4,6 +4,73 @@ import XCTest
 @testable import QuotaViewCore
 
 final class AppBehaviorTests: XCTestCase {
+    @MainActor
+    func testTokenActivityHoverCancellationDoesNotPresentTooltip()
+        async {
+        let controller = TokenActivityHoverController()
+        var presentedCellID: Int?
+        let cancelledPresentation = expectation(
+            description: "Cancelled hover does not present"
+        )
+        cancelledPresentation.isInverted = true
+
+        controller.schedule(
+            cellID: 4,
+            delayNanoseconds: 20_000_000
+        ) {
+            presentedCellID = 4
+            cancelledPresentation.fulfill()
+        }
+        controller.cancel()
+        await fulfillment(
+            of: [cancelledPresentation],
+            timeout: 0.1
+        )
+
+        XCTAssertNil(presentedCellID)
+
+        let presented = expectation(
+            description: "Active hover presents"
+        )
+        controller.schedule(
+            cellID: 9,
+            delayNanoseconds: 20_000_000
+        ) {
+            presentedCellID = 9
+            presented.fulfill()
+        }
+        await fulfillment(of: [presented], timeout: 1.0)
+
+        XCTAssertEqual(presentedCellID, 9)
+    }
+
+    func testMenuPanelResizeKeepsItsMenuBarAnchorStable() {
+        let visibleFrame = NSRect(
+            x: 0,
+            y: 0,
+            width: 1_440,
+            height: 875
+        )
+        let compact = MenuBarPanelGeometry.anchoredFrame(
+            size: NSSize(width: 310, height: 500),
+            centerX: 1_250,
+            visibleFrame: visibleFrame,
+            screenEdgeInset: 8,
+            menuBarGap: 6
+        )
+        let expanded = MenuBarPanelGeometry.anchoredFrame(
+            size: NSSize(width: 310, height: 620),
+            centerX: 1_250,
+            visibleFrame: visibleFrame,
+            screenEdgeInset: 8,
+            menuBarGap: 6
+        )
+
+        XCTAssertEqual(compact.maxY, expanded.maxY)
+        XCTAssertEqual(compact.maxY, visibleFrame.maxY - 6)
+        XCTAssertEqual(compact.minX, expanded.minX)
+    }
+
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
@@ -371,242 +438,8 @@ final class AppBehaviorTests: XCTestCase {
         )
 
         XCTAssertEqual(store.presentation, .hidden)
-        XCTAssertNil(store.snapshot)
-        XCTAssertTrue(store.tasks.isEmpty)
+        XCTAssertEqual(store.snapshot?.occurredAt, endedAt)
         await store.stop()
-    }
-
-    @MainActor
-    func testCodexActivityKeepsInterleavedSessionsIndependent() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil),
-            compactDelay: 0.02,
-            hiddenDelayAfterCompact: 0.20
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .stop,
-                sessionHash: "completed-session",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "working-session",
-                toolCategory: .fileEdit,
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-
-        for _ in 0..<200 where store.tasks.first(where: {
-            $0.sessionHash == "completed-session"
-        })?.presentation != .compact {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.tasks.count, 2)
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "completed-session"
-            }?.presentation,
-            .compact
-        )
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "working-session"
-            }?.presentation,
-            .expanded
-        )
-        XCTAssertEqual(store.presentation, .expanded)
-        XCTAssertEqual(store.primarySessionHash, "working-session")
-        await store.stop()
-    }
-
-    @MainActor
-    func testSessionEndRemovesOnlyItsOwnTask() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        for sessionHash in ["first", "second"] {
-            store.receive(
-                CodexActivityEvent(
-                    event: .preToolUse,
-                    sessionHash: sessionHash,
-                    occurredAt: now
-                )
-            )
-        }
-
-        store.receive(
-            CodexActivityEvent(
-                event: .sessionEnd,
-                sessionHash: "first",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-
-        XCTAssertEqual(store.tasks.map(\.sessionHash), ["second"])
-        XCTAssertEqual(store.primarySessionHash, "second")
-        XCTAssertEqual(store.presentation, .expanded)
-        await store.stop()
-    }
-
-    @MainActor
-    func testFocusedTaskDoesNotYieldToBackgroundAttention() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "focused",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "background",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-        store.focusTask(sessionHash: "focused")
-        store.receive(
-            CodexActivityEvent(
-                event: .permissionRequest,
-                sessionHash: "background",
-                occurredAt: now.addingTimeInterval(2)
-            )
-        )
-
-        XCTAssertEqual(store.primarySessionHash, "focused")
-        XCTAssertEqual(
-            store.tasks.first {
-                $0.sessionHash == "background"
-            }?.snapshot.state,
-            .awaitingConfirmation
-        )
-        await store.stop()
-    }
-
-    @MainActor
-    func testAutomaticFallbackPrefersAttentionThenRecentActivity() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil)
-        )
-        let now = Date()
-        store.receive(
-            CodexActivityEvent(
-                event: .preToolUse,
-                sessionHash: "first",
-                occurredAt: now
-            )
-        )
-        store.receive(
-            CodexActivityEvent(
-                event: .postToolUse,
-                sessionHash: "second",
-                occurredAt: now.addingTimeInterval(1)
-            )
-        )
-        XCTAssertEqual(store.primarySessionHash, "second")
-
-        store.receive(
-            CodexActivityEvent(
-                event: .permissionRequest,
-                sessionHash: "first",
-                occurredAt: now.addingTimeInterval(2)
-            )
-        )
-        XCTAssertEqual(store.primarySessionHash, "first")
-        await store.stop()
-    }
-
-    @MainActor
-    func testAllCompletedTasksCompactAsOneCluster() async {
-        let store = CodexActivityStore(
-            titleClient: CodexAppServerClient(executablePath: nil),
-            compactDelay: 0.02,
-            hiddenDelayAfterCompact: 0.20
-        )
-        for sessionHash in ["first", "second"] {
-            store.receive(
-                CodexActivityEvent(
-                    event: .stop,
-                    sessionHash: sessionHash
-                )
-            )
-        }
-
-        for _ in 0..<100 where store.presentation != .compact {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.presentation, .compact)
-        XCTAssertTrue(store.tasks.allSatisfy {
-            $0.presentation == .compact
-        })
-
-        store.expandCompactDetail()
-        XCTAssertEqual(store.presentation, .expanded)
-        await store.stop()
-    }
-
-    func testProductionTaskRailUsesContiguousThreeTaskWindow() {
-        let tasks = (0..<8).map { index in
-            CodexActivityRenderState(
-                sessionHash: "session-\(index)",
-                visualState: .working,
-                windowTitle: "Task \(index)",
-                statusTitle: "Working",
-                operation: "Running",
-                accessibilityLabel: "Task \(index), Working"
-            )
-        }
-
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-0"
-            ),
-            0
-        )
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-3"
-            ),
-            1
-        )
-        XCTAssertEqual(
-            codexActivityRailWindowStart(
-                tasks: tasks,
-                primarySessionHash: "session-7"
-            ),
-            5
-        )
-    }
-
-    func testFocusedTaskReaderIsBoundedAndReadOnly() throws {
-        let repositoryRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let sourceURL = repositoryRoot
-            .appendingPathComponent("Sources/QuotaView")
-            .appendingPathComponent("CodexFocusedTaskTitleReader.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
-
-        XCTAssertTrue(source.contains("maximumTraversalDepth"))
-        XCTAssertTrue(source.contains("maximumVisitedElements"))
-        XCTAssertTrue(source.contains("kAXTitleAttribute"))
-        XCTAssertTrue(source.contains("kAXButtonRole"))
-        XCTAssertFalse(source.contains("AXUIElementPerformAction"))
-        XCTAssertFalse(source.contains("kAXValueAttribute"))
-        XCTAssertFalse(source.contains("CGEventPost"))
-        XCTAssertFalse(source.contains("kAXPressAction"))
     }
 
     func testCodexActivityHookInstallerPreservesExistingHooks() throws {
@@ -949,13 +782,14 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showCreditBalance)
         XCTAssertTrue(preferences.showDailyTokens)
         XCTAssertTrue(preferences.showLifetimeTokens)
+        XCTAssertTrue(preferences.showTokenActivity)
+        XCTAssertEqual(preferences.tokenActivityRange, .month)
         XCTAssertTrue(preferences.showResetAction)
         XCTAssertTrue(preferences.followsSystemAppearance)
         XCTAssertTrue(preferences.followsSystemLanguage)
         XCTAssertEqual(preferences.customAppearance, .dark)
         XCTAssertEqual(preferences.customLanguage, .simplifiedChinese)
         XCTAssertEqual(preferences.glassMode, .clear)
-        XCTAssertFalse(preferences.followCurrentCodexTask)
         XCTAssertEqual(
             defaults.string(
                 forKey: "preferences.appearance.glassPreset"
@@ -988,8 +822,12 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.language.followsSystem"
         )
         savedDefaults.set(
-            true,
-            forKey: "preferences.codexActivity.followCurrentTask"
+            false,
+            forKey: "preferences.panel.showTokenActivity"
+        )
+        savedDefaults.set(
+            AppPreferences.TokenActivityRange.total.rawValue,
+            forKey: "preferences.panel.tokenActivityRange"
         )
         savedDefaults.set(
             AppPreferences.Language.english.rawValue,
@@ -1003,7 +841,8 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(savedPreferences.glassMode, .frosted)
         XCTAssertFalse(savedPreferences.followsSystemLanguage)
         XCTAssertEqual(savedPreferences.customLanguage, .english)
-        XCTAssertTrue(savedPreferences.followCurrentCodexTask)
+        XCTAssertFalse(savedPreferences.showTokenActivity)
+        XCTAssertEqual(savedPreferences.tokenActivityRange, .total)
 
         let legacySuiteName = "QuotaViewTests.\(UUID().uuidString)"
         let legacyDefaults = UserDefaults(suiteName: legacySuiteName)!
@@ -1121,6 +960,138 @@ final class AppBehaviorTests: XCTestCase {
         await store.stop()
     }
 
+    func testHistoricalUsageProjectsSortedTokenActivity() throws {
+        let earlier = Date(timeIntervalSince1970: 1_784_160_000)
+        let later = earlier.addingTimeInterval(86_400)
+        let observations = [later, earlier].map { date in
+            MetricObservation(
+                definitionID: CodexDomainCatalog.dailyTokensID,
+                entity: CodexDomainCatalog.providerEntity,
+                value: .count(date == earlier ? 1_200 : 4_800),
+                interval: DateInterval(
+                    start: date,
+                    duration: 86_400
+                ),
+                observedAt: date,
+                receivedAt: later,
+                source: .providerHistoricalBucket,
+                precision: .exact
+            )
+        }
+        let result = Self.makeFetchResult(
+            resetCredits: nil,
+            historicalObservations: observations
+        )
+        let presentation = try XCTUnwrap(
+            CurrentCodexPresentationProjector()
+                .makePresentation(from: result)
+        )
+
+        XCTAssertEqual(
+            presentation.tokenActivity.map(\.date),
+            [earlier, later]
+        )
+        XCTAssertEqual(
+            presentation.tokenActivity.map(\.tokens),
+            [1_200, 4_800]
+        )
+    }
+
+    @MainActor
+    func testTokenActivityGridUsesLeadingPlaceholdersAndSixteenColumns()
+    throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let endDate = try XCTUnwrap(
+            DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 8,
+                day: 10
+            ).date
+        )
+        let earlierDate = try XCTUnwrap(
+            calendar.date(byAdding: .day, value: -39, to: endDate)
+        )
+        let activity = [
+            DailyTokenActivity(date: earlierDate, tokens: 9_000),
+            DailyTokenActivity(date: endDate, tokens: 3_000)
+        ]
+
+        for range in AppPreferences.TokenActivityRange.allCases {
+            let model = TokenActivityGridModel(
+                activity: activity,
+                range: range,
+                endingAt: endDate
+            )
+            let placeholderCount = model.cells
+                .prefix { $0.isPlaceholder }
+                .count
+
+            XCTAssertEqual(
+                model.cells.count,
+                model.rowCount * TokenActivityGridMetrics.columnCount
+            )
+            XCTAssertEqual(
+                placeholderCount,
+                model.cells.count - model.dayCount
+            )
+            XCTAssertFalse(
+                model.cells.dropFirst(placeholderCount).contains {
+                    $0.isPlaceholder
+                }
+            )
+        }
+
+        let week = TokenActivityGridModel(
+            activity: activity,
+            range: .week,
+            endingAt: endDate
+        )
+        XCTAssertEqual(week.dayCount, 7)
+        XCTAssertEqual(week.rowCount, 1)
+        XCTAssertEqual(week.cells.prefix { $0.isPlaceholder }.count, 9)
+        XCTAssertEqual(week.maximumTokens, 3_000)
+        XCTAssertEqual(TokenActivityGridMetrics.gridWidth, 237)
+        XCTAssertEqual(
+            TokenActivityGridMetrics.tooltipDelayNanoseconds,
+            500_000_000
+        )
+        XCTAssertEqual(
+            TokenActivityGridMetrics.sectionHeight(
+                rowCount: week.rowCount
+            ),
+            59
+        )
+
+        let month = TokenActivityGridModel(
+            activity: activity,
+            range: .month,
+            endingAt: endDate
+        )
+        XCTAssertEqual(month.dayCount, 31)
+        XCTAssertEqual(month.rowCount, 2)
+        XCTAssertEqual(month.cells.prefix { $0.isPlaceholder }.count, 1)
+        XCTAssertEqual(
+            TokenActivityGridMetrics.sectionHeight(
+                rowCount: month.rowCount
+            ),
+            74
+        )
+
+        let total = TokenActivityGridModel(
+            activity: activity,
+            range: .total,
+            endingAt: endDate
+        )
+        XCTAssertEqual(total.dayCount, 40)
+        XCTAssertEqual(total.rowCount, 3)
+        XCTAssertEqual(total.cells.prefix { $0.isPlaceholder }.count, 8)
+        XCTAssertEqual(total.maximumTokens, 9_000)
+    }
+
     @MainActor
     func testZeroResetCreditsDoNotExposeDemoAction() async {
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
@@ -1180,7 +1151,8 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     private static func makeFetchResult(
-        resetCredits: Int?
+        resetCredits: Int?,
+        historicalObservations: [MetricObservation] = []
     ) -> ProviderFetchResult {
         let capturedAt = Date(timeIntervalSince1970: 1_785_000_000)
         let window = RateWindow(
@@ -1225,7 +1197,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         return ProviderFetchResult(
             snapshot: snapshot,
-            historicalObservations: [],
+            historicalObservations: historicalObservations,
             diagnostics: SanitizedFetchDiagnostics(
                 sourceLabel: "test",
                 duration: 0,

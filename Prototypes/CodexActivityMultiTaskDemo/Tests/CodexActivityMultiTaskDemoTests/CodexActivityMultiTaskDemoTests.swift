@@ -807,7 +807,7 @@ final class CodexActivityMultiTaskDemoTests: XCTestCase {
             "The fixed panel must reallocate width instead of growing"
         )
 
-        for taskCount in 2...demoMaximumTaskCount {
+        for taskCount in 2...4 {
             XCTAssertEqual(
                 IslandPresentationMode.expanded.panelSize(
                     for: .working,
@@ -846,19 +846,10 @@ final class CodexActivityMultiTaskDemoTests: XCTestCase {
         )
     }
 
-    func testEightTaskRailScrollsAsOneOrderedWindow() {
-        let tasks = (0..<demoMaximumTaskCount).map {
+    func testFourTaskRailScrollsAsOneOrderedWindow() {
+        let tasks = (0..<4).map {
             DemoTask(id: $0, name: "Task \($0)", state: .working)
         }
-
-        XCTAssertEqual(
-            taskRailRowCapacity(
-                currentCapacity: 4,
-                taskCount: tasks.count
-            ),
-            8,
-            "The rail must allocate rows for every simulated task"
-        )
 
         XCTAssertEqual(
             visibleRailTasks(
@@ -874,17 +865,6 @@ final class CodexActivityMultiTaskDemoTests: XCTestCase {
             ).map(\.id),
             [1, 2, 3]
         )
-        XCTAssertEqual(
-            visibleRailTasks(
-                from: tasks,
-                primaryID: 7
-            ).map(\.id),
-            [5, 6, 7]
-        )
-    }
-
-    func testDemoExposesEightEditableTasks() {
-        XCTAssertEqual(demoMaximumTaskCount, 8)
     }
 
     func testWheelRailUsesThreeRowsAndCompactMotion() {
