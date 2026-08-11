@@ -125,7 +125,9 @@ Tag：`v0.3.5-build.5`
 - 接入 Sparkle 2.9.2 Stable 更新检查、手动检查入口和默认关闭的 24 小时
   自动检查；Debug、Ad Hoc、非 App 或非预期签名环境不访问 Feed；
 - Build Number 从本版开始延续全局递增规则；后续迭代从 Build 6 开始；
-- 产品截图：`Resources/QuotaView-0.3.5-Overview.png`。
+- 产品截图：`Resources/QuotaView-0.3.5-Overview.png`；中英文 README 的
+  0.3.5 更新介绍和 GitHub Release 正文共同引用该图，Release 使用不可变
+  提交 `c060168976930c39dca4af616567fa51eb75d3be` 的 raw URL。
 
 验证与发布资产：
 

@@ -181,7 +181,10 @@ GitHub 正式 Release 只使用一份英文源正文，Release URL 为
 `https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5`。公开产品
 更新介绍截图位于 `Resources/QuotaView-0.3.5-Overview.png`，由中英文 README
 的 0.3.5 章节引用；README 首页另使用
-`Resources/QuotaView-Product-Hero.png` 作为产品主图。
+`Resources/QuotaView-Product-Hero.png` 作为产品主图。GitHub Release 正文
+在开场说明后引用同一更新介绍图，使用不可变提交
+`c060168976930c39dca4af616567fa51eb75d3be` 的 raw URL，避免后续 `main`
+变化造成历史 Release 图片漂移。
 
 正文覆盖：独立 Spark 周额度、主周期内嵌重置、30 日 Tokens 与非账单成本
 估算、半年上限完整 16 列 Token 网格、“最近一天”日期语义、Sparkle 2.9.2
@@ -790,7 +793,8 @@ GitHub 回下载再次验证。
 4. 更新 README 中英文下载入口与 0.3.5 功能说明，并加入产品所有者提供的
    `Resources/QuotaView-Product-Hero.png` 首页产品图和
    `Resources/QuotaView-0.3.5-Overview.png` 更新介绍图；
-5. 确认 GitHub Release Notes 只有一份英文源正文；
+5. 确认 GitHub Release Notes 只有一份英文源正文，并包含上述不可变 0.3.5
+   更新介绍图链接；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
