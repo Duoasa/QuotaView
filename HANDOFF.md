@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-08-11
+更新日期：2026-08-12
 
 工作区：`/private/tmp/quotaview-033-build5-estimated-cost`
 
@@ -88,6 +88,11 @@ README 首页产品图为 `Resources/QuotaView-Product-Hero.png`；0.3.5 更新�
 为 `Resources/QuotaView-0.3.5-Overview.png`，两者均用于中英文 README 的
 对应位置。
 完整外观与辅助功能交叉矩阵仍不得记录为全量通过。
+
+2026-08-12：QuotaView 已在 GitHub README 中明确标注为开源项目，仓库根
+目录使用标准 MIT `LICENSE`；中英文 README 均包含 MIT 徽章和许可证入口，
+并已移除不再维护的公开路线图。本次只改变项目文档与授权声明，不改变
+`0.3.5 Build 5` 的源码、版本身份、Release 资产或自动更新 Feed。
 
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
 确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
@@ -796,6 +801,8 @@ GitHub 回下载再次验证。
 5. 确认 GitHub Release Notes 只有一份英文源正文，并包含上述不可变 0.3.5
    更新介绍图链接；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
+7. 中英文 README 已移除路线图，明确 QuotaView 为开源项目，并共同链接
+   仓库根目录的标准 MIT `LICENSE`。
 
 README 下载入口、GitHub Latest 和
 `VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.5-build.5`。公开

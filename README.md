@@ -13,6 +13,7 @@
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,8 @@
   <a href="#privacy-by-design">Privacy</a>
   ·
   <a href="#build-and-test">Build from source</a>
+  ·
+  <a href="#license">Open source</a>
 </p>
 
 <p align="center">
@@ -31,7 +34,7 @@
   <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island live task activity on macOS" width="100%">
 </p>
 
-QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep period and Spark quota, estimated cost, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
+QuotaView is an open-source, lightweight, native macOS companion for the Codex account already signed in on your Mac. **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep period and Spark quota, estimated cost, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
 
 ## Why QuotaView
 
@@ -345,16 +348,9 @@ Tests/
 └── QuotaViewCoreTests/     # Domain, app behavior, process, and contract tests
 ```
 
-## Roadmap
+## License
 
-- [x] Codex Island live task status
-- [ ] Launch at login with `ServiceManagement`
-- [ ] Historical trends and quota alerts
-- [x] WidgetKit extension backed by an App Group
-- [ ] More AI providers
-- [ ] Separately authorized official account operations
-- [x] Developer ID signing and notarization
-- [ ] Automatic updates
+QuotaView is open-source software released under the [MIT License](LICENSE).
 
 ## Feedback and contributions
 

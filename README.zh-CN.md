@@ -13,6 +13,7 @@
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
+  <a href="LICENSE"><img alt="MIT 许可证" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,8 @@
   <a href="#隐私设计">隐私说明</a>
   ·
   <a href="#构建与测试">从源码构建</a>
+  ·
+  <a href="#许可证">开源项目</a>
 </p>
 
 <p align="center">
@@ -31,7 +34,7 @@
   <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex 灵动岛在 macOS 上实时呈现任务活动" width="100%">
 </p>
 
-QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。**Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让本周期与 Spark 额度、成本估算、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
+QuotaView 是一款开源、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。**Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让本周期与 Spark 额度、成本估算、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
 
 ## 为什么选择 QuotaView
 
@@ -324,16 +327,9 @@ Tests/
 └── QuotaViewCoreTests/     # Domain、应用行为、进程与契约测试
 ```
 
-## 路线图
+## 许可证
 
-- [x] Codex 灵动岛实时任务状态
-- [ ] 使用 `ServiceManagement` 实现登录时启动
-- [ ] 历史趋势和额度提醒
-- [x] 基于 App Group 的 WidgetKit 扩展
-- [ ] 适配更多 AI 服务
-- [ ] 用户单独授权后的官方账户操作
-- [x] Developer ID 签名与公证
-- [ ] 自动更新
+QuotaView 是开源项目，采用 [MIT 许可证](LICENSE)发布。
 
 ## 反馈与贡献
 
