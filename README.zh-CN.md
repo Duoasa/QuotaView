@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 设置、Codex 灵动岛、小组件、额度、成本估算与 Token 活动概览" width="100%">
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex 灵动岛在 macOS 上实时呈现任务活动" width="100%">
 </p>
 
 QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。**Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让本周期与 Spark 额度、成本估算、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
@@ -90,6 +90,10 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 QuotaView 0.3.5 将 0.3.4 扩展的用量概览纳入稳定版本，并首次支持从应用
 内部检查后续正式签名版本。
+
+<p align="center">
+  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 设置、Codex 灵动岛、小组件、额度、成本估算与 Token 活动概览" width="100%">
+</p>
 
 - 在主周期额度下方新增独立建模、固定中性色的 Spark 周额度；账户未提供
   有效 Spark 数据时自动隐藏，不保留空白；

@@ -84,7 +84,9 @@ GitHub Release、Latest 切换、GitHub 回下载复核和公开签名 appcast �
 
 本版包含主额度内嵌重置、独立 Spark 周额度、30 日 Tokens、成本估算、
 Token 活动半年上限与完整 16 列网格，并新增 Sparkle 2.9.2 Stable 更新检查。
-产品截图为 `Resources/QuotaView-0.3.5-Overview.png`，已用于中英文 README。
+README 首页产品图为 `Resources/QuotaView-Product-Hero.png`；0.3.5 更新介绍图
+为 `Resources/QuotaView-0.3.5-Overview.png`，两者均用于中英文 README 的
+对应位置。
 完整外观与辅助功能交叉矩阵仍不得记录为全量通过。
 
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
@@ -177,7 +179,9 @@ Pre-release。响应速度、当前任务跟随、任务切换与收展节奏仍
 
 GitHub 正式 Release 只使用一份英文源正文，Release URL 为
 `https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5`。公开产品
-截图位于 `Resources/QuotaView-0.3.5-Overview.png`，由中英文 README 引用。
+更新介绍截图位于 `Resources/QuotaView-0.3.5-Overview.png`，由中英文 README
+的 0.3.5 章节引用；README 首页另使用
+`Resources/QuotaView-Product-Hero.png` 作为产品主图。
 
 正文覆盖：独立 Spark 周额度、主周期内嵌重置、30 日 Tokens 与非账单成本
 估算、半年上限完整 16 列 Token 网格、“最近一天”日期语义、Sparkle 2.9.2
@@ -784,7 +788,8 @@ GitHub 回下载再次验证。
    大小、SHA-256、签名、公证和验证结论；
 3. 将本文件的版本入口、发布、验证与完成状态由候选状态更新为发布事实；
 4. 更新 README 中英文下载入口与 0.3.5 功能说明，并加入产品所有者提供的
-   `Resources/QuotaView-0.3.5-Overview.png` 产品截图；
+   `Resources/QuotaView-Product-Hero.png` 首页产品图和
+   `Resources/QuotaView-0.3.5-Overview.png` 更新介绍图；
 5. 确认 GitHub Release Notes 只有一份英文源正文；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
