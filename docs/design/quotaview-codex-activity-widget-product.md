@@ -322,9 +322,9 @@ QuotaView 收到当前固定 Hook 定义产生的第一条真实
 - 0.3.1 (Build 1) 版本信息。
 
 上列 Build 1 项是单任务灵动岛首次发布时的历史自动化范围。当前生产版本
-为 `0.3.1 (Build 2)`；Build 2 只修复 Widget App Group 并统一“本周期剩余”
-文案，没有改变本规格的单任务灵动岛状态机、Hook 映射或收起时序。Build 2
-的签名、资产与发布证据以 `HANDOFF.md` 和 `VERSION_HISTORY.md` 为准。
+为 `0.3.5 (Build 5)`；后续稳定版本继续继承本规格的单任务灵动岛状态机、
+Hook 映射和收起时序，0.3.2 Preview 的多任务实现未进入稳定生产源码。最新
+签名、资产与发布证据以 `HANDOFF.md` 和 `VERSION_HISTORY.md` 为准。
 
 以下项目继续等待产品所有者运行应用后验收：
 

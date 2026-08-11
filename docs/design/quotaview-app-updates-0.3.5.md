@@ -4,7 +4,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Verifying`（Build 5 已正式发布并上线 Feed；真实 N → N+1 待后续 Build）
 >
 > 目标版本：`0.3.5 (Build 5)`
 
@@ -47,8 +47,9 @@
 ### 3.1 自动更新序列准入
 
 - GitHub Stable Release 与公开 Sparkle appcast 的成员资格彼此独立；
-- 只有产品所有者针对精确版本、Build、tag 和最终 ZIP 明确批准后，该版本
-  才能进入自动更新序列；
+- 产品所有者针对精确版本、Build、tag 和 ZIP 身份明确批准后，该批准即授权
+  并触发正式签名、公证、Stable Release、回下载、公开 appcast 和文档联动；
+  不得在代码合并后等待第二次发布确认；
 - 未明确批准的所有 GitHub 推送、tag、Stable/Latest Release 和正式资产默认
   不进入 appcast；本地 Fixture 验证不构成发布授权；
 - appcast 可跳过未批准的中间版本。客户端以更高 Build Number 判断更新，
@@ -56,7 +57,8 @@
 - 产品所有者已于 `2026-08-11` 明确批准 `0.3.5 Build 5` 进入自动更新序列，
   准入身份固定为 tag `v0.3.5-build.5` 与资产
   `QuotaView-v0.3.5-build.5.zip`；最终资产 SHA-256、Developer ID、Apple
-  公证/Staple、回下载和 Feed 签名门禁完成前仍不得公开部署 appcast。
+  公证/Staple、回下载、Feed 签名和线上复核门禁均已完成。后续版本必须
+  重新获得精确准入，不得沿用本次授权。
 
 ## 4. 版本规则
 
@@ -82,31 +84,38 @@ Version 重置。后续示例为 `0.3.5 Build 5`、`0.3.6 Build 6`。应用、Wi
 | `APP-UPDATES-05` | Stable-only、最低系统版本和全局递增 Build | Appcast Fixture、版本门禁 |
 | `APP-UPDATES-06` | Sparkle 嵌套组件由内到外签名且均为 Universal | 发布脚本、codesign、lipo |
 | `APP-UPDATES-07` | 两个真实签名公证版本完成 N → N+1 更新 | 发布前端到端验证记录 |
-| `APP-UPDATES-08` | 产品所有者按精确版本显式批准 appcast；未批准默认排除 | Handoff 准入记录、发布前授权核对 |
+| `APP-UPDATES-08` | 产品所有者按精确版本显式批准后自动执行完整 Release 与 appcast 链路；未批准默认排除 | Handoff 准入记录、最终 Release 与 Feed 证据 |
 
 ## 7. 发布边界
 
-本规格授权生产实现与本地验证，不等同于授权创建 GitHub Release、切换
-Latest 或发布 Appcast。未完成正式签名、公证、EdDSA 私钥离线备份及两个
-版本端到端测试前，交付状态不得改为 `Released`，公开 Latest 继续保持
-`0.3.3 Build 3`。
+本规格的默认授权边界仍以 3.1 的显式准入为准。产品所有者已明确批准
+`0.3.5 Build 5` 进入自动更新序列，因此本版已完成 Developer ID、Apple
+公证/Staple、GitHub Stable/Latest、回下载、公开 appcast 和文档联动。
 
-即使上述工程门禁全部通过，也只有产品所有者明确指定的版本可以发布到
-公开 appcast。发布 GitHub Stable/Latest 本身不构成自动更新序列授权。
+Build 5 是首个包含更新器的正式版本，无法单独完成两个正式版本之间的
+N → N+1 验收。因此 `APP-UPDATES-07` 和本规格交付状态保持 `Verifying`，
+直到后续获准的更高 Build 完成真实应用内更新；这不影响 Build 5 版本本身
+已经 `Released`。后续 GitHub Stable/Latest 仍不自动获得 appcast 准入。
 
 ## 8. 当前验证记录
 
-- `swift test`：64 项通过，0 失败；
-- `0.3.5 Build 5` Universal Xcode Release 无签名构建通过；App、Widget、Hook、Core、
+- `swift test`：64 项通过，0 失败；PR #22 GitHub CI 通过；
+- `0.3.5 Build 5` Universal 正式构建通过；App、Widget、Hook、Core、
   Sparkle framework 及其 Installer、Downloader、Autoupdate、Updater
   组件均包含 `x86_64 arm64`；
 - Build 5 的自动检查开关已复用 `NativeSettingsCard` / `NativeSettingsRow`，
   形成左文右控件的独立设置栏；产品视觉验收待完成；
-- Build 5 的 Ad Hoc 发布脚本完成 Sparkle 嵌套组件内到外签名、ZIP 解压与
-  严格验签；
-- 临时 `0.3.5 Build 5` ZIP（SHA-256
-  `4b8bf53c38f2144fa6f67ebafc8df9a7af4a4285b71b5cf76cb65ef7148f8028`）
-  成功生成并验证签名 appcast；版本、最低 macOS 14、稳定资产 URL、ZIP
-  EdDSA 与 Feed EdDSA 字段通过；该 Ad Hoc 资产仅为 Fixture，不得发布；
-- 设置视觉/交互、Developer ID 正式包、公证、私钥加密离线备份、公开 Feed
-  与真实 N → N+1 更新仍未完成，当前结论保持 `Verifying`。
+- Developer ID 正式 ZIP 为 `QuotaView-v0.3.5-build.5.zip`，大小
+  `12,747,358 bytes`，SHA-256
+  `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1`；
+- Apple notarization `Accepted` 并 Staple，Submission
+  `88796026-3227-405a-9e1b-900af973c527`；GitHub Release 回下载与本地正式
+  ZIP 逐字节一致，并重新通过签名、Gatekeeper、版本、架构与资源复核；
+- Sparkle 私钥完成 AES-256 iCloud 加密备份与恢复一致性验证，恢复密码只存
+  macOS Keychain；
+- 公开 appcast 已部署到 `https://duoasa.github.io/QuotaView/appcast.xml`，
+  SHA-256 为
+  `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；线上
+  文件与本地签名 Feed 逐字节一致，Feed EdDSA 验证通过；
+- 设置完整视觉/辅助功能矩阵与真实 N → N+1 更新仍未完成，因此规格结论
+  保持 `Verifying`；Build 5 版本发布事实为 `Released`。

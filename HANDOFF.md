@@ -7,24 +7,23 @@
 当前生产分支：`main`
 
 当前稳定发布提交与生产基线：
-`a93a81af4f90610a57783ceb16a744f07e216c6a`
+`58e676a8317d907107af3d1731ab11a0ded52684`
 
 当前预览发布提交：
 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c`
 
-当前稳定发布：`0.3.3 (Build 3)` / `v0.3.3` / GitHub Latest。
+当前稳定发布：`0.3.5 (Build 5)` / `v0.3.5-build.5` / GitHub Latest。
 
-当前开发迭代：`0.3.5 (Build 5)`，在继承 `0.3.4 Build 3` 用量概览与
-Token 活动修正的基础上，接入 Sparkle 2.9.2 应用检查与更新。正式签名 App
-可手动检查 Stable 更新，并可选择每 24 小时自动检查；Debug、非 App、
-Ad Hoc、错误 Bundle ID 或非预期 Team ID 环境不会创建更新器或访问 Feed。
-Build 5 将自动检查开关从居中布局调整为独立的原生设置卡片行：左侧标题与
-状态说明，右侧小号系统 Switch。64 项自动化测试、Build 5 Universal
-Release 无签名构建，以及 Build 5 Ad Hoc 内到外签名打包和临时 ZIP →
-EdDSA 签名 appcast Fixture 均通过。设置界面与真实 N → N+1 更新仍
-等待产品所有者及正式签名发布链路验收。
-本开发构建未创建 tag、正式签名/公证资产、GitHub Release 或公开 appcast，
-公开 Latest 仍为 `0.3.3 (Build 3)`。
+`0.3.5 Build 5` 已于 2026-08-11 完成完整发布链路：64 项本地测试和 PR #22
+GitHub CI 通过；Universal 正式包使用 Developer ID 与 Hardened Runtime，
+Apple 公证 Accepted 并 Staple；正式 ZIP 上传 GitHub Stable/Latest Release
+后完成回下载逐字节复核；签名 Stable appcast 已部署到 GitHub Pages 并完成
+线上 Feed EdDSA 验证。Build 5 是首个包含 Sparkle 更新器的版本，因此仍需
+手动安装；真实应用内 N → N+1 验收必须由后续获准的 Build 6 或更高正式版
+完成。
+
+下一次开发从全局递增的 `Build 6` 开始；Marketing Version 由产品所有者
+在进入下一阶段时明确，不得把 Build Number 重置为 1。
 
 当前开发提交不在本文固化；每次会话使用 `git branch --show-current` 和
 `git rev-parse HEAD` 读取，避免 Handoff 在合并后立即陈旧。
@@ -41,12 +40,12 @@ EdDSA 签名 appcast Fixture 均通过。设置界面与真实 N → N+1 更新�
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.3 (Build 3)` |
-| tag | `v0.3.3` |
-| 发布提交 | `a93a81af4f90610a57783ceb16a744f07e216c6a` |
-| Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
-| 资产 | `QuotaView-v0.3.3-build.3.zip`，`11,566,058 bytes` |
-| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 最新推荐版本 | `0.3.5 (Build 5)` |
+| tag | `v0.3.5-build.5` |
+| 发布提交 | `58e676a8317d907107af3d1731ab11a0ded52684` |
+| Release | [QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) |
+| 资产 | `QuotaView-v0.3.5-build.5.zip`，`12,747,358 bytes` |
+| SHA-256 | `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
 
 当前公开预览版为：
 
@@ -61,30 +60,32 @@ EdDSA 签名 appcast Fixture 均通过。设置界面与真实 N → N+1 更新�
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-`0.3.3 (Build 3)` 已完成 Developer ID 签名、Apple 公证、Staple、
-GitHub Release、Latest 切换和 GitHub 回下载复核，是当前公开生产基线。
+`0.3.5 (Build 5)` 已完成 Developer ID 签名、Apple 公证、Staple、
+GitHub Release、Latest 切换、GitHub 回下载复核和公开签名 appcast 部署，
+是当前公开生产基线。
 
-`0.3.3 (Build 3)` 正式发布记录：
+`0.3.5 (Build 5)` 正式发布记录：
 
 | 项目 | 当前值 |
 |---|---|
-| Marketing / Build | `0.3.3 (3)` |
-| tag | `v0.3.3` |
-| Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
-| 发布提交 | `a93a81af4f90610a57783ceb16a744f07e216c6a` |
-| 正式资产 | `QuotaView-v0.3.3-build.3.zip`，`11,566,058 bytes` |
-| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| Marketing / Build | `0.3.5 (5)` |
+| tag | `v0.3.5-build.5` |
+| Release | [QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) |
+| 发布提交 | `58e676a8317d907107af3d1731ab11a0ded52684` |
+| 正式资产 | `QuotaView-v0.3.5-build.5.zip`，`12,747,358 bytes` |
+| SHA-256 | `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
-| 自动化 | `swift test` 57 项通过、0 失败；PR #20 GitHub CI 通过；App、Widget、Helper、Core 均为 `x86_64 arm64` |
-| GitHub 状态 | 正式 Release、Latest、非 Draft、非 Pre-release；发布于 `2026-08-11 01:45`（Asia/Shanghai） |
-| 回下载复核 | 与本地公证包逐字节一致；`codesign`、Staple、Gatekeeper、版本、架构、资源、隔离属性和真实启动全部通过 |
+| 公证 | Apple Accepted，已 Staple；Submission `88796026-3227-405a-9e1b-900af973c527` |
+| 自动化 | `swift test` 64 项通过、0 失败；PR #22 GitHub CI 通过；App、Widget、Hook、Core、Sparkle 与嵌套组件均为 `x86_64 arm64` |
+| GitHub 状态 | 正式 Release、Latest、非 Draft、非 Pre-release；发布于 `2026-08-11 21:15`（Asia/Shanghai） |
+| 回下载复核 | 与本地公证包逐字节一致；`codesign`、Staple、Gatekeeper、版本、架构和资源复核通过 |
+| 公开 appcast | [HTTPS Feed](https://duoasa.github.io/QuotaView/appcast.xml)；`gh-pages` 提交 `9048dd67c746e145be75dd86870bc888d5eef499`；SHA-256 `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；线上 Feed 逐字节与 EdDSA 验证通过 |
+| Sparkle 私钥备份 | iCloud Drive `QuotaView Release Keys/QuotaView-Sparkle-EdDSA-2026-08-11.enc`；AES-256；SHA-256 `f48ba844884312cffc29b5316d2a624b0e38ee4caf4f9e064e3abb82f126f89d`；恢复密码仅存于 macOS Keychain |
 
-本版新增每日 Token 活动图表：默认月视图，支持周/月/三个月/总计；完整
-16 列网格、右下对齐、0.5 秒紧凑 Tooltip、深浅五级不透明单色、设置开关，
-并在切换周期时固定菜单顶部、只由下边缘调整高度。产品所有者已明确确认
-最终视觉阶梯与收缩/扩展均无跳动；完整外观和辅助功能交叉矩阵仍不扩大为
-全量通过。
+本版包含主额度内嵌重置、独立 Spark 周额度、30 日 Tokens、成本估算、
+Token 活动半年上限与完整 16 列网格，并新增 Sparkle 2.9.2 Stable 更新检查。
+产品截图为 `Resources/QuotaView-0.3.5-Overview.png`，已用于中英文 README。
+完整外观与辅助功能交叉矩阵仍不得记录为全量通过。
 
 2026-08-01：`0.3.1 (Build 2)` Widget 热修复已正式发布。macOS 系统日志
 确认，公开 Build 1 的 Widget 在 Developer ID 直接分发环境中被
@@ -111,19 +112,19 @@ SDD 唯一规格索引：
 
 | 项目 | 当前值 |
 |---|---|
-| 公开生产基线 | `0.3.3 (Build 3)`，GitHub Latest |
-| 当前进行中工作 | `0.3.5 (Build 5)` Stable 应用检查与更新设置行调整 |
+| 公开生产基线 | `0.3.5 (Build 5)`，GitHub Latest，已进入公开 Stable appcast |
+| 当前进行中工作 | 后续 `Build 6` 的真实 N → N+1 更新验收；尚未定义新的 Marketing Version 或功能范围 |
 | 当前规格 | `QV-PRODUCT-APP-UPDATES-003` |
 | 规格状态 | `Accepted` |
-| 交付状态 | `Verifying`：实现、自动化、Universal 构建、Ad Hoc 打包和签名 appcast Fixture 完成；正式签名更新与产品验收未完成；`0.3.3 Build 3` 保持 `Released` |
-| 当前开发源码 | 继承 `0.3.4 Build 3` 的主额度内嵌重置、Spark 周额度、30 日 Tokens、成本估算、半年上限完整网格与“最近一天”语义；新增仅对预期 Developer ID Team 启用的 Sparkle 更新器；不包含 0.3.2 Preview 多任务生产实现 |
-| 开发测试与验收 | 64 项测试通过；`0.3.5 (5)` Universal Release 无签名构建通过；Build 5 Ad Hoc 内到外签名打包与 EdDSA appcast Fixture 通过；App、Widget、Hook、Core、Sparkle 及嵌套组件均为 `x86_64 arm64`；版本、资源、签名顺序和 appcast 字段门禁通过 |
-| 当前构建候选包 | `/private/tmp/quotaview-035-build5-updater-row-derived/Build/Products/Release/QuotaView.app`；无签名验证包的更新环境门禁保持关闭，等待用户视觉验收 |
-| 自动更新序列准入 | 产品所有者已于 `2026-08-11` 明确批准 `0.3.5 Build 5`；绑定 tag `v0.3.5-build.5` 与资产 `QuotaView-v0.3.5-build.5.zip`；公开 appcast 仍须等待最终资产 SHA-256、正式签名、公证、回下载与 Feed 验证完成 |
-| 正式资产 | `QuotaView-v0.3.3-build.3.zip`；`11,566,058 bytes`；SHA-256 `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 交付状态 | `0.3.5 Build 5` 版本发布为 `Released`；`QV-PRODUCT-APP-UPDATES-003` 保持 `Verifying`，仅因首个更新器版本无法单独完成真实 N → N+1 验收 |
+| 当前生产源码 | 主额度内嵌重置、Spark 周额度、30 日 Tokens、成本估算、半年上限完整网格与“最近一天”语义；仅对预期 Developer ID Team 启用 Sparkle 更新器；不包含 0.3.2 Preview 多任务生产实现 |
+| 发布测试与验收 | 64 项本地测试和 PR #22 CI 通过；Developer ID、公证/Staple、正式 ZIP、GitHub 回下载和公开 appcast 全部验证；完整视觉/辅助功能交叉矩阵仍等待产品所有者逐项验收 |
+| 正式本地包 | `/private/tmp/quotaview-033-build5-estimated-cost/dist/QuotaView.app` 与 `dist/QuotaView-v0.3.5-build.5.zip` |
+| 自动更新序列准入 | `0.3.5 Build 5` 已完成准入和部署；后续 GitHub 推送默认不进入 Feed，仍须产品所有者按精确版本主动批准 |
+| 正式资产 | `QuotaView-v0.3.5-build.5.zip`；`12,747,358 bytes`；SHA-256 `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
 | 独立预览版 | `0.3.2 Preview 1` / `v0.3.2-preview.1` 继续作为 GitHub Pre-release 供社区测试 |
 | 本地预览备份 | 分支 `codex/archive-0.3.2-preview.1-multitask-island`；worktree `.worktrees/QuotaView-0.3.2-preview.1-backup`；提交 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
-| 发布后回滚基线 | `0.3.1 (Build 2)` / `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
+| 发布后回滚基线 | `0.3.3 (Build 3)` / `v0.3.3` / `a93a81af4f90610a57783ceb16a744f07e216c6a` |
 
 [`QV-PRODUCT-USAGE-OVERVIEW-002`](docs/design/quotaview-usage-overview-0.3.4.md)
 记录已并入 `0.3.5 Build 5` 候选的 `0.3.4` 用量范围。Build 1 在同一次
@@ -142,19 +143,20 @@ Version 变化而重置，并同步 App、Widget 和兼容 Info.plist。
 记录当前更新范围。主 App 固定 Sparkle `2.9.2`，`QuotaViewAppDelegate`
 持有单一长生命周期控制器；用户可手动检查或显式开启每 24 小时自动检查，
 安装不静默执行。Feed 使用 HTTPS、EdDSA、签名 Feed 与解压前验证，并关闭
-系统画像和 JavaScript。EdDSA 私钥已生成在登录 Keychain 的
-`com.quotaview.menubar` account 中；正式发布前仍必须完成加密离线备份并
-显式设置 `SPARKLE_KEY_BACKUP_CONFIRMED=YES`。首个带更新器的版本只能由
-用户手动安装，真实更新验收需要后续两个正式签名、公证版本完成 N → N+1。
+系统画像和 JavaScript。EdDSA 私钥位于登录 Keychain 的
+`com.quotaview.menubar` account，并已完成 AES-256 iCloud 加密备份与恢复
+一致性校验；恢复密码只存于 `com.quotaview.menubar.sparkle-backup` Keychain
+service。首个带更新器的版本只能由用户手动安装，真实更新验收需要后续正式
+签名、公证的更高 Build 完成 N → N+1。
 
 自动更新序列采用产品所有者显式准入：GitHub 推送、tag、Stable/Latest
 Release 和正式 ZIP 默认均不进入公开 appcast；只有产品所有者针对精确
 Marketing Version、Build、tag 与最终资产主动确认后才能发布 Feed。序列可
 跳过未批准的中间 Release，后续更高 Build 可直接成为下一更新目标。产品
 所有者已于 `2026-08-11` 明确批准 `0.3.5 Build 5` 进入自动更新序列，绑定
-tag `v0.3.5-build.5` 与资产 `QuotaView-v0.3.5-build.5.zip`。该批准不跳过
-最终资产 SHA-256、Developer ID、Apple 公证/Staple、回下载和签名 Feed
-门禁；门禁完成前不得公开部署 appcast。
+tag `v0.3.5-build.5` 与资产 `QuotaView-v0.3.5-build.5.zip`。最终资产
+SHA-256、Developer ID、Apple 公证/Staple、回下载、Feed 签名和线上验证均
+已完成，公开 appcast 当前只包含该 Stable Build。
 
 0.3.2 Preview 1 的固定单岛多任务方向与发布证据继续有效，但它只代表独立
 Pre-release。响应速度、当前任务跟随、任务切换与收展节奏仍需优化，因此
@@ -171,7 +173,18 @@ Pre-release。响应速度、当前任务跟随、任务切换与收展节奏仍
 - [多任务 Demo 说明](Prototypes/CodexActivityMultiTaskDemo/README.md)
 - [多任务 Demo Design QA](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)
 
-## 0.2 0.3.3 Release Notes 源文
+## 0.2 0.3.5 Build 5 Release Notes 源文
+
+GitHub 正式 Release 只使用一份英文源正文，Release URL 为
+`https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5`。公开产品
+截图位于 `Resources/QuotaView-0.3.5-Overview.png`，由中英文 README 引用。
+
+正文覆盖：独立 Spark 周额度、主周期内嵌重置、30 日 Tokens 与非账单成本
+估算、半年上限完整 16 列 Token 网格、“最近一天”日期语义、Sparkle 2.9.2
+Stable 更新检查，以及首个更新器版本仍须手动安装的限制。GitHub 界面负责
+翻译，不维护第二份中文 Release 正文。
+
+## 0.3 0.3.3 Release Notes 源文
 
 GitHub 正式 Release 使用以下单份英文源正文；版本介绍图位于
 `Resources/QuotaView-0.3.3-Token-Activity.png`，README 中英文与 Release
@@ -766,15 +779,16 @@ GitHub 回下载再次验证。
 
 当前公开发布文档已完成以下联动：
 
-1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 `0.3.3 (Build 3)`；
+1. 将 `VERSION_HISTORY.md#当前最新版本` 更新为 `0.3.5 (Build 5)`；
 2. 在版本总览和版本详情中记录 tag、发布提交、Release URL、资产名、
    大小、SHA-256、签名、公证和验证结论；
 3. 将本文件的版本入口、发布、验证与完成状态由候选状态更新为发布事实；
-4. 更新 README 中英文下载入口、Codex 灵动岛重点文案，并于 2026-08-02
-   将静态预览图替换为动画 GIF；
+4. 更新 README 中英文下载入口与 0.3.5 功能说明，并加入产品所有者提供的
+   `Resources/QuotaView-0.3.5-Overview.png` 产品截图；
 5. 确认 GitHub Release Notes 只有一份英文源正文；
 6. 确认已撤回的 `0.2.0 Build 3` 不会重新成为下载或开发基线。
 
 README 下载入口、GitHub Latest 和
-`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.3`。已撤回的
+`VERSION_HISTORY.md#当前最新版本` 当前均指向 `v0.3.5-build.5`。公开
+appcast 也已指向同一正式资产。已撤回的
 `0.2.0 Build 3` 继续只保留历史记录，不得恢复为下载或开发基线。

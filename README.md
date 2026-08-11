@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.3/QuotaView-v0.3.3-build.3.zip"><strong>Download QuotaView v0.3.3 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.5-build.5/QuotaView-v0.3.5-build.5.zip"><strong>Download QuotaView v0.3.5 Build 5</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -28,19 +28,20 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-Preview.jpg" alt="QuotaView dark appearance preview" width="49%">
-  <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView light appearance preview" width="49%">
+  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 settings, Codex Island, widgets, quota, cost estimate, and Token Activity overview" width="100%">
 </p>
 
-QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. Its new **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep quota, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
+QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep period and Spark quota, estimated cost, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
 
 ## Why QuotaView
 
 | | |
 | --- | --- |
 | **Codex Island** | Follow thinking, tool use, approvals, context compaction, subagents, completion, and failures through a live Metal-rendered activity surface. |
-| **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
-| **Token Activity** | Review daily token usage in a compact monochrome chart with week, month, three-month, and all-history ranges. |
+| **At a glance** | See period and Spark quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
+| **Usage overview** | Review the latest day, 30-day tokens, and a clearly labeled 30-day local cost estimate. |
+| **Token Activity** | Review daily token usage in a compact monochrome chart with week, month, three-month, and six-month ranges. |
+| **App updates** | Manually check the Stable channel or opt into a native 24-hour automatic check after installing this version. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
 | **Lightweight** | Built natively with SwiftUI and AppKit, with no embedded browser runtime. |
@@ -49,11 +50,11 @@ QuotaView is a simple, lightweight, native macOS companion for the Codex account
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.3-build.3.zip` from the [v0.3.3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3).
+2. Download `QuotaView-v0.3.5-build.5.zip` from the [v0.3.5 Build 5 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.3 Build 3 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.5 Build 5 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -64,10 +65,11 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 - Current plan and service availability
 - Period usage and remaining percentage
-- Countdown to the next quota reset
+- Period and Spark quota with their own reset countdowns
 - Plan quota and additional Credits as separate values
 - Available quota reset credits
-- Recent daily and lifetime token usage
+- Latest-day, 30-day, and lifetime token usage
+- A 30-day local cost estimate, explicitly marked as an estimate rather than a bill
 - Near-limit, exhausted, offline, and App Server error states
 
 ## Native experience
@@ -76,13 +78,39 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
   status-aware color and motion, and automatic dismissal after completion
 - Compact status item with a dynamically sized menu panel
 - Automatic refresh every 60 seconds and manual refresh
-- Configurable menu bar values and seven optional panel sections
+- Manual Stable update checks and an opt-in 24-hour automatic check
+- Configurable menu bar values and optional panel sections
 - Frosted and clear glass appearances with light/dark adaptation
 - Native Liquid Glass on macOS 26 and a Material fallback on macOS 14–15
 - System-aware or fixed light/dark appearance
 - English and Simplified Chinese interfaces
 - Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
+
+## What's new in 0.3.5: Usage overview and app updates
+
+QuotaView 0.3.5 brings the expanded 0.3.4 usage overview into the first stable
+version that can check future signed releases from inside the app.
+
+- Adds an independently modeled, neutrally styled Spark weekly quota below the
+  primary period quota; it hides cleanly when the account does not provide it.
+- Moves the primary reset countdown into the period chart and removes the
+  redundant standalone panel setting.
+- Adds 30-day tokens and a monochrome 30-day cost estimate using the documented
+  local reference rate. The value is explicitly labeled as an estimate, not a
+  bill.
+- Keeps Token Activity's complete 16-column grid while limiting its longest
+  range to the most recent six months of available history.
+- Uses consistent latest-day semantics across the summary, activity chart, and
+  cost chart instead of describing an older bucket as today.
+- Adds Sparkle 2.9.2 manual Stable update checks and a separate native setting
+  for an optional 24-hour automatic check. Installing an update always requires
+  confirmation.
+- Keeps update traffic disabled for Debug, ad-hoc, unpackaged, wrong-bundle-ID,
+  or unexpected-signing-team builds.
+
+Because 0.3.5 Build 5 is the first release containing the updater, it must be
+installed manually. In-app updating begins with a later approved Stable build.
 
 ## What's new in 0.3.3: Token Activity
 
@@ -113,7 +141,7 @@ in the stable 0.3.3 source.
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.3.3 Build 3 is the recommended stable version and does
+> Island behavior. v0.3.5 Build 5 is the recommended stable version and does
 > not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
@@ -140,7 +168,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.3.3 Build 3 when stable
+- This build is intended for preview validation. Use v0.3.5 Build 5 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix
@@ -186,7 +214,7 @@ QuotaView does **not**:
 
 QuotaView starts the local `codex app-server` process and requests account data over JSON-RPC. It stores only the latest successful refresh time, availability state, a short error summary, and display preferences in its own macOS preferences domain.
 
-Version 0.3.3 is read-only by default and contains no live account-operation
+Version 0.3.5 is read-only by default and contains no live account-operation
 executor. The quota reset flow remains a local demo. The architecture reserves
 separate, explicitly authorized official operations for a future release
 without allowing refreshes to trigger side effects.
@@ -225,7 +253,7 @@ QuotaView looks for the Codex executable in this order:
 
 ## Current limitations
 
-- Version 0.3.1 currently supports Codex only; more official providers are
+- Version 0.3.5 currently supports Codex only; more official providers are
   planned through the static provider registry.
 - The quota reset interface is a safety-focused demo and does not call `account/rateLimitResetCredit/consume`.
 - The App Server schema can vary with the installed Codex version.

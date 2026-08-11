@@ -139,19 +139,23 @@ PR 必须写明 `Spec impact: None` 及理由。涉及已冻结方向、从 `Pro
 GitHub 版本发布与 Sparkle 自动更新序列是两个独立动作。产品所有者对每个
 版本保留单独的自动更新准入决定权，长期采用显式加入（opt-in）规则：
 
-1. 只有产品所有者针对某个精确版本明确表示“纳入自动更新序列”或“发布到
-   appcast”，该版本才允许写入公开 Stable appcast；
+1. 产品所有者针对某个精确版本明确表示“纳入自动更新序列”或“发布到
+   appcast”，即同时授权并触发该版本的完整发布链路：合并生产代码、正式
+   Developer ID 签名、Apple 公证/Staple、不可变 GitHub Stable Release、
+   回下载验证、签名 appcast 部署和发布文档联动；不得在合并 `main` 后停下
+   等待第二次“可以发布”确认；
 2. 推送代码、创建 tag、创建 GitHub Release、设为 Stable/Latest、上传正式
    ZIP 或一般性的“可以发布”，均不得自动推导为已获 appcast 准入；
 3. 未获得明确准入的版本默认排除在自动更新序列之外。允许为工程验证生成
    本地 appcast Fixture，但不得上传、部署或覆盖公开 appcast；
-4. 准入授权必须绑定精确的 Marketing Version、Build Number、tag 与最终
-   Release 资产；更换 Build、tag、ZIP 或重新打包后必须重新确认；
+4. 准入授权必须绑定精确的 Marketing Version、Build Number 和预期 tag / ZIP
+   身份；完成门禁后把最终资产大小、SHA-256、签名和公证结果回填文档。更换
+   Build、tag、资产名或在最终验证后重新打包必须重新确认；
 5. 自动更新序列可以跳过中间 GitHub Release。后续获准且 Build Number 更高
    的版本可直接作为现有客户端的下一更新目标，无需补录未获准版本；
 6. 在 `HANDOFF.md` 和当前更新规格中记录每个候选版本的准入状态。没有记录
    或记录为“未批准”时，一律按未获准处理；
-7. 发布公开 appcast 前必须再次核对产品所有者授权、不可变 Release 资产、
+7. 发布公开 appcast 前必须核对产品所有者授权、不可变 Release 资产、
    SHA-256、Developer ID、公证/Staple、EdDSA 和回下载验证；
 8. 已发布到 appcast 后如需撤回，必须由产品所有者明确授权，并同步处理
    appcast、GitHub Release/Latest、`HANDOFF.md` 与 `VERSION_HISTORY.md`，

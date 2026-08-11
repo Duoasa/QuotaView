@@ -6,7 +6,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`（Build 3 本地门禁通过，等待产品验收）
+> 交付状态：`Released`（由 `0.3.5 Build 5` 正式发布；完整视觉矩阵仍未标记全量通过）
 >
 > 目标版本：QuotaView `0.3.4 (Build 3)`
 >
@@ -213,13 +213,14 @@ Spark 额度来自必需的 rate-limit 响应，不扩大 usage 请求需求。�
 
 ## USAGE-OVERVIEW-09. 变更与发布控制
 
-- 当前公开 Latest 保持 `0.3.3 Build 3`，不得在正式发布门禁完成前将
-  `0.3.4 Build 3` 或继承本范围的开发候选写成公开 Release；
+- `0.3.4 Build 3` 未形成独立 Release；本范围已由正式签名、公证并完成
+  回下载验证的 `0.3.5 Build 5` 发布，当前 GitHub Latest 为
+  `v0.3.5-build.5`；
 - 本规格最终 `0.3.4` 开发迭代使用 Build 3，并已由 `0.3.5 Build 4` 候选
   继承；从 Build 4 起编号全局递增，不得因 Marketing Version 变化而重置；
 - 每次 Build 更新必须同步 App、Widget、兼容 Info.plist、Handoff 与 SDD
   索引；
 - 修改 Spark limit ID、隐藏条件、中性颜色、成本参考价、三十日边界或
   “非账单”语义时，必须更新本规格和对应测试；
-- 不得引入 OAuth、网页抓取、Keychain、新权限、真实重置消费或调试数据
+- 不得为本用量范围引入 OAuth、网页抓取、新凭据、新权限、真实重置消费或调试数据
   注入来实现本规格。
