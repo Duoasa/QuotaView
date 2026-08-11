@@ -15,28 +15,29 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.3 (Build 3)` |
-| Git tag | `v0.3.3` |
-| Tag commit | `a93a81af4f90610a57783ceb16a744f07e216c6a` |
-| GitHub Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
-| Release 资产 | `QuotaView-v0.3.3-build.3.zip` |
-| 资产大小 | `11,566,058 bytes` |
-| SHA-256 | `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 最新推荐版本 | `0.3.5 (Build 5)` |
+| Git tag | `v0.3.5-build.5` |
+| Tag commit | `58e676a8317d907107af3d1731ab11a0ded52684` |
+| GitHub Release | [QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) |
+| Release 资产 | `QuotaView-v0.3.5-build.5.zip` |
+| 资产大小 | `12,747,358 bytes` |
+| SHA-256 | `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
+| 公证 | Apple Accepted，已 Staple；Submission `88796026-3227-405a-9e1b-900af973c527` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
+| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；Feed SHA-256 `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；线上 EdDSA 验证通过 |
 
 上一稳定回滚基线：
 
 | 项目 | 封存值 |
 |---|---|
-| 版本 | `0.3.1 (Build 2)` |
-| tag / commit | `v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7` |
-| Release | [QuotaView 0.3.1 Build 2 — Widget Hotfix](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.1-build.2) |
-| 资产 / SHA-256 | `QuotaView-v0.3.1-build.2.zip` / `9051b60799a5a20e578c2eea4e3f3a5b3725109b553fc8580473953c0f59a1ed` |
-| 状态 | 不可移动历史正式版；发生 0.3.3 回滚时使用该 tag 与已核验资产 |
+| 版本 | `0.3.3 (Build 3)` |
+| tag / commit | `v0.3.3` / `a93a81af4f90610a57783ceb16a744f07e216c6a` |
+| Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
+| 资产 / SHA-256 | `QuotaView-v0.3.3-build.3.zip` / `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
+| 状态 | 不可移动历史正式版；发生 0.3.5 回滚时使用该 tag 与已核验资产 |
 
 当前公开预览版：
 
@@ -55,23 +56,19 @@
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-> 当前生产版本为 `0.3.3 (Build 3)`。本版在稳定单任务 Codex 灵动岛基础上
-> 新增 Token 活动图表；开发、验证与发布记录见 [HANDOFF.md](HANDOFF.md)。
+> 当前生产版本为 `0.3.5 (Build 5)`。本版继承 0.3.4 用量概览，包含独立
+> Spark 周额度、30 日 Tokens、成本估算、Token 活动半年上限与完整 16 列
+> 网格，并接入只在预期 Developer ID 正式 App 中启用的 Sparkle 2.9.2
+> Stable 更新器。正式签名、公证/Staple、GitHub Release/Latest、回下载和
+> 公开签名 appcast 均已完成；详细证据见 [HANDOFF.md](HANDOFF.md)。
 
-> 当前本地开发迭代为 `0.3.5 (Build 5)`：继承 `0.3.4 Build 3` 的用量概览
-> 与 Token 活动修正，并接入仅对预期 Developer ID Team 启用的 Sparkle
-> 2.9.2 Stable 更新器。Build 5 将自动检查更新调整为独立原生设置卡片行，
-> 左侧显示标题和状态说明，右侧使用小号系统 Switch。64 项自动化测试和
-> Build 5 Universal Release 无签名构建、Ad Hoc 内到外签名打包和 EdDSA
-> 签名 appcast Fixture 均通过；产品所有者已明确批准该版本进入自动更新
-> 序列，但正式资产门禁和公开 Feed 尚未完成。Build 5
-> 未创建 tag、正式签名/公证资产、GitHub Release 或公开 appcast，因此不
-> 加入下方公开版本总览，也不改变 GitHub Latest。当前开发范围见
-> [HANDOFF.md](HANDOFF.md#01-当前-sdd-迭代)。
+> 下一次开发使用全局递增的 `Build 6`。`QV-PRODUCT-APP-UPDATES-003` 仍需
+> 由后续正式版本完成真实 N → N+1 更新验收，因此规格交付状态保持
+> `Verifying`；这不改变 `0.3.5 Build 5` 已作为正式版本发布的事实。
 
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
-> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.3 稳定版中。
+> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.5 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
 > [SDD 当前状态快照](docs/specs/README.md#2-当前状态快照) 为准。
@@ -92,7 +89,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.3.3 (Build 3)` | 2026-08-11 | **当前最新** | Token 活动统计、单色方格图与顶部固定动态面板 |
+| `0.3.5 (Build 5)` | 2026-08-11 | **当前最新** | Spark 与 30 日用量概览、半年 Token 活动、Stable 应用更新检查 |
+| `0.3.3 (Build 3)` | 2026-08-11 | 历史正式版 / 0.3.5 回滚基线 | Token 活动统计、单色方格图与顶部固定动态面板 |
 | `0.3.2 (Build 1) Preview 1` | 2026-08-05 | **当前预览版** | Codex 灵动岛多任务支持与可选当前任务跟随 |
 | `0.3.1 (Build 2)` | 2026-08-01 | 历史正式版 / 0.3.3 回滚基线 | Widget 共享容器热修复与可变额度周期文案 |
 | `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
@@ -104,11 +102,66 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.3.5 (Build 5)
+
+Tag：`v0.3.5-build.5`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
+已进入公开 Stable appcast。
+
+发布提交：
+`58e676a8317d907107af3d1731ab11a0ded52684`
+
+主要特性：
+
+- 在主周期额度下方增加独立建模、固定中性色的 Spark 周额度；无有效数据时
+  自动隐藏，不重复显示订阅方案；
+- 将主周期下次重置合并到额度图表，并移除重复的独立面板开关；
+- 新增最近一天、30 日 Tokens 与 30 日成本估算，成本明确标注为本地估算值、
+  非账单；
+- Token 活动最长范围调整为最近半年，同时保留每行 16 格、左上占位补齐和
+  真实日期右下对齐；
+- 统一摘要、Token 活动和成本图的“最近一天”日期语义；
+- 接入 Sparkle 2.9.2 Stable 更新检查、手动检查入口和默认关闭的 24 小时
+  自动检查；Debug、Ad Hoc、非 App 或非预期签名环境不访问 Feed；
+- Build Number 从本版开始延续全局递增规则；后续迭代从 Build 6 开始；
+- 产品截图：`Resources/QuotaView-0.3.5-Overview.png`。
+
+验证与发布资产：
+
+- `swift test`：64 项通过、0 失败；PR #22 GitHub CI 通过；
+- 文件名：`QuotaView-v0.3.5-build.5.zip`
+- 大小：`12,747,358 bytes`
+- SHA-256：
+  `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1`
+- App、Widget、Hook、Core、Sparkle framework 及其 Installer、Downloader、
+  Autoupdate、Updater 组件均为 Universal `x86_64 arm64`；App 与 Widget 为
+  `0.3.5 (5)`；
+- Developer ID：`Developer ID Application: Chenchen Xu (BUUH229D5Q)`，
+  启用 Hardened Runtime；
+- Apple 公证：Accepted，已 Staple；Submission
+  `88796026-3227-405a-9e1b-900af973c527`；
+- GitHub 回下载正式资产与本地公证包逐字节一致，并重新通过 `codesign`、
+  Staple、Gatekeeper、版本、架构和资源复核；
+- 公开 Feed：`https://duoasa.github.io/QuotaView/appcast.xml`；`gh-pages`
+  提交 `9048dd67c746e145be75dd86870bc888d5eef499`；Feed SHA-256
+  `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；
+  线上文件与本地签名文件逐字节一致，Feed EdDSA 验证通过；
+- Sparkle 私钥已使用 AES-256 加密备份到 iCloud Drive，备份 SHA-256
+  `f48ba844884312cffc29b5316d2a624b0e38ee4caf4f9e064e3abb82f126f89d`，
+  恢复密码仅存于 macOS Keychain；
+- Build 5 是首个包含更新器的版本，必须手动安装；真实 N → N+1 更新验收
+  留待后续获准的正式 Build 完成；完整视觉与辅助功能交叉矩阵未记录为全量
+  通过。
+
+Release：
+[QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5)
+
 ## 0.3.3 (Build 3)
 
 Tag：`v0.3.3`
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release。
+状态：历史正式 Release、`0.3.5` 的封存回滚基线、非 Draft、非 Pre-release。
 
 发布提交：
 `a93a81af4f90610a57783ceb16a744f07e216c6a`
@@ -152,7 +205,7 @@ Release：
 
 Tag：`v0.3.2-preview.1`
 
-状态：当前公开预览版、非 Draft、非 Latest；`0.3.3 (Build 3)` 是
+状态：当前公开预览版、非 Draft、非 Latest；`0.3.5 (Build 5)` 是
 推荐稳定版与 GitHub Latest。
 
 发布提交：

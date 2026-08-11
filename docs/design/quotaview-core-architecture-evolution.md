@@ -12,7 +12,7 @@
 >
 > 原始设计基线：QuotaView `0.1.5 (Build 6)`
 >
-> 当前生产基线：QuotaView `0.3.3 (Build 3)`
+> 当前生产基线：QuotaView `0.3.5 (Build 5)`
 >
 > 编写日期：2026-07-28
 >

@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.3/QuotaView-v0.3.3-build.3.zip"><strong>下载 QuotaView v0.3.3 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.5-build.5/QuotaView-v0.3.5-build.5.zip"><strong>下载 QuotaView v0.3.5 Build 5</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -28,19 +28,20 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-Preview.jpg" alt="QuotaView 深色外观预览" width="49%">
-  <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView 浅色外观预览" width="49%">
+  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 设置、Codex 灵动岛、小组件、额度、成本估算与 Token 活动概览" width="100%">
 </p>
 
-QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。全新的 **Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让额度、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
+QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。**Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让本周期与 Spark 额度、成本估算、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
 
 ## 为什么选择 QuotaView
 
 | | |
 | --- | --- |
 | **Codex 灵动岛** | 通过实时 Metal 流体球查看思考、工具调用、权限确认、上下文压缩、子任务、完成与失败状态。 |
-| **一眼掌握** | 无需离开当前应用，即可从菜单栏或原生桌面小组件查看已用与剩余额度、重置倒计时、Credits 和可用状态。 |
-| **Token 活动** | 通过紧凑的单色图表查看每日 Token 用量，并切换周、月、三个月和全部历史。 |
+| **一眼掌握** | 无需离开当前应用，即可从菜单栏或原生桌面小组件查看本周期与 Spark 额度、重置倒计时、Credits 和可用状态。 |
+| **用量概览** | 查看最近一天、30 日 Token，以及明确标注为估算值的本地 30 日成本估算。 |
+| **Token 活动** | 通过紧凑的单色图表查看每日 Token 用量，并切换周、月、三个月和半年。 |
+| **应用更新** | 安装本版本后可手动检查 Stable 通道，或主动开启每 24 小时一次的原生自动检查。 |
 | **本地连接** | 通过 JSON-RPC 与本机启动的 `codex app-server` 进程通信。 |
 | **简洁设计** | 专注必要的额度信息，以紧凑、无冗余的界面降低干扰。 |
 | **轻量原生** | 使用 SwiftUI 和 AppKit 原生构建，不包含嵌入式浏览器运行层。 |
@@ -49,11 +50,11 @@ QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.3.3 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) 下载 `QuotaView-v0.3.3-build.3.zip`。
+2. 前往 [v0.3.5 Build 5 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) 下载 `QuotaView-v0.3.5-build.5.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.3.3 Build 3 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
+> v0.3.5 Build 5 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
 > 可在解压后正常打开，不再需要旧版未签名构建所使用的 Finder 右键打开
 > 方式。
 
@@ -63,10 +64,11 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 - 当前套餐和服务可用状态
 - 本周期已用额度和剩余百分比
-- 距离下次额度重置的倒计时
+- 本周期与 Spark 额度各自对应的重置倒计时
 - 分别展示套餐额度和额外 Credits
 - 可用的额度重置次数
-- 近期每日和累计 Token 用量
+- 最近一天、30 日和累计 Token 用量
+- 明确标注“估算值 · 非账单”的 30 日本地成本估算
 - 接近上限、额度耗尽、离线和 App Server 错误状态
 
 ## 原生使用体验
@@ -75,13 +77,36 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
   并在任务完成后自动收起
 - 紧凑的状态栏入口和可动态调整高度的菜单面板
 - 每 60 秒自动刷新，同时支持手动刷新
-- 可配置菜单栏数值和七个面板内容区域
+- 支持手动检查 Stable 更新，并可主动开启每 24 小时自动检查
+- 可配置菜单栏数值和面板内容区域
 - 提供磨砂和清透玻璃效果，并适配浅色与深色模式
 - macOS 26 使用原生 Liquid Glass，macOS 14–15 使用 Material 兼容方案
 - 支持跟随系统或固定使用浅色、深色外观
 - 支持简体中文和英文界面
 - 原生设置窗口包含菜单栏、面板内容、外观、语言和通用选项
 - 提供小号与中号两种原生 WidgetKit 小组件
+
+## 0.3.5 新功能：用量概览与应用更新
+
+QuotaView 0.3.5 将 0.3.4 扩展的用量概览纳入稳定版本，并首次支持从应用
+内部检查后续正式签名版本。
+
+- 在主周期额度下方新增独立建模、固定中性色的 Spark 周额度；账户未提供
+  有效 Spark 数据时自动隐藏，不保留空白；
+- 将主周期下次重置信息合并到额度图表，并移除重复的独立面板开关；
+- 新增 30 日 Token 和单色 30 日成本估算，使用文档记录的本地参考价，并
+  明确标注“估算值 · 非账单”；
+- 保留 Token 活动完整的 16 列网格，将最长范围限制为最近半年内的有效
+  历史；
+- 列表、Token 活动和成本图统一使用“最近一天”语义，不再把较早的数据桶
+  误称为今天；
+- 新增 Sparkle 2.9.2 Stable 手动检查，以及独立的原生设置栏，可选择每
+  24 小时自动检查；安装更新始终需要用户确认；
+- Debug、Ad Hoc、非 App、Bundle ID 错误或签名 Team 不符合预期的构建
+  不会访问更新源。
+
+0.3.5 Build 5 是首个包含更新器的版本，因此仍需手动安装；应用内升级将从
+后续获准进入 Stable 自动更新序列的版本开始。
 
 ## 0.3.3 新功能：Token 活动统计
 
@@ -107,7 +132,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
 
 > [!NOTE]
 > 0.3.2 Preview 1 是用于验证 Codex 灵动岛多任务体验的抢先预览版。
-> v0.3.3 Build 3 是推荐稳定版，不包含这套实验性多任务实现。
+> v0.3.5 Build 5 是推荐稳定版，不包含这套实验性多任务实现。
 
 [下载 QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
@@ -130,7 +155,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
   发生调整时，可能出现跟随滞后或未命中；
 - 任务切换、长标题跑马灯以及最大态/紧凑态切换节奏仍需要继续优化体验与
   性能；
-- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.3.3 Build 3。
+- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.3.5 Build 5。
 
 ## 0.3.1 Build 2 小组件热修复
 
@@ -171,7 +196,7 @@ QuotaView **不会**：
 
 QuotaView 会启动本地 `codex app-server` 进程，并通过 JSON-RPC 请求账户数据。它只会在自己的 macOS 偏好设置域中保存最近一次成功刷新时间、可用状态、简短错误摘要和显示偏好。
 
-0.3.3 默认只读，不包含真实账户操作执行器；额度重置仍是本地 Demo。
+0.3.5 默认只读，不包含真实账户操作执行器；额度重置仍是本地 Demo。
 底层只为未来“用户单独授权后的官方账户操作”预留独立边界，数据刷新不能
 隐式触发任何写操作。
 
@@ -207,7 +232,7 @@ QuotaView 会按以下顺序查找 Codex 可执行文件：
 
 ## 当前限制
 
-- 0.3.1 当前仍只支持 Codex，后续通过静态 Provider Registry 接入更多
+- 0.3.5 当前仍只支持 Codex，后续通过静态 Provider Registry 接入更多
   官方数据源。
 - 额度重置界面仍是安全演示，不会调用 `account/rateLimitResetCredit/consume`。
 - App Server Schema 可能随本机安装的 Codex 版本变化。

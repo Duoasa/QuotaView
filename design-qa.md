@@ -6,9 +6,9 @@
 >
 > 证据状态：`Active`（持续维护）
 >
-> 当前生产基线：QuotaView `0.3.3 (Build 3)`
+> 当前生产基线：QuotaView `0.3.5 (Build 5)`
 >
-> 当前开发迭代：QuotaView `0.3.5 (Build 5)`；等待产品验收，尚未发布
+> 当前开发入口：全局递增的 `Build 6`；功能范围与 Marketing Version 待定义
 >
 > 证据边界：下方各版本结论按实际产品所有者反馈分别保留；未明确确认的
 > 项目继续标记为等待验收，不得由历史 Passed 推导为当前全矩阵通过。
@@ -33,10 +33,12 @@ Prototype 结论不能回填为生产 App 验收。
 `NativeSettingsRow` 的标题与说明排版，右侧沿用原生小号 Switch。不可更新
 的无签名验收包继续显示真实原因并禁用开关，不伪造在线状态。
 
-64 项自动化测试、Build 5 Universal Release 无签名构建、Ad Hoc 内到外
-签名打包与 EdDSA appcast Fixture 通过；App、Widget、Hook、Core、Sparkle
-及其嵌套组件均为 `x86_64 arm64`。深色 / 浅色、中英文、键盘、VoiceOver
-与 Increase Contrast 的实际视觉和交互等待产品所有者验收。
+64 项自动化测试、PR #22 CI、Developer ID 正式包、公证/Staple、GitHub
+回下载和公开签名 appcast 均通过；App、Widget、Hook、Core、Sparkle 及其
+嵌套组件均为 `x86_64 arm64`。产品所有者提供的正式产品截图已存为
+`Resources/QuotaView-0.3.5-Overview.png` 并用于 README；提供截图和批准发布
+不自动等同于深色 / 浅色、中英文、键盘、VoiceOver 与 Increase Contrast
+完整矩阵通过，这些项目仍等待逐项验收。
 
 0.3.5 Build 5 automatic-update settings row result:
 **Waiting for product-owner review**
