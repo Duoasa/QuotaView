@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 settings, Codex Island, widgets, quota, cost estimate, and Token Activity overview" width="100%">
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island live task activity on macOS" width="100%">
 </p>
 
 QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep period and Spark quota, estimated cost, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
@@ -91,6 +91,10 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 QuotaView 0.3.5 brings the expanded 0.3.4 usage overview into the first stable
 version that can check future signed releases from inside the app.
+
+<p align="center">
+  <img src="Resources/QuotaView-0.3.5-Overview.png" alt="QuotaView 0.3.5 settings, Codex Island, widgets, quota, cost estimate, and Token Activity overview" width="100%">
+</p>
 
 - Adds an independently modeled, neutrally styled Spark weekly quota below the
   primary period quota; it hides cleanly when the account does not provide it.
