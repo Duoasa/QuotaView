@@ -10,9 +10,11 @@
 >
 > 当前生产基线：QuotaView `0.3.3 (Build 3)`
 >
-> 当前进行中工作：0.3.3 已发布；下一版本尚未选定
+> 当前进行中工作：`QV-PRODUCT-APP-UPDATES-003` 正在验证
+> `0.3.5 (Build 5)` Stable 应用检查与更新设置行调整
 >
-> 当前交付阶段：`Released`（`v0.3.3`）
+> 当前交付阶段：`Verifying`（`0.3.5 Build 5`）；公开版本仍为
+> `Released`（`v0.3.3`）
 
 ## 1. 本文件的职责
 
@@ -47,22 +49,29 @@
 | 维度 | 当前事实 |
 |---|---|
 | 公开生产版本 | `0.3.3 (Build 3)`；GitHub Latest |
-| 当前开发代码版本 | `MARKETING_VERSION = 0.3.3`，`CURRENT_PROJECT_VERSION = 3`，稳定渠道 |
-| 当前迭代 | 0.3.3 Token 活动统计已发布；下一迭代尚未建立 |
-| 当前规格 | `QV-PRODUCT-TOKEN-ACTIVITY-001` |
-| 规格状态 | `Accepted`：数据、网格、单色阶梯、Hover 与顶部锚定行为已确认 |
-| 交付状态 | `Released`：实现、手动验收、CI、签名、公证、Release 与回下载验证全部完成 |
+| 当前开发代码版本 | `MARKETING_VERSION = 0.3.5`、`CURRENT_PROJECT_VERSION = 5`；未发布开发迭代 |
+| 当前迭代 | `0.3.5 Build 5` Stable 应用检查与更新设置行调整 |
+| 当前规格 | `QV-PRODUCT-APP-UPDATES-003` |
+| 规格状态 | `Accepted` |
+| 交付状态 | `Verifying`：实现、自动化与 Universal 构建完成，等待产品所有者视觉/交互验收；尚未发布 |
 | 生产源码状态 | 每日用量桶、周/月/三个月/总计、16 列网格、0.5 秒紧凑 Tooltip、设置开关和顶部固定动态面板已接入；0.3.2 多任务生产实现不包含在稳定源码中 |
+| 开发源码状态 | 继承 `0.3.4 Build 3` 的主额度、Spark、30 日 Tokens、成本估算、半年完整网格与“最近一天”语义；新增只在预期 Developer ID Team 正式 App 内启动的 Sparkle 2.9.2 Stable 更新器；Build 5 将自动检查改为独立原生设置卡片行 |
 | 生产自动化 | `swift test` 57 项通过、0 失败；PR #20 GitHub CI 通过；Universal Release、Developer ID、Apple 公证与 Staple 通过，App、Widget、Hook、Core 均为 `x86_64 arm64` |
+| 开发基线验证 | `swift test` 64 项通过、0 失败；`0.3.5 Build 5` Universal Release 无签名构建通过；App、Widget、Hook、Core、Sparkle 及嵌套组件均为 `x86_64 arm64`；Build 5 Ad Hoc 内到外签名打包与 EdDSA 签名 appcast Fixture 通过 |
 | 正式 Release | `v0.3.3` / [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) / 发布提交 `a93a81af4f90610a57783ceb16a744f07e216c6a` |
 | 正式资产 | `QuotaView-v0.3.3-build.3.zip`；`11,566,058 bytes`；SHA-256 `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12`；Apple Submission `2dd7f885-db01-4ec1-a4d3-fbd8156ab616` |
 | 回下载验证 | 与本地公证包逐字节一致；签名、Staple、Gatekeeper、版本、架构、资源、隔离属性与真实启动通过 |
 | 独立预览版 | `0.3.2 (Build 1) Preview 1` / `v0.3.2-preview.1` / [GitHub Pre-release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)，继续保留供社区测试 |
 | 本地预览备份 | 分支 `codex/archive-0.3.2-preview.1-multitask-island`；worktree `.worktrees/QuotaView-0.3.2-preview.1-backup`；提交 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
-| 当前验收 | 产品所有者已确认 Token 图表观感、单色阶梯、0.5 秒 Tooltip 与周期切换顶部固定；完整外观/语言/辅助功能矩阵继续等待逐项验收 |
+| 当前验收 | `0.3.4 Build 1` Spark 样式已获确认；Build 3 Token 网格修正等待验收；Build 4 居中自动更新布局被产品反馈替代；Build 5 独立设置行、正式签名运行环境和真实 N → N+1 更新等待验收 |
 
 ### 当前迭代边界
 
+- 当前 `0.3.5 Build 5` 的唯一进行中规格为
+  [`QV-PRODUCT-APP-UPDATES-003`](../design/quotaview-app-updates-0.3.5.md)；
+- 已并入当前候选但仍等待视觉验收的用量范围由
+  [`QV-PRODUCT-USAGE-OVERVIEW-002`](../design/quotaview-usage-overview-0.3.4.md)
+  继续记录；
 - Token 活动图表的唯一规格为
   [`QV-PRODUCT-TOKEN-ACTIVITY-001`](../design/quotaview-token-activity.md)；
 - 0.3.3 的 tag、Latest、正式资产和回下载验证已完成，发布事实不可移动；
@@ -70,7 +79,8 @@
   发布事实；对应本地归档必须保留，后续优化使用新的迭代、Build、tag 和资产；
 - 0.3.2 Preview 的多任务生产代码不得进入 0.3.3 稳定版；单任务灵动岛继续
   作为稳定行为；
-- 0.3.3 Build 3 之后任何源码变更必须使用新的 Build Number。
+- `0.3.5 Build 4` 起 Build Number 全局单调递增，Marketing Version 升级
+  也不得重置；App、Widget、兼容 Info.plist、tag 和 ZIP 必须同步。
 
 ## 3. SDD 状态模型
 
@@ -106,6 +116,8 @@
 | `QV-GOVERNANCE-001` | [AGENTS.md](../../AGENTS.md) | 治理规范 | `Accepted` | — | 长期产品、实现、验证与发布约束 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-001` | [单任务灵动岛产品规格](../design/quotaview-codex-activity-widget-product.md) | 已发布功能规格 | `Accepted` | `Released` | `0.3.1` 单任务生产行为基线 |
 | `QV-PRODUCT-TOKEN-ACTIVITY-001` | [Token 活动图表规格](../design/quotaview-token-activity.md) | 已发布功能规格 | `Accepted` | `Released` | `0.3.3 Build 3` 当前稳定行为基线 |
+| `QV-PRODUCT-USAGE-OVERVIEW-002` | [0.3.4 用量概览扩展规格](../design/quotaview-usage-overview-0.3.4.md) | 已并入候选的功能规格 | `Accepted` | `Verifying` | 已并入 `0.3.5 Build 5`；局部视觉仍等待验收 |
+| `QV-PRODUCT-APP-UPDATES-003` | [0.3.5 应用检查与更新规格](../design/quotaview-app-updates-0.3.5.md) | 当前功能规格 | `Accepted` | `Verifying` | 实现与本地工程门禁通过；正式 N → N+1 未执行 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [多任务灵动岛规格](../design/quotaview-codex-activity-island-multitask.md) | 预览版功能规格 | `Accepted` | `Released` | `0.3.2 Preview 1` 独立预览行为基线；不映射到 0.3.3 稳定源码 |
 | `QV-DESIGN-WIDGET-001` | [WidgetKit 接入规格](../design/quotaview-widgetkit-solution.md) | 架构/功能规格 | `Accepted` | `Released` | Widget 数据、Target 与验证边界 |
 | `QV-EXEC-CORE-002` | [核心架构演进规格](../design/quotaview-core-architecture-evolution.md) | 架构规格 | `Accepted` | `Released`（Phase 0–2、4A–4B；Phase 3 部分） | Token 活动使用官方每日桶；SQLite History 与 Phase 5–7 尚未实施 |
@@ -125,8 +137,42 @@
 
 ## 5. 当前迭代追踪矩阵
 
-当前 Token 活动工作使用以下稳定 Requirement ID。详细定义与验收条件位于
-[Token 活动图表规格](../design/quotaview-token-activity.md)。
+当前 `0.3.5 Build 5` 使用以下 Requirement ID。详细定义与验收条件位于
+[0.3.5 应用检查与更新规格](../design/quotaview-app-updates-0.3.5.md)。
+
+| Requirement ID | 规格范围 | 当前证据 | 当前结论 |
+|---|---|---|---|
+| `APP-UPDATES-01` | 单一长生命周期控制器与两处设置入口 | `AppUpdateController`、AppDelegate 与设置注入 + 编译 | 已实现；App 启动完成后启动同一控制器 |
+| `APP-UPDATES-02` | Debug、非 App 和非预期签名环境无网络更新 | 纯环境模型与控制器测试 | 门禁分支通过；Ad Hoc 包保持不可更新 |
+| `APP-UPDATES-03` | 手动检查、独立原生设置行、默认关闭的 24 小时自动检查、显式安装 | `SettingsView`、Info.plist + 代码审查 | Build 5 已实现左文右开关的独立卡片行；视觉和真实签名交互等待验收 |
+| `APP-UPDATES-04` | HTTPS、EdDSA、签名 Feed、解压前验证、无画像/JS | Info.plist、Keychain 公钥与 appcast Fixture | 本地配置与签名 Feed 校验通过；私钥离线备份待完成 |
+| `APP-UPDATES-05` | Stable-only、macOS 14 与全局递增 Build | `generate-appcast.sh`、版本配置与 Fixture | `0.3.5 (5)`、最低 14.0、Stable 资产门禁通过 |
+| `APP-UPDATES-06` | Sparkle 嵌套组件内到外签名且 Universal | `build-app.sh`、Ad Hoc 打包、`lipo` | App、Sparkle 与嵌套组件 `x86_64 arm64`；正式 Developer ID 待发布时复核 |
+| `APP-UPDATES-07` | 两个正式签名公证版本完成 N → N+1 | 发布前端到端验证记录 | 未执行；不得标记 Released |
+| `APP-UPDATES-08` | 产品所有者按精确版本显式批准 appcast；未批准默认排除 | `AGENTS.md`、Handoff 准入记录与发布前核对 | `0.3.5 Build 5` 已于 `2026-08-11` 获准；绑定 `v0.3.5-build.5` 与正式 ZIP，待完成发布资产门禁后部署 Feed |
+
+### 5.1 已并入候选的 0.3.4 用量范围
+
+下列 Requirement 已实现并并入 `0.3.5 Build 5`；其中 Build 3 的视觉范围
+仍等待产品所有者验收。
+
+| Requirement ID | 规格范围 | 当前证据 | 当前结论 |
+|---|---|---|---|
+| `USAGE-OVERVIEW-01` | 主额度内嵌重置信息并移除独立面板开关 | `QuotaViewFigmaMenu`、`AppPreferences` + 代码审查 | 已实现；菜单栏倒计时开关保持独立 |
+| `USAGE-OVERVIEW-02` | `codex_bengalfox` 独立 Spark 窗口与 fail-soft | `CodexProviderAdapter` + `CodexModelsTests` | 映射、缺失和越界降级通过 |
+| `USAGE-OVERVIEW-03` | Spark 紧凑中性图表、隐藏条件与动态高度 | `QuotaViewFigmaMenu` + 产品所有者验收 | 产品所有者确认，并批准为 Build 1 基线 |
+| `USAGE-OVERVIEW-04` | 最近三十日 Token 汇总 | `EstimatedCostChartModel` + 行为测试 | UTC 三十日边界、窗口外排除与汇总通过 |
+| `USAGE-OVERVIEW-05` | `$0.50/M` 缓存输入成本估算与非账单语义 | `EstimatedCostChartModel`、`SettingsView` + 行为测试 | 公式、三十柱几何和缺失数据语义通过 |
+| `USAGE-OVERVIEW-06` | 设置顺序、默认值、持久化与 usage Demand | `AppPreferences`、`CodexStatusStore` + 偏好测试 | 实现完成，五项 usage 消费者共同控制可选请求 |
+| `USAGE-OVERVIEW-07` | 顶部固定动态面板、状态、语言与 AX | 面板高度模型 + 代码审查 | 自动化边界通过；完整交叉矩阵仍等待逐项验收 |
+| `USAGE-OVERVIEW-08` | Build 1 验证门禁 | 61 项测试、Universal、版本、架构、资源与残留搜索 | 本地门禁通过；签名、公证和 Release 未执行 |
+| `USAGE-OVERVIEW-09` | 版本与发布控制 | `AGENTS.md`、`HANDOFF.md`、版本配置 | 已进入 `0.3.5 (5)`；后续 Build 全局递增 |
+| `USAGE-OVERVIEW-10` | 半年历史上限、连续日期格与完整 16 列占位网格 | `TokenActivityGridModel` + 行为测试 | 实现与自动化通过；等待产品验收 |
+| `USAGE-OVERVIEW-11` | 最近一天与真实 UTC 日桶语义一致 | `CurrentCodexPresentation`、成本模型 + 行为测试 | 实现与自动化通过；等待产品验收 |
+
+### 5.2 已发布 Token 活动追踪矩阵
+
+`0.3.3 Build 3` 的以下 Requirement 已归档为稳定发布证据：
 
 | Requirement ID | 规格范围 | 当前证据 | 当前结论 |
 |---|---|---|---|

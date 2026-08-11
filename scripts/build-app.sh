@@ -18,6 +18,21 @@ app_group_identifier="$(
         -c 'Print :QuotaViewAppGroupIdentifier' \
         "${info_plist}"
 )"
+update_team_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewUpdateTeamIdentifier' \
+        "${info_plist}"
+)"
+sparkle_feed_url="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUFeedURL' \
+        "${info_plist}"
+)"
+sparkle_public_key="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUPublicEDKey' \
+        "${info_plist}"
+)"
 if [[ "${build_number}" == "1" ]]; then
     release_name="QuotaView-v${version}"
 else
@@ -30,11 +45,18 @@ built_app="${derived_data}/Build/Products/${configuration}/QuotaView.app"
 staging_app="${staging_dir}/QuotaView.app"
 widget_extension="${staging_app}/Contents/PlugIns/QuotaViewWidgetExtension.appex"
 activity_helper="${staging_app}/Contents/Helpers/QuotaViewActivityHook"
+sparkle_framework="${staging_app}/Contents/Frameworks/Sparkle.framework"
+sparkle_version_dir="${sparkle_framework}/Versions/B"
+sparkle_installer_xpc="${sparkle_version_dir}/XPCServices/Installer.xpc"
+sparkle_downloader_xpc="${sparkle_version_dir}/XPCServices/Downloader.xpc"
+sparkle_autoupdate="${sparkle_version_dir}/Autoupdate"
+sparkle_updater_app="${sparkle_version_dir}/Updater.app"
 destination_app="${dist_dir}/QuotaView.app"
 staging_zip="${staging_dir}/${release_name}.zip"
 destination_zip="${dist_dir}/${release_name}.zip"
 signing_identity="${CODESIGN_IDENTITY:-}"
 notary_profile="${NOTARY_PROFILE:-}"
+sparkle_key_account="${SPARKLE_KEY_ACCOUNT:-com.quotaview.menubar}"
 
 if [[ -z "${signing_identity}" ]]; then
     identity_inventory="$(security find-identity -v -p codesigning)"
@@ -78,6 +100,17 @@ if [[ -n "${notary_profile}" ]] \
     exit 2
 fi
 
+if [[ "${signing_identity}" == "Developer ID Application:"* ]] \
+    && [[ "${SPARKLE_KEY_BACKUP_CONFIRMED:-NO}" != "YES" ]]; then
+    print -u2 \
+        "Developer ID packaging requires an encrypted offline backup " \
+        "of the Sparkle EdDSA private key."
+    print -u2 \
+        "After verifying the backup, rerun with " \
+        "SPARKLE_KEY_BACKUP_CONFIRMED=YES."
+    exit 2
+fi
+
 mkdir -p "${dist_dir}"
 
 cd "${project_dir}"
@@ -112,6 +145,18 @@ if [[ ! -x "${activity_helper}" ]]; then
     exit 3
 fi
 
+for sparkle_component in \
+    "${sparkle_framework}" \
+    "${sparkle_installer_xpc}" \
+    "${sparkle_downloader_xpc}" \
+    "${sparkle_autoupdate}" \
+    "${sparkle_updater_app}"; do
+    if [[ ! -e "${sparkle_component}" ]]; then
+        print -u2 "Missing embedded Sparkle component: ${sparkle_component}"
+        exit 3
+    fi
+done
+
 signing_args=(
     --force
     --sign "${signing_identity}"
@@ -123,7 +168,19 @@ else
     signing_args+=(--options runtime --timestamp)
 fi
 
+codesign "${signing_args[@]}" "${sparkle_installer_xpc}"
+codesign \
+    "${signing_args[@]}" \
+    --preserve-metadata=entitlements \
+    "${sparkle_downloader_xpc}"
+codesign "${signing_args[@]}" "${sparkle_autoupdate}"
+codesign "${signing_args[@]}" "${sparkle_updater_app}"
+codesign "${signing_args[@]}" "${sparkle_framework}"
+
 for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
+    if [[ "${framework}" == "${sparkle_framework}" ]]; then
+        continue
+    fi
     codesign "${signing_args[@]}" "${framework}"
 done
 
@@ -212,6 +269,41 @@ widget_extension_point="$(
         -c 'Print :NSExtension:NSExtensionPointIdentifier' \
         "${widget_extension}/Contents/Info.plist"
 )"
+built_update_team_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewUpdateTeamIdentifier' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_feed_url="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUFeedURL' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_public_key="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUPublicEDKey' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_automatic_checks="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUEnableAutomaticChecks' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_allows_automatic_updates="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUAllowsAutomaticUpdates' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_verify_before_extraction="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SUVerifyUpdateBeforeExtraction' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_sparkle_requires_signed_feed="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :SURequireSignedFeed' \
+        "${staging_app}/Contents/Info.plist"
+)"
 
 if [[ "${built_version}" != "${version}" ]] \
     || [[ "${built_build_number}" != "${build_number}" ]]; then
@@ -240,6 +332,18 @@ if [[ "${widget_extension_point}" \
         != "com.apple.widgetkit-extension" ]]; then
     print -u2 \
         "Unexpected widget extension point: ${widget_extension_point}"
+    exit 4
+fi
+
+if [[ "${built_update_team_identifier}" \
+        != "${update_team_identifier}" ]] \
+    || [[ "${built_sparkle_feed_url}" != "${sparkle_feed_url}" ]] \
+    || [[ "${built_sparkle_public_key}" != "${sparkle_public_key}" ]] \
+    || [[ "${built_sparkle_automatic_checks}" != "false" ]] \
+    || [[ "${built_sparkle_allows_automatic_updates}" != "false" ]] \
+    || [[ "${built_sparkle_verify_before_extraction}" != "true" ]] \
+    || [[ "${built_sparkle_requires_signed_feed}" != "true" ]]; then
+    print -u2 "Sparkle update configuration is missing or inconsistent."
     exit 4
 fi
 
@@ -297,6 +401,29 @@ for framework in "${staging_app}"/Contents/Frameworks/*.framework(N); do
         print -u2 \
             "Expected universal ${framework_name}, " \
             "found: ${framework_architectures}"
+        exit 4
+    fi
+done
+
+sparkle_binaries=(
+    "${sparkle_version_dir}/Sparkle"
+    "${sparkle_installer_xpc}/Contents/MacOS/Installer"
+    "${sparkle_downloader_xpc}/Contents/MacOS/Downloader"
+    "${sparkle_autoupdate}"
+    "${sparkle_updater_app}/Contents/MacOS/Updater"
+)
+for sparkle_binary in "${sparkle_binaries[@]}"; do
+    if [[ ! -f "${sparkle_binary}" ]]; then
+        print -u2 "Missing Sparkle executable: ${sparkle_binary}"
+        exit 4
+    fi
+
+    sparkle_architectures="$(lipo -archs "${sparkle_binary}")"
+    if [[ " ${sparkle_architectures} " != *" arm64 "* ]] \
+        || [[ " ${sparkle_architectures} " != *" x86_64 "* ]]; then
+        print -u2 \
+            "Expected a universal Sparkle executable, found: " \
+            "${sparkle_architectures}"
         exit 4
     fi
 done
@@ -391,6 +518,34 @@ if [[ "${destination_zip_sha256}" != "${staging_zip_sha256}" ]]; then
     exit 4
 fi
 
+if [[ "${signing_identity}" == "Developer ID Application:"* ]]; then
+    sign_update_tool="$(
+        find "${derived_data}/SourcePackages/artifacts" \
+            -path '*/Sparkle/bin/sign_update' \
+            -type f \
+            -perm -111 \
+            -print \
+            -quit
+    )"
+    if [[ -z "${sign_update_tool}" ]]; then
+        print -u2 "Sparkle sign_update tool was not resolved."
+        exit 4
+    fi
+
+    sparkle_signature="$(
+        "${sign_update_tool}" \
+            --account "${sparkle_key_account}" \
+            -p \
+            "${destination_zip}"
+    )"
+    "${sign_update_tool}" \
+        --account "${sparkle_key_account}" \
+        --verify \
+        "${destination_zip}" \
+        "${sparkle_signature}"
+    sparkle_archive_length="$(stat -f '%z' "${destination_zip}")"
+fi
+
 print "Built ${destination_app}"
 print "Archived ${destination_zip}"
 print "Architectures: ${architectures}"
@@ -408,4 +563,10 @@ if [[ -n "${notary_profile}" ]]; then
     print "Notarization: accepted and stapled"
 else
     print "Notarization: not performed"
+fi
+
+if [[ "${signing_identity}" == "Developer ID Application:"* ]]; then
+    print \
+        "Sparkle enclosure: sparkle:edSignature=\"${sparkle_signature}\" " \
+        "length=\"${sparkle_archive_length}\""
 fi

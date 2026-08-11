@@ -9,6 +9,8 @@
 > 生效日期：2026-08-04
 >
 > 当前生产基线：QuotaView `0.3.3 (Build 3)`
+>
+> 当前开发迭代：QuotaView `0.3.5 (Build 5)`；交付状态 `Verifying`
 
 ## 1. 核心原则
 
@@ -112,12 +114,19 @@ Demo 被确认不代表已进入生产，生产实现完成也不代表已经发
 只有用户明确授权发布后执行。必须遵守 `AGENTS.md` 的签名、公证、资产、
 tag、Release、回下载和双文档联动门禁。
 
+GitHub Release 授权与应用内自动更新序列授权必须分别判断。创建 Stable、
+设为 Latest 或上传正式资产，不自动授权发布 appcast；只有产品所有者对精确
+版本、Build、tag 和最终 ZIP 明确表示“纳入自动更新序列”后，才允许部署
+公开 Feed。未明确批准时默认排除，但可以生成不发布的本地 Fixture 做验证。
+
 出口：
 
 - `VERSION_HISTORY.md` 记录已发生的发布事实；
 - `HANDOFF.md` 和 SDD 索引更新生产基线与下一迭代；
 - 对应规格交付状态变为 `Released`；
 - 追踪矩阵指向最终代码、测试、验收和 Release 证据。
+- 如该版本获准进入自动更新序列，Handoff 还必须记录准入原文、精确版本身份
+  与最终 appcast 验证结果；未获准版本明确记录为排除状态。
 
 ## 3. 对话协议
 
@@ -178,7 +187,20 @@ MT-DATA-001 和 MT-SELECT-001，不改版本号、不发布。
 - 规格、代码和测试对同一行为的描述不一致；
 - 发布文档提前记录尚未发生的 tag、Release 或资产。
 
-## 5. 当前 Token 活动迭代的归档结论
+## 5. 当前迭代与已发布归档
+
+`QV-PRODUCT-APP-UPDATES-003` 是当前 `0.3.5 Build 5` 的唯一进行中规格，
+规格状态为 `Accepted`，交付状态为 `Verifying`。Build 4 完成 Sparkle
+生命周期、正式签名环境门禁、手动/自动检查、发布脚本和 appcast Fixture；
+Build 5 按产品反馈把自动检查调整为独立原生设置卡片行。64 项自动化测试、
+Build 5 Universal Release 无签名构建、版本、架构与资源检查已通过，视觉
+和交互等待产品所有者验收。正式签名、公证、tag、Release、公开 appcast
+与真实 N → N+1 更新尚未执行，因此不得标记为 `Released`。
+
+下一次开发迭代必须先把 Build Number 更新为 6，再建立对应功能规格或更新
+现有 Requirement；不得继续复用 Build 5。
+
+### 5.1 0.3.3 Token 活动归档结论
 
 `QV-PRODUCT-TOKEN-ACTIVITY-001` 的规格状态为 `Accepted`，交付状态为
 `Released`。实现、产品所有者手动验收、57 项测试、PR #20 CI、Universal

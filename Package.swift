@@ -24,6 +24,12 @@ let package = Package(
         ),
         .executable(name: "QuotaViewProbe", targets: ["QuotaViewProbe"])
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/sparkle-project/Sparkle",
+            exact: "2.9.2"
+        )
+    ],
     targets: [
         .target(
             name: "QuotaViewCore",
@@ -42,7 +48,8 @@ let package = Package(
             name: "QuotaView",
             dependencies: [
                 "QuotaViewCore",
-                "QuotaViewWidgetContract"
+                "QuotaViewWidgetContract",
+                .product(name: "Sparkle", package: "Sparkle")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

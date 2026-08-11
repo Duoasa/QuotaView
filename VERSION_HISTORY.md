@@ -58,6 +58,17 @@
 > 当前生产版本为 `0.3.3 (Build 3)`。本版在稳定单任务 Codex 灵动岛基础上
 > 新增 Token 活动图表；开发、验证与发布记录见 [HANDOFF.md](HANDOFF.md)。
 
+> 当前本地开发迭代为 `0.3.5 (Build 5)`：继承 `0.3.4 Build 3` 的用量概览
+> 与 Token 活动修正，并接入仅对预期 Developer ID Team 启用的 Sparkle
+> 2.9.2 Stable 更新器。Build 5 将自动检查更新调整为独立原生设置卡片行，
+> 左侧显示标题和状态说明，右侧使用小号系统 Switch。64 项自动化测试和
+> Build 5 Universal Release 无签名构建、Ad Hoc 内到外签名打包和 EdDSA
+> 签名 appcast Fixture 均通过；产品所有者已明确批准该版本进入自动更新
+> 序列，但正式资产门禁和公开 Feed 尚未完成。Build 5
+> 未创建 tag、正式签名/公证资产、GitHub Release 或公开 appcast，因此不
+> 加入下方公开版本总览，也不改变 GitHub Latest。当前开发范围见
+> [HANDOFF.md](HANDOFF.md#01-当前-sdd-迭代)。
+
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
 > 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.3 稳定版中。

@@ -37,6 +37,40 @@ enum TokenActivityGridMetrics {
     }
 }
 
+enum EstimatedCostChartMetrics {
+    static let dayCount = 30
+    static let cachedInputUSDPerMillionTokens = 0.50
+    static let horizontalInset: CGFloat = 4
+    static let verticalInset: CGFloat = 16
+    static let contentWidth: CGFloat = 242
+    static let heroHeight: CGFloat = 43
+    static let contentSpacing: CGFloat = 9
+    static let chartHeight: CGFloat = 67
+    static let footerHeight: CGFloat = 16
+    static let barWidth: CGFloat = 6
+    static let barCornerRadius: CGFloat = 1.5
+    static let plotHeight: CGFloat = 48
+    static let scaleLabelHeight: CGFloat = 16
+    static let scalePlotSpacing: CGFloat = 3
+    static let tooltipWidth: CGFloat = 146
+    static let tooltipHeight: CGFloat = 22
+
+    static var barSpacing: CGFloat {
+        (contentWidth - CGFloat(dayCount) * barWidth)
+            / CGFloat(dayCount - 1)
+    }
+
+    static var sectionHeight: CGFloat {
+        verticalInset
+            + heroHeight
+            + contentSpacing
+            + chartHeight
+            + contentSpacing
+            + footerHeight
+            + verticalInset
+    }
+}
+
 struct QuotaViewFigmaMenu: View {
     nonisolated static let designSize = CGSize(width: 274, height: 433)
 
@@ -56,6 +90,7 @@ struct QuotaViewFigmaMenu: View {
         static let width = QuotaViewFigmaMenu.designSize.width
         static let headerHeight: CGFloat = 48
         static let summaryHeight: CGFloat = 117
+        static let sparkSummaryHeight: CGFloat = 82
         static let footerHeight: CGFloat = 48
         static let metricRowHeight: CGFloat = 36
         static let resetCardHeight: CGFloat = 51
@@ -119,10 +154,17 @@ struct QuotaViewFigmaMenu: View {
         case interactive
     }
 
+    private enum ProgressStyle {
+        case quotaRisk
+        case neutral
+    }
+
     private enum InfoItem {
         case usageSummary
+        case sparkQuotaSummary
         case metric(Metric)
         case tokenActivity
+        case estimatedCost
     }
 
     private enum PanelItem: Identifiable {
@@ -133,10 +175,14 @@ struct QuotaViewFigmaMenu: View {
             switch self {
             case .info(.usageSummary):
                 "usage-summary"
+            case .info(.sparkQuotaSummary):
+                "spark-quota-summary"
             case let .info(.metric(metric)):
                 metric.id
             case .info(.tokenActivity):
                 "token-activity"
+            case .info(.estimatedCost):
+                "estimated-cost"
             case .resetEntry:
                 "quota-reset"
             }
@@ -158,6 +204,10 @@ struct QuotaViewFigmaMenu: View {
 
             if showsUsageSummary {
                 summary
+            }
+
+            if showsSparkQuotaSummary {
+                sparkQuotaSummary
             }
 
             if !detailItems.isEmpty {
@@ -233,16 +283,103 @@ struct QuotaViewFigmaMenu: View {
     }
 
     private var summary: some View {
+        quotaSummary(
+            title: copy.text("本周期剩余", "Period Remaining"),
+            remainingPercent: remainingPercent,
+            usedPercent: usedPercent,
+            resetsAt: store.snapshot?.resetsAt,
+            subscription: subscriptionLabel,
+            isAvailable: hasCodexStatus,
+            accessibilityLabel: copy.text("本周期额度", "Period quota")
+        )
+    }
+
+    @ViewBuilder
+    private var sparkQuotaSummary: some View {
+        if let sparkQuota = store.snapshot?.sparkQuota {
+            VStack(alignment: .trailing, spacing: 9) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(copy.text("Spark 周额度", "Spark Weekly Quota"))
+                        .font(AstaSans.regular(10.5))
+                        .foregroundStyle(secondaryTextColor)
+                        .lineLimit(1)
+
+                    Text(
+                        remainingPercentLabel(
+                            sparkQuota.remainingPercent,
+                            isAvailable: hasCodexStatus
+                        )
+                    )
+                        .font(AstaSans.semiBold(10.5))
+                        .foregroundStyle(primaryTextColor)
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+
+                    Spacer(minLength: 6)
+                }
+                .frame(height: 16)
+
+                progressBar(
+                    remainingPercent: sparkQuota.remainingPercent,
+                    usedPercent: sparkQuota.usedPercent,
+                    isAvailable: hasCodexStatus,
+                    accessibilityLabel: copy.text(
+                        "Spark 周额度",
+                        "Spark weekly quota"
+                    ),
+                    style: .neutral
+                )
+
+                HStack(spacing: 6) {
+                    Text(nextResetLabel(sparkQuota.resetsAt))
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+
+                    Spacer(minLength: 6)
+
+                    Text(
+                        usedPercentLabel(
+                            sparkQuota.usedPercent,
+                            isAvailable: hasCodexStatus
+                        )
+                    )
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                }
+                .font(AstaSans.regular(10.5))
+                .foregroundStyle(secondaryTextColor)
+                .frame(height: 16)
+            }
+            .padding(.horizontal, Layout.summaryInset)
+            .padding(.vertical, 12)
+            .frame(width: Layout.width, height: Layout.sparkSummaryHeight)
+        }
+    }
+
+    private func quotaSummary(
+        title: String,
+        remainingPercent: Int,
+        usedPercent: Int,
+        resetsAt: Date?,
+        subscription: String?,
+        isAvailable: Bool,
+        accessibilityLabel: String
+    ) -> some View {
         VStack(alignment: .trailing, spacing: 9) {
             HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(copy.text("本周期剩余", "Period Remaining"))
+                    Text(title)
                         .font(AstaSans.regular(10.5))
                         .foregroundStyle(secondaryTextColor)
                         .lineLimit(1)
                         .frame(height: 16)
 
-                    Text(remainingPercentLabel)
+                    Text(
+                        remainingPercentLabel(
+                            remainingPercent,
+                            isAvailable: isAvailable
+                        )
+                    )
                         .font(AstaSans.semiBold(21))
                         .tracking(-0.21)
                         .foregroundStyle(primaryTextColor)
@@ -253,42 +390,72 @@ struct QuotaViewFigmaMenu: View {
 
                 Spacer(minLength: 6)
 
-                Text(subscriptionLabel)
-                    .font(AstaSans.semiBold(10.5))
-                    .foregroundStyle(primaryTextColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .frame(height: 16)
-                    .accessibilityLabel(
-                        copy.text(
-                            "Codex 订阅：\(subscriptionLabel)",
-                            "Codex subscription: \(subscriptionLabel)"
+                if let subscription {
+                    Text(subscription)
+                        .font(AstaSans.semiBold(10.5))
+                        .foregroundStyle(primaryTextColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(height: 16)
+                        .accessibilityLabel(
+                            copy.text(
+                                "Codex 订阅：\(subscription)",
+                                "Codex subscription: \(subscription)"
+                            )
                         )
-                    )
+                }
             }
             .frame(height: 43)
 
-            progressBar
+            progressBar(
+                remainingPercent: remainingPercent,
+                usedPercent: usedPercent,
+                isAvailable: isAvailable,
+                accessibilityLabel: accessibilityLabel,
+                style: .quotaRisk
+            )
 
-            Text(usedPercentLabel)
-                .font(AstaSans.regular(10.5))
-                .foregroundStyle(secondaryTextColor)
-                .contentTransition(.numericText())
-                .lineLimit(1)
-                .frame(height: 16)
+            HStack(spacing: 6) {
+                Text(nextResetLabel(resetsAt))
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text(
+                    usedPercentLabel(
+                        usedPercent,
+                        isAvailable: isAvailable
+                    )
+                )
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+            }
+            .font(AstaSans.regular(10.5))
+            .foregroundStyle(secondaryTextColor)
+            .frame(height: 16)
         }
         .padding(Layout.summaryInset)
         .frame(width: Layout.width, height: Layout.summaryHeight)
     }
 
-    private var progressBar: some View {
+    private func progressBar(
+        remainingPercent: Int,
+        usedPercent: Int,
+        isAvailable: Bool,
+        accessibilityLabel: String,
+        style: ProgressStyle
+    ) -> some View {
         GeometryReader { proxy in
-            let showsBothSegments = progressRemainingPercent > 0
-                && progressRemainingPercent < 100
+            let normalizedRemainingPercent = isAvailable
+                ? min(max(remainingPercent, 0), 100)
+                : 0
+            let showsBothSegments = normalizedRemainingPercent > 0
+                && normalizedRemainingPercent < 100
             let segmentGap: CGFloat = showsBothSegments ? 1 : 0
             let segmentWidth = max(0, proxy.size.width - segmentGap)
             let remainingWidth =
-                segmentWidth * CGFloat(progressRemainingPercent) / 100
+                segmentWidth * CGFloat(normalizedRemainingPercent) / 100
             let usedWidth = segmentWidth - remainingWidth
 
             ZStack {
@@ -308,7 +475,7 @@ struct QuotaViewFigmaMenu: View {
                         )
                 )
 
-                if hasCodexStatus {
+                if isAvailable {
                     HStack(spacing: segmentGap) {
                         if remainingWidth > 0 {
                             if showsBothSegments {
@@ -325,7 +492,13 @@ struct QuotaViewFigmaMenu: View {
                                     ),
                                     style: .continuous
                                 )
-                                .fill(remainingQuotaColor)
+                                .fill(
+                                    progressRemainingColor(
+                                        remainingPercent,
+                                        isAvailable: isAvailable,
+                                        style: style
+                                    )
+                                )
                                 .frame(width: remainingWidth)
                             } else {
                                 RoundedRectangle(
@@ -333,7 +506,13 @@ struct QuotaViewFigmaMenu: View {
                                         Layout.progressOuterCornerRadius,
                                     style: .continuous
                                 )
-                                .fill(remainingQuotaColor)
+                                .fill(
+                                    progressRemainingColor(
+                                        remainingPercent,
+                                        isAvailable: isAvailable,
+                                        style: style
+                                    )
+                                )
                                 .frame(width: remainingWidth)
                             }
                         }
@@ -353,7 +532,7 @@ struct QuotaViewFigmaMenu: View {
                                     ),
                                     style: .continuous
                                 )
-                                .fill(progressUsedColor)
+                                .fill(progressUsedColor(for: style))
                                 .frame(width: usedWidth)
                             } else {
                                 RoundedRectangle(
@@ -361,7 +540,7 @@ struct QuotaViewFigmaMenu: View {
                                         Layout.progressOuterCornerRadius,
                                     style: .continuous
                                 )
-                                .fill(progressUsedColor)
+                                .fill(progressUsedColor(for: style))
                                 .frame(width: usedWidth)
                             }
                         }
@@ -386,10 +565,14 @@ struct QuotaViewFigmaMenu: View {
             }
         }
         .frame(height: Layout.progressHeight)
-        .accessibilityLabel(
-            copy.text("本周期额度", "Period quota")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(
+            progressAccessibilityValue(
+                remainingPercent: remainingPercent,
+                usedPercent: usedPercent,
+                isAvailable: isAvailable
+            )
         )
-        .accessibilityValue(progressAccessibilityValue)
     }
 
     private var details: some View {
@@ -409,10 +592,13 @@ struct QuotaViewFigmaMenu: View {
                             in: items
                         )
                     )
-                case .info(.usageSummary):
+                case .info(.usageSummary),
+                     .info(.sparkQuotaSummary):
                     EmptyView()
                 case .info(.tokenActivity):
                     tokenActivitySection
+                case .info(.estimatedCost):
+                    estimatedCostSection
                 case .resetEntry:
                     resetCard
                         .padding(
@@ -597,8 +783,8 @@ struct QuotaViewFigmaMenu: View {
             copy.text("月", "M")
         case .threeMonths:
             copy.text("三月", "3M")
-        case .total:
-            copy.text("总计", "All")
+        case .sixMonths:
+            copy.text("半年", "6M")
         }
     }
 
@@ -612,9 +798,81 @@ struct QuotaViewFigmaMenu: View {
             copy.text("最近一个月", "Last month")
         case .threeMonths:
             copy.text("最近三个月", "Last three months")
-        case .total:
-            copy.text("全部可用历史", "All available history")
+        case .sixMonths:
+            copy.text("最近半年", "Last six months")
         }
+    }
+
+    private var estimatedCostSection: some View {
+        let model = EstimatedCostChartModel(
+            activity: store.snapshot?.tokenActivity ?? [],
+            endingAt: Date()
+        )
+
+        return VStack(
+            alignment: .trailing,
+            spacing: EstimatedCostChartMetrics.contentSpacing
+        ) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(copy.text("成本估算（30 天）", "Cost Estimate (30d)"))
+                    .font(AstaSans.regular(10.5))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(1)
+                    .frame(height: 16)
+
+                Text(formattedEstimatedUSD(model.periodCost))
+                    .font(AstaSans.semiBold(21))
+                    .tracking(-0.21)
+                    .foregroundStyle(primaryTextColor)
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(height: 24)
+            }
+            .frame(
+                width: EstimatedCostChartMetrics.contentWidth,
+                height: EstimatedCostChartMetrics.heroHeight,
+                alignment: .leading
+            )
+
+            EstimatedCostBars(model: model, copy: copy)
+
+            HStack(spacing: 6) {
+                Text(
+                    copy.text(
+                        "估算值 · 非账单",
+                        "Estimated · Not a bill"
+                    )
+                )
+                .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text(
+                    copy.text("最近一天 ", "Latest day ")
+                        + formattedEstimatedUSD(model.latestCost)
+                )
+                .contentTransition(.numericText())
+                .lineLimit(1)
+            }
+            .font(AstaSans.regular(10.5))
+            .foregroundStyle(secondaryTextColor)
+            .frame(
+                width: EstimatedCostChartMetrics.contentWidth,
+                height: EstimatedCostChartMetrics.footerHeight
+            )
+        }
+        .padding(
+            .horizontal,
+            EstimatedCostChartMetrics.horizontalInset
+        )
+        .padding(.vertical, EstimatedCostChartMetrics.verticalInset)
+        .frame(
+            width: Layout.contentWidth,
+            height: EstimatedCostChartMetrics.sectionHeight,
+            alignment: .top
+        )
+        .accessibilityElement(children: .contain)
     }
 
     private var resetCard: some View {
@@ -855,12 +1113,18 @@ struct QuotaViewFigmaMenu: View {
         return OpenAIPlanDisplayName.resolve(rawPlan) ?? "—"
     }
 
-    private var remainingPercentLabel: String {
-        hasCodexStatus ? "\(remainingPercent)%" : "—"
+    private func remainingPercentLabel(
+        _ remainingPercent: Int,
+        isAvailable: Bool
+    ) -> String {
+        isAvailable ? "\(remainingPercent)%" : "—"
     }
 
-    private var usedPercentLabel: String {
-        guard hasCodexStatus else {
+    private func usedPercentLabel(
+        _ usedPercent: Int,
+        isAvailable: Bool
+    ) -> String {
+        guard isAvailable else {
             return copy.text("已使用 —", "— Used")
         }
         return copy.text(
@@ -869,14 +1133,18 @@ struct QuotaViewFigmaMenu: View {
         )
     }
 
-    private var progressRemainingPercent: Int {
-        hasCodexStatus
-            ? min(max(remainingPercent, 0), 100)
-            : 0
+    private func nextResetLabel(_ resetsAt: Date?) -> String {
+        copy.text(
+            "下次重置 \(resetCountdown(resetsAt))",
+            "Next Reset \(resetCountdown(resetsAt))"
+        )
     }
 
-    private var remainingQuotaColor: Color {
-        guard hasCodexStatus else {
+    private func remainingQuotaColor(
+        _ remainingPercent: Int,
+        isAvailable: Bool
+    ) -> Color {
+        guard isAvailable else {
             return Palette.danger
         }
 
@@ -890,12 +1158,46 @@ struct QuotaViewFigmaMenu: View {
         }
     }
 
-    private var progressUsedColor: Color {
-        Color.white.opacity(0.32)
+    private func progressRemainingColor(
+        _ remainingPercent: Int,
+        isAvailable: Bool,
+        style: ProgressStyle
+    ) -> Color {
+        switch style {
+        case .quotaRisk:
+            return remainingQuotaColor(
+                remainingPercent,
+                isAvailable: isAvailable
+            )
+        case .neutral:
+            guard isAvailable else {
+                return isLightAppearance
+                    ? Color.black.opacity(0.18)
+                    : Color.white.opacity(0.18)
+            }
+            return isLightAppearance
+                ? Color.black.opacity(0.62)
+                : Color.white.opacity(0.88)
+        }
     }
 
-    private var progressAccessibilityValue: String {
-        guard hasCodexStatus else {
+    private func progressUsedColor(for style: ProgressStyle) -> Color {
+        switch style {
+        case .quotaRisk:
+            return Color.white.opacity(0.32)
+        case .neutral:
+            return isLightAppearance
+                ? Color.black.opacity(0.18)
+                : Color.white.opacity(0.30)
+        }
+    }
+
+    private func progressAccessibilityValue(
+        remainingPercent: Int,
+        usedPercent: Int,
+        isAvailable: Bool
+    ) -> String {
+        guard isAvailable else {
             return copy.text("不可用", "Unavailable")
         }
         return copy.text(
@@ -931,18 +1233,14 @@ struct QuotaViewFigmaMenu: View {
             result.append(.info(.usageSummary))
         }
 
-        if preferences.showNextReset {
-            result.append(
-                .info(
-                    .metric(
-                        Metric(
-                            id: "next-reset",
-                            title: copy.text("下次重置", "Next Reset"),
-                            value: resetCountdown(snapshot?.resetsAt)
-                        )
-                    )
-                )
-            )
+        if preferences.showSparkQuota,
+           store.hasCurrentCodexStatus,
+           snapshot?.sparkQuota != nil {
+            result.append(.info(.sparkQuotaSummary))
+        }
+
+        if preferences.showEstimatedCost {
+            result.append(.info(.estimatedCost))
         }
 
         if preferences.showCreditBalance {
@@ -965,9 +1263,31 @@ struct QuotaViewFigmaMenu: View {
                     .metric(
                         Metric(
                             id: "today-tokens",
-                            title: copy.text("今日 Tokens", "Today Tokens"),
+                            title: copy.text(
+                                "最近一天 Tokens",
+                                "Latest Daily Tokens"
+                            ),
                             value: compactTokenCount(
                                 snapshot?.recentDailyTokens
+                            )
+                        )
+                    )
+                )
+            )
+        }
+
+        if preferences.showThirtyDayTokens {
+            result.append(
+                .info(
+                    .metric(
+                        Metric(
+                            id: "thirty-day-tokens",
+                            title: copy.text(
+                                "30 日 Tokens",
+                                "30-Day Tokens"
+                            ),
+                            value: compactTokenCount(
+                                thirtyDayTokenTotal(snapshot)
                             )
                         )
                     )
@@ -1007,6 +1327,16 @@ struct QuotaViewFigmaMenu: View {
             && store.hasAvailableResetCredit
     }
 
+    private func thirtyDayTokenTotal(
+        _ snapshot: CurrentCodexPresentation?
+    ) -> Int64? {
+        guard let snapshot else { return nil }
+        return EstimatedCostChartModel(
+            activity: snapshot.tokenActivity,
+            endingAt: Date()
+        ).periodTokens
+    }
+
     private var showsUsageSummary: Bool {
         visibleItems.contains {
             if case .info(.usageSummary) = $0 {
@@ -1016,12 +1346,24 @@ struct QuotaViewFigmaMenu: View {
         }
     }
 
+    private var showsSparkQuotaSummary: Bool {
+        visibleItems.contains {
+            if case .info(.sparkQuotaSummary) = $0 {
+                return true
+            }
+            return false
+        }
+    }
+
     private var detailItems: [PanelItem] {
         visibleItems.filter {
-            if case .info(.usageSummary) = $0 {
+            switch $0 {
+            case .info(.usageSummary),
+                 .info(.sparkQuotaSummary):
                 return false
+            default:
+                return true
             }
-            return true
         }
     }
 
@@ -1039,6 +1381,7 @@ struct QuotaViewFigmaMenu: View {
     ) -> CGFloat {
         Layout.headerHeight
             + (showsUsageSummary ? Layout.summaryHeight : 0)
+            + (showsSparkQuotaSummary ? Layout.sparkSummaryHeight : 0)
             + detailsHeight(
                 for: detailItems,
                 tokenActivityRange: range
@@ -1067,7 +1410,8 @@ struct QuotaViewFigmaMenu: View {
 
         let contentHeight = items.reduce(CGFloat.zero) { result, item in
             switch item {
-            case .info(.usageSummary):
+            case .info(.usageSummary),
+                 .info(.sparkQuotaSummary):
                 result
             case .info(.metric):
                 result + Layout.metricRowHeight
@@ -1075,6 +1419,8 @@ struct QuotaViewFigmaMenu: View {
                 result + tokenActivitySectionHeight(
                     for: tokenActivityRange
                 )
+            case .info(.estimatedCost):
+                result + EstimatedCostChartMetrics.sectionHeight
             case .resetEntry:
                 result + Layout.resetCardHeight
             }
@@ -1211,9 +1557,15 @@ struct TokenActivityGridModel: Equatable {
             endingAt: normalizedEnd
         )
         var activityByDay: [Date: Int64] = [:]
-        for value in activity {
+        for value in activity where value.tokens >= 0 {
             let day = Self.utcCalendar.startOfDay(for: value.date)
-            activityByDay[day] = value.tokens
+            guard day >= startDate, day <= normalizedEnd else { continue }
+            let (combinedTokens, overflow) = activityByDay[
+                day,
+                default: 0
+            ].addingReportingOverflow(value.tokens)
+            guard !overflow else { continue }
+            activityByDay[day] = combinedTokens
         }
 
         var days: [(date: Date, tokens: Int64?)] = []
@@ -1285,10 +1637,22 @@ struct TokenActivityGridModel: Equatable {
                     to: $0
                 )
             } ?? endDate
-        case .total:
+        case .sixMonths:
+            let boundary = utcCalendar.date(
+                byAdding: .month,
+                value: -6,
+                to: endDate
+            ).flatMap {
+                utcCalendar.date(
+                    byAdding: .day,
+                    value: 1,
+                    to: $0
+                )
+            } ?? endDate
             return activity
+                .filter { $0.tokens >= 0 }
                 .map { utcCalendar.startOfDay(for: $0.date) }
-                .filter { $0 <= endDate }
+                .filter { $0 >= boundary && $0 <= endDate }
                 .min()
                 ?? utcCalendar.date(
                     byAdding: .day,
@@ -1305,6 +1669,373 @@ struct TokenActivityGridModel: Equatable {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         return calendar
     }()
+}
+
+struct EstimatedCostChartModel: Equatable {
+    struct Day: Identifiable, Equatable {
+        let date: Date
+        let tokens: Int64?
+        let estimatedCost: Double?
+
+        var id: Date { date }
+    }
+
+    let days: [Day]
+    let todayCost: Double?
+    let latestCost: Double?
+    let periodTokens: Int64?
+    let periodCost: Double?
+    let maximumCost: Double
+
+    init(
+        activity: [DailyTokenActivity],
+        endingAt endDate: Date
+    ) {
+        let normalizedEnd = Self.utcCalendar.startOfDay(for: endDate)
+        let startDate = Self.utcCalendar.date(
+            byAdding: .day,
+            value: -(EstimatedCostChartMetrics.dayCount - 1),
+            to: normalizedEnd
+        ) ?? normalizedEnd
+        var activityByDay: [Date: Int64] = [:]
+        for value in activity {
+            let day = Self.utcCalendar.startOfDay(for: value.date)
+            activityByDay[day] = value.tokens
+        }
+
+        var resolvedDays: [Day] = []
+        resolvedDays.reserveCapacity(EstimatedCostChartMetrics.dayCount)
+        var date = startDate
+        for _ in 0..<EstimatedCostChartMetrics.dayCount {
+            let tokens = activityByDay[date]
+            resolvedDays.append(
+                Day(
+                    date: date,
+                    tokens: tokens,
+                    estimatedCost: tokens.flatMap(Self.estimatedCost)
+                )
+            )
+            guard let nextDate = Self.utcCalendar.date(
+                byAdding: .day,
+                value: 1,
+                to: date
+            ) else {
+                break
+            }
+            date = nextDate
+        }
+
+        days = resolvedDays
+        todayCost = resolvedDays.last?.estimatedCost
+        latestCost = resolvedDays.last(where: {
+            $0.tokens != nil
+        })?.estimatedCost
+        let tokenCounts = resolvedDays.compactMap(\.tokens)
+        periodTokens = tokenCounts.isEmpty
+            ? nil
+            : tokenCounts.reduce(0, +)
+        let costs = resolvedDays.compactMap(\.estimatedCost)
+        periodCost = costs.isEmpty ? nil : costs.reduce(0, +)
+        maximumCost = costs.max() ?? 0
+    }
+
+    static func estimatedCost(tokens: Int64) -> Double? {
+        guard tokens >= 0 else { return nil }
+        return Double(tokens) / 1_000_000
+            * EstimatedCostChartMetrics.cachedInputUSDPerMillionTokens
+    }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }()
+}
+
+private struct EstimatedCostTooltipPresentation: Equatable {
+    let dayID: Int
+    let text: String
+}
+
+private struct EstimatedCostBars: View {
+    let model: EstimatedCostChartModel
+    let copy: AppCopy
+
+    @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var hoverController =
+        TokenActivityHoverController()
+    @State private var tooltipPresentation:
+        EstimatedCostTooltipPresentation?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: EstimatedCostChartMetrics.scalePlotSpacing) {
+                Text(maximumCostLabel)
+                    .font(AstaSans.regular(10.5))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(1)
+                    .frame(
+                        width: EstimatedCostChartMetrics.contentWidth,
+                        height: EstimatedCostChartMetrics.scaleLabelHeight,
+                        alignment: .trailing
+                    )
+
+                HStack(
+                    alignment: .bottom,
+                    spacing: EstimatedCostChartMetrics.barSpacing
+                ) {
+                    ForEach(Array(model.days.enumerated()), id: \.element.id) {
+                        index,
+                        day in
+                        dayColumn(day, index: index)
+                    }
+                }
+                .frame(
+                    width: EstimatedCostChartMetrics.contentWidth,
+                    height: EstimatedCostChartMetrics.plotHeight,
+                    alignment: .bottomLeading
+                )
+            }
+
+            if let tooltipPresentation {
+                tooltip(tooltipPresentation)
+            }
+        }
+        .frame(
+            width: EstimatedCostChartMetrics.contentWidth,
+            height: EstimatedCostChartMetrics.chartHeight,
+            alignment: .topLeading
+        )
+        .accessibilityLabel(
+            copy.text(
+                "最近三十天成本估算图",
+                "30-day cost estimate chart"
+            )
+        )
+        .onChange(of: model) { _, _ in
+            resetTooltip()
+        }
+        .onDisappear {
+            resetTooltip()
+        }
+    }
+
+    private func dayColumn(
+        _ day: EstimatedCostChartModel.Day,
+        index: Int
+    ) -> some View {
+        ZStack(alignment: .bottom) {
+            bar(for: day)
+
+            Color.clear
+                .frame(
+                    width: EstimatedCostChartMetrics.barWidth,
+                    height: EstimatedCostChartMetrics.plotHeight
+                )
+                .contentShape(Rectangle())
+                .onHover { isHovering in
+                    handleHover(
+                        isHovering,
+                        dayID: index,
+                        text: dayHelp(day)
+                    )
+                }
+                .accessibilityLabel(dateLabel(day.date))
+                .accessibilityValue(costValueLabel(day.estimatedCost))
+        }
+        .frame(
+            width: EstimatedCostChartMetrics.barWidth,
+            height: EstimatedCostChartMetrics.plotHeight,
+            alignment: .bottom
+        )
+    }
+
+    @ViewBuilder
+    private func bar(for day: EstimatedCostChartModel.Day) -> some View {
+        if let cost = day.estimatedCost, cost > 0 {
+            RoundedRectangle(
+                cornerRadius: EstimatedCostChartMetrics.barCornerRadius,
+                style: .continuous
+            )
+                .fill(barColor(cost))
+                .frame(
+                    width: EstimatedCostChartMetrics.barWidth,
+                    height: barHeight(cost)
+                )
+        }
+    }
+
+    private func tooltip(
+        _ presentation: EstimatedCostTooltipPresentation
+    ) -> some View {
+        Text(presentation.text)
+            .font(AstaSans.regular(9))
+            .foregroundStyle(Color(nsColor: .labelColor))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .frame(
+                width: EstimatedCostChartMetrics.tooltipWidth,
+                height: EstimatedCostChartMetrics.tooltipHeight
+            )
+            .background(
+                Color(nsColor: .controlBackgroundColor),
+                in: RoundedRectangle(
+                    cornerRadius: 5,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(
+                        Color(nsColor: .separatorColor),
+                        lineWidth: 0.5
+                    )
+            }
+            .position(tooltipCenter(dayID: presentation.dayID))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private func tooltipCenter(dayID: Int) -> CGPoint {
+        let center = CGFloat(dayID)
+            * (
+                EstimatedCostChartMetrics.barWidth
+                    + EstimatedCostChartMetrics.barSpacing
+            )
+            + EstimatedCostChartMetrics.barWidth / 2
+        let halfTooltip = EstimatedCostChartMetrics.tooltipWidth / 2
+        return CGPoint(
+            x: min(
+                max(center, halfTooltip),
+                EstimatedCostChartMetrics.contentWidth - halfTooltip
+            ),
+            y: EstimatedCostChartMetrics.scaleLabelHeight
+                + EstimatedCostChartMetrics.scalePlotSpacing
+                + EstimatedCostChartMetrics.tooltipHeight / 2
+                + 1
+        )
+    }
+
+    private func handleHover(
+        _ isHovering: Bool,
+        dayID: Int,
+        text: String
+    ) {
+        if isHovering {
+            if tooltipPresentation != nil {
+                tooltipPresentation = nil
+            }
+            hoverController.schedule(cellID: dayID) {
+                tooltipPresentation = EstimatedCostTooltipPresentation(
+                    dayID: dayID,
+                    text: text
+                )
+            }
+        } else if hoverController.leave(cellID: dayID),
+                  tooltipPresentation?.dayID == dayID
+        {
+            tooltipPresentation = nil
+        }
+    }
+
+    private func resetTooltip() {
+        hoverController.cancel()
+        if tooltipPresentation != nil {
+            tooltipPresentation = nil
+        }
+    }
+
+    private func barHeight(_ cost: Double) -> CGFloat {
+        guard model.maximumCost > 0 else { return 3 }
+        return max(
+            3,
+            CGFloat(cost / model.maximumCost)
+                * EstimatedCostChartMetrics.plotHeight
+        )
+    }
+
+    private func barColor(_ cost: Double) -> Color {
+        guard cost > 0, model.maximumCost > 0 else {
+            return cellPalette.zero
+        }
+        let ratio = cost / model.maximumCost
+        return switch ratio {
+        case ..<0.25: cellPalette.low
+        case ..<0.50: cellPalette.medium
+        case ..<0.75: cellPalette.high
+        default: cellPalette.peak
+        }
+    }
+
+    private var maximumCostLabel: String {
+        guard model.maximumCost > 0 else { return "—" }
+        return formattedEstimatedUSD(
+            model.maximumCost,
+            minimumFractionDigits: 0
+        )
+    }
+
+    private var cellPalette: TokenActivityCellPalette {
+        TokenActivityCellPalette.resolved(for: colorScheme)
+    }
+
+    private var secondaryTextColor: Color {
+        colorScheme == .light
+            ? Color(
+                red: 87.0 / 255.0,
+                green: 87.0 / 255.0,
+                blue: 87.0 / 255.0
+            )
+            : Color.white.opacity(0.75)
+    }
+
+    private func dayHelp(_ day: EstimatedCostChartModel.Day) -> String {
+        "\(dateLabel(day.date)) · \(costValueLabel(day.estimatedCost))"
+    }
+
+    private func costValueLabel(_ cost: Double?) -> String {
+        guard let cost else {
+            return copy.text("估算不可用", "Estimate unavailable")
+        }
+        return copy.text(
+            "估算 \(formattedEstimatedUSD(cost))",
+            "Estimated \(formattedEstimatedUSD(cost))"
+        )
+    }
+
+    private func dateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Self.utcCalendar
+        formatter.locale = Locale(
+            identifier: copy.language.localeIdentifier
+        )
+        formatter.timeZone = Self.utcCalendar.timeZone
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }()
+}
+
+private func formattedEstimatedUSD(
+    _ value: Double?,
+    minimumFractionDigits: Int = 2
+) -> String {
+    guard let value, value.isFinite, value >= 0 else { return "—" }
+    let formatter = NumberFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.numberStyle = .decimal
+    formatter.usesGroupingSeparator = true
+    formatter.minimumFractionDigits = minimumFractionDigits
+    formatter.maximumFractionDigits = 2
+    return "$" + (formatter.string(from: value as NSNumber) ?? "—")
 }
 
 @MainActor

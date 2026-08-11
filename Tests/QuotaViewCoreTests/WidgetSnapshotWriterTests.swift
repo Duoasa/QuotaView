@@ -191,6 +191,7 @@ final class WidgetSnapshotWriterTests: XCTestCase {
             remainingPercent: remainingPercent,
             windowDurationMinutes: 10_080,
             resetsAt: now.addingTimeInterval(3_600),
+            sparkQuota: nil,
             creditBalance: creditBalance,
             hasCredits: creditBalance != nil,
             unlimitedCredits: false,

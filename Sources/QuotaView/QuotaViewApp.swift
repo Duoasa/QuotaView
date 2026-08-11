@@ -12,7 +12,8 @@ struct QuotaViewApp: App {
             SettingsView(
                 store: appDelegate.store,
                 preferences: appDelegate.preferences,
-                activityRuntime: appDelegate.activityRuntime
+                activityRuntime: appDelegate.activityRuntime,
+                updateController: appDelegate.updateController
             )
             .environment(\.locale, appDelegate.preferences.locale)
         }
@@ -24,6 +25,7 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     let store: CodexStatusStore
     let preferences: AppPreferences
     let activityRuntime: CodexActivityRuntime
+    let updateController: AppUpdateController
 
     private var menuBarController: MenuBarPanelController?
     private var isPreparingTermination = false
@@ -35,6 +37,7 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         self.activityRuntime = CodexActivityRuntime(
             preferences: preferences
         )
+        self.updateController = AppUpdateController()
         super.init()
     }
 
@@ -42,12 +45,14 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         _ notification: Notification
     ) {
         AstaSansFontRegistrar.registerBundledFonts()
+        updateController.start()
         store.start()
         activityRuntime.start()
         menuBarController = MenuBarPanelController(
             store: store,
             preferences: preferences,
-            activityRuntime: activityRuntime
+            activityRuntime: activityRuntime,
+            updateController: updateController
         )
     }
 

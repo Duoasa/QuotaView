@@ -26,10 +26,10 @@ struct SettingsView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
     @ObservedObject var activityRuntime: CodexActivityRuntime
+    @ObservedObject var updateController: AppUpdateController
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: SettingsPage? = .menuBar
-    @State private var updatePlaceholderVisible = false
     @State private var codexActivityDetailsExpanded = false
 
     private var copy: AppCopy { preferences.copy }
@@ -299,12 +299,25 @@ struct SettingsView: View {
             NativeSettingsDivider()
 
             preferenceToggle(
-                copy.text("下次重置时间", "Next reset time"),
+                copy.text("Spark 周额度", "Spark weekly quota"),
                 subtitle: copy.text(
-                    "显示当前用量周期的重置倒计时。",
-                    "Show the reset countdown for the current usage cycle."
+                    "有可用数据时，在周期用量概览下方显示 Spark 周额度。",
+                    "When available, show the Spark weekly quota below the "
+                        + "quota overview."
                 ),
-                isOn: $preferences.showNextReset
+                isOn: $preferences.showSparkQuota
+            )
+
+            NativeSettingsDivider()
+
+            preferenceToggle(
+                copy.text("成本估算图表", "Cost estimate chart"),
+                subtitle: copy.text(
+                    "按最近 30 天 Token 总量和 GPT-5.6 Sol 缓存输入价估算。",
+                    "Estimate the last 30 days from token totals and the "
+                        + "GPT-5.6 Sol cached-input rate."
+                ),
+                isOn: $preferences.showEstimatedCost
             )
 
             NativeSettingsDivider()
@@ -332,6 +345,17 @@ struct SettingsView: View {
             NativeSettingsDivider()
 
             preferenceToggle(
+                copy.text("30 日 Token", "30-day tokens"),
+                subtitle: copy.text(
+                    "显示最近 30 个统计日的 Token 总用量。",
+                    "Show total token usage for the last 30 reporting days."
+                ),
+                isOn: $preferences.showThirtyDayTokens
+            )
+
+            NativeSettingsDivider()
+
+            preferenceToggle(
                 copy.text("累计 Token", "Lifetime tokens"),
                 subtitle: copy.text(
                     "显示当前账户的累计 Token 用量。",
@@ -345,9 +369,9 @@ struct SettingsView: View {
             preferenceToggle(
                 copy.text("Token 活动图表", "Token activity chart"),
                 subtitle: copy.text(
-                    "按日期显示 Token 活动，可切换周、月、三个月和总计。",
+                    "按日期显示 Token 活动，可切换周、月、三个月和半年。",
                     "Show token activity by date for the week, month, "
-                        + "three months, or all available history."
+                        + "three months, or six months."
                 ),
                 isOn: $preferences.showTokenActivity
             )
@@ -701,7 +725,7 @@ struct SettingsView: View {
                 .padding(.top, 10)
 
             Button {
-                updatePlaceholderVisible = true
+                updateController.checkForUpdates()
             } label: {
                 Text(copy.text("检查更新…", "Check for Updates…"))
                     .frame(minWidth: 112)
@@ -709,37 +733,98 @@ struct SettingsView: View {
             .nativeSettingsActionStyle()
             .controlSize(.small)
             .padding(.top, 22)
+            .disabled(!updateController.canCheckForUpdates)
+            .help(updateCheckHelpText)
 
-            if updatePlaceholderVisible {
-                Text(
-                    copy.text(
-                        "自动更新服务将在正式发布前接入。",
-                        "The automatic update service will be connected before release."
+            Spacer(minLength: 32)
+
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text(
+                        "自动检查更新",
+                        "Automatically check for updates"
+                    ),
+                    subtitle: updateStatusText
+                ) {
+                    Toggle(
+                        copy.text(
+                            "自动检查更新",
+                            "Automatically check for updates"
+                        ),
+                        isOn: Binding(
+                            get: {
+                                updateController
+                                    .automaticallyChecksForUpdates
+                            },
+                            set: {
+                                updateController
+                                    .setAutomaticallyChecksForUpdates($0)
+                            }
+                        )
                     )
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 12)
-                .transition(.opacity)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .disabled(
+                        updateController.availability != .available
+                    )
+                }
             }
-
-            Spacer(minLength: 42)
         }
         .frame(maxWidth: .infinity, minHeight: 430)
-        .animation(
-            .easeOut(duration: 0.16),
-            value: updatePlaceholderVisible
+    }
+
+    private var updateCheckHelpText: String {
+        if updateController.availability == .available {
+            return copy.text(
+                "立即通过签名更新源检查新版本。",
+                "Check the signed update feed for a new version now."
+            )
+        }
+        return copy.text(
+            "当前构建不支持在线更新。",
+            "This build does not support online updates."
         )
+    }
+
+    private var updateStatusText: String {
+        switch updateController.availability {
+        case .available:
+            return copy.text(
+                "开启后每 24 小时自动检查；下载与安装始终需要你的确认。",
+                "When enabled, QuotaView checks every 24 hours; downloads and installation always require your confirmation."
+            )
+        case .debugBuild:
+            return copy.text(
+                "调试构建不会连接在线更新服务。",
+                "Debug builds do not connect to the online update service."
+            )
+        case .notApplicationBundle:
+            return copy.text(
+                "当前运行方式不支持在线更新。",
+                "The current launch environment does not support online updates."
+            )
+        case .unexpectedBundleIdentifier,
+             .untrustedSignature:
+            return copy.text(
+                "只有经 QuotaView 正式签名的应用支持在线更新。",
+                "Online updates are available only in an officially signed QuotaView app."
+            )
+        case .invalidConfiguration:
+            return copy.text(
+                "更新服务配置不可用，请重新安装正式版本。",
+                "The update service is unavailable. Reinstall the official release."
+            )
+        }
     }
 
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.3"
+        ) as? String ?? "0.3.5"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
-        ) as? String ?? "1"
+        ) as? String ?? "5"
         return copy.text(
             "版本 \(version)（\(build)）",
             "Version \(version) (\(build))"
