@@ -41,6 +41,7 @@ final class MenuBarPanelController: NSObject {
     private let store: CodexStatusStore
     private let preferences: AppPreferences
     private let activityRuntime: CodexActivityRuntime
+    private let updateController: AppUpdateController
 
     private var statusItem: NSStatusItem?
     private var panel: QuotaViewMenuPanel?
@@ -69,11 +70,13 @@ final class MenuBarPanelController: NSObject {
     init(
         store: CodexStatusStore,
         preferences: AppPreferences,
-        activityRuntime: CodexActivityRuntime
+        activityRuntime: CodexActivityRuntime,
+        updateController: AppUpdateController
     ) {
         self.store = store
         self.preferences = preferences
         self.activityRuntime = activityRuntime
+        self.updateController = updateController
         super.init()
 
         configureStatusItem()
@@ -498,7 +501,7 @@ final class MenuBarPanelController: NSObject {
     }
 
     private func resizePanelToFit() {
-        guard let hostingView, let panel else { return }
+        guard let hostingView, panel != nil else { return }
 
         hostingView.invalidateIntrinsicContentSize()
         hostingView.layoutSubtreeIfNeeded()
@@ -722,7 +725,8 @@ final class MenuBarPanelController: NSObject {
             let rootView = QuotaViewSettingsWindowRoot(
                 store: store,
                 preferences: preferences,
-                activityRuntime: activityRuntime
+                activityRuntime: activityRuntime,
+                updateController: updateController
             )
             let hostingController = NSHostingController(
                 rootView: rootView
@@ -797,12 +801,14 @@ private struct QuotaViewSettingsWindowRoot: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
     @ObservedObject var activityRuntime: CodexActivityRuntime
+    @ObservedObject var updateController: AppUpdateController
 
     var body: some View {
         SettingsView(
             store: store,
             preferences: preferences,
-            activityRuntime: activityRuntime
+            activityRuntime: activityRuntime,
+            updateController: updateController
         )
         .environment(\.locale, preferences.locale)
     }

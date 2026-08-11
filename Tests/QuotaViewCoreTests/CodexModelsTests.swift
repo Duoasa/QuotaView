@@ -136,17 +136,65 @@ final class CodexModelsTests: XCTestCase {
         }
     }
 
+    func testProviderMapsDedicatedSparkRateWindow() throws {
+        let result = try makeResult(
+            usedPercent: 34,
+            reachedType: nil,
+            resetCredits: 0,
+            sparkUsedPercent: 42
+        )
+        let sparkWindow = try XCTUnwrap(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.sparkRateWindowID
+            })
+        )
+
+        XCTAssertEqual(sparkWindow.usedFraction ?? -1, 0.42, accuracy: 0.0001)
+        XCTAssertEqual(
+            sparkWindow.remainingFraction ?? -1,
+            0.58,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(sparkWindow.period, .duration(minutes: 10_080))
+        XCTAssertEqual(
+            sparkWindow.resetsAt,
+            Date(timeIntervalSince1970: 1_785_908_028)
+        )
+    }
+
+    func testInvalidSparkRateWindowDoesNotInvalidatePrimaryQuota() throws {
+        let result = try makeResult(
+            usedPercent: 34,
+            reachedType: nil,
+            resetCredits: 0,
+            sparkUsedPercent: 101
+        )
+
+        XCTAssertNotNil(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.primaryRateWindowID
+            })
+        )
+        XCTAssertNil(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.sparkRateWindowID
+            })
+        )
+    }
+
     private func makeResult(
         usedPercent: Int,
         reachedType: String?,
         resetCredits: Int,
+        sparkUsedPercent: Int? = nil,
         now: Date = Date(timeIntervalSince1970: 1_785_000_000)
     ) throws -> ProviderFetchResult {
         let payload = CodexProviderPayload(
             rateLimits: try decodeRateLimits(
                 usedPercent: usedPercent,
                 reachedType: reachedType,
-                resetCredits: resetCredits
+                resetCredits: resetCredits,
+                sparkUsedPercent: sparkUsedPercent
             ),
             usage: try decodeUsage(),
             capturedAt: now,
@@ -160,14 +208,14 @@ final class CodexModelsTests: XCTestCase {
     private func decodeRateLimits(
         usedPercent: Int,
         reachedType: String?,
-        resetCredits: Int
+        resetCredits: Int,
+        sparkUsedPercent: Int?
     ) throws -> AccountRateLimitsResponse {
         let reachedValue = reachedType.map {
             "\"\($0)\""
         } ?? "null"
-        let json = """
+        let mainLimits = """
         {
-          "rateLimits": {
             "limitId": "codex",
             "limitName": null,
             "primary": {
@@ -185,8 +233,37 @@ final class CodexModelsTests: XCTestCase {
             "spendControlReached": false,
             "planType": "plus",
             "rateLimitReachedType": \(reachedValue)
-          },
-          "rateLimitsByLimitId": null,
+        }
+        """
+        let rateLimitsByLimitID: String
+        if let sparkUsedPercent {
+            rateLimitsByLimitID = """
+            {
+              "codex": \(mainLimits),
+              "codex_bengalfox": {
+                "limitId": "codex_bengalfox",
+                "limitName": "Spark",
+                "primary": {
+                  "usedPercent": \(sparkUsedPercent),
+                  "windowDurationMins": 10080,
+                  "resetsAt": 1785908028
+                },
+                "secondary": null,
+                "credits": null,
+                "individualLimit": null,
+                "spendControlReached": false,
+                "planType": "plus",
+                "rateLimitReachedType": null
+              }
+            }
+            """
+        } else {
+            rateLimitsByLimitID = "null"
+        }
+        let json = """
+        {
+          "rateLimits": \(mainLimits),
+          "rateLimitsByLimitId": \(rateLimitsByLimitID),
           "rateLimitResetCredits": {
             "availableCount": \(resetCredits),
             "credits": []

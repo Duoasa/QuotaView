@@ -48,6 +48,8 @@
 		B10000000000000000000028 /* CodexActivityIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIsland.swift */; };
 		B10000000000000000000029 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* main.swift */; };
 		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B1000000000000000000002B /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000030 /* AppUpdateController.swift */; };
+		B1000000000000000000002C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000001 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -165,6 +167,7 @@
 		F1000000000000000000002D /* CodexActivityIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIsland.swift; sourceTree = "<group>"; };
 		F1000000000000000000002E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F1000000000000000000002F /* QuotaViewActivityHook */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = QuotaViewActivityHook; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000030 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -173,6 +176,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000004 /* QuotaViewCore.framework in Frameworks */,
+				B1000000000000000000002C /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +240,7 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000001 /* QuotaViewApp.swift */,
+				F10000000000000000000030 /* AppUpdateController.swift */,
 				F10000000000000000000002 /* CodexStatusStore.swift */,
 				F10000000000000000000003 /* MenuBarView.swift */,
 				F10000000000000000000011 /* AppPreferences.swift */,
@@ -371,6 +376,9 @@
 				T10000000000000000000004 /* PBXTargetDependency */,
 			);
 			name = QuotaView;
+			packageProductDependencies = (
+				P20000000000000000000001 /* Sparkle */,
+			);
 			productName = QuotaView;
 			productReference = F1000000000000000000000F /* QuotaView.app */;
 			productType = "com.apple.product-type.application";
@@ -497,6 +505,9 @@
 				zh_CN,
 			);
 			mainGroup = G10000000000000000000001;
+			packageReferences = (
+				P10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = G10000000000000000000008 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -559,6 +570,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000001 /* QuotaViewApp.swift in Sources */,
+				B1000000000000000000002B /* AppUpdateController.swift in Sources */,
 				B10000000000000000000002 /* CodexStatusStore.swift in Sources */,
 				B10000000000000000000003 /* MenuBarView.swift in Sources */,
 				B1000000000000000000000D /* AppPreferences.swift in Sources */,
@@ -811,6 +823,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		P10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		P20000000000000000000001 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E10000000000000000000001 /* Project object */;
 }

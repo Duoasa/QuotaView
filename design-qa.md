@@ -8,18 +8,118 @@
 >
 > 当前生产基线：QuotaView `0.3.3 (Build 3)`
 >
+> 当前开发迭代：QuotaView `0.3.5 (Build 5)`；等待产品验收，尚未发布
+>
 > 证据边界：下方各版本结论按实际产品所有者反馈分别保留；未明确确认的
 > 项目继续标记为等待验收，不得由历史 Passed 推导为当前全矩阵通过。
 
 本文件只维护生产主面板、重置流程、设置窗口及相关已发布界面的视觉/交互
 历史。`Baseline result: Passed` 和各旧版本结论只对其记录的版本与范围有效，
-不代表 `0.3.3 (Build 3)` 的完整外观、语言、数据状态和辅助功能矩阵已通过。
+不代表 `0.3.3 (Build 3)`、`0.3.4 (Build 1)`、`0.3.4 (Build 3)` 或
+`0.3.5 (Build 4)`、`0.3.5 (Build 5)` 的
+完整外观、语言、数据状态和辅助功能矩阵已通过。
 
 灵动岛证据按功能路由：已发布单任务行为与等待验收项见
 [`QV-PRODUCT-ACTIVITY-ISLAND-001`](docs/design/quotaview-codex-activity-widget-product.md#activity-08-031-验证边界)；
 当前多任务 Demo 的视觉与交互记录见
 [`QV-EVIDENCE-MULTITASK-DEMO-QA-001`](Prototypes/CodexActivityMultiTaskDemo/design-qa.md)。
 Prototype 结论不能回填为生产 App 验收。
+
+## 0.3.5 Build 5 自动更新独立设置行（等待验收）
+
+2026-08-11，产品所有者要求“自动检查更新”参考现有外观设置行，并单独
+形成一栏。Build 5 保留通用页居中的应用信息、版本和“检查更新…”按钮，
+把自动检查及其状态说明移入独立 `NativeSettingsCard`：左侧沿用
+`NativeSettingsRow` 的标题与说明排版，右侧沿用原生小号 Switch。不可更新
+的无签名验收包继续显示真实原因并禁用开关，不伪造在线状态。
+
+64 项自动化测试、Build 5 Universal Release 无签名构建、Ad Hoc 内到外
+签名打包与 EdDSA appcast Fixture 通过；App、Widget、Hook、Core、Sparkle
+及其嵌套组件均为 `x86_64 arm64`。深色 / 浅色、中英文、键盘、VoiceOver
+与 Increase Contrast 的实际视觉和交互等待产品所有者验收。
+
+0.3.5 Build 5 automatic-update settings row result:
+**Waiting for product-owner review**
+
+## 0.3.5 Build 4 应用更新设置（已由 Build 5 布局调整替代）
+
+2026-08-11，通用设置页将未接入的“检查更新…”占位按钮替换为 Sparkle
+标准更新入口，并新增原生小号自动检查 Switch。自动检查默认关闭，用户可
+显式开启每 24 小时检查；安装继续由标准界面要求确认。不可更新的 Debug、
+非 App、Ad Hoc、错误 Bundle ID/Team ID 或配置异常环境显示对应说明，不
+伪造网络结果。
+
+64 项自动化测试、Universal Release 无签名构建、Ad Hoc 打包与临时签名
+appcast Fixture 已通过。产品所有者检查后指出居中的自动检查开关与状态说明
+不符合现有设置行结构，要求改为独立原生设置栏；该视觉结论未获验收，已由
+Build 5 调整替代。正式签名环境和真实 N → N+1 更新仍等待发布链路验收。
+
+0.3.5 Build 4 app-update settings result:
+**Superseded — layout refined in Build 5**
+
+## 0.3.4 Build 3 Token 活动修正（等待验收）
+
+2026-08-11，产品所有者澄清“半年”的含义只限制历史显示上限，并要求恢复
+0.3.3 的原有网格呈现：每行固定 16 格，不足部分使用左上占位格补齐；同时
+要求成本图底部“估算值 · 非账单”和“最近一天”使用同样字号与样式。
+
+Build 3 实现与代码审查结论：
+
+- 周、月和三个月恢复连续日期格与完整 `16 × N` 网格；
+- 半年从最近半年内最早的有效桶开始，不足半年不扩造更早历史；没有范围内
+  数据时沿用一个月空状态；
+- 左上占位格恢复虚线浅底样式，不响应 Hover，并从辅助功能树隐藏；
+- 成本图底部左右文案由同一个 `HStack` 统一提供
+  `Asta Sans Regular 10.5 pt` 与相同次要文字颜色；
+- 61 项自动化测试与 Universal Release 无签名构建通过；App、Widget、
+  Hook、Core 均为 `x86_64 arm64`。
+
+深色 / 浅色、中文 / 英文、四个范围切换、顶部锚定、Hover、Reduce Motion
+和 VoiceOver 的实际视觉与交互结果等待产品所有者运行 Build 3 后确认。
+
+0.3.4 Build 3 token-activity result:
+**Waiting for product-owner review**
+
+## 0.3.4 Build 2 Token 活动调整（已由 Build 3 澄清替代）
+
+2026-08-11，产品所有者要求把 Token 活动第四范围从“总计”改为“半年”，
+最初被实现为最近半年内有多少有效日桶就显示多少格，不生成行首、行尾或
+缺失日期占位格；同时修正列表“今日 Tokens”与图表当天状态不一致。
+
+当前实现已通过代码审查、61 项自动化测试和 Universal Release 无签名构建：
+
+- “半年 / 6M”限制为最近六个月有效 UTC 日桶；
+- 最后一行允许不足 16 格，零有效桶时不生成格子；
+- 旧 `total` 偏好迁移到 `sixMonths`；
+- 列表与成本摘要改用“最近一天”，不把上一有效日桶复制为今天。
+
+产品所有者在视觉检查后明确：无占位格不是目标呈现，半年仅表示历史上限。
+因此本节网格结论未被验收，并由 Build 3 修正规格替代；“最近一天”日期
+语义修正继续保留。
+
+0.3.4 Build 2 token-activity result:
+**Superseded — clarified before acceptance**
+
+## 0.3.4 Build 1 用量概览局部验收
+
+2026-08-11，产品所有者在真实运行的开发构建中连续检查主周期额度和 Spark
+周额度，并明确回复 `ok`，要求将当前状态固化为 `0.3.4 (Build 1)`：
+
+- 通过：主周期额度底部左侧显示下次重置，字号、字体和颜色与右侧“已使用”
+  一致；不再保留独立的面板“下次重置”设置开关；
+- 通过：Spark 周额度位于主周期额度下方，不重复显示订阅方案；
+- 通过：Spark 使用标题与剩余百分比同一行的 `82 pt` 紧凑布局，与主额度
+  的大号百分比形成区分；
+- 通过：Spark 进度条使用固定中性明暗分段，不随剩余额度阈值切换彩色；
+- 通过：底部继续清晰显示下次重置与已使用百分比；
+- 通过：当前视觉方向被产品所有者选定为 `0.3.4 Build 1` 开发基线。
+
+本记录只覆盖上述主额度重置信息与 Spark 区域。成本估算、30 日 Tokens、
+浅色 / 深色、磨砂 / 清透、中英文、Increase Contrast、Reduce Motion、
+键盘和 VoiceOver 的完整交叉矩阵继续等待逐项验收。
+
+0.3.4 Build 1 usage-overview result:
+**Passed — scoped product-owner review**
 
 ## 0.3.3 Build 3 Token 活动图表验收
 

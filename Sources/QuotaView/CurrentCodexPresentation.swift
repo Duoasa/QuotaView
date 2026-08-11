@@ -8,6 +8,13 @@ struct DailyTokenActivity: Equatable, Sendable, Identifiable {
     var id: Date { date }
 }
 
+struct CodexQuotaWindowPresentation: Equatable, Sendable {
+    let usedPercent: Int
+    let remainingPercent: Int
+    let windowDurationMinutes: Int?
+    let resetsAt: Date?
+}
+
 struct CurrentCodexPresentation: Equatable, Sendable {
     enum Availability: String, Equatable, Sendable {
         case ready
@@ -29,6 +36,7 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let remainingPercent: Int
     let windowDurationMinutes: Int?
     let resetsAt: Date?
+    let sparkQuota: CodexQuotaWindowPresentation?
     let creditBalance: String?
     let hasCredits: Bool
     let unlimitedCredits: Bool
@@ -79,14 +87,15 @@ struct CurrentCodexPresentationProjector {
         let creditBalance = snapshot.balances.first(
             where: { $0.kind == .credits }
         )
-        let latestDailyObservation = result.historicalObservations
-            .filter {
-                $0.definitionID == CodexDomainCatalog.dailyTokensID
-            }
-            .max(by: { $0.observedAt < $1.observedAt })
         let tokenActivity = tokenActivity(
             from: result.historicalObservations
         )
+        let latestDailyActivity = tokenActivity.last
+        let sparkQuota = snapshot.rateWindows
+            .first(where: {
+                $0.id == CodexDomainCatalog.sparkRateWindowID
+            })
+            .flatMap(quotaWindowPresentation)
 
         return CurrentCodexPresentation(
             availability: availability,
@@ -97,6 +106,7 @@ struct CurrentCodexPresentationProjector {
                 primaryWindow.period
             ),
             resetsAt: primaryWindow.resetsAt,
+            sparkQuota: sparkQuota,
             creditBalance: decimalString(creditBalance?.value),
             hasCredits: creditBalance?.hasBalance ?? false,
             unlimitedCredits: creditBalance?.isUnlimited ?? false,
@@ -112,17 +122,29 @@ struct CurrentCodexPresentationProjector {
                     in: snapshot
                 )
             ),
-            recentDailyTokens: int64Value(
-                metric(
-                    CodexDomainCatalog.dailyTokensID,
-                    in: snapshot
-                )
-            ),
-            recentDailyDate: latestDailyObservation.map {
-                Self.dailyDateFormatter.string(from: $0.observedAt)
+            recentDailyTokens: latestDailyActivity?.tokens,
+            recentDailyDate: latestDailyActivity.map {
+                Self.dailyDateFormatter.string(from: $0.date)
             },
             tokenActivity: tokenActivity,
             lastUpdatedAt: snapshot.capturedAt
+        )
+    }
+
+    private func quotaWindowPresentation(
+        _ window: RateWindow
+    ) -> CodexQuotaWindowPresentation? {
+        guard let usedFraction = window.usedFraction,
+              let remainingFraction = window.remainingFraction
+        else {
+            return nil
+        }
+
+        return CodexQuotaWindowPresentation(
+            usedPercent: percent(from: usedFraction),
+            remainingPercent: percent(from: remainingFraction),
+            windowDurationMinutes: durationMinutes(window.period),
+            resetsAt: window.resetsAt
         )
     }
 
@@ -142,7 +164,12 @@ struct CurrentCodexPresentationProjector {
             let sourceDate = observation.interval?.start
                 ?? observation.observedAt
             let day = Self.utcCalendar.startOfDay(for: sourceDate)
-            valuesByDay[day] = tokens
+            let (combinedTokens, overflow) = valuesByDay[
+                day,
+                default: 0
+            ].addingReportingOverflow(tokens)
+            guard !overflow else { continue }
+            valuesByDay[day] = combinedTokens
         }
 
         return valuesByDay

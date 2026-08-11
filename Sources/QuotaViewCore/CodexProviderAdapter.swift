@@ -18,6 +18,12 @@ public enum CodexDomainCatalog {
         nativeID: "primary"
     )
 
+    public static let sparkRateWindowID = EntityID(
+        providerID: providerID,
+        kind: .rateWindow,
+        nativeID: "codex_bengalfox"
+    )
+
     public static let usedFractionID = MetricID(
         providerID: providerID,
         namespace: "quota",
@@ -222,6 +228,9 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
             sourcePrecision: .providerRounded,
             quotaRisk: quotaRisk
         )
+        let sparkRateWindow = makeSparkRateWindow(
+            from: payload.rateLimits
+        )
 
         var currentMetrics: [MetricSample] = [
             sample(
@@ -320,7 +329,7 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
             availability: .available,
             accountScope: nil,
             plan: plan,
-            rateWindows: [rateWindow],
+            rateWindows: [rateWindow] + [sparkRateWindow].compactMap { $0 },
             balances: balances,
             currentMetrics: currentMetrics,
             models: [],
@@ -336,6 +345,49 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
                 duration: duration,
                 optionalIssues: payload.optionalIssues
             )
+        )
+    }
+
+    private static func makeSparkRateWindow(
+        from response: AccountRateLimitsResponse
+    ) -> RateWindow? {
+        guard let limits = response
+                .rateLimitsByLimitId?["codex_bengalfox"],
+              let window = limits.primary,
+              let usedPercent = window.usedPercent,
+              (0...100).contains(usedPercent)
+        else {
+            return nil
+        }
+
+        let usedFraction = Double(usedPercent) / 100
+        let remainingFraction = 1 - usedFraction
+        let reached = limits.rateLimitReachedType != nil
+            || limits.spendControlReached == true
+        let quotaRisk: QuotaRisk
+
+        if reached || usedPercent >= 100 {
+            quotaRisk = .exhausted
+        } else if usedPercent >= 85 {
+            quotaRisk = .warning
+        } else {
+            quotaRisk = .normal
+        }
+
+        return RateWindow(
+            id: CodexDomainCatalog.sparkRateWindowID,
+            titleKey: "codex.quota.spark.weekly",
+            period: window.windowDurationMins.map {
+                .duration(minutes: $0)
+            } ?? .providerDefined,
+            startsAt: nil,
+            resetsAt: window.resetsAt.map {
+                Date(timeIntervalSince1970: TimeInterval($0))
+            },
+            usedFraction: usedFraction,
+            remainingFraction: remainingFraction,
+            sourcePrecision: .providerRounded,
+            quotaRisk: quotaRisk
         )
     }
 
