@@ -1,0 +1,20 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>QuotaView</title>
+        <item>
+            <title>0.3.5</title>
+            <pubDate>Tue, 11 Aug 2026 21:15:55 +0800</pubDate>
+            <link>https://github.com/Duoasa/QuotaView</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5</sparkle:fullReleaseNotesLink>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>0.3.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.3.5-build.5/QuotaView-v0.3.5-build.5.zip" length="12747358" type="application/octet-stream" sparkle:edSignature="AUSlpSWmRvxIRswWFZhFwOYDnu9UlOeQlVsmvTQA90F+HbX7FhQ5x7NXxWk88cPRU/zq1PZAGFG3M9FGZe3YBg=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: GmXFYupSLI83AINYKDcEHcKHZUyXHtawXdRe0sZPto+ynndhGzbZTbhhnUY9+9chi75Gn8On522M90617KeaDw==
+length: 1258
+-->
