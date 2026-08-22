@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.5-build.5/QuotaView-v0.3.5-build.5.zip"><strong>Download QuotaView v0.3.5 Build 5</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.6-build.2/QuotaView-v0.3.6-build.2.zip"><strong>Download QuotaView v0.3.6 Build 2</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -53,11 +53,11 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.5-build.5.zip` from the [v0.3.5 Build 5 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5).
+2. Download `QuotaView-v0.3.6-build.2.zip` from the [v0.3.6 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.5 Build 5 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.6 Build 2 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -87,8 +87,35 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - Native Liquid Glass on macOS 26 and a Material fallback on macOS 14–15
 - System-aware or fixed light/dark appearance
 - English and Simplified Chinese interfaces
-- Native Settings window for Menu Bar, Popover, Appearance, Language, and General options
+- Native Settings window for Menu Bar, Popover, Codex Island, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
+
+## What's new in 0.3.6: A Codex Island that fits your workflow
+
+QuotaView 0.3.6 makes the stable single-task Codex Island visually and
+behaviorally customizable while keeping its local connection and privacy
+boundary unchanged.
+
+<p align="center">
+  <img src="Resources/QuotaView-0.3.6-Codex-Island-Settings.png" alt="QuotaView 0.3.6 Codex Island settings with visibility, Particle Orb and Ripple Glow previews, and compact and hide timing controls" width="100%">
+</p>
+
+- Adds a dedicated **Show Codex Island** switch. Hiding the island leaves the
+  local Codex connection active, so it can resume with the current state.
+- Adds a live animation picker with the existing **Particle Orb** and the new
+  **Ripple Glow**. Both previews use the production renderer, and switching
+  takes effect immediately.
+- Maps Ripple Glow to all nine existing task states while preserving a circular
+  silhouette, smooth state interpolation, and the approved faster animation
+  rhythm.
+- Adds stepped **Compact After Completion** timing from 5–60 seconds and
+  **Hide After Compacting** timing from 5–120 seconds, with visible tick marks
+  and the current value.
+- Keeps Reduce Motion support, falls back to Particle Orb if the new Metal
+  renderer is unavailable, and caches the Ripple Glow pipeline to avoid
+  repeated shader compilation.
+- Continues to use one stable single-task island. The separate multi-task
+  Preview experiment is not included.
 
 ## What's new in 0.3.5: Usage overview and app updates
 
@@ -116,8 +143,9 @@ version that can check future signed releases from inside the app.
 - Keeps update traffic disabled for Debug, ad-hoc, unpackaged, wrong-bundle-ID,
   or unexpected-signing-team builds.
 
-Because 0.3.5 Build 5 is the first release containing the updater, it must be
-installed manually. In-app updating begins with a later approved Stable build.
+Because 0.3.5 Build 5 was the first release containing the updater, it required
+a manual install. Approved installations can update to 0.3.6 Build 2 through
+the Stable channel.
 
 ## What's new in 0.3.3: Token Activity
 
@@ -148,7 +176,7 @@ in the stable 0.3.3 source.
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.3.5 Build 5 is the recommended stable version and does
+> Island behavior. v0.3.6 Build 2 is the recommended stable version and does
 > not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
@@ -175,7 +203,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.3.5 Build 5 when stable
+- This build is intended for preview validation. Use v0.3.6 Build 2 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix

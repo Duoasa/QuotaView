@@ -40,8 +40,9 @@
   签名；
 - 启用解压前验证和签名 Feed；公钥进入 Info.plist，私钥只进入开发者
   Keychain，并在发布前完成加密离线备份；
-- Appcast 条目必须提供全局递增的 Build Number、用户可读版本、最低
-  `macOS 14`、资产长度、EdDSA 签名和 Release Notes；
+- Appcast 条目必须提供全局递增的机器可读内部更新序号、用户可读的
+  Marketing Version 与产品 Build、最低 `macOS 14`、资产长度、EdDSA
+  签名和 Release Notes；
 - Appcast 只能在不可变 GitHub Release 资产可下载且已复核后最后发布。
 
 ### 3.1 自动更新序列准入
@@ -52,8 +53,8 @@
   不得在代码合并后等待第二次发布确认；
 - 未明确批准的所有 GitHub 推送、tag、Stable/Latest Release 和正式资产默认
   不进入 appcast；本地 Fixture 验证不构成发布授权；
-- appcast 可跳过未批准的中间版本。客户端以更高 Build Number 判断更新，
-  因而可从较早获准版本直接升级到之后获准的版本；
+- appcast 可跳过未批准的中间版本。客户端以更高 `CFBundleVersion` 内部
+  更新序号判断更新，因而可从较早获准版本直接升级到之后获准的版本；
 - 产品所有者已于 `2026-08-11` 明确批准 `0.3.5 Build 5` 进入自动更新序列，
   准入身份固定为 tag `v0.3.5-build.5` 与资产
   `QuotaView-v0.3.5-build.5.zip`；最终资产 SHA-256、Developer ID、Apple
@@ -62,9 +63,17 @@
 
 ## 4. 版本规则
 
-`CFBundleVersion` 从 `0.3.5 Build 4` 起全局单调递增，不再随 Marketing
-Version 重置。后续示例为 `0.3.5 Build 5`、`0.3.6 Build 6`。应用、Widget、
-兼容 Info.plist、tag、ZIP、Handoff 和版本历史必须使用同一个 Build Number。
+产品可见 Build Number 按 Marketing Version 独立计数：Marketing Version
+变化时归 `Build 1`，同一 Marketing Version 内的后续迭代依次递增。因此
+`0.3.5 Build 5` 的下一 Marketing Version 为 `0.3.6 Build 1`。
+
+Sparkle 的[官方升级说明](https://sparkle-project.org/documentation/upgrading/)
+要求 `CFBundleVersion` / `sparkle:version` 使用递增的机器可读版本，因此
+两者继续作为跨 Marketing Version 单调递增的内部更新序号；从
+`0.3.5 Build 5` 到 `0.3.6 Build 1` 时内部序号由 `5` 增至 `6`。产品可见
+Build 由 `QuotaViewDisplayBuildNumber` / `QUOTAVIEW_DISPLAY_BUILD_NUMBER`
+维护，设置界面、tag、ZIP、Handoff 与版本历史使用该值。App、Widget 与
+兼容 Info.plist 必须同时同步 Marketing Version、产品 Build 和内部更新序号。
 
 ## 5. 架构
 
@@ -81,10 +90,10 @@ Version 重置。后续示例为 `0.3.5 Build 5`、`0.3.6 Build 6`。应用、Wi
 | `APP-UPDATES-02` | Debug、非 App 和非预期签名环境无网络更新 | 纯环境模型测试、Ad Hoc 构建检查 |
 | `APP-UPDATES-03` | 手动检查、独立原生设置行、默认关闭的 24 小时自动检查、显式安装 | 设置行为测试、Info.plist 校验 |
 | `APP-UPDATES-04` | HTTPS、EdDSA、签名 Feed、解压前验证、无画像/JS | 配置与 Appcast 校验 |
-| `APP-UPDATES-05` | Stable-only、最低系统版本和全局递增 Build | Appcast Fixture、版本门禁 |
+| `APP-UPDATES-05` | Stable-only、最低系统版本、按 Marketing Version 重置的产品 Build 与全局递增的内部更新序号 | Appcast Fixture、版本门禁 |
 | `APP-UPDATES-06` | Sparkle 嵌套组件由内到外签名且均为 Universal | 发布脚本、codesign、lipo |
 | `APP-UPDATES-07` | 两个真实签名公证版本完成 N → N+1 更新 | 发布前端到端验证记录 |
-| `APP-UPDATES-08` | 产品所有者按精确版本显式批准后自动执行完整 Release 与 appcast 链路；未批准默认排除 | Handoff 准入记录、最终 Release 与 Feed 证据 |
+| `APP-UPDATES-08` | 产品所有者按精确版本显式批准后自动执行完整 Release 与 appcast 链路；未批准默认排除 | Handoff 当前准入状态、Version History 最终 Release 与 Feed 证据 |
 
 ## 7. 发布边界
 
@@ -94,8 +103,9 @@ Version 重置。后续示例为 `0.3.5 Build 5`、`0.3.6 Build 6`。应用、Wi
 
 Build 5 是首个包含更新器的正式版本，无法单独完成两个正式版本之间的
 N → N+1 验收。因此 `APP-UPDATES-07` 和本规格交付状态保持 `Verifying`，
-直到后续获准的更高 Build 完成真实应用内更新；这不影响 Build 5 版本本身
-已经 `Released`。后续 GitHub Stable/Latest 仍不自动获得 appcast 准入。
+直到后续获准且内部更新序号更高的版本完成真实应用内更新；这不影响
+Build 5 版本本身已经 `Released`。后续 GitHub Stable/Latest 仍不自动获得
+appcast 准入。
 
 ## 8. 当前验证记录
 

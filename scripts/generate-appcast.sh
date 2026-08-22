@@ -6,7 +6,7 @@ if [[ "$#" -ne 2 ]]; then
     print -u2 \
         "Usage: $0 <archives-directory> <release-tag>"
     print -u2 \
-        "Example: $0 /tmp/quotaview-updates v0.3.5-build.4"
+        "Example: $0 /tmp/quotaview-updates v0.3.6-build.2"
     exit 2
 fi
 
@@ -25,8 +25,13 @@ build_number="$(
         -c 'Print :CFBundleVersion' \
         "${info_plist}"
 )"
-expected_tag="v${version}-build.${build_number}"
-release_name="QuotaView-v${version}-build.${build_number}"
+display_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewDisplayBuildNumber' \
+        "${info_plist}"
+)"
+expected_tag="v${version}-build.${display_build_number}"
+release_name="QuotaView-v${version}-build.${display_build_number}"
 release_archive="${archives_dir}/${release_name}.zip"
 appcast_path="${archives_dir}/appcast.xml"
 sparkle_key_account="${SPARKLE_KEY_ACCOUNT:-com.quotaview.menubar}"

@@ -39,8 +39,8 @@ final class CodexActivityStore: ObservableObject {
     var stateDidChange: (() -> Void)?
 
     private let titleClient: CodexAppServerClient
-    private let compactDelayNanoseconds: UInt64
-    private let hiddenDelayNanoseconds: UInt64
+    private var compactDelayNanoseconds: UInt64
+    private var hiddenDelayNanoseconds: UInt64
     private var inactivityTask: Task<Void, Never>?
     private var titleTask: Task<Void, Never>?
     private var titleTaskSessionHash: String?
@@ -139,6 +139,41 @@ final class CodexActivityStore: ObservableObject {
         await titleClient.stop()
     }
 
+    func updateInactivityDelays(
+        compactDelay: TimeInterval,
+        hiddenDelayAfterCompact: TimeInterval
+    ) {
+        let compactNanoseconds = Self.nanoseconds(for: compactDelay)
+        let hiddenNanoseconds = Self.nanoseconds(
+            for: hiddenDelayAfterCompact
+        )
+        guard compactDelayNanoseconds != compactNanoseconds
+                || hiddenDelayNanoseconds != hiddenNanoseconds
+        else {
+            return
+        }
+
+        compactDelayNanoseconds = compactNanoseconds
+        hiddenDelayNanoseconds = hiddenNanoseconds
+        guard snapshot?.state == .completed
+                || snapshot?.state == .standby
+        else {
+            return
+        }
+
+        revision &+= 1
+        let timingRevision = revision
+        inactivityTask?.cancel()
+        switch presentation {
+        case .expanded:
+            scheduleInactivityCycle(revision: timingRevision)
+        case .compact:
+            scheduleHideAfterCompact(revision: timingRevision)
+        case .hidden:
+            break
+        }
+    }
+
     private func resolveTitleIfNeeded(
         for sessionHash: String,
         revision: UInt64
@@ -191,19 +226,39 @@ final class CodexActivityStore: ObservableObject {
                 }
                 presentation = .compact
                 notifyChange()
-
-                try await Task.sleep(
-                    nanoseconds: hiddenDelayNanoseconds
-                )
-                guard !Task.isCancelled, self.revision == revision else {
-                    return
-                }
-                presentation = .hidden
-                notifyChange()
+                await sleepUntilHidden(revision: revision)
             } catch {
                 return
             }
         }
+    }
+
+    private func scheduleHideAfterCompact(revision: UInt64) {
+        inactivityTask = Task { [weak self] in
+            guard let self else { return }
+            await sleepUntilHidden(revision: revision)
+        }
+    }
+
+    private func sleepUntilHidden(revision: UInt64) async {
+        do {
+            try await Task.sleep(
+                nanoseconds: hiddenDelayNanoseconds
+            )
+            guard !Task.isCancelled, self.revision == revision else {
+                return
+            }
+            presentation = .hidden
+            notifyChange()
+        } catch {
+            return
+        }
+    }
+
+    private nonisolated static func nanoseconds(
+        for delay: TimeInterval
+    ) -> UInt64 {
+        UInt64(max(delay, 0) * 1_000_000_000)
     }
 
     private func notifyChange() {
@@ -234,6 +289,7 @@ final class CodexActivityRuntime: ObservableObject {
     private let securityReviewLauncher: CodexSecurityReviewLauncher
     private var island: CodexActivityIslandPanelController?
     private var preferenceCancellable: AnyCancellable?
+    private var timingPreferenceCancellable: AnyCancellable?
     private var accessibilityCancellable: AnyCancellable?
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
@@ -258,7 +314,13 @@ final class CodexActivityRuntime: ObservableObject {
     ) {
         self.preferences = preferences
         self.defaults = defaults
-        store = CodexActivityStore()
+        store = CodexActivityStore(
+            compactDelay:
+                TimeInterval(preferences.codexActivityCompactDelay),
+            hiddenDelayAfterCompact: TimeInterval(
+                preferences.codexActivityHiddenDelayAfterCompact
+            )
+        )
 
         let tokenKey = "codexActivity.bridge.authenticationToken"
         let token: String
@@ -303,6 +365,18 @@ final class CodexActivityRuntime: ObservableObject {
                     self?.render()
                 }
             }
+        timingPreferenceCancellable = Publishers.CombineLatest(
+            preferences.$codexActivityCompactDelay,
+            preferences.$codexActivityHiddenDelayAfterCompact
+        )
+        .dropFirst()
+        .receive(on: RunLoop.main)
+        .sink { [weak self] compactDelay, hiddenDelay in
+            self?.store.updateInactivityDelays(
+                compactDelay: TimeInterval(compactDelay),
+                hiddenDelayAfterCompact: TimeInterval(hiddenDelay)
+            )
+        }
         accessibilityCancellable = NotificationCenter.default.publisher(
             for: NSWorkspace
                 .accessibilityDisplayOptionsDidChangeNotification
@@ -900,6 +974,11 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     private func render() {
+        guard preferences.codexActivityIslandEnabled else {
+            island?.hide()
+            return
+        }
+
         if shouldRenderDisconnectedIsland {
             renderDisconnectedIsland()
             return
@@ -936,7 +1015,8 @@ final class CodexActivityRuntime: ObservableObject {
 
         if island == nil {
             island = CodexActivityIslandPanelController(
-                initialState: renderState
+                initialState: renderState,
+                orbAnimation: preferences.codexActivityOrbAnimation
             )
         }
         island?.update(
@@ -946,7 +1026,8 @@ final class CodexActivityRuntime: ObservableObject {
                 copy.presentationAccessibilityValue(presentation),
             reduceMotion:
                 NSWorkspace.shared
-                .accessibilityDisplayShouldReduceMotion
+                .accessibilityDisplayShouldReduceMotion,
+            orbAnimation: preferences.codexActivityOrbAnimation
         )
     }
 
@@ -981,7 +1062,8 @@ final class CodexActivityRuntime: ObservableObject {
 
         if island == nil {
             island = CodexActivityIslandPanelController(
-                initialState: renderState
+                initialState: renderState,
+                orbAnimation: preferences.codexActivityOrbAnimation
             )
         }
         island?.update(
@@ -991,7 +1073,8 @@ final class CodexActivityRuntime: ObservableObject {
                 copy.presentationAccessibilityValue(.expanded),
             reduceMotion:
                 NSWorkspace.shared
-                .accessibilityDisplayShouldReduceMotion
+                .accessibilityDisplayShouldReduceMotion,
+            orbAnimation: preferences.codexActivityOrbAnimation
         )
     }
 

@@ -29,6 +29,7 @@ struct SettingsView: View {
     @ObservedObject var updateController: AppUpdateController
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection: SettingsPage? = .menuBar
     @State private var codexActivityDetailsExpanded = false
 
@@ -86,8 +87,8 @@ struct SettingsView: View {
                 )
             case .codexActivity:
                 copy.text(
-                    "配置 Codex 灵动岛连接与状态显示。",
-                    "Configure the Codex island connection and status display."
+                    "配置 Codex 灵动岛的显示、动画、事件与连接。",
+                    "Configure Codex island visibility, animation, events, and connection."
                 )
             case .appearance:
                 copy.text(
@@ -496,8 +497,29 @@ struct SettingsView: View {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text(
-                        "Codex 灵动岛",
-                        "Codex Island"
+                        "显示灵动岛",
+                        "Show Codex Island"
+                    ),
+                    subtitle: copy.text(
+                        "手动控制灵动岛浮窗；关闭后仍保留 Codex 本地连接。",
+                        "Manually control the island window while keeping the local Codex connection active."
+                    )
+                ) {
+                    Toggle(
+                        copy.text("显示灵动岛", "Show Codex Island"),
+                        isOn: $preferences.codexActivityIslandEnabled
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                }
+            }
+
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text(
+                        "Codex 连接",
+                        "Codex Connection"
                     ),
                     subtitle: codexActivityConnectionSubtitle
                 ) {
@@ -605,27 +627,75 @@ struct SettingsView: View {
             }
 
             NativeSettingsCard {
-                NativeSettingsRow(
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(copy.text(
+                            "灵动岛动画",
+                            "Island Animation"
+                        ))
+                        .font(.body.weight(.medium))
+
+                        Text(copy.text(
+                            "选择灵动岛使用的光球动画。",
+                            "Choose the orb animation used by the Codex island."
+                        ))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 12) {
+                        codexActivityAnimationOption(.particleOrb)
+                        codexActivityAnimationOption(.rippleGlow)
+                    }
+                }
+                .padding(18)
+            }
+
+            NativeSettingsCard {
+                CodexActivityTimingControl(
                     title: copy.text(
-                        "自适应显示",
-                        "Adaptive presentation"
+                        "完成后缩小",
+                        "Compact After Completion"
                     ),
                     subtitle: copy.text(
-                        "任务活动时展开；完成 20 秒后缩为最小态，完成满 2 分钟后隐藏。任何新活动都会立即重新展开。",
-                        "Expands during activity, compacts 20 seconds after completion, and hides two minutes after completion. New activity expands it immediately."
-                    )
-                ) {
-                    Text(copy.text("自动", "Automatic"))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
+                        "任务完成后保持展开状态的时间。",
+                        "How long the island remains expanded after a task completes."
+                    ),
+                    value: $preferences.codexActivityCompactDelay,
+                    range:
+                        AppPreferences.CodexActivityTiming
+                        .compactDelayRange,
+                    step: AppPreferences.CodexActivityTiming.step,
+                    secondsLabel: copy.text("秒", "sec")
+                )
+
+                NativeSettingsDivider()
+
+                CodexActivityTimingControl(
+                    title: copy.text(
+                        "缩小后隐藏",
+                        "Hide After Compacting"
+                    ),
+                    subtitle: copy.text(
+                        "进入紧凑态后继续显示的时间。",
+                        "How long the compact island remains visible."
+                    ),
+                    value:
+                        $preferences
+                        .codexActivityHiddenDelayAfterCompact,
+                    range:
+                        AppPreferences.CodexActivityTiming
+                        .hiddenDelayAfterCompactRange,
+                    step: AppPreferences.CodexActivityTiming.step,
+                    secondsLabel: copy.text("秒", "sec")
+                )
 
                 NativeSettingsDivider()
 
                 NativeSettingsNote(
                     text: copy.text(
-                        "开启“减少动态效果”时，窗口与球体使用静态状态反馈。",
-                        "When Reduce Motion is enabled, the window and orb use static state feedback."
+                        "任何新活动都会立即重新展开。开启“减少动态效果”时，窗口与球体使用静态状态反馈。",
+                        "New activity immediately expands the island. With Reduce Motion enabled, the window and orb use static state feedback."
                     )
                 )
             }
@@ -633,6 +703,66 @@ struct SettingsView: View {
         .onAppear {
             activityRuntime.refreshConnectionStatus()
         }
+    }
+
+    private func codexActivityAnimationOption(
+        _ animation: AppPreferences.CodexActivityOrbAnimation
+    ) -> some View {
+        let isSelected = preferences.codexActivityOrbAnimation == animation
+        let title = switch animation {
+        case .particleOrb:
+            copy.text("粒子球", "Particle Orb")
+        case .rippleGlow:
+            copy.text("波澜光晕", "Ripple Glow")
+        }
+
+        return Button {
+            preferences.codexActivityOrbAnimation = animation
+        } label: {
+            VStack(spacing: 8) {
+                CodexActivityOrbPreview(
+                    animation: animation,
+                    reduceMotion: reduceMotion
+                )
+                .frame(width: 88, height: 88)
+
+                Text(title)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                isSelected
+                    ? Color(nsColor: .controlAccentColor)
+                        .opacity(0.10)
+                    : Color(nsColor: .windowBackgroundColor),
+                in: RoundedRectangle(
+                    cornerRadius: 10,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: 10,
+                    style: .continuous
+                )
+                .strokeBorder(
+                    isSelected
+                        ? Color(nsColor: .controlAccentColor)
+                        : Color(nsColor: .separatorColor),
+                    lineWidth: isSelected ? 1.5 : 0.5
+                )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(
+            isSelected
+                ? copy.text("已选择", "Selected")
+                : copy.text("未选择", "Not selected")
+        )
     }
 
     private var languageSettings: some View {
@@ -821,10 +951,12 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.5"
+        ) as? String ?? "0.3.6"
         let build = Bundle.main.object(
+            forInfoDictionaryKey: "QuotaViewDisplayBuildNumber"
+        ) as? String ?? Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
-        ) as? String ?? "5"
+        ) as? String ?? "1"
         return copy.text(
             "版本 \(version)（\(build)）",
             "Version \(version) (\(build))"
@@ -1374,6 +1506,107 @@ private struct SettingsTrafficLightHost: NSViewRepresentable {
                 )
             }
         }
+    }
+}
+
+private struct CodexActivityOrbPreview: NSViewRepresentable {
+    let animation: AppPreferences.CodexActivityOrbAnimation
+    let reduceMotion: Bool
+
+    func makeNSView(context: Context) -> CodexActivityOrbPreviewHostView {
+        let view = CodexActivityOrbPreviewHostView(animation: animation)
+        view.update(animation: animation, reduceMotion: reduceMotion)
+        return view
+    }
+
+    func updateNSView(
+        _ view: CodexActivityOrbPreviewHostView,
+        context: Context
+    ) {
+        view.update(animation: animation, reduceMotion: reduceMotion)
+    }
+}
+
+private struct CodexActivityTimingControl: View {
+    let title: String
+    let subtitle: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let step: Int
+    let secondsLabel: String
+
+    private var values: [Int] {
+        Array(stride(
+            from: range.lowerBound,
+            through: range.upperBound,
+            by: step
+        ))
+    }
+
+    private var sliderValue: Binding<Double> {
+        Binding(
+            get: { Double(value) },
+            set: { value = Int($0.rounded()) }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .firstTextBaseline, spacing: 18) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.body.weight(.medium))
+                    Text(subtitle)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 18)
+
+                Text("\(value) \(secondsLabel)")
+                    .font(.callout.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 58, alignment: .trailing)
+            }
+
+            Slider(
+                value: sliderValue,
+                in: Double(range.lowerBound)...Double(range.upperBound),
+                step: Double(step)
+            )
+            .controlSize(.small)
+            .accessibilityLabel(title)
+            .accessibilityValue("\(value) \(secondsLabel)")
+
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(values, id: \.self) { tick in
+                    VStack(spacing: 3) {
+                        Rectangle()
+                            .fill(Color(nsColor: .tertiaryLabelColor))
+                            .frame(
+                                width: 1,
+                                height: tick.isMultiple(of: 15) ? 6 : 4
+                            )
+
+                        if tick == range.lowerBound
+                            || tick == range.upperBound
+                        {
+                            Text("\(tick)")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            Color.clear.frame(height: 11)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
     }
 }
 

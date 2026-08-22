@@ -51,6 +51,9 @@ let package = Package(
                 "QuotaViewWidgetContract",
                 .product(name: "Sparkle", package: "Sparkle")
             ],
+            resources: [
+                .copy("Resources/CodexActivityRippleGlowShader.txt")
+            ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(

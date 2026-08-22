@@ -53,6 +53,21 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum CodexActivityOrbAnimation: String, CaseIterable, Identifiable {
+        case particleOrb
+        case rippleGlow
+
+        var id: String { rawValue }
+    }
+
+    enum CodexActivityTiming {
+        static let compactDelayRange = 5...60
+        static let hiddenDelayAfterCompactRange = 5...120
+        static let step = 5
+        static let defaultCompactDelay = 20
+        static let defaultHiddenDelayAfterCompact = 100
+    }
+
     private enum Key {
         static let showStatusIcon = "preferences.menuBar.showStatusIcon"
         static let showRemainingQuota = "preferences.menuBar.showRemainingQuota"
@@ -71,6 +86,14 @@ final class AppPreferences: ObservableObject {
         static let tokenActivityRange =
             "preferences.panel.tokenActivityRange"
         static let showResetAction = "preferences.panel.showResetAction"
+        static let codexActivityIslandEnabled =
+            "preferences.codexActivity.islandEnabled"
+        static let codexActivityOrbAnimation =
+            "preferences.codexActivity.orbAnimation"
+        static let codexActivityCompactDelay =
+            "preferences.codexActivity.compactDelay"
+        static let codexActivityHiddenDelayAfterCompact =
+            "preferences.codexActivity.hiddenDelayAfterCompact"
         static let followsSystemAppearance = "preferences.appearance.followsSystem"
         static let customAppearance = "preferences.appearance.custom"
         // Keep the previous key so older installations migrate without
@@ -154,6 +177,58 @@ final class AppPreferences: ObservableObject {
 
     @Published var showResetAction: Bool {
         didSet { defaults.set(showResetAction, forKey: Key.showResetAction) }
+    }
+
+    @Published var codexActivityIslandEnabled: Bool {
+        didSet {
+            defaults.set(
+                codexActivityIslandEnabled,
+                forKey: Key.codexActivityIslandEnabled
+            )
+        }
+    }
+
+    @Published var codexActivityOrbAnimation: CodexActivityOrbAnimation {
+        didSet {
+            defaults.set(
+                codexActivityOrbAnimation.rawValue,
+                forKey: Key.codexActivityOrbAnimation
+            )
+        }
+    }
+
+    @Published var codexActivityCompactDelay: Int {
+        didSet {
+            let normalized = Self.normalizedTimingValue(
+                codexActivityCompactDelay,
+                in: CodexActivityTiming.compactDelayRange
+            )
+            if normalized != codexActivityCompactDelay {
+                codexActivityCompactDelay = normalized
+                return
+            }
+            defaults.set(
+                normalized,
+                forKey: Key.codexActivityCompactDelay
+            )
+        }
+    }
+
+    @Published var codexActivityHiddenDelayAfterCompact: Int {
+        didSet {
+            let normalized = Self.normalizedTimingValue(
+                codexActivityHiddenDelayAfterCompact,
+                in: CodexActivityTiming.hiddenDelayAfterCompactRange
+            )
+            if normalized != codexActivityHiddenDelayAfterCompact {
+                codexActivityHiddenDelayAfterCompact = normalized
+                return
+            }
+            defaults.set(
+                normalized,
+                forKey: Key.codexActivityHiddenDelayAfterCompact
+            )
+        }
     }
 
     @Published var followsSystemAppearance: Bool {
@@ -271,6 +346,31 @@ final class AppPreferences: ObservableObject {
             forKey: Key.showResetAction,
             defaultValue: true
         )
+        codexActivityIslandEnabled = defaults.storedBool(
+            forKey: Key.codexActivityIslandEnabled,
+            defaultValue: true
+        )
+        codexActivityOrbAnimation = CodexActivityOrbAnimation(
+            rawValue: defaults.string(
+                forKey: Key.codexActivityOrbAnimation
+            ) ?? ""
+        ) ?? .particleOrb
+        codexActivityCompactDelay = Self.normalizedTimingValue(
+            defaults.storedInt(
+                forKey: Key.codexActivityCompactDelay,
+                defaultValue:
+                    CodexActivityTiming.defaultCompactDelay
+            ),
+            in: CodexActivityTiming.compactDelayRange
+        )
+        codexActivityHiddenDelayAfterCompact = Self.normalizedTimingValue(
+            defaults.storedInt(
+                forKey: Key.codexActivityHiddenDelayAfterCompact,
+                defaultValue:
+                    CodexActivityTiming.defaultHiddenDelayAfterCompact
+            ),
+            in: CodexActivityTiming.hiddenDelayAfterCompactRange
+        )
         followsSystemAppearance = defaults.storedBool(
             forKey: Key.followsSystemAppearance,
             defaultValue: true
@@ -289,6 +389,18 @@ final class AppPreferences: ObservableObject {
             rawValue: defaults.string(forKey: Key.customLanguage) ?? ""
         ) ?? .simplifiedChinese
         defaults.set(glassMode.rawValue, forKey: Key.glassMode)
+        defaults.set(
+            codexActivityOrbAnimation.rawValue,
+            forKey: Key.codexActivityOrbAnimation
+        )
+        defaults.set(
+            codexActivityCompactDelay,
+            forKey: Key.codexActivityCompactDelay
+        )
+        defaults.set(
+            codexActivityHiddenDelayAfterCompact,
+            forKey: Key.codexActivityHiddenDelayAfterCompact
+        )
 
         localeCancellable = NotificationCenter.default.publisher(
             for: NSLocale.currentLocaleDidChangeNotification
@@ -312,6 +424,18 @@ final class AppPreferences: ObservableObject {
 
     var copy: AppCopy {
         AppCopy(language: resolvedLanguage)
+    }
+
+    private static func normalizedTimingValue(
+        _ value: Int,
+        in range: ClosedRange<Int>
+    ) -> Int {
+        let clamped = min(max(value, range.lowerBound), range.upperBound)
+        let offset = clamped - range.lowerBound
+        let stepped = Int(
+            (Double(offset) / Double(CodexActivityTiming.step)).rounded()
+        ) * CodexActivityTiming.step
+        return min(range.lowerBound + stepped, range.upperBound)
     }
 
     private func synchronizeApplicationAppearance() {
@@ -394,5 +518,10 @@ private extension UserDefaults {
     func storedBool(forKey key: String, defaultValue: Bool) -> Bool {
         guard object(forKey: key) != nil else { return defaultValue }
         return bool(forKey: key)
+    }
+
+    func storedInt(forKey key: String, defaultValue: Int) -> Int {
+        guard object(forKey: key) != nil else { return defaultValue }
+        return integer(forKey: key)
     }
 }

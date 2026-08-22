@@ -8,8 +8,8 @@
 >
 > 交付状态：`Released`
 >
-> 当前公开基线：QuotaView `0.3.3 (Build 3)`；本规格继续定义稳定版单任务
-> Codex 灵动岛，0.3.3 未包含 0.3.2 Preview 1 的多任务生产实现
+> 当前公开基线：QuotaView `0.3.5 (Build 5)`；本规格继续定义稳定版单任务
+> Codex 灵动岛，当前稳定源码未包含 0.3.2 Preview 1 的多任务实现
 >
 > 验证状态：自动化、签名、公证与发布验证完成；完整视觉与交互矩阵仍等待
 > 产品所有者逐项确认
@@ -45,10 +45,10 @@ Codex App Server thread/list
 不使用 Codex Desktop 私有 IPC，不读取或修改 Codex 任务内容，也不接入
 任何账户写操作。
 
-本规格描述已经发布的单任务生产基线。正在 Demo 调试的多任务扩展由
+本规格描述已经发布的单任务生产基线。历史多任务 Preview 由
 [`QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001`](./quotaview-codex-activity-island-multitask.md)
-独立管理；在其交付状态进入生产实现前，不得用多任务 Demo 改写本文的现行
-生产事实。
+独立管理；当前 0.3.6 升级由 `QV-PRODUCT-ACTIVITY-ISLAND-004` 管理。在
+当前规格明确采纳前，不得用 Preview 改写本文的稳定生产事实。
 
 ## ACTIVITY-01. 状态集
 
@@ -324,7 +324,8 @@ QuotaView 收到当前固定 Hook 定义产生的第一条真实
 上列 Build 1 项是单任务灵动岛首次发布时的历史自动化范围。当前生产版本
 为 `0.3.5 (Build 5)`；后续稳定版本继续继承本规格的单任务灵动岛状态机、
 Hook 映射和收起时序，0.3.2 Preview 的多任务实现未进入稳定生产源码。最新
-签名、资产与发布证据以 `HANDOFF.md` 和 `VERSION_HISTORY.md` 为准。
+签名、资产与发布证据以 `VERSION_HISTORY.md` 为准，当前工作状态以
+`HANDOFF.md` 为准。
 
 以下项目继续等待产品所有者运行应用后验收：
 
