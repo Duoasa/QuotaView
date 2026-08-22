@@ -6,9 +6,9 @@
 >
 > 状态：`Accepted`
 >
-> 当前生产基线：`0.3.5 Build 5`
+> 当前生产基线：`0.3.6 Build 2`
 >
-> 当前迭代：`0.3.6 Build 2` 灵动岛升级
+> 当前迭代：`0.3.6 Build 2` 已发布；下一版本尚未定义
 
 本文件只负责定位当前工作和规格，不复制 Release 证据、实现细节或历史
 Requirement 矩阵。
@@ -17,14 +17,14 @@ Requirement 矩阵。
 
 | 项目 | 当前值 |
 |---|---|
-| 公开稳定版 | `0.3.5 Build 5`；事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本) |
-| 当前开发版本 | 产品 `0.3.6 Build 2`；Sparkle 内部序号 `7` |
+| 公开稳定版 | `0.3.6 Build 2`；事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本) |
+| 当前开发版本 | 尚未定义；生产配置保持产品 `0.3.6 Build 2` / Sparkle 内部序号 `7` |
 | 当前产品规格 | `QV-PRODUCT-ACTIVITY-ISLAND-004` |
-| 规格 / 交付状态 | `Accepted` / `Verifying` |
+| 规格 / 交付状态 | `Accepted` / `Released` |
 | 当前边界 | 只升级单任务灵动岛；多任务实验已排除；不扩大本地数据与权限边界 |
-| 当前阶段 | 产品验收完成；已批准 `v0.3.6-build.2` 进入完整 Stable Release 与 appcast 门禁，发布进行中 |
+| 当前阶段 | `v0.3.6-build.2` 已完成 Stable Release、回下载验证与 appcast 发布 |
 | 当前设置 | 完成后缩小 5...60 秒；缩小后隐藏 5...120 秒；均为 5 秒档位 |
-| 并行验证 | `QV-PRODUCT-APP-UPDATES-003` 为 `Accepted / Verifying`，等待真实 N → N+1 |
+| 并行验证 | `QV-PRODUCT-APP-UPDATES-003` 为 `Accepted / Verifying`；0.3.6 已进入 Feed，真实客户端安装操作仍待独立记录 |
 
 当前工作区、验证结果和下一步见 [HANDOFF.md](../../HANDOFF.md)。
 
@@ -43,8 +43,8 @@ Requirement 矩阵。
 
 | Spec ID | 文档 | 状态 | 用途 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [0.3.6 灵动岛升级](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Verifying` | 单灵动岛动画选择、显示开关与缩小/隐藏时间设置；等待产品验收 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 已发布更新器；后续获准版本完成真实 N → N+1 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [0.3.6 灵动岛升级](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | 单灵动岛动画选择、显示开关与缩小/隐藏时间设置；已发布到 Stable |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.3.6 已进入 Feed；真实客户端安装操作仍待记录 |
 
 ## 4. 已发布与历史参考
 
