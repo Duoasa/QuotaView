@@ -1,8 +1,9 @@
 # QuotaView 项目执行与设计规范
 
 本文件约束后续所有针对 QuotaView 的代码、界面和发布任务。除非用户在
-当前任务中明确要求改变产品方向，否则实现应保持与当前 0.3.3 Build 3
-一致。
+当前任务中明确要求改变产品方向，否则实现应保持当前公开稳定版的生产
+行为；稳定版身份以 `VERSION_HISTORY.md#当前最新版本` 为准，当前开发范围
+以 `HANDOFF.md` 为准。
 
 ## 规范来源与优先级
 
@@ -21,114 +22,77 @@
 不得用其中的历史实现覆盖当前生产代码。`HANDOFF.md` 负责当前工作状态和
 下一次迭代入口，不得把计划中的版本提前写成已发布。
 
-## 会话启动与文档联动
+## 会话启动与文档职责
 
-每个新会话处理 QuotaView 任务前，按以下顺序建立上下文：
+默认调用链保持短且唯一：
 
-1. 阅读本文件，确认长期产品、设计、实现和发布约束；
-2. 阅读 `HANDOFF.md` 第 0 节“版本定位入口”；
-3. 按其中的相对链接打开
-   `VERSION_HISTORY.md#当前最新版本`，确认最新推荐版本、Build Number、
-   tag、Release、资产和发布提交；
-4. 打开 `docs/specs/README.md`，确认当前迭代、规格状态、交付状态和对应
-   Requirement ID；
-5. 读取当前任务对应的唯一规格，再回到 `HANDOFF.md` 继续读取当前结论、
-   验证状态、工作区边界和下一次迭代入口；
-6. 仅在任务涉及视觉验收历史时读取 `design-qa.md` 或对应 Prototype 的
-   Design QA；
-7. 只有满足下方 CodexBar 门禁时，才读取 CodexBar 参考文档。
+1. 阅读本文件；
+2. 阅读 `HANDOFF.md`，并按顶部链接核对
+   `VERSION_HISTORY.md#当前最新版本`；
+3. 打开 `docs/specs/README.md` 定位当前任务对应的一份规格；
+4. 仅在任务需要时读取历史证据、大型架构文档或 `design-qa.md`；
+5. 只有满足下方 CodexBar 门禁时才读取 CodexBar 参考。
 
-文档职责必须保持清晰：
+各文档只保存一类事实：
 
-- `AGENTS.md`：长期执行与设计规范；
-- `HANDOFF.md`：当前生产状态、已完成事项、未完成事项、工作区和下一步；
-- `VERSION_HISTORY.md`：当前最新版本指针、公开历史版本、各版本特性、
-  撤回原因和替代版本；
-- `docs/specs/README.md`：SDD 唯一规格索引、当前迭代和追踪矩阵；
-- `docs/specs/DEVELOPMENT_PROCESS.md`：SDD 状态模型、阶段出口、对话协议和
-  PR 门禁；
-- `docs/design/*.md`：具体产品、架构与功能规格；
-- `design-qa.md`：视觉验收历史和等待产品所有者确认的矩阵。
+- `AGENTS.md`：长期约束；
+- `HANDOFF.md`：当前工作区、迭代、未完成验证和下一步；
+- `VERSION_HISTORY.md`：已发生的 Release、tag、资产、签名、公证和撤回历史；
+- `docs/specs/README.md`：精简规格注册表与阅读路由；
+- `docs/specs/DEVELOPMENT_PROCESS.md`：稳定 SDD 流程；
+- `docs/design/*.md`：具体规格或按需历史参考；
+- `design-qa.md`：视觉验收证据。
 
-### 文档时态、正式边界与防陈旧规则
+未跟踪草稿、旧 Prototype、图片和外部参考不参与默认决策。当前分支、HEAD
+和工作区必须通过 Git 实时读取；Handoff 不保存会随提交失效的开发 HEAD。
+历史规格中的“下一步”不是当前路线图，只有被当前规格明确采纳后才能实施。
 
-- 正式 SDD 文档系统只包含已经由 Git 跟踪、并在
-  `docs/specs/README.md` 注册或路由的 Markdown。未跟踪的 Prototype、图片、
-  外部参考或个人草稿不参与权重判断，也不得静默驱动生产实现；
-- `HANDOFF.md` 不固化会随每次提交变化的 `main` HEAD。当前分支与提交必须
-  通过 `git status --short --branch`、`git branch --show-current` 和
-  `git rev-parse HEAD` 读取；已经发布的 tag、发布提交和资产校验值可以持久
-  记录；
-- 历史报告、旧版实施计划和发布规格中的“当前”“后续”“待实现”等表述，
-  必须标明所指版本或时间。文档顶部的当前实施状态或校准附录优先于历史
-  正文中的实施时态；
-- 已发布规格若保留实施前计划，必须补充当前生产映射、已完成阶段和未实施
-  阶段，不能让未来时态覆盖已经存在的代码，也不能把预留接口写成已交付；
-- 当前工作调用链固定为：`AGENTS.md` → `HANDOFF.md` 版本入口 →
-  `VERSION_HISTORY.md` 当前版本 → `docs/specs/README.md` → 当前唯一规格 →
-  对应验证证据。任何旁路文档只能提供参考，不能越级覆盖生产事实。
+## SDD 最小门禁
 
-## SDD 规格驱动开发门禁
+- 新功能、用户可见行为或架构边界变化必须先注册唯一 Spec ID，并在所属
+  规格定义 Requirement、非目标、降级语义和验收条件；
+- 规格接受、生产实现授权、用户验收和正式发布是四个独立状态，不得混写；
+- Prototype 必须与生产 Target 隔离，Demo 证据不能冒充生产证据；
+- 小型缺陷或文档修复可复用既有 Requirement；无规格影响时记录
+  `Spec impact: None`；
+- 改变产品方向、迁入 Prototype、改变版本身份或发布必须获得对应的明确
+  用户授权；
+- 具体状态和出口只在 `docs/specs/README.md` 与
+  `docs/specs/DEVELOPMENT_PROCESS.md` 定义，不在本文件重复矩阵。
 
-QuotaView 使用 Specification-Driven Development（SDD）。规格状态、交付
-状态与发布状态必须分开维护，不能把“规格已接受”“Demo 已确认”“生产实现
-完成”或“正式发布”混写成同一个“已完成”。
-
-统一规格状态为：`Draft`、`Review`、`Accepted`、`Superseded`、
-`Archived`。统一交付状态为：`Discovery`、`Prototype`、`Planned`、
-`Implementing`、`Verifying`、`Released`。具体定义以
-`docs/specs/README.md` 为准。
-
-所有新增功能、行为变化和架构变化必须：
-
-1. 先在 SDD 索引中定位或创建唯一 Spec ID；
-2. 使用稳定 Requirement ID 定义范围、不变量、失败/降级语义和可验证的
-   验收条件；
-3. 在进入生产实现前将规格状态推进到 `Accepted`，并取得与当前阶段相符的
-   用户授权；
-4. 需要探索时将 Prototype 隔离在 `Prototypes/` 或系统临时目录，不得把
-   Demo 证据冒充生产完成证据；
-5. 实现时建立“Requirement ID → 生产源码 → 自动化测试 → 产品验收”追踪；
-6. 发现规格缺口或冲突时先同步规格，不得用实现细节静默改变产品语义；
-7. 只有完成正式发布门禁后才能把交付状态写为 `Released`。
-
-小型缺陷、文案或文档修复可以复用既有 Requirement ID；若确实不影响规格，
-PR 必须写明 `Spec impact: None` 及理由。涉及已冻结方向、从 `Prototype`
-迁入生产、改变版本号或发布，必须由用户明确授权，不得从一般性的“继续”或
-“采用”中推断。
-
-当前生产基线、当前迭代及其阶段必须以 `docs/specs/README.md`、
-`HANDOFF.md`、`VERSION_HISTORY.md` 和生产配置交叉核对。`0.3.2 Preview 1`
-多任务灵动岛已经独立发布并归档，但不映射到 `0.3.3` 稳定生产源码；后续
-继续开发必须建立新的迭代、版本与 Build，不得直接把归档代码当作当前生产。
-
-版本与交接文档必须双向联动：
+版本与交接文档必须双向联动，但不得复制整段历史：
 
 - `HANDOFF.md` 顶部必须直接链接
   `VERSION_HISTORY.md#当前最新版本`；
 - `VERSION_HISTORY.md` 必须回链 `HANDOFF.md`；
-- 每次发布、撤回版本、删除 tag 或改变 GitHub Latest 时，必须同步更新
-  两份文档；
+- 每次发布、撤回版本、删除 tag 或改变 GitHub Latest 时，必须在
+  `VERSION_HISTORY.md` 记录完整不可变证据，并在 `HANDOFF.md` 更新当前
+  版本指针、回滚入口和对当前开发的影响；
 - 每次改变当前迭代、规格状态或交付状态时，必须同步更新
   `docs/specs/README.md` 与 `HANDOFF.md`；
-- 同步内容至少包括最新版本、Build Number、tag、发布提交、Release URL、
-  资产名、大小、SHA-256、签名、公证状态、验证结论和替代版本；
+- 完整的版本、Build、tag、发布提交、Release URL、资产名、大小、SHA-256、
+  签名、公证、验证和替代版本只在 `VERSION_HISTORY.md` 保存；Handoff 只保留
+  当前稳定版的最小定位信息和活跃迭代所需的增量事实；
 - README 下载链接与 GitHub Release Notes 也必须同时核对；
 - GitHub Release Notes 使用单份英文源文，由 GitHub 界面负责翻译，避免
   手写中英文正文被重复显示；
 - 删除 Release 后仍在 `VERSION_HISTORY.md` 保留“已撤回”记录，说明原因
   和替代版本，防止后续恢复问题版本；
-- 如果 Marketing Version 不变，新的热更新必须使用更大的 Build Number、
-  唯一 tag 和带 Build Number 的 ZIP；Marketing Version 是否升级由用户
-  明确决定。
-- 从 `0.3.4 (Build 1)` 开始，同一 Marketing Version 的每次后续开发迭代
-  都必须递增 `CURRENT_PROJECT_VERSION`，不得复用旧 Build Number；App、
-  Widget 与兼容 `Info.plist` 必须在同一任务内同步。
+- 产品可见 Build Number 按 Marketing Version 独立计数：Marketing Version
+  变化时重置为 `Build 1`；Marketing Version 不变时，每次后续开发迭代都
+  必须递增，不得复用旧 Build Number。每个构建使用唯一 tag 和带 Build
+  Number 的 ZIP；Marketing Version 是否升级由用户明确决定。
+- Sparkle 使用的 `CFBundleVersion` / `CURRENT_PROJECT_VERSION` 是机器可读的
+  内部更新序号，必须跨 Marketing Version 单调递增，不能随产品可见 Build
+  归 1。产品可见 Build 使用 `QuotaViewDisplayBuildNumber` /
+  `QUOTAVIEW_DISPLAY_BUILD_NUMBER`；设置界面、tag、ZIP、Handoff 与版本历史
+  均使用产品可见 Build。App、Widget 和兼容 `Info.plist` 中的 Marketing
+  Version、内部更新序号与产品 Build 必须在同一任务内同步。
 
 出现版本信息冲突时：
 
-1. 先以用户当前指令和生产代码中的
-   `CFBundleShortVersionString` / `CFBundleVersion` 为准；
+1. 先以用户当前指令和生产代码中的 `CFBundleShortVersionString`、
+   `QuotaViewDisplayBuildNumber` 与 `CFBundleVersion` 为准；
 2. 通过 GitHub Release/tag 和最终发布提交核实已经发生的发布事实；
 3. 在同一任务内修正 `VERSION_HISTORY.md` 与 `HANDOFF.md`；
 4. 不得把计划、候选包或尚未完成的 Release 写成已经发布；
@@ -151,8 +115,9 @@ GitHub 版本发布与 Sparkle 自动更新序列是两个独立动作。产品�
 4. 准入授权必须绑定精确的 Marketing Version、Build Number 和预期 tag / ZIP
    身份；完成门禁后把最终资产大小、SHA-256、签名和公证结果回填文档。更换
    Build、tag、资产名或在最终验证后重新打包必须重新确认；
-5. 自动更新序列可以跳过中间 GitHub Release。后续获准且 Build Number 更高
-   的版本可直接作为现有客户端的下一更新目标，无需补录未获准版本；
+5. 自动更新序列可以跳过中间 GitHub Release。后续获准且内部更新序号更高
+   的版本可直接作为现有客户端的下一更新目标，无需补录未获准版本；产品
+   可见 Build 只用于版本身份，不参与 Sparkle 新旧判断；
 6. 在 `HANDOFF.md` 和当前更新规格中记录每个候选版本的准入状态。没有记录
    或记录为“未批准”时，一律按未获准处理；
 7. 发布公开 appcast 前必须核对产品所有者授权、不可变 Release 资产、
@@ -173,8 +138,8 @@ GitHub 版本发布与 Sparkle 自动更新序列是两个独立动作。产品�
    SHA、Release URL、资产名、大小和 SHA-256；
 2. 确认对应资产已经完成该稳定版要求的签名、公证、Staple、Gatekeeper、
    架构和真实启动验证；
-3. 在 `VERSION_HISTORY.md#当前最新版本` 与 `HANDOFF.md` 中将其明确标记为
-   当前稳定回滚基线，并记录新版本发生问题时应回退到哪个 tag 和资产；
+3. 在 `VERSION_HISTORY.md#当前最新版本` 保存完整回滚资产事实，在
+   `HANDOFF.md` 保留当前回滚 tag / commit 的最小入口；
 4. 新预发布版本不得移动、覆盖或删除该稳定 tag，不得覆盖原 Release 资产；
    修复必须使用新提交、新 Build、唯一 tag 和新资产；
 5. Preview、Beta 或 RC 默认不得取代稳定版的 GitHub Latest 与 README 默认
@@ -184,10 +149,9 @@ GitHub 版本发布与 Sparkle 自动更新序列是两个独立动作。产品�
 7. 回滚时从已封存 tag 或已核验资产恢复，不从开发分支、未提交工作区、
    Prototype 或候选包推断稳定代码。
 
-当前 `0.3.3` 发布流程的稳定回滚基线固定为
-`v0.3.1-build.2` / `3119171f45163fe45d68a4f774a0488968f14fd7`；
-`0.3.2 Preview 1` 另由不可移动 tag、GitHub Pre-release 和本地归档分支
-保留，不作为稳定回滚基线。
+当前回滚基线不得在本长期规范中硬编码；以
+`VERSION_HISTORY.md#当前最新版本` 为唯一事实源。Preview、Beta 或 RC 不得
+自动成为稳定回滚基线。
 
 ## CodexBar 参考文档调用门禁
 
@@ -633,8 +597,8 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 2. 状态切换：有效、不可用、刷新中、无重置次数、禁用和确认层
 3. `swift test`
 4. Universal Xcode Release 无签名构建
-5. 检查 `CFBundleShortVersionString`、`CFBundleVersion` 和
-   `x86_64 arm64`
+5. 检查 `CFBundleShortVersionString`、`QuotaViewDisplayBuildNumber`、
+   `CFBundleVersion` 和 `x86_64 arm64`
 6. 检查 `AppIcon.icns`、`Assets.car` 和新增资源
 7. `git diff --check`
 8. 搜索并确认没有临时截图、自动展开、自动点击或 UI QA 入口
@@ -652,7 +616,7 @@ Apple、Raycast 和 Figma 的外部设计规范只用于帮助组织原生性、
 涉及版本、Release、Handoff 或版本历史的修改还必须完成：
 
 1. 对照 `Support/Info.plist` 与 `Configs/App.xcconfig` 检查 Marketing
-   Version 和 Build Number；
+   Version、产品可见 Build Number 和内部更新序号；
 2. 检查 `HANDOFF.md` 顶部能直接定位
    `VERSION_HISTORY.md#当前最新版本`；
 3. 检查 `VERSION_HISTORY.md` 能回到 `HANDOFF.md`；

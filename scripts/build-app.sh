@@ -13,6 +13,11 @@ app_entitlements="${project_dir}/Support/QuotaView.entitlements"
 widget_entitlements="${project_dir}/Support/QuotaViewWidget.entitlements"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${info_plist}")"
 build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${info_plist}")"
+display_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewDisplayBuildNumber' \
+        "${info_plist}"
+)"
 app_group_identifier="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :QuotaViewAppGroupIdentifier' \
@@ -33,11 +38,7 @@ sparkle_public_key="$(
         -c 'Print :SUPublicEDKey' \
         "${info_plist}"
 )"
-if [[ "${build_number}" == "1" ]]; then
-    release_name="QuotaView-v${version}"
-else
-    release_name="QuotaView-v${version}-build.${build_number}"
-fi
+release_name="QuotaView-v${version}-build.${display_build_number}"
 staging_dir="$(mktemp -d "/tmp/quotaview-package.XXXXXX")"
 verification_dir="$(mktemp -d "/tmp/quotaview-verify.XXXXXX")"
 derived_data="${staging_dir}/DerivedData"
@@ -249,6 +250,11 @@ built_build_number="$(
         -c 'Print :CFBundleVersion' \
         "${staging_app}/Contents/Info.plist"
 )"
+built_display_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewDisplayBuildNumber' \
+        "${staging_app}/Contents/Info.plist"
+)"
 widget_version="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :CFBundleShortVersionString' \
@@ -257,6 +263,11 @@ widget_version="$(
 widget_build_number="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :CFBundleVersion' \
+        "${widget_extension}/Contents/Info.plist"
+)"
+widget_display_build_number="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewDisplayBuildNumber' \
         "${widget_extension}/Contents/Info.plist"
 )"
 widget_bundle_identifier="$(
@@ -306,18 +317,26 @@ built_sparkle_requires_signed_feed="$(
 )"
 
 if [[ "${built_version}" != "${version}" ]] \
-    || [[ "${built_build_number}" != "${build_number}" ]]; then
+    || [[ "${built_build_number}" != "${build_number}" ]] \
+    || [[ "${built_display_build_number}" \
+        != "${display_build_number}" ]]; then
     print -u2 \
-        "Version mismatch: expected ${version} (${build_number}), " \
-        "built ${built_version} (${built_build_number})"
+        "Version mismatch: expected ${version} Build " \
+        "${display_build_number} (update ${build_number}), built " \
+        "${built_version} Build ${built_display_build_number} " \
+        "(update ${built_build_number})"
     exit 4
 fi
 
 if [[ "${widget_version}" != "${version}" ]] \
-    || [[ "${widget_build_number}" != "${build_number}" ]]; then
+    || [[ "${widget_build_number}" != "${build_number}" ]] \
+    || [[ "${widget_display_build_number}" \
+        != "${display_build_number}" ]]; then
     print -u2 \
-        "Widget version mismatch: expected ${version} (${build_number}), " \
-        "built ${widget_version} (${widget_build_number})"
+        "Widget version mismatch: expected ${version} Build " \
+        "${display_build_number} (update ${build_number}), built " \
+        "${widget_version} Build ${widget_display_build_number} " \
+        "(update ${widget_build_number})"
     exit 4
 fi
 
@@ -498,10 +517,17 @@ mv "${staging_app}" "${destination_app}"
 mv -f "${staging_zip}" "${destination_zip}"
 
 xattr -cr "${destination_app}"
-for packaged_bundle in \
-    "${destination_app}" \
-    "${destination_app}"/Contents/Frameworks/*.framework(N) \
-    "${destination_app}"/Contents/PlugIns/*.appex(N); do
+destination_sparkle_version_dir="${destination_app}/Contents/Frameworks/"
+destination_sparkle_version_dir+="Sparkle.framework/Versions/Current"
+packaged_bundles=(
+    "${destination_sparkle_version_dir}/XPCServices/Installer.xpc"
+    "${destination_sparkle_version_dir}/XPCServices/Downloader.xpc"
+    "${destination_sparkle_version_dir}/Updater.app"
+    "${destination_app}"/Contents/Frameworks/*.framework(N)
+    "${destination_app}"/Contents/PlugIns/*.appex(N)
+    "${destination_app}"
+)
+for packaged_bundle in "${packaged_bundles[@]}"; do
     xattr -d com.apple.FinderInfo "${packaged_bundle}" 2>/dev/null || true
 done
 codesign \

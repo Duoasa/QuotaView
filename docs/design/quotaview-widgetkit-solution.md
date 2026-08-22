@@ -14,6 +14,10 @@
 > 参考实现：CodexBar，固定分析版本
 > `dd029db4cb17811edd5805d952c5d5fc23395be3`
 
+> 阅读边界：这是已发布 Widget 的大型专项参考，不属于默认 SDD 调用链。
+> 只有修改 Widget Target、共享快照、App Group 或 Widget 布局时才读取；
+> 版本与发布事实以生产配置和 `VERSION_HISTORY.md` 为准。
+
 ## WIDGET-00. 如何使用本文档
 
 本文档是 QuotaView 接入 macOS 原生桌面小组件的专项设计。实现或讨论时可直接
@@ -32,7 +36,7 @@
 
 ### WIDGET-00.1 当前生产映射
 
-| 项目 | `0.3.3 (Build 3)` 当前事实 |
+| 项目 | `0.3.5 (Build 5)` 生产事实 |
 |---|---|
 | Team | `BUUH229D5Q` |
 | 主应用 Bundle ID | `com.quotaview.menubar` |
@@ -43,7 +47,7 @@
 | 主应用投影与写入 | `Sources/QuotaView/QuotaViewWidgetSnapshotWriter.swift` |
 | Extension 实现 | `Sources/QuotaViewWidget/QuotaViewWidget.swift` |
 | 配置与权限 | `Configs/App.xcconfig`、`Configs/Widget.xcconfig`、`Support/*.entitlements` |
-| 当前版本 | 主应用与 Extension 均为 `0.3.3 (3)` |
+| 当前版本 | 主应用与 Extension 均为 Marketing Version `0.3.5`；公开产品 Build `5` |
 | 发布验证 | Universal、Developer ID、Apple 公证、Staple、真实安装与共享容器通过；视觉仍等待产品所有者验收 |
 
 当前映射优先于本文保留的首版候选代码和实施步骤。后文凡使用

@@ -165,6 +165,58 @@ final class AppBehaviorTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testCodexActivityUpdatedTimingAppliesToPendingCompletion() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            compactDelay: 1,
+            hiddenDelayAfterCompact: 1
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session"
+            )
+        )
+        store.updateInactivityDelays(
+            compactDelay: 0.01,
+            hiddenDelayAfterCompact: 0.01
+        )
+
+        for _ in 0..<100 where store.presentation != .hidden {
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(store.presentation, .hidden)
+        await store.stop()
+    }
+
+    @MainActor
+    func testRippleGlowProductionContractAndRendererResource() throws {
+        XCTAssertEqual(
+            CodexActivityRippleGlowContract.uniformFloatCount,
+            128
+        )
+        XCTAssertEqual(
+            CodexActivityRippleGlowContract.sphereRadius,
+            0.535,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityRippleGlowContract.contourDeformation,
+            0
+        )
+        XCTAssertEqual(
+            CodexActivityRippleGlowContract.approvedSpeedMultiplier,
+            1.5
+        )
+
+        let view = ActivityRippleGlowMetalView(
+            frame: NSRect(x: 0, y: 0, width: 64, height: 64),
+            initialState: .thinking
+        )
+        XCTAssertTrue(view.isRendererAvailable)
+    }
+
     func testCodexActivityConnectionRequiresRealPromptSubmission() {
         var evidence = CodexActivityConnectionEvidence(
             observedInstallationID: nil,
@@ -872,6 +924,16 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showEstimatedCost)
         XCTAssertEqual(preferences.tokenActivityRange, .month)
         XCTAssertTrue(preferences.showResetAction)
+        XCTAssertTrue(preferences.codexActivityIslandEnabled)
+        XCTAssertEqual(
+            preferences.codexActivityOrbAnimation,
+            .particleOrb
+        )
+        XCTAssertEqual(preferences.codexActivityCompactDelay, 20)
+        XCTAssertEqual(
+            preferences.codexActivityHiddenDelayAfterCompact,
+            100
+        )
         XCTAssertTrue(preferences.followsSystemAppearance)
         XCTAssertTrue(preferences.followsSystemLanguage)
         XCTAssertEqual(preferences.customAppearance, .dark)
@@ -932,6 +994,23 @@ final class AppBehaviorTests: XCTestCase {
             AppPreferences.Language.english.rawValue,
             forKey: "preferences.language.custom"
         )
+        savedDefaults.set(
+            false,
+            forKey: "preferences.codexActivity.islandEnabled"
+        )
+        savedDefaults.set(
+            AppPreferences.CodexActivityOrbAnimation.rippleGlow.rawValue,
+            forKey: "preferences.codexActivity.orbAnimation"
+        )
+        savedDefaults.set(
+            58,
+            forKey: "preferences.codexActivity.compactDelay"
+        )
+        savedDefaults.set(
+            999,
+            forKey:
+                "preferences.codexActivity.hiddenDelayAfterCompact"
+        )
 
         let savedPreferences = AppPreferences(defaults: savedDefaults)
 
@@ -945,6 +1024,16 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertFalse(savedPreferences.showEstimatedCost)
         XCTAssertFalse(savedPreferences.showSparkQuota)
         XCTAssertEqual(savedPreferences.tokenActivityRange, .sixMonths)
+        XCTAssertFalse(savedPreferences.codexActivityIslandEnabled)
+        XCTAssertEqual(
+            savedPreferences.codexActivityOrbAnimation,
+            .rippleGlow
+        )
+        XCTAssertEqual(savedPreferences.codexActivityCompactDelay, 60)
+        XCTAssertEqual(
+            savedPreferences.codexActivityHiddenDelayAfterCompact,
+            120
+        )
         XCTAssertEqual(
             savedDefaults.string(
                 forKey: "preferences.panel.tokenActivityRange"

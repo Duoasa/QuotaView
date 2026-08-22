@@ -1435,6 +1435,140 @@ private final class ActivityMetalOrbView: MTKView {
     }
 }
 
+private final class ActivitySelectableOrbView: NSView {
+    private let particleView: ActivityMetalOrbView
+    private var rippleGlowView: ActivityRippleGlowMetalView?
+    private var activeView: NSView
+    private var state: CodexActivityVisualState
+    private var animation: AppPreferences.CodexActivityOrbAnimation
+    private var reduceMotion = false
+
+    override var isOpaque: Bool { false }
+
+    init(
+        frame: NSRect,
+        initialState: CodexActivityVisualState,
+        animation: AppPreferences.CodexActivityOrbAnimation
+    ) {
+        state = initialState
+        self.animation = animation
+        particleView = ActivityMetalOrbView(
+            frame: frame,
+            initialState: initialState
+        )
+        activeView = particleView
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        addSubview(particleView)
+        setAnimation(animation)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        activeView.frame = bounds
+        redrawIfPaused()
+    }
+
+    func setAnimation(
+        _ newAnimation: AppPreferences.CodexActivityOrbAnimation
+    ) {
+        let requestedView: NSView
+        switch newAnimation {
+        case .particleOrb:
+            requestedView = particleView
+        case .rippleGlow:
+            if rippleGlowView == nil {
+                let candidate = ActivityRippleGlowMetalView(
+                    frame: bounds,
+                    initialState: state
+                )
+                if candidate.isRendererAvailable {
+                    rippleGlowView = candidate
+                }
+            }
+            requestedView = rippleGlowView ?? particleView
+        }
+
+        animation = newAnimation
+        guard activeView !== requestedView else {
+            setReduceMotion(reduceMotion)
+            return
+        }
+
+        particleView.setReduceMotion(true)
+        rippleGlowView?.setReduceMotion(true)
+        activeView.removeFromSuperview()
+        activeView = requestedView
+        activeView.frame = bounds
+        addSubview(activeView)
+        setReduceMotion(reduceMotion)
+    }
+
+    func setState(_ newState: CodexActivityVisualState) {
+        state = newState
+        particleView.setState(newState)
+        rippleGlowView?.setState(newState)
+        redrawIfPaused()
+    }
+
+    func setReduceMotion(_ enabled: Bool) {
+        reduceMotion = enabled
+        particleView.setReduceMotion(
+            enabled || activeView !== particleView
+        )
+        if let rippleGlowView {
+            rippleGlowView.setReduceMotion(
+                enabled || activeView !== rippleGlowView
+            )
+        }
+    }
+
+    func redrawIfPaused() {
+        particleView.redrawIfPaused()
+        rippleGlowView?.redrawIfPaused()
+    }
+}
+
+final class CodexActivityOrbPreviewHostView: NSView {
+    private let orbView: ActivitySelectableOrbView
+
+    override var isOpaque: Bool { false }
+
+    init(animation: AppPreferences.CodexActivityOrbAnimation) {
+        orbView = ActivitySelectableOrbView(
+            frame: .zero,
+            initialState: .thinking,
+            animation: animation
+        )
+        super.init(frame: .zero)
+        addSubview(orbView)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        orbView.frame = bounds
+    }
+
+    func update(
+        animation: AppPreferences.CodexActivityOrbAnimation,
+        reduceMotion: Bool
+    ) {
+        orbView.setAnimation(animation)
+        orbView.setReduceMotion(reduceMotion)
+    }
+}
+
 private final class ActivityIslandSurfaceView: NSView {
     private let materialView = NSVisualEffectView()
     private let tintView = NSView()
@@ -1484,7 +1618,7 @@ private final class ActivityIslandSurfaceView: NSView {
 private final class ActivityIslandContentView: NSView {
     private let shadowHost = NSView()
     private let surface = ActivityIslandSurfaceView()
-    private let orbView: ActivityMetalOrbView
+    private let orbView: ActivitySelectableOrbView
     private let kickerLabel = ActivitySingleLineTextView()
     private let titleLabel = ActivitySingleLineTextView()
     private let compactTitleLabel = ActivitySingleLineTextView()
@@ -1495,11 +1629,15 @@ private final class ActivityIslandContentView: NSView {
 
     override var isOpaque: Bool { false }
 
-    init(initialState: CodexActivityRenderState) {
+    init(
+        initialState: CodexActivityRenderState,
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+    ) {
         renderState = initialState
-        orbView = ActivityMetalOrbView(
+        orbView = ActivitySelectableOrbView(
             frame: .zero,
-            initialState: initialState.visualState
+            initialState: initialState.visualState,
+            animation: orbAnimation
         )
         super.init(frame: .zero)
 
@@ -1558,7 +1696,10 @@ private final class ActivityIslandContentView: NSView {
         statusDot.layer?.cornerRadius = activityStatusDotSide / 2
         surface.addSubview(statusDot)
 
-        update(renderState: initialState)
+        update(
+            renderState: initialState,
+            orbAnimation: orbAnimation
+        )
     }
 
     @available(*, unavailable)
@@ -1713,7 +1854,10 @@ private final class ActivityIslandContentView: NSView {
         )
     }
 
-    func update(renderState: CodexActivityRenderState) {
+    func update(
+        renderState: CodexActivityRenderState,
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+    ) {
         self.renderState = renderState
         kickerLabel.stringValue = renderState.windowTitle
         titleLabel.stringValue = renderState.statusTitle
@@ -1727,6 +1871,7 @@ private final class ActivityIslandContentView: NSView {
         detailLabel.shimmerEnabled = sweeps
         statusDot.layer?.backgroundColor =
             renderState.visualState.activityAccentColor.cgColor
+        orbView.setAnimation(orbAnimation)
         orbView.setState(renderState.visualState)
         needsLayout = true
 
@@ -1761,9 +1906,13 @@ final class CodexActivityIslandPanelController {
     private var presentationMode:
         CodexActivityIslandPresentation = .expanded
 
-    init(initialState: CodexActivityRenderState) {
+    init(
+        initialState: CodexActivityRenderState,
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+    ) {
         content = ActivityIslandContentView(
-            initialState: initialState
+            initialState: initialState,
+            orbAnimation: orbAnimation
         )
         panel = CodexActivityPanel(
             contentRect: NSRect(
@@ -1801,13 +1950,17 @@ final class CodexActivityIslandPanelController {
         renderState: CodexActivityRenderState,
         presentationMode: CodexActivityIslandPresentation,
         presentationAccessibilityValue: String,
-        reduceMotion: Bool
+        reduceMotion: Bool,
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation
     ) {
         let modeChanged = self.presentationMode != presentationMode
         self.presentationMode = presentationMode
 
         content.setReduceMotion(reduceMotion)
-        content.update(renderState: renderState)
+        content.update(
+            renderState: renderState,
+            orbAnimation: orbAnimation
+        )
         content.setPresentationMode(
             presentationMode,
             accessibilityValue: presentationAccessibilityValue

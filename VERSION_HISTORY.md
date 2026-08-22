@@ -60,22 +60,27 @@
 > Spark 周额度、30 日 Tokens、成本估算、Token 活动半年上限与完整 16 列
 > 网格，并接入只在预期 Developer ID 正式 App 中启用的 Sparkle 2.9.2
 > Stable 更新器。正式签名、公证/Staple、GitHub Release/Latest、回下载和
-> 公开签名 appcast 均已完成；详细证据见 [HANDOFF.md](HANDOFF.md)。
+> 公开签名 appcast 均已完成；详细证据见本文件的 `0.3.5 (Build 5)` 章节。
 
-> 下一次开发使用全局递增的 `Build 6`。`QV-PRODUCT-APP-UPDATES-003` 仍需
-> 由后续正式版本完成真实 N → N+1 更新验收，因此规格交付状态保持
-> `Verifying`；这不改变 `0.3.5 Build 5` 已作为正式版本发布的事实。
+> 当前开发版本为 `0.3.6 (Build 2)` 灵动岛升级。产品可见 Build 在
+> Marketing Version 变化后归 1，同一版本内每次迭代递增；Sparkle 内部
+> 更新序号保持全局递增，本轮 `CFBundleVersion = 7`。动画选择、独立显示
+> 开关与缩小/隐藏时间设置已进入 `Accepted / Verifying`。产品所有者已
+> 明确批准 `v0.3.6-build.2` 进入完整 Stable Release 与 appcast 门禁，
+> 当前仍在发布过程中；正式资产、签名、公证、Release、回下载和 Feed 全部
+> 完成前，不得写入下方正式版本总览，也不改变 `0.3.5 Build 5` 当前已
+> 发布的事实。
 
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
 > 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.5 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
-> [SDD 当前状态快照](docs/specs/README.md#2-当前状态快照) 为准。
+> [SDD 当前状态](docs/specs/README.md#1-当前状态) 为准。
 
 ### 版本定位规则
 
-1. 新会话先读取 [HANDOFF.md](HANDOFF.md) 顶部的“版本定位入口”。
+1. 新会话先读取 [HANDOFF.md](HANDOFF.md) 顶部的版本定位链接。
 2. 按该入口跳转到本节，确认最新版本、tag、资产和发布状态。
 3. 回到 `HANDOFF.md` 阅读当前工作区、已完成事项和下一次迭代建议。
 4. 打开 `docs/specs/README.md` 确认当前迭代的规格状态和交付状态。
@@ -124,7 +129,8 @@ Tag：`v0.3.5-build.5`
 - 统一摘要、Token 活动和成本图的“最近一天”日期语义；
 - 接入 Sparkle 2.9.2 Stable 更新检查、手动检查入口和默认关闭的 24 小时
   自动检查；Debug、Ad Hoc、非 App 或非预期签名环境不访问 Feed；
-- Build Number 从本版开始延续全局递增规则；后续迭代从 Build 6 开始；
+- 本版的产品 Build 与 Sparkle 内部更新序号均为 5；后续从 `0.3.6` 起两者
+  分离：产品 Build 随 Marketing Version 归 1，内部更新序号继续递增；
 - 产品截图：`Resources/QuotaView-0.3.5-Overview.png`；中英文 README 的
   0.3.5 更新介绍和 GitHub Release 正文共同引用该图，Release 使用不可变
   提交 `c060168976930c39dca4af616567fa51eb75d3be` 的 raw URL。
@@ -592,4 +598,6 @@ Tag：`v0.1.0`
   防止后续 Codex 重复使用问题版本。
 - GitHub Release Notes 使用单份英文源文，避免与 GitHub 自动翻译产生
   重复内容。
-- 不移动或覆盖已发布 tag；热更新使用新的 Build Number、tag 和资产名。
+- 不移动或覆盖已发布 tag；同一 Marketing Version 的热更新使用递增的产品
+  Build Number、唯一 tag 和资产名；Marketing Version 改变时产品 Build
+  归 1，但 Sparkle 内部更新序号仍必须递增。
