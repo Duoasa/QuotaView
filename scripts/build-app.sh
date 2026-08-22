@@ -58,19 +58,21 @@ destination_zip="${dist_dir}/${release_name}.zip"
 signing_identity="${CODESIGN_IDENTITY:-}"
 notary_profile="${NOTARY_PROFILE:-}"
 sparkle_key_account="${SPARKLE_KEY_ACCOUNT:-com.quotaview.menubar}"
+identity_inventory="$(security find-identity -v -p codesigning)"
 
 if [[ -z "${signing_identity}" ]]; then
-    identity_inventory="$(security find-identity -v -p codesigning)"
     signing_identity="$(
         print -r -- "${identity_inventory}" \
-            | sed -n 's/^[^"]*"\(Developer ID Application:[^"]*\)".*$/\1/p' \
-            | head -n 1
+            | sed -n \
+                's/^[[:space:]]*[0-9][0-9]*) \([[:xdigit:]]\{40\}\) "Developer ID Application:[^"]*".*$/\1/p' \
+            | tail -n 1
     )"
 
     if [[ -z "${signing_identity}" ]]; then
         signing_identity="$(
             print -r -- "${identity_inventory}" \
-                | sed -n 's/^[^"]*"\(Apple Development:[^"]*\)".*$/\1/p' \
+                | sed -n \
+                    's/^[[:space:]]*[0-9][0-9]*) \([[:xdigit:]]\{40\}\) "Apple Development:[^"]*".*$/\1/p' \
                 | head -n 1
         )"
     fi
@@ -80,6 +82,48 @@ if [[ -z "${signing_identity}" ]]; then
     fi
 fi
 
+signing_common_name="${signing_identity}"
+if [[ "${signing_identity}" != "-" ]]; then
+    if ! print -r -- "${signing_identity}" \
+        | grep -Eq '^[[:xdigit:]]{40}$'; then
+        matching_identity_hashes="$(
+            print -r -- "${identity_inventory}" \
+                | awk -v requested="\"${signing_identity}\"" \
+                    'index($0, requested) { print $2 }'
+        )"
+        matching_identity_count="$(
+            print -r -- "${matching_identity_hashes}" \
+                | awk 'NF { count += 1 } END { print count + 0 }'
+        )"
+        if [[ "${matching_identity_count}" -ne 1 ]]; then
+            print -u2 \
+                "Signing identity name is missing or ambiguous: " \
+                "${signing_identity}"
+            print -u2 \
+                "Set CODESIGN_IDENTITY to one exact 40-character " \
+                "certificate SHA-1 fingerprint."
+            exit 2
+        fi
+        signing_identity="${matching_identity_hashes}"
+    fi
+
+    signing_common_name="$(
+        print -r -- "${identity_inventory}" \
+            | awk -v requested="${signing_identity}" '
+                $2 == requested {
+                    if (match($0, /"[^"]+"/)) {
+                        print substr($0, RSTART + 1, RLENGTH - 2)
+                    }
+                }
+            '
+    )"
+fi
+
+is_developer_id=false
+if [[ "${signing_common_name}" == "Developer ID Application:"* ]]; then
+    is_developer_id=true
+fi
+
 cleanup() {
     rm -rf "${staging_dir}"
     rm -rf "${verification_dir}"
@@ -87,21 +131,20 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ "${signing_identity}" != "-" ]]; then
-    available_identities="$(security find-identity -v -p codesigning)"
-    if [[ "${available_identities}" != *"${signing_identity}"* ]]; then
+    if [[ "${identity_inventory}" != *"${signing_identity}"* ]] \
+        || [[ -z "${signing_common_name}" ]]; then
         print -u2 "Signing identity not found: ${signing_identity}"
         print -u2 "Install or repair the requested code signing identity first."
         exit 2
     fi
 fi
 
-if [[ -n "${notary_profile}" ]] \
-    && [[ "${signing_identity}" != "Developer ID Application:"* ]]; then
+if [[ -n "${notary_profile}" ]] && [[ "${is_developer_id}" != true ]]; then
     print -u2 "NOTARY_PROFILE requires a Developer ID Application signature."
     exit 2
 fi
 
-if [[ "${signing_identity}" == "Developer ID Application:"* ]] \
+if [[ "${is_developer_id}" == true ]] \
     && [[ "${SPARKLE_KEY_BACKUP_CONFIRMED:-NO}" != "YES" ]]; then
     print -u2 \
         "Developer ID packaging requires an encrypted offline backup " \
@@ -544,7 +587,7 @@ if [[ "${destination_zip_sha256}" != "${staging_zip_sha256}" ]]; then
     exit 4
 fi
 
-if [[ "${signing_identity}" == "Developer ID Application:"* ]]; then
+if [[ "${is_developer_id}" == true ]]; then
     sign_update_tool="$(
         find "${derived_data}/SourcePackages/artifacts" \
             -path '*/Sparkle/bin/sign_update' \
@@ -582,7 +625,7 @@ if [[ "${signing_identity}" == "-" ]]; then
     print "Signature: ad-hoc without Hardened Runtime"
     print "Warning: this signature has no trusted developer identity."
 else
-    print "Signature: ${signing_identity}"
+    print "Signature: ${signing_common_name} (${signing_identity})"
 fi
 
 if [[ -n "${notary_profile}" ]]; then
@@ -591,7 +634,7 @@ else
     print "Notarization: not performed"
 fi
 
-if [[ "${signing_identity}" == "Developer ID Application:"* ]]; then
+if [[ "${is_developer_id}" == true ]]; then
     print \
         "Sparkle enclosure: sparkle:edSignature=\"${sparkle_signature}\" " \
         "length=\"${sparkle_archive_length}\""
