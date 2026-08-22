@@ -4,7 +4,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`（Build 5 已正式发布并上线 Feed；真实 N → N+1 待后续 Build）
+> 交付状态：`Verifying`（Build 5 已发布更新器，Build 2 已作为 0.3.6 更新进入 Feed；真实客户端安装操作待独立记录）
 >
 > 目标版本：`0.3.5 (Build 5)`
 
@@ -60,18 +60,24 @@
   `QuotaView-v0.3.5-build.5.zip`；最终资产 SHA-256、Developer ID、Apple
   公证/Staple、回下载、Feed 签名和线上复核门禁均已完成。后续版本必须
   重新获得精确准入，不得沿用本次授权。
+- 产品所有者已于 `2026-08-23` 明确批准 `0.3.6 Build 2` 进入自动更新
+  序列，准入身份为 tag `v0.3.6-build.2`、资产
+  `QuotaView-v0.3.6-build.2.zip`、产品 Build `2` 和内部更新序号 `7`；
+  Developer ID、公证/Staple、Stable/Latest Release、回下载、Feed EdDSA
+  与线上逐字节复核均已完成。本次准入同样不自动延伸到后续版本。
 
 ## 4. 版本规则
 
 产品可见 Build Number 按 Marketing Version 独立计数：Marketing Version
 变化时归 `Build 1`，同一 Marketing Version 内的后续迭代依次递增。因此
-`0.3.5 Build 5` 的下一 Marketing Version 为 `0.3.6 Build 1`。
+`0.3.5 Build 5` 之后的 `0.3.6` 从 Build 1 开始，本次正式发布的是同一
+Marketing Version 的第二次迭代 `0.3.6 Build 2`。
 
 Sparkle 的[官方升级说明](https://sparkle-project.org/documentation/upgrading/)
 要求 `CFBundleVersion` / `sparkle:version` 使用递增的机器可读版本，因此
-两者继续作为跨 Marketing Version 单调递增的内部更新序号；从
-`0.3.5 Build 5` 到 `0.3.6 Build 1` 时内部序号由 `5` 增至 `6`。产品可见
-Build 由 `QuotaViewDisplayBuildNumber` / `QUOTAVIEW_DISPLAY_BUILD_NUMBER`
+两者继续作为跨 Marketing Version 单调递增的内部更新序号；`0.3.6 Build
+1` 使用内部序号 `6`，`0.3.6 Build 2` 使用内部序号 `7`。产品可见 Build
+由 `QuotaViewDisplayBuildNumber` / `QUOTAVIEW_DISPLAY_BUILD_NUMBER`
 维护，设置界面、tag、ZIP、Handoff 与版本历史使用该值。App、Widget 与
 兼容 Info.plist 必须同时同步 Marketing Version、产品 Build 和内部更新序号。
 
@@ -101,11 +107,11 @@ Build 由 `QuotaViewDisplayBuildNumber` / `QUOTAVIEW_DISPLAY_BUILD_NUMBER`
 `0.3.5 Build 5` 进入自动更新序列，因此本版已完成 Developer ID、Apple
 公证/Staple、GitHub Stable/Latest、回下载、公开 appcast 和文档联动。
 
-Build 5 是首个包含更新器的正式版本，无法单独完成两个正式版本之间的
-N → N+1 验收。因此 `APP-UPDATES-07` 和本规格交付状态保持 `Verifying`，
-直到后续获准且内部更新序号更高的版本完成真实应用内更新；这不影响
-Build 5 版本本身已经 `Released`。后续 GitHub Stable/Latest 仍不自动获得
-appcast 准入。
+Build 5 是首个包含更新器的正式版本，0.3.6 Build 2 是第一个获准且内部
+序号更高的 Stable appcast 条目。版本判断、远端资产和完整签名链已经验证，
+但尚未从真实 0.3.5 客户端记录一次检查、下载、替换与重启全过程。因此
+`APP-UPDATES-07` 和本规格交付状态保持 `Verifying`；这不影响两个版本各自
+已经 `Released`。后续 GitHub Stable/Latest 仍不自动获得 appcast 准入。
 
 ## 8. 当前验证记录
 
@@ -124,8 +130,13 @@ appcast 准入。
 - Sparkle 私钥完成 AES-256 iCloud 加密备份与恢复一致性验证，恢复密码只存
   macOS Keychain；
 - 公开 appcast 已部署到 `https://duoasa.github.io/QuotaView/appcast.xml`，
-  SHA-256 为
-  `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；线上
+  当前指向 `0.3.6 Build 2 / sparkle:version 7`，SHA-256 为
+  `06a9007a3814192deb6469490dadb2b0ca540b3ea6c836a7a623c0107c94a211`；线上
   文件与本地签名 Feed 逐字节一致，Feed EdDSA 验证通过；
-- 设置完整视觉/辅助功能矩阵与真实 N → N+1 更新仍未完成，因此规格结论
-  保持 `Verifying`；Build 5 版本发布事实为 `Released`。
+- 0.3.6 正式 ZIP 大小 `12,861,638 bytes`，SHA-256
+  `b90e05ee724f8adf7856be469476f8b2224304a981c8869e4200aee4ce525bae`；
+  Apple notarization `Accepted` 并 Staple，Submission
+  `ff3fef0b-d92f-47cd-8798-3cb388aa2d9e`；GitHub 回下载逐字节一致；
+- 设置完整视觉/辅助功能矩阵与真实客户端 N → N+1 安装操作仍未完成独立
+  记录，因此规格结论保持 `Verifying`；0.3.5 与 0.3.6 的版本发布事实均为
+  `Released`。

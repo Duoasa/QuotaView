@@ -15,29 +15,29 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.3.5 (Build 5)` |
-| Git tag | `v0.3.5-build.5` |
-| Tag commit | `58e676a8317d907107af3d1731ab11a0ded52684` |
-| GitHub Release | [QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) |
-| Release 资产 | `QuotaView-v0.3.5-build.5.zip` |
-| 资产大小 | `12,747,358 bytes` |
-| SHA-256 | `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
+| 最新推荐版本 | `0.3.6 (Build 2)` |
+| Git tag | `v0.3.6-build.2` |
+| Tag commit | `ab033001a194b78e2ec80f31e1f334ea1cae0021` |
+| GitHub Release | [QuotaView 0.3.6 Build 2 — Customizable Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2) |
+| Release 资产 | `QuotaView-v0.3.6-build.2.zip` |
+| 资产大小 | `12,861,638 bytes` |
+| SHA-256 | `b90e05ee724f8adf7856be469476f8b2224304a981c8869e4200aee4ce525bae` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
-| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `88796026-3227-405a-9e1b-900af973c527` |
+| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，证书 SHA-1 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，启用 Hardened Runtime |
+| 公证 | Apple Accepted，已 Staple；Submission `ff3fef0b-d92f-47cd-8798-3cb388aa2d9e` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；Feed SHA-256 `ee46651f1b45fe03cf4e4967543d3b5dd18a644aff956fd5396ea90bd36e2f50`；线上 EdDSA 验证通过 |
+| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；`gh-pages` 提交 `421486caac313e04795e429ac36ab14df9d918fd`；Feed SHA-256 `06a9007a3814192deb6469490dadb2b0ca540b3ea6c836a7a623c0107c94a211`；线上 EdDSA 验证通过 |
 
 上一稳定回滚基线：
 
 | 项目 | 封存值 |
 |---|---|
-| 版本 | `0.3.3 (Build 3)` |
-| tag / commit | `v0.3.3` / `a93a81af4f90610a57783ceb16a744f07e216c6a` |
-| Release | [QuotaView 0.3.3 — Token Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.3) |
-| 资产 / SHA-256 | `QuotaView-v0.3.3-build.3.zip` / `ec96964d72d8c37f95cf08170fef83697df83183e36e6be8e23c84e04aa95e12` |
-| 状态 | 不可移动历史正式版；发生 0.3.5 回滚时使用该 tag 与已核验资产 |
+| 版本 | `0.3.5 (Build 5)` |
+| tag / commit | `v0.3.5-build.5` / `58e676a8317d907107af3d1731ab11a0ded52684` |
+| Release | [QuotaView 0.3.5 Build 5 — Usage Overview and App Updates](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.5-build.5) |
+| 资产 / SHA-256 | `QuotaView-v0.3.5-build.5.zip` / `d8524ddf5739501bd797cdd082cc8738a7775d8b994fe99033068af8f821b2e1` |
+| 状态 | 不可移动历史正式版；发生 0.3.6 回滚时使用该 tag 与已核验资产 |
 
 当前公开预览版：
 
@@ -56,24 +56,18 @@
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-> 当前生产版本为 `0.3.5 (Build 5)`。本版继承 0.3.4 用量概览，包含独立
-> Spark 周额度、30 日 Tokens、成本估算、Token 活动半年上限与完整 16 列
-> 网格，并接入只在预期 Developer ID 正式 App 中启用的 Sparkle 2.9.2
-> Stable 更新器。正式签名、公证/Staple、GitHub Release/Latest、回下载和
-> 公开签名 appcast 均已完成；详细证据见本文件的 `0.3.5 (Build 5)` 章节。
+> 当前生产版本为 `0.3.6 (Build 2)`。本版只升级稳定单任务 Codex 灵动岛，
+> 新增独立显示开关、“粒子球 / 波澜光晕”实时动画选择，以及完成后缩小和
+> 缩小后隐藏时间控制；不迁入多任务 Preview。正式签名、公证/Staple、
+> GitHub Release/Latest、回下载和公开签名 appcast 均已完成；详细证据见
+> 本文件的 `0.3.6 (Build 2)` 章节。
 
-> 当前开发版本为 `0.3.6 (Build 2)` 灵动岛升级。产品可见 Build 在
-> Marketing Version 变化后归 1，同一版本内每次迭代递增；Sparkle 内部
-> 更新序号保持全局递增，本轮 `CFBundleVersion = 7`。动画选择、独立显示
-> 开关与缩小/隐藏时间设置已进入 `Accepted / Verifying`。产品所有者已
-> 明确批准 `v0.3.6-build.2` 进入完整 Stable Release 与 appcast 门禁，
-> 当前仍在发布过程中；正式资产、签名、公证、Release、回下载和 Feed 全部
-> 完成前，不得写入下方正式版本总览，也不改变 `0.3.5 Build 5` 当前已
-> 发布的事实。
+> 下一开发版本尚未定义。生产配置保持 Marketing Version `0.3.6`、产品
+> Build `2` 和 Sparkle 内部更新序号 `7`；不得把计划版本提前写成已发布。
 
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
-> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.5 稳定版中。
+> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.6 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
 > [SDD 当前状态](docs/specs/README.md#1-当前状态) 为准。
@@ -94,8 +88,9 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.3.5 (Build 5)` | 2026-08-11 | **当前最新** | Spark 与 30 日用量概览、半年 Token 活动、Stable 应用更新检查 |
-| `0.3.3 (Build 3)` | 2026-08-11 | 历史正式版 / 0.3.5 回滚基线 | Token 活动统计、单色方格图与顶部固定动态面板 |
+| `0.3.6 (Build 2)` | 2026-08-23 | **当前最新** | 单任务 Codex 灵动岛动画、显示与事件时间个性化 |
+| `0.3.5 (Build 5)` | 2026-08-11 | 历史正式版 / 0.3.6 回滚基线 | Spark 与 30 日用量概览、半年 Token 活动、Stable 应用更新检查 |
+| `0.3.3 (Build 3)` | 2026-08-11 | 历史正式版 | Token 活动统计、单色方格图与顶部固定动态面板 |
 | `0.3.2 (Build 1) Preview 1` | 2026-08-05 | **当前预览版** | Codex 灵动岛多任务支持与可选当前任务跟随 |
 | `0.3.1 (Build 2)` | 2026-08-01 | 历史正式版 / 0.3.3 回滚基线 | Widget 共享容器热修复与可变额度周期文案 |
 | `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
@@ -107,12 +102,68 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.3.6 (Build 2)
+
+Tag：`v0.3.6-build.2`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
+已进入公开 Stable appcast。
+
+发布提交：
+`ab033001a194b78e2ec80f31e1f334ea1cae0021`
+
+主要特性：
+
+- 在设置页新增独立“显示灵动岛”开关；关闭只隐藏窗口，Codex Hook、Socket
+  和本地状态连接继续工作；
+- 为稳定单任务灵动岛提供“粒子球”和“波澜光晕”两种生产渲染预览，选择
+  后即时切换；
+- “波澜光晕”覆盖现有九种任务状态，保持固定圆形轮廓和连续状态过渡，
+  Metal 不可用时回退“粒子球”；
+- “完成后缩小”支持 5...60 秒，“缩小后隐藏”支持 5...120 秒，均以
+  5 秒为档位并显示刻度与当前值；
+- 保留 Reduce Motion、单一 NSPanel 和现有本地隐私边界；不包含独立的
+  多任务 Preview 实验；
+- 产品 Build 为 2，Sparkle 内部更新序号为 7，可被 0.3.5 Build 5 的
+  Stable 更新器识别为新版本；
+- 产品截图：`Resources/QuotaView-0.3.6-Codex-Island-Settings.png`；中英文
+  README 的 0.3.6 更新介绍与 GitHub Release 正文共同引用该图。
+
+验证与发布资产：
+
+- `swift test`：66 项通过、0 失败；PR #27 与签名修复 PR #28 GitHub CI
+  均通过；
+- 文件名：`QuotaView-v0.3.6-build.2.zip`
+- 大小：`12,861,638 bytes`
+- SHA-256：
+  `b90e05ee724f8adf7856be469476f8b2224304a981c8869e4200aee4ce525bae`
+- App、Widget 和 Hook 均为 Universal `x86_64 arm64`；App 为
+  Marketing Version `0.3.6`、内部版本 `7`、产品 Build `2`；
+- Developer ID：`Developer ID Application: Chenchen Xu (BUUH229D5Q)`，
+  证书 SHA-1 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，启用
+  Hardened Runtime；
+- Apple 公证：Accepted，已 Staple；Submission
+  `ff3fef0b-d92f-47cd-8798-3cb388aa2d9e`；
+- GitHub 回下载正式资产与本地公证包逐字节一致；从 ZIP 全新解压后重新
+  通过 `codesign --deep --strict`、Staple、Gatekeeper、版本、架构与资源
+  复核；
+- 公开 Feed：`https://duoasa.github.io/QuotaView/appcast.xml`；`gh-pages`
+  提交 `421486caac313e04795e429ac36ab14df9d918fd`；Feed SHA-256
+  `06a9007a3814192deb6469490dadb2b0ca540b3ea6c836a7a623c0107c94a211`；
+  线上文件与本地签名文件逐字节一致，Feed EdDSA 验证通过；
+- 真实 0.3.5 → 0.3.6 应用内安装操作和完整视觉/辅助功能交叉矩阵尚未形成
+  独立验收记录，因此更新器规格继续保持 `Accepted / Verifying`；不影响
+  本版已经正式发布。
+
+Release：
+[QuotaView 0.3.6 Build 2 — Customizable Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2)
+
 ## 0.3.5 (Build 5)
 
 Tag：`v0.3.5-build.5`
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
-已进入公开 Stable appcast。
+状态：历史正式 Release、0.3.6 的封存回滚基线、首个包含更新器的稳定
+版本、非 Draft、非 Pre-release；已由 0.3.6 Build 2 替代。
 
 发布提交：
 `58e676a8317d907107af3d1731ab11a0ded52684`
@@ -213,7 +264,7 @@ Release：
 
 Tag：`v0.3.2-preview.1`
 
-状态：当前公开预览版、非 Draft、非 Latest；`0.3.5 (Build 5)` 是
+状态：当前公开预览版、非 Draft、非 Latest；`0.3.6 (Build 2)` 是
 推荐稳定版与 GitHub Latest。
 
 发布提交：

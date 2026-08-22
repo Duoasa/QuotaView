@@ -7,7 +7,7 @@
 > 文档版本：`2.1`<br>
 > 依赖：`QV-EXEC-CORE-002` Phase 0–2<br>
 > 原始设计基线：QuotaView `0.1.5 (Build 6)`<br>
-> 当前生产基线：QuotaView `0.3.5 (Build 5)`；本版未改变 WidgetKit 数据与界面契约<br>
+> 当前生产基线：QuotaView `0.3.6 (Build 2)`；本版未改变 WidgetKit 数据与界面契约<br>
 > 编写日期：2026-07-28<br>
 > SDD 状态更新：2026-08-04<br>
 > 适用平台：macOS 14 及以上<br>

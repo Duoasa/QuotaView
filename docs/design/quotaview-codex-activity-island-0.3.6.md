@@ -4,7 +4,7 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
 > 目标版本：`0.3.6 (Build 2)`
 >
@@ -75,12 +75,17 @@
   `x86_64 arm64`；App/Widget 均读取为 `0.3.6 / 7 / 产品 Build 2`；
 - `AppIcon.icns`、`Assets.car` 和 `CodexActivityRippleGlowShader.txt` 均已
   进入 App 包；
-- 本地 ad-hoc 验收包为 `dist/QuotaView-v0.3.6-build.2.zip`，SHA-256
-  `2aacc1beab25ba82899f64d0e44de028e7a6239ada6ad3deaebf84b3050da807`；
-  ZIP 全新解压后的深度签名、版本、资源与 Universal 架构复核通过；
-- 代码与自动化验证完成后，交付维持 `Verifying`。设置页排版、两种预览、
-  即时切换、开关和两段计时的视觉/交互结论等待产品所有者运行应用验收；
+- 正式资产为 `QuotaView-v0.3.6-build.2.zip`，大小 `12,861,638 bytes`，
+  SHA-256
+  `b90e05ee724f8adf7856be469476f8b2224304a981c8869e4200aee4ce525bae`；
+- Developer ID、Hardened Runtime、Apple notarization `Accepted` 与 Staple
+  已完成，Submission `ff3fef0b-d92f-47cd-8798-3cb388aa2d9e`；
+- GitHub 回下载 ZIP 与本地正式资产逐字节一致；全新解压后通过严格深度
+  签名、Gatekeeper、Staple、版本、资源与 Universal 架构复核；
 - 产品所有者已在 2026-08-23 明确批准 `0.3.6 Build 2` 进入完整稳定发布
-  和自动更新序列；预期 tag / ZIP 为 `v0.3.6-build.2` /
-  `QuotaView-v0.3.6-build.2.zip`。签名、公证、Release、回下载和 appcast
-  证据只有实际完成后才能回填为已发布。
+  和自动更新序列；`v0.3.6-build.2` Stable/Latest Release 与公开 appcast
+  已发布，Feed SHA-256
+  `06a9007a3814192deb6469490dadb2b0ca540b3ea6c836a7a623c0107c94a211`，线上
+  文件逐字节一致且 EdDSA 验证通过；
+- 本规格交付状态因此进入 `Released`。完整视觉与辅助功能交叉矩阵没有单独
+  记录为全量通过；该未记录项不改写已经发生的 Release 事实。
