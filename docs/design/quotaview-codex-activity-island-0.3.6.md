@@ -1,4 +1,4 @@
-# QuotaView 0.3.6 灵动岛升级规格
+# QuotaView 稳定单任务 Codex 灵动岛规格
 
 > 文档编号：`QV-PRODUCT-ACTIVITY-ISLAND-004`
 >
@@ -6,86 +6,83 @@
 >
 > 交付状态：`Released`
 >
-> 目标版本：`0.3.6 (Build 2)`
->
-> 内部更新序号：`CFBundleVersion = 7`
+> 当前版本：`0.3.6 Build 2`（Sparkle 内部序号 `7`）
 
-## 1. 已确认范围
+本文件合并了 0.3.1 的稳定单任务基础契约与 0.3.6 的个性化升级，是当前
+生产灵动岛的唯一规格。`0.3.2 Preview 1` 多任务实验不属于本规格。
 
-- 本版只升级当前单任务 Codex 灵动岛，不加入 `0.3.2 Preview 1` 的多任务
-  实验；
-- 在设置的“Codex 灵动岛”页面增加独立显示开关。关闭只隐藏浮窗，Codex
-  本地 Hook、Socket 和状态连接继续工作；重新开启后按当前真实状态恢复；
-- 提供两种动画：现有动画命名为“粒子球”，已确认的新动画命名为“波澜
-  光晕”；设置页使用“上方实时光球预览、下方名称”的双选项布局，选择后
-  立即作用于生产灵动岛；
-- “完成后缩小”范围为 `5...60 秒`，“缩小后隐藏”范围为
-  `5...120 秒`，步进均为 `5 秒`；控件显示全部档位刻度、当前档位和端点；
-- 新活动立即展开灵动岛；修改等待时间时，正在等待的完成/空闲事件按新值
-  重新计时；设置持久化并即时生效；
-- 产品 Build 在 Marketing Version 改变后从 1 重新计数。本轮是
-  `0.3.6 Build 2`，Sparkle 内部更新序号保持全局递增为 `7`。
+## 目标与边界
 
-## 2. 动画与状态要求
+- 通过非激活单一 `NSPanel` 显示当前 Codex 会话状态；不控制 Codex UI；
+- 事件链保持 `Codex Hooks → 签名 Helper → 私有 Unix Socket → Store →
+  AppKit/Metal`；App Server 只用于有界标题匹配；
+- 不读取或转发 Prompt、命令、参数、工具输出、模型内容、会话记录或完整
+  路径；不新增账号、凭据、网页抓取、遥测、云端转发或权限；
+- 额度菜单、Widget、更新器和额度重置 Demo 不受本功能状态影响。
 
-- “粒子球”保持当前稳定 Metal 动画和九种状态语义；
-- “波澜光晕”复用已验收 Demo 着色器与参数：`style = 9`、玻璃开启、
-  128 个 Float / 512 bytes、球体半径固定 `0.535`、轮廓形变固定 `0`、
-  动画速度为参考节奏的 `1.5×`；
-- 两种动画都适配未连接、空闲、思考、工作、压缩上下文、待确认、完成、
-  失败和未载入九种状态；切换动画不能改变现有 AppKit/CoreText 外壳、状态
-  文案、展开/紧凑几何和本地事件链；
-- “波澜光晕”在状态切换时连续插值，并在速度变化时保持相位，球体不得出现
-  不规则外轮廓；
-- 设置页预览和生产浮窗复用同一渲染实现；Metal Pipeline 按设备与像素格式
-  缓存，避免预览与浮窗重复编译；
-- 开启 macOS“减少动态效果”后，两种光球和窗口收展改用静态状态反馈；
-  Metal 初始化失败时“波澜光晕”降级到“粒子球”。
+## 状态与事件映射
 
-## 3. 设置与持久化
+生产状态固定为：未连接、待机、思考、工作、压缩上下文、等待确认、完成、
+失败和不可用。事件按以下语义投影：
 
-| 设置 | 键 | 默认值 / 范围 |
+| Hook 事件 | 状态 / 生命周期 |
+|---|---|
+| `SessionStart(startup/resume/clear)` | 待机 |
+| `SessionStart(compact)`、`UserPromptSubmit` | 思考 |
+| `PreToolUse`、`SubagentStart` | 工作 |
+| `PermissionRequest` | 等待确认 |
+| `PostToolUse`、`PostCompact`、`SubagentStop` | 思考 |
+| `PreCompact` | 压缩上下文 |
+| `Stop` | 完成并启动收起计时 |
+| `SessionEnd` | 立即隐藏；更早事件不能重新打开 |
+
+新活动立即展开。状态切换不能创建第二个岛、改变既有文案语义或使旧事件
+覆盖较新的 SessionEnd。
+
+## 显示、动画与时间设置
+
+| 设置 | 持久化键 | 默认值 / 有效值 |
 |---|---|---|
 | 显示灵动岛 | `preferences.codexActivity.islandEnabled` | 开启 |
-| 光球动画 | `preferences.codexActivity.orbAnimation` | `particleOrb` |
-| 完成后缩小 | `preferences.codexActivity.compactDelay` | 20 秒；5...60 |
-| 缩小后隐藏 | `preferences.codexActivity.hiddenDelayAfterCompact` | 100 秒；5...120 |
+| 光球动画 | `preferences.codexActivity.orbAnimation` | `particleOrb`；可选 `rippleGlow` |
+| 完成后缩小 | `preferences.codexActivity.compactDelay` | 20 秒；`5...60`，步进 5 |
+| 缩小后隐藏 | `preferences.codexActivity.hiddenDelayAfterCompact` | 100 秒；`5...120`，步进 5 |
 
-非法或旧存储值按 5 秒步进归一到最近的有效档位。设置页使用 macOS 系统
-字体、语义颜色、小号原生 Switch 和 Slider；中文与 English 都必须完整
-显示，并为选项、Slider 当前值和连接状态提供辅助功能语义。
+- 关闭显示只隐藏浮窗，不卸载 Hook、不关闭 Socket 或丢失最新状态；重新
+  开启后按真实状态恢复；
+- 设置页使用“上方实时预览、下方名称”的粒子球/波澜光晕双选项；预览与
+  生产浮窗复用同一渲染器；
+- 粒子球保持既有九状态 Metal 动画；波澜光晕使用 `style = 9`、128 个
+  Float、半径 `0.535`、轮廓形变 `0` 和 `1.5×` 节奏，状态连续插值且外轮廓
+  始终为圆形；
+- 修改时间时，正在等待的完成/空闲事件按新档位重新计时；非法旧值归一到
+  最近的 5 秒档；
+- Reduce Motion 使用静态状态反馈；波澜光晕 Metal 初始化失败时回退粒子球。
 
-## 4. 隐私与行为边界
+## 本地连接与安全
 
-- 不新增账号、凭据、网页抓取、遥测、云端转发或权限；
-- 不读取或迁入多任务 Preview 的任务轨道、任务切换、当前任务跟随与仲裁
-  逻辑；
-- 手动关闭“显示灵动岛”不能卸载 Hook、关闭连接或丢失最新状态；
-- 连接开关继续独立管理 Codex Hook 与本地连接，不与显示开关互相冒充；
-- 隔离 Demo 保留在 `Prototypes/CodexActivityOrbVisualDemo` 作为动画调参和
-  回归证据，不再作为生产运行入口。
+- Helper 固定安装在 Application Support，合并 `~/.codex/hooks.json` 时保留
+  用户现有 Hook 并创建备份；首次连接只能引导用户在 Codex 中完成官方信任
+  审查，QuotaView 不自动确认；
+- Helper 只发送哈希会话 ID、工作区最后一级、事件类型、粗粒度工具类别、
+  SessionStart 来源和时间；
+- stdin 上限 2 MiB，Socket 消息上限 64 KiB；私有目录/Socket 权限分别为
+  `0700/0600`，握手使用随机令牌并校验文件所有者与时效；
+- 连接开关管理 Hook/Socket，显示开关只管理窗口，两者不得互相冒充。
 
-## 5. 验证证据与出口条件
+## Requirement 与验收
 
-- 隔离 Demo：5 项测试、九状态 `128 × 128` Metal 离屏绘制通过；产品
-  所有者已确认视觉、圆形轮廓和加快 50% 的节奏；
-- 生产 `swift test`：66 项通过，0 失败；覆盖设置默认值、持久化、时间档位
-  归一、运行中重新计时和“波澜光晕”资源/Pipeline；
-- Universal Xcode Release 无签名构建通过；App、Widget 和 Hook 均为
-  `x86_64 arm64`；App/Widget 均读取为 `0.3.6 / 7 / 产品 Build 2`；
-- `AppIcon.icns`、`Assets.car` 和 `CodexActivityRippleGlowShader.txt` 均已
-  进入 App 包；
-- 正式资产为 `QuotaView-v0.3.6-build.2.zip`，大小 `12,861,638 bytes`，
-  SHA-256
-  `b90e05ee724f8adf7856be469476f8b2224304a981c8869e4200aee4ce525bae`；
-- Developer ID、Hardened Runtime、Apple notarization `Accepted` 与 Staple
-  已完成，Submission `ff3fef0b-d92f-47cd-8798-3cb388aa2d9e`；
-- GitHub 回下载 ZIP 与本地正式资产逐字节一致；全新解压后通过严格深度
-  签名、Gatekeeper、Staple、版本、资源与 Universal 架构复核；
-- 产品所有者已在 2026-08-23 明确批准 `0.3.6 Build 2` 进入完整稳定发布
-  和自动更新序列；`v0.3.6-build.2` Stable/Latest Release 与公开 appcast
-  已发布，Feed SHA-256
-  `06a9007a3814192deb6469490dadb2b0ca540b3ea6c836a7a623c0107c94a211`，线上
-  文件逐字节一致且 EdDSA 验证通过；
-- 本规格交付状态因此进入 `Released`。完整视觉与辅助功能交叉矩阵没有单独
-  记录为全量通过；该未记录项不改写已经发生的 Release 事实。
+| ID | 要求 |
+|---|---|
+| `ACTIVITY-ISLAND-01` | 单一非激活窗口、九状态和稳定事件顺序 |
+| `ACTIVITY-ISLAND-02` | 最小脱敏本地链路及有界输入、权限和信任审查 |
+| `ACTIVITY-ISLAND-03` | 显示开关不改变连接和最新状态 |
+| `ACTIVITY-ISLAND-04` | 两种动画共用生产渲染器并覆盖九状态、Reduce Motion 与失败回退 |
+| `ACTIVITY-ISLAND-05` | 两段时间范围、5 秒档位、持久化和运行中重新计时 |
+| `ACTIVITY-ISLAND-06` | 中英文、键盘、VoiceOver 与设置页系统语义样式 |
+
+0.3.6 的 Demo、66 项测试、Universal 构建与正式发布均已完成；不可变资产、
+签名、公证、Release 和 appcast 证据见
+[`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#036-build-2)。完整生产视觉与
+辅助功能交叉矩阵仍按 [`design-qa.md`](../../design-qa.md) 记录，不由发布事实
+自动推导为通过。

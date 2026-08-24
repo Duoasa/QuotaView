@@ -70,19 +70,7 @@
 > 不足，因此该版本不晋升为稳定版；其实现不包含在 0.3.6 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
-> [SDD 当前状态](docs/specs/README.md#1-当前状态) 为准。
-
-### 版本定位规则
-
-1. 新会话先读取 [HANDOFF.md](HANDOFF.md) 顶部的版本定位链接。
-2. 按该入口跳转到本节，确认最新版本、tag、资产和发布状态。
-3. 回到 `HANDOFF.md` 阅读当前工作区、已完成事项和下一次迭代建议。
-4. 打开 `docs/specs/README.md` 确认当前迭代的规格状态和交付状态。
-5. 如本文件、`HANDOFF.md` 与生产代码中的版本号不一致，以用户当前指令和
-   生产代码为准，并在同一任务内同步修正两份文档。
-6. 不得把已撤回版本重新标记为最新版本，也不得移动已有正式 tag。
-7. 新版本只有完成正式签名、公证、资产验证和 Release 后才能加入版本总览
-   并切换 Latest；必须使用唯一的 tag 与 ZIP 文件名。
+> [SDD 当前规格](docs/specs/README.md#当前规格) 为准。
 
 ## 版本总览
 
@@ -633,22 +621,3 @@ Tag：`v0.1.0`
 - `QuotaView-v0.1.0.zip`
 - SHA-256：
   `5a4412794f78fc8a340b9fbb7c9eca7908cc5395dcd21fcb6fce8f39998b88fe`
-
-## 维护规则
-
-- 每次正式发布、撤回版本或修改 Latest 指向时，必须同步更新：
-  - 本文件的“当前最新版本”；
-  - 版本总览；
-  - 对应版本详情；
-  - [HANDOFF.md](HANDOFF.md) 的当前版本与下一步。
-- Prototype、计划版本和候选构建只记录在 SDD 索引与 Handoff，不得进入
-  本文件的正式版本总览；只有 Release 已实际完成后才补写发布历史。
-- 版本记录只写已经发生并可由 tag、Release、生产代码或验证日志确认的
-  事实；计划中的版本不得提前写成已发布。
-- 删除 Release 时仍保留一条“已撤回”历史记录，说明原因和替代版本，
-  防止后续 Codex 重复使用问题版本。
-- GitHub Release Notes 使用单份英文源文，避免与 GitHub 自动翻译产生
-  重复内容。
-- 不移动或覆盖已发布 tag；同一 Marketing Version 的热更新使用递增的产品
-  Build Number、唯一 tag 和资产名；Marketing Version 改变时产品 Build
-  归 1，但 Sparkle 内部更新序号仍必须递增。
