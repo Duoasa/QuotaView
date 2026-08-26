@@ -4,11 +4,11 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
-> 当前开发：`0.3.7 Build 1`（Sparkle 内部序号 `11`）
+> 当前生产：`0.3.7 Build 1`（Sparkle 内部序号 `11`）
 >
-> 已发布基线：`0.3.6 Build 2`（Sparkle 内部序号 `7`）
+> 回滚基线：`0.3.6 Build 2`（Sparkle 内部序号 `7`）
 
 本文件合并了 0.3.1 的稳定单任务基础契约与 0.3.6 的个性化升级，是当前
 生产灵动岛的唯一规格。`0.3.2 Preview 1` 多任务实验不属于本规格。
@@ -102,8 +102,9 @@
 不可变资产、签名、公证、Release 和 appcast 证据见
 [`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#036-build-2)。完整生产视觉与
 辅助功能交叉矩阵仍按 [`design-qa.md`](../../design-qa.md) 记录，不由发布
-事实自动推导为通过。0.3.7 Build 1 的屏幕定位实现、72 项测试和 Universal
-无签名 Release 构建已通过，App、Widget 与 Activity Hook 均为
-`x86_64 + arm64`；多屏视觉与交互等待产品所有者验收，尚未签名、发布或
-进入 appcast；该精确版本已获准启动正式签名、公证与发布链，完成前仍保持
-`Verifying`。
+事实自动推导为通过。0.3.7 Build 1 的屏幕定位实现、72 项测试、GitHub CI、
+Universal、Developer ID、公证/Staple、回下载启动冒烟与公开 appcast 均已
+完成，完整证据见
+[`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#037-build-1)。多屏视觉、
+VoiceOver 与完整外观交叉矩阵仍等待产品所有者按需验收，不由 `Released`
+自动推导为全量通过。
