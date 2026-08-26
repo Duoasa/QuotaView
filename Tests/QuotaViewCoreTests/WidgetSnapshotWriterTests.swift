@@ -1,4 +1,5 @@
 import Foundation
+import QuotaViewCore
 import QuotaViewWidgetContract
 import XCTest
 @testable import QuotaView
@@ -191,6 +192,15 @@ final class WidgetSnapshotWriterTests: XCTestCase {
             remainingPercent: remainingPercent,
             windowDurationMinutes: 10_080,
             resetsAt: now.addingTimeInterval(3_600),
+            quotaWindows: [
+                CodexQuotaWindowPresentation(
+                    id: CodexDomainCatalog.primaryRateWindowID,
+                    usedPercent: 100 - remainingPercent,
+                    remainingPercent: remainingPercent,
+                    windowDurationMinutes: 10_080,
+                    resetsAt: now.addingTimeInterval(3_600)
+                )
+            ],
             sparkQuota: nil,
             creditBalance: creditBalance,
             hasCredits: creditBalance != nil,

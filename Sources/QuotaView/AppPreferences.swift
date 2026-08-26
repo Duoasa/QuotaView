@@ -60,6 +60,13 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum CodexActivityScreenPlacement: String, CaseIterable, Identifiable {
+        case followHotspot
+        case codexScreen
+
+        var id: String { rawValue }
+    }
+
     enum CodexActivityTiming {
         static let compactDelayRange = 5...60
         static let hiddenDelayAfterCompactRange = 5...120
@@ -90,6 +97,8 @@ final class AppPreferences: ObservableObject {
             "preferences.codexActivity.islandEnabled"
         static let codexActivityOrbAnimation =
             "preferences.codexActivity.orbAnimation"
+        static let codexActivityScreenPlacement =
+            "preferences.codexActivity.screenPlacement"
         static let codexActivityCompactDelay =
             "preferences.codexActivity.compactDelay"
         static let codexActivityHiddenDelayAfterCompact =
@@ -193,6 +202,16 @@ final class AppPreferences: ObservableObject {
             defaults.set(
                 codexActivityOrbAnimation.rawValue,
                 forKey: Key.codexActivityOrbAnimation
+            )
+        }
+    }
+
+    @Published var codexActivityScreenPlacement:
+        CodexActivityScreenPlacement {
+        didSet {
+            defaults.set(
+                codexActivityScreenPlacement.rawValue,
+                forKey: Key.codexActivityScreenPlacement
             )
         }
     }
@@ -355,6 +374,11 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.codexActivityOrbAnimation
             ) ?? ""
         ) ?? .particleOrb
+        codexActivityScreenPlacement = CodexActivityScreenPlacement(
+            rawValue: defaults.string(
+                forKey: Key.codexActivityScreenPlacement
+            ) ?? ""
+        ) ?? .followHotspot
         codexActivityCompactDelay = Self.normalizedTimingValue(
             defaults.storedInt(
                 forKey: Key.codexActivityCompactDelay,
@@ -392,6 +416,10 @@ final class AppPreferences: ObservableObject {
         defaults.set(
             codexActivityOrbAnimation.rawValue,
             forKey: Key.codexActivityOrbAnimation
+        )
+        defaults.set(
+            codexActivityScreenPlacement.rawValue,
+            forKey: Key.codexActivityScreenPlacement
         )
         defaults.set(
             codexActivityCompactDelay,

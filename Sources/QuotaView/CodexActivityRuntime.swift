@@ -291,6 +291,7 @@ final class CodexActivityRuntime: ObservableObject {
     private var preferenceCancellable: AnyCancellable?
     private var timingPreferenceCancellable: AnyCancellable?
     private var accessibilityCancellable: AnyCancellable?
+    private var screenTrackingCancellable: AnyCancellable?
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
     private var securityReviewObservationTask: Task<Void, Never>?
@@ -406,6 +407,20 @@ final class CodexActivityRuntime: ObservableObject {
             }
             Task { @MainActor in
                 self?.refreshConnectionStatus()
+            }
+        }
+        .store(in: &workspaceCancellables)
+
+        NotificationCenter.default.publisher(
+            for: NSApplication.didChangeScreenParametersNotification
+        )
+        .merge(with: workspaceCenter.publisher(
+            for: NSWorkspace.didActivateApplicationNotification
+        ))
+        .receive(on: RunLoop.main)
+        .sink { [weak self] _ in
+            Task { @MainActor in
+                self?.render()
             }
         }
         .store(in: &workspaceCancellables)
@@ -974,6 +989,8 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     private func render() {
+        defer { reconcileScreenTracking() }
+
         guard preferences.codexActivityIslandEnabled else {
             island?.hide()
             return
@@ -1012,11 +1029,16 @@ final class CodexActivityRuntime: ObservableObject {
         )
         let presentation: CodexActivityIslandPresentation =
             store.presentation == .compact ? .compact : .expanded
+        let codexProcessIdentifier =
+            Self.runningCodexProcessIdentifier()
 
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
-                orbAnimation: preferences.codexActivityOrbAnimation
+                orbAnimation: preferences.codexActivityOrbAnimation,
+                screenPlacement:
+                    preferences.codexActivityScreenPlacement,
+                codexProcessIdentifier: codexProcessIdentifier
             )
         }
         island?.update(
@@ -1027,8 +1049,45 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
-            orbAnimation: preferences.codexActivityOrbAnimation
+            orbAnimation: preferences.codexActivityOrbAnimation,
+            screenPlacement: preferences.codexActivityScreenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
         )
+    }
+
+    private func reconcileScreenTracking() {
+        let shouldTrack = preferences.codexActivityIslandEnabled
+            && preferences.codexActivityScreenPlacement == .codexScreen
+            && island?.isVisible == true
+
+        guard shouldTrack else {
+            screenTrackingCancellable?.cancel()
+            screenTrackingCancellable = nil
+            return
+        }
+        guard screenTrackingCancellable == nil else { return }
+
+        screenTrackingCancellable = Timer.publish(
+            every: 1,
+            on: .main,
+            in: .common
+        )
+        .autoconnect()
+        .sink { [weak self] _ in
+            Task { @MainActor in
+                guard let self,
+                      let island = self.island,
+                      island.isVisible
+                else {
+                    return
+                }
+                island.reposition(
+                    screenPlacement: .codexScreen,
+                    codexProcessIdentifier:
+                        Self.runningCodexProcessIdentifier()
+                )
+            }
+        }
     }
 
     private var shouldRenderDisconnectedIsland: Bool {
@@ -1059,11 +1118,16 @@ final class CodexActivityRuntime: ObservableObject {
                 operation: operation
             )
         )
+        let codexProcessIdentifier =
+            Self.runningCodexProcessIdentifier()
 
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
-                orbAnimation: preferences.codexActivityOrbAnimation
+                orbAnimation: preferences.codexActivityOrbAnimation,
+                screenPlacement:
+                    preferences.codexActivityScreenPlacement,
+                codexProcessIdentifier: codexProcessIdentifier
             )
         }
         island?.update(
@@ -1074,7 +1138,9 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
-            orbAnimation: preferences.codexActivityOrbAnimation
+            orbAnimation: preferences.codexActivityOrbAnimation,
+            screenPlacement: preferences.codexActivityScreenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
         )
     }
 

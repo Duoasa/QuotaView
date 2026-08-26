@@ -8,7 +8,8 @@ struct DailyTokenActivity: Equatable, Sendable, Identifiable {
     var id: Date { date }
 }
 
-struct CodexQuotaWindowPresentation: Equatable, Sendable {
+struct CodexQuotaWindowPresentation: Equatable, Sendable, Identifiable {
+    let id: EntityID
     let usedPercent: Int
     let remainingPercent: Int
     let windowDurationMinutes: Int?
@@ -36,6 +37,7 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let remainingPercent: Int
     let windowDurationMinutes: Int?
     let resetsAt: Date?
+    let quotaWindows: [CodexQuotaWindowPresentation]
     let sparkQuota: CodexQuotaWindowPresentation?
     let creditBalance: String?
     let hasCredits: Bool
@@ -91,6 +93,7 @@ struct CurrentCodexPresentationProjector {
             from: result.historicalObservations
         )
         let latestDailyActivity = tokenActivity.last
+        let quotaWindows = coreQuotaWindows(from: snapshot)
         let sparkQuota = snapshot.rateWindows
             .first(where: {
                 $0.id == CodexDomainCatalog.sparkRateWindowID
@@ -106,6 +109,7 @@ struct CurrentCodexPresentationProjector {
                 primaryWindow.period
             ),
             resetsAt: primaryWindow.resetsAt,
+            quotaWindows: quotaWindows,
             sparkQuota: sparkQuota,
             creditBalance: decimalString(creditBalance?.value),
             hasCredits: creditBalance?.hasBalance ?? false,
@@ -141,11 +145,34 @@ struct CurrentCodexPresentationProjector {
         }
 
         return CodexQuotaWindowPresentation(
+            id: window.id,
             usedPercent: percent(from: usedFraction),
             remainingPercent: percent(from: remainingFraction),
             windowDurationMinutes: durationMinutes(window.period),
             resetsAt: window.resetsAt
         )
+    }
+
+    private func coreQuotaWindows(
+        from snapshot: ProviderSnapshot
+    ) -> [CodexQuotaWindowPresentation] {
+        let stableOrder = [
+            CodexDomainCatalog.primaryRateWindowID: 0,
+            CodexDomainCatalog.secondaryRateWindowID: 1
+        ]
+
+        return snapshot.rateWindows
+            .filter { stableOrder[$0.id] != nil }
+            .compactMap(quotaWindowPresentation)
+            .sorted { left, right in
+                let leftDuration = left.windowDurationMinutes ?? Int.max
+                let rightDuration = right.windowDurationMinutes ?? Int.max
+                if leftDuration != rightDuration {
+                    return leftDuration < rightDuration
+                }
+                return stableOrder[left.id, default: Int.max]
+                    < stableOrder[right.id, default: Int.max]
+            }
     }
 
     private func tokenActivity(

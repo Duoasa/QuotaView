@@ -4,9 +4,11 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Released`
+> 交付状态：`Verifying`
 >
-> 当前版本：`0.3.6 Build 2`（Sparkle 内部序号 `7`）
+> 当前开发：`0.3.7 Build 1`（Sparkle 内部序号 `11`）
+>
+> 已发布基线：`0.3.6 Build 2`（Sparkle 内部序号 `7`）
 
 本文件合并了 0.3.1 的稳定单任务基础契约与 0.3.6 的个性化升级，是当前
 生产灵动岛的唯一规格。`0.3.2 Preview 1` 多任务实验不属于本规格。
@@ -44,12 +46,23 @@
 | 设置 | 持久化键 | 默认值 / 有效值 |
 |---|---|---|
 | 显示灵动岛 | `preferences.codexActivity.islandEnabled` | 开启 |
+| 显示屏幕 | `preferences.codexActivity.screenPlacement` | `followHotspot`；可选 `codexScreen` |
 | 光球动画 | `preferences.codexActivity.orbAnimation` | `particleOrb`；可选 `rippleGlow` |
 | 完成后缩小 | `preferences.codexActivity.compactDelay` | 20 秒；`5...60`，步进 5 |
 | 缩小后隐藏 | `preferences.codexActivity.hiddenDelayAfterCompact` | 100 秒；`5...120`，步进 5 |
 
 - 关闭显示只隐藏浮窗，不卸载 Hook、不关闭 Socket 或丢失最新状态；重新
   开启后按真实状态恢复；
+- “跟随热区”保持既有 `NSScreen.main` 定位；“Codex 屏幕”使用 Codex
+  进程最大可见、零层级窗口与显示器的实际交集确定目标屏幕，窗口跨屏时
+  选择交集面积更大的屏幕；
+- 设置页使用单一“锁定到 Codex 屏幕”开关表达两种互斥状态：关闭对应
+  `followHotspot`，开启对应 `codexScreen`；
+- Codex 未运行、窗口最小化/隐藏、窗口几何不可用或目标显示器已断开时，
+  自动回退“跟随热区”，不得让灵动岛消失或停留在屏幕外；切换设置、激活
+  应用或显示器配置改变后重新定位；
+- 仅当“Codex 屏幕”模式且灵动岛可见时，以 1 秒间隔复核窗口屏幕；隐藏、
+  关闭灵动岛或切回“跟随热区”后必须停止该计时与窗口查询；
 - 设置页使用“上方实时预览、下方名称”的粒子球/波澜光晕双选项；预览与
   生产浮窗复用同一渲染器；
 - 粒子球保持既有九状态 Metal 动画；波澜光晕使用 `style = 9`、128 个
@@ -66,6 +79,9 @@
   审查，QuotaView 不自动确认；
 - Helper 只发送哈希会话 ID、工作区最后一级、事件类型、粗粒度工具类别、
   SessionStart 来源和时间；
+- 屏幕定位只读取 Codex 进程 ID、可见窗口矩形和显示器矩形；不读取窗口
+  标题、窗口内容或像素，不申请辅助功能或屏幕录制权限，非 Codex 条目
+  立即丢弃；
 - stdin 上限 2 MiB，Socket 消息上限 64 KiB；私有目录/Socket 权限分别为
   `0700/0600`，握手使用随机令牌并校验文件所有者与时效；
 - 连接开关管理 Hook/Socket，显示开关只管理窗口，两者不得互相冒充。
@@ -80,9 +96,14 @@
 | `ACTIVITY-ISLAND-04` | 两种动画共用生产渲染器并覆盖九状态、Reduce Motion 与失败回退 |
 | `ACTIVITY-ISLAND-05` | 两段时间范围、5 秒档位、持久化和运行中重新计时 |
 | `ACTIVITY-ISLAND-06` | 中英文、键盘、VoiceOver 与设置页系统语义样式 |
+| `ACTIVITY-ISLAND-07` | 可持久化选择跟随热区或 Codex 屏幕；多屏、跨屏与不可定位状态必须稳定回退 |
 
-0.3.6 的 Demo、66 项测试、Universal 构建与正式发布均已完成；不可变资产、
-签名、公证、Release 和 appcast 证据见
+0.3.6 Build 2 的 Demo、66 项测试、Universal 构建与正式发布均已完成；
+不可变资产、签名、公证、Release 和 appcast 证据见
 [`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#036-build-2)。完整生产视觉与
-辅助功能交叉矩阵仍按 [`design-qa.md`](../../design-qa.md) 记录，不由发布事实
-自动推导为通过。
+辅助功能交叉矩阵仍按 [`design-qa.md`](../../design-qa.md) 记录，不由发布
+事实自动推导为通过。0.3.7 Build 1 的屏幕定位实现、72 项测试和 Universal
+无签名 Release 构建已通过，App、Widget 与 Activity Hook 均为
+`x86_64 + arm64`；多屏视觉与交互等待产品所有者验收，尚未签名、发布或
+进入 appcast；该精确版本已获准启动正式签名、公证与发布链，完成前仍保持
+`Verifying`。

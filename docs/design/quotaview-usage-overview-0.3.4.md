@@ -10,6 +10,9 @@
 估算。数据沿用现有 Codex App Server，不增加请求接口、凭据、权限、网页
 抓取或账户写操作。Token 网格细节由
 [`QV-PRODUCT-TOKEN-ACTIVITY-001`](quotaview-token-activity.md) 独占定义。
+主额度的多周期映射、排序与动态高度已由
+[`QV-PRODUCT-QUOTA-WINDOWS-003`](quotaview-quota-windows-0.3.6-build.3.md)
+增量取代；本文件其余 Spark、Token 与成本规则继续有效。
 
 ## 主额度与 Spark
 

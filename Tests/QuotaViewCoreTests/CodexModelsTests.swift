@@ -182,10 +182,86 @@ final class CodexModelsTests: XCTestCase {
         )
     }
 
+    func testProviderMapsPrimaryAndSecondaryRateWindows() throws {
+        let result = try makeResult(
+            usedPercent: 34,
+            reachedType: nil,
+            resetCredits: 0,
+            secondaryUsedPercent: 61
+        )
+        let primary = try XCTUnwrap(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.primaryRateWindowID
+            })
+        )
+        let secondary = try XCTUnwrap(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.secondaryRateWindowID
+            })
+        )
+
+        XCTAssertEqual(primary.period, .duration(minutes: 10_080))
+        XCTAssertEqual(secondary.period, .duration(minutes: 300))
+        XCTAssertEqual(
+            secondary.usedFraction ?? -1,
+            0.61,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            secondary.remainingFraction ?? -1,
+            0.39,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            secondary.resetsAt,
+            Date(timeIntervalSince1970: 1_785_018_000)
+        )
+    }
+
+    func testInvalidSecondaryRateWindowDoesNotInvalidatePrimary() throws {
+        let result = try makeResult(
+            usedPercent: 34,
+            reachedType: nil,
+            resetCredits: 0,
+            secondaryUsedPercent: 101
+        )
+
+        XCTAssertNotNil(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.primaryRateWindowID
+            })
+        )
+        XCTAssertNil(
+            result.snapshot.rateWindows.first(where: {
+                $0.id == CodexDomainCatalog.secondaryRateWindowID
+            })
+        )
+    }
+
+    func testSecondaryAndSparkWindowsRemainIndependent() throws {
+        let result = try makeResult(
+            usedPercent: 34,
+            reachedType: nil,
+            resetCredits: 0,
+            secondaryUsedPercent: 61,
+            sparkUsedPercent: 42
+        )
+
+        XCTAssertEqual(
+            Set(result.snapshot.rateWindows.map(\.id)),
+            Set([
+                CodexDomainCatalog.primaryRateWindowID,
+                CodexDomainCatalog.secondaryRateWindowID,
+                CodexDomainCatalog.sparkRateWindowID
+            ])
+        )
+    }
+
     private func makeResult(
         usedPercent: Int,
         reachedType: String?,
         resetCredits: Int,
+        secondaryUsedPercent: Int? = nil,
         sparkUsedPercent: Int? = nil,
         now: Date = Date(timeIntervalSince1970: 1_785_000_000)
     ) throws -> ProviderFetchResult {
@@ -194,6 +270,7 @@ final class CodexModelsTests: XCTestCase {
                 usedPercent: usedPercent,
                 reachedType: reachedType,
                 resetCredits: resetCredits,
+                secondaryUsedPercent: secondaryUsedPercent,
                 sparkUsedPercent: sparkUsedPercent
             ),
             usage: try decodeUsage(),
@@ -209,10 +286,20 @@ final class CodexModelsTests: XCTestCase {
         usedPercent: Int,
         reachedType: String?,
         resetCredits: Int,
+        secondaryUsedPercent: Int?,
         sparkUsedPercent: Int?
     ) throws -> AccountRateLimitsResponse {
         let reachedValue = reachedType.map {
             "\"\($0)\""
+        } ?? "null"
+        let secondaryWindow = secondaryUsedPercent.map {
+            """
+            {
+              "usedPercent": \($0),
+              "windowDurationMins": 300,
+              "resetsAt": 1785018000
+            }
+            """
         } ?? "null"
         let mainLimits = """
         {
@@ -223,7 +310,7 @@ final class CodexModelsTests: XCTestCase {
               "windowDurationMins": 10080,
               "resetsAt": 1785303228
             },
-            "secondary": null,
+            "secondary": \(secondaryWindow),
             "credits": {
               "hasCredits": false,
               "unlimited": false,

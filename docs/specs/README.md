@@ -6,7 +6,7 @@
 >
 > 生产基线：`0.3.6 Build 2`
 >
-> 当前开发：尚未定义
+> 当前开发：`0.3.7 Build 1`（Sparkle 内部更新序号 `11`）
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,7 +14,8 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | 0.3.6 已发布；多任务实验不在稳定范围 |
+| `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Verifying` | 已纳入 0.3.7 Build 1 发布候选并获 Stable appcast 准入 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Verifying` | 0.3.7 Build 1 新增“锁定到 Codex 屏幕”开关；多任务实验不在稳定范围 |
 | `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | Stable Feed 已发布；真实 N → N+1 安装操作待记录 |
 
 当前版本与下一步见 [Handoff](../../HANDOFF.md)，不可变发布事实见
