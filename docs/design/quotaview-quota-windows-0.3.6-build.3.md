@@ -4,11 +4,11 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
-> 生产基线：`0.3.6 Build 2`
+> 生产版本：`0.3.7 Build 1`
 >
-> 最终发布候选：`0.3.7 Build 1`；Sparkle 内部更新序号 `11`
+> Sparkle 内部更新序号：`11`
 
 ## 决策
 
@@ -60,14 +60,14 @@ Spark 继续作为 `codex_bengalfox` 的独立中性窗口，位于全部 Codex 
 - 核对 App、Widget 的 Marketing Version、内部更新序号和产品 Build；
 - 搜索临时 Mock/UI QA 入口并执行 `git diff --check`；
 - 深浅色、中英文、单/双主窗口、Spark 有无及顶部锚定由产品所有者手动
-  验收，完成前交付状态保持 `Verifying`。
+  验收；未形成完整交叉矩阵时如实保留为未记录，不由发布事实推导为通过。
 
 ## 非目标
 
 - 不修改 OpenAI 限额规则，不承诺某一订阅恒定拥有某个周期；
 - 不扩展 Widget 共享快照为多窗口；
 - 不新增额度窗口显隐开关或手动排序；
-- 本规格不改变既有发布机制；0.3.7 Build 1 是否发布仅由精确版本准入决定。
+- 本规格不改变既有发布机制；任何后续版本仍需独立的精确版本准入。
 
 ## 当前验证记录
 
@@ -75,7 +75,9 @@ Spark 继续作为 `codex_bengalfox` 的独立中性窗口，位于全部 Codex 
   Spark 并存以及短周期优先排序；
 - Universal Xcode Release 无签名构建通过；App、Widget、Activity Hook 与
   Core 均为 `x86_64 arm64`；
-- App 与 Widget 候选身份均为 Marketing Version `0.3.7`、Sparkle 内部序号
+- App 与 Widget 身份均为 Marketing Version `0.3.7`、Sparkle 内部序号
   `11`、产品 Build `1`；`Assets.car`、`AppIcon.icns` 与波澜光晕资源存在；
-- 视觉与交互结果等待产品所有者在真实账户的单/双窗口数据下验收；尚未
-  完整签名发布链执行中。
+- Developer ID、公证/Staple、GitHub Latest、回下载启动冒烟与公开签名
+  appcast 均已完成，完整证据见
+  [`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#037-build-1)；真实账户下
+  的完整深浅色与单/双窗口视觉矩阵仍等待产品所有者按需验收。
