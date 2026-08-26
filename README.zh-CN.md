@@ -375,3 +375,13 @@ QuotaView 是开源项目，采用 [MIT 许可证](LICENSE)发布。
 欢迎提交 Bug、兼容性报告和目标明确的功能建议。请先使用 [Issue 模板](https://github.com/Duoasa/QuotaView/issues/new/choose)，准备代码改动前请阅读 [SDD 规格索引](docs/specs/README.md) 和 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 请勿在 Issue 中包含身份认证 Token、登录凭据或未经脱敏的 `~/.codex` 文件。
+
+## 用户反馈社群
+
+遇到问题、发现 Bug，或者有新想法？欢迎扫码加入 QuotaView QQ 反馈群，一起把 QuotaView 做得更好。
+
+**QQ群：1108649282**
+
+<p align="center">
+  <img src="Resources/QuotaView-QQ-Feedback-Community.jpg" alt="QuotaView QQ 反馈群二维码，群号 1108649282" width="320">
+</p>

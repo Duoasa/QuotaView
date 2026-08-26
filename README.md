@@ -409,3 +409,13 @@ QuotaView is open-source software released under the [MIT License](LICENSE).
 Bug reports, compatibility reports, and focused feature proposals are welcome. Start with the [issue templates](https://github.com/Duoasa/QuotaView/issues/new/choose). Before preparing a code change, read the [SDD specification index](docs/specs/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Please never include authentication tokens, credentials, or an unredacted `~/.codex` file in an issue.
+
+## User feedback community
+
+Found a bug, have a question, or want to share an idea? Scan the code to join the QuotaView QQ feedback group and help make QuotaView better.
+
+**QQ group: 1108649282**
+
+<p align="center">
+  <img src="Resources/QuotaView-QQ-Feedback-Community.jpg" alt="QuotaView QQ feedback group QR code, group number 1108649282" width="320">
+</p>
