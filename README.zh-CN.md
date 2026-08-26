@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.6-build.2/QuotaView-v0.3.6-build.2.zip"><strong>下载 QuotaView v0.3.6 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.7-build.1/QuotaView-v0.3.7-build.1.zip"><strong>下载 QuotaView v0.3.7 Build 1</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -53,11 +53,11 @@ QuotaView 是一款开源、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.3.6 Build 2 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2) 下载 `QuotaView-v0.3.6-build.2.zip`。
+2. 前往 [v0.3.7 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1) 下载 `QuotaView-v0.3.7-build.1.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.3.6 Build 2 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
+> v0.3.7 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
 > 可在解压后正常打开，不再需要旧版未签名构建所使用的 Finder 右键打开
 > 方式。
 
@@ -88,6 +88,24 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 支持简体中文和英文界面
 - 原生设置窗口包含菜单栏、面板内容、Codex 灵动岛、外观、语言和通用选项
 - 提供小号与中号两种原生 WidgetKit 小组件
+
+## 0.3.7 新功能：多周期额度与可锁定屏幕的 Codex 灵动岛
+
+QuotaView 0.3.7 可完整显示同一账户的多个 Codex 核心额度窗口，并为多显示器
+用户提供一个简洁选项，让 Codex 灵动岛留在 Codex 所在的屏幕。
+
+- 独立显示所有有效 Codex 核心额度，并按周期从短到长排列，5 小时与周额度
+  不再互相覆盖；
+- 根据 Codex 返回的真实周期生成额度标题，不根据订阅名称猜测。次窗口缺失
+  或无效时会直接隐藏，不显示虚假的 0；
+- Spark 继续作为独立的中性额度显示在核心窗口之后，拥有自己的用量与重置
+  倒计时，并且不重复显示订阅方案；
+- 新增单一的**锁定到 Codex 屏幕**开关。开启后，灵动岛跟随最大可见 Codex
+  窗口所在的显示器；关闭后继续跟随当前菜单栏热区；
+- Codex 隐藏、最小化、未运行或无法定位时会安全回退到热区。屏幕选择只读取
+  进程及窗口/显示器几何信息，不读取标题、内容或像素，也不申请新权限；
+- 保留 0.3.6 的稳定单任务灵动岛、粒子球与波澜光晕、收起时间自定义和
+  Reduce Motion 支持。
 
 ## 0.3.6 新功能：更符合个人工作流的 Codex 灵动岛
 
@@ -134,7 +152,7 @@ QuotaView 0.3.5 将 0.3.4 扩展的用量概览纳入稳定版本，并首次支
   不会访问更新源。
 
 0.3.5 Build 5 是首个包含更新器的版本，因此需要手动安装；符合正式签名
-环境的安装现在可以通过 Stable 通道更新到 0.3.6 Build 2。
+环境的安装现在可以通过 Stable 通道更新到 0.3.7 Build 1。
 
 ## 0.3.3 新功能：Token 活动统计
 
@@ -160,7 +178,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
 
 > [!NOTE]
 > 0.3.2 Preview 1 是用于验证 Codex 灵动岛多任务体验的抢先预览版。
-> v0.3.6 Build 2 是推荐稳定版，不包含这套实验性多任务实现。
+> v0.3.7 Build 1 是推荐稳定版，不包含这套实验性多任务实现。
 
 [下载 QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
@@ -183,7 +201,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
   发生调整时，可能出现跟随滞后或未命中；
 - 任务切换、长标题跑马灯以及最大态/紧凑态切换节奏仍需要继续优化体验与
   性能；
-- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.3.6 Build 2。
+- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.3.7 Build 1。
 
 ## 0.3.1 Build 2 小组件热修复
 

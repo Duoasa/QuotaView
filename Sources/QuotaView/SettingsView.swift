@@ -291,8 +291,9 @@ struct SettingsView: View {
             preferenceToggle(
                 copy.text("周期用量概览", "Quota overview"),
                 subtitle: copy.text(
-                    "显示当前周期的已用量和剩余量。",
-                    "Show used and remaining quota for the current cycle."
+                    "显示所有可用周期的已用量、剩余量和重置时间。",
+                    "Show usage, remaining quota, and reset time for all "
+                        + "available cycles."
                 ),
                 isOn: $preferences.showUsageSummary
             )
@@ -512,6 +513,47 @@ struct SettingsView: View {
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text(
+                        "锁定到 Codex 屏幕",
+                        "Lock to Codex Screen"
+                    ),
+                    subtitle: copy.text(
+                        "开启后跟随最大可见 Codex 窗口所在屏幕；关闭时跟随当前热区，无法定位时也会自动回退到热区。",
+                        "When enabled, the island follows the screen containing the largest visible Codex window. When off or unavailable, it follows the current hotspot."
+                    )
+                ) {
+                    Toggle(
+                        copy.text(
+                            "锁定到 Codex 屏幕",
+                            "Lock to Codex Screen"
+                        ),
+                        isOn: Binding(
+                            get: {
+                                preferences
+                                    .codexActivityScreenPlacement
+                                    == .codexScreen
+                            },
+                            set: { isEnabled in
+                                preferences
+                                    .codexActivityScreenPlacement =
+                                    isEnabled
+                                        ? .codexScreen
+                                        : .followHotspot
+                            }
+                        )
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .help(copy.text(
+                        "控制灵动岛是否锁定到 Codex 所在屏幕。",
+                        "Control whether the island stays on the Codex screen."
+                    ))
                 }
             }
 
@@ -951,7 +993,7 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.6"
+        ) as? String ?? "0.3.7"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "QuotaViewDisplayBuildNumber"
         ) as? String ?? Bundle.main.object(

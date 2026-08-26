@@ -203,7 +203,7 @@ struct QuotaViewFigmaMenu: View {
             header
 
             if showsUsageSummary {
-                summary
+                usageSummaries
             }
 
             if showsSparkQuotaSummary {
@@ -282,16 +282,52 @@ struct QuotaViewFigmaMenu: View {
         .accessibilityHidden(true)
     }
 
-    private var summary: some View {
-        quotaSummary(
-            title: copy.text("本周期剩余", "Period Remaining"),
-            remainingPercent: remainingPercent,
-            usedPercent: usedPercent,
-            resetsAt: store.snapshot?.resetsAt,
-            subscription: subscriptionLabel,
-            isAvailable: hasCodexStatus,
-            accessibilityLabel: copy.text("本周期额度", "Period quota")
-        )
+    @ViewBuilder
+    private var usageSummaries: some View {
+        if hasCodexStatus,
+           let windows = store.snapshot?.quotaWindows,
+           !windows.isEmpty {
+            ForEach(Array(windows.enumerated()), id: \.element.id) {
+                index,
+                window in
+                quotaSummary(
+                    title: quotaWindowTitle(
+                        durationMinutes: window.windowDurationMinutes
+                    ),
+                    remainingPercent: window.remainingPercent,
+                    usedPercent: window.usedPercent,
+                    resetsAt: window.resetsAt,
+                    subscription: index == 0 ? subscriptionLabel : nil,
+                    isAvailable: true,
+                    accessibilityLabel: quotaWindowAccessibilityLabel(
+                        durationMinutes: window.windowDurationMinutes
+                    )
+                )
+                .overlay(alignment: .bottom) {
+                    if index < windows.count - 1 {
+                        Rectangle()
+                            .fill(separatorColor)
+                            .frame(
+                                width: Layout.contentWidth,
+                                height: 0.5
+                            )
+                    }
+                }
+            }
+        } else {
+            quotaSummary(
+                title: copy.text("本周期剩余", "Period Remaining"),
+                remainingPercent: remainingPercent,
+                usedPercent: usedPercent,
+                resetsAt: store.snapshot?.resetsAt,
+                subscription: subscriptionLabel,
+                isAvailable: false,
+                accessibilityLabel: copy.text(
+                    "本周期额度",
+                    "Period quota"
+                )
+            )
+        }
     }
 
     @ViewBuilder
@@ -1140,6 +1176,63 @@ struct QuotaViewFigmaMenu: View {
         )
     }
 
+    private func quotaWindowTitle(
+        durationMinutes: Int?
+    ) -> String {
+        guard let durationMinutes, durationMinutes > 0 else {
+            return copy.text("本周期剩余", "Period Remaining")
+        }
+
+        if durationMinutes == 10_080 {
+            return copy.text("周额度剩余", "Weekly Limit Remaining")
+        }
+        if durationMinutes.isMultiple(of: 1_440) {
+            let days = durationMinutes / 1_440
+            return copy.text(
+                "\(days) 天额度剩余",
+                "\(days)-Day Limit Remaining"
+            )
+        }
+        if durationMinutes.isMultiple(of: 60) {
+            let hours = durationMinutes / 60
+            return copy.text(
+                "\(hours) 小时额度剩余",
+                "\(hours)-Hour Limit Remaining"
+            )
+        }
+        return copy.text(
+            "\(durationMinutes) 分钟额度剩余",
+            "\(durationMinutes)-Minute Limit Remaining"
+        )
+    }
+
+    private func quotaWindowAccessibilityLabel(
+        durationMinutes: Int?
+    ) -> String {
+        guard let durationMinutes, durationMinutes > 0 else {
+            return copy.text("本周期额度", "Period quota")
+        }
+
+        if durationMinutes == 10_080 {
+            return copy.text("周额度", "Weekly quota")
+        }
+        if durationMinutes.isMultiple(of: 1_440) {
+            let days = durationMinutes / 1_440
+            return copy.text("\(days) 天额度", "\(days)-day quota")
+        }
+        if durationMinutes.isMultiple(of: 60) {
+            let hours = durationMinutes / 60
+            return copy.text(
+                "\(hours) 小时额度",
+                "\(hours)-hour quota"
+            )
+        }
+        return copy.text(
+            "\(durationMinutes) 分钟额度",
+            "\(durationMinutes)-minute quota"
+        )
+    }
+
     private func remainingQuotaColor(
         _ remainingPercent: Int,
         isAvailable: Bool
@@ -1380,13 +1473,24 @@ struct QuotaViewFigmaMenu: View {
         for range: AppPreferences.TokenActivityRange
     ) -> CGFloat {
         Layout.headerHeight
-            + (showsUsageSummary ? Layout.summaryHeight : 0)
+            + CGFloat(usageSummaryCount) * Layout.summaryHeight
             + (showsSparkQuotaSummary ? Layout.sparkSummaryHeight : 0)
             + detailsHeight(
                 for: detailItems,
                 tokenActivityRange: range
             )
             + Layout.footerHeight
+    }
+
+    private var usageSummaryCount: Int {
+        guard showsUsageSummary else { return 0 }
+        guard hasCodexStatus,
+              let count = store.snapshot?.quotaWindows.count,
+              count > 0
+        else {
+            return 1
+        }
+        return count
     }
 
     private func detailsHeight(

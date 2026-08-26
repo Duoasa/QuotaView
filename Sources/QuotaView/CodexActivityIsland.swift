@@ -1899,17 +1899,138 @@ private final class CodexActivityPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+struct CodexActivityScreenLocator {
+    struct DisplayGeometry: Equatable {
+        let id: CGDirectDisplayID
+        let bounds: CGRect
+    }
+
+    static func screen(
+        forProcessIdentifier processIdentifier: pid_t,
+        screens: [NSScreen] = NSScreen.screens
+    ) -> NSScreen? {
+        guard processIdentifier > 0,
+              let windowInfo = CGWindowListCopyWindowInfo(
+                [.optionOnScreenOnly, .excludeDesktopElements],
+                kCGNullWindowID
+              ) as? [[String: Any]]
+        else {
+            return nil
+        }
+
+        let windowBounds = windowInfo.compactMap { entry -> CGRect? in
+            guard let ownerPID = entry[
+                kCGWindowOwnerPID as String
+            ] as? NSNumber,
+            ownerPID.int32Value == processIdentifier,
+            let layer = entry[kCGWindowLayer as String] as? NSNumber,
+            layer.intValue == 0,
+            ((entry[kCGWindowAlpha as String] as? NSNumber)?.doubleValue
+                ?? 1) > 0,
+            let boundsDictionary = entry[
+                kCGWindowBounds as String
+            ] as? NSDictionary,
+            let bounds = CGRect(
+                dictionaryRepresentation: boundsDictionary
+            ),
+            bounds.width > 1,
+            bounds.height > 1
+            else {
+                return nil
+            }
+            return bounds
+        }
+
+        let displayGeometries = screens.compactMap {
+            screen -> DisplayGeometry? in
+            let screenNumberKey = NSDeviceDescriptionKey(
+                "NSScreenNumber"
+            )
+            guard let screenNumber = screen.deviceDescription[
+                screenNumberKey
+            ] as? NSNumber
+            else {
+                return nil
+            }
+            let displayID = CGDirectDisplayID(
+                screenNumber.uint32Value
+            )
+            return DisplayGeometry(
+                id: displayID,
+                bounds: CGDisplayBounds(displayID)
+            )
+        }
+
+        guard let displayID = bestDisplayID(
+            windowBounds: windowBounds,
+            displays: displayGeometries
+        ) else {
+            return nil
+        }
+
+        return screens.first { screen in
+            let key = NSDeviceDescriptionKey("NSScreenNumber")
+            guard let number = screen.deviceDescription[key]
+                as? NSNumber
+            else {
+                return false
+            }
+            return number.uint32Value == displayID
+        }
+    }
+
+    static func bestDisplayID(
+        windowBounds: [CGRect],
+        displays: [DisplayGeometry]
+    ) -> CGDirectDisplayID? {
+        guard let largestWindow = (
+            windowBounds
+                .filter { $0.width > 1 && $0.height > 1 }
+                .max(by: { area(of: $0) < area(of: $1) })
+        )
+        else {
+            return nil
+        }
+
+        let bestMatch = displays
+            .map { display in
+                (
+                    display.id,
+                    area(of: largestWindow.intersection(display.bounds))
+                )
+            }
+            .filter { $0.1 > 0 }
+            .max { left, right in
+                if left.1 != right.1 {
+                    return left.1 < right.1
+                }
+                return left.0 > right.0
+            }
+        return bestMatch?.0
+    }
+
+    private static func area(of rect: CGRect) -> CGFloat {
+        guard !rect.isNull, !rect.isInfinite else { return 0 }
+        return max(0, rect.width) * max(0, rect.height)
+    }
+}
+
 @MainActor
 final class CodexActivityIslandPanelController {
     private let panel: CodexActivityPanel
     private let content: ActivityIslandContentView
     private var presentationMode:
         CodexActivityIslandPresentation = .expanded
+    private var targetSize: NSSize
 
     init(
         initialState: CodexActivityRenderState,
-        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        screenPlacement:
+            AppPreferences.CodexActivityScreenPlacement,
+        codexProcessIdentifier: pid_t?
     ) {
+        targetSize = initialState.visualState.activityWindowSize
         content = ActivityIslandContentView(
             initialState: initialState,
             orbAnimation: orbAnimation
@@ -1942,7 +2063,9 @@ final class CodexActivityIslandPanelController {
 
         positionPanel(
             size: initialState.visualState.activityWindowSize,
-            animated: false
+            animated: false,
+            screenPlacement: screenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
         )
     }
 
@@ -1951,7 +2074,10 @@ final class CodexActivityIslandPanelController {
         presentationMode: CodexActivityIslandPresentation,
         presentationAccessibilityValue: String,
         reduceMotion: Bool,
-        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        screenPlacement:
+            AppPreferences.CodexActivityScreenPlacement,
+        codexProcessIdentifier: pid_t?
     ) {
         let modeChanged = self.presentationMode != presentationMode
         self.presentationMode = presentationMode
@@ -1969,12 +2095,15 @@ final class CodexActivityIslandPanelController {
         let duration = modeChanged
             ? presentationMode.transitionDuration
             : 0.44
+        targetSize = presentationMode.panelSize(
+            for: renderState.visualState
+        )
         positionPanel(
-            size: presentationMode.panelSize(
-                for: renderState.visualState
-            ),
+            size: targetSize,
             animated: !reduceMotion,
-            duration: duration
+            duration: duration,
+            screenPlacement: screenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
         )
         panel.orderFrontRegardless()
     }
@@ -1983,12 +2112,36 @@ final class CodexActivityIslandPanelController {
         panel.orderOut(nil)
     }
 
+    var isVisible: Bool {
+        panel.isVisible
+    }
+
+    func reposition(
+        screenPlacement:
+            AppPreferences.CodexActivityScreenPlacement,
+        codexProcessIdentifier: pid_t?
+    ) {
+        positionPanel(
+            size: targetSize,
+            animated: true,
+            duration: 0.20,
+            screenPlacement: screenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
+        )
+    }
+
     private func positionPanel(
         size: NSSize,
         animated: Bool,
-        duration: TimeInterval = 0.44
+        duration: TimeInterval = 0.44,
+        screenPlacement:
+            AppPreferences.CodexActivityScreenPlacement,
+        codexProcessIdentifier: pid_t?
     ) {
-        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+        guard let screen = targetScreen(
+            for: screenPlacement,
+            codexProcessIdentifier: codexProcessIdentifier
+        ) else {
             return
         }
         let visibleFrame = screen.visibleFrame
@@ -1998,6 +2151,8 @@ final class CodexActivityIslandPanelController {
             width: size.width,
             height: size.height
         )
+
+        guard panel.frame != targetFrame else { return }
 
         guard animated, panel.isVisible else {
             panel.setFrame(targetFrame, display: true)
@@ -2011,6 +2166,20 @@ final class CodexActivityIslandPanelController {
             )
             panel.animator().setFrame(targetFrame, display: true)
         }
+    }
+
+    private func targetScreen(
+        for placement: AppPreferences.CodexActivityScreenPlacement,
+        codexProcessIdentifier: pid_t?
+    ) -> NSScreen? {
+        if placement == .codexScreen,
+           let codexProcessIdentifier,
+           let codexScreen = CodexActivityScreenLocator.screen(
+            forProcessIdentifier: codexProcessIdentifier
+           ) {
+            return codexScreen
+        }
+        return NSScreen.main ?? NSScreen.screens.first
     }
 }
 

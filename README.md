@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.6-build.2/QuotaView-v0.3.6-build.2.zip"><strong>Download QuotaView v0.3.6 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.7-build.1/QuotaView-v0.3.7-build.1.zip"><strong>Download QuotaView v0.3.7 Build 1</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -53,11 +53,11 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.6-build.2.zip` from the [v0.3.6 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.6-build.2).
+2. Download `QuotaView-v0.3.7-build.1.zip` from the [v0.3.7 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.6 Build 2 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.3.7 Build 1 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -89,6 +89,30 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - English and Simplified Chinese interfaces
 - Native Settings window for Menu Bar, Popover, Codex Island, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
+
+## What's new in 0.3.7: Multiple quota windows and a screen-aware Codex Island
+
+QuotaView 0.3.7 makes accounts with more than one Codex quota window fully
+visible and gives multi-display users a simple way to keep the Codex Island on
+the screen where Codex is located.
+
+- Displays every valid Codex core quota window independently and orders them
+  from the shortest period to the longest, so 5-hour and weekly limits no
+  longer overwrite one another.
+- Derives quota titles from the duration returned by Codex instead of guessing
+  from the subscription plan. Missing secondary data hides cleanly rather than
+  appearing as a false zero.
+- Keeps Spark as a separate, neutral quota below the core windows, with its own
+  usage and reset countdown and without repeating the subscription label.
+- Adds a single **Lock to Codex Screen** switch. When enabled, the Codex Island
+  follows the display containing the largest visible Codex window; when off,
+  it continues to follow the active menu-bar hotspot.
+- Falls back safely to the hotspot if Codex is hidden, minimized, unavailable,
+  or cannot be located. Screen selection reads only process and window/display
+  geometry—never titles, window contents, or pixels—and requests no new
+  permissions.
+- Keeps the stable single-task Island, both Particle Orb and Ripple Glow,
+  custom compact/hide timing, and Reduce Motion behavior from 0.3.6.
 
 ## What's new in 0.3.6: A Codex Island that fits your workflow
 
@@ -144,7 +168,7 @@ version that can check future signed releases from inside the app.
   or unexpected-signing-team builds.
 
 Because 0.3.5 Build 5 was the first release containing the updater, it required
-a manual install. Approved installations can update to 0.3.6 Build 2 through
+a manual install. Approved installations can update to 0.3.7 Build 1 through
 the Stable channel.
 
 ## What's new in 0.3.3: Token Activity
@@ -176,7 +200,7 @@ in the stable 0.3.3 source.
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.3.6 Build 2 is the recommended stable version and does
+> Island behavior. v0.3.7 Build 1 is the recommended stable version and does
 > not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
@@ -203,7 +227,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.3.6 Build 2 when stable
+- This build is intended for preview validation. Use v0.3.7 Build 1 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix

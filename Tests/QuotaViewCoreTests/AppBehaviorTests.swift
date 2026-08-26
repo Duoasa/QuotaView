@@ -929,6 +929,10 @@ final class AppBehaviorTests: XCTestCase {
             preferences.codexActivityOrbAnimation,
             .particleOrb
         )
+        XCTAssertEqual(
+            preferences.codexActivityScreenPlacement,
+            .followHotspot
+        )
         XCTAssertEqual(preferences.codexActivityCompactDelay, 20)
         XCTAssertEqual(
             preferences.codexActivityHiddenDelayAfterCompact,
@@ -1003,6 +1007,10 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.codexActivity.orbAnimation"
         )
         savedDefaults.set(
+            AppPreferences.CodexActivityScreenPlacement.codexScreen.rawValue,
+            forKey: "preferences.codexActivity.screenPlacement"
+        )
+        savedDefaults.set(
             58,
             forKey: "preferences.codexActivity.compactDelay"
         )
@@ -1028,6 +1036,10 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(
             savedPreferences.codexActivityOrbAnimation,
             .rippleGlow
+        )
+        XCTAssertEqual(
+            savedPreferences.codexActivityScreenPlacement,
+            .codexScreen
         )
         XCTAssertEqual(savedPreferences.codexActivityCompactDelay, 60)
         XCTAssertEqual(
@@ -1094,7 +1106,8 @@ final class AppBehaviorTests: XCTestCase {
         let store = CodexStatusStore(
             provider: provider,
             preferences: preferences,
-            diagnostics: defaults
+            diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
         await store.refresh()
@@ -1128,7 +1141,8 @@ final class AppBehaviorTests: XCTestCase {
         }
         let store = CodexStatusStore(
             provider: provider,
-            diagnostics: defaults
+            diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
         await store.refresh()
@@ -1152,7 +1166,8 @@ final class AppBehaviorTests: XCTestCase {
         }
         let store = CodexStatusStore(
             provider: provider,
-            diagnostics: defaults
+            diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
         await store.refresh()
@@ -1164,6 +1179,62 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertNil(store.snapshot?.sparkQuota)
         XCTAssertFalse(store.hasAvailableResetCredit)
         await store.stop()
+    }
+
+    func testCodexActivityScreenLocatorUsesLargestVisibleWindow() {
+        let displays = [
+            CodexActivityScreenLocator.DisplayGeometry(
+                id: 1,
+                bounds: CGRect(x: 0, y: 0, width: 1_920, height: 1_080)
+            ),
+            CodexActivityScreenLocator.DisplayGeometry(
+                id: 2,
+                bounds: CGRect(
+                    x: 1_920,
+                    y: 0,
+                    width: 2_560,
+                    height: 1_440
+                )
+            )
+        ]
+
+        let displayID = CodexActivityScreenLocator.bestDisplayID(
+            windowBounds: [
+                CGRect(x: 200, y: 100, width: 400, height: 300),
+                CGRect(x: 2_100, y: 120, width: 1_600, height: 1_000)
+            ],
+            displays: displays
+        )
+
+        XCTAssertEqual(displayID, 2)
+    }
+
+    func testCodexActivityScreenLocatorUsesLargestIntersection() {
+        let displays = [
+            CodexActivityScreenLocator.DisplayGeometry(
+                id: 1,
+                bounds: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+            ),
+            CodexActivityScreenLocator.DisplayGeometry(
+                id: 2,
+                bounds: CGRect(x: 1_000, y: 0, width: 1_000, height: 800)
+            )
+        ]
+
+        let displayID = CodexActivityScreenLocator.bestDisplayID(
+            windowBounds: [
+                CGRect(x: 800, y: 100, width: 700, height: 500)
+            ],
+            displays: displays
+        )
+
+        XCTAssertEqual(displayID, 2)
+        XCTAssertNil(
+            CodexActivityScreenLocator.bestDisplayID(
+                windowBounds: [],
+                displays: displays
+            )
+        )
     }
 
     func testSparkQuotaProjectsFromDedicatedRateWindow() throws {
@@ -1184,6 +1255,35 @@ final class AppBehaviorTests: XCTestCase {
             sparkQuota.resetsAt,
             result.snapshot.capturedAt.addingTimeInterval(604_800)
         )
+    }
+
+    func testCoreQuotaWindowsProjectShortestDurationFirst() throws {
+        let result = Self.makeFetchResult(
+            resetCredits: nil,
+            secondaryUsedPercent: 60
+        )
+        let presentation = try XCTUnwrap(
+            CurrentCodexPresentationProjector()
+                .makePresentation(from: result)
+        )
+
+        XCTAssertEqual(
+            presentation.quotaWindows.map(\.id),
+            [
+                CodexDomainCatalog.secondaryRateWindowID,
+                CodexDomainCatalog.primaryRateWindowID
+            ]
+        )
+        XCTAssertEqual(
+            presentation.quotaWindows.map(\.windowDurationMinutes),
+            [300, 10_080]
+        )
+        XCTAssertEqual(
+            presentation.quotaWindows.map(\.remainingPercent),
+            [40, 75]
+        )
+        XCTAssertEqual(presentation.remainingPercent, 75)
+        XCTAssertEqual(presentation.windowDurationMinutes, 10_080)
     }
 
     func testHistoricalUsageProjectsSortedTokenActivity() throws {
@@ -1495,7 +1595,8 @@ final class AppBehaviorTests: XCTestCase {
         }
         let store = CodexStatusStore(
             provider: provider,
-            diagnostics: defaults
+            diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
         await store.refresh()
@@ -1523,7 +1624,8 @@ final class AppBehaviorTests: XCTestCase {
         }
         let store = CodexStatusStore(
             provider: provider,
-            diagnostics: defaults
+            diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
         await store.refresh()
@@ -1543,6 +1645,7 @@ final class AppBehaviorTests: XCTestCase {
 
     private static func makeFetchResult(
         resetCredits: Int?,
+        secondaryUsedPercent: Int? = nil,
         sparkUsedPercent: Int? = nil,
         historicalObservations: [MetricObservation] = []
     ) -> ProviderFetchResult {
@@ -1559,6 +1662,22 @@ final class AppBehaviorTests: XCTestCase {
             quotaRisk: .normal
         )
         var rateWindows = [window]
+        if let secondaryUsedPercent {
+            let usedFraction = Double(secondaryUsedPercent) / 100
+            rateWindows.append(
+                RateWindow(
+                    id: CodexDomainCatalog.secondaryRateWindowID,
+                    titleKey: "codex.quota.secondary",
+                    period: .duration(minutes: 300),
+                    startsAt: nil,
+                    resetsAt: capturedAt.addingTimeInterval(18_000),
+                    usedFraction: usedFraction,
+                    remainingFraction: 1 - usedFraction,
+                    sourcePrecision: .providerRounded,
+                    quotaRisk: .normal
+                )
+            )
+        }
         if let sparkUsedPercent {
             let usedFraction = Double(sparkUsedPercent) / 100
             rateWindows.append(
@@ -1612,6 +1731,16 @@ final class AppBehaviorTests: XCTestCase {
                 duration: 0,
                 optionalIssues: []
             )
+        )
+    }
+
+    @MainActor
+    private static func disabledWidgetWriter()
+        -> QuotaViewWidgetSnapshotWriter {
+        QuotaViewWidgetSnapshotWriter(
+            appGroupIdentifier: "com.quotaview.tests.disabled",
+            containerURLProvider: { _ in nil },
+            timelineReloader: { _ in }
         )
     }
 }
