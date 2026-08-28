@@ -6,7 +6,7 @@
 >
 > 生产基线：`0.3.7 Build 1`
 >
-> 当前开发：无；生产 Sparkle 内部更新序号 `11`
+> 当前开发：`0.4.0 Build 1`；Sparkle 内部更新序号 `12`；`Discovery`
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,6 +14,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-RELEASE-0.4.0-001` | [0.4.0 大版本开发](../design/quotaview-0.4.0-development.md) | `Draft / Discovery` | 版本身份已授权并建立；具体产品范围、非目标和阶段尚待产品所有者定义 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
 | `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | Stable Feed 已发布；真实 N → N+1 安装操作待记录 |

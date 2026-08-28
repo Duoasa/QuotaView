@@ -993,7 +993,7 @@ struct SettingsView: View {
     private var versionAndBuildLabel: String {
         let version = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0.3.7"
+        ) as? String ?? "0.4.0"
         let build = Bundle.main.object(
             forInfoDictionaryKey: "QuotaViewDisplayBuildNumber"
         ) as? String ?? Bundle.main.object(
