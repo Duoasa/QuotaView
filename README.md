@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.1-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.3.7-build.1/QuotaView-v0.3.7-build.1.zip"><strong>Download QuotaView v0.3.7 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.1-build.1/QuotaView-v0.4.1-build.1.zip"><strong>Download QuotaView v0.4.1 Build 1</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -40,7 +40,7 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 
 | | |
 | --- | --- |
-| **Codex Island** | Follow thinking, tool use, approvals, context compaction, subagents, completion, and failures through a live Metal-rendered activity surface. |
+| **Codex Island** | Follow thinking, tool use, approvals, context compaction, completion, and failures through an AI Orb or progress-aware smoke surface. |
 | **At a glance** | See period and Spark quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
 | **Usage overview** | Review the latest day, 30-day tokens, and a clearly labeled 30-day local cost estimate. |
 | **Token Activity** | Review daily token usage in a compact monochrome chart with week, month, three-month, and six-month ranges. |
@@ -53,11 +53,11 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.3.7-build.1.zip` from the [v0.3.7 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.7-build.1).
+2. Download `QuotaView-v0.4.1-build.1.zip` from the [v0.4.1 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.1-build.1).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.3.7 Build 1 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.4.1 Build 1 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -77,8 +77,8 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 ## Native experience
 
-- Codex Island with expanded and compact states, a live Metal fluid sphere,
-  status-aware color and motion, and automatic dismissal after completion
+- Codex Island with expanded and compact states, AI Orb and Progress Bar
+  styles, status-aware Metal motion, and automatic dismissal after completion
 - Compact status item with a dynamically sized menu panel
 - Automatic refresh every 60 seconds and manual refresh
 - Manual Stable update checks and an opt-in 24-hour automatic check
@@ -89,6 +89,36 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - English and Simplified Chinese interfaces
 - Native Settings window for Menu Bar, Popover, Codex Island, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
+
+## What's new in 0.4.1: A progress-aware Codex Island
+
+QuotaView 0.4.1 adds a dedicated Progress Bar style alongside the existing AI
+Orb and keeps progress behavior coherent for both planned and unplanned tasks.
+
+- Switch between **AI Orb** and **Progress Bar** as independent Codex Island
+  styles. The AI Orb adds 100%, 85%, and 75% expanded sizes; those choices do
+  not change the Progress Bar or compact Island.
+- Follow approximate progress through a state-colored smoke front. Structured
+  plans use completed, in-progress, and pending counts, cap active work at 95%,
+  and reserve 100% for a real completion event.
+- Start every active task at 1% for a 4-second plan-discovery window. An
+  in-progress plan step contributes a conservative 10% of one step so a newly
+  detected multi-step task does not jump ahead. Tasks
+  without a plan then enter a slower single-step estimate capped at 50%; a late
+  plan can still take over without moving the front backward.
+- Recognize both direct plan updates and Codex Desktop's wrapped
+  `tools.update_plan(...)` calls while forwarding only three status counts—
+  never step text, explanations, raw scripts, prompts, arguments, or output.
+- Improve readability with lower-luminance state palettes and an opacity curve
+  tied to the visible smoke width. Context compaction remains slower and less
+  diffuse than ordinary work.
+- Finish with a fill, darken, and fade sequence that returns to the native
+  Island surface, then separates a clean 1 pt green highlight outline from the
+  four-sided breathing glow underneath.
+- Dismiss settled activity safely when a terminal Hook event is missing, and
+  prevent delayed events from reopening a turn that already completed.
+- Keep expanded and compact Progress Bar geometry stable across the widest
+  supported English and Simplified Chinese status copy.
 
 ## What's new in 0.3.7: Multiple quota windows and a screen-aware Codex Island
 
@@ -168,7 +198,7 @@ version that can check future signed releases from inside the app.
   or unexpected-signing-team builds.
 
 Because 0.3.5 Build 5 was the first release containing the updater, it required
-a manual install. Approved installations can update to 0.3.7 Build 1 through
+a manual install. Approved installations can update to 0.4.1 Build 1 through
 the Stable channel.
 
 ## What's new in 0.3.3: Token Activity
@@ -200,7 +230,7 @@ in the stable 0.3.3 source.
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.3.7 Build 1 is the recommended stable version and does
+> Island behavior. v0.4.1 Build 1 is the recommended stable version and does
 > not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
@@ -227,7 +257,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.3.7 Build 1 when stable
+- This build is intended for preview validation. Use v0.4.1 Build 1 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix
@@ -284,9 +314,11 @@ account identifier, complete server response, or usage history.
 
 Codex Island uses official Codex Hooks and a signed local helper. It forwards
 only hashed session identifiers, the final workspace path component, event
-type, coarse tool category, session source, and timestamp. It never forwards
-prompts, commands, arguments, tool output, or transcript paths, and it never
-bypasses the official Hook trust confirmation.
+type, coarse tool category, session source, timestamp, and—when available—only
+the completed, in-progress, and pending plan-step counts. It never forwards
+step text, plan explanations, raw wrapper scripts, prompts, commands,
+arguments, tool output, or transcript paths, and it never bypasses the
+official Hook trust confirmation.
 
 For local diagnostics:
 

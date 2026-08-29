@@ -2,6 +2,9 @@ import CryptoKit
 import Darwin
 import Foundation
 import OSLog
+#if SWIFT_PACKAGE
+import QuotaViewActivityHookSupport
+#endif
 
 private let diagnosticLogger = Logger(
     subsystem: "com.quotaview.menubar",
@@ -37,6 +40,12 @@ private enum SessionStartSource: String, Codable {
     case compact
 }
 
+private struct SanitizedPlanProgress: Codable {
+    let completedSteps: Int
+    let inProgressSteps: Int
+    let pendingSteps: Int
+}
+
 private struct SanitizedActivity: Codable {
     let schemaVersion: Int
     let event: HookEvent
@@ -45,6 +54,7 @@ private struct SanitizedActivity: Codable {
     let workspaceName: String?
     let toolCategory: ToolCategory?
     let sessionStartSource: SessionStartSource?
+    let planProgress: SanitizedPlanProgress?
     let occurredAt: Date
 }
 
@@ -124,6 +134,24 @@ private func toolCategory(_ canonicalName: String?) -> ToolCategory? {
     return .localTool
 }
 
+private func sanitizedPlanProgress(
+    event: HookEvent,
+    toolName: String?,
+    toolInput: Any?
+) -> SanitizedPlanProgress? {
+    guard event == .preToolUse,
+          let parsed = CodexActivityPlanInputParser.parse(
+              toolName: toolName,
+              toolInput: toolInput
+          )
+    else { return nil }
+    return SanitizedPlanProgress(
+        completedSteps: parsed.completedSteps,
+        inProgressSteps: parsed.inProgressSteps,
+        pendingSteps: parsed.pendingSteps
+    )
+}
+
 private func sanitize(_ data: Data) -> SanitizedActivity? {
     guard data.count <= 2_097_152,
           let object = try? JSONSerialization.jsonObject(with: data),
@@ -137,15 +165,21 @@ private func sanitize(_ data: Data) -> SanitizedActivity? {
     }
 
     let turnID = input["turn_id"] as? String
+    let toolName = input["tool_name"] as? String
     return SanitizedActivity(
-        schemaVersion: 1,
+        schemaVersion: 2,
         event: event,
         sessionHash: hashIdentifier(sessionID),
         turnHash: turnID.map(hashIdentifier),
         workspaceName: sanitizedWorkspaceName(input["cwd"] as? String),
-        toolCategory: toolCategory(input["tool_name"] as? String),
+        toolCategory: toolCategory(toolName),
         sessionStartSource: (input["source"] as? String)
             .flatMap(SessionStartSource.init(rawValue:)),
+        planProgress: sanitizedPlanProgress(
+            event: event,
+            toolName: toolName,
+            toolInput: input["tool_input"]
+        ),
         occurredAt: Date()
     )
 }

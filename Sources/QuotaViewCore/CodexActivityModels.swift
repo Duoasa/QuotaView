@@ -31,8 +31,50 @@ public enum CodexActivitySessionStartSource: String, Codable, Sendable {
     case compact
 }
 
+public struct CodexActivityPlanProgress: Codable, Equatable, Sendable {
+    public static let maximumStepCount = 100
+    public static let maximumActiveFraction = 0.95
+    public static let inProgressStepWeight = 0.10
+
+    public let completedSteps: Int
+    public let inProgressSteps: Int
+    public let pendingSteps: Int
+
+    public init(
+        completedSteps: Int,
+        inProgressSteps: Int,
+        pendingSteps: Int
+    ) {
+        self.completedSteps = completedSteps
+        self.inProgressSteps = inProgressSteps
+        self.pendingSteps = pendingSteps
+    }
+
+    public var totalSteps: Int {
+        completedSteps + inProgressSteps + pendingSteps
+    }
+
+    public var approximateFraction: Double? {
+        guard completedSteps >= 0,
+              inProgressSteps >= 0,
+              pendingSteps >= 0,
+              (1...Self.maximumStepCount).contains(totalSteps)
+        else {
+            return nil
+        }
+
+        let weightedCompleted = Double(completedSteps)
+            + Double(inProgressSteps) * Self.inProgressStepWeight
+        return min(
+            weightedCompleted / Double(totalSteps),
+            Self.maximumActiveFraction
+        )
+    }
+}
+
 public struct CodexActivityEvent: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let minimumSupportedSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public let schemaVersion: Int
     public let event: CodexActivityHookEvent
@@ -41,6 +83,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let workspaceName: String?
     public let toolCategory: CodexActivityToolCategory?
     public let sessionStartSource: CodexActivitySessionStartSource?
+    public let planProgress: CodexActivityPlanProgress?
     public let occurredAt: Date
 
     public init(
@@ -51,6 +94,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         workspaceName: String? = nil,
         toolCategory: CodexActivityToolCategory? = nil,
         sessionStartSource: CodexActivitySessionStartSource? = nil,
+        planProgress: CodexActivityPlanProgress? = nil,
         occurredAt: Date = Date()
     ) {
         self.schemaVersion = schemaVersion
@@ -60,6 +104,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.workspaceName = workspaceName
         self.toolCategory = toolCategory
         self.sessionStartSource = sessionStartSource
+        self.planProgress = planProgress
         self.occurredAt = occurredAt
     }
 }
@@ -104,6 +149,7 @@ public struct CodexActivitySnapshot: Equatable, Sendable {
     public let workspaceName: String?
     public let operationKey: CodexActivityOperationKey
     public let toolCategory: CodexActivityToolCategory?
+    public let approximateProgressFraction: Double?
     public let occurredAt: Date
 
     public init(
@@ -112,6 +158,7 @@ public struct CodexActivitySnapshot: Equatable, Sendable {
         workspaceName: String?,
         operationKey: CodexActivityOperationKey,
         toolCategory: CodexActivityToolCategory?,
+        approximateProgressFraction: Double?,
         occurredAt: Date
     ) {
         self.sessionHash = sessionHash
@@ -119,6 +166,7 @@ public struct CodexActivitySnapshot: Equatable, Sendable {
         self.workspaceName = workspaceName
         self.operationKey = operationKey
         self.toolCategory = toolCategory
+        self.approximateProgressFraction = approximateProgressFraction
         self.occurredAt = occurredAt
     }
 }
@@ -146,9 +194,13 @@ public enum CodexActivityOperationKey: String, Codable, Sendable {
 
 public enum CodexActivityReducer {
     public static func snapshot(
-        for event: CodexActivityEvent
+        for event: CodexActivityEvent,
+        approximateProgressFraction: Double? = nil
     ) -> CodexActivitySnapshot? {
-        guard event.schemaVersion == CodexActivityEvent.currentSchemaVersion,
+        guard event.schemaVersion
+                >= CodexActivityEvent.minimumSupportedSchemaVersion,
+              event.schemaVersion
+                <= CodexActivityEvent.currentSchemaVersion,
               !event.sessionHash.isEmpty
         else {
             return nil
@@ -204,6 +256,11 @@ public enum CodexActivityReducer {
             workspaceName: event.workspaceName,
             operationKey: operation,
             toolCategory: event.toolCategory,
+            approximateProgressFraction:
+                event.event == .stop
+                ? 1
+                : approximateProgressFraction
+                    ?? event.planProgress?.approximateFraction,
             occurredAt: event.occurredAt
         )
     }
@@ -222,6 +279,17 @@ public enum CodexActivityReducer {
             true
         case .sessionStart:
             event.sessionStartSource != .compact
+        default:
+            false
+        }
+    }
+
+    public static func shouldHideAfterSettledEventSilence(
+        after event: CodexActivityEvent
+    ) -> Bool {
+        switch event.event {
+        case .postToolUse, .postCompact, .subagentStop:
+            true
         default:
             false
         }

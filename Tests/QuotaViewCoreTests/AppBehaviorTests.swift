@@ -1,9 +1,68 @@
+import AppKit
 import Foundation
+import Metal
+import SwiftUI
 import XCTest
 @testable import QuotaView
+@testable import QuotaViewActivityHookSupport
 @testable import QuotaViewCore
 
+private extension NSView {
+    func firstDescendant<ViewType: NSView>(
+        ofType type: ViewType.Type
+    ) -> ViewType? {
+        if let match = self as? ViewType {
+            return match
+        }
+        for subview in subviews {
+            if let match = subview.firstDescendant(ofType: type) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
 final class AppBehaviorTests: XCTestCase {
+    @MainActor
+    func testNativeSettingsRowPinsVisibleSegmentedControlToTrailingInset() {
+        let row = NativeSettingsRow(
+            title: "Island Style",
+            subtitle: "Switch between island styles."
+        ) {
+            NativeSettingsSegmentedPicker(
+                "Island Style",
+                selection: .constant(0)
+            ) {
+                Text("AI Orb").tag(0)
+                Text("Progress Bar").tag(1)
+            }
+        }
+        let hostingView = NSHostingView(rootView: row)
+        hostingView.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: 600,
+            height: 80
+        )
+        hostingView.layoutSubtreeIfNeeded()
+
+        guard let segmentedControl = hostingView.firstDescendant(
+            ofType: NSSegmentedControl.self
+        ) else {
+            return XCTFail("Expected a native segmented control")
+        }
+        let controlFrame = hostingView.convert(
+            segmentedControl.bounds,
+            from: segmentedControl
+        )
+        XCTAssertEqual(
+            controlFrame.maxX,
+            hostingView.bounds.maxX - 18,
+            accuracy: 1
+        )
+    }
+
     func testAppUpdateEnvironmentAcceptsOnlyTrustedConfiguration() {
         let environment = makeUpdateEnvironment()
 
@@ -159,6 +218,10 @@ final class AppBehaviorTests: XCTestCase {
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
+            CodexActivityStore.settledEventSilenceDelay,
+            20
+        )
+        XCTAssertEqual(
             CodexActivityStore.compactDelay
                 + CodexActivityStore.hiddenDelayAfterCompact,
             120
@@ -213,6 +276,264 @@ final class AppBehaviorTests: XCTestCase {
         let view = ActivityRippleGlowMetalView(
             frame: NSRect(x: 0, y: 0, width: 64, height: 64),
             initialState: .thinking
+        )
+        XCTAssertTrue(view.isRendererAvailable)
+    }
+
+    @MainActor
+    func testStateSmokeProductionContractAndMetalPipeline() {
+        let profiles = CodexActivityVisualState.allCases.map {
+            CodexActivityStateSmokeProfile.profile(for: $0)
+        }
+        XCTAssertEqual(profiles.count, 9)
+        XCTAssertEqual(
+            CodexActivityStateSmokeProfile
+                .profile(for: .disconnectedCodex)
+                .motionFrequency,
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertGreaterThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .motionFrequency,
+            CodexActivityStateSmokeProfile
+                .profile(for: .standby)
+                .motionFrequency
+        )
+        XCTAssertGreaterThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .error)
+                .turbulence,
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .turbulence
+        )
+        XCTAssertGreaterThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .diffusion,
+            CodexActivityStateSmokeProfile
+                .profile(for: .standby)
+                .diffusion
+        )
+        XCTAssertLessThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .compactingContext)
+                .diffusionSpeed,
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .diffusionSpeed
+        )
+        XCTAssertLessThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .compactingContext)
+                .diffusion,
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .diffusion
+        )
+        XCTAssertGreaterThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .working)
+                .diffusionSpeedVariation,
+            0
+        )
+        XCTAssertGreaterThan(
+            CodexActivityStateSmokeProfile
+                .profile(for: .error)
+                .diffusionSpeedVariation,
+            CodexActivityStateSmokeProfile
+                .profile(for: .standby)
+                .diffusionSpeedVariation
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.minimumProgressFrontPosition,
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "clamp(u.frontPosition, 0.0, 0.95)"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float terminalDiffusion"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float broadPlumeNoise"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float finePlumeNoise"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float diffusionSpeedPhase"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.diffusionSpeedVariation"
+            )
+        )
+        XCTAssertFalse(
+            activityStateSmokeShaderSource.contains(
+                "convergenceDirection"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.completionFillProgress"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.completionDarkening"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.completionSmokeOpacity"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "normalHorizontalOpacity"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "uv.x / opacityFront"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.opacityStopPositions"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "u.opacityStopOpacities"
+            )
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0,
+                frontPosition: 0.60,
+                completionActive: false
+            ),
+            0.50,
+            accuracy: 0.0001
+        )
+        let workingProfile = CodexActivityStateSmokeProfile.profile(
+            for: .working
+        )
+        let compactingProfile = CodexActivityStateSmokeProfile.profile(
+            for: .compactingContext
+        )
+        XCTAssertEqual(
+            compactingProfile.opacityCurve,
+            .normal
+        )
+        XCTAssertEqual(
+            compactingProfile.opacityCurve.opacity(at: 0),
+            CodexActivityStateSmokeContract.normalLeftmostOpacity,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            workingProfile.deepColor,
+            SIMD4<Float>(0.14, 0.29, 0.34, 1)
+        )
+        XCTAssertEqual(
+            workingProfile.midColor,
+            SIMD4<Float>(0.20, 0.40, 0.46, 1)
+        )
+        XCTAssertEqual(
+            workingProfile.highlightColor,
+            SIMD4<Float>(0.28, 0.48, 0.54, 1)
+        )
+        XCTAssertEqual(
+            compactingProfile.deepColor,
+            SIMD4<Float>(0.16, 0.18, 0.20, 1)
+        )
+        XCTAssertEqual(
+            compactingProfile.midColor,
+            SIMD4<Float>(0.22, 0.24, 0.26, 1)
+        )
+        XCTAssertEqual(
+            compactingProfile.highlightColor,
+            SIMD4<Float>(0.28, 0.30, 0.32, 1)
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.30,
+                frontPosition: 0.60,
+                completionActive: false
+            ),
+            0.75,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.60,
+                frontPosition: 0.60,
+                completionActive: false
+            ),
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.90,
+                frontPosition: 0.60,
+                completionActive: false
+            ),
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.20,
+                frontPosition: 0.40,
+                completionActive: false
+            ),
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.40,
+                frontPosition: 0.80,
+                completionActive: false
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.horizontalOpacity(
+                at: 0.90,
+                frontPosition: 0.60,
+                completionActive: true
+            ),
+            1,
+            accuracy: 0.0001
+        )
+
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            return XCTFail("Metal is unavailable")
+        }
+        do {
+            _ = try device.makeLibrary(
+                source: activityStateSmokeShaderSource,
+                options: MTLCompileOptions()
+            )
+        } catch {
+            XCTFail("State Smoke shader failed: \(error)")
+        }
+
+        let view = ActivityStateSmokeMetalView(
+            frame: NSRect(x: 0, y: 0, width: 180, height: 50)
         )
         XCTAssertTrue(view.isRendererAvailable)
     }
@@ -513,6 +834,120 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(store.presentation, .expanded)
         XCTAssertEqual(store.snapshot?.state, .working)
         XCTAssertEqual(store.snapshot?.operationKey, .editingFiles)
+        await store.stop()
+    }
+
+    @MainActor
+    func testSettledToolEventHidesWhenStopIsMissing() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            settledEventSilenceDelay: 0.02
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                occurredAt: Date()
+            )
+        )
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.snapshot?.operationKey, .reviewingToolResult)
+
+        for _ in 0..<100 where store.presentation != .hidden {
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(store.presentation, .hidden)
+        await store.stop()
+    }
+
+    @MainActor
+    func testNewActivityCancelsSettledEventSilenceHide() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            settledEventSilenceDelay: 0.02
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                occurredAt: Date()
+            )
+        )
+        try? await Task.sleep(nanoseconds: 8_000_000)
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                toolCategory: .fileEdit,
+                occurredAt: Date()
+            )
+        )
+
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.snapshot?.state, .working)
+        XCTAssertEqual(store.snapshot?.operationKey, .editingFiles)
+        await store.stop()
+    }
+
+    @MainActor
+    func testReplayedOldSettledEventDoesNotReopenIsland() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            settledEventSilenceDelay: 0.20
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                occurredAt: Date().addingTimeInterval(-1)
+            )
+        )
+
+        XCTAssertEqual(store.presentation, .hidden)
+        XCTAssertEqual(store.snapshot?.operationKey, .reviewingToolResult)
+        await store.stop()
+    }
+
+    @MainActor
+    func testLateSettledEventCannotReopenCompletedTurn() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            compactDelay: 1,
+            hiddenDelayAfterCompact: 1
+        )
+        let now = Date()
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                occurredAt: now
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                occurredAt: now.addingTimeInterval(0.01)
+            )
+        )
+
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.snapshot?.state, .completed)
+        XCTAssertEqual(store.snapshot?.operationKey, .turnCompleted)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                occurredAt: now.addingTimeInterval(0.02)
+            )
+        )
+        XCTAssertEqual(store.snapshot?.state, .thinking)
+        XCTAssertEqual(store.snapshot?.operationKey, .analyzingRequest)
         await store.stop()
     }
 
@@ -926,12 +1361,20 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showResetAction)
         XCTAssertTrue(preferences.codexActivityIslandEnabled)
         XCTAssertEqual(
+            preferences.codexActivityIslandStyle,
+            .aiOrb
+        )
+        XCTAssertEqual(
             preferences.codexActivityOrbAnimation,
             .particleOrb
         )
         XCTAssertEqual(
             preferences.codexActivityScreenPlacement,
             .followHotspot
+        )
+        XCTAssertEqual(
+            preferences.codexActivityExpandedSize,
+            .oneHundredPercent
         )
         XCTAssertEqual(preferences.codexActivityCompactDelay, 20)
         XCTAssertEqual(
@@ -1003,12 +1446,21 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.codexActivity.islandEnabled"
         )
         savedDefaults.set(
+            AppPreferences.CodexActivityIslandStyle
+                .progressBar.rawValue,
+            forKey: "preferences.codexActivity.islandStyle"
+        )
+        savedDefaults.set(
             AppPreferences.CodexActivityOrbAnimation.rippleGlow.rawValue,
             forKey: "preferences.codexActivity.orbAnimation"
         )
         savedDefaults.set(
             AppPreferences.CodexActivityScreenPlacement.codexScreen.rawValue,
             forKey: "preferences.codexActivity.screenPlacement"
+        )
+        savedDefaults.set(
+            "60",
+            forKey: "preferences.codexActivity.expandedSize"
         )
         savedDefaults.set(
             58,
@@ -1034,12 +1486,28 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(savedPreferences.tokenActivityRange, .sixMonths)
         XCTAssertFalse(savedPreferences.codexActivityIslandEnabled)
         XCTAssertEqual(
+            savedPreferences.codexActivityIslandStyle,
+            .progressBar
+        )
+        XCTAssertEqual(
             savedPreferences.codexActivityOrbAnimation,
             .rippleGlow
         )
         XCTAssertEqual(
             savedPreferences.codexActivityScreenPlacement,
             .codexScreen
+        )
+        XCTAssertEqual(
+            savedPreferences.codexActivityExpandedSize,
+            .seventyFivePercent
+        )
+        savedPreferences.codexActivityExpandedSize = .eightyFivePercent
+        XCTAssertEqual(
+            savedDefaults.string(
+                forKey: "preferences.codexActivity.expandedSize"
+            ),
+            AppPreferences.CodexActivityExpandedSize
+                .eightyFivePercent.rawValue
         )
         XCTAssertEqual(savedPreferences.codexActivityCompactDelay, 60)
         XCTAssertEqual(
@@ -1062,6 +1530,10 @@ final class AppBehaviorTests: XCTestCase {
             "legacy-ultra-thin",
             forKey: "preferences.appearance.glassPreset"
         )
+        legacyDefaults.set(
+            "80",
+            forKey: "preferences.codexActivity.expandedSize"
+        )
 
         let migratedPreferences = AppPreferences(defaults: legacyDefaults)
 
@@ -1072,6 +1544,115 @@ final class AppBehaviorTests: XCTestCase {
             ),
             "clear"
         )
+        XCTAssertEqual(
+            migratedPreferences.codexActivityExpandedSize,
+            .eightyFivePercent
+        )
+        XCTAssertEqual(
+            legacyDefaults.string(
+                forKey: "preferences.codexActivity.expandedSize"
+            ),
+            AppPreferences.CodexActivityExpandedSize
+                .eightyFivePercent.rawValue
+        )
+
+        let invalidSuiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let invalidDefaults = UserDefaults(suiteName: invalidSuiteName)!
+        defer {
+            invalidDefaults.removePersistentDomain(forName: invalidSuiteName)
+        }
+        invalidDefaults.set(
+            "custom",
+            forKey: "preferences.codexActivity.expandedSize"
+        )
+
+        let fallbackPreferences = AppPreferences(defaults: invalidDefaults)
+
+        XCTAssertEqual(
+            fallbackPreferences.codexActivityExpandedSize,
+            .oneHundredPercent
+        )
+        XCTAssertEqual(
+            invalidDefaults.string(
+                forKey: "preferences.codexActivity.expandedSize"
+            ),
+            AppPreferences.CodexActivityExpandedSize
+                .oneHundredPercent.rawValue
+        )
+    }
+
+    @MainActor
+    func testStateSmokeLegacyPreferenceMigratesToProgressBarStyle() {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        defaults.set(
+            "smokeProgress",
+            forKey: "preferences.codexActivity.orbAnimation"
+        )
+
+        let preferences = AppPreferences(defaults: defaults)
+
+        XCTAssertEqual(
+            preferences.codexActivityIslandStyle,
+            .progressBar
+        )
+        XCTAssertEqual(
+            preferences.codexActivityOrbAnimation,
+            .particleOrb
+        )
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.islandStyle"
+            ),
+            AppPreferences.CodexActivityIslandStyle
+                .progressBar.rawValue
+        )
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.orbAnimation"
+            ),
+            AppPreferences.CodexActivityOrbAnimation
+                .particleOrb.rawValue
+        )
+        preferences.codexActivityIslandStyle = .aiOrb
+        preferences.codexActivityOrbAnimation = .rippleGlow
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.islandStyle"
+            ),
+            AppPreferences.CodexActivityIslandStyle.aiOrb.rawValue
+        )
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.orbAnimation"
+            ),
+            AppPreferences.CodexActivityOrbAnimation
+                .rippleGlow.rawValue
+        )
+
+        let invalidSuiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let invalidDefaults = UserDefaults(suiteName: invalidSuiteName)!
+        defer {
+            invalidDefaults.removePersistentDomain(
+                forName: invalidSuiteName
+            )
+        }
+        invalidDefaults.set(
+            "unknown-style",
+            forKey: "preferences.codexActivity.islandStyle"
+        )
+        invalidDefaults.set(
+            "unknown-visual",
+            forKey: "preferences.codexActivity.orbAnimation"
+        )
+
+        let fallback = AppPreferences(defaults: invalidDefaults)
+
+        XCTAssertEqual(fallback.codexActivityIslandStyle, .aiOrb)
+        XCTAssertEqual(fallback.codexActivityOrbAnimation, .particleOrb)
     }
 
     @MainActor
@@ -1207,6 +1788,907 @@ final class AppBehaviorTests: XCTestCase {
         )
 
         XCTAssertEqual(displayID, 2)
+    }
+
+    func testCodexActivityExpandedSizeScalesOnlyExpandedAIOrbGeometry() {
+        let expanded = CodexActivityIslandGeometry.panelSize(
+            presentation: .expanded,
+            state: .working,
+            style: .aiOrb,
+            expandedSize: .eightyFivePercent
+        )
+        XCTAssertEqual(expanded.width, 377.4, accuracy: 0.001)
+        XCTAssertEqual(expanded.height, 129.2, accuracy: 0.001)
+
+        let compactAtFullSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .compact,
+            state: .working,
+            style: .aiOrb,
+            expandedSize: .oneHundredPercent
+        )
+        let compactAtSmallSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .compact,
+            state: .working,
+            style: .aiOrb,
+            expandedSize: .seventyFivePercent
+        )
+        XCTAssertEqual(compactAtFullSize, compactAtSmallSize)
+        XCTAssertEqual(compactAtSmallSize, NSSize(width: 270, height: 72))
+
+        let progressBarAtSmallSize =
+            CodexActivityIslandGeometry.panelSize(
+                presentation: .expanded,
+                state: .working,
+                style: .progressBar,
+                expandedSize: .seventyFivePercent
+            )
+        XCTAssertEqual(
+            progressBarAtSmallSize,
+            NSSize(width: 462, height: 128)
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry.textInset,
+            20
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry
+                .expandedSurfaceHeight,
+            68
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextGeometry
+                .expandedStatusAlignment(style: .progressBar),
+            .trailing
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextGeometry
+                .expandedStatusAlignment(style: .aiOrb),
+            .leading
+        )
+
+        let progressCompactState = CodexActivityRenderState(
+            visualState: .thinking,
+            approximateProgressFraction: 0.42,
+            windowTitle: "0.4.0",
+            statusTitle: "思考中",
+            operation: "正在分析任务",
+            accessibilityLabel: "测试"
+        )
+        let progressCompactSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .compact,
+            renderState: progressCompactState,
+            style: .progressBar,
+            expandedSize: .seventyFivePercent
+        )
+        let maximumCompactTextWidth =
+            CodexActivityIslandProgressBarGeometry
+            .maximumLocalizedCompactStatusTextWidth
+        let retainedWhitespace =
+            progressCompactSize.width
+            - CodexActivityIslandProgressBarGeometry.effectInset * 2
+            - maximumCompactTextWidth
+        let originalWhitespace =
+            CodexActivityIslandPresentation.compactSurfaceSize.width
+            - maximumCompactTextWidth
+        XCTAssertEqual(progressCompactSize.height, 112, accuracy: 0.0001)
+        XCTAssertLessThan(
+            progressCompactSize.width,
+            CodexActivityIslandPresentation.compactSurfaceSize.width
+                + CodexActivityIslandProgressBarGeometry.effectInset * 2
+        )
+        XCTAssertEqual(
+            retainedWhitespace / originalWhitespace,
+            CodexActivityIslandProgressBarGeometry
+                .compactWhitespaceRetention,
+            accuracy: 0.0001
+        )
+        for statusTitle in
+            CodexActivityIslandProgressBarGeometry
+            .allLocalizedStatusTitles
+        {
+            XCTAssertEqual(
+                CodexActivityIslandProgressBarGeometry
+                    .compactPanelSize(statusTitle: statusTitle),
+                progressCompactSize
+            )
+            XCTAssertLessThanOrEqual(
+                CodexActivityIslandProgressBarGeometry
+                    .compactStatusTextWidth(for: statusTitle),
+                CodexActivityIslandProgressBarGeometry
+                    .fixedCompactSurfaceWidth
+            )
+        }
+    }
+
+    func testStateSmokeSimulationKeepsStateSpecificMotion() {
+        var simulation = CodexActivityStateSmokeSimulation()
+        let profile = CodexActivityStateSmokeProfile.profile(
+            for: .working
+        )
+        var minimumPulse: Float = 1
+        var maximumPulse: Float = 0
+
+        for _ in 0..<180 {
+            simulation.step(profile: profile)
+            minimumPulse = min(minimumPulse, simulation.pulse)
+            maximumPulse = max(maximumPulse, simulation.pulse)
+        }
+
+        XCTAssertLessThan(minimumPulse, 0.1)
+        XCTAssertGreaterThan(maximumPulse, 0.9)
+        XCTAssertGreaterThan(simulation.fieldTime, 0)
+    }
+
+    func testStateSmokePlanProgressUsesOnlyStatusCounts() {
+        let progress = CodexActivityPlanProgress(
+            completedSteps: 2,
+            inProgressSteps: 1,
+            pendingSteps: 2
+        )
+        XCTAssertEqual(progress.totalSteps, 5)
+        XCTAssertEqual(
+            progress.approximateFraction ?? -1,
+            0.42,
+            accuracy: 0.0001
+        )
+
+        let firstOfFour = CodexActivityPlanProgress(
+            completedSteps: 0,
+            inProgressSteps: 1,
+            pendingSteps: 3
+        )
+        XCTAssertEqual(
+            firstOfFour.approximateFraction ?? -1,
+            0.025,
+            accuracy: 0.0001
+        )
+
+        let allCompleted = CodexActivityPlanProgress(
+            completedSteps: 3,
+            inProgressSteps: 0,
+            pendingSteps: 0
+        )
+        XCTAssertEqual(
+            allCompleted.approximateFraction,
+            CodexActivityPlanProgress.maximumActiveFraction
+        )
+        XCTAssertNil(
+            CodexActivityPlanProgress(
+                completedSteps: 0,
+                inProgressSteps: 0,
+                pendingSteps: 0
+            ).approximateFraction
+        )
+        XCTAssertNotNil(
+            CodexActivityReducer.snapshot(
+                for: CodexActivityEvent(
+                    schemaVersion: 1,
+                    event: .preToolUse,
+                    sessionHash: "legacy-session"
+                )
+            )
+        )
+    }
+
+    func testActivityHookParsesDirectAndExecWrappedPlans() throws {
+        let direct = try XCTUnwrap(
+            CodexActivityPlanInputParser.parse(
+                toolName: "update_plan",
+                toolInput: [
+                    "explanation": "private explanation",
+                    "plan": [
+                        ["step": "private first step", "status": "completed"],
+                        ["step": "private second step", "status": "in_progress"],
+                        ["step": "private third step", "status": "pending"]
+                    ]
+                ]
+            )
+        )
+        XCTAssertEqual(direct.completedSteps, 1)
+        XCTAssertEqual(direct.inProgressSteps, 1)
+        XCTAssertEqual(direct.pendingSteps, 1)
+
+        let wrappedSource = #"""
+        const result = await tools.update_plan({
+          explanation: "不要传出这段说明（含括号、逗号与 \"引号\"）",
+          plan: [
+            {step: "分析（现状）", status: "completed"},
+            {step: "实现：解析 exec", status: "in_progress"},
+            {step: "验证，且不泄露文本", status: "pending"},
+          ],
+        });
+        """#
+        let wrapped = try XCTUnwrap(
+            CodexActivityPlanInputParser.parse(
+                toolName: "exec",
+                toolInput: wrappedSource
+            )
+        )
+        XCTAssertEqual(wrapped, direct)
+        XCTAssertFalse(String(reflecting: wrapped).contains("不要传出"))
+
+        XCTAssertEqual(
+            CodexActivityPlanInputParser.parse(
+                toolName: "functions.exec",
+                toolInput: ["input": wrappedSource]
+            ),
+            direct
+        )
+    }
+
+    func testActivityHookUsesLastValidWrappedPlanAndRejectsGuessing() {
+        let source = #"""
+        const ignored = "tools.update_plan({plan:[{status:'completed'}]})";
+        // tools.update_plan({plan:[{status:"completed"}]});
+        await tools.update_plan({plan:[
+          {step:"one", status:"completed"},
+          {step:"two", status:"pending"}
+        ]});
+        await tools.update_plan({plan:[
+          {step:"one", status:"completed"},
+          {step:"two", status:"in_progress"},
+          {step:"three", status:"pending"}
+        ]});
+        await tools.update_plan({plan: dynamicallyGeneratedPlan});
+        """#
+        XCTAssertEqual(
+            CodexActivityPlanInputParser.parse(
+                toolName: "functions__exec",
+                toolInput: source
+            ),
+            CodexActivitySanitizedPlanProgress(
+                completedSteps: 1,
+                inProgressSteps: 1,
+                pendingSteps: 1
+            )
+        )
+        XCTAssertNil(
+            CodexActivityPlanInputParser.parse(
+                toolName: "exec",
+                toolInput:
+                    "tools.update_plan({plan: dynamicallyGeneratedPlan})"
+            )
+        )
+        XCTAssertNil(
+            CodexActivityPlanInputParser.parse(
+                toolName: "exec_command",
+                toolInput: source
+            )
+        )
+    }
+
+    @MainActor
+    func testStateSmokeStoreCarriesPlanProgressUntilTurnStops() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                toolCategory: .localTool,
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 1,
+                    inProgressSteps: 1,
+                    pendingSteps: 2
+                )
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.275
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                toolCategory: .localTool
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.275
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-2"
+            )
+        )
+        XCTAssertNil(store.snapshot?.approximateProgressFraction)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                toolCategory: .localTool,
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 2,
+                    inProgressSteps: 0,
+                    pendingSteps: 0
+                )
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            CodexActivityPlanProgress.maximumActiveFraction
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-2"
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            1
+        )
+        await store.stop()
+    }
+
+    func testStateSmokeProgressProjectionTracksApproximateProgress() {
+        var projection = CodexActivityStateSmokeProgressProjection()
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: nil,
+                elapsed: 1.0 / 60.0,
+                reduceMotion: false
+            ),
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeProgressProjection
+                .targetFrontPosition(for: 0.42) ?? -1,
+            0.42,
+            accuracy: 0.0001
+        )
+
+        var projected = projection.resolve(
+            approximateProgressFraction: 0.60,
+            elapsed: 1.0 / 60.0,
+            reduceMotion: false
+        )
+        XCTAssertGreaterThan(projected, 0)
+        XCTAssertLessThan(projected, 0.60)
+        for _ in 0..<180 {
+            projected = projection.resolve(
+                approximateProgressFraction: 0.60,
+                elapsed: 1.0 / 60.0,
+                reduceMotion: false
+            )
+        }
+        XCTAssertEqual(projected, 0.60, accuracy: 0.0001)
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: 1,
+                elapsed: 0,
+                reduceMotion: true
+            ),
+            CodexActivityStateSmokeContract
+                .maximumProgressFrontPosition,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: nil,
+                elapsed: 1.0 / 60.0,
+                reduceMotion: false
+            ),
+            0,
+            accuracy: 0.0001
+        )
+        let compactRenderState = CodexActivityRenderState(
+            visualState: .thinking,
+            approximateProgressFraction: 0.42,
+            windowTitle: "0.4.0",
+            statusTitle: "思考中",
+            operation: "正在分析任务",
+            accessibilityLabel: "测试"
+        )
+        let compactPanelSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .expanded,
+            renderState: compactRenderState,
+            style: .progressBar,
+            expandedSize: .oneHundredPercent
+        )
+        XCTAssertEqual(
+            compactPanelSize.height,
+            CodexActivityIslandProgressBarGeometry
+                .expandedPanelHeight,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            compactPanelSize.width,
+            CodexActivityIslandProgressBarGeometry
+                .maximumExpandedPanelWidth,
+            accuracy: 0.0001
+        )
+
+        let wideRenderState = CodexActivityRenderState(
+            visualState: .compactingContext,
+            approximateProgressFraction: 0.75,
+            windowTitle: "Refine the compact Codex activity island",
+            statusTitle: "Compacting Context",
+            operation:
+                "Condensing earlier messages to free context space",
+            accessibilityLabel: "Test"
+        )
+        let widePanelSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .expanded,
+            renderState: wideRenderState,
+            style: .progressBar,
+            expandedSize: .seventyFivePercent
+        )
+        XCTAssertEqual(widePanelSize, compactPanelSize)
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry.columnGap,
+            14,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast.statusDotBorderWidth,
+            0.5,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .secondaryTextColor.alphaComponent,
+            0.72,
+            accuracy: 0.0001
+        )
+    }
+
+    func testStateSmokeUnplannedProgressAdvancesFromZero() {
+        var progress = CodexActivityStateSmokeUnplannedProgress()
+        XCTAssertEqual(
+            progress.resolve(
+                state: .thinking,
+                elapsed: 0,
+                reduceMotion: false
+            ) ?? -1,
+            0,
+            accuracy: 0.0001
+        )
+
+        for _ in 0..<120 {
+            _ = progress.resolve(
+                state: .thinking,
+                elapsed: 1.0 / 60.0,
+                reduceMotion: false
+            )
+        }
+        XCTAssertGreaterThan(progress.fraction, 0.10)
+        XCTAssertLessThan(
+            progress.fraction,
+            CodexActivityStateSmokeUnplannedProgress
+                .maximumActiveFraction
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeUnplannedProgress
+                .maximumActiveFraction,
+            0.50,
+            accuracy: 0.0001
+        )
+
+        _ = progress.resolve(
+            state: .working,
+            elapsed: 0,
+            reduceMotion: false
+        )
+        XCTAssertGreaterThanOrEqual(
+            progress.fraction,
+            CodexActivityStateSmokeUnplannedProgress
+                .workingMinimumFraction
+        )
+        let workingFraction = progress.fraction
+        _ = progress.resolve(
+            state: .thinking,
+            elapsed: 0,
+            reduceMotion: false
+        )
+        XCTAssertGreaterThanOrEqual(
+            progress.fraction,
+            workingFraction
+        )
+
+        _ = progress.resolve(
+            state: .compactingContext,
+            elapsed: 0,
+            reduceMotion: false
+        )
+        XCTAssertGreaterThanOrEqual(
+            progress.fraction,
+            CodexActivityStateSmokeUnplannedProgress
+                .compactionMinimumFraction
+        )
+
+        progress.reset()
+        XCTAssertEqual(
+            progress.resolve(
+                state: .thinking,
+                elapsed: 0,
+                reduceMotion: true
+            ) ?? -1,
+            Double(
+                CodexActivityStateSmokeUnplannedProgress
+                    .reducedMotionThinkingFraction
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertNil(
+            progress.resolve(
+                state: .standby,
+                elapsed: 1,
+                reduceMotion: false
+            )
+        )
+
+        var projection =
+            CodexActivityStateSmokeProgressProjection()
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: 0.60,
+                elapsed: 0,
+                reduceMotion: true
+            ),
+            0.60,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: 0.20,
+                elapsed: 1.0 / 60.0,
+                reduceMotion: false
+            ),
+            0.60,
+            accuracy: 0.0001
+        )
+        projection.reset()
+        XCTAssertNil(projection.displayedFrontPosition)
+    }
+
+    func testStateSmokeWaitsAtOnePercentBeforeUnplannedProgress() {
+        var resolver = CodexActivityStateSmokeProgressResolver()
+
+        for _ in 0..<15 {
+            XCTAssertEqual(
+                resolver.resolve(
+                    state: .thinking,
+                    plannedFraction: nil,
+                    elapsed: 0.25,
+                    reduceMotion: false
+                ) ?? -1,
+                CodexActivityStateSmokeProgressResolver
+                    .planResolutionFraction,
+                accuracy: 0.0001
+            )
+        }
+        XCTAssertEqual(resolver.mode, .resolvingPlan)
+        XCTAssertEqual(
+            resolver.resolve(
+                state: .thinking,
+                plannedFraction: nil,
+                elapsed: 0.24,
+                reduceMotion: false
+            ) ?? -1,
+            0.01,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(resolver.mode, .resolvingPlan)
+
+        let firstUnplanned = resolver.resolve(
+            state: .thinking,
+            plannedFraction: nil,
+            elapsed: 0.01,
+            reduceMotion: false
+        )
+        XCTAssertEqual(firstUnplanned ?? -1, 0.01, accuracy: 0.0001)
+        XCTAssertEqual(resolver.mode, .unplanned)
+
+        let advancing = resolver.resolve(
+            state: .thinking,
+            plannedFraction: nil,
+            elapsed: 0.25,
+            reduceMotion: false
+        )
+        XCTAssertGreaterThan(advancing ?? 0, firstUnplanned ?? 0)
+    }
+
+    func testStateSmokePlanCanTakeOverEarlyOrLateWithoutResettingDisplay() {
+        var resolver = CodexActivityStateSmokeProgressResolver()
+        XCTAssertEqual(
+            resolver.resolve(
+                state: .thinking,
+                plannedFraction: nil,
+                elapsed: 0.25,
+                reduceMotion: false
+            ) ?? -1,
+            0.01,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            resolver.resolve(
+                state: .thinking,
+                plannedFraction: 0.125,
+                elapsed: 0.25,
+                reduceMotion: false
+            ) ?? -1,
+            0.125,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(resolver.mode, .planned)
+
+        resolver.reset()
+        for _ in 0..<17 {
+            _ = resolver.resolve(
+                state: .thinking,
+                plannedFraction: nil,
+                elapsed: 0.25,
+                reduceMotion: false
+            )
+        }
+        XCTAssertEqual(resolver.mode, .unplanned)
+        XCTAssertEqual(
+            resolver.resolve(
+                state: .working,
+                plannedFraction: 0.375,
+                elapsed: 0.25,
+                reduceMotion: false
+            ) ?? -1,
+            0.375,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(resolver.mode, .planned)
+
+        var projection = CodexActivityStateSmokeProgressProjection()
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: 0.40,
+                elapsed: 0,
+                reduceMotion: true
+            ),
+            0.40,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            projection.resolve(
+                approximateProgressFraction: 0.25,
+                elapsed: 0.25,
+                reduceMotion: false
+            ),
+            0.40,
+            accuracy: 0.0001
+        )
+    }
+
+    func testStateSmokeStaticStatesKeepTheFieldStill() {
+        for state in [
+            CodexActivityVisualState.disconnectedCodex,
+            .unavailable,
+        ] {
+            var simulation = CodexActivityStateSmokeSimulation()
+            let profile = CodexActivityStateSmokeProfile.profile(
+                for: state
+            )
+            for _ in 0..<120 {
+                simulation.step(profile: profile)
+            }
+            XCTAssertEqual(
+                simulation.fieldTime,
+                0,
+                accuracy: 0.0001
+            )
+        }
+    }
+
+    func testStateSmokeCompletionTransitionFillsDarkensAndResets() {
+        var transition =
+            CodexActivityStateSmokeCompletionTransition()
+        XCTAssertEqual(transition.snapshot, .inactive)
+
+        transition.enter()
+        let early = transition.advance(elapsed: 0.10)
+        XCTAssertGreaterThan(early.fillProgress, 0)
+        XCTAssertLessThan(early.fillProgress, 1)
+        XCTAssertEqual(early.darkening, 0, accuracy: 0.0001)
+        XCTAssertEqual(early.smokeOpacity, 1, accuracy: 0.0001)
+
+        var fading = early
+        for _ in 0..<60 {
+            fading = transition.advance(
+                elapsed: CodexActivityStateSmokeContract.fixedStep
+            )
+        }
+        XCTAssertEqual(fading.fillProgress, 1, accuracy: 0.0001)
+        XCTAssertEqual(
+            fading.darkening,
+            CodexActivityStateSmokeContract.completionFinalDarkening,
+            accuracy: 0.0001
+        )
+        XCTAssertGreaterThan(fading.smokeOpacity, 0)
+        XCTAssertLessThan(fading.smokeOpacity, 1)
+
+        var completed = fading
+        for _ in 0..<30 {
+            completed = transition.advance(
+                elapsed: CodexActivityStateSmokeContract.fixedStep
+            )
+        }
+        XCTAssertEqual(completed.smokeOpacity, 0, accuracy: 0.0001)
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.completionGlowDelay,
+            CFTimeInterval(
+                CodexActivityStateSmokeContract
+                    .completionSmokeFadeDelay
+                + CodexActivityStateSmokeContract
+                    .completionSmokeFadeDuration
+            ),
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.completionGlowBreathDuration,
+            1.8,
+            accuracy: 0.0001
+        )
+
+        transition.reset()
+        XCTAssertEqual(transition.snapshot, .inactive)
+        XCTAssertFalse(transition.isActive)
+    }
+
+    func testStateSmokeCompletionGlowUsesInsetFourSidedSource() {
+        let islandRect = NSRect(x: 10, y: 10, width: 424, height: 110)
+        let sourceRect =
+            CodexActivityIslandCompletionGlowGeometry.sourceRect(
+                in: islandRect
+            )
+
+        XCTAssertGreaterThan(sourceRect.minX, islandRect.minX)
+        XCTAssertLessThan(sourceRect.maxX, islandRect.maxX)
+        XCTAssertGreaterThan(sourceRect.minY, islandRect.minY)
+        XCTAssertLessThan(sourceRect.maxY, islandRect.maxY)
+        XCTAssertEqual(
+            sourceRect.midX,
+            islandRect.midX,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            sourceRect.midY,
+            islandRect.midY,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            sourceRect.minX - islandRect.minX,
+            CodexActivityIslandCompletionGlowGeometry.sourceInset,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandCompletionGlowGeometry
+                .sourceCornerRadius(
+                    in: islandRect,
+                    islandCornerRadius:
+                        CodexActivityIslandProgressBarGeometry
+                        .expandedCornerRadius
+                ),
+            CodexActivityIslandProgressBarGeometry
+                .expandedCornerRadius
+                - CodexActivityIslandCompletionGlowGeometry
+                    .sourceInset,
+            accuracy: 0.0001
+        )
+        XCTAssertGreaterThanOrEqual(
+            CodexActivityIslandProgressBarGeometry.effectInset,
+            CodexActivityIslandCompletionGlowGeometry
+                .peakShadowRadius * 3
+        )
+        XCTAssertEqual(
+            CodexActivityIslandCompletionGlowGeometry.outlineWidth,
+            1,
+            accuracy: 0.0001
+        )
+    }
+
+    func testStateSmokeReduceMotionAndRequestedTextGeometryAreStable() {
+        let snapshot =
+            CodexActivityStateSmokeSimulation
+            .reducedMotionSnapshot
+        XCTAssertEqual(snapshot.fieldTime, 0.35, accuracy: 0.0001)
+        XCTAssertEqual(
+            CodexActivityStateSmokeCompletionSnapshot.reducedMotion
+                .fillProgress,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeCompletionSnapshot.reducedMotion
+                .darkening,
+            CodexActivityStateSmokeContract.completionFinalDarkening,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeCompletionSnapshot.reducedMotion
+                .smokeOpacity,
+            0,
+            accuracy: 0.0001
+        )
+
+        let aiOrbExpandedStart = CodexActivityIslandTextGeometry.textStart(
+            style: .aiOrb,
+            compactStart: 54,
+            expandedStart: 128,
+            expansionProgress: 1
+        )
+        let smokeExpandedStart = CodexActivityIslandTextGeometry.textStart(
+            style: .progressBar,
+            compactStart: 54,
+            expandedStart: 128,
+            expansionProgress: 1
+        )
+        XCTAssertEqual(aiOrbExpandedStart, 128, accuracy: 0.0001)
+        XCTAssertEqual(
+            smokeExpandedStart,
+            CodexActivityIslandProgressBarGeometry.textInset,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            activityIslandSurfaceCornerRadius(
+                style: .progressBar,
+                surfaceHeight:
+                    CodexActivityIslandProgressBarGeometry
+                    .expandedSurfaceHeight,
+                expansionProgress: 1
+            ),
+            CodexActivityIslandProgressBarGeometry
+                .expandedCornerRadius,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            activityIslandSurfaceCornerRadius(
+                style: .progressBar,
+                surfaceHeight:
+                    CodexActivityIslandPresentation
+                    .compactSurfaceSize.height,
+                expansionProgress: 0
+            ),
+            CodexActivityIslandPresentation
+                .compactSurfaceSize.height / 2,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            activityIslandSurfaceCornerRadius(
+                style: .aiOrb,
+                surfaceHeight: 110,
+                expansionProgress: 1
+            ),
+            34,
+            accuracy: 0.0001
+        )
+
+        let smokeCompactFrame =
+            CodexActivityIslandTextGeometry.compactTitleFrame(
+                style: .progressBar,
+                surfaceWidth: 250
+            )
+        XCTAssertEqual(smokeCompactFrame.minX, 0, accuracy: 0.0001)
+        XCTAssertEqual(smokeCompactFrame.width, 250, accuracy: 0.0001)
+        XCTAssertEqual(smokeCompactFrame.midX, 125, accuracy: 0.0001)
+
+        let aiOrbCompactFrame =
+            CodexActivityIslandTextGeometry.compactTitleFrame(
+                style: .aiOrb,
+                surfaceWidth: 250
+            )
+        XCTAssertEqual(aiOrbCompactFrame.minX, 40, accuracy: 0.0001)
+        XCTAssertEqual(aiOrbCompactFrame.width, 210, accuracy: 0.0001)
     }
 
     func testCodexActivityScreenLocatorUsesLargestIntersection() {

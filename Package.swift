@@ -63,6 +63,11 @@ let package = Package(
         ),
         .executableTarget(
             name: "QuotaViewActivityHook",
+            dependencies: ["QuotaViewActivityHookSupport"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(
+            name: "QuotaViewActivityHookSupport",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
@@ -71,7 +76,8 @@ let package = Package(
                 "QuotaViewCore",
                 "QuotaViewWidgetContract",
                 "QuotaViewFutureContracts",
-                "QuotaView"
+                "QuotaView",
+                "QuotaViewActivityHookSupport"
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         )

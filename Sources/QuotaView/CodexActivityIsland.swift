@@ -7,6 +7,7 @@ import simd
 
 struct CodexActivityRenderState: Equatable {
     let visualState: CodexActivityVisualState
+    let approximateProgressFraction: Double?
     let windowTitle: String
     let statusTitle: String
     let operation: String
@@ -57,6 +58,230 @@ enum CodexActivityIslandPresentation: Int, CaseIterable {
             )
         }
     }
+}
+
+struct CodexActivityIslandGeometry {
+    static func panelInset(
+        for style: AppPreferences.CodexActivityIslandStyle
+    ) -> CGFloat {
+        style == .progressBar
+            ? CodexActivityIslandProgressBarGeometry.effectInset
+            : CodexActivityIslandPresentation.panelInset
+    }
+
+    static func panelSize(
+        presentation: CodexActivityIslandPresentation,
+        state: CodexActivityVisualState,
+        style: AppPreferences.CodexActivityIslandStyle,
+        expandedSize: AppPreferences.CodexActivityExpandedSize
+    ) -> NSSize {
+        let baseSize = presentation.panelSize(for: state)
+        if style == .progressBar {
+            switch presentation {
+            case .expanded:
+                return CodexActivityIslandProgressBarGeometry
+                    .expandedPanelSize(
+                        windowTitle: "",
+                        operation: "",
+                        statusTitle: ""
+                    )
+            case .compact:
+                return CodexActivityIslandProgressBarGeometry
+                    .compactPanelSize(statusTitle: "")
+            }
+        }
+
+        guard presentation == .expanded else {
+            return baseSize
+        }
+
+        return NSSize(
+            width: baseSize.width * expandedSize.scale,
+            height: baseSize.height * expandedSize.scale
+        )
+    }
+
+    static func panelSize(
+        presentation: CodexActivityIslandPresentation,
+        renderState: CodexActivityRenderState,
+        style: AppPreferences.CodexActivityIslandStyle,
+        expandedSize: AppPreferences.CodexActivityExpandedSize
+    ) -> NSSize {
+        guard style == .progressBar
+        else {
+            return panelSize(
+                presentation: presentation,
+                state: renderState.visualState,
+                style: style,
+                expandedSize: expandedSize
+            )
+        }
+
+        switch presentation {
+        case .expanded:
+            return CodexActivityIslandProgressBarGeometry
+                .expandedPanelSize(
+                    windowTitle: renderState.windowTitle,
+                    operation: renderState.operation,
+                    statusTitle: renderState.statusTitle
+                )
+        case .compact:
+            return CodexActivityIslandProgressBarGeometry
+                .compactPanelSize(
+                    statusTitle: renderState.statusTitle
+                )
+        }
+    }
+}
+
+struct CodexActivityIslandProgressBarGeometry {
+    static let compactWhitespaceRetention: CGFloat = 0.60
+    static let effectInset: CGFloat = 30
+    static let textInset: CGFloat = 20
+    static let verticalTextInset: CGFloat = 14
+    static let expandedCornerRadius: CGFloat = 20
+    static let columnGap: CGFloat = 14
+    static let titleDetailGap: CGFloat = 4
+    static let titleDotGap: CGFloat = 8
+    static let titleFontSize: CGFloat = 12.5
+    static let detailFontSize: CGFloat = 11.5
+    static let statusFontSize: CGFloat = 15
+    static let maximumLeftColumnWidth: CGFloat = 210
+    static let maximumStatusColumnWidth: CGFloat = 138
+
+    static func compactPanelSize(
+        statusTitle _: String
+    ) -> NSSize {
+        NSSize(
+            width:
+                fixedCompactSurfaceWidth
+                + effectInset * 2,
+            height:
+                CodexActivityIslandPresentation
+                .compactSurfaceSize.height
+                + effectInset * 2
+        )
+    }
+
+    static func compactSurfaceWidth(
+        statusTitle _: String
+    ) -> CGFloat {
+        fixedCompactSurfaceWidth
+    }
+
+    static var fixedCompactSurfaceWidth: CGFloat {
+        let originalWidth =
+            CodexActivityIslandPresentation.compactSurfaceSize.width
+        let textWidth = maximumLocalizedCompactStatusTextWidth
+        let originalWhitespace = max(0, originalWidth - textWidth)
+        return textWidth
+            + originalWhitespace * compactWhitespaceRetention
+    }
+
+    static var maximumLocalizedCompactStatusTextWidth: CGFloat {
+        allLocalizedStatusTitles
+            .map(compactStatusTextWidth)
+            .max() ?? 0
+    }
+
+    static var allLocalizedStatusTitles: [String] {
+        AppPreferences.Language.allCases.flatMap { language in
+            let copy = CodexActivityCopy(language: language)
+            return CodexActivityVisualState.allCases.map {
+                copy.statusTitle(for: $0)
+            }
+        }
+    }
+
+    static func compactStatusTextWidth(
+        for text: String
+    ) -> CGFloat {
+        min(
+            measuredWidth(
+                for: text,
+                font: activityFont(
+                    "AstaSans-SemiBold",
+                    size:
+                        CodexActivityIslandPresentation
+                        .compactTitleFontSize,
+                    fallbackWeight: .semibold
+                )
+            ),
+            CodexActivityIslandPresentation.compactSurfaceSize.width
+        )
+    }
+
+    static var maximumExpandedPanelWidth: CGFloat {
+        textInset * 2
+            + maximumLeftColumnWidth
+            + columnGap
+            + maximumStatusColumnWidth
+            + effectInset * 2
+    }
+
+    static var expandedSurfaceHeight: CGFloat {
+        activitySupportingLineHeight * 2
+            + titleDetailGap
+            + verticalTextInset * 2
+    }
+
+    static var expandedPanelHeight: CGFloat {
+        expandedSurfaceHeight
+            + effectInset * 2
+    }
+
+    static func expandedPanelSize(
+        windowTitle _: String,
+        operation _: String,
+        statusTitle _: String
+    ) -> NSSize {
+        return NSSize(
+            width: maximumExpandedPanelWidth,
+            height: expandedPanelHeight
+        )
+    }
+
+    private static func measuredWidth(
+        for text: String,
+        font: NSFont
+    ) -> CGFloat {
+        NSAttributedString(
+            string: text,
+            attributes: [.font: font]
+        ).size().width
+    }
+}
+
+struct CodexActivityIslandCompletionGlowGeometry {
+    static let sourceInset: CGFloat = 1.25
+    static let outlineWidth: CGFloat = 1
+    static let restingShadowRadius: CGFloat = 5.5
+    static let peakShadowRadius: CGFloat = 9.5
+    static let restingShadowOpacity: Float = 0.65
+    static let peakShadowOpacity: Float = 1
+
+    static func sourceRect(in islandRect: NSRect) -> NSRect {
+        islandRect.insetBy(dx: sourceInset, dy: sourceInset)
+    }
+
+    static func sourceCornerRadius(
+        in islandRect: NSRect,
+        islandCornerRadius: CGFloat
+    ) -> CGFloat {
+        max(
+            0,
+            min(islandCornerRadius, islandRect.height / 2)
+                - sourceInset
+        )
+    }
+}
+
+struct CodexActivityIslandTextContrast {
+    static let secondaryTextColor =
+        NSColor.white.withAlphaComponent(0.72)
+    static let statusDotBorderWidth: CGFloat = 0.5
+    static let statusDotBorderColor =
+        NSColor.black.withAlphaComponent(0.82)
 }
 
 private extension CodexActivityVisualState {
@@ -331,9 +556,69 @@ private func activityInterpolate(
     start + (end - start) * progress
 }
 
-private enum ActivityTextHorizontalAlignment: Equatable {
+func activityIslandSurfaceCornerRadius(
+    style: AppPreferences.CodexActivityIslandStyle,
+    surfaceHeight: CGFloat,
+    expansionProgress: CGFloat
+) -> CGFloat {
+    let defaultRadius = min(34, surfaceHeight / 2)
+    guard style == .progressBar else { return defaultRadius }
+
+    let compactRadius =
+        CodexActivityIslandPresentation.compactSurfaceSize.height / 2
+    let radius = activityInterpolate(
+        from: compactRadius,
+        to:
+            CodexActivityIslandProgressBarGeometry
+            .expandedCornerRadius,
+        progress: expansionProgress
+    )
+    return min(surfaceHeight / 2, radius)
+}
+
+struct CodexActivityIslandTextGeometry {
+    static func expandedStatusAlignment(
+        style: AppPreferences.CodexActivityIslandStyle
+    ) -> ActivityTextHorizontalAlignment {
+        style == .progressBar ? .trailing : .leading
+    }
+
+    static func textStart(
+        style: AppPreferences.CodexActivityIslandStyle,
+        compactStart: CGFloat,
+        expandedStart: CGFloat,
+        expansionProgress: CGFloat
+    ) -> CGFloat {
+        let resolvedExpandedStart =
+            style == .progressBar
+            ? CodexActivityIslandProgressBarGeometry.textInset
+            : expandedStart
+        return compactStart
+            + (resolvedExpandedStart - compactStart) * expansionProgress
+    }
+
+    static func compactTitleFrame(
+        style: AppPreferences.CodexActivityIslandStyle,
+        surfaceWidth: CGFloat
+    ) -> NSRect {
+        let leading =
+            style == .progressBar
+            ? 0
+            : CodexActivityIslandPresentation.compactOrbLeading
+                + CodexActivityIslandPresentation.compactOrbDiameter
+        return NSRect(
+            x: leading,
+            y: 0,
+            width: max(0, surfaceWidth - leading),
+            height: CodexActivityIslandPresentation.compactSurfaceSize.height
+        )
+    }
+}
+
+enum ActivityTextHorizontalAlignment: Equatable {
     case leading
     case center
+    case trailing
 }
 
 private func activitySingleLinePlacement(
@@ -347,6 +632,8 @@ private func activitySingleLinePlacement(
         baselineX = bounds.minX
     case .center:
         baselineX = bounds.midX - imageBounds.midX
+    case .trailing:
+        baselineX = bounds.maxX - imageBounds.maxX
     }
     return CGPoint(
         x: baselineX,
@@ -475,7 +762,6 @@ private final class ActivitySingleLineTextView: NSView {
     var shimmerEnabled = false {
         didSet { updateShimmerPlayback() }
     }
-
     override var isOpaque: Bool { false }
     override var isFlipped: Bool { false }
 
@@ -594,6 +880,12 @@ private struct ActivityExpandedTextLayout {
     var statusDotY: CGFloat
 }
 
+private struct ActivityProgressTextLayout {
+    var titleY: CGFloat
+    var detailY: CGFloat
+    var statusDotY: CGFloat
+}
+
 private let activitySupportingLineHeight: CGFloat = 18
 private let activityStatusLineHeight: CGFloat = 26
 private let activityTextRowGap: CGFloat = 4
@@ -618,6 +910,27 @@ private func activityCenteredTextLayout(
         detailY: detailY,
         statusDotY:
             kickerY
+            + (activitySupportingLineHeight - activityStatusDotSide) / 2
+    )
+}
+
+private func activityProgressTextLayout(
+    surfaceHeight: CGFloat
+) -> ActivityProgressTextLayout {
+    let stackHeight =
+        activitySupportingLineHeight * 2
+        + CodexActivityIslandProgressBarGeometry.titleDetailGap
+    let stackBottom = (surfaceHeight - stackHeight) / 2
+    let detailY = stackBottom
+    let titleY =
+        detailY
+        + activitySupportingLineHeight
+        + CodexActivityIslandProgressBarGeometry.titleDetailGap
+    return ActivityProgressTextLayout(
+        titleY: titleY,
+        detailY: detailY,
+        statusDotY:
+            titleY
             + (activitySupportingLineHeight - activityStatusDotSide) / 2
     )
 }
@@ -1442,6 +1755,7 @@ private final class ActivitySelectableOrbView: NSView {
     private var state: CodexActivityVisualState
     private var animation: AppPreferences.CodexActivityOrbAnimation
     private var reduceMotion = false
+    private var playbackEnabled = true
 
     override var isOpaque: Bool { false }
 
@@ -1507,7 +1821,7 @@ private final class ActivitySelectableOrbView: NSView {
         activeView = requestedView
         activeView.frame = bounds
         addSubview(activeView)
-        setReduceMotion(reduceMotion)
+        updatePlaybackState()
     }
 
     func setState(_ newState: CodexActivityVisualState) {
@@ -1519,12 +1833,25 @@ private final class ActivitySelectableOrbView: NSView {
 
     func setReduceMotion(_ enabled: Bool) {
         reduceMotion = enabled
+        updatePlaybackState()
+    }
+
+    func setPlaybackEnabled(_ enabled: Bool) {
+        playbackEnabled = enabled
+        updatePlaybackState()
+    }
+
+    private func updatePlaybackState() {
         particleView.setReduceMotion(
-            enabled || activeView !== particleView
+            reduceMotion
+                || !playbackEnabled
+                || activeView !== particleView
         )
         if let rippleGlowView {
             rippleGlowView.setReduceMotion(
-                enabled || activeView !== rippleGlowView
+                reduceMotion
+                    || !playbackEnabled
+                    || activeView !== rippleGlowView
             )
         }
     }
@@ -1572,6 +1899,7 @@ final class CodexActivityOrbPreviewHostView: NSView {
 private final class ActivityIslandSurfaceView: NSView {
     private let materialView = NSVisualEffectView()
     private let tintView = NSView()
+    private var resolvedCornerRadius: CGFloat = 34
 
     override var isOpaque: Bool { false }
 
@@ -1606,18 +1934,358 @@ private final class ActivityIslandSurfaceView: NSView {
 
     override func layout() {
         super.layout()
-        let radius = min(34, bounds.height / 2)
-        layer?.cornerRadius = radius
+        applyCornerRadius()
         materialView.frame = bounds
         tintView.frame = bounds
+    }
+
+    func setCornerRadius(_ radius: CGFloat) {
+        let normalized = max(0, radius)
+        guard resolvedCornerRadius != normalized else { return }
+        resolvedCornerRadius = normalized
+        applyCornerRadius()
+    }
+
+    private func applyCornerRadius() {
+        let radius = min(resolvedCornerRadius, bounds.height / 2)
+        layer?.cornerRadius = radius
         tintView.layer?.cornerRadius = radius
         tintView.layer?.cornerCurve = .continuous
     }
 }
 
+private let activityCompletionHighlightColor = NSColor(
+    srgbRed: 0.00,
+    green: 1.00,
+    blue: 17.00 / 255.00,
+    alpha: 1
+)
+
+private final class ActivityIslandCompletionGlowView: NSView {
+    private enum AnimationKey {
+        static let reveal = "quotaview.activity.completion-glow.reveal"
+        static let breathOpacity =
+            "quotaview.activity.completion-glow.opacity"
+        static let breathRadius =
+            "quotaview.activity.completion-glow.radius"
+    }
+
+    private let completionGlowLayer = CAShapeLayer()
+    private var isCompleted = false
+    private var reduceMotion = false
+    private var playbackVisible = false
+    private var islandCornerRadius: CGFloat = 34
+    private var islandInset =
+        CodexActivityIslandPresentation.panelInset
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        layer?.masksToBounds = false
+
+        completionGlowLayer.fillColor =
+            activityCompletionHighlightColor.cgColor
+        completionGlowLayer.strokeColor = nil
+        completionGlowLayer.shadowColor =
+            activityCompletionHighlightColor.cgColor
+        completionGlowLayer.shadowOffset = .zero
+        completionGlowLayer.masksToBounds = false
+        layer?.addSublayer(completionGlowLayer)
+        isHidden = true
+        setAccessibilityElement(false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func layout() {
+        super.layout()
+        let islandRect = bounds.insetBy(
+            dx: islandInset,
+            dy: islandInset
+        )
+        let islandRadius = min(
+            islandCornerRadius,
+            islandRect.height / 2
+        )
+        let glowSourceRect =
+            CodexActivityIslandCompletionGlowGeometry.sourceRect(
+                in: islandRect
+            )
+        let glowSourceRadius =
+            CodexActivityIslandCompletionGlowGeometry
+            .sourceCornerRadius(
+                in: islandRect,
+                islandCornerRadius: islandRadius
+            )
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        completionGlowLayer.frame = bounds
+        completionGlowLayer.path = CGPath(
+            roundedRect: glowSourceRect,
+            cornerWidth: glowSourceRadius,
+            cornerHeight: glowSourceRadius,
+            transform: nil
+        )
+        CATransaction.commit()
+    }
+
+    func setIslandInset(_ inset: CGFloat) {
+        let normalized = max(0, inset)
+        guard islandInset != normalized else { return }
+        islandInset = normalized
+        needsLayout = true
+    }
+
+    func setIslandCornerRadius(_ radius: CGFloat) {
+        let normalized = max(0, radius)
+        guard islandCornerRadius != normalized else { return }
+        islandCornerRadius = normalized
+        needsLayout = true
+    }
+
+    func update(
+        isCompleted: Bool,
+        reduceMotion: Bool,
+        playbackVisible: Bool
+    ) {
+        guard self.isCompleted != isCompleted
+                || self.reduceMotion != reduceMotion
+                || self.playbackVisible != playbackVisible
+        else {
+            return
+        }
+
+        let wasShowing = self.isCompleted && self.playbackVisible
+        self.isCompleted = isCompleted
+        self.reduceMotion = reduceMotion
+        self.playbackVisible = playbackVisible
+        applyState(delaysReveal: !wasShowing)
+    }
+
+    private func applyState(delaysReveal: Bool) {
+        completionGlowLayer.removeAllAnimations()
+
+        let shouldShow = isCompleted && playbackVisible
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        completionGlowLayer.opacity = shouldShow ? 1 : 0
+        completionGlowLayer.shadowOpacity = shouldShow
+            ? CodexActivityIslandCompletionGlowGeometry
+                .restingShadowOpacity
+            : 0
+        completionGlowLayer.shadowRadius = shouldShow
+            ? CodexActivityIslandCompletionGlowGeometry
+                .restingShadowRadius
+            : 0
+        CATransaction.commit()
+        isHidden = !shouldShow
+
+        guard shouldShow, !reduceMotion else { return }
+
+        let now = completionGlowLayer.convertTime(
+            CACurrentMediaTime(),
+            from: nil
+        )
+        var breathBeginTime = now
+        if delaysReveal {
+            let reveal = CABasicAnimation(keyPath: "opacity")
+            reveal.fromValue = 0
+            reveal.toValue = 1
+            reveal.beginTime =
+                now + CodexActivityStateSmokeContract.completionGlowDelay
+            reveal.duration =
+                CodexActivityStateSmokeContract.completionGlowFadeDuration
+            reveal.fillMode = .backwards
+            reveal.timingFunction = CAMediaTimingFunction(
+                name: .easeOut
+            )
+            completionGlowLayer.add(reveal, forKey: AnimationKey.reveal)
+            breathBeginTime = reveal.beginTime + reveal.duration
+        }
+
+        let breathOpacity = CAKeyframeAnimation(
+            keyPath: "shadowOpacity"
+        )
+        breathOpacity.values = [
+            CodexActivityIslandCompletionGlowGeometry
+                .restingShadowOpacity,
+            CodexActivityIslandCompletionGlowGeometry
+                .peakShadowOpacity,
+            CodexActivityIslandCompletionGlowGeometry
+                .restingShadowOpacity,
+        ]
+        breathOpacity.keyTimes = [0, 0.5, 1]
+        breathOpacity.beginTime = breathBeginTime
+        breathOpacity.duration =
+            CodexActivityStateSmokeContract
+                .completionGlowBreathDuration
+        breathOpacity.repeatCount = .infinity
+        breathOpacity.timingFunctions = [
+            CAMediaTimingFunction(name: .easeInEaseOut),
+            CAMediaTimingFunction(name: .easeInEaseOut),
+        ]
+        completionGlowLayer.add(
+            breathOpacity,
+            forKey: AnimationKey.breathOpacity
+        )
+
+        let breathRadius = CAKeyframeAnimation(keyPath: "shadowRadius")
+        breathRadius.values = [
+            CodexActivityIslandCompletionGlowGeometry
+                .restingShadowRadius,
+            CodexActivityIslandCompletionGlowGeometry
+                .peakShadowRadius,
+            CodexActivityIslandCompletionGlowGeometry
+                .restingShadowRadius,
+        ]
+        breathRadius.keyTimes = [0, 0.5, 1]
+        breathRadius.beginTime = breathBeginTime
+        breathRadius.duration =
+            CodexActivityStateSmokeContract
+                .completionGlowBreathDuration
+        breathRadius.repeatCount = .infinity
+        breathRadius.timingFunctions = [
+            CAMediaTimingFunction(name: .easeInEaseOut),
+            CAMediaTimingFunction(name: .easeInEaseOut),
+        ]
+        completionGlowLayer.add(
+            breathRadius,
+            forKey: AnimationKey.breathRadius
+        )
+    }
+}
+
+private final class ActivityIslandCompletionOutlineView: NSView {
+    private enum AnimationKey {
+        static let reveal =
+            "quotaview.activity.completion-outline.reveal"
+    }
+
+    private let outlineLayer = CAShapeLayer()
+    private var isCompleted = false
+    private var reduceMotion = false
+    private var playbackVisible = false
+    private var islandCornerRadius: CGFloat = 34
+
+    override var isOpaque: Bool { false }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        outlineLayer.fillColor = NSColor.clear.cgColor
+        outlineLayer.strokeColor =
+            activityCompletionHighlightColor.cgColor
+        outlineLayer.lineWidth =
+            CodexActivityIslandCompletionGlowGeometry.outlineWidth
+        layer?.addSublayer(outlineLayer)
+        isHidden = true
+        setAccessibilityElement(false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func layout() {
+        super.layout()
+        let halfWidth =
+            CodexActivityIslandCompletionGlowGeometry.outlineWidth / 2
+        let outlineRect = bounds.insetBy(
+            dx: halfWidth,
+            dy: halfWidth
+        )
+        let outlineRadius = max(
+            0,
+            min(islandCornerRadius, bounds.height / 2) - halfWidth
+        )
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        outlineLayer.frame = bounds
+        outlineLayer.path = CGPath(
+            roundedRect: outlineRect,
+            cornerWidth: outlineRadius,
+            cornerHeight: outlineRadius,
+            transform: nil
+        )
+        CATransaction.commit()
+    }
+
+    func setIslandCornerRadius(_ radius: CGFloat) {
+        let normalized = max(0, radius)
+        guard islandCornerRadius != normalized else { return }
+        islandCornerRadius = normalized
+        needsLayout = true
+    }
+
+    func update(
+        isCompleted: Bool,
+        reduceMotion: Bool,
+        playbackVisible: Bool
+    ) {
+        guard self.isCompleted != isCompleted
+                || self.reduceMotion != reduceMotion
+                || self.playbackVisible != playbackVisible
+        else {
+            return
+        }
+
+        let wasShowing = self.isCompleted && self.playbackVisible
+        self.isCompleted = isCompleted
+        self.reduceMotion = reduceMotion
+        self.playbackVisible = playbackVisible
+        applyState(delaysReveal: !wasShowing)
+    }
+
+    private func applyState(delaysReveal: Bool) {
+        outlineLayer.removeAllAnimations()
+        let shouldShow = isCompleted && playbackVisible
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        outlineLayer.opacity = shouldShow ? 1 : 0
+        CATransaction.commit()
+        isHidden = !shouldShow
+
+        guard shouldShow, !reduceMotion, delaysReveal else { return }
+        let now = outlineLayer.convertTime(CACurrentMediaTime(), from: nil)
+        let reveal = CABasicAnimation(keyPath: "opacity")
+        reveal.fromValue = 0
+        reveal.toValue = 1
+        reveal.beginTime =
+            now + CodexActivityStateSmokeContract.completionGlowDelay
+        reveal.duration =
+            CodexActivityStateSmokeContract.completionGlowFadeDuration
+        reveal.fillMode = .backwards
+        reveal.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        outlineLayer.add(reveal, forKey: AnimationKey.reveal)
+    }
+}
+
 private final class ActivityIslandContentView: NSView {
     private let shadowHost = NSView()
+    private let completionGlowView =
+        ActivityIslandCompletionGlowView(frame: .zero)
+    private let completionOutlineView =
+        ActivityIslandCompletionOutlineView(frame: .zero)
     private let surface = ActivityIslandSurfaceView()
+    private let stateSmokeView =
+        ActivityStateSmokeMetalView(frame: .zero)
     private let orbView: ActivitySelectableOrbView
     private let kickerLabel = ActivitySingleLineTextView()
     private let titleLabel = ActivitySingleLineTextView()
@@ -1626,14 +2294,29 @@ private final class ActivityIslandContentView: NSView {
     private let statusDot = NSView()
 
     private var renderState: CodexActivityRenderState
+    private var presentationMode:
+        CodexActivityIslandPresentation = .expanded
+    private var expandedSize:
+        AppPreferences.CodexActivityExpandedSize
+    private var islandStyle:
+        AppPreferences.CodexActivityIslandStyle
+    private var orbAnimation:
+        AppPreferences.CodexActivityOrbAnimation
+    private var reduceMotion = false
+    private var playbackVisible = false
 
     override var isOpaque: Bool { false }
 
     init(
         initialState: CodexActivityRenderState,
-        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+        islandStyle: AppPreferences.CodexActivityIslandStyle,
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        expandedSize: AppPreferences.CodexActivityExpandedSize
     ) {
         renderState = initialState
+        self.expandedSize = expandedSize
+        self.islandStyle = islandStyle
+        self.orbAnimation = orbAnimation
         orbView = ActivitySelectableOrbView(
             frame: .zero,
             initialState: initialState.visualState,
@@ -1655,8 +2338,14 @@ private final class ActivityIslandContentView: NSView {
         )
         addSubview(shadowHost)
 
+        shadowHost.addSubview(completionGlowView)
         shadowHost.addSubview(surface)
+        shadowHost.addSubview(completionOutlineView)
+        surface.addSubview(stateSmokeView)
         surface.addSubview(orbView)
+
+        stateSmokeView.isHidden = true
+        stateSmokeView.setPlaybackEnabled(false)
 
         kickerLabel.font = activityFont(
             "AstaSans-SemiBold",
@@ -1698,6 +2387,7 @@ private final class ActivityIslandContentView: NSView {
 
         update(
             renderState: initialState,
+            islandStyle: islandStyle,
             orbAnimation: orbAnimation
         )
     }
@@ -1710,29 +2400,56 @@ private final class ActivityIslandContentView: NSView {
     override func layout() {
         super.layout()
 
-        let panelInset = CodexActivityIslandPresentation.panelInset
+        let panelInset = CodexActivityIslandGeometry.panelInset(
+            for: islandStyle
+        )
         shadowHost.frame = bounds.insetBy(
             dx: panelInset,
             dy: panelInset
         )
+        completionGlowView.frame = shadowHost.bounds.insetBy(
+            dx: -panelInset,
+            dy: -panelInset
+        )
+        completionGlowView.setIslandInset(panelInset)
         surface.frame = shadowHost.bounds
+        completionOutlineView.frame = shadowHost.bounds
 
         let surfaceBounds = surface.bounds
-        shadowHost.layer?.shadowPath = CGPath(
-            roundedRect: shadowHost.bounds,
-            cornerWidth: min(34, shadowHost.bounds.height / 2),
-            cornerHeight: min(34, shadowHost.bounds.height / 2),
-            transform: nil
-        )
+        stateSmokeView.frame = surfaceBounds
+        stateSmokeView.redrawIfPaused()
 
-        let expandedSurfaceHeight = max(
-            renderState.visualState.activityWindowSize.height
-                - panelInset * 2,
-            CodexActivityIslandPresentation.compactSurfaceSize.height
-        )
+        let expandedSurfaceHeight =
+            islandStyle == .progressBar
+            ? CodexActivityIslandProgressBarGeometry
+                .expandedSurfaceHeight
+            : max(
+                renderState.visualState.activityWindowSize.height
+                    - panelInset * 2,
+                CodexActivityIslandPresentation
+                    .compactSurfaceSize.height
+            )
         let progress = activityExpansionProgress(
             surfaceHeight: surfaceBounds.height,
             expandedSurfaceHeight: expandedSurfaceHeight
+        )
+        let surfaceCornerRadius = activityIslandSurfaceCornerRadius(
+            style: islandStyle,
+            surfaceHeight: surfaceBounds.height,
+            expansionProgress: progress
+        )
+        surface.setCornerRadius(surfaceCornerRadius)
+        completionGlowView.setIslandCornerRadius(
+            surfaceCornerRadius
+        )
+        completionOutlineView.setIslandCornerRadius(
+            surfaceCornerRadius
+        )
+        shadowHost.layer?.shadowPath = CGPath(
+            roundedRect: shadowHost.bounds,
+            cornerWidth: surfaceCornerRadius,
+            cornerHeight: surfaceCornerRadius,
+            transform: nil
         )
         let expandedOrbSide = max(
             CodexActivityIslandPresentation.compactOrbCanvasSide,
@@ -1756,12 +2473,13 @@ private final class ActivityIslandContentView: NSView {
             to: 4,
             progress: progress
         )
-        orbView.frame = NSRect(
+        let orbFrame = NSRect(
             x: orbX,
             y: (surfaceBounds.height - orbCanvasSide) / 2,
             width: orbCanvasSide,
             height: orbCanvasSide
         )
+        orbView.frame = orbFrame
         orbView.redrawIfPaused()
 
         let compactTextStart =
@@ -1769,14 +2487,24 @@ private final class ActivityIslandContentView: NSView {
             + CodexActivityIslandPresentation.compactOrbDiameter
             + CodexActivityIslandPresentation.compactTextGap
         let expandedTextStart = 4 + expandedOrbSide + 2
-        let textStart = activityInterpolate(
-            from: compactTextStart,
-            to: expandedTextStart,
-            progress: progress
+        let textStart = CodexActivityIslandTextGeometry.textStart(
+            style: islandStyle,
+            compactStart: compactTextStart,
+            expandedStart: expandedTextStart,
+            expansionProgress: progress
         )
+        let usesProgressLayout = islandStyle == .progressBar
+        let statusColumnWidth =
+            CodexActivityIslandProgressBarGeometry
+            .maximumStatusColumnWidth
+        let textTrailing = usesProgressLayout
+            ? CodexActivityIslandProgressBarGeometry.textInset
+                + statusColumnWidth
+                + CodexActivityIslandProgressBarGeometry.columnGap
+            : 18
         let textWidth = max(
             0,
-            surfaceBounds.width - textStart - 18
+            surfaceBounds.width - textStart - textTrailing
         )
         let supportingAlpha = min(
             max((progress - 0.42) / 0.58, 0),
@@ -1793,58 +2521,93 @@ private final class ActivityIslandContentView: NSView {
         let textLayout = activityCenteredTextLayout(
             surfaceHeight: surfaceBounds.height
         )
+        let progressTextLayout = activityProgressTextLayout(
+            surfaceHeight: surfaceBounds.height
+        )
 
         kickerLabel.alphaValue = supportingAlpha
         detailLabel.alphaValue = supportingAlpha
         statusDot.alphaValue = supportingAlpha
         titleLabel.alphaValue = expandedTitleAlpha
         compactTitleLabel.alphaValue = compactTitleAlpha
-
-        kickerLabel.frame = NSRect(
-            x: textStart + 12,
-            y: textLayout.kickerY,
-            width: max(0, textWidth - 12),
-            height: activitySupportingLineHeight
-        )
-        statusDot.frame = NSRect(
-            x: textStart,
-            y: textLayout.statusDotY,
-            width: activityStatusDotSide,
-            height: activityStatusDotSide
-        )
         let centeredStatusY =
             (surfaceBounds.height - activityStatusLineHeight) / 2
-        titleLabel.frame = NSRect(
-            x: textStart,
-            y: activityInterpolate(
-                from: centeredStatusY,
-                to: textLayout.titleY,
-                progress: progress
-            ),
-            width: textWidth,
-            height: activityStatusLineHeight
+
+        if usesProgressLayout {
+            kickerLabel.frame = NSRect(
+                x:
+                    textStart
+                    + activityStatusDotSide
+                    + CodexActivityIslandProgressBarGeometry
+                        .titleDotGap,
+                y: progressTextLayout.titleY,
+                width: max(
+                    0,
+                    textWidth
+                        - activityStatusDotSide
+                        - CodexActivityIslandProgressBarGeometry
+                            .titleDotGap
+                ),
+                height: activitySupportingLineHeight
+            )
+            statusDot.frame = NSRect(
+                x: textStart,
+                y: progressTextLayout.statusDotY,
+                width: activityStatusDotSide,
+                height: activityStatusDotSide
+            )
+            detailLabel.frame = NSRect(
+                x: textStart,
+                y: progressTextLayout.detailY,
+                width: textWidth,
+                height: activitySupportingLineHeight
+            )
+            titleLabel.frame = NSRect(
+                x:
+                    surfaceBounds.width
+                    - CodexActivityIslandProgressBarGeometry.textInset
+                    - statusColumnWidth,
+                y: centeredStatusY,
+                width: statusColumnWidth,
+                height: activityStatusLineHeight
+            )
+        } else {
+            kickerLabel.frame = NSRect(
+                x: textStart + 12,
+                y: textLayout.kickerY,
+                width: max(0, textWidth - 12),
+                height: activitySupportingLineHeight
+            )
+            statusDot.frame = NSRect(
+                x: textStart,
+                y: textLayout.statusDotY,
+                width: activityStatusDotSide,
+                height: activityStatusDotSide
+            )
+            titleLabel.frame = NSRect(
+                x: textStart,
+                y: activityInterpolate(
+                    from: centeredStatusY,
+                    to: textLayout.titleY,
+                    progress: progress
+                ),
+                width: textWidth,
+                height: activityStatusLineHeight
+            )
+            detailLabel.frame = NSRect(
+                x: textStart,
+                y: textLayout.detailY,
+                width: textWidth,
+                height: activitySupportingLineHeight
+            )
+        }
+        var compactTitleFrame =
+            CodexActivityIslandTextGeometry.compactTitleFrame(
+                style: islandStyle,
+                surfaceWidth: surfaceBounds.width
         )
-        compactTitleLabel.frame = NSRect(
-            x:
-                CodexActivityIslandPresentation.compactOrbLeading
-                + CodexActivityIslandPresentation.compactOrbDiameter,
-            y: 0,
-            width: max(
-                0,
-                surfaceBounds.width
-                    - CodexActivityIslandPresentation
-                        .compactOrbLeading
-                    - CodexActivityIslandPresentation
-                        .compactOrbDiameter
-            ),
-            height: surfaceBounds.height
-        )
-        detailLabel.frame = NSRect(
-            x: textStart,
-            y: textLayout.detailY,
-            width: textWidth,
-            height: activitySupportingLineHeight
-        )
+        compactTitleFrame.size.height = surfaceBounds.height
+        compactTitleLabel.frame = compactTitleFrame
         shadowHost.layer?.shadowOpacity = Float(
             activityInterpolate(
                 from: 0.30,
@@ -1854,25 +2617,61 @@ private final class ActivityIslandContentView: NSView {
         )
     }
 
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        synchronizeLogicalBounds()
+    }
+
     func update(
         renderState: CodexActivityRenderState,
+        islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation
     ) {
         self.renderState = renderState
+        self.islandStyle = islandStyle
+        self.orbAnimation = orbAnimation
+        configureTypography(for: islandStyle)
+        let usesProgressTextStyle = islandStyle == .progressBar
         kickerLabel.stringValue = renderState.windowTitle
         titleLabel.stringValue = renderState.statusTitle
         compactTitleLabel.stringValue = renderState.statusTitle
         detailLabel.stringValue = renderState.operation
         let sweeps =
             renderState.visualState.activityShowsOperationSweep
-        detailLabel.textColor = NSColor.white.withAlphaComponent(
-            sweeps ? 0.42 : 0.64
-        )
+        if usesProgressTextStyle {
+            kickerLabel.textColor =
+                CodexActivityIslandTextContrast
+                .secondaryTextColor
+            detailLabel.textColor =
+                CodexActivityIslandTextContrast
+                .secondaryTextColor
+            statusDot.layer?.borderWidth =
+                CodexActivityIslandTextContrast
+                .statusDotBorderWidth
+            statusDot.layer?.borderColor =
+                CodexActivityIslandTextContrast
+                .statusDotBorderColor.cgColor
+        } else {
+            kickerLabel.textColor =
+                NSColor.white.withAlphaComponent(0.46)
+            detailLabel.textColor =
+                NSColor.white.withAlphaComponent(
+                    sweeps ? 0.42 : 0.64
+                )
+            statusDot.layer?.borderWidth = 0
+            statusDot.layer?.borderColor = nil
+        }
         detailLabel.shimmerEnabled = sweeps
         statusDot.layer?.backgroundColor =
             renderState.visualState.activityAccentColor.cgColor
         orbView.setAnimation(orbAnimation)
         orbView.setState(renderState.visualState)
+        stateSmokeView.setState(renderState.visualState)
+        stateSmokeView.setApproximateProgress(
+            renderState.approximateProgressFraction
+        )
+        applyVisualEffectPlayback()
+        synchronizeLogicalBounds()
         needsLayout = true
 
         setAccessibilityElement(true)
@@ -1880,17 +2679,118 @@ private final class ActivityIslandContentView: NSView {
         setAccessibilityLabel(renderState.accessibilityLabel)
     }
 
+    private func configureTypography(
+        for style: AppPreferences.CodexActivityIslandStyle
+    ) {
+        let usesProgressLayout = style == .progressBar
+        kickerLabel.font = activityFont(
+            "AstaSans-SemiBold",
+            size:
+                usesProgressLayout
+                ? CodexActivityIslandProgressBarGeometry
+                    .titleFontSize
+                : 11.5,
+            fallbackWeight: .semibold
+        )
+        titleLabel.font = activityFont(
+            "AstaSans-SemiBold",
+            size:
+                usesProgressLayout
+                ? CodexActivityIslandProgressBarGeometry
+                    .statusFontSize
+                : 18,
+            fallbackWeight: .semibold
+        )
+        detailLabel.font = activityFont(
+            "AstaSans-Regular",
+            size:
+                CodexActivityIslandProgressBarGeometry
+                .detailFontSize,
+            fallbackWeight: .regular
+        )
+        titleLabel.horizontalAlignment =
+            CodexActivityIslandTextGeometry
+            .expandedStatusAlignment(style: style)
+    }
+
     func setReduceMotion(_ enabled: Bool) {
-        orbView.setReduceMotion(enabled)
+        reduceMotion = enabled
+        applyVisualEffectPlayback()
         detailLabel.setReduceMotion(enabled)
+    }
+
+    func setPlaybackVisible(_ visible: Bool) {
+        playbackVisible = visible
+        applyVisualEffectPlayback()
     }
 
     func setPresentationMode(
         _ mode: CodexActivityIslandPresentation,
+        expandedSize: AppPreferences.CodexActivityExpandedSize,
         accessibilityValue: String
     ) {
+        presentationMode = mode
+        self.expandedSize = expandedSize
+        synchronizeLogicalBounds()
         needsLayout = true
         setAccessibilityValue(accessibilityValue)
+    }
+
+    private func synchronizeLogicalBounds() {
+        let logicalSize: NSSize
+        if presentationMode == .expanded,
+           islandStyle == .aiOrb,
+           expandedSize != .oneHundredPercent
+        {
+            logicalSize = renderState.visualState.activityWindowSize
+        } else {
+            logicalSize = frame.size
+        }
+
+        guard bounds.origin != .zero || bounds.size != logicalSize else {
+            return
+        }
+        super.setBoundsOrigin(.zero)
+        super.setBoundsSize(logicalSize)
+    }
+
+    private var isUsingStateSmoke: Bool {
+        islandStyle == .progressBar
+            && stateSmokeView.isRendererAvailable
+    }
+
+    private func applyVisualEffectPlayback() {
+        let usesStateSmoke = isUsingStateSmoke
+        orbView.setAnimation(
+            islandStyle == .progressBar
+                ? .particleOrb
+                : orbAnimation
+        )
+        stateSmokeView.isHidden = !usesStateSmoke
+        orbView.isHidden = usesStateSmoke
+        stateSmokeView.setReduceMotion(reduceMotion)
+        stateSmokeView.setPlaybackEnabled(
+            usesStateSmoke && playbackVisible
+        )
+        completionGlowView.update(
+            isCompleted:
+                usesStateSmoke
+                && renderState.visualState == .completed,
+            reduceMotion: reduceMotion,
+            playbackVisible: playbackVisible
+        )
+        completionOutlineView.update(
+            isCompleted:
+                usesStateSmoke
+                && renderState.visualState == .completed,
+            reduceMotion: reduceMotion,
+            playbackVisible: playbackVisible
+        )
+        orbView.setReduceMotion(reduceMotion)
+        orbView.setPlaybackEnabled(
+            !usesStateSmoke && playbackVisible
+        )
+        needsLayout = true
     }
 }
 
@@ -2022,23 +2922,36 @@ final class CodexActivityIslandPanelController {
     private var presentationMode:
         CodexActivityIslandPresentation = .expanded
     private var targetSize: NSSize
+    private var panelInset: CGFloat
 
     init(
         initialState: CodexActivityRenderState,
+        islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        expandedSize: AppPreferences.CodexActivityExpandedSize,
         screenPlacement:
             AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?
     ) {
-        targetSize = initialState.visualState.activityWindowSize
+        panelInset = CodexActivityIslandGeometry.panelInset(
+            for: islandStyle
+        )
+        targetSize = CodexActivityIslandGeometry.panelSize(
+            presentation: .expanded,
+            renderState: initialState,
+            style: islandStyle,
+            expandedSize: expandedSize
+        )
         content = ActivityIslandContentView(
             initialState: initialState,
-            orbAnimation: orbAnimation
+            islandStyle: islandStyle,
+            orbAnimation: orbAnimation,
+            expandedSize: expandedSize
         )
         panel = CodexActivityPanel(
             contentRect: NSRect(
                 origin: .zero,
-                size: initialState.visualState.activityWindowSize
+                size: targetSize
             ),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -2062,7 +2975,7 @@ final class CodexActivityIslandPanelController {
         panel.contentView = content
 
         positionPanel(
-            size: initialState.visualState.activityWindowSize,
+            size: targetSize,
             animated: false,
             screenPlacement: screenPlacement,
             codexProcessIdentifier: codexProcessIdentifier
@@ -2074,29 +2987,40 @@ final class CodexActivityIslandPanelController {
         presentationMode: CodexActivityIslandPresentation,
         presentationAccessibilityValue: String,
         reduceMotion: Bool,
+        islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        expandedSize: AppPreferences.CodexActivityExpandedSize,
         screenPlacement:
             AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?
     ) {
         let modeChanged = self.presentationMode != presentationMode
         self.presentationMode = presentationMode
+        panelInset = CodexActivityIslandGeometry.panelInset(
+            for: islandStyle
+        )
 
         content.setReduceMotion(reduceMotion)
         content.update(
             renderState: renderState,
+            islandStyle: islandStyle,
             orbAnimation: orbAnimation
         )
         content.setPresentationMode(
             presentationMode,
+            expandedSize: expandedSize,
             accessibilityValue: presentationAccessibilityValue
         )
+        content.setPlaybackVisible(true)
 
         let duration = modeChanged
             ? presentationMode.transitionDuration
             : 0.44
-        targetSize = presentationMode.panelSize(
-            for: renderState.visualState
+        targetSize = CodexActivityIslandGeometry.panelSize(
+            presentation: presentationMode,
+            renderState: renderState,
+            style: islandStyle,
+            expandedSize: expandedSize
         )
         positionPanel(
             size: targetSize,
@@ -2109,6 +3033,7 @@ final class CodexActivityIslandPanelController {
     }
 
     func hide() {
+        content.setPlaybackVisible(false)
         panel.orderOut(nil)
     }
 
@@ -2145,9 +3070,17 @@ final class CodexActivityIslandPanelController {
             return
         }
         let visibleFrame = screen.visibleFrame
+        let topInsetCompensation = max(
+            0,
+            panelInset - CodexActivityIslandPresentation.panelInset
+        )
         let targetFrame = NSRect(
             x: visibleFrame.midX - size.width / 2,
-            y: visibleFrame.maxY - size.height - 6,
+            y:
+                visibleFrame.maxY
+                - size.height
+                - 6
+                + topInsetCompensation,
             width: size.width,
             height: size.height
         )

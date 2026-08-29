@@ -519,6 +519,77 @@ struct SettingsView: View {
 
                 NativeSettingsRow(
                     title: copy.text(
+                        "灵动岛样式",
+                        "Island Style"
+                    ),
+                    subtitle: copy.text(
+                        "在 AI 球与独立的进度条灵动岛之间切换。",
+                        "Switch between the AI Orb and the independent Progress Bar island."
+                    )
+                ) {
+                    NativeSettingsSegmentedPicker(
+                        copy.text("灵动岛样式", "Island Style"),
+                        selection:
+                            $preferences.codexActivityIslandStyle
+                    ) {
+                        Text(copy.text("AI 球", "AI Orb"))
+                            .tag(
+                                AppPreferences
+                                    .CodexActivityIslandStyle.aiOrb
+                            )
+                        Text(copy.text("进度条", "Progress Bar"))
+                            .tag(
+                                AppPreferences
+                                    .CodexActivityIslandStyle.progressBar
+                            )
+                    }
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text(
+                        "展开尺寸",
+                        "Expanded Size"
+                    ),
+                    subtitle: copy.text(
+                        "仅缩放 AI 球灵动岛的展开状态；进度条与紧凑状态保持原尺寸。",
+                        "Scale only the expanded AI Orb island. The Progress Bar and compact states keep their original size."
+                    )
+                ) {
+                    NativeSettingsSegmentedPicker(
+                        copy.text("展开尺寸", "Expanded Size"),
+                        selection: $preferences.codexActivityExpandedSize
+                    ) {
+                        ForEach(
+                            AppPreferences.CodexActivityExpandedSize
+                                .allCases
+                        ) { size in
+                            Text("\(size.rawValue)%")
+                                .tag(size)
+                        }
+                    }
+                    .disabled(
+                        preferences.codexActivityIslandStyle
+                            != .aiOrb
+                    )
+                    .help(copy.text(
+                        "选择 AI 球灵动岛展开状态的固定缩放档位。",
+                        "Choose a fixed scale for the expanded AI Orb island."
+                    ))
+                    .accessibilityLabel(copy.text(
+                        "AI 球灵动岛展开尺寸",
+                        "AI Orb island expanded size"
+                    ))
+                    .accessibilityValue(
+                        "\(preferences.codexActivityExpandedSize.rawValue)%"
+                    )
+                }
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text(
                         "锁定到 Codex 屏幕",
                         "Lock to Codex Screen"
                     ),
@@ -668,29 +739,31 @@ struct SettingsView: View {
                 .padding(.vertical, 11)
             }
 
-            NativeSettingsCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(copy.text(
-                            "灵动岛动画",
-                            "Island Animation"
-                        ))
-                        .font(.body.weight(.medium))
+            if preferences.codexActivityIslandStyle == .aiOrb {
+                NativeSettingsCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(copy.text(
+                                "AI 球动画",
+                                "AI Orb Animation"
+                            ))
+                            .font(.body.weight(.medium))
 
-                        Text(copy.text(
-                            "选择灵动岛使用的光球动画。",
-                            "Choose the orb animation used by the Codex island."
-                        ))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    }
+                            Text(copy.text(
+                                "选择 AI 球灵动岛使用的球体动画。",
+                                "Choose the orb animation used by the AI Orb island."
+                            ))
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        }
 
-                    HStack(spacing: 12) {
-                        codexActivityAnimationOption(.particleOrb)
-                        codexActivityAnimationOption(.rippleGlow)
+                        HStack(spacing: 12) {
+                            codexActivityAnimationOption(.particleOrb)
+                            codexActivityAnimationOption(.rippleGlow)
+                        }
                     }
+                    .padding(18)
                 }
-                .padding(18)
             }
 
             NativeSettingsCard {
@@ -762,7 +835,7 @@ struct SettingsView: View {
             preferences.codexActivityOrbAnimation = animation
         } label: {
             VStack(spacing: 8) {
-                CodexActivityOrbPreview(
+                codexActivityAnimationPreview(
                     animation: animation,
                     reduceMotion: reduceMotion
                 )
@@ -804,6 +877,16 @@ struct SettingsView: View {
             isSelected
                 ? copy.text("已选择", "Selected")
                 : copy.text("未选择", "Not selected")
+        )
+    }
+
+    private func codexActivityAnimationPreview(
+        animation: AppPreferences.CodexActivityOrbAnimation,
+        reduceMotion: Bool
+    ) -> some View {
+        CodexActivityOrbPreview(
+            animation: animation,
+            reduceMotion: reduceMotion
         )
     }
 
@@ -1690,7 +1773,7 @@ private struct NativeSettingsCard<Content: View>: View {
     }
 }
 
-private struct NativeSettingsRow<Control: View>: View {
+struct NativeSettingsRow<Control: View>: View {
     let title: String
     let subtitle: String?
     let control: Control
@@ -1719,16 +1802,44 @@ private struct NativeSettingsRow<Control: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-
-            Spacer(minLength: 18)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             control
-                .fixedSize(horizontal: true, vertical: false)
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 18)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity, minHeight: 52)
         .contentShape(Rectangle())
+    }
+}
+
+struct NativeSettingsSegmentedPicker<
+    Selection: Hashable,
+    Content: View
+>: View {
+    let title: String
+    @Binding var selection: Selection
+    let content: Content
+
+    init(
+        _ title: String,
+        selection: Binding<Selection>,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        _selection = selection
+        self.content = content()
+    }
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            content
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .controlSize(.small)
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 

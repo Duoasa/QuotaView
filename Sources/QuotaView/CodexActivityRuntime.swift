@@ -30,6 +30,7 @@ enum CodexActivityBridgeStatus: Equatable {
 final class CodexActivityStore: ObservableObject {
     nonisolated static let compactDelay: TimeInterval = 20
     nonisolated static let hiddenDelayAfterCompact: TimeInterval = 100
+    nonisolated static let settledEventSilenceDelay: TimeInterval = 20
 
     @Published private(set) var snapshot: CodexActivitySnapshot?
     @Published private(set) var presentation:
@@ -41,19 +42,33 @@ final class CodexActivityStore: ObservableObject {
     private let titleClient: CodexAppServerClient
     private var compactDelayNanoseconds: UInt64
     private var hiddenDelayNanoseconds: UInt64
+    private var settledEventSilenceDelayNanoseconds: UInt64
     private var inactivityTask: Task<Void, Never>?
     private var titleTask: Task<Void, Never>?
     private var titleTaskSessionHash: String?
     private var titleCache: [String: String] = [:]
     private var titleAttemptedAt: [String: Date] = [:]
     private var latestEventAtBySession: [String: Date] = [:]
+    private var completedTurnBySession: [String: CompletedTurn] = [:]
+    private var planProgressBySession: [String: StoredPlanProgress] = [:]
     private var revision: UInt64 = 0
+
+    private struct StoredPlanProgress {
+        let turnHash: String?
+        let fraction: Double
+    }
+
+    private struct CompletedTurn {
+        let turnHash: String?
+    }
 
     init(
         titleClient: CodexAppServerClient = CodexAppServerClient(),
         compactDelay: TimeInterval = CodexActivityStore.compactDelay,
         hiddenDelayAfterCompact: TimeInterval =
-            CodexActivityStore.hiddenDelayAfterCompact
+            CodexActivityStore.hiddenDelayAfterCompact,
+        settledEventSilenceDelay: TimeInterval =
+            CodexActivityStore.settledEventSilenceDelay
     ) {
         self.titleClient = titleClient
         compactDelayNanoseconds = UInt64(
@@ -62,10 +77,13 @@ final class CodexActivityStore: ObservableObject {
         hiddenDelayNanoseconds = UInt64(
             max(hiddenDelayAfterCompact, 0) * 1_000_000_000
         )
+        settledEventSilenceDelayNanoseconds = Self.nanoseconds(
+            for: settledEventSilenceDelay
+        )
     }
 
     func receive(_ event: CodexActivityEvent) {
-        guard let nextSnapshot = CodexActivityReducer.snapshot(for: event)
+        guard CodexActivityReducer.snapshot(for: event) != nil
         else {
             return
         }
@@ -75,11 +93,44 @@ final class CodexActivityStore: ObservableObject {
         {
             return
         }
-        latestEventAtBySession[event.sessionHash] = event.occurredAt
         if let snapshot,
            event.sessionHash != snapshot.sessionHash,
            event.occurredAt < snapshot.occurredAt
         {
+            return
+        }
+        if shouldIgnoreLateSettledEvent(afterCompletedTurn: event) {
+            return
+        }
+        latestEventAtBySession[event.sessionHash] = event.occurredAt
+
+        switch event.event {
+        case .userPromptSubmit:
+            completedTurnBySession.removeValue(
+                forKey: event.sessionHash
+            )
+        case .sessionStart:
+            if event.sessionStartSource != .compact {
+                completedTurnBySession.removeValue(
+                    forKey: event.sessionHash
+                )
+            }
+        case .sessionEnd:
+            completedTurnBySession.removeValue(
+                forKey: event.sessionHash
+            )
+        case .stop:
+            completedTurnBySession[event.sessionHash] =
+                CompletedTurn(turnHash: event.turnHash)
+        default:
+            break
+        }
+
+        let approximateProgress = approximateProgress(for: event)
+        guard let nextSnapshot = CodexActivityReducer.snapshot(
+            for: event,
+            approximateProgressFraction: approximateProgress
+        ) else {
             return
         }
 
@@ -96,6 +147,9 @@ final class CodexActivityStore: ObservableObject {
             }
             titleCache.removeValue(forKey: event.sessionHash)
             titleAttemptedAt.removeValue(forKey: event.sessionHash)
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
             if titleTaskSessionHash == event.sessionHash {
                 titleTask?.cancel()
                 titleTask = nil
@@ -111,6 +165,17 @@ final class CodexActivityStore: ObservableObject {
         }
         snapshot = nextSnapshot
         resolvedThreadTitle = titleCache[event.sessionHash]
+        let settledEventHideDelay =
+            remainingSettledEventSilenceNanoseconds(for: event)
+        if settledEventHideDelay == 0,
+           CodexActivityReducer.shouldHideAfterSettledEventSilence(
+               after: event
+           )
+        {
+            presentation = .hidden
+            notifyChange()
+            return
+        }
         presentation = .expanded
         notifyChange()
 
@@ -121,6 +186,11 @@ final class CodexActivityStore: ObservableObject {
 
         if CodexActivityReducer.shouldStartInactivityCycle(after: event) {
             scheduleInactivityCycle(revision: eventRevision)
+        } else if let settledEventHideDelay {
+            scheduleSettledEventSilenceHide(
+                revision: eventRevision,
+                delayNanoseconds: settledEventHideDelay
+            )
         }
     }
 
@@ -214,6 +284,60 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    private func approximateProgress(
+        for event: CodexActivityEvent
+    ) -> Double? {
+        switch event.event {
+        case .userPromptSubmit:
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            return nil
+        case .sessionStart:
+            if event.sessionStartSource != .compact {
+                planProgressBySession.removeValue(
+                    forKey: event.sessionHash
+                )
+            }
+        case .sessionEnd:
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            return nil
+        case .stop:
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            return 1
+        default:
+            break
+        }
+
+        if let fraction = event.planProgress?.approximateFraction {
+            planProgressBySession[event.sessionHash] =
+                StoredPlanProgress(
+                    turnHash: event.turnHash,
+                    fraction: fraction
+                )
+            return fraction
+        }
+
+        guard let stored = planProgressBySession[event.sessionHash]
+        else {
+            return nil
+        }
+        if let storedTurnHash = stored.turnHash,
+           let eventTurnHash = event.turnHash,
+           storedTurnHash != eventTurnHash
+        {
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            return nil
+        }
+        return stored.fraction
+    }
+
     private func scheduleInactivityCycle(revision: UInt64) {
         inactivityTask = Task { [weak self] in
             guard let self else { return }
@@ -238,6 +362,53 @@ final class CodexActivityStore: ObservableObject {
             guard let self else { return }
             await sleepUntilHidden(revision: revision)
         }
+    }
+
+    private func scheduleSettledEventSilenceHide(
+        revision: UInt64,
+        delayNanoseconds: UInt64
+    ) {
+        inactivityTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(nanoseconds: delayNanoseconds)
+                guard !Task.isCancelled, self.revision == revision else {
+                    return
+                }
+                presentation = .hidden
+                notifyChange()
+            } catch {
+                return
+            }
+        }
+    }
+
+    private func remainingSettledEventSilenceNanoseconds(
+        for event: CodexActivityEvent
+    ) -> UInt64? {
+        guard CodexActivityReducer
+            .shouldHideAfterSettledEventSilence(after: event)
+        else {
+            return nil
+        }
+        let elapsed = max(0, Date().timeIntervalSince(event.occurredAt))
+        let fullDelay = TimeInterval(
+            settledEventSilenceDelayNanoseconds
+        ) / 1_000_000_000
+        return Self.nanoseconds(for: max(0, fullDelay - elapsed))
+    }
+
+    private func shouldIgnoreLateSettledEvent(
+        afterCompletedTurn event: CodexActivityEvent
+    ) -> Bool {
+        guard let completedTurn =
+                completedTurnBySession[event.sessionHash],
+              completedTurn.turnHash == event.turnHash
+        else {
+            return false
+        }
+        return CodexActivityReducer
+            .shouldHideAfterSettledEventSilence(after: event)
     }
 
     private func sleepUntilHidden(revision: UInt64) async {
@@ -1016,6 +1187,8 @@ final class CodexActivityRuntime: ObservableObject {
         )
         let renderState = CodexActivityRenderState(
             visualState: snapshot.state,
+            approximateProgressFraction:
+                snapshot.approximateProgressFraction,
             windowTitle: title,
             statusTitle: copy.statusTitle(for: snapshot.state),
             operation: copy.operation(
@@ -1024,7 +1197,9 @@ final class CodexActivityRuntime: ObservableObject {
             accessibilityLabel: copy.accessibilityLabel(
                 windowTitle: title,
                 statusTitle: copy.statusTitle(for: snapshot.state),
-                operation: copy.operation(for: snapshot.operationKey)
+                operation: copy.operation(for: snapshot.operationKey),
+                approximateProgressFraction:
+                    snapshot.approximateProgressFraction
             )
         )
         let presentation: CodexActivityIslandPresentation =
@@ -1035,7 +1210,9 @@ final class CodexActivityRuntime: ObservableObject {
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
+                islandStyle: preferences.codexActivityIslandStyle,
                 orbAnimation: preferences.codexActivityOrbAnimation,
+                expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
                 codexProcessIdentifier: codexProcessIdentifier
@@ -1049,7 +1226,9 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
+            islandStyle: preferences.codexActivityIslandStyle,
             orbAnimation: preferences.codexActivityOrbAnimation,
+            expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier
         )
@@ -1109,13 +1288,15 @@ final class CodexActivityRuntime: ObservableObject {
         )
         let renderState = CodexActivityRenderState(
             visualState: .disconnectedCodex,
+            approximateProgressFraction: nil,
             windowTitle: "QuotaView",
             statusTitle: statusTitle,
             operation: operation,
             accessibilityLabel: copy.accessibilityLabel(
                 windowTitle: "QuotaView",
                 statusTitle: statusTitle,
-                operation: operation
+                operation: operation,
+                approximateProgressFraction: nil
             )
         )
         let codexProcessIdentifier =
@@ -1124,7 +1305,9 @@ final class CodexActivityRuntime: ObservableObject {
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
+                islandStyle: preferences.codexActivityIslandStyle,
                 orbAnimation: preferences.codexActivityOrbAnimation,
+                expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
                 codexProcessIdentifier: codexProcessIdentifier
@@ -1138,7 +1321,9 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
+            islandStyle: preferences.codexActivityIslandStyle,
             orbAnimation: preferences.codexActivityOrbAnimation,
+            expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier
         )
@@ -1163,7 +1348,7 @@ final class CodexActivityRuntime: ObservableObject {
     }
 }
 
-private struct CodexActivityCopy {
+struct CodexActivityCopy {
     let language: AppPreferences.Language
 
     func statusTitle(for state: CodexActivityVisualState) -> String {
@@ -1312,14 +1497,27 @@ private struct CodexActivityCopy {
     func accessibilityLabel(
         windowTitle: String,
         statusTitle: String,
-        operation: String
+        operation: String,
+        approximateProgressFraction: Double?
     ) -> String {
+        let progressText = approximateProgressFraction.map {
+            String(Int((min(max($0, 0), 1) * 100).rounded()))
+        }
         switch language {
         case .simplifiedChinese:
-            "\(windowTitle)，状态：\(statusTitle)，"
+            if let progressText {
+                return "\(windowTitle)，状态：\(statusTitle)，"
+                    + "近似进度：\(progressText)%，当前操作：\(operation)"
+            }
+            return "\(windowTitle)，状态：\(statusTitle)，"
                 + "当前操作：\(operation)"
         case .english:
-            "\(windowTitle), status: \(statusTitle), "
+            if let progressText {
+                return "\(windowTitle), status: \(statusTitle), "
+                    + "approximate progress: \(progressText)%, "
+                    + "current operation: \(operation)"
+            }
+            return "\(windowTitle), status: \(statusTitle), "
                 + "current operation: \(operation)"
         }
     }
