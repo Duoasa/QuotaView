@@ -52,6 +52,8 @@
 		B1000000000000000000002C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000001 /* Sparkle */; };
 		B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000031 /* CodexActivityRippleGlow.swift */; };
 		B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */; };
+		B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* CodexActivityStateSmoke.swift */; };
+		B10000000000000000000030 /* PlanProgressParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000034 /* PlanProgressParser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -172,6 +174,8 @@
 		F10000000000000000000030 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
 		F10000000000000000000031 /* CodexActivityRippleGlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityRippleGlow.swift; sourceTree = "<group>"; };
 		F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/CodexActivityRippleGlowShader.txt; sourceTree = "<group>"; };
+		F10000000000000000000033 /* CodexActivityStateSmoke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityStateSmoke.swift; sourceTree = "<group>"; };
+		F10000000000000000000034 /* PlanProgressParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressParser.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -236,6 +240,7 @@
 				G10000000000000000000009 /* QuotaViewWidgetContract */,
 				G1000000000000000000000A /* QuotaViewWidget */,
 				G1000000000000000000000C /* QuotaViewActivityHook */,
+				G1000000000000000000000D /* QuotaViewActivityHookSupport */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -259,6 +264,7 @@
 				F1000000000000000000002C /* CodexActivityRuntime.swift */,
 				F1000000000000000000002D /* CodexActivityIsland.swift */,
 				F10000000000000000000031 /* CodexActivityRippleGlow.swift */,
+				F10000000000000000000033 /* CodexActivityStateSmoke.swift */,
 				F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */,
 			);
 			path = QuotaView;
@@ -304,6 +310,14 @@
 				F1000000000000000000002E /* main.swift */,
 			);
 			path = QuotaViewActivityHook;
+			sourceTree = "<group>";
+		};
+		G1000000000000000000000D /* QuotaViewActivityHookSupport */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000034 /* PlanProgressParser.swift */,
+			);
+			path = QuotaViewActivityHookSupport;
 			sourceTree = "<group>";
 		};
 		G10000000000000000000005 /* Tests */ = {
@@ -593,6 +607,7 @@
 				B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */,
 				B10000000000000000000028 /* CodexActivityIsland.swift in Sources */,
 				B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */,
+				B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -637,6 +652,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000029 /* main.swift in Sources */,
+				B10000000000000000000030 /* PlanProgressParser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

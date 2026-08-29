@@ -53,6 +53,13 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum CodexActivityIslandStyle: String, CaseIterable, Identifiable {
+        case aiOrb
+        case progressBar
+
+        var id: String { rawValue }
+    }
+
     enum CodexActivityOrbAnimation: String, CaseIterable, Identifiable {
         case particleOrb
         case rippleGlow
@@ -65,6 +72,22 @@ final class AppPreferences: ObservableObject {
         case codexScreen
 
         var id: String { rawValue }
+    }
+
+    enum CodexActivityExpandedSize: String, CaseIterable, Identifiable {
+        case oneHundredPercent = "100"
+        case eightyFivePercent = "85"
+        case seventyFivePercent = "75"
+
+        var id: String { rawValue }
+
+        var scale: CGFloat {
+            switch self {
+            case .oneHundredPercent: 1
+            case .eightyFivePercent: 0.85
+            case .seventyFivePercent: 0.75
+            }
+        }
     }
 
     enum CodexActivityTiming {
@@ -95,10 +118,14 @@ final class AppPreferences: ObservableObject {
         static let showResetAction = "preferences.panel.showResetAction"
         static let codexActivityIslandEnabled =
             "preferences.codexActivity.islandEnabled"
+        static let codexActivityIslandStyle =
+            "preferences.codexActivity.islandStyle"
         static let codexActivityOrbAnimation =
             "preferences.codexActivity.orbAnimation"
         static let codexActivityScreenPlacement =
             "preferences.codexActivity.screenPlacement"
+        static let codexActivityExpandedSize =
+            "preferences.codexActivity.expandedSize"
         static let codexActivityCompactDelay =
             "preferences.codexActivity.compactDelay"
         static let codexActivityHiddenDelayAfterCompact =
@@ -197,6 +224,15 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published var codexActivityIslandStyle: CodexActivityIslandStyle {
+        didSet {
+            defaults.set(
+                codexActivityIslandStyle.rawValue,
+                forKey: Key.codexActivityIslandStyle
+            )
+        }
+    }
+
     @Published var codexActivityOrbAnimation: CodexActivityOrbAnimation {
         didSet {
             defaults.set(
@@ -212,6 +248,16 @@ final class AppPreferences: ObservableObject {
             defaults.set(
                 codexActivityScreenPlacement.rawValue,
                 forKey: Key.codexActivityScreenPlacement
+            )
+        }
+    }
+
+    @Published var codexActivityExpandedSize:
+        CodexActivityExpandedSize {
+        didSet {
+            defaults.set(
+                codexActivityExpandedSize.rawValue,
+                forKey: Key.codexActivityExpandedSize
             )
         }
     }
@@ -369,16 +415,37 @@ final class AppPreferences: ObservableObject {
             forKey: Key.codexActivityIslandEnabled,
             defaultValue: true
         )
-        codexActivityOrbAnimation = CodexActivityOrbAnimation(
+        let storedCodexActivityOrbAnimation = defaults.string(
+            forKey: Key.codexActivityOrbAnimation
+        ) ?? ""
+        codexActivityIslandStyle = CodexActivityIslandStyle(
             rawValue: defaults.string(
-                forKey: Key.codexActivityOrbAnimation
+                forKey: Key.codexActivityIslandStyle
             ) ?? ""
+        ) ?? (
+            storedCodexActivityOrbAnimation == "smokeProgress"
+                ? .progressBar
+                : .aiOrb
+        )
+        codexActivityOrbAnimation = CodexActivityOrbAnimation(
+            rawValue: storedCodexActivityOrbAnimation
         ) ?? .particleOrb
         codexActivityScreenPlacement = CodexActivityScreenPlacement(
             rawValue: defaults.string(
                 forKey: Key.codexActivityScreenPlacement
             ) ?? ""
         ) ?? .followHotspot
+        let storedCodexActivityExpandedSize = defaults.string(
+            forKey: Key.codexActivityExpandedSize
+        ) ?? ""
+        codexActivityExpandedSize = switch storedCodexActivityExpandedSize {
+        case "80": .eightyFivePercent
+        case "60": .seventyFivePercent
+        default:
+            CodexActivityExpandedSize(
+                rawValue: storedCodexActivityExpandedSize
+            ) ?? .oneHundredPercent
+        }
         codexActivityCompactDelay = Self.normalizedTimingValue(
             defaults.storedInt(
                 forKey: Key.codexActivityCompactDelay,
@@ -414,12 +481,20 @@ final class AppPreferences: ObservableObject {
         ) ?? .simplifiedChinese
         defaults.set(glassMode.rawValue, forKey: Key.glassMode)
         defaults.set(
+            codexActivityIslandStyle.rawValue,
+            forKey: Key.codexActivityIslandStyle
+        )
+        defaults.set(
             codexActivityOrbAnimation.rawValue,
             forKey: Key.codexActivityOrbAnimation
         )
         defaults.set(
             codexActivityScreenPlacement.rawValue,
             forKey: Key.codexActivityScreenPlacement
+        )
+        defaults.set(
+            codexActivityExpandedSize.rawValue,
+            forKey: Key.codexActivityExpandedSize
         )
         defaults.set(
             codexActivityCompactDelay,
