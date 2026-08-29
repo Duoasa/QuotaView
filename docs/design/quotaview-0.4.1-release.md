@@ -4,11 +4,11 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
 > 更新日期：2026-08-30
 >
-> 生产基线：`0.3.7 Build 1` / `v0.3.7-build.1`
+> 发布基线：`0.3.7 Build 1` / `v0.3.7-build.1`
 >
 > 目标版本：`0.4.1 Build 1` / Sparkle 内部序号 `13`
 
@@ -51,15 +51,28 @@
 | `RELEASE-0.4.1-05` | Stable appcast 使用 Sparkle EdDSA 签名并在线验证；GitHub 回下载资产与本地公证包逐字节一致 |
 | `RELEASE-0.4.1-06` | `HANDOFF.md`、`VERSION_HISTORY.md`、SDD 注册表和相关规格只在对应事实完成后回填，不把候选状态写成已发布 |
 
-## 当前验证
+## 发布结果
 
 - `swift test`：93 项通过、0 失败；新增覆盖缺失 `Stop` 的静默收敛、同轮
   迟到结束事件防回开、重启旧事件不重放和新任务取消收敛；
 - Activity Hook Unix Socket 隐私检查：`exec` 包装计划只输出三个状态计数；
-- Universal Xcode Release 无签名构建：App、Widget、Hook 均为
-  `x86_64 arm64`；
-- 最新 0.4.1 本地验收包已用 ad-hoc 签名重新构建并启动；这不是正式发布包；
-- Developer ID、公证、GitHub Release、回下载与 appcast：待执行；
-- 产品所有者已完成当前生产 App 的最终视觉验收，并确认继续正式发布流程；
+- PR #34 GitHub CI 通过并合并为发布提交
+  `e14039eeb7021041f384b10db386a80844694b0f`；Universal Release 的 App、
+  Widget、Hook 均为 `x86_64 arm64`；
+- 正式包使用 `Developer ID Application: Chenchen Xu (BUUH229D5Q)` 与
+  Hardened Runtime；Apple 公证 Accepted 并完成 Staple，Submission 为
+  `fd08ea22-9a55-4f63-9279-f10f0663eb7a`；
+- GitHub Latest 为 `v0.4.1-build.1`；正式资产
+  `QuotaView-v0.4.1-build.1.zip` 大小 `13,068,004 bytes`，SHA-256 为
+  `ae8cf53acc6e6473ebf33bb853b7448672b48c4e849ef4b219efd74b18a9a2a3`；
+- GitHub 回下载资产与本地公证包逐字节一致；回解压后通过嵌套签名、Staple、
+  Gatekeeper、版本、资源与双架构复核，并完成独立启动冒烟；
+- Stable appcast 由 `gh-pages` 提交
+  `e8312e45e344fbb9fcb01875ab27a65ce47506d0` 发布；线上文件 SHA-256 为
+  `afcce62e375f3f35f6557308343e47349e0d895ab23489fb101b537c58abc852`，
+  与本地签名 feed 逐字节一致且 EdDSA 验证通过；
+- GitHub Release Notes 使用单份英文源文，README 中英文下载入口均指向
+  同一正式资产；
+- 产品所有者已确认当前生产 App 没有发现新的视觉问题并批准发布；
   完整深浅色、VoiceOver、Increase Contrast 与 Reduce Motion 交叉矩阵未
   单独记录为全量通过。

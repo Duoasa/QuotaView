@@ -4,11 +4,11 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
 > 更新日期：2026-08-30
 >
-> 生产基线：`0.3.7 Build 1`
+> 发布基线：`0.3.7 Build 1`
 >
 > 目标发布版本：`0.4.1 Build 1`
 
@@ -263,15 +263,18 @@ QuotaView。修正后的 Hook 同时保留直接路径，并只在 `exec`、
   `pendingSteps` 三个计数及既有哈希元数据；
 - Universal Xcode Release 无签名构建通过，App、Widget 和 Activity Hook
   均为 `x86_64 arm64`；候选版本身份已切换为 Marketing `0.4.1`、内部序号
-  `13`、产品 Build `1`，正式封包结果待 Release 流程回填；
+  `13`、产品 Build `1`；
 - `AppIcon.icns`、`Assets.car`、ad-hoc 签名、`git diff --check`、临时 Debug/
   自动 UI QA 标记与真实额度消费调用搜索通过；
 - 完成高光使用岛体内部缩进的完整圆角阴影源，辉光层位于原生岛体图层下方，
   稳定 `1 pt` 纯净绿色描边位于岛体上方；上层岛体表面覆盖内部光源，透明
-  窗口预留扩大到 `30 pt`，已移除会切出矩形边界的偶奇遮罩；展开和紧凑态视觉结果
-  仍等待产品所有者验收；
-- 0.4.1 Developer ID 封包、公证、Stable appcast 与 GitHub Release 结果在
-  发布完成后回填；视觉与交互仍为“等待用户验收”。
+  窗口预留扩大到 `30 pt`，已移除会切出矩形边界的偶奇遮罩；产品所有者已
+  确认当前生产 App 没有发现新的视觉问题并批准发布；
+- 已随 `v0.4.1-build.1` 正式发布：Developer ID、公证/Staple、GitHub
+  Latest、回下载启动与 Stable appcast 在线 EdDSA 核验均通过；资产与 feed
+  证据见 [版本历史](../../VERSION_HISTORY.md#041-build-1)。完整深浅色、多屏、
+  VoiceOver、Increase Contrast 与 Reduce Motion 交叉矩阵未单独记录为
+  全量通过。
 
 ## 回滚
 
