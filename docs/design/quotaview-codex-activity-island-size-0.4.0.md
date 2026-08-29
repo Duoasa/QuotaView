@@ -4,13 +4,13 @@
 >
 > 规格状态：`Accepted`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
 > 更新日期：2026-08-30
 >
-> 生产基线：`0.3.7 Build 1`
+> 发布基线：`0.3.7 Build 1`
 >
-> 目标开发版本：`0.4.0 Build 1`
+> 发布版本：`0.4.1 Build 1`
 
 ## 决策
 
@@ -128,14 +128,17 @@ AI 球紧凑态始终为 `270 × 72`，包括 `250 × 52` 内容表面与四周 
   只作用于 AI 球的几何边界；
 - Universal Xcode Release 构建通过；App、Widget 和 Activity Hook 均为
   `x86_64 arm64`；
-- 构建身份为 Marketing `0.4.0`、Sparkle 内部序号 `12`、产品 Build `1`；
+- 最终构建身份为 Marketing `0.4.1`、Sparkle 内部序号 `13`、产品 Build `1`；
 - `AppIcon.icns`、`Assets.car`、Info.plist、app/extension 结构与 ad-hoc 签名
   校验通过；
-- 本地产物为 `dist/QuotaView-v0.4.0-build.1.zip`，SHA-256：
-  `b4c01d9e66b7eb7ad65732000bab045225df4507d668208e22d74305df0df806`；
+- 正式资产为 `QuotaView-v0.4.1-build.1.zip`，SHA-256：
+  `ae8cf53acc6e6473ebf33bb853b7448672b48c4e849ef4b219efd74b18a9a2a3`；
 - `git diff --check`、临时 Debug/UI QA 标记和真实额度消费调用搜索通过；
-- 未执行 Developer ID 签名、公证、发布、appcast 更新或视觉验收；视觉与
-  交互状态为“等待用户验收”。
+- 产品所有者已确认当前生产 App 没有发现新的视觉问题并批准发布；本项已随
+  `v0.4.1-build.1` 正式发布，Developer ID、公证/Staple、GitHub Latest、
+  回下载启动与 Stable appcast 在线 EdDSA 核验均通过。完整深浅色、多屏、
+  VoiceOver、Increase Contrast 与 Reduce Motion 交叉矩阵未单独记录为
+  全量通过。
 
 ## 回滚
 

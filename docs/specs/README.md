@@ -4,9 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 生产基线：`0.3.7 Build 1`
+> 生产基线：`0.4.1 Build 1`
 >
-> 当前候选：`0.4.1 Build 1`；Sparkle 内部更新序号 `13`；Release `Verifying`
+> 当前候选：无；`0.4.1 Build 1` / Sparkle 内部更新序号 `13` 已发布
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,9 +14,9 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-RELEASE-0.4.1-001` | [0.4.1 发布](../design/quotaview-0.4.1-release.md) | `Accepted / Verifying` | 产品所有者已完成当前生产 App 的最终视觉验收并授权继续封包、GitHub Latest 与 Stable appcast；93 项测试和 Universal 无签名构建通过，正式发布链执行中 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | [进度条灵动岛](../design/quotaview-codex-activity-island-state-smoke-0.4.0.md) | `Accepted / Verifying` | 已支持 `exec` 包装计划计数、4 秒 1%识别窗口、执行中步骤 10%权重、单步骤回退与迟到计划接管；完成高光拆为稳定描边和扩大窗口余量后的呼吸辉光，并修复缺失或迟到结束事件导致的偶发假任务；生产 App 最终视觉验收已通过，等待发布证据 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Accepted / Verifying` | 三档只等比缩放 AI 球展开态；进度条与紧凑态保持原尺寸，生产 App 最终视觉验收已通过，等待发布证据 |
+| `QV-RELEASE-0.4.1-001` | [0.4.1 发布](../design/quotaview-0.4.1-release.md) | `Accepted / Released` | 93 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线签名核验均已完成 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | [进度条灵动岛](../design/quotaview-codex-activity-island-state-smoke-0.4.0.md) | `Accepted / Released` | `exec` 计划计数、4 秒 1%识别窗口、单步骤回退、完成高光分层与结束事件收敛已随 0.4.1 Build 1 发布 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Accepted / Released` | AI 球 100% / 85% / 75% 展开尺寸和进度条固定双语几何已随 0.4.1 Build 1 发布 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
 | `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | Stable Feed 已发布；真实 N → N+1 安装操作待记录 |
@@ -25,7 +25,7 @@
 
 | Spec ID | 文档 | 状态 | 结论 |
 |---|---|---|---|
-| `QV-RELEASE-0.4.0-001` | [0.4.0 大版本开发](../design/quotaview-0.4.0-development.md) | `Superseded / Verifying` | 0.4.0 保留为开发身份记录，不发布；已由精确的 0.4.1 发布规格接管 |
+| `QV-RELEASE-0.4.0-001` | [0.4.0 大版本开发](../design/quotaview-0.4.0-development.md) | `Superseded / Released` | 0.4.0 保留为开发身份记录，不发布；成果已由 0.4.1 Build 1 正式发布 |
 
 当前版本与下一步见 [Handoff](../../HANDOFF.md)，不可变发布事实见
 [Version History](../../VERSION_HISTORY.md#当前最新版本)。

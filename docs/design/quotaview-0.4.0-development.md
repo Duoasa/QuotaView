@@ -4,9 +4,9 @@
 >
 > 规格状态：`Superseded`
 >
-> 交付状态：`Verifying`
+> 交付状态：`Released`
 >
-> 更新日期：2026-08-29
+> 更新日期：2026-08-30
 >
 > 稳定生产基线：`0.3.7 Build 1` / `v0.3.7-build.1`
 >
@@ -15,7 +15,8 @@
 > 后继发布规格：
 > [`QV-RELEASE-0.4.1-001`](quotaview-0.4.1-release.md)。0.4.0 仅作为本轮
 > 大规模开发的历史身份，不创建公开 Release；产品所有者已将满意的实现
-> 定版为 0.4.1 Build 1。
+> 定版并已发布为 0.4.1 Build 1；0.4.0 本身没有 tag、Release 或 appcast
+> 条目。
 
 ## 决策
 
@@ -37,12 +38,14 @@
 
 ## 已确认基线
 
-- 当前公开稳定版为 `0.3.7 Build 1`，tag 为 `v0.3.7-build.1`；
+- 本开发周期启动时的公开稳定版为 `0.3.7 Build 1`，tag 为
+  `v0.3.7-build.1`；
 - 0.3.7 已包含多周期额度完整展示、稳定单任务 Codex 灵动岛、多屏锁定、
   Token 活动、用量概览和应用内更新能力；
 - 0.3.2 多任务灵动岛仍是独立 Preview，不属于 0.3.7 稳定源码，也不会因
   版本升级自动迁入 0.4.0；
-- 0.3.7 的公开 Release、Latest、签名 appcast 和回滚资产保持不变。
+- 开发阶段保持 0.3.7 的公开 Release、Latest、签名 appcast 和回滚资产
+  不变；最终由独立授权的 0.4.1 发布流程替换 Latest 与 Stable feed。
 
 ## 当前目标
 
@@ -55,8 +58,8 @@
 
 | Spec | 状态 | 范围 |
 |---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | `Accepted / Verifying` | 进度条已从 AI 球动画中拆为并列顶层样式；旧偏好迁移、结构化近似进度、扩散尾迹和完成反馈已通过定向测试，等待产品所有者验收 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | `Accepted / Verifying` | 三档只作用于 AI 球展开态；进度条与紧凑态保持原尺寸，等待产品所有者验收 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | `Accepted / Released` | 进度条并列顶层样式、结构化近似进度、扩散尾迹与完成反馈已随 0.4.1 Build 1 发布 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | `Accepted / Released` | AI 球三档展开尺寸与进度条固定几何已随 0.4.1 Build 1 发布 |
 
 ## 当前非目标
 
@@ -116,12 +119,22 @@ Stable appcast。发布与自动更新准入必须针对精确版本和资产另
 - 尺寸切片和独立进度条样式均已通过 Universal Xcode Release 构建；
   App、Widget 和 Activity Hook 均为 `x86_64 arm64`；
 - `git diff --check`、临时 Debug 标记和真实额度消费调用搜索通过；
-- README、GitHub Latest 与 `VERSION_HISTORY.md` 继续指向 0.3.7 Build 1。
+- 在 0.4.0 开发阶段，README、GitHub Latest 与 `VERSION_HISTORY.md` 保持
+  指向 0.3.7 Build 1；0.4.1 的独立发布门禁完成后才切换。
 
 尚未执行：
 
 - 0.4.0 Developer ID 签名、公证、GitHub 发布、Stable appcast 准入和视觉
-  验收；当前本地产物仅为 ad-hoc 验证构建，不构成发布。
+  验收；0.4.0 最终没有形成公开发布，相关成果由 0.4.1 的精确发布规格接管。
+
+最终出口：
+
+- 产品所有者将满意实现定版为 0.4.1 Build 1，并确认当前生产 App 没有发现
+  新的视觉问题；
+- 0.4.1 的 93 项测试、Universal、Developer ID、公证/Staple、GitHub
+  Latest、回下载启动和 Stable appcast 在线签名核验均已完成；
+- 0.4.0 保留为大版本开发身份记录，不存在 0.4.0 tag、Release 或 appcast
+  条目。不可变发布证据见 [版本历史](../../VERSION_HISTORY.md#041-build-1)。
 
 Discovery 阶段的出口条件：
 

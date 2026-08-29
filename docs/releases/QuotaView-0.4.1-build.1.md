@@ -26,10 +26,10 @@ explicit multi-step plan or performs one unplanned action.
 - **Privacy-preserving by construction:** The helper immediately reduces a plan
   to completed, in-progress, and pending counts. Step text, explanations, raw
   scripts, prompts, arguments, and tool output are never forwarded.
-- **More readable state smoke:** Working uses a lower-luminance blue, context
-  compaction uses a cool gray-white, and the opacity curve follows the visible
-  smoke width so the leading text remains readable while the smoke front stays
-  distinct.
+- **More readable state smoke:** Working uses a low-saturation bright cyan,
+  context compaction uses a cool gray-white, and the opacity curve follows the
+  visible smoke width so the leading text remains readable while the smoke
+  front stays distinct.
 - **Refined completion feedback:** Completion fills the Island, darkens, fades
   back to the native surface, and separates a clean 1 pt green highlight
   outline from a four-sided breathing glow beneath the Island. Extra transparent

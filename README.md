@@ -109,9 +109,10 @@ Orb and keeps progress behavior coherent for both planned and unplanned tasks.
 - Recognize both direct plan updates and Codex Desktop's wrapped
   `tools.update_plan(...)` calls while forwarding only three status counts—
   never step text, explanations, raw scripts, prompts, arguments, or output.
-- Improve readability with lower-luminance state palettes and an opacity curve
-  tied to the visible smoke width. Context compaction remains slower and less
-  diffuse than ordinary work.
+- Improve readability with a low-saturation bright cyan for active work, a
+  cool gray-white for context compaction, and an opacity curve tied to the
+  visible smoke width. Context compaction remains slower and less diffuse than
+  ordinary work.
 - Finish with a fill, darken, and fade sequence that returns to the native
   Island surface, then separates a clean 1 pt green highlight outline from the
   four-sided breathing glow underneath.
