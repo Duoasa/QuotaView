@@ -95,6 +95,11 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 QuotaView 0.4.2 expands the Progress Bar and makes Codex Island lifecycle
 tracking more reliable.
 
+<p align="center">
+  <img src="Resources/QuotaView-0.4.2-Progress-Mode.jpg" alt="QuotaView 0.4.2 progress-mode Codex Island product overview" width="49%">
+  <img src="Resources/QuotaView-0.4.2-Progress-Styles.jpg" alt="QuotaView 0.4.2 State Smoke, Drop Field, Liquid Slosh, and Diamond Front progress styles" width="49%">
+</p>
+
 - Choose **State Smoke**, **Diamond Front**, **Drop Field**, or **Liquid Slosh**
   from live previews; every style follows the current Codex state palette.
 - Follow planned work with smoother progress transitions and a restrained

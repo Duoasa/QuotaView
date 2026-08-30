@@ -93,6 +93,11 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 QuotaView 0.4.2 扩展进度条样式，并提升 Codex 灵动岛的任务连续性。
 
+<p align="center">
+  <img src="Resources/QuotaView-0.4.2-Progress-Mode.jpg" alt="QuotaView 0.4.2 进度条灵动岛产品概览" width="49%">
+  <img src="Resources/QuotaView-0.4.2-Progress-Styles.jpg" alt="QuotaView 0.4.2 状态烟雾、液滴涌动、液态涌浪与晶钻前沿四种进度效果" width="49%">
+</p>
+
 - 在真实预览中选择**状态烟雾**、**晶钻前沿**、**液滴涌动**或**液态涌浪**；
   四种效果统一跟随当前 Codex 状态配色；
 - 多步骤进度切换更平滑，三个新增效果在走满后提供克制的完成高亮；
