@@ -2,13 +2,13 @@
 
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-PROGRESS-EFFECTS-007`
 >
-> 状态：`Accepted / Verifying`
+> 状态：`Accepted / Released`
 >
 > 日期：2026-08-30
 >
 > 生产基线：`0.4.1 Build 1` / `v0.4.1-build.1`
 >
-> 本地候选：`0.4.2 Build 1`；Sparkle 内部更新序号 `14`
+> 发布版本：`0.4.2 Build 1`；Sparkle 内部更新序号 `14`
 
 本规格受 [`PROGRESS_EFFECT_ADAPTATION.md`](../specs/PROGRESS_EFFECT_ADAPTATION.md)
 约束，只扩展进度条灵动岛内部效果与设置选择，不改变 0.4.1 已发布的进度
@@ -93,9 +93,9 @@ Reduce Motion、窗口几何与 AI 球隔离。随后运行相关定向测试、
 Universal Release 无签名构建、版本/架构/资源检查、临时代码搜索和
 `git diff --check`。
 
-深浅色、简中/英文、四种效果的展开/紧凑态、状态切换、Reduce Motion、
-Increase Contrast、VoiceOver、长时间观感及对 MetalForge 参考的视觉相似度
-均等待产品所有者在本地候选 App 中手动验收和调整，不由自动化宣称通过。
+产品所有者已确认当前效果完成度满足发布；深浅色、简中/英文、展开/紧凑态、
+Reduce Motion、Increase Contrast、VoiceOver 和长时间观感的完整交叉矩阵未
+单独记录为全量通过，不由自动化结果代替视觉验收。
 
 ## 第一轮工程证据与当前反馈
 
@@ -133,3 +133,6 @@ Increase Contrast、VoiceOver、长时间观感及对 MetalForge 参考的视觉
 - 产品所有者已确认当前候选完成度满足发布；完整深浅色、多屏、VoiceOver、
   Increase Contrast 与 Reduce Motion 交叉矩阵未单独记录为全量通过。正式
   签名、公证、GitHub Release 与 appcast 证据由发布规格记录。
+
+本规格已随 `0.4.2 Build 1` / `v0.4.2-build.1` 正式发布；不可变资产与线上
+验证事实见 [`QV-RELEASE-0.4.2-001`](quotaview-0.4.2-release.md)。

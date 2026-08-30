@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-RELEASE-0.4.2-001`
 >
-> 状态：`Accepted / Verifying`
+> 状态：`Accepted / Released`
 >
 > 日期：2026-08-30
 >
@@ -45,11 +45,24 @@
 | `RELEASE-0.4.2-05` | Stable appcast 使用 Sparkle EdDSA 签名并在线验证；GitHub 回下载资产与本地公证包逐字节一致 |
 | `RELEASE-0.4.2-06` | `HANDOFF.md`、`VERSION_HISTORY.md`、SDD 注册表和功能规格只在对应线上事实完成后标记 `Released` |
 
-## 当前验证
+## 发布结果
 
-- 产品所有者已确认当前候选完成度满足发布，仍不把未单独执行的完整深浅色、
-  多屏、VoiceOver、Increase Contrast 与 Reduce Motion 交叉矩阵记为全量通过；
-- `swift test` 当前为 103 项通过、0 失败；本地 ad-hoc Universal 候选的 App、
-  Widget 与 Activity Hook 均为 `x86_64 arm64`；
-- Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线
-  EdDSA 仍属于本规格的发布门禁，完成前状态保持 `Verifying`。
+- `swift test`：103 项通过、0 失败；PR #36 GitHub CI 通过并合并为发布提交
+  `6c8434950d59afd9439b2f6f50d8c8b091a40f6d`；
+- Universal Release 的 App、Widget 与 Activity Hook 均为 `x86_64 arm64`，
+  包内身份为 Marketing `0.4.2`、Sparkle 内部序号 `14`、产品 Build `1`；
+- 正式包使用 `Developer ID Application: Chenchen Xu (BUUH229D5Q)` 与
+  Hardened Runtime；Apple 公证 Accepted 并完成 Staple，Submission 为
+  `5cad0ca0-7f2e-49ef-beda-34b151ed2f45`；
+- GitHub Latest 为 `v0.4.2-build.1`；资产
+  `QuotaView-v0.4.2-build.1.zip` 大小 `13,166,133 bytes`，SHA-256 为
+  `a87f7f03da644fb014a8c90b617b99697bbb6aae72a7c35928d3386bbf2c05a3`；
+- GitHub 回下载资产与本地公证包逐字节一致；回解压后通过嵌套签名、Staple、
+  Gatekeeper、版本、资源、三目标双架构复核和独立启动冒烟；
+- Stable appcast 由 `gh-pages` 提交
+  `ead810f540261fbd3e67d17f0f0d32401606b0c0` 发布，线上 SHA-256 为
+  `a8ddb8809340caed56dbf0743ab71f51bb2bae6a1a8a067676853cfd76185e8b`；
+  线上文件与本地 feed 逐字节一致且 Sparkle EdDSA 验证通过；
+- GitHub Release Notes 使用单份简洁英文源文，README 中英文下载入口均指向
+  同一正式资产；产品所有者已批准发布。完整深浅色、多屏、VoiceOver、
+  Increase Contrast 与 Reduce Motion 交叉矩阵未单独记录为全量通过。
