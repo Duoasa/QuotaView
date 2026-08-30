@@ -974,16 +974,11 @@ struct SettingsView: View {
     private func codexActivityProgressEffectTitle(
         _ effect: AppPreferences.CodexActivityProgressEffect
     ) -> String {
-        switch effect {
-        case .stateSmoke:
-            copy.text("状态烟雾", "State Smoke")
-        case .diamondFront:
-            copy.text("晶钻前沿", "Diamond Front")
-        case .dropField:
-            copy.text("液滴涌动", "Drop Field")
-        case .sloshFlow:
-            copy.text("液态涌浪", "Liquid Slosh")
-        }
+        let displayName = effect.displayName
+        return copy.text(
+            displayName.simplifiedChinese,
+            displayName.english
+        )
     }
 
     private var languageSettings: some View {

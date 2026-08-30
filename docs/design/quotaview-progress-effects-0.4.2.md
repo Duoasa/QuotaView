@@ -136,3 +136,7 @@ Reduce Motion、Increase Contrast、VoiceOver 和长时间观感的完整交叉�
 
 本规格已随 `0.4.2 Build 1` / `v0.4.2-build.1` 正式发布；不可变资产与线上
 验证事实见 [`QV-RELEASE-0.4.2-001`](quotaview-0.4.2-release.md)。
+
+发布后的“液滴涌动”更名、状态换色相位连续性、增强闪灭与完成亮度修正由
+[`QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009`](quotaview-quantum-noise-effect-correction.md)
+单独管理；在后续版本发布前不改写本规格记录的 0.4.2 Build 1 历史事实。

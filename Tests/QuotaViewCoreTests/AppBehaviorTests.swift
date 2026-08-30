@@ -458,6 +458,56 @@ final class AppBehaviorTests: XCTestCase {
                 "frontDensity * 0.88"
             )
         )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "effectTime * 0.68"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float twinkleRate = mix("
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float quantumNoiseOpacityBoost = 1.10;"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "+ twinkleWave * 0.62"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "+ pow(twinkleWave, 5.0) * 0.16"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "* quantumNoiseOpacityBoost"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float completionHighlightDensity = pow(density, 3.0);"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "completionHighlightDensity = pow(density, 1.5);"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "* completionHighlightDensity"
+            )
+        )
+        XCTAssertFalse(
+            activityStateSmokeShaderSource.contains(
+                "time * (0.52 + turbulence * 0.46)"
+            )
+        )
         XCTAssertFalse(
             activityStateSmokeShaderSource.contains(
                 "float rows = 5.5;"
@@ -524,6 +574,33 @@ final class AppBehaviorTests: XCTestCase {
             compactingProfile.highlightColor,
             SIMD4<Float>(0.28, 0.30, 0.32, 1)
         )
+        let quantumNoiseCompactingProfile =
+            CodexActivityStateSmokeProfile.profile(
+                for: .compactingContext,
+                effect: .dropField
+            )
+        XCTAssertEqual(
+            quantumNoiseCompactingProfile.deepColor,
+            SIMD4<Float>(0.50, 0.53, 0.57, 1)
+        )
+        XCTAssertEqual(
+            quantumNoiseCompactingProfile.midColor,
+            SIMD4<Float>(0.68, 0.72, 0.77, 1)
+        )
+        XCTAssertEqual(
+            quantumNoiseCompactingProfile.highlightColor,
+            SIMD4<Float>(0.88, 0.92, 0.98, 1)
+        )
+        XCTAssertEqual(
+            quantumNoiseCompactingProfile.fieldSpeed,
+            compactingProfile.fieldSpeed,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            quantumNoiseCompactingProfile.turbulence,
+            compactingProfile.turbulence,
+            accuracy: 0.0001
+        )
         let visualStates: [CodexActivityVisualState] = [
             .disconnectedCodex,
             .standby,
@@ -541,6 +618,11 @@ final class AppBehaviorTests: XCTestCase {
             for effect in
                 AppPreferences.CodexActivityProgressEffect.allCases
             {
+                if state == .compactingContext,
+                   effect == .dropField
+                {
+                    continue
+                }
                 XCTAssertEqual(
                     CodexActivityStateSmokeProfile.profile(
                         for: state,
@@ -2191,6 +2273,20 @@ final class AppBehaviorTests: XCTestCase {
             ),
             [0, 1, 2, 3]
         )
+        XCTAssertEqual(
+            AppPreferences.CodexActivityProgressEffect.dropField.rawValue,
+            "dropField"
+        )
+        XCTAssertEqual(
+            AppPreferences.CodexActivityProgressEffect
+                .dropField.displayName.simplifiedChinese,
+            "量子噪点"
+        )
+        XCTAssertEqual(
+            AppPreferences.CodexActivityProgressEffect
+                .dropField.displayName.english,
+            "Quantum Noise"
+        )
 
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -2803,8 +2899,38 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(
             CodexActivityIslandTextContrast
-                .secondaryTextColor.alphaComponent,
-            0.72,
+                .progressTaskTitleColor.alphaComponent,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .progressTaskTitleColor.whiteComponent,
+            0.88,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .progressOperationColor.alphaComponent,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .progressOperationColor.whiteComponent,
+            0.76,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .operationShimmerShoulderAlpha,
+            0.24,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandTextContrast
+                .operationShimmerPeakAlpha,
+            1,
             accuracy: 0.0001
         )
     }
@@ -3042,14 +3168,62 @@ final class AppBehaviorTests: XCTestCase {
                 for: state
             )
             for _ in 0..<120 {
-                simulation.step(profile: profile)
+                simulation.step(
+                    profile: profile,
+                    effectPlaybackEnabled: false
+                )
             }
             XCTAssertEqual(
                 simulation.fieldTime,
                 0,
                 accuracy: 0.0001
             )
+            XCTAssertEqual(
+                simulation.effectTime,
+                0,
+                accuracy: 0.0001
+            )
         }
+    }
+
+    func testQuantumNoiseClockStaysContinuousAcrossStateProfiles() {
+        var simulation = CodexActivityStateSmokeSimulation()
+        let working = CodexActivityStateSmokeProfile.profile(
+            for: .working
+        )
+        let awaitingConfirmation =
+            CodexActivityStateSmokeProfile.profile(
+                for: .awaitingConfirmation
+            )
+
+        for _ in 0..<120 {
+            simulation.step(
+                profile: working,
+                effectPlaybackEnabled: true
+            )
+        }
+        let beforeStateChange = simulation.effectTime
+        for _ in 0..<120 {
+            simulation.step(
+                profile: awaitingConfirmation,
+                effectPlaybackEnabled: true
+            )
+        }
+
+        XCTAssertEqual(beforeStateChange, 2, accuracy: 0.0001)
+        XCTAssertEqual(simulation.effectTime, 4, accuracy: 0.0001)
+        XCTAssertNotEqual(simulation.fieldTime, simulation.effectTime)
+
+        simulation.step(
+            profile: CodexActivityStateSmokeProfile.profile(
+                for: .unavailable
+            ),
+            effectPlaybackEnabled: false
+        )
+        XCTAssertEqual(simulation.effectTime, 4, accuracy: 0.0001)
+
+        simulation.resetEffectTime()
+        XCTAssertEqual(simulation.effectTime, 0, accuracy: 0.0001)
     }
 
     func testStateSmokeCompletionTransitionFillsDarkensAndResets() {
@@ -3130,6 +3304,24 @@ final class AppBehaviorTests: XCTestCase {
                 .completionEffectHighlightIntensity,
             0.14
         )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract
+                .completionHighlightIntensity(for: .dropField),
+            0.18,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract
+                .completionHighlightIntensity(for: .diamondFront),
+            0.14,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract
+                .completionHighlightIntensity(for: .sloshFlow),
+            0.14,
+            accuracy: 0.0001
+        )
 
         let settled = transition.advance(
             elapsed:
@@ -3192,6 +3384,11 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(
             CodexActivityIslandCompletionGlowGeometry.outlineWidth,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandCompletionGlowGeometry.shadowOpacity,
             1,
             accuracy: 0.0001
         )

@@ -14,8 +14,8 @@
 | 稳定版 | `0.4.2 Build 1` / `v0.4.2-build.1` / GitHub Latest |
 | 回滚基线 | `0.4.1 Build 1` / `v0.4.1-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | 无；`0.4.2 Build 1` 已正式发布，下一版本尚未立项 |
-| 当前主题 | 0.4.2 已发布：四种进度条效果与真实设置预览、状态配色适配、平滑进度与完成高亮；活动任务不再因局部步骤结束而误隐藏或提前完成 |
+| 当前候选 | 未指定发布版本的本地冻结检查点：量子噪点与完成态绿色辉光修正；尚未封包或发布 |
+| 当前主题 | 量子噪点相位、完成态、压缩上下文可见性与粒子不透明度修正；进度条左侧文字采用两级淡灰并增强操作状态流光；完成描边与呼吸光晕统一绿色基准 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
 Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
@@ -24,6 +24,7 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
+| [`QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009`](docs/design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Verifying` | 保留 `dropField` 持久化兼容；独立连续相位、增强闪灭及完成态中密度粒子覆盖已通过 104 项测试和 Universal 构建，等待产品所有者视觉验收 |
 | [`QV-RELEASE-0.4.2-001`](docs/design/quotaview-0.4.2-release.md) | `Accepted / Released` | Developer ID、公证/Staple、GitHub Latest、回下载启动和 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-LIFECYCLE-008`](docs/design/quotaview-activity-island-lifecycle-continuity-0.4.2.md) | `Accepted / Released` | 投递来源、ACK/队列、turn 感知终态锁与生命周期动画门控已实现；完成态只接受真实 `Stop` |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-PROGRESS-EFFECTS-007`](docs/design/quotaview-progress-effects-0.4.2.md) | `Accepted / Released` | 四种真实预览、细密 Drops、清晰 Slosh、状态配色适配和平滑完成反馈已随 0.4.2 发布 |
@@ -34,6 +35,25 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 | [`QV-PRODUCT-QUOTA-WINDOWS-003`](docs/design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 多周期额度已随 0.3.7 Build 1 发布并进入 Stable Feed |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-004`](docs/design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；不包含多任务 Preview |
 | [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.3.5、0.3.6、0.3.7、0.4.1 与 0.4.2 均已进入 Stable Feed；尚缺一次真实 N → N+1 替换与重启记录 |
+
+### 2.1 本地冻结检查点（2026-08-30）
+
+产品所有者已要求停止本日开发并固定当前版本。检查点位于分支
+`codex/0.4.2-product-images`，由本地提交
+`chore: freeze post-0.4.2 island refinements` 固定；正式发布身份仍是
+`0.4.2 Build 1`，源码配置保持 Marketing `0.4.2`、Sparkle 内部序号 `14`，
+不得把该本地提交解释为新的 Release、Build 或 Stable appcast 条目。
+
+冻结范围包括量子噪点更名与连续相位、细密闪灭、完成态中密度高亮、压缩
+上下文专属灰白可见性、粒子不透明度提高 `10%`、进度条左侧两级不透明淡灰
+与增强流光，以及完成描边和背后光晕统一 sRGB `#00FF11` / `100%` 亮度
+基准、呼吸只改变光晕半径。主体改造曾通过完整 `swift test` 104 项；最终
+视觉微调按产品所有者要求只运行对应定向冒烟测试，均为 1 项通过、0 失败，
+最终 Universal Release 无签名构建通过且为 `x86_64 arm64`，本地候选已启动。
+最终微调后未重跑完整测试；颜色、完成辉光和完整辅助功能矩阵不得记录为
+视觉已通过。
+
+本检查点未封包、签名、公证、推送、创建 tag、修改 Release 或更新 appcast。
 
 `0.4.1 Build 1` 的 93 项测试、PR #34 GitHub CI、Universal、Developer ID、
 Apple 公证/Staple、GitHub Release/Latest、回下载、启动冒烟与公开 EdDSA
@@ -112,13 +132,15 @@ Reduce Motion 交叉矩阵仍未单独记录为全量通过。
 
 ## 4. 下一步
 
-1. 下一次迭代从 `0.4.2 Build 1` 稳定基线建立新的精确规格，不复用已发布
-   候选身份；
-2. 如需关闭更新器规格的 `APP-UPDATES-07`，使用正式旧版客户端完成一次
+1. 下一次会话先读取本地冻结检查点，确认视觉结果并由产品所有者决定目标
+   Marketing Version / Build；不得默认把它发布为另一个 `0.4.2 Build 1`；
+2. 未获明确发布授权前，不封包、不推送、不创建 tag、不修改 Release 或
+   appcast；
+3. 如需关闭更新器规格的 `APP-UPDATES-07`，使用正式旧版客户端完成一次
    到 0.4.2 的真实应用内检查、下载、替换与重启；
-3. 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 矩阵
+4. 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 矩阵
    仍由产品所有者按需验收；
-4. 新任务从 [SDD 注册表](docs/specs/README.md) 只读取对应的一份当前规格。
+5. 新任务从 [SDD 注册表](docs/specs/README.md) 只读取对应的一份当前规格。
 
 ## 5. 文档入口
 

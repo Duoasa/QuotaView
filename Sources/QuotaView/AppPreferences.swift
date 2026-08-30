@@ -83,6 +83,22 @@ final class AppPreferences: ObservableObject {
             case .sloshFlow: 3
             }
         }
+
+        var displayName: (
+            simplifiedChinese: String,
+            english: String
+        ) {
+            switch self {
+            case .stateSmoke:
+                ("状态烟雾", "State Smoke")
+            case .diamondFront:
+                ("晶钻前沿", "Diamond Front")
+            case .dropField:
+                ("量子噪点", "Quantum Noise")
+            case .sloshFlow:
+                ("液态涌浪", "Liquid Slosh")
+            }
+        }
     }
 
     enum CodexActivityScreenPlacement: String, CaseIterable, Identifiable {
