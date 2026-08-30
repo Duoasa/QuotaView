@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 import Metal
 import SwiftUI
@@ -218,7 +219,7 @@ final class AppBehaviorTests: XCTestCase {
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
-            CodexActivityStore.settledEventSilenceDelay,
+            CodexActivityStore.settledEventReplayAgeThreshold,
             20
         )
         XCTAssertEqual(
@@ -394,6 +395,16 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertTrue(
             activityStateSmokeShaderSource.contains(
+                "u.completionEffectHighlight"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "if (u.effectStyle > 0.5)"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
                 "u.completionDarkening"
             )
         )
@@ -421,6 +432,49 @@ final class AppBehaviorTests: XCTestCase {
             activityStateSmokeShaderSource.contains(
                 "u.opacityStopOpacities"
             )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "activityProgressDiamondDensity"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "activityProgressDropDensity"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "activityProgressSloshDensity"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float dropletCellSize = 2.35;"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "frontDensity * 0.88"
+            )
+        )
+        XCTAssertFalse(
+            activityStateSmokeShaderSource.contains(
+                "float rows = 5.5;"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains(
+                "float body = fill * (0.50 + caustic * 0.38);"
+            )
+        )
+        XCTAssertTrue(
+            activityStateSmokeShaderSource.contains("u.effectStyle")
+        )
+        XCTAssertEqual(
+            CodexActivityStateSmokeContract.previewProgressFraction,
+            0.60,
+            accuracy: 0.0001
         )
         XCTAssertEqual(
             CodexActivityStateSmokeContract.horizontalOpacity(
@@ -470,6 +524,33 @@ final class AppBehaviorTests: XCTestCase {
             compactingProfile.highlightColor,
             SIMD4<Float>(0.28, 0.30, 0.32, 1)
         )
+        let visualStates: [CodexActivityVisualState] = [
+            .disconnectedCodex,
+            .standby,
+            .thinking,
+            .working,
+            .compactingContext,
+            .awaitingConfirmation,
+            .completed,
+            .error,
+            .unavailable
+        ]
+        for state in visualStates {
+            let stateSmokeReference =
+                CodexActivityStateSmokeProfile.profile(for: state)
+            for effect in
+                AppPreferences.CodexActivityProgressEffect.allCases
+            {
+                XCTAssertEqual(
+                    CodexActivityStateSmokeProfile.profile(
+                        for: state,
+                        effect: effect
+                    ),
+                    stateSmokeReference,
+                    "\(effect.rawValue) must use the State Smoke \(state) profile"
+                )
+            }
+        }
         XCTAssertEqual(
             CodexActivityStateSmokeContract.horizontalOpacity(
                 at: 0.30,
@@ -823,8 +904,17 @@ final class AppBehaviorTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 8_000_000)
         store.receive(
             CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                occurredAt: Date()
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
                 event: .preToolUse,
                 sessionHash: "session",
+                turnHash: "turn-2",
                 toolCategory: .fileEdit,
                 occurredAt: Date()
             )
@@ -838,10 +928,10 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testSettledToolEventHidesWhenStopIsMissing() async {
+    func testLiveSettledToolEventStaysVisibleWhenStopIsMissing() async {
         let store = CodexActivityStore(
             titleClient: CodexAppServerClient(executablePath: nil),
-            settledEventSilenceDelay: 0.02
+            settledEventReplayAgeThreshold: 0.02
         )
         store.receive(
             CodexActivityEvent(
@@ -853,18 +943,17 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(store.presentation, .expanded)
         XCTAssertEqual(store.snapshot?.operationKey, .reviewingToolResult)
 
-        for _ in 0..<100 where store.presentation != .hidden {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.presentation, .hidden)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.snapshot?.state, .thinking)
         await store.stop()
     }
 
     @MainActor
-    func testNewActivityCancelsSettledEventSilenceHide() async {
+    func testNewActivityContinuesWithoutSettledVisibilityGap() async {
         let store = CodexActivityStore(
             titleClient: CodexAppServerClient(executablePath: nil),
-            settledEventSilenceDelay: 0.02
+            settledEventReplayAgeThreshold: 0.02
         )
         store.receive(
             CodexActivityEvent(
@@ -873,7 +962,8 @@ final class AppBehaviorTests: XCTestCase {
                 occurredAt: Date()
             )
         )
-        try? await Task.sleep(nanoseconds: 8_000_000)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(store.presentation, .expanded)
         store.receive(
             CodexActivityEvent(
                 event: .preToolUse,
@@ -883,7 +973,6 @@ final class AppBehaviorTests: XCTestCase {
             )
         )
 
-        try? await Task.sleep(nanoseconds: 50_000_000)
         XCTAssertEqual(store.presentation, .expanded)
         XCTAssertEqual(store.snapshot?.state, .working)
         XCTAssertEqual(store.snapshot?.operationKey, .editingFiles)
@@ -894,18 +983,136 @@ final class AppBehaviorTests: XCTestCase {
     func testReplayedOldSettledEventDoesNotReopenIsland() async {
         let store = CodexActivityStore(
             titleClient: CodexAppServerClient(executablePath: nil),
-            settledEventSilenceDelay: 0.20
+            settledEventReplayAgeThreshold: 0.20
         )
         store.receive(
-            CodexActivityEvent(
-                event: .postToolUse,
-                sessionHash: "session",
-                occurredAt: Date().addingTimeInterval(-1)
+            CodexActivityDelivery(
+                source: .startupReplay,
+                activity: CodexActivityEvent(
+                    event: .postToolUse,
+                    sessionHash: "session",
+                    occurredAt: Date().addingTimeInterval(-1)
+                )
             )
         )
 
         XCTAssertEqual(store.presentation, .hidden)
         XCTAssertEqual(store.snapshot?.operationKey, .reviewingToolResult)
+        await store.stop()
+    }
+
+    @MainActor
+    func testDelayedLiveQueueEventIsNotMistakenForStartupReplay() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            settledEventReplayAgeThreshold: 0.20
+        )
+        store.receive(
+            CodexActivityDelivery(
+                source: .liveQueue,
+                activity: CodexActivityEvent(
+                    event: .postToolUse,
+                    sessionHash: "session",
+                    occurredAt: Date().addingTimeInterval(-1)
+                )
+            )
+        )
+
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.lifecycle, .active)
+        XCTAssertTrue(store.shouldPlayVisualEffects)
+        await store.stop()
+    }
+
+    @MainActor
+    func testIntermediateToolStepsNeverSynthesizeTurnCompletion() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            compactDelay: 1,
+            hiddenDelayAfterCompact: 1
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn"
+            )
+        )
+        for completedStep in 0..<4 {
+            store.receive(
+                CodexActivityEvent(
+                    event: .preToolUse,
+                    sessionHash: "session",
+                    turnHash: "turn",
+                    toolCategory: .localTool,
+                    planProgress: CodexActivityPlanProgress(
+                        completedSteps: completedStep,
+                        inProgressSteps: 1,
+                        pendingSteps: 3 - completedStep
+                    )
+                )
+            )
+            store.receive(
+                CodexActivityEvent(
+                    event: .postToolUse,
+                    sessionHash: "session",
+                    turnHash: "turn",
+                    toolCategory: .localTool
+                )
+            )
+
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            XCTAssertEqual(store.lifecycle, .active)
+            XCTAssertEqual(store.snapshot?.state, .thinking)
+            XCTAssertEqual(
+                store.snapshot?.operationKey,
+                .reviewingToolResult
+            )
+            XCTAssertNotEqual(store.snapshot?.state, .completed)
+            XCTAssertEqual(store.presentation, .expanded)
+            XCTAssertTrue(store.shouldPlayVisualEffects)
+        }
+
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn"
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .completed)
+        XCTAssertEqual(store.snapshot?.state, .completed)
+        XCTAssertEqual(store.snapshot?.operationKey, .turnCompleted)
+        await store.stop()
+    }
+
+    @MainActor
+    func testDuplicateDeliveryIDIsReducedOnlyOnce() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        let prompt = CodexActivityDelivery(
+            eventID: "event-1",
+            source: .liveSocket,
+            activity: CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session"
+            )
+        )
+        store.receive(prompt)
+        store.receive(
+            CodexActivityDelivery(
+                eventID: "event-1",
+                source: .liveQueue,
+                activity: CodexActivityEvent(
+                    event: .stop,
+                    sessionHash: "session"
+                )
+            )
+        )
+
+        XCTAssertEqual(store.lifecycle, .active)
+        XCTAssertEqual(store.snapshot?.state, .thinking)
         await store.stop()
     }
 
@@ -929,7 +1136,7 @@ final class AppBehaviorTests: XCTestCase {
             CodexActivityEvent(
                 event: .postToolUse,
                 sessionHash: "session",
-                turnHash: "turn-1",
+                turnHash: nil,
                 occurredAt: now.addingTimeInterval(0.01)
             )
         )
@@ -948,6 +1155,114 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(store.snapshot?.state, .thinking)
         XCTAssertEqual(store.snapshot?.operationKey, .analyzingRequest)
+        await store.stop()
+    }
+
+    @MainActor
+    func testLeadingActivityStartsNewTurnWithoutPromptAfterStop() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            compactDelay: 1,
+            hiddenDelayAfterCompact: 1
+        )
+        let now = Date()
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                occurredAt: now
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                toolCategory: .shell,
+                occurredAt: now.addingTimeInterval(0.01)
+            )
+        )
+
+        XCTAssertEqual(store.lifecycle, .active)
+        XCTAssertEqual(store.presentation, .expanded)
+        XCTAssertEqual(store.snapshot?.state, .working)
+        XCTAssertEqual(store.snapshot?.operationKey, .executingShell)
+        XCTAssertTrue(store.shouldPlayVisualEffects)
+        await store.stop()
+    }
+
+    @MainActor
+    func testLateLeadingActivityFromCompletedTurnCannotReopenIt() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            compactDelay: 1,
+            hiddenDelayAfterCompact: 1
+        )
+        let now = Date()
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                occurredAt: now
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                toolCategory: .shell,
+                occurredAt: now.addingTimeInterval(0.01)
+            )
+        )
+
+        XCTAssertEqual(store.lifecycle, .completed)
+        XCTAssertEqual(store.snapshot?.state, .completed)
+        XCTAssertEqual(store.snapshot?.operationKey, .turnCompleted)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                toolCategory: .shell,
+                occurredAt: now.addingTimeInterval(0.02)
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .active)
+        XCTAssertEqual(store.snapshot?.state, .working)
+        XCTAssertEqual(store.snapshot?.operationKey, .executingShell)
+        await store.stop()
+    }
+
+    @MainActor
+    func testSessionEndStillHidesImmediatelyAfterStop() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session"
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session"
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .sessionEnd,
+                sessionHash: "session"
+            )
+        )
+
+        XCTAssertEqual(store.lifecycle, .idle)
+        XCTAssertEqual(store.presentation, .hidden)
+        XCTAssertFalse(store.shouldPlayVisualEffects)
         await store.stop()
     }
 
@@ -1286,11 +1601,14 @@ final class AppBehaviorTests: XCTestCase {
             description: "Authenticated file event received"
         )
         received.expectedFulfillmentCount = 1
-        try bridge.start { event in
+        try bridge.start { delivery, completion in
+            let event = delivery.activity
+            XCTAssertEqual(delivery.source, .liveQueue)
             XCTAssertEqual(event.event, .preToolUse)
             XCTAssertEqual(event.sessionHash, "session-hash")
             XCTAssertEqual(event.toolCategory, .fileEdit)
             received.fulfill()
+            completion(true)
         }
 
         let event = CodexActivityEvent(
@@ -1312,6 +1630,7 @@ final class AppBehaviorTests: XCTestCase {
         let validEnvelope = CodexActivityBridgeEnvelope(
             authenticationToken: "expected-token",
             installationIdentifier: "expected-installation",
+            eventID: "valid-event",
             activity: event
         )
         try JSONEncoder().encode(invalidEnvelope).write(
@@ -1333,6 +1652,183 @@ final class AppBehaviorTests: XCTestCase {
             options: .atomic
         )
 
+        wait(for: [received], timeout: 1)
+    }
+
+    func testCodexActivityFileBridgeKeepsUnacceptedStartupReplay()
+        throws
+    {
+        let fileManager = FileManager.default
+        let queueURL = fileManager.temporaryDirectory
+            .appendingPathComponent(
+                "QuotaViewActivityReplayTests-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try fileManager.createDirectory(
+            at: queueURL,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? fileManager.removeItem(at: queueURL) }
+
+        let eventURL = queueURL.appendingPathComponent(
+            "event-startup-replay.json"
+        )
+        let envelope = CodexActivityBridgeEnvelope(
+            authenticationToken: "token",
+            installationIdentifier: "installation",
+            eventID: "startup-replay",
+            activity: CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session"
+            )
+        )
+        try JSONEncoder().encode(envelope).write(
+            to: eventURL,
+            options: .atomic
+        )
+
+        let rejected = expectation(description: "Replay rejected")
+        let firstBridge = CodexActivityFileBridge(
+            queueURL: queueURL,
+            authenticationToken: "token",
+            installationIdentifier: "installation"
+        )
+        try firstBridge.start { delivery, completion in
+            XCTAssertEqual(delivery.source, .startupReplay)
+            XCTAssertEqual(delivery.eventID, "startup-replay")
+            completion(false)
+            rejected.fulfill()
+        }
+        wait(for: [rejected], timeout: 1)
+        firstBridge.stop()
+        XCTAssertTrue(fileManager.fileExists(atPath: eventURL.path))
+
+        let accepted = expectation(description: "Replay accepted")
+        let secondBridge = CodexActivityFileBridge(
+            queueURL: queueURL,
+            authenticationToken: "token",
+            installationIdentifier: "installation"
+        )
+        defer { secondBridge.stop() }
+        try secondBridge.start { delivery, completion in
+            XCTAssertEqual(delivery.source, .startupReplay)
+            completion(true)
+            accepted.fulfill()
+        }
+        wait(for: [accepted], timeout: 1)
+        for _ in 0..<100
+        where fileManager.fileExists(atPath: eventURL.path) {
+            Thread.sleep(forTimeInterval: 0.005)
+        }
+        XCTAssertFalse(fileManager.fileExists(atPath: eventURL.path))
+    }
+
+    func testCodexActivityUnixBridgeAcknowledgesAcceptedEvent()
+        throws
+    {
+        let fileManager = FileManager.default
+        let rootURL = URL(
+            fileURLWithPath:
+                "/tmp/qv-socket-\(UUID().uuidString.prefix(8))",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: rootURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: rootURL) }
+        let socketURL = rootURL.appendingPathComponent("activity.sock")
+        let bridge = CodexActivityUnixBridge(
+            socketURL: socketURL,
+            authenticationToken: "token",
+            installationIdentifier: "installation"
+        )
+        defer { bridge.stop() }
+
+        let received = expectation(description: "Socket event accepted")
+        try bridge.start { delivery, completion in
+            XCTAssertEqual(delivery.source, .liveSocket)
+            XCTAssertEqual(delivery.eventID, "socket-event")
+            XCTAssertEqual(delivery.activity.event, .stop)
+            completion(true)
+            received.fulfill()
+        }
+
+        let envelope = CodexActivityBridgeEnvelope(
+            authenticationToken: "token",
+            installationIdentifier: "installation",
+            eventID: "socket-event",
+            activity: CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session"
+            )
+        )
+        let payload = try JSONEncoder().encode(envelope)
+        let client = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        XCTAssertGreaterThanOrEqual(client, 0)
+        defer { Darwin.close(client) }
+        var receiveTimeout = timeval(tv_sec: 1, tv_usec: 0)
+        setsockopt(
+            client,
+            SOL_SOCKET,
+            SO_RCVTIMEO,
+            &receiveTimeout,
+            socklen_t(MemoryLayout<timeval>.size)
+        )
+
+        var address = sockaddr_un()
+        let pathBytes = Array(socketURL.path.utf8CString)
+        XCTAssertLessThanOrEqual(
+            pathBytes.count,
+            MemoryLayout.size(ofValue: address.sun_path)
+        )
+        address.sun_family = sa_family_t(AF_UNIX)
+        address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+        withUnsafeMutableBytes(of: &address.sun_path) { destination in
+            destination.initializeMemory(as: UInt8.self, repeating: 0)
+            pathBytes.withUnsafeBytes { source in
+                destination.copyBytes(from: source)
+            }
+        }
+        let connectResult = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(
+                to: sockaddr.self,
+                capacity: 1
+            ) { socketAddress in
+                Darwin.connect(
+                    client,
+                    socketAddress,
+                    socklen_t(MemoryLayout<sockaddr_un>.size)
+                )
+            }
+        }
+        XCTAssertEqual(connectResult, 0)
+
+        let didSend = payload.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else { return false }
+            return Darwin.send(client, baseAddress, buffer.count, 0)
+                == buffer.count
+        }
+        XCTAssertTrue(didSend)
+
+        var acknowledgementBuffer = [UInt8](repeating: 0, count: 1_024)
+        let acknowledgementCount = Darwin.recv(
+            client,
+            &acknowledgementBuffer,
+            acknowledgementBuffer.count,
+            0
+        )
+        XCTAssertGreaterThan(acknowledgementCount, 0)
+        let acknowledgementData = Data(
+            acknowledgementBuffer.prefix(max(acknowledgementCount, 0))
+        )
+        let acknowledgement = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: acknowledgementData)
+                as? [String: Any]
+        )
+        XCTAssertEqual(acknowledgement["eventID"] as? String, "socket-event")
+        XCTAssertEqual(acknowledgement["accepted"] as? Bool, true)
         wait(for: [received], timeout: 1)
     }
 
@@ -1455,6 +1951,11 @@ final class AppBehaviorTests: XCTestCase {
             forKey: "preferences.codexActivity.orbAnimation"
         )
         savedDefaults.set(
+            AppPreferences.CodexActivityProgressEffect
+                .sloshFlow.rawValue,
+            forKey: "preferences.codexActivity.progressEffect"
+        )
+        savedDefaults.set(
             AppPreferences.CodexActivityScreenPlacement.codexScreen.rawValue,
             forKey: "preferences.codexActivity.screenPlacement"
         )
@@ -1492,6 +1993,18 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(
             savedPreferences.codexActivityOrbAnimation,
             .rippleGlow
+        )
+        XCTAssertEqual(
+            savedPreferences.codexActivityProgressEffect,
+            .sloshFlow
+        )
+        savedPreferences.codexActivityProgressEffect = .diamondFront
+        XCTAssertEqual(
+            savedDefaults.string(
+                forKey: "preferences.codexActivity.progressEffect"
+            ),
+            AppPreferences.CodexActivityProgressEffect
+                .diamondFront.rawValue
         )
         XCTAssertEqual(
             savedPreferences.codexActivityScreenPlacement,
@@ -1604,6 +2117,10 @@ final class AppBehaviorTests: XCTestCase {
             .particleOrb
         )
         XCTAssertEqual(
+            preferences.codexActivityProgressEffect,
+            .stateSmoke
+        )
+        XCTAssertEqual(
             defaults.string(
                 forKey: "preferences.codexActivity.islandStyle"
             ),
@@ -1616,6 +2133,13 @@ final class AppBehaviorTests: XCTestCase {
             ),
             AppPreferences.CodexActivityOrbAnimation
                 .particleOrb.rawValue
+        )
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.progressEffect"
+            ),
+            AppPreferences.CodexActivityProgressEffect
+                .stateSmoke.rawValue
         )
         preferences.codexActivityIslandStyle = .aiOrb
         preferences.codexActivityOrbAnimation = .rippleGlow
@@ -1653,6 +2177,43 @@ final class AppBehaviorTests: XCTestCase {
 
         XCTAssertEqual(fallback.codexActivityIslandStyle, .aiOrb)
         XCTAssertEqual(fallback.codexActivityOrbAnimation, .particleOrb)
+    }
+
+    @MainActor
+    func testProgressEffectPreferenceUsesStableFourCaseContract() {
+        XCTAssertEqual(
+            AppPreferences.CodexActivityProgressEffect.allCases,
+            [.stateSmoke, .diamondFront, .dropField, .sloshFlow]
+        )
+        XCTAssertEqual(
+            AppPreferences.CodexActivityProgressEffect.allCases.map(
+                \.shaderIndex
+            ),
+            [0, 1, 2, 3]
+        )
+
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        defaults.set(
+            "unknown-effect",
+            forKey: "preferences.codexActivity.progressEffect"
+        )
+
+        let preferences = AppPreferences(defaults: defaults)
+
+        XCTAssertEqual(
+            preferences.codexActivityProgressEffect,
+            .stateSmoke
+        )
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.progressEffect"
+            ),
+            AppPreferences.CodexActivityProgressEffect.stateSmoke.rawValue
+        )
     }
 
     @MainActor
@@ -2157,6 +2718,7 @@ final class AppBehaviorTests: XCTestCase {
             elapsed: 1.0 / 60.0,
             reduceMotion: false
         )
+        XCTAssertEqual(projected, 0.0340, accuracy: 0.0001)
         XCTAssertGreaterThan(projected, 0)
         XCTAssertLessThan(projected, 0.60)
         for _ in 0..<180 {
@@ -2499,6 +3061,7 @@ final class AppBehaviorTests: XCTestCase {
         let early = transition.advance(elapsed: 0.10)
         XCTAssertGreaterThan(early.fillProgress, 0)
         XCTAssertLessThan(early.fillProgress, 1)
+        XCTAssertEqual(early.effectHighlight, 0, accuracy: 0.0001)
         XCTAssertEqual(early.darkening, 0, accuracy: 0.0001)
         XCTAssertEqual(early.smokeOpacity, 1, accuracy: 0.0001)
 
@@ -2543,6 +3106,43 @@ final class AppBehaviorTests: XCTestCase {
         transition.reset()
         XCTAssertEqual(transition.snapshot, .inactive)
         XCTAssertFalse(transition.isActive)
+    }
+
+    func testProgressEffectsCompletionHighlightIsBriefAndSubdued() {
+        var transition =
+            CodexActivityStateSmokeCompletionTransition()
+        transition.enter()
+
+        _ = transition.advance(elapsed: 0.25)
+        let filled = transition.advance(elapsed: 0.17)
+        XCTAssertEqual(filled.fillProgress, 1, accuracy: 0.0001)
+        XCTAssertEqual(filled.effectHighlight, 0, accuracy: 0.0001)
+
+        let highlighted = transition.advance(
+            elapsed:
+                CodexActivityStateSmokeContract
+                    .completionEffectHighlightDuration / 2
+        )
+        XCTAssertEqual(highlighted.fillProgress, 1, accuracy: 0.0001)
+        XCTAssertEqual(highlighted.effectHighlight, 1, accuracy: 0.0001)
+        XCTAssertLessThanOrEqual(
+            CodexActivityStateSmokeContract
+                .completionEffectHighlightIntensity,
+            0.14
+        )
+
+        let settled = transition.advance(
+            elapsed:
+                CodexActivityStateSmokeContract
+                    .completionEffectHighlightDuration / 2
+        )
+        XCTAssertEqual(settled.effectHighlight, 0, accuracy: 0.0001)
+        XCTAssertEqual(
+            CodexActivityStateSmokeCompletionSnapshot
+                .reducedMotion.effectHighlight,
+            0,
+            accuracy: 0.0001
+        )
     }
 
     func testStateSmokeCompletionGlowUsesInsetFourSidedSource() {

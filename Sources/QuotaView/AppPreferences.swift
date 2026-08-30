@@ -67,6 +67,24 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum CodexActivityProgressEffect: String, CaseIterable, Identifiable {
+        case stateSmoke
+        case diamondFront
+        case dropField
+        case sloshFlow
+
+        var id: String { rawValue }
+
+        var shaderIndex: Float {
+            switch self {
+            case .stateSmoke: 0
+            case .diamondFront: 1
+            case .dropField: 2
+            case .sloshFlow: 3
+            }
+        }
+    }
+
     enum CodexActivityScreenPlacement: String, CaseIterable, Identifiable {
         case followHotspot
         case codexScreen
@@ -122,6 +140,8 @@ final class AppPreferences: ObservableObject {
             "preferences.codexActivity.islandStyle"
         static let codexActivityOrbAnimation =
             "preferences.codexActivity.orbAnimation"
+        static let codexActivityProgressEffect =
+            "preferences.codexActivity.progressEffect"
         static let codexActivityScreenPlacement =
             "preferences.codexActivity.screenPlacement"
         static let codexActivityExpandedSize =
@@ -238,6 +258,16 @@ final class AppPreferences: ObservableObject {
             defaults.set(
                 codexActivityOrbAnimation.rawValue,
                 forKey: Key.codexActivityOrbAnimation
+            )
+        }
+    }
+
+    @Published var codexActivityProgressEffect:
+        CodexActivityProgressEffect {
+        didSet {
+            defaults.set(
+                codexActivityProgressEffect.rawValue,
+                forKey: Key.codexActivityProgressEffect
             )
         }
     }
@@ -430,6 +460,11 @@ final class AppPreferences: ObservableObject {
         codexActivityOrbAnimation = CodexActivityOrbAnimation(
             rawValue: storedCodexActivityOrbAnimation
         ) ?? .particleOrb
+        codexActivityProgressEffect = CodexActivityProgressEffect(
+            rawValue: defaults.string(
+                forKey: Key.codexActivityProgressEffect
+            ) ?? ""
+        ) ?? .stateSmoke
         codexActivityScreenPlacement = CodexActivityScreenPlacement(
             rawValue: defaults.string(
                 forKey: Key.codexActivityScreenPlacement
@@ -487,6 +522,10 @@ final class AppPreferences: ObservableObject {
         defaults.set(
             codexActivityOrbAnimation.rawValue,
             forKey: Key.codexActivityOrbAnimation
+        )
+        defaults.set(
+            codexActivityProgressEffect.rawValue,
+            forKey: Key.codexActivityProgressEffect
         )
         defaults.set(
             codexActivityScreenPlacement.rawValue,

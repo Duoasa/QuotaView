@@ -30,26 +30,30 @@ enum CodexActivityBridgeStatus: Equatable {
 final class CodexActivityStore: ObservableObject {
     nonisolated static let compactDelay: TimeInterval = 20
     nonisolated static let hiddenDelayAfterCompact: TimeInterval = 100
-    nonisolated static let settledEventSilenceDelay: TimeInterval = 20
+    nonisolated static let settledEventReplayAgeThreshold: TimeInterval = 20
 
     @Published private(set) var snapshot: CodexActivitySnapshot?
     @Published private(set) var presentation:
         CodexActivityPresentation = .hidden
     @Published private(set) var resolvedThreadTitle: String?
+    @Published private(set) var lifecycle:
+        CodexActivityTurnLifecycle = .idle
 
     var stateDidChange: (() -> Void)?
 
     private let titleClient: CodexAppServerClient
     private var compactDelayNanoseconds: UInt64
     private var hiddenDelayNanoseconds: UInt64
-    private var settledEventSilenceDelayNanoseconds: UInt64
+    private var settledEventReplayAgeThresholdNanoseconds: UInt64
     private var inactivityTask: Task<Void, Never>?
     private var titleTask: Task<Void, Never>?
     private var titleTaskSessionHash: String?
     private var titleCache: [String: String] = [:]
     private var titleAttemptedAt: [String: Date] = [:]
     private var latestEventAtBySession: [String: Date] = [:]
-    private var completedTurnBySession: [String: CompletedTurn] = [:]
+    private var terminalTurnsBySession: [String: TerminalTurn] = [:]
+    private var acceptedEventIDs: Set<String> = []
+    private var acceptedEventIDOrder: [String] = []
     private var planProgressBySession: [String: StoredPlanProgress] = [:]
     private var revision: UInt64 = 0
 
@@ -58,7 +62,7 @@ final class CodexActivityStore: ObservableObject {
         let fraction: Double
     }
 
-    private struct CompletedTurn {
+    private struct TerminalTurn {
         let turnHash: String?
     }
 
@@ -67,8 +71,8 @@ final class CodexActivityStore: ObservableObject {
         compactDelay: TimeInterval = CodexActivityStore.compactDelay,
         hiddenDelayAfterCompact: TimeInterval =
             CodexActivityStore.hiddenDelayAfterCompact,
-        settledEventSilenceDelay: TimeInterval =
-            CodexActivityStore.settledEventSilenceDelay
+        settledEventReplayAgeThreshold: TimeInterval =
+            CodexActivityStore.settledEventReplayAgeThreshold
     ) {
         self.titleClient = titleClient
         compactDelayNanoseconds = UInt64(
@@ -77,12 +81,28 @@ final class CodexActivityStore: ObservableObject {
         hiddenDelayNanoseconds = UInt64(
             max(hiddenDelayAfterCompact, 0) * 1_000_000_000
         )
-        settledEventSilenceDelayNanoseconds = Self.nanoseconds(
-            for: settledEventSilenceDelay
+        settledEventReplayAgeThresholdNanoseconds = Self.nanoseconds(
+            for: settledEventReplayAgeThreshold
         )
     }
 
+    var shouldPlayVisualEffects: Bool {
+        guard presentation != .hidden else { return false }
+        return lifecycle == .active || lifecycle == .completed
+    }
+
     func receive(_ event: CodexActivityEvent) {
+        receive(
+            CodexActivityDelivery(
+                source: .liveSocket,
+                activity: event
+            )
+        )
+    }
+
+    func receive(_ delivery: CodexActivityDelivery) {
+        let event = delivery.activity
+        guard registerEventID(delivery.eventID) else { return }
         guard CodexActivityReducer.snapshot(for: event) != nil
         else {
             return
@@ -99,31 +119,44 @@ final class CodexActivityStore: ObservableObject {
         {
             return
         }
-        if shouldIgnoreLateSettledEvent(afterCompletedTurn: event) {
+        if shouldIgnoreEventAfterTerminalState(event) {
             return
         }
         latestEventAtBySession[event.sessionHash] = event.occurredAt
 
         switch event.event {
         case .userPromptSubmit:
-            completedTurnBySession.removeValue(
-                forKey: event.sessionHash
-            )
+            terminalTurnsBySession.removeValue(forKey: event.sessionHash)
+            lifecycle = .active
         case .sessionStart:
             if event.sessionStartSource != .compact {
-                completedTurnBySession.removeValue(
+                terminalTurnsBySession.removeValue(
                     forKey: event.sessionHash
                 )
+                lifecycle = .idle
+            } else {
+                lifecycle = .active
             }
         case .sessionEnd:
-            completedTurnBySession.removeValue(
-                forKey: event.sessionHash
+            terminalTurnsBySession[event.sessionHash] = TerminalTurn(
+                turnHash: event.turnHash
             )
+            lifecycle = .idle
         case .stop:
-            completedTurnBySession[event.sessionHash] =
-                CompletedTurn(turnHash: event.turnHash)
-        default:
-            break
+            terminalTurnsBySession[event.sessionHash] = TerminalTurn(
+                turnHash: event.turnHash
+            )
+            lifecycle = .completed
+        case .preToolUse, .permissionRequest, .preCompact,
+             .subagentStart:
+            // Some Codex hosts do not emit UserPromptSubmit before the first
+            // activity of a new turn. A leading activity is still conclusive
+            // evidence of a new turn after the terminal guard has rejected
+            // any same-turn late event.
+            terminalTurnsBySession.removeValue(forKey: event.sessionHash)
+            lifecycle = .active
+        case .postToolUse, .postCompact, .subagentStop:
+            lifecycle = .active
         }
 
         let approximateProgress = approximateProgress(for: event)
@@ -165,13 +198,8 @@ final class CodexActivityStore: ObservableObject {
         }
         snapshot = nextSnapshot
         resolvedThreadTitle = titleCache[event.sessionHash]
-        let settledEventHideDelay =
-            remainingSettledEventSilenceNanoseconds(for: event)
-        if settledEventHideDelay == 0,
-           CodexActivityReducer.shouldHideAfterSettledEventSilence(
-               after: event
-           )
-        {
+        if isStaleSettledContinuationEvent(delivery) {
+            lifecycle = .unconfirmed
             presentation = .hidden
             notifyChange()
             return
@@ -186,11 +214,6 @@ final class CodexActivityStore: ObservableObject {
 
         if CodexActivityReducer.shouldStartInactivityCycle(after: event) {
             scheduleInactivityCycle(revision: eventRevision)
-        } else if let settledEventHideDelay {
-            scheduleSettledEventSilenceHide(
-                revision: eventRevision,
-                delayNanoseconds: settledEventHideDelay
-            )
         }
     }
 
@@ -206,6 +229,7 @@ final class CodexActivityStore: ObservableObject {
 
     func stop() async {
         hide()
+        lifecycle = .idle
         await titleClient.stop()
     }
 
@@ -364,51 +388,62 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
-    private func scheduleSettledEventSilenceHide(
-        revision: UInt64,
-        delayNanoseconds: UInt64
-    ) {
-        inactivityTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await Task.sleep(nanoseconds: delayNanoseconds)
-                guard !Task.isCancelled, self.revision == revision else {
-                    return
-                }
-                presentation = .hidden
-                notifyChange()
-            } catch {
-                return
-            }
-        }
-    }
-
-    private func remainingSettledEventSilenceNanoseconds(
-        for event: CodexActivityEvent
-    ) -> UInt64? {
-        guard CodexActivityReducer
-            .shouldHideAfterSettledEventSilence(after: event)
-        else {
-            return nil
-        }
-        let elapsed = max(0, Date().timeIntervalSince(event.occurredAt))
-        let fullDelay = TimeInterval(
-            settledEventSilenceDelayNanoseconds
-        ) / 1_000_000_000
-        return Self.nanoseconds(for: max(0, fullDelay - elapsed))
-    }
-
-    private func shouldIgnoreLateSettledEvent(
-        afterCompletedTurn event: CodexActivityEvent
+    private func isStaleSettledContinuationEvent(
+        _ delivery: CodexActivityDelivery
     ) -> Bool {
-        guard let completedTurn =
-                completedTurnBySession[event.sessionHash],
-              completedTurn.turnHash == event.turnHash
+        guard delivery.source == .startupReplay else { return false }
+        let event = delivery.activity
+        guard CodexActivityReducer
+            .isSettledContinuationEvent(after: event)
         else {
             return false
         }
-        return CodexActivityReducer
-            .shouldHideAfterSettledEventSilence(after: event)
+        let elapsed = max(0, Date().timeIntervalSince(event.occurredAt))
+        let replayAgeThreshold = TimeInterval(
+            settledEventReplayAgeThresholdNanoseconds
+        ) / 1_000_000_000
+        return elapsed >= replayAgeThreshold
+    }
+
+    private func shouldIgnoreEventAfterTerminalState(
+        _ event: CodexActivityEvent
+    ) -> Bool {
+        guard let terminalTurn =
+            terminalTurnsBySession[event.sessionHash]
+        else {
+            return false
+        }
+        switch event.event {
+        case .userPromptSubmit, .sessionEnd:
+            return false
+        case .sessionStart:
+            return event.sessionStartSource == .compact
+        case .preToolUse, .permissionRequest, .preCompact,
+             .subagentStart:
+            guard let completedTurnHash = terminalTurn.turnHash,
+                  let eventTurnHash = event.turnHash
+            else {
+                return false
+            }
+            return completedTurnHash == eventTurnHash
+        case .postToolUse, .postCompact, .subagentStop, .stop:
+            return true
+        }
+    }
+
+    private func registerEventID(_ eventID: String?) -> Bool {
+        guard let eventID, !eventID.isEmpty else { return true }
+        guard acceptedEventIDs.insert(eventID).inserted else {
+            return false
+        }
+        acceptedEventIDOrder.append(eventID)
+        if acceptedEventIDOrder.count > 512 {
+            let overflow = acceptedEventIDOrder.count - 512
+            let removed = acceptedEventIDOrder.prefix(overflow)
+            acceptedEventIDs.subtract(removed)
+            acceptedEventIDOrder.removeFirst(overflow)
+        }
+        return true
     }
 
     private func sleepUntilHidden(revision: UInt64) async {
@@ -598,9 +633,14 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func start() {
-        let handler: (CodexActivityEvent) -> Void = { [weak self] activity in
+        let handler: CodexActivityDeliveryHandler = {
+            [weak self] delivery, completion in
             Task { @MainActor in
-                self?.receive(activity)
+                guard let self else {
+                    completion(false)
+                    return
+                }
+                completion(self.receive(delivery))
             }
         }
         var isListening = false
@@ -959,11 +999,16 @@ final class CodexActivityRuntime: ObservableObject {
         }
     }
 
-    private func receive(_ activity: CodexActivityEvent) {
+    private func receive(_ delivery: CodexActivityDelivery) -> Bool {
+        let activity = delivery.activity
         if defaults.bool(forKey: DefaultsKey.setupEnabled) {
             guard canAcceptActivityAfterRequiredRestart() else {
                 render()
-                return
+                CodexActivityDiagnostics.record(
+                    delivery: delivery,
+                    outcome: "rejected_restart_required"
+                )
+                return false
             }
 
             let installationID = installer.installationIdentifier
@@ -996,7 +1041,20 @@ final class CodexActivityRuntime: ObservableObject {
                 setupIslandRequested = false
             }
         }
-        store.receive(activity)
+        let snapshotBeforeDelivery = store.snapshot
+        let presentationBeforeDelivery = store.presentation
+        let lifecycleBeforeDelivery = store.lifecycle
+        store.receive(delivery)
+        let didApplyDelivery = store.snapshot != snapshotBeforeDelivery
+            || store.presentation != presentationBeforeDelivery
+            || store.lifecycle != lifecycleBeforeDelivery
+        CodexActivityDiagnostics.record(
+            delivery: delivery,
+            outcome: didApplyDelivery
+                ? "accepted_applied"
+                : "accepted_ignored"
+        )
+        return true
     }
 
     private func canAcceptActivityAfterRequiredRestart() -> Bool {
@@ -1212,6 +1270,8 @@ final class CodexActivityRuntime: ObservableObject {
                 initialState: renderState,
                 islandStyle: preferences.codexActivityIslandStyle,
                 orbAnimation: preferences.codexActivityOrbAnimation,
+                progressEffect:
+                    preferences.codexActivityProgressEffect,
                 expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
@@ -1228,9 +1288,11 @@ final class CodexActivityRuntime: ObservableObject {
                 .accessibilityDisplayShouldReduceMotion,
             islandStyle: preferences.codexActivityIslandStyle,
             orbAnimation: preferences.codexActivityOrbAnimation,
+            progressEffect: preferences.codexActivityProgressEffect,
             expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
+            codexProcessIdentifier: codexProcessIdentifier,
+            playbackEnabled: store.shouldPlayVisualEffects
         )
     }
 
@@ -1307,6 +1369,8 @@ final class CodexActivityRuntime: ObservableObject {
                 initialState: renderState,
                 islandStyle: preferences.codexActivityIslandStyle,
                 orbAnimation: preferences.codexActivityOrbAnimation,
+                progressEffect:
+                    preferences.codexActivityProgressEffect,
                 expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
@@ -1323,9 +1387,11 @@ final class CodexActivityRuntime: ObservableObject {
                 .accessibilityDisplayShouldReduceMotion,
             islandStyle: preferences.codexActivityIslandStyle,
             orbAnimation: preferences.codexActivityOrbAnimation,
+            progressEffect: preferences.codexActivityProgressEffect,
             expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
+            codexProcessIdentifier: codexProcessIdentifier,
+            playbackEnabled: false
         )
     }
 
@@ -1534,7 +1600,17 @@ struct CodexActivityCopy {
     }
 }
 
-private final class CodexActivityUnixBridge {
+typealias CodexActivityDeliveryHandler = (
+    CodexActivityDelivery,
+    @escaping @Sendable (Bool) -> Void
+) -> Void
+
+private struct CodexActivityDeliveryAcknowledgement: Codable {
+    let eventID: String?
+    let accepted: Bool
+}
+
+final class CodexActivityUnixBridge: @unchecked Sendable {
     enum BridgeError: LocalizedError {
         case socketCreationFailed
         case socketPathTooLong
@@ -1564,7 +1640,7 @@ private final class CodexActivityUnixBridge {
     )
     private var source: DispatchSourceRead?
     private var descriptor: Int32 = -1
-    private var handler: ((CodexActivityEvent) -> Void)?
+    private var handler: CodexActivityDeliveryHandler?
 
     init(
         socketURL: URL,
@@ -1577,7 +1653,7 @@ private final class CodexActivityUnixBridge {
     }
 
     func start(
-        handler: @escaping (CodexActivityEvent) -> Void
+        handler: @escaping CodexActivityDeliveryHandler
     ) throws {
         stop()
         self.handler = handler
@@ -1667,12 +1743,19 @@ private final class CodexActivityUnixBridge {
         while true {
             let connection = Darwin.accept(descriptor, nil, nil)
             guard connection >= 0 else { return }
+            var noSigPipe: Int32 = 1
+            setsockopt(
+                connection,
+                SOL_SOCKET,
+                SO_NOSIGPIPE,
+                &noSigPipe,
+                socklen_t(MemoryLayout<Int32>.size)
+            )
             read(connection: connection)
         }
     }
 
     private func read(connection: Int32) {
-        defer { Darwin.close(connection) }
         var timeout = timeval(tv_sec: 1, tv_usec: 0)
         setsockopt(
             connection,
@@ -1707,16 +1790,76 @@ private final class CodexActivityUnixBridge {
                     installationIdentifier
                 )
                 else {
+                    Darwin.close(connection)
                     return
                 }
-                handler?(envelope.activity)
+                guard let handler else {
+                    sendAcknowledgement(
+                        eventID: envelope.eventID,
+                        accepted: false,
+                        connection: connection
+                    )
+                    return
+                }
+                let delivery = CodexActivityDelivery(
+                    eventID: envelope.eventID,
+                    source: .liveSocket,
+                    activity: envelope.activity
+                )
+                handler(delivery) { [weak self] accepted in
+                    guard let self else {
+                        Darwin.close(connection)
+                        return
+                    }
+                    self.sendAcknowledgement(
+                        eventID: envelope.eventID,
+                        accepted: accepted,
+                        connection: connection
+                    )
+                }
                 return
             }
+        }
+        Darwin.close(connection)
+    }
+
+    private func sendAcknowledgement(
+        eventID: String?,
+        accepted: Bool,
+        connection: Int32
+    ) {
+        defer { Darwin.close(connection) }
+        guard let payload = try? JSONEncoder().encode(
+            CodexActivityDeliveryAcknowledgement(
+                eventID: eventID,
+                accepted: accepted
+            )
+        ) else {
+            return
+        }
+        _ = payload.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else {
+                return false
+            }
+            var pointer = baseAddress
+            var remaining = buffer.count
+            while remaining > 0 {
+                let written = Darwin.send(
+                    connection,
+                    pointer,
+                    remaining,
+                    0
+                )
+                guard written > 0 else { return false }
+                pointer = pointer.advanced(by: written)
+                remaining -= written
+            }
+            return true
         }
     }
 }
 
-final class CodexActivityFileBridge {
+final class CodexActivityFileBridge: @unchecked Sendable {
     enum BridgeError: LocalizedError {
         case queueCreationFailed
         case unsafeQueueDirectory
@@ -1747,7 +1890,9 @@ final class CodexActivityFileBridge {
     )
     private var source: DispatchSourceFileSystemObject?
     private var descriptor: Int32 = -1
-    private var handler: ((CodexActivityEvent) -> Void)?
+    private var handler: CodexActivityDeliveryHandler?
+    private var startupReplayFileNames: Set<String> = []
+    private var inFlightFileNames: Set<String> = []
 
     init(
         queueURL: URL,
@@ -1760,11 +1905,14 @@ final class CodexActivityFileBridge {
     }
 
     func start(
-        handler: @escaping (CodexActivityEvent) -> Void
+        handler: @escaping CodexActivityDeliveryHandler
     ) throws {
         stop()
         try prepareQueueDirectory()
         self.handler = handler
+        startupReplayFileNames = Set(
+            eventURLsInQueue().map(\.lastPathComponent)
+        )
 
         let directoryDescriptor = Darwin.open(
             queueURL.path,
@@ -1799,6 +1947,8 @@ final class CodexActivityFileBridge {
             descriptor = -1
         }
         handler = nil
+        startupReplayFileNames.removeAll()
+        inFlightFileNames.removeAll()
     }
 
     private func prepareQueueDirectory() throws {
@@ -1827,25 +1977,14 @@ final class CodexActivityFileBridge {
     }
 
     private func drainAvailableEvents() {
-        let fileManager = FileManager.default
-        guard let urls = try? fileManager.contentsOfDirectory(
-            at: queueURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else {
-            return
-        }
-
-        let eventURLs = urls
-            .filter {
-                $0.pathExtension == "json"
-                    && $0.lastPathComponent.hasPrefix("event-")
-            }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-
-        var events: [CodexActivityEvent] = []
+        let eventURLs = eventURLsInQueue()
+        var deliveries: [(
+            url: URL,
+            delivery: CodexActivityDelivery
+        )] = []
         for url in eventURLs.prefix(Self.maximumQueuedFiles) {
-            defer { unlink(url.path) }
+            let fileName = url.lastPathComponent
+            guard !inFlightFileNames.contains(fileName) else { continue }
             guard let data = readPayload(at: url),
                   let envelope = try? JSONDecoder().decode(
                       CodexActivityBridgeEnvelope.self,
@@ -1862,19 +2001,60 @@ final class CodexActivityFileBridge {
                   abs(envelope.activity.occurredAt.timeIntervalSinceNow)
                     <= Self.staleEventAge
             else {
+                unlink(url.path)
+                startupReplayFileNames.remove(fileName)
                 continue
             }
-            events.append(envelope.activity)
+            let source: CodexActivityDeliverySource =
+                startupReplayFileNames.contains(fileName)
+                ? .startupReplay
+                : .liveQueue
+            deliveries.append((
+                url: url,
+                delivery: CodexActivityDelivery(
+                    eventID: envelope.eventID,
+                    source: source,
+                    activity: envelope.activity
+                )
+            ))
         }
 
-        for url in eventURLs.dropFirst(Self.maximumQueuedFiles) {
-            unlink(url.path)
+        deliveries.sort {
+            $0.delivery.activity.occurredAt
+                < $1.delivery.activity.occurredAt
         }
+        for item in deliveries {
+            let fileName = item.url.lastPathComponent
+            guard let handler else { return }
+            inFlightFileNames.insert(fileName)
+            handler(item.delivery) { [weak self] accepted in
+                guard let self else { return }
+                self.queue.async {
+                    self.inFlightFileNames.remove(fileName)
+                    guard accepted else { return }
+                    unlink(item.url.path)
+                    self.startupReplayFileNames.remove(fileName)
+                    self.drainAvailableEvents()
+                }
+            }
+        }
+    }
 
-        events.sort { $0.occurredAt < $1.occurredAt }
-        for event in events {
-            handler?(event)
+    private func eventURLsInQueue() -> [URL] {
+        let fileManager = FileManager.default
+        guard let urls = try? fileManager.contentsOfDirectory(
+            at: queueURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
         }
+        return urls
+            .filter {
+                $0.pathExtension == "json"
+                    && $0.lastPathComponent.hasPrefix("event-")
+            }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     private func readPayload(at url: URL) -> Data? {
@@ -2365,6 +2545,8 @@ struct CodexSecurityReviewLauncher: Sendable {
 }
 
 enum CodexActivityDiagnostics {
+    private static let maximumLogBytes: off_t = 65_536
+
     static var logURL: URL {
         URL(
             fileURLWithPath:
@@ -2372,6 +2554,48 @@ enum CodexActivityDiagnostics {
             isDirectory: true
         )
         .appendingPathComponent("diagnostics.log")
+    }
+
+    static func record(
+        delivery: CodexActivityDelivery,
+        outcome: String
+    ) {
+        let path = logURL.path
+        let descriptor = Darwin.open(
+            path,
+            O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW | O_CLOEXEC,
+            S_IRUSR | S_IWUSR
+        )
+        guard descriptor >= 0 else { return }
+        defer { Darwin.close(descriptor) }
+
+        guard Darwin.lockf(descriptor, F_LOCK, 0) == 0 else { return }
+        defer { Darwin.lockf(descriptor, F_ULOCK, 0) }
+
+        var metadata = stat()
+        guard fstat(descriptor, &metadata) == 0,
+              metadata.st_uid == getuid(),
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_mode & (S_IRWXG | S_IRWXO) == 0
+        else {
+            return
+        }
+
+        if metadata.st_size >= maximumLogBytes {
+            guard ftruncate(descriptor, 0) == 0 else { return }
+        }
+
+        let activity = delivery.activity
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let session = String(activity.sessionHash.prefix(12))
+        let turn = activity.turnHash.map { String($0.prefix(12)) } ?? "none"
+        let eventID = delivery.eventID.map {
+            String($0.prefix(12))
+        } ?? "legacy"
+        let line = "\(timestamp) event=\(activity.event.rawValue) source=\(delivery.source.rawValue) outcome=\(outcome) session=\(session) turn=\(turn) id=\(eventID)\n"
+        _ = line.withCString { pointer in
+            Darwin.write(descriptor, pointer, strlen(pointer))
+        }
     }
 }
 
