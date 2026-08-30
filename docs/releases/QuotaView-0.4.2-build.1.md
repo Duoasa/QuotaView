@@ -5,6 +5,11 @@
 QuotaView 0.4.2 expands the progress-aware Codex Island and tightens task
 lifecycle tracking.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Duoasa/QuotaView/main/Resources/QuotaView-0.4.2-Progress-Mode.jpg" alt="QuotaView 0.4.2 progress-mode Codex Island product overview" width="49%">
+  <img src="https://raw.githubusercontent.com/Duoasa/QuotaView/main/Resources/QuotaView-0.4.2-Progress-Styles.jpg" alt="QuotaView 0.4.2 State Smoke, Drop Field, Liquid Slosh, and Diamond Front progress styles" width="49%">
+</p>
+
 ## Highlights
 
 - **Four progress styles:** Choose State Smoke, Diamond Front, Drop Field, or
