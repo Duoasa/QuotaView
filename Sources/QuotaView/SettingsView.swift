@@ -32,6 +32,8 @@ struct SettingsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection: SettingsPage? = .menuBar
     @State private var codexActivityDetailsExpanded = false
+    @State private var hoveredProgressEffect:
+        AppPreferences.CodexActivityProgressEffect?
 
     private var copy: AppCopy { preferences.copy }
 
@@ -764,6 +766,35 @@ struct SettingsView: View {
                     }
                     .padding(18)
                 }
+            } else {
+                NativeSettingsCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(copy.text(
+                                "进度条效果",
+                                "Progress Effect"
+                            ))
+                            .font(.body.weight(.medium))
+
+                            Text(copy.text(
+                                "选择进度条灵动岛内部使用的动态效果。预览固定展示 60% 工作状态。",
+                                "Choose the animated effect inside the Progress Bar island. Previews show a fixed 60% working state."
+                            ))
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        }
+
+                        HStack(spacing: 10) {
+                            ForEach(
+                                AppPreferences
+                                    .CodexActivityProgressEffect.allCases
+                            ) { effect in
+                                codexActivityProgressEffectOption(effect)
+                            }
+                        }
+                    }
+                    .padding(18)
+                }
             }
 
             NativeSettingsCard {
@@ -888,6 +919,71 @@ struct SettingsView: View {
             animation: animation,
             reduceMotion: reduceMotion
         )
+    }
+
+    private func codexActivityProgressEffectOption(
+        _ effect: AppPreferences.CodexActivityProgressEffect
+    ) -> some View {
+        let isSelected =
+            preferences.codexActivityProgressEffect == effect
+        let title = codexActivityProgressEffectTitle(effect)
+
+        return Button {
+            preferences.codexActivityProgressEffect = effect
+        } label: {
+            VStack(spacing: 8) {
+                CodexActivityProgressEffectPreview(
+                    effect: effect,
+                    reduceMotion: reduceMotion
+                )
+                .frame(width: 88, height: 88)
+                .accessibilityHidden(true)
+
+                Text(title)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(CodexActivityPreviewOptionButtonStyle(
+            isSelected: isSelected,
+            isHovered: hoveredProgressEffect == effect,
+            reduceMotion: reduceMotion
+        ))
+        .onHover { isHovering in
+            hoveredProgressEffect = isHovering ? effect : nil
+        }
+        .help(copy.text(
+            "选择\(title)进度条效果。",
+            "Choose the \(title) progress effect."
+        ))
+        .accessibilityLabel(title)
+        .accessibilityValue(
+            isSelected
+                ? copy.text("已选择", "Selected")
+                : copy.text("未选择", "Not selected")
+        )
+        .accessibilityHint(copy.text(
+            "应用到进度条灵动岛。",
+            "Applies this effect to the Progress Bar island."
+        ))
+    }
+
+    private func codexActivityProgressEffectTitle(
+        _ effect: AppPreferences.CodexActivityProgressEffect
+    ) -> String {
+        switch effect {
+        case .stateSmoke:
+            copy.text("状态烟雾", "State Smoke")
+        case .diamondFront:
+            copy.text("晶钻前沿", "Diamond Front")
+        case .dropField:
+            copy.text("液滴涌动", "Drop Field")
+        case .sloshFlow:
+            copy.text("液态涌浪", "Liquid Slosh")
+        }
     }
 
     private var languageSettings: some View {
@@ -1649,6 +1745,79 @@ private struct CodexActivityOrbPreview: NSViewRepresentable {
         context: Context
     ) {
         view.update(animation: animation, reduceMotion: reduceMotion)
+    }
+}
+
+private struct CodexActivityProgressEffectPreview: NSViewRepresentable {
+    let effect: AppPreferences.CodexActivityProgressEffect
+    let reduceMotion: Bool
+
+    func makeNSView(
+        context: Context
+    ) -> CodexActivityStateSmokePreviewHostView {
+        let view = CodexActivityStateSmokePreviewHostView(effect: effect)
+        view.update(effect: effect, reduceMotion: reduceMotion)
+        return view
+    }
+
+    func updateNSView(
+        _ view: CodexActivityStateSmokePreviewHostView,
+        context: Context
+    ) {
+        view.update(effect: effect, reduceMotion: reduceMotion)
+    }
+}
+
+private struct CodexActivityPreviewOptionButtonStyle: ButtonStyle {
+    let isSelected: Bool
+    let isHovered: Bool
+    let reduceMotion: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 10)
+            .padding(.vertical, 12)
+            .background(
+                backgroundColor(isPressed: configuration.isPressed),
+                in: RoundedRectangle(
+                    cornerRadius: 10,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: 10,
+                    style: .continuous
+                )
+                .strokeBorder(
+                    isSelected
+                        ? Color(nsColor: .controlAccentColor)
+                        : Color(nsColor: .separatorColor),
+                    lineWidth: isSelected ? 1.5 : 0.5
+                )
+            }
+            .scaleEffect(
+                !reduceMotion && configuration.isPressed
+                    ? 0.985
+                    : 1
+            )
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.08),
+                value: configuration.isPressed
+            )
+    }
+
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isPressed {
+            return Color(nsColor: .controlAccentColor).opacity(0.14)
+        }
+        if isSelected {
+            return Color(nsColor: .controlAccentColor).opacity(0.10)
+        }
+        if isHovered {
+            return Color(nsColor: .controlAccentColor).opacity(0.05)
+        }
+        return Color(nsColor: .windowBackgroundColor)
     }
 }
 

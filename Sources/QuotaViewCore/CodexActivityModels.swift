@@ -112,15 +112,40 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
 public struct CodexActivityBridgeEnvelope: Codable, Equatable, Sendable {
     public let authenticationToken: String
     public let installationIdentifier: String
+    public let eventID: String?
     public let activity: CodexActivityEvent
 
     public init(
         authenticationToken: String,
         installationIdentifier: String,
+        eventID: String? = nil,
         activity: CodexActivityEvent
     ) {
         self.authenticationToken = authenticationToken
         self.installationIdentifier = installationIdentifier
+        self.eventID = eventID
+        self.activity = activity
+    }
+}
+
+public enum CodexActivityDeliverySource: String, Codable, Sendable {
+    case liveSocket
+    case liveQueue
+    case startupReplay
+}
+
+public struct CodexActivityDelivery: Equatable, Sendable {
+    public let eventID: String?
+    public let source: CodexActivityDeliverySource
+    public let activity: CodexActivityEvent
+
+    public init(
+        eventID: String? = nil,
+        source: CodexActivityDeliverySource,
+        activity: CodexActivityEvent
+    ) {
+        self.eventID = eventID
+        self.source = source
         self.activity = activity
     }
 }
@@ -141,6 +166,13 @@ public enum CodexActivityPresentation: String, Codable, Sendable {
     case hidden
     case expanded
     case compact
+}
+
+public enum CodexActivityTurnLifecycle: String, Codable, Sendable {
+    case idle
+    case active
+    case completed
+    case unconfirmed
 }
 
 public struct CodexActivitySnapshot: Equatable, Sendable {
@@ -284,7 +316,7 @@ public enum CodexActivityReducer {
         }
     }
 
-    public static func shouldHideAfterSettledEventSilence(
+    public static func isSettledContinuationEvent(
         after event: CodexActivityEvent
     ) -> Bool {
         switch event.event {

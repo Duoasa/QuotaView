@@ -2302,6 +2302,8 @@ private final class ActivityIslandContentView: NSView {
         AppPreferences.CodexActivityIslandStyle
     private var orbAnimation:
         AppPreferences.CodexActivityOrbAnimation
+    private var progressEffect:
+        AppPreferences.CodexActivityProgressEffect
     private var reduceMotion = false
     private var playbackVisible = false
 
@@ -2311,12 +2313,14 @@ private final class ActivityIslandContentView: NSView {
         initialState: CodexActivityRenderState,
         islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        progressEffect: AppPreferences.CodexActivityProgressEffect,
         expandedSize: AppPreferences.CodexActivityExpandedSize
     ) {
         renderState = initialState
         self.expandedSize = expandedSize
         self.islandStyle = islandStyle
         self.orbAnimation = orbAnimation
+        self.progressEffect = progressEffect
         orbView = ActivitySelectableOrbView(
             frame: .zero,
             initialState: initialState.visualState,
@@ -2345,6 +2349,7 @@ private final class ActivityIslandContentView: NSView {
         surface.addSubview(orbView)
 
         stateSmokeView.isHidden = true
+        stateSmokeView.setEffect(progressEffect)
         stateSmokeView.setPlaybackEnabled(false)
 
         kickerLabel.font = activityFont(
@@ -2388,7 +2393,8 @@ private final class ActivityIslandContentView: NSView {
         update(
             renderState: initialState,
             islandStyle: islandStyle,
-            orbAnimation: orbAnimation
+            orbAnimation: orbAnimation,
+            progressEffect: progressEffect
         )
     }
 
@@ -2625,11 +2631,13 @@ private final class ActivityIslandContentView: NSView {
     func update(
         renderState: CodexActivityRenderState,
         islandStyle: AppPreferences.CodexActivityIslandStyle,
-        orbAnimation: AppPreferences.CodexActivityOrbAnimation
+        orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        progressEffect: AppPreferences.CodexActivityProgressEffect
     ) {
         self.renderState = renderState
         self.islandStyle = islandStyle
         self.orbAnimation = orbAnimation
+        self.progressEffect = progressEffect
         configureTypography(for: islandStyle)
         let usesProgressTextStyle = islandStyle == .progressBar
         kickerLabel.stringValue = renderState.windowTitle
@@ -2667,6 +2675,7 @@ private final class ActivityIslandContentView: NSView {
         orbView.setAnimation(orbAnimation)
         orbView.setState(renderState.visualState)
         stateSmokeView.setState(renderState.visualState)
+        stateSmokeView.setEffect(progressEffect)
         stateSmokeView.setApproximateProgress(
             renderState.approximateProgressFraction
         )
@@ -2928,6 +2937,7 @@ final class CodexActivityIslandPanelController {
         initialState: CodexActivityRenderState,
         islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        progressEffect: AppPreferences.CodexActivityProgressEffect,
         expandedSize: AppPreferences.CodexActivityExpandedSize,
         screenPlacement:
             AppPreferences.CodexActivityScreenPlacement,
@@ -2946,6 +2956,7 @@ final class CodexActivityIslandPanelController {
             initialState: initialState,
             islandStyle: islandStyle,
             orbAnimation: orbAnimation,
+            progressEffect: progressEffect,
             expandedSize: expandedSize
         )
         panel = CodexActivityPanel(
@@ -2989,10 +3000,12 @@ final class CodexActivityIslandPanelController {
         reduceMotion: Bool,
         islandStyle: AppPreferences.CodexActivityIslandStyle,
         orbAnimation: AppPreferences.CodexActivityOrbAnimation,
+        progressEffect: AppPreferences.CodexActivityProgressEffect,
         expandedSize: AppPreferences.CodexActivityExpandedSize,
         screenPlacement:
             AppPreferences.CodexActivityScreenPlacement,
-        codexProcessIdentifier: pid_t?
+        codexProcessIdentifier: pid_t?,
+        playbackEnabled: Bool
     ) {
         let modeChanged = self.presentationMode != presentationMode
         self.presentationMode = presentationMode
@@ -3004,14 +3017,15 @@ final class CodexActivityIslandPanelController {
         content.update(
             renderState: renderState,
             islandStyle: islandStyle,
-            orbAnimation: orbAnimation
+            orbAnimation: orbAnimation,
+            progressEffect: progressEffect
         )
         content.setPresentationMode(
             presentationMode,
             expandedSize: expandedSize,
             accessibilityValue: presentationAccessibilityValue
         )
-        content.setPlaybackVisible(true)
+        content.setPlaybackVisible(playbackEnabled)
 
         let duration = modeChanged
             ? presentationMode.transitionDuration

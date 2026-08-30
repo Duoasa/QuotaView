@@ -61,7 +61,13 @@ private struct SanitizedActivity: Codable {
 private struct BridgeEnvelope: Codable {
     let authenticationToken: String
     let installationIdentifier: String
+    let eventID: String
     let activity: SanitizedActivity
+}
+
+private struct DeliveryAcknowledgement: Codable {
+    let eventID: String?
+    let accepted: Bool
 }
 
 private struct Arguments {
@@ -216,6 +222,7 @@ private enum SocketDeliveryResult {
 
 private func send(
     _ data: Data,
+    eventID: String,
     to socketPath: String
 ) -> SocketDeliveryResult {
     let pathBytes = Array(socketPath.utf8CString)
@@ -277,7 +284,43 @@ private func send(
         }
         return true
     }
-    return didWrite ? .delivered : .failed("socket_write_failed")
+    guard didWrite else { return .failed("socket_write_failed") }
+
+    var timeout = timeval(tv_sec: 1, tv_usec: 0)
+    setsockopt(
+        descriptor,
+        SOL_SOCKET,
+        SO_RCVTIMEO,
+        &timeout,
+        socklen_t(MemoryLayout<timeval>.size)
+    )
+    var acknowledgementData = Data()
+    var acknowledgementBuffer = [UInt8](repeating: 0, count: 1_024)
+    while acknowledgementData.count <= 4_096 {
+        let count = Darwin.recv(
+            descriptor,
+            &acknowledgementBuffer,
+            acknowledgementBuffer.count,
+            0
+        )
+        guard count > 0 else { break }
+        acknowledgementData.append(
+            acknowledgementBuffer,
+            count: count
+        )
+        if let acknowledgement = try? JSONDecoder().decode(
+            DeliveryAcknowledgement.self,
+            from: acknowledgementData
+        ) {
+            guard acknowledgement.accepted,
+                  acknowledgement.eventID == eventID
+            else {
+                return .failed("socket_event_rejected")
+            }
+            return .delivered
+        }
+    }
+    return .failed("socket_acknowledgement_missing")
 }
 
 private func defaultQueuePath() -> String {
@@ -286,6 +329,7 @@ private func defaultQueuePath() -> String {
 
 private func writeFallback(
     _ data: Data,
+    eventID: String,
     to queuePath: String
 ) -> Bool {
     guard !data.isEmpty, data.count <= 65_536 else {
@@ -312,9 +356,8 @@ private func writeFallback(
     }.prefix(128).count
     guard queuedCount < 128 else { return false }
 
-    let identifier = UUID().uuidString.lowercased()
-    let temporaryPath = "\(queuePath)/.event-\(identifier).tmp"
-    let finalPath = "\(queuePath)/event-\(identifier).json"
+    let temporaryPath = "\(queuePath)/.event-\(eventID).tmp"
+    let finalPath = "\(queuePath)/event-\(eventID).json"
     let descriptor = Darwin.open(
         temporaryPath,
         O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
@@ -355,12 +398,12 @@ private func writeFallback(
 
 private func appendDiagnostic(
     code: String,
-    fallbackSucceeded: Bool,
+    event: HookEvent,
+    outcome: String,
     queuePath: String
 ) {
-    let outcome = fallbackSucceeded ? "queued" : "failed"
-    diagnosticLogger.error(
-        "activity delivery \(code, privacy: .public); fallback \(outcome, privacy: .public)"
+    diagnosticLogger.info(
+        "activity \(event.rawValue, privacy: .public) delivery \(code, privacy: .public); outcome \(outcome, privacy: .public)"
     )
 
     var directoryMetadata = stat()
@@ -381,18 +424,24 @@ private func appendDiagnostic(
     guard descriptor >= 0 else { return }
     defer { Darwin.close(descriptor) }
 
+    guard Darwin.lockf(descriptor, F_LOCK, 0) == 0 else { return }
+    defer { Darwin.lockf(descriptor, F_ULOCK, 0) }
+
     var metadata = stat()
     guard fstat(descriptor, &metadata) == 0,
           metadata.st_uid == getuid(),
           metadata.st_mode & S_IFMT == S_IFREG,
-          metadata.st_mode & (S_IRWXG | S_IRWXO) == 0,
-          metadata.st_size <= 65_536
+          metadata.st_mode & (S_IRWXG | S_IRWXO) == 0
     else {
         return
     }
 
+    if metadata.st_size >= 65_536 {
+        guard ftruncate(descriptor, 0) == 0 else { return }
+    }
+
     let timestamp = ISO8601DateFormatter().string(from: Date())
-    let line = "\(timestamp) code=\(code) fallback=\(outcome)\n"
+    let line = "\(timestamp) event=\(event.rawValue) code=\(code) outcome=\(outcome)\n"
     _ = line.withCString { pointer in
         Darwin.write(descriptor, pointer, strlen(pointer))
     }
@@ -406,12 +455,14 @@ guard let input = readBoundedStandardInput(maximumBytes: 2_097_152)
 else {
     exit(0)
 }
+let eventID = UUID().uuidString.lowercased()
 guard let activity = sanitize(input),
       let payload = try? JSONEncoder().encode(
           BridgeEnvelope(
               authenticationToken: arguments.authenticationToken,
               installationIdentifier:
                   arguments.installationIdentifier,
+              eventID: eventID,
               activity: activity
           )
       )
@@ -419,15 +470,25 @@ else {
     exit(0)
 }
 
-switch send(payload, to: arguments.socketPath) {
+switch send(payload, eventID: eventID, to: arguments.socketPath) {
 case .delivered:
-    break
+    appendDiagnostic(
+        code: "socket_acknowledged",
+        event: activity.event,
+        outcome: "accepted",
+        queuePath: defaultQueuePath()
+    )
 case .failed(let code):
     let queuePath = defaultQueuePath()
-    let fallbackSucceeded = writeFallback(payload, to: queuePath)
+    let fallbackSucceeded = writeFallback(
+        payload,
+        eventID: eventID,
+        to: queuePath
+    )
     appendDiagnostic(
         code: code,
-        fallbackSucceeded: fallbackSucceeded,
+        event: activity.event,
+        outcome: fallbackSucceeded ? "queued" : "failed",
         queuePath: queuePath
     )
 }

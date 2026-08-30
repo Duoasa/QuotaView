@@ -6,6 +6,7 @@ import simd
 
 enum CodexActivityStateSmokeContract {
     static let fixedStep: Float = 1.0 / 60.0
+    static let progressFrontTrackingRate: Float = 3.5
     static let grain: Float = 0.01
     static let normalLeftmostOpacity: Float = 0.50
     static let normalTerminalOpacity: Float = 1
@@ -13,6 +14,9 @@ enum CodexActivityStateSmokeContract {
     static let maximumProgressFrontPosition: Float = 0.95
     static let completionFullFrontPosition: Float = 1.12
     static let completionFillDuration: Float = 0.42
+    static let completionEffectHighlightDelay: Float = 0.42
+    static let completionEffectHighlightDuration: Float = 0.30
+    static let completionEffectHighlightIntensity: Float = 0.14
     static let completionDarkenDelay: Float = 0.36
     static let completionDarkenDuration: Float = 0.44
     static let completionFinalDarkening: Float = 0.64
@@ -22,6 +26,7 @@ enum CodexActivityStateSmokeContract {
     static let completionGlowFadeDuration: CFTimeInterval = 0.24
     static let completionGlowBreathDuration: CFTimeInterval = 1.80
     static let previewState: CodexActivityVisualState = .working
+    static let previewProgressFraction: Double = 0.60
 
     static func horizontalOpacity(
         at normalizedX: Float,
@@ -306,6 +311,14 @@ struct CodexActivityStateSmokeProfile: Equatable {
         }
     }
 
+    static func profile(
+        for state: CodexActivityVisualState,
+        effect: AppPreferences.CodexActivityProgressEffect
+    ) -> CodexActivityStateSmokeProfile {
+        _ = effect
+        return profile(for: state)
+    }
+
     func interpolated(
         to target: CodexActivityStateSmokeProfile,
         amount: Float
@@ -349,17 +362,20 @@ struct CodexActivityStateSmokeSnapshot: Equatable {
 
 struct CodexActivityStateSmokeCompletionSnapshot: Equatable {
     let fillProgress: Float
+    let effectHighlight: Float
     let darkening: Float
     let smokeOpacity: Float
 
     static let inactive = CodexActivityStateSmokeCompletionSnapshot(
         fillProgress: 0,
+        effectHighlight: 0,
         darkening: 0,
         smokeOpacity: 1
     )
 
     static let reducedMotion = CodexActivityStateSmokeCompletionSnapshot(
         fillProgress: 1,
+        effectHighlight: 0,
         darkening:
             CodexActivityStateSmokeContract.completionFinalDarkening,
         smokeOpacity: 0
@@ -383,6 +399,19 @@ struct CodexActivityStateSmokeCompletionTransition {
             1
         )
         let fillProgress = 1 - pow(1 - fillLinear, 3)
+        let highlightLinear = min(
+            max(
+                (elapsed
+                    - CodexActivityStateSmokeContract
+                        .completionEffectHighlightDelay)
+                    / CodexActivityStateSmokeContract
+                        .completionEffectHighlightDuration,
+                0
+            ),
+            1
+        )
+        let highlightWave = sin(highlightLinear * .pi)
+        let effectHighlight = highlightWave * highlightWave
         let darkenLinear = min(
             max(
                 (elapsed
@@ -411,6 +440,7 @@ struct CodexActivityStateSmokeCompletionTransition {
             fadeLinear * fadeLinear * (3 - 2 * fadeLinear)
         return CodexActivityStateSmokeCompletionSnapshot(
             fillProgress: fillProgress,
+            effectHighlight: effectHighlight,
             darkening:
                 darkenProgress
                 * CodexActivityStateSmokeContract
@@ -553,7 +583,10 @@ struct CodexActivityStateSmokeProgressProjection {
 
         let current = displayedFrontPosition ?? 0
         let monotonicTarget = max(target, current)
-        let transition = 1 - exp(-7.0 * min(max(elapsed, 0), 0.25))
+        let transition = 1 - exp(
+            -CodexActivityStateSmokeContract.progressFrontTrackingRate
+                * min(max(elapsed, 0), 0.25)
+        )
         let resolved =
             current + (monotonicTarget - current) * transition
         displayedFrontPosition = resolved
@@ -752,7 +785,9 @@ private struct ActivityStateSmokeUniforms {
     var diffusionSpeed: Float
     var diffusionSpeedVariation: Float
     var grain: Float
+    var effectStyle: Float
     var completionFillProgress: Float
+    var completionEffectHighlight: Float
     var completionDarkening: Float
     var completionSmokeOpacity: Float
     var completionActive: Float
@@ -784,7 +819,9 @@ struct ActivityStateSmokeUniforms {
     float diffusionSpeed;
     float diffusionSpeedVariation;
     float grain;
+    float effectStyle;
     float completionFillProgress;
+    float completionEffectHighlight;
     float completionDarkening;
     float completionSmokeOpacity;
     float completionActive;
@@ -909,6 +946,146 @@ float activityStateSmokeHorizontalOpacity(
     );
 }
 
+float activityProgressDiamondDensity(
+    float2 uv,
+    float aspect,
+    float front,
+    float time,
+    float pulse,
+    float turbulence
+) {
+    float rows = 7.5;
+    float columns = max(rows * aspect, 1.0);
+    float2 coordinate = float2(uv.x * columns, uv.y * rows);
+    float column = floor(coordinate.x);
+    coordinate.y += fmod(column, 2.0) * 0.5;
+    float2 cell = floor(coordinate);
+    float2 local = fract(coordinate) - 0.5;
+    float distanceToDiamond = abs(local.x) + abs(local.y);
+    float core = 1.0 - smoothstep(0.28, 0.47, distanceToDiamond);
+    float bloom = exp(-max(distanceToDiamond - 0.25, 0.0) * 9.5);
+    float seed = activityStateSmokeHash(cell + 17.0);
+    float centerX = (cell.x + 0.5) / columns;
+    float stagger = (seed - 0.5) * (0.028 + turbulence * 0.018);
+    float shimmer =
+        sin(time * 2.8 + seed * 6.2831853) * (0.004 + pulse * 0.005);
+    float activated = 1.0 - smoothstep(
+        front - 0.018,
+        front + 0.032,
+        centerX + stagger + shimmer
+    );
+    float edgeFocus = exp(-abs(centerX - front) * 15.0);
+    return clamp(
+        (core + bloom * (0.12 + edgeFocus * 0.20))
+            * activated
+            * (0.72 + edgeFocus * 0.28),
+        0.0,
+        1.0
+    );
+}
+
+float activityProgressDropDensity(
+    float2 pixel,
+    float2 resolution,
+    float front,
+    float time,
+    float pulse,
+    float turbulence
+) {
+    float dropletCellSize = 2.35;
+    float2 drift = float2(
+        sin(time * 0.63) * (0.32 + pulse * 0.42),
+        time * (0.52 + turbulence * 0.46)
+    );
+    float2 coordinate = (pixel + drift) / dropletCellSize;
+    float2 cell = floor(coordinate);
+    float shapeSeed = activityStateSmokeHash(cell + 31.0);
+    float2 jitter = float2(
+        activityStateSmokeHash(cell + 47.0),
+        activityStateSmokeHash(cell + 83.0)
+    ) - 0.5;
+    float2 local = fract(coordinate) - 0.5 - jitter * 0.22;
+    float dotRadius = mix(0.17, 0.31, shapeSeed);
+    float dotDistance = length(local);
+    float microDrop = 1.0 - smoothstep(
+        dotRadius,
+        dotRadius + 0.10,
+        dotDistance
+    );
+    float microBloom = exp(-max(dotDistance - dotRadius, 0.0) * 12.0);
+    float centerX = clamp(
+        ((cell.x + 0.5) * dropletCellSize - drift.x)
+            / max(resolution.x, 1.0),
+        0.0,
+        1.0
+    );
+    float stagger =
+        (activityStateSmokeHash(cell + 109.0) - 0.5)
+        * (0.020 + turbulence * 0.014);
+    float frontDensity = 1.0 - smoothstep(
+        front - 0.125,
+        front + 0.002,
+        centerX + stagger
+    );
+    float occupancySeed = activityStateSmokeHash(cell + 151.0);
+    float occupancy = step(
+        1.0 - frontDensity * 0.88,
+        occupancySeed
+    );
+    float sparkle = 0.82
+        + 0.18 * sin(time * 2.8 + shapeSeed * 6.2831853);
+    return clamp(
+        (microDrop + microBloom * 0.08)
+            * occupancy
+            * sparkle,
+        0.0,
+        1.0
+    );
+}
+
+float activityProgressSloshDensity(
+    float2 uv,
+    float front,
+    float time,
+    float pulse,
+    float turbulence
+) {
+    float verticalPhase = (uv.y - 0.5) * 6.2831853;
+    float primaryWave =
+        sin(verticalPhase * 1.10 - time * 1.40) * 0.026;
+    float secondaryWave =
+        sin(verticalPhase * 2.30 + time * 0.82 + 1.7) * 0.012;
+    float localPulse = (pulse - 0.5) * 0.012;
+    float boundary = front
+        + (primaryWave + secondaryWave + localPulse)
+            * (0.72 + turbulence * 0.28);
+    float fill = 1.0 - smoothstep(
+        boundary - 0.055,
+        boundary + 0.018,
+        uv.x
+    );
+    float frontDistance = abs(uv.x - boundary);
+    float crest = exp(-frontDistance * 42.0);
+    float firstEcho = exp(-abs(uv.x - (boundary - 0.082)) * 31.0);
+    float secondEcho = exp(-abs(uv.x - (boundary - 0.164)) * 23.0);
+    float fluidNoise = activityStateSmokeFBM(
+        float2(
+            uv.x * 4.2 - time * 0.22,
+            uv.y * 3.4 + time * 0.10
+        )
+    );
+    float caustic = smoothstep(0.34, 0.68, fluidNoise);
+    float body = fill * (0.50 + caustic * 0.38);
+    return clamp(
+        body
+            + crest * (0.76 + pulse * 0.20)
+            + firstEcho * fill * 0.34
+            + secondEcho * fill * 0.18,
+        0.0,
+        1.0
+    );
+}
+
 fragment float4 activityStateSmokeFragment(
     VertexOut in [[stage_in]],
     constant ActivityStateSmokeUniforms &u [[buffer(0)]]
@@ -1003,6 +1180,41 @@ fragment float4 activityStateSmokeFragment(
         * plumeWisps
         * (0.14 + u.diffusion * 0.66);
     density = clamp(max(density, terminalDiffusion), 0.0, 1.0);
+    if (u.effectStyle > 0.5 && u.effectStyle < 1.5) {
+        density = activityProgressDiamondDensity(
+            uv,
+            aspect,
+            completionFront,
+            u.fieldTime,
+            u.pulse,
+            u.turbulence
+        );
+    } else if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
+        density = activityProgressDropDensity(
+            pixel,
+            resolution,
+            completionFront,
+            u.fieldTime,
+            u.pulse,
+            u.turbulence
+        );
+    } else if (u.effectStyle >= 2.5) {
+        density = activityProgressSloshDensity(
+            uv,
+            completionFront,
+            u.fieldTime,
+            u.pulse,
+            u.turbulence
+        );
+    }
+    if (u.effectStyle > 0.5) {
+        float effectProgressGate = mix(
+            smoothstep(0.0005, 0.012, boundedFront),
+            1.0,
+            clamp(u.completionActive, 0.0, 1.0)
+        );
+        density *= effectProgressGate;
+    }
     float breathing = 1.0 + (u.pulse - 0.5) * 0.18;
 
     float3 color = u.background.rgb;
@@ -1018,6 +1230,13 @@ fragment float4 activityStateSmokeFragment(
         * 0.55
         * breathing
         * u.energy;
+    if (u.effectStyle > 0.5) {
+        color +=
+            u.highlightColor.rgb
+            * pow(density, 3.0)
+            * clamp(u.completionEffectHighlight, 0.0, 1.0)
+            * u.energy;
+    }
     color = mix(
         color,
         u.background.rgb * 0.62,
@@ -1139,6 +1358,8 @@ private final class ActivityStateSmokeRenderer:
             for: CodexActivityStateSmokeContract.previewState
         )
     private var state = CodexActivityStateSmokeContract.previewState
+    private var effect =
+        AppPreferences.CodexActivityProgressEffect.stateSmoke
     private var approximateProgressFraction: Double?
     private var progressProjection =
         CodexActivityStateSmokeProgressProjection()
@@ -1215,12 +1436,31 @@ private final class ActivityStateSmokeRenderer:
             completionTransition.reset()
         }
         targetProfile = CodexActivityStateSmokeProfile.profile(
-            for: newState
+            for: newState,
+            effect: effect
         )
         if reduceMotion {
             currentProfile = targetProfile
         }
         applyPlaybackState(in: view)
+    }
+
+    func setEffect(
+        _ newEffect: AppPreferences.CodexActivityProgressEffect,
+        in view: MTKView
+    ) {
+        guard effect != newEffect else { return }
+        effect = newEffect
+        targetProfile = CodexActivityStateSmokeProfile.profile(
+            for: state,
+            effect: effect
+        )
+        if reduceMotion {
+            currentProfile = targetProfile
+        }
+        if playbackEnabled && view.isPaused {
+            view.needsDisplay = true
+        }
     }
 
     func setApproximateProgress(
@@ -1325,8 +1565,13 @@ private final class ActivityStateSmokeRenderer:
             diffusionSpeedVariation:
                 currentProfile.diffusionSpeedVariation,
             grain: CodexActivityStateSmokeContract.grain,
+            effectStyle: effect.shaderIndex,
             completionFillProgress:
                 completionSnapshot.fillProgress,
+            completionEffectHighlight:
+                completionSnapshot.effectHighlight
+                * CodexActivityStateSmokeContract
+                    .completionEffectHighlightIntensity,
             completionDarkening: completionSnapshot.darkening,
             completionSmokeOpacity: completionSnapshot.smokeOpacity,
             completionActive: state == .completed ? 1 : 0,
@@ -1414,6 +1659,12 @@ final class ActivityStateSmokeMetalView: MTKView {
         smokeRenderer?.setState(state, in: self)
     }
 
+    func setEffect(
+        _ effect: AppPreferences.CodexActivityProgressEffect
+    ) {
+        smokeRenderer?.setEffect(effect, in: self)
+    }
+
     func setApproximateProgress(_ fraction: Double?) {
         smokeRenderer?.setApproximateProgress(fraction, in: self)
     }
@@ -1430,15 +1681,25 @@ final class CodexActivityStateSmokePreviewHostView: NSView {
 
     override var isOpaque: Bool { false }
 
-    override init(frame frameRect: NSRect) {
+    init(
+        frame frameRect: NSRect,
+        effect: AppPreferences.CodexActivityProgressEffect
+    ) {
         super.init(frame: frameRect)
         wantsLayer = true
         addSubview(smokeView)
+        smokeView.preferredFramesPerSecond = 30
         smokeView.setState(CodexActivityStateSmokeContract.previewState)
+        smokeView.setEffect(effect)
+        smokeView.setApproximateProgress(
+            CodexActivityStateSmokeContract.previewProgressFraction
+        )
     }
 
-    convenience init() {
-        self.init(frame: .zero)
+    convenience init(
+        effect: AppPreferences.CodexActivityProgressEffect
+    ) {
+        self.init(frame: .zero, effect: effect)
     }
 
     @available(*, unavailable)
@@ -1453,22 +1714,25 @@ final class CodexActivityStateSmokePreviewHostView: NSView {
 
     override func layout() {
         super.layout()
-        let width = bounds.width
-        let height = min(bounds.height, width / 3.6)
-        smokeView.frame = NSRect(
-            x: 0,
-            y: (bounds.height - height) / 2,
-            width: width,
-            height: height
-        )
-        smokeView.layer?.cornerRadius = height * 0.144
+        smokeView.frame = bounds
+        smokeView.layer?.cornerRadius = min(
+            bounds.width,
+            bounds.height
+        ) * 0.18
         smokeView.layer?.cornerCurve = .continuous
         smokeView.layer?.masksToBounds = true
         smokeView.redrawIfPaused()
     }
 
-    func update(reduceMotion: Bool) {
+    func update(
+        effect: AppPreferences.CodexActivityProgressEffect,
+        reduceMotion: Bool
+    ) {
+        smokeView.setEffect(effect)
         smokeView.setReduceMotion(reduceMotion)
+        smokeView.setApproximateProgress(
+            CodexActivityStateSmokeContract.previewProgressFraction
+        )
         smokeView.setPlaybackEnabled(window != nil)
     }
 }
