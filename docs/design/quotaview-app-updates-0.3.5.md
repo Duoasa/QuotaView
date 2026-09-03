@@ -41,7 +41,8 @@
 - 该批准触发完整链路：合并、Developer ID、公证/Staple、不可变 Stable
   Release、回下载、EdDSA appcast 与文档联动；更换身份或重新打包需重新确认；
 - appcast 可跳过未批准的中间版本；每个后续版本都需独立批准；
-- `0.3.5 Build 5`、`0.3.6 Build 2` 与 `0.3.7 Build 1` 均已分别明确获准并
+- `0.3.5 Build 5`、`0.3.6 Build 2`、`0.3.7 Build 1`、`0.4.1 Build 1`、
+  `0.4.2 Build 1` 与 `0.4.3 Build 1` 均已分别明确获准并
   完成发布；详细资产证据只在
   [`VERSION_HISTORY.md`](../../VERSION_HISTORY.md) 保存。
 

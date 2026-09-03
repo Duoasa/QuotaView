@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-RELEASE-0.4.3-001`
 >
-> 状态：`Accepted / Verifying`
+> 状态：`Accepted / Released`
 >
 > 日期：2026-09-03
 >
@@ -41,9 +41,20 @@
 | `RELEASE-0.4.3-05` | Stable appcast 使用 Sparkle EdDSA 签名并在线验证；GitHub 回下载资产与本地公证包逐字节一致 |
 | `RELEASE-0.4.3-06` | `HANDOFF.md`、`VERSION_HISTORY.md`、SDD 注册表和功能规格只在对应线上事实完成后标记 `Released` |
 
-## 当前状态
+## 发布结果
 
-- 产品所有者已指定 `0.4.3 Build 1` 并授权 GitHub、Release 与 appcast 发布；
-- 候选版本、文档与发布说明正在准备；
-- 完整 `swift test` 104 项通过、0 失败；签名、公证、远端合并、Release 和
-  appcast 证据尚待完成。
+- PR #40 GitHub CI 通过并合并到 `main`；发布提交为
+  `b76c317d640e73621b6e2119e4363d0cac6ddff6`；
+- 完整 `swift test` 104 项通过、0 失败；Universal App、Widget 与 Activity
+  Hook 均为 `x86_64 arm64`；
+- Developer ID 与 Hardened Runtime 验证通过；Apple 公证 Accepted 并完成
+  Staple，Submission `e3f5f0fa-8f36-4ed3-8b26-3b6ef1861344`；
+- 正式资产 `QuotaView-v0.4.3-build.1.zip` 为 `13,166,345 bytes`，SHA-256
+  `a2b35249c3c146444207fc82d041121e790d099cc534b597775262e42160d54c`；
+- GitHub Release 为 Latest、非 Draft、非 Pre-release；回下载文件与本地
+  公证包逐字节一致，并从 `/Applications/QuotaView.app` 完成启动冒烟；
+- Stable appcast 由 `gh-pages` 提交
+  `56c02c07cebfbeb19a2684ee3dff2bce2f6bbe0c` 发布，线上 SHA-256 为
+  `2e5b058592c5b823511391e54a4d873c962d787f54899c1dc1e9da034a9eb40a`，
+  逐字节与 Sparkle EdDSA 验证通过；
+- 完整视觉与辅助功能交叉矩阵仍由产品所有者按需验收。
