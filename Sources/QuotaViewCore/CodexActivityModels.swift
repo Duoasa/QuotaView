@@ -12,6 +12,7 @@ public enum CodexActivityHookEvent: String, Codable, CaseIterable, Sendable {
     case postCompact = "PostCompact"
     case subagentStart = "SubagentStart"
     case subagentStop = "SubagentStop"
+    case interrupt = "Interrupt"
     case stop = "Stop"
 }
 
@@ -20,8 +21,41 @@ public enum CodexActivityToolCategory: String, Codable, Sendable {
     case fileEdit
     case mcp
     case subagent
+    case goal
     case localTool
     case unknown
+}
+
+public enum CodexActivityEventSource: String, Codable, Sendable {
+    case hook
+    case appServer
+    case localRollout
+}
+
+public enum CodexActivityPlanSource: String, Codable, Sendable {
+    case legacyTool
+    case appServer
+    case localRollout
+}
+
+public enum CodexActivityTurnCompletionStatus: String, Codable, Sendable {
+    case completed
+    case interrupted
+    case failed
+}
+
+public enum CodexActivityGoalStatus: String, Codable, Sendable {
+    case active
+    case paused
+    case blocked
+    case usageLimited
+    case budgetLimited
+    case complete
+}
+
+public enum CodexActivityWaitReason: String, Codable, Sendable {
+    case approval
+    case userInput
 }
 
 public enum CodexActivitySessionStartSource: String, Codable, Sendable {
@@ -74,7 +108,7 @@ public struct CodexActivityPlanProgress: Codable, Equatable, Sendable {
 
 public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public static let minimumSupportedSchemaVersion = 1
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     public let schemaVersion: Int
     public let event: CodexActivityHookEvent
@@ -84,6 +118,11 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let toolCategory: CodexActivityToolCategory?
     public let sessionStartSource: CodexActivitySessionStartSource?
     public let planProgress: CodexActivityPlanProgress?
+    public let source: CodexActivityEventSource?
+    public let planSource: CodexActivityPlanSource?
+    public let turnCompletionStatus: CodexActivityTurnCompletionStatus?
+    public let goalStatus: CodexActivityGoalStatus?
+    public let waitReason: CodexActivityWaitReason?
     public let occurredAt: Date
 
     public init(
@@ -95,6 +134,11 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         toolCategory: CodexActivityToolCategory? = nil,
         sessionStartSource: CodexActivitySessionStartSource? = nil,
         planProgress: CodexActivityPlanProgress? = nil,
+        source: CodexActivityEventSource? = nil,
+        planSource: CodexActivityPlanSource? = nil,
+        turnCompletionStatus: CodexActivityTurnCompletionStatus? = nil,
+        goalStatus: CodexActivityGoalStatus? = nil,
+        waitReason: CodexActivityWaitReason? = nil,
         occurredAt: Date = Date()
     ) {
         self.schemaVersion = schemaVersion
@@ -105,6 +149,11 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.toolCategory = toolCategory
         self.sessionStartSource = sessionStartSource
         self.planProgress = planProgress
+        self.source = source
+        self.planSource = planSource
+        self.turnCompletionStatus = turnCompletionStatus
+        self.goalStatus = goalStatus
+        self.waitReason = waitReason
         self.occurredAt = occurredAt
     }
 }
@@ -132,6 +181,7 @@ public enum CodexActivityDeliverySource: String, Codable, Sendable {
     case liveSocket
     case liveQueue
     case startupReplay
+    case localRollout
 }
 
 public struct CodexActivityDelivery: Equatable, Sendable {
@@ -147,6 +197,28 @@ public struct CodexActivityDelivery: Equatable, Sendable {
         self.eventID = eventID
         self.source = source
         self.activity = activity
+    }
+}
+
+public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
+    public let sessionHash: String
+    public let turnHash: String
+    public let cumulativeTotalTokens: Int64
+    public let lastReportedTotalTokens: Int64
+    public let occurredAt: Date
+
+    public init(
+        sessionHash: String,
+        turnHash: String,
+        cumulativeTotalTokens: Int64,
+        lastReportedTotalTokens: Int64,
+        occurredAt: Date = Date()
+    ) {
+        self.sessionHash = sessionHash
+        self.turnHash = turnHash
+        self.cumulativeTotalTokens = cumulativeTotalTokens
+        self.lastReportedTotalTokens = lastReportedTotalTokens
+        self.occurredAt = occurredAt
     }
 }
 
@@ -212,14 +284,24 @@ public enum CodexActivityOperationKey: String, Codable, Sendable {
     case callingExternalTool
     case coordinatingSubagent
     case usingLocalTool
+    case executingPlan
+    case managingGoal
+    case followingGoal
+    case goalPaused
+    case goalBlocked
+    case goalLimited
+    case goalCompleted
     case usingTool
     case awaitingApproval
+    case awaitingUserInput
     case reviewingToolResult
     case compactingContext
     case continuingAfterCompaction
     case subagentStarted
     case subagentStopped
     case turnCompleted
+    case turnInterrupted
+    case turnFailed
     case bridgeUnavailable
     case malformedEvent
 }
@@ -227,7 +309,8 @@ public enum CodexActivityOperationKey: String, Codable, Sendable {
 public enum CodexActivityReducer {
     public static func snapshot(
         for event: CodexActivityEvent,
-        approximateProgressFraction: Double? = nil
+        approximateProgressFraction: Double? = nil,
+        activeGoalStatus: CodexActivityGoalStatus? = nil
     ) -> CodexActivitySnapshot? {
         guard event.schemaVersion
                 >= CodexActivityEvent.minimumSupportedSchemaVersion,
@@ -258,13 +341,37 @@ public enum CodexActivityReducer {
             operation = .analyzingRequest
         case .preToolUse:
             state = .working
-            operation = operationForTool(event.toolCategory)
+            operation = event.planSource != nil
+                ? .executingPlan
+                : operationForTool(event.toolCategory)
         case .permissionRequest:
             state = .awaitingConfirmation
-            operation = .awaitingApproval
+            operation = event.waitReason == .userInput
+                ? .awaitingUserInput
+                : .awaitingApproval
         case .postToolUse:
-            state = .thinking
-            operation = .reviewingToolResult
+            switch event.goalStatus {
+            case .active:
+                state = .thinking
+                operation = .followingGoal
+            case .paused:
+                state = .standby
+                operation = .goalPaused
+            case .blocked:
+                state = .error
+                operation = .goalBlocked
+            case .usageLimited, .budgetLimited:
+                state = .unavailable
+                operation = .goalLimited
+            case .complete:
+                state = .completed
+                operation = .goalCompleted
+            case nil:
+                state = .thinking
+                operation = event.toolCategory == .goal
+                    ? .managingGoal
+                    : .reviewingToolResult
+            }
         case .preCompact:
             state = .compactingContext
             operation = .compactingContext
@@ -277,10 +384,42 @@ public enum CodexActivityReducer {
         case .subagentStop:
             state = .thinking
             operation = .subagentStopped
+        case .interrupt:
+            state = .standby
+            operation = .turnInterrupted
         case .stop:
-            state = .completed
-            operation = .turnCompleted
+            switch event.turnCompletionStatus {
+            case .interrupted:
+                state = .standby
+                operation = .turnInterrupted
+            case .failed:
+                state = .error
+                operation = .turnFailed
+            case .completed, nil:
+                switch activeGoalStatus {
+                case .active:
+                    state = .standby
+                    operation = .followingGoal
+                case .paused:
+                    state = .standby
+                    operation = .goalPaused
+                case .blocked:
+                    state = .error
+                    operation = .goalBlocked
+                case .usageLimited, .budgetLimited:
+                    state = .unavailable
+                    operation = .goalLimited
+                case .complete, nil:
+                    state = .completed
+                    operation = .turnCompleted
+                }
+            }
         }
+
+        let isCompletedTurn = event.event == .stop
+            && event.turnCompletionStatus != .interrupted
+            && event.turnCompletionStatus != .failed
+            && (activeGoalStatus == nil || activeGoalStatus == .complete)
 
         return CodexActivitySnapshot(
             sessionHash: event.sessionHash,
@@ -289,7 +428,7 @@ public enum CodexActivityReducer {
             operationKey: operation,
             toolCategory: event.toolCategory,
             approximateProgressFraction:
-                event.event == .stop
+                isCompletedTurn
                 ? 1
                 : approximateProgressFraction
                     ?? event.planProgress?.approximateFraction,
@@ -307,8 +446,10 @@ public enum CodexActivityReducer {
         after event: CodexActivityEvent
     ) -> Bool {
         switch event.event {
-        case .stop:
+        case .stop, .interrupt:
             true
+        case .postToolUse:
+            event.goalStatus != nil && event.goalStatus != .active
         case .sessionStart:
             event.sessionStartSource != .compact
         default:
@@ -339,6 +480,8 @@ public enum CodexActivityReducer {
             .callingExternalTool
         case .subagent:
             .coordinatingSubagent
+        case .goal:
+            .managingGoal
         case .localTool:
             .usingLocalTool
         case .unknown, nil:
@@ -380,6 +523,14 @@ public enum CodexActivityPrivacy {
             || canonicalName.contains("subagent")
         {
             return .subagent
+        }
+        if ["create_goal", "get_goal", "update_goal"].contains(
+            canonicalName
+        ) || canonicalName.hasSuffix("__create_goal")
+            || canonicalName.hasSuffix("__get_goal")
+            || canonicalName.hasSuffix("__update_goal")
+        {
+            return .goal
         }
         if canonicalName.hasPrefix("mcp__") {
             return .mcp

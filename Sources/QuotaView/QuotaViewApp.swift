@@ -32,10 +32,12 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
 
     override init() {
         let preferences = AppPreferences()
+        let statusStore = CodexStatusStore(preferences: preferences)
         self.preferences = preferences
-        self.store = CodexStatusStore(preferences: preferences)
+        self.store = statusStore
         self.activityRuntime = CodexActivityRuntime(
-            preferences: preferences
+            preferences: preferences,
+            quotaStatusStore: statusStore
         )
         self.updateController = AppUpdateController()
         super.init()

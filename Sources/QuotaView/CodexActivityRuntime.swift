@@ -31,6 +31,7 @@ final class CodexActivityStore: ObservableObject {
     nonisolated static let compactDelay: TimeInterval = 20
     nonisolated static let hiddenDelayAfterCompact: TimeInterval = 100
     nonisolated static let settledEventReplayAgeThreshold: TimeInterval = 20
+    nonisolated static let confirmationReminderDelay: TimeInterval = 10
 
     @Published private(set) var snapshot: CodexActivitySnapshot?
     @Published private(set) var presentation:
@@ -38,14 +39,45 @@ final class CodexActivityStore: ObservableObject {
     @Published private(set) var resolvedThreadTitle: String?
     @Published private(set) var lifecycle:
         CodexActivityTurnLifecycle = .idle
+    @Published private(set) var isConfirmationReminderActive = false
+
+    var currentTurnTokenUsage: Int64? {
+        guard let snapshot,
+              let activeTurnHash = activeTurnHashBySession[
+                  snapshot.sessionHash
+              ],
+              let usage = turnTokenUsageBySession[snapshot.sessionHash],
+              usage.turnHash == activeTurnHash,
+              let consumedTokens = usage.consumedTokens,
+              consumedTokens > 0
+        else {
+            return nil
+        }
+        return consumedTokens
+    }
 
     var stateDidChange: (() -> Void)?
+    var nativeConnectionStateDidChange:
+        ((CodexSharedAppServerConnectionState) -> Void)?
 
     private let titleClient: CodexAppServerClient
+    private let sharedActivityClient: CodexSharedAppServerActivityClient
+    private let localRolloutActivityClient:
+        CodexLocalRolloutActivityClient
+    private(set) var nativeConnectionState:
+        CodexSharedAppServerConnectionState = .disabled
+    private var sharedConnectionState:
+        CodexSharedAppServerConnectionState = .disabled
+    private var localRolloutConnectionState:
+        CodexSharedAppServerConnectionState = .disabled
     private var compactDelayNanoseconds: UInt64
     private var hiddenDelayNanoseconds: UInt64
     private var settledEventReplayAgeThresholdNanoseconds: UInt64
+    private var confirmationReminderDelayNanoseconds: UInt64
     private var inactivityTask: Task<Void, Never>?
+    private var confirmationReminderTask: Task<Void, Never>?
+    private var confirmationReminderContext:
+        ConfirmationReminderContext?
     private var titleTask: Task<Void, Never>?
     private var titleTaskSessionHash: String?
     private var titleCache: [String: String] = [:]
@@ -55,26 +87,50 @@ final class CodexActivityStore: ObservableObject {
     private var acceptedEventIDs: Set<String> = []
     private var acceptedEventIDOrder: [String] = []
     private var planProgressBySession: [String: StoredPlanProgress] = [:]
+    private var goalStatusBySession: [String: CodexActivityGoalStatus] = [:]
+    private var cumulativeTokensBySession: [String: Int64] = [:]
+    private var activeTurnHashBySession: [String: String] = [:]
+    private var turnTokenUsageBySession: [String: StoredTurnTokenUsage] = [:]
     private var revision: UInt64 = 0
 
     private struct StoredPlanProgress {
         let turnHash: String?
         let fraction: Double
+        let source: CodexActivityPlanSource
     }
 
     private struct TerminalTurn {
         let turnHash: String?
     }
 
+    private struct StoredTurnTokenUsage {
+        let turnHash: String
+        let baselineTotalTokens: Int64?
+        let consumedTokens: Int64?
+    }
+
+    private struct ConfirmationReminderContext: Equatable {
+        let sessionHash: String
+        let turnHash: String?
+    }
+
     init(
         titleClient: CodexAppServerClient = CodexAppServerClient(),
+        sharedActivityClient: CodexSharedAppServerActivityClient =
+            CodexSharedAppServerActivityClient(),
+        localRolloutActivityClient: CodexLocalRolloutActivityClient =
+            CodexLocalRolloutActivityClient(),
         compactDelay: TimeInterval = CodexActivityStore.compactDelay,
         hiddenDelayAfterCompact: TimeInterval =
             CodexActivityStore.hiddenDelayAfterCompact,
         settledEventReplayAgeThreshold: TimeInterval =
-            CodexActivityStore.settledEventReplayAgeThreshold
+            CodexActivityStore.settledEventReplayAgeThreshold,
+        confirmationReminderDelay: TimeInterval =
+            CodexActivityStore.confirmationReminderDelay
     ) {
         self.titleClient = titleClient
+        self.sharedActivityClient = sharedActivityClient
+        self.localRolloutActivityClient = localRolloutActivityClient
         compactDelayNanoseconds = UInt64(
             max(compactDelay, 0) * 1_000_000_000
         )
@@ -84,11 +140,106 @@ final class CodexActivityStore: ObservableObject {
         settledEventReplayAgeThresholdNanoseconds = Self.nanoseconds(
             for: settledEventReplayAgeThreshold
         )
+        confirmationReminderDelayNanoseconds = Self.nanoseconds(
+            for: confirmationReminderDelay
+        )
+
+        Task { [weak self, titleClient] in
+            await titleClient.setActivityNotificationHandler {
+                [weak self] event in
+                await self?.receive(event)
+            }
+        }
     }
 
     var shouldPlayVisualEffects: Bool {
         guard presentation != .hidden else { return false }
         return lifecycle == .active || lifecycle == .completed
+    }
+
+    func startNativeActivityNotifications() {
+        let sharedActivityClient = sharedActivityClient
+        let localRolloutActivityClient = localRolloutActivityClient
+        Task { [weak self] in
+            await localRolloutActivityClient.start(
+                handler: { [weak self] record, isStartupReplay in
+                    guard let self else { return }
+                    switch record.update {
+                    case .activity(let event):
+                        let delivery = CodexActivityDelivery(
+                            eventID: record.eventID,
+                            source: isStartupReplay
+                                ? .startupReplay
+                                : .localRollout,
+                            activity: event
+                        )
+                        await self.receive(delivery)
+                        CodexActivityDiagnostics.record(
+                            delivery: delivery,
+                            outcome: isStartupReplay
+                                ? "local_rollout_replay"
+                                : "local_rollout_received"
+                        )
+                    case .tokenUsage(let update):
+                        await self.receive(update)
+                    }
+                },
+                connectionStateHandler: { [weak self] state in
+                    await self?.setLocalRolloutConnectionState(state)
+                }
+            )
+            await sharedActivityClient.start(
+                handler: { [weak self] event in
+                    let delivery = CodexActivityDelivery(
+                        source: .liveSocket,
+                        activity: event
+                    )
+                    await self?.receive(delivery)
+                    CodexActivityDiagnostics.record(
+                        delivery: delivery,
+                        outcome: "native_received"
+                    )
+                },
+                tokenUsageHandler: { [weak self] update in
+                    await self?.receive(update)
+                },
+                connectionStateHandler: { [weak self] state in
+                    await self?.setSharedConnectionState(state)
+                }
+            )
+        }
+    }
+
+    private func setSharedConnectionState(
+        _ state: CodexSharedAppServerConnectionState
+    ) {
+        sharedConnectionState = state
+        publishAggregateConnectionState()
+    }
+
+    private func setLocalRolloutConnectionState(
+        _ state: CodexSharedAppServerConnectionState
+    ) {
+        localRolloutConnectionState = state
+        publishAggregateConnectionState()
+    }
+
+    private func publishAggregateConnectionState() {
+        let state: CodexSharedAppServerConnectionState
+        if localRolloutConnectionState == .connected
+            || sharedConnectionState == .connected
+        {
+            state = .connected
+        } else if localRolloutConnectionState == .discovering
+                    || sharedConnectionState == .discovering
+        {
+            state = .discovering
+        } else {
+            state = .disabled
+        }
+        guard nativeConnectionState != state else { return }
+        nativeConnectionState = state
+        nativeConnectionStateDidChange?(state)
     }
 
     func receive(_ event: CodexActivityEvent) {
@@ -103,7 +254,12 @@ final class CodexActivityStore: ObservableObject {
     func receive(_ delivery: CodexActivityDelivery) {
         let event = delivery.activity
         guard registerEventID(delivery.eventID) else { return }
-        guard CodexActivityReducer.snapshot(for: event) != nil
+        let knownGoalStatus = event.goalStatus
+            ?? goalStatusBySession[event.sessionHash]
+        guard CodexActivityReducer.snapshot(
+            for: event,
+            activeGoalStatus: knownGoalStatus
+        ) != nil
         else {
             return
         }
@@ -123,6 +279,10 @@ final class CodexActivityStore: ObservableObject {
             return
         }
         latestEventAtBySession[event.sessionHash] = event.occurredAt
+        if let goalStatus = event.goalStatus {
+            goalStatusBySession[event.sessionHash] = goalStatus
+        }
+        synchronizeTokenTurn(for: event)
 
         switch event.event {
         case .userPromptSubmit:
@@ -142,11 +302,21 @@ final class CodexActivityStore: ObservableObject {
                 turnHash: event.turnHash
             )
             lifecycle = .idle
+            goalStatusBySession.removeValue(forKey: event.sessionHash)
+        case .interrupt:
+            terminalTurnsBySession[event.sessionHash] = TerminalTurn(
+                turnHash: event.turnHash
+            )
+            lifecycle = .idle
         case .stop:
             terminalTurnsBySession[event.sessionHash] = TerminalTurn(
                 turnHash: event.turnHash
             )
-            lifecycle = .completed
+            lifecycle = event.turnCompletionStatus == .failed
+                || event.turnCompletionStatus == .interrupted
+                || (knownGoalStatus != nil && knownGoalStatus != .complete)
+                ? .idle
+                : .completed
         case .preToolUse, .permissionRequest, .preCompact,
              .subagentStart:
             // Some Codex hosts do not emit UserPromptSubmit before the first
@@ -155,14 +325,23 @@ final class CodexActivityStore: ObservableObject {
             // any same-turn late event.
             terminalTurnsBySession.removeValue(forKey: event.sessionHash)
             lifecycle = .active
-        case .postToolUse, .postCompact, .subagentStop:
+        case .postToolUse:
+            lifecycle = event.goalStatus != nil
+                && event.goalStatus != .active
+                ? (event.goalStatus == .complete ? .completed : .idle)
+                : .active
+        case .postCompact, .subagentStop:
             lifecycle = .active
         }
 
-        let approximateProgress = approximateProgress(for: event)
+        let approximateProgress = approximateProgress(
+            for: event,
+            activeGoalStatus: knownGoalStatus
+        )
         guard let nextSnapshot = CodexActivityReducer.snapshot(
             for: event,
-            approximateProgressFraction: approximateProgress
+            approximateProgressFraction: approximateProgress,
+            activeGoalStatus: knownGoalStatus
         ) else {
             return
         }
@@ -176,6 +355,7 @@ final class CodexActivityStore: ObservableObject {
                 snapshot = nextSnapshot
                 presentation = .hidden
                 resolvedThreadTitle = nil
+                resetConfirmationReminder()
                 notifyChange()
             }
             titleCache.removeValue(forKey: event.sessionHash)
@@ -183,6 +363,7 @@ final class CodexActivityStore: ObservableObject {
             planProgressBySession.removeValue(
                 forKey: event.sessionHash
             )
+            goalStatusBySession.removeValue(forKey: event.sessionHash)
             if titleTaskSessionHash == event.sessionHash {
                 titleTask?.cancel()
                 titleTask = nil
@@ -201,9 +382,16 @@ final class CodexActivityStore: ObservableObject {
         if isStaleSettledContinuationEvent(delivery) {
             lifecycle = .unconfirmed
             presentation = .hidden
+            resetConfirmationReminder()
             notifyChange()
             return
         }
+        updateConfirmationReminder(
+            for: nextSnapshot,
+            turnHash: event.turnHash
+                ?? activeTurnHashBySession[event.sessionHash],
+            occurredAt: event.occurredAt
+        )
         presentation = .expanded
         notifyChange()
 
@@ -217,10 +405,62 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    func receive(_ update: CodexActivityTokenUsageUpdate) {
+        let previousCumulative = cumulativeTokensBySession[
+            update.sessionHash
+        ]
+        cumulativeTokensBySession[update.sessionHash] =
+            update.cumulativeTotalTokens
+
+        let existing = turnTokenUsageBySession[update.sessionHash]
+        let baseline: Int64
+        if let existing,
+           existing.turnHash == update.turnHash,
+           let existingBaseline = existing.baselineTotalTokens {
+            baseline = existingBaseline
+        } else if let previousCumulative,
+                  previousCumulative <= update.cumulativeTotalTokens {
+            baseline = previousCumulative
+        } else {
+            baseline = max(
+                0,
+                update.cumulativeTotalTokens
+                    - update.lastReportedTotalTokens
+            )
+        }
+
+        let measuredTokens = max(
+            0,
+            update.cumulativeTotalTokens - baseline
+        )
+        let previousMeasuredTokens = existing?.turnHash == update.turnHash
+            ? existing?.consumedTokens
+            : nil
+        let resolvedTokens = max(
+            previousMeasuredTokens ?? 0,
+            measuredTokens
+        )
+        activeTurnHashBySession[update.sessionHash] = update.turnHash
+        turnTokenUsageBySession[update.sessionHash] = StoredTurnTokenUsage(
+            turnHash: update.turnHash,
+            baselineTotalTokens: baseline,
+            consumedTokens: resolvedTokens > 0 ? resolvedTokens : nil
+        )
+
+        guard previousMeasuredTokens != resolvedTokens,
+              snapshot?.sessionHash == update.sessionHash,
+              presentation != .hidden
+        else {
+            return
+        }
+        notifyChange()
+    }
+
     func hide() {
         revision &+= 1
         inactivityTask?.cancel()
         titleTask?.cancel()
+        resetConfirmationReminder()
         titleTask = nil
         titleTaskSessionHash = nil
         presentation = .hidden
@@ -230,7 +470,10 @@ final class CodexActivityStore: ObservableObject {
     func stop() async {
         hide()
         lifecycle = .idle
+        await titleClient.setActivityNotificationHandler(nil)
         await titleClient.stop()
+        await localRolloutActivityClient.stop()
+        await sharedActivityClient.stop()
     }
 
     func updateInactivityDelays(
@@ -266,6 +509,60 @@ final class CodexActivityStore: ObservableObject {
         case .hidden:
             break
         }
+    }
+
+    private func synchronizeTokenTurn(for event: CodexActivityEvent) {
+        switch event.event {
+        case .sessionEnd:
+            activeTurnHashBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            turnTokenUsageBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            cumulativeTokensBySession.removeValue(
+                forKey: event.sessionHash
+            )
+        case .userPromptSubmit:
+            guard let turnHash = event.turnHash else {
+                activeTurnHashBySession.removeValue(
+                    forKey: event.sessionHash
+                )
+                turnTokenUsageBySession.removeValue(
+                    forKey: event.sessionHash
+                )
+                return
+            }
+            beginTokenUsageTurn(
+                sessionHash: event.sessionHash,
+                turnHash: turnHash
+            )
+        case .preToolUse, .permissionRequest, .postToolUse,
+             .preCompact, .postCompact, .subagentStart,
+             .subagentStop, .interrupt, .stop:
+            guard let turnHash = event.turnHash else { return }
+            beginTokenUsageTurn(
+                sessionHash: event.sessionHash,
+                turnHash: turnHash
+            )
+        case .sessionStart:
+            break
+        }
+    }
+
+    private func beginTokenUsageTurn(
+        sessionHash: String,
+        turnHash: String
+    ) {
+        guard activeTurnHashBySession[sessionHash] != turnHash else {
+            return
+        }
+        activeTurnHashBySession[sessionHash] = turnHash
+        turnTokenUsageBySession[sessionHash] = StoredTurnTokenUsage(
+            turnHash: turnHash,
+            baselineTotalTokens: cumulativeTokensBySession[sessionHash],
+            consumedTokens: nil
+        )
     }
 
     private func resolveTitleIfNeeded(
@@ -309,7 +606,8 @@ final class CodexActivityStore: ObservableObject {
     }
 
     private func approximateProgress(
-        for event: CodexActivityEvent
+        for event: CodexActivityEvent,
+        activeGoalStatus: CodexActivityGoalStatus?
     ) -> Double? {
         switch event.event {
         case .userPromptSubmit:
@@ -328,20 +626,68 @@ final class CodexActivityStore: ObservableObject {
                 forKey: event.sessionHash
             )
             return nil
+        case .interrupt:
+            planProgressBySession.removeValue(
+                forKey: event.sessionHash
+            )
+            return nil
         case .stop:
             planProgressBySession.removeValue(
                 forKey: event.sessionHash
             )
+            guard event.turnCompletionStatus != .failed,
+                  event.turnCompletionStatus != .interrupted,
+                  activeGoalStatus == nil || activeGoalStatus == .complete
+            else {
+                return nil
+            }
             return 1
         default:
             break
         }
 
-        if let fraction = event.planProgress?.approximateFraction {
+        if let planProgress = event.planProgress {
+            let source = event.planSource ?? .legacyTool
+            if planProgress.totalSteps == 0, source == .appServer {
+                if let stored = planProgressBySession[
+                    event.sessionHash
+                ], Self.sameTurn(stored.turnHash, event.turnHash),
+                   Self.planSourcePriority(stored.source)
+                    > Self.planSourcePriority(source)
+                {
+                    return stored.fraction
+                }
+                planProgressBySession.removeValue(
+                    forKey: event.sessionHash
+                )
+                return nil
+            }
+            guard let fraction = planProgress.approximateFraction else {
+                return nil
+            }
+
+            if let stored = planProgressBySession[event.sessionHash],
+               Self.sameTurn(stored.turnHash, event.turnHash) {
+                if Self.planSourcePriority(stored.source)
+                    > Self.planSourcePriority(source)
+                {
+                    return stored.fraction
+                }
+                let resolvedFraction = max(stored.fraction, fraction)
+                planProgressBySession[event.sessionHash] =
+                    StoredPlanProgress(
+                        turnHash: event.turnHash ?? stored.turnHash,
+                        fraction: resolvedFraction,
+                        source: source
+                    )
+                return resolvedFraction
+            }
+
             planProgressBySession[event.sessionHash] =
                 StoredPlanProgress(
                     turnHash: event.turnHash,
-                    fraction: fraction
+                    fraction: fraction,
+                    source: source
                 )
             return fraction
         }
@@ -362,6 +708,24 @@ final class CodexActivityStore: ObservableObject {
         return stored.fraction
     }
 
+    private nonisolated static func sameTurn(
+        _ lhs: String?,
+        _ rhs: String?
+    ) -> Bool {
+        guard let lhs, let rhs else { return true }
+        return lhs == rhs
+    }
+
+    private nonisolated static func planSourcePriority(
+        _ source: CodexActivityPlanSource
+    ) -> Int {
+        switch source {
+        case .localRollout: 3
+        case .appServer: 2
+        case .legacyTool: 1
+        }
+    }
+
     private func scheduleInactivityCycle(revision: UInt64) {
         inactivityTask = Task { [weak self] in
             guard let self else { return }
@@ -379,6 +743,63 @@ final class CodexActivityStore: ObservableObject {
                 return
             }
         }
+    }
+
+    private func updateConfirmationReminder(
+        for snapshot: CodexActivitySnapshot,
+        turnHash: String?,
+        occurredAt: Date
+    ) {
+        guard snapshot.state == .awaitingConfirmation else {
+            resetConfirmationReminder()
+            return
+        }
+
+        let context = ConfirmationReminderContext(
+            sessionHash: snapshot.sessionHash,
+            turnHash: turnHash
+        )
+        guard confirmationReminderContext != context else { return }
+
+        confirmationReminderTask?.cancel()
+        confirmationReminderContext = context
+        isConfirmationReminderActive = false
+
+        let elapsed = max(0, Date().timeIntervalSince(occurredAt))
+        let configuredDelay = TimeInterval(
+            confirmationReminderDelayNanoseconds
+        ) / 1_000_000_000
+        let remainingDelay = max(0, configuredDelay - elapsed)
+        guard remainingDelay > 0 else {
+            isConfirmationReminderActive = true
+            return
+        }
+
+        confirmationReminderTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(
+                    nanoseconds: Self.nanoseconds(for: remainingDelay)
+                )
+                guard !Task.isCancelled,
+                      self.confirmationReminderContext == context,
+                      self.snapshot?.state == .awaitingConfirmation
+                else {
+                    return
+                }
+                self.isConfirmationReminderActive = true
+                self.notifyChange()
+            } catch {
+                return
+            }
+        }
+    }
+
+    private func resetConfirmationReminder() {
+        confirmationReminderTask?.cancel()
+        confirmationReminderTask = nil
+        confirmationReminderContext = nil
+        isConfirmationReminderActive = false
     }
 
     private func scheduleHideAfterCompact(revision: UInt64) {
@@ -426,7 +847,7 @@ final class CodexActivityStore: ObservableObject {
                 return false
             }
             return completedTurnHash == eventTurnHash
-        case .postToolUse, .postCompact, .subagentStop, .stop:
+        case .postToolUse, .postCompact, .subagentStop, .interrupt, .stop:
             return true
         }
     }
@@ -480,6 +901,8 @@ final class CodexActivityRuntime: ObservableObject {
         CodexActivityBridgeStatus = .stopped
     @Published private(set) var hooksFeatureStatus:
         CodexHooksFeatureStatus = .checking
+    @Published private(set) var nativeConnectionState:
+        CodexSharedAppServerConnectionState = .disabled
     @Published private(set) var codexVersion: String?
     @Published private(set) var isConfiguring = false
     @Published private(set) var isOpeningSecurityReview = false
@@ -498,10 +921,13 @@ final class CodexActivityRuntime: ObservableObject {
     private var timingPreferenceCancellable: AnyCancellable?
     private var accessibilityCancellable: AnyCancellable?
     private var screenTrackingCancellable: AnyCancellable?
+    private var quotaStatusCancellable: AnyCancellable?
+    private var currentQuotaPresentation: CurrentCodexPresentation?
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
     private var securityReviewObservationTask: Task<Void, Never>?
     private var setupIslandRequested = false
+    private var isRunning = false
 
     private enum DefaultsKey {
         static let setupEnabled = "codexActivity.setup.enabled"
@@ -517,6 +943,7 @@ final class CodexActivityRuntime: ObservableObject {
 
     init(
         preferences: AppPreferences,
+        quotaStatusStore: CodexStatusStore? = nil,
         defaults: UserDefaults = .standard
     ) {
         self.preferences = preferences
@@ -564,6 +991,25 @@ final class CodexActivityRuntime: ObservableObject {
 
         store.stateDidChange = { [weak self] in
             self?.render()
+        }
+        store.nativeConnectionStateDidChange = { [weak self] state in
+            self?.handleNativeConnectionState(state)
+        }
+        if let quotaStatusStore {
+            currentQuotaPresentation = quotaStatusStore.hasCurrentCodexStatus
+                ? quotaStatusStore.snapshot
+                : nil
+            quotaStatusCancellable = Publishers.CombineLatest(
+                quotaStatusStore.$snapshot,
+                quotaStatusStore.$errorMessage
+            )
+            .receive(on: RunLoop.main)
+            .sink { [weak self] snapshot, errorMessage in
+                self?.currentQuotaPresentation = errorMessage == nil
+                    ? snapshot
+                    : nil
+                self?.render()
+            }
         }
         preferenceCancellable = preferences.objectWillChange
             .receive(on: RunLoop.main)
@@ -633,6 +1079,8 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func start() {
+        isRunning = true
+        store.startNativeActivityNotifications()
         let handler: CodexActivityDeliveryHandler = {
             [weak self] delivery, completion in
             Task { @MainActor in
@@ -846,7 +1294,12 @@ final class CodexActivityRuntime: ObservableObject {
         inspectEnvironmentAndInstallation()
     }
 
+    var isNativeActivityConnected: Bool {
+        nativeConnectionState == .connected
+    }
+
     func stop() async {
+        isRunning = false
         setupTask?.cancel()
         securityReviewObservationTask?.cancel()
         bridge.stop()
@@ -858,6 +1311,21 @@ final class CodexActivityRuntime: ObservableObject {
 
     var diagnosticLogPath: String {
         CodexActivityDiagnostics.logURL.path
+    }
+
+    private func handleNativeConnectionState(
+        _ state: CodexSharedAppServerConnectionState
+    ) {
+        let wasConnected = isNativeActivityConnected
+        nativeConnectionState = state
+
+        if state == .connected {
+            connectionStatus = .connected
+            setupIslandRequested = false
+            render()
+        } else if wasConnected, isRunning {
+            inspectEnvironmentAndInstallation()
+        }
     }
 
     private func reconcileOnLaunch() {
@@ -977,7 +1445,11 @@ final class CodexActivityRuntime: ObservableObject {
                 hooksFeatureStatus = environment.hooksEnabled
                     ? .enabled
                     : .disabled
-                if installed {
+                if isNativeActivityConnected {
+                    connectionStatus = .connected
+                    setupIslandRequested = false
+                    render()
+                } else if installed {
                     defaults.set(true, forKey: DefaultsKey.setupEnabled)
                     updateConnectionStatusFromInstalledState()
                 } else {
@@ -987,7 +1459,9 @@ final class CodexActivityRuntime: ObservableObject {
                 }
             case .failure(let error):
                 hooksFeatureStatus = .unavailable
-                if defaults.bool(forKey: DefaultsKey.setupEnabled) {
+                if isNativeActivityConnected {
+                    connectionStatus = .connected
+                } else if defaults.bool(forKey: DefaultsKey.setupEnabled) {
                     connectionStatus = .abnormal(
                         error.localizedDescription
                     )
@@ -1083,6 +1557,13 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     private func updateConnectionStatusFromInstalledState() {
+        if isNativeActivityConnected {
+            connectionStatus = .connected
+            setupIslandRequested = false
+            render()
+            return
+        }
+
         if case .failed(let message) = bridgeStatus {
             connectionStatus = .abnormal(message)
             render()
@@ -1243,6 +1724,28 @@ final class CodexActivityRuntime: ObservableObject {
         let copy = CodexActivityCopy(
             language: preferences.resolvedLanguage
         )
+        let currentTurnTokenUsage = store.currentTurnTokenUsage
+        let tokenUsageTitle = currentTurnTokenUsage.map {
+            copy.tokenUsageTitle(totalTokens: $0)
+        }
+        let showsCompletionReceipt =
+            CodexActivityTurnTokenUsagePresentationContract
+            .showsCompletionReceipt(
+                visualState: snapshot.state,
+                operationKey: snapshot.operationKey,
+                totalTokens: currentTurnTokenUsage
+            )
+        let completionQuotaRemainingPercent = showsCompletionReceipt
+            ? currentQuotaPresentation?.remainingPercent
+            : nil
+        let baseAccessibilityLabel = copy.accessibilityLabel(
+            windowTitle: title,
+            statusTitle: copy.statusTitle(for: snapshot.state),
+            operation: copy.operation(for: snapshot.operationKey),
+            approximateProgressFraction:
+                snapshot.approximateProgressFraction,
+            tokenUsageTitle: tokenUsageTitle
+        )
         let renderState = CodexActivityRenderState(
             visualState: snapshot.state,
             approximateProgressFraction:
@@ -1252,13 +1755,26 @@ final class CodexActivityRuntime: ObservableObject {
             operation: copy.operation(
                 for: snapshot.operationKey
             ),
-            accessibilityLabel: copy.accessibilityLabel(
-                windowTitle: title,
-                statusTitle: copy.statusTitle(for: snapshot.state),
-                operation: copy.operation(for: snapshot.operationKey),
-                approximateProgressFraction:
-                    snapshot.approximateProgressFraction
-            )
+            tokenUsageTitle: tokenUsageTitle,
+            completionReceiptStatus: showsCompletionReceipt
+                ? copy.statusTitle(for: snapshot.state)
+                : nil,
+            completionReceiptDetail: showsCompletionReceipt
+                ? currentTurnTokenUsage.map {
+                    copy.completionTokenUsageDetail(totalTokens: $0)
+                }
+                : nil,
+            completionQuotaRemainingPercent:
+                completionQuotaRemainingPercent,
+            isConfirmationReminderActive:
+                store.isConfirmationReminderActive,
+            accessibilityLabel: showsCompletionReceipt
+                ? baseAccessibilityLabel
+                    + copy.completionQuotaAccessibilitySuffix(
+                        remainingPercent:
+                            completionQuotaRemainingPercent
+                    )
+                : baseAccessibilityLabel
         )
         let presentation: CodexActivityIslandPresentation =
             store.presentation == .compact ? .compact : .expanded
@@ -1268,11 +1784,8 @@ final class CodexActivityRuntime: ObservableObject {
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
-                islandStyle: preferences.codexActivityIslandStyle,
-                orbAnimation: preferences.codexActivityOrbAnimation,
                 progressEffect:
                     preferences.codexActivityProgressEffect,
-                expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
                 codexProcessIdentifier: codexProcessIdentifier
@@ -1286,10 +1799,7 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
-            islandStyle: preferences.codexActivityIslandStyle,
-            orbAnimation: preferences.codexActivityOrbAnimation,
             progressEffect: preferences.codexActivityProgressEffect,
-            expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier,
             playbackEnabled: store.shouldPlayVisualEffects
@@ -1367,11 +1877,8 @@ final class CodexActivityRuntime: ObservableObject {
         if island == nil {
             island = CodexActivityIslandPanelController(
                 initialState: renderState,
-                islandStyle: preferences.codexActivityIslandStyle,
-                orbAnimation: preferences.codexActivityOrbAnimation,
                 progressEffect:
                     preferences.codexActivityProgressEffect,
-                expandedSize: preferences.codexActivityExpandedSize,
                 screenPlacement:
                     preferences.codexActivityScreenPlacement,
                 codexProcessIdentifier: codexProcessIdentifier
@@ -1385,10 +1892,7 @@ final class CodexActivityRuntime: ObservableObject {
             reduceMotion:
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
-            islandStyle: preferences.codexActivityIslandStyle,
-            orbAnimation: preferences.codexActivityOrbAnimation,
             progressEffect: preferences.codexActivityProgressEffect,
-            expandedSize: preferences.codexActivityExpandedSize,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier,
             playbackEnabled: false
@@ -1414,8 +1918,88 @@ final class CodexActivityRuntime: ObservableObject {
     }
 }
 
+enum CodexActivityTurnTokenUsagePresentationContract {
+    static func showsCompletionReceipt(
+        visualState: CodexActivityVisualState,
+        operationKey: CodexActivityOperationKey,
+        totalTokens: Int64?
+    ) -> Bool {
+        visualState == .completed
+            && operationKey == .turnCompleted
+            && totalTokens != nil
+    }
+}
+
+enum CodexActivityTokenUsageFormatter {
+    static func string(for totalTokens: Int64) -> String {
+        let tokens = max(totalTokens, 0)
+        if tokens >= 1_000_000 {
+            return compact(
+                Double(tokens) / 1_000_000,
+                suffix: "M"
+            )
+        }
+        if tokens >= 1_000 {
+            return compact(Double(tokens) / 1_000, suffix: "K")
+        }
+        return String(tokens)
+    }
+
+    private static func compact(
+        _ value: Double,
+        suffix: String
+    ) -> String {
+        let rounded = (value * 10).rounded() / 10
+        if rounded.rounded() == rounded {
+            return "\(Int64(rounded))\(suffix)"
+        }
+        return String(
+            format: "%.1f%@",
+            locale: Locale(identifier: "en_US_POSIX"),
+            rounded,
+            suffix
+        )
+    }
+}
+
 struct CodexActivityCopy {
     let language: AppPreferences.Language
+
+    func tokenUsageTitle(totalTokens: Int64) -> String {
+        let count = CodexActivityTokenUsageFormatter.string(
+            for: totalTokens
+        )
+        return switch language {
+        case .simplifiedChinese: "本次 \(count) tokens"
+        case .english: "This turn \(count) tokens"
+        }
+    }
+
+    func completionTokenUsageDetail(totalTokens: Int64) -> String {
+        let count = CodexActivityTokenUsageFormatter.string(
+            for: totalTokens
+        )
+        return switch language {
+        case .simplifiedChinese: "本次消耗 \(count) tokens"
+        case .english: "\(count) tokens this turn"
+        }
+    }
+
+    func completionQuotaAccessibilitySuffix(
+        remainingPercent: Int?
+    ) -> String {
+        switch (language, remainingPercent) {
+        case (.simplifiedChinese, .some(let remainingPercent)):
+            "，当前额度剩余 \(min(max(remainingPercent, 0), 100))%"
+        case (.simplifiedChinese, .none):
+            "，当前额度剩余不可用"
+        case (.english, .some(let remainingPercent)):
+            ", current quota remaining: "
+                + "\(min(max(remainingPercent, 0), 100)) percent"
+        case (.english, .none):
+            ", current quota remaining unavailable"
+        }
+    }
 
     func statusTitle(for state: CodexActivityVisualState) -> String {
         switch (language, state) {
@@ -1501,10 +2085,26 @@ struct CodexActivityCopy {
             "正在协调子任务"
         case (.simplifiedChinese, .usingLocalTool):
             "正在执行本地工具"
+        case (.simplifiedChinese, .executingPlan):
+            "正在执行多步骤计划"
+        case (.simplifiedChinese, .managingGoal):
+            "正在更新长期目标"
+        case (.simplifiedChinese, .followingGoal):
+            "正在跟进长期目标"
+        case (.simplifiedChinese, .goalPaused):
+            "长期目标已暂停"
+        case (.simplifiedChinese, .goalBlocked):
+            "长期目标需要处理"
+        case (.simplifiedChinese, .goalLimited):
+            "长期目标暂受用量限制"
+        case (.simplifiedChinese, .goalCompleted):
+            "长期目标已完成"
         case (.simplifiedChinese, .usingTool):
             "正在执行工具操作"
         case (.simplifiedChinese, .awaitingApproval):
             "有一项操作需要你的批准"
+        case (.simplifiedChinese, .awaitingUserInput):
+            "任务正在等待你的输入"
         case (.simplifiedChinese, .reviewingToolResult):
             "正在检查工具执行结果"
         case (.simplifiedChinese, .compactingContext):
@@ -1517,6 +2117,10 @@ struct CodexActivityCopy {
             "正在汇总子任务结果"
         case (.simplifiedChinese, .turnCompleted):
             "当前任务已完成"
+        case (.simplifiedChinese, .turnInterrupted):
+            "当前任务已中断"
+        case (.simplifiedChinese, .turnFailed):
+            "当前任务执行失败"
         case (.simplifiedChinese, .bridgeUnavailable):
             "Codex 灵动岛连接不可用"
         case (.simplifiedChinese, .malformedEvent):
@@ -1537,10 +2141,26 @@ struct CodexActivityCopy {
             "Coordinating a subtask"
         case (.english, .usingLocalTool):
             "Running a local tool"
+        case (.english, .executingPlan):
+            "Executing a multi-step plan"
+        case (.english, .managingGoal):
+            "Updating the long-running goal"
+        case (.english, .followingGoal):
+            "Following the long-running goal"
+        case (.english, .goalPaused):
+            "The long-running goal is paused"
+        case (.english, .goalBlocked):
+            "The long-running goal needs attention"
+        case (.english, .goalLimited):
+            "The long-running goal is usage-limited"
+        case (.english, .goalCompleted):
+            "The long-running goal is complete"
         case (.english, .usingTool):
             "Running a tool"
         case (.english, .awaitingApproval):
             "An operation needs your approval"
+        case (.english, .awaitingUserInput):
+            "The task is waiting for your input"
         case (.english, .reviewingToolResult):
             "Reviewing the tool result"
         case (.english, .compactingContext):
@@ -1553,6 +2173,10 @@ struct CodexActivityCopy {
             "Summarizing subtask results"
         case (.english, .turnCompleted):
             "The current task is complete"
+        case (.english, .turnInterrupted):
+            "The current task was interrupted"
+        case (.english, .turnFailed):
+            "The current task failed"
         case (.english, .bridgeUnavailable):
             "The Codex island connection is unavailable"
         case (.english, .malformedEvent):
@@ -1564,7 +2188,8 @@ struct CodexActivityCopy {
         windowTitle: String,
         statusTitle: String,
         operation: String,
-        approximateProgressFraction: Double?
+        approximateProgressFraction: Double?,
+        tokenUsageTitle: String? = nil
     ) -> String {
         let progressText = approximateProgressFraction.map {
             String(Int((min(max($0, 0), 1) * 100).rounded()))
@@ -1574,17 +2199,31 @@ struct CodexActivityCopy {
             if let progressText {
                 return "\(windowTitle)，状态：\(statusTitle)，"
                     + "近似进度：\(progressText)%，当前操作：\(operation)"
+                    + tokenUsageAccessibilitySuffix(tokenUsageTitle)
             }
             return "\(windowTitle)，状态：\(statusTitle)，"
                 + "当前操作：\(operation)"
+                + tokenUsageAccessibilitySuffix(tokenUsageTitle)
         case .english:
             if let progressText {
                 return "\(windowTitle), status: \(statusTitle), "
                     + "approximate progress: \(progressText)%, "
                     + "current operation: \(operation)"
+                    + tokenUsageAccessibilitySuffix(tokenUsageTitle)
             }
             return "\(windowTitle), status: \(statusTitle), "
                 + "current operation: \(operation)"
+                + tokenUsageAccessibilitySuffix(tokenUsageTitle)
+        }
+    }
+
+    private func tokenUsageAccessibilitySuffix(
+        _ tokenUsageTitle: String?
+    ) -> String {
+        guard let tokenUsageTitle else { return "" }
+        return switch language {
+        case .simplifiedChinese: "，\(tokenUsageTitle)"
+        case .english: ", \(tokenUsageTitle)"
         }
     }
 
@@ -2592,7 +3231,9 @@ enum CodexActivityDiagnostics {
         let eventID = delivery.eventID.map {
             String($0.prefix(12))
         } ?? "legacy"
-        let line = "\(timestamp) event=\(activity.event.rawValue) source=\(delivery.source.rawValue) outcome=\(outcome) session=\(session) turn=\(turn) id=\(eventID)\n"
+        let activitySource = activity.source?.rawValue ?? "unknown"
+        let planSource = activity.planSource?.rawValue ?? "none"
+        let line = "\(timestamp) event=\(activity.event.rawValue) source=\(delivery.source.rawValue) activity_source=\(activitySource) plan_source=\(planSource) outcome=\(outcome) session=\(session) turn=\(turn) id=\(eventID)\n"
         _ = line.withCString { pointer in
             Darwin.write(descriptor, pointer, strlen(pointer))
         }

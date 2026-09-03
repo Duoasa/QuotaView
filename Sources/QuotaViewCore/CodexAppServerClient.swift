@@ -52,6 +52,21 @@ public actor CodexAppServerClient {
     private var connectionGeneration: UInt64 = 0
     private var initialized = false
     private var lastStandardError = ""
+    private var activityNotificationHandler:
+        (@Sendable (CodexActivityEvent) async -> Void)?
+
+    private nonisolated static let allThreadSourceKinds = [
+        "cli",
+        "vscode",
+        "exec",
+        "appServer",
+        "subAgent",
+        "subAgentReview",
+        "subAgentCompact",
+        "subAgentThreadSpawn",
+        "subAgentOther",
+        "unknown"
+    ]
 
     public init(
         executablePath: String? = CodexExecutableLocator.locate(),
@@ -131,14 +146,22 @@ public actor CodexAppServerClient {
 
         let response: ThreadListResponse
         do {
-            response = try await request(
-                method: "thread/list",
-                params: [
-                    "limit": 100,
-                    "useStateDbOnly": true
-                ],
-                includeNullParams: false
+            response = try await requestThreadList(
+                includeAllSourceKinds: true
             )
+        } catch let error as ClientError {
+            guard case .server = error else {
+                stop()
+                throw error
+            }
+            do {
+                response = try await requestThreadList(
+                    includeAllSourceKinds: false
+                )
+            } catch {
+                stop()
+                throw error
+            }
         } catch {
             stop()
             throw error
@@ -147,6 +170,12 @@ public actor CodexAppServerClient {
         return response.data.first {
             $0.matches(sessionHash: sessionHash)
         }?.privacySafeDisplayName
+    }
+
+    public func setActivityNotificationHandler(
+        _ handler: (@Sendable (CodexActivityEvent) async -> Void)?
+    ) {
+        activityNotificationHandler = handler
     }
 
     public func stop() {
@@ -272,6 +301,23 @@ public actor CodexAppServerClient {
         let data: [CodexThreadMetadata]
     }
 
+    private func requestThreadList(
+        includeAllSourceKinds: Bool
+    ) async throws -> ThreadListResponse {
+        var params: [String: Any] = [
+            "limit": 100,
+            "useStateDbOnly": true
+        ]
+        if includeAllSourceKinds {
+            params["sourceKinds"] = Self.allThreadSourceKinds
+        }
+        return try await request(
+            method: "thread/list",
+            params: params,
+            includeNullParams: false
+        )
+    }
+
     private func request<Response: Decodable>(
         method: String,
         params: [String: Any]? = nil,
@@ -369,14 +415,27 @@ public actor CodexAppServerClient {
         }
     }
 
-    private func handleOutputLine(_ line: String) {
+    private func handleOutputLine(_ line: String) async {
         guard
             let data = line.data(using: .utf8),
             let object = try? JSONSerialization.jsonObject(with: data),
-            let message = object as? [String: Any],
-            let id = message["id"] as? Int,
-            let request = pending.removeValue(forKey: id)
+            let message = object as? [String: Any]
         else {
+            return
+        }
+
+        guard let id = message["id"] as? Int else {
+            guard let event = CodexAppServerActivityNotificationDecoder
+                    .decode(data: data),
+                  let activityNotificationHandler
+            else {
+                return
+            }
+            await activityNotificationHandler(event)
+            return
+        }
+
+        guard let request = pending.removeValue(forKey: id) else {
             return
         }
 

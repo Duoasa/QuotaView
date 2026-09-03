@@ -276,9 +276,9 @@ struct CodexActivityStateSmokeProfile: Equatable {
         case .completed:
             CodexActivityStateSmokeProfile(
                 background: activityStateSmokeBackground,
-                deepColor: activityStateSmokeRGBA(0.02, 0.38, 0.22),
-                midColor: activityStateSmokeRGBA(0.05, 0.70, 0.40),
-                highlightColor: activityStateSmokeRGBA(0.36, 0.95, 0.65),
+                deepColor: activityStateSmokeRGBA(0.18, 0.12, 0.52),
+                midColor: activityStateSmokeRGBA(0.26, 0.48, 0.88),
+                highlightColor: activityStateSmokeRGBA(0.43, 0.89, 1.00),
                 fieldSpeed: 0.18,
                 motionFrequency: 0.24,
                 turbulence: 0.12,
