@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011`
 >
-> 状态：`Accepted / Publishing`
+> 状态：`Accepted / Released`
 >
 > 目标版本：`0.4.5 Build 1`（Sparkle 内部 Build `17`）
 
@@ -15,7 +15,7 @@ Desktop 是否连接共享 App Server Socket。共享 Socket 与 Hook/本地队�
 
 本轮从未发布的 0.4.4 共享桥候选继续演进，发布基线为
 `0.4.3 Build 1`。产品所有者已完成关键路径检查并批准 0.4.5 发布；正式
-签名、公证、GitHub Release 与 Stable appcast 由 0.4.5 发布规格统一收口。
+签名、公证、GitHub Release 与 Stable appcast 已由 0.4.5 发布规格收口。
 
 ## 2. 目标与非目标
 
@@ -125,3 +125,4 @@ rollout 不可用 -> Socket/Hook 继续保留兼容能力
 - 通过共享 App Server 的真实四步计划、量子噪点进度条、运行与完成信息、
   等待确认提醒等关键路径已由产品所有者检查并批准发布；完整辅助功能交叉矩阵
   不作为本次发布的已验证结论。
+- 本规格已随 `v0.4.5-build.1` 正式发布。

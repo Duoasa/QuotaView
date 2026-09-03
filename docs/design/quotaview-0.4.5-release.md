@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-RELEASE-0.4.5-001`
 >
-> 状态：`Accepted / Publishing`
+> 状态：`Accepted / Released`
 >
 > 日期：2026-09-04
 >
@@ -46,8 +46,25 @@
 ## 当前状态
 
 - 产品所有者已批准 0.4.5 Build 1 发布；
-- 开发验证为 `swift test` 130 项通过、0 失败，Universal 无签名构建、
-  ad-hoc 严格签名校验和干净副本启动通过；
-- Developer ID、公证、Release、回下载与 Stable appcast 正在执行；
-- 完整发布事实将在远端验证完成后写回本规格、`VERSION_HISTORY.md` 与
-  `HANDOFF.md`。
+- `swift test` 130 项通过、0 失败；PR #42 CI 通过并合并到 `main`，发布提交
+  与 tag commit 为 `75913c07e4457b5f6451f286522799d36982ff0c`；
+- Universal Developer ID Release 构建通过；App、Core、Widget 与 Activity
+  Hook 均为 `x86_64 arm64`，版本为 Marketing `0.4.5`、内部 `17`、产品
+  Build `1`；
+- 正式资产 `QuotaView-v0.4.5-build.1.zip` 为 `13,477,643 bytes`，SHA-256
+  `d5308880d9dc096e46cdbf715db414ae79a4bc92a1dcc4f433d315a6a7bd7e5a`；
+- Developer ID 证书 SHA-1 为
+  `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，Apple 公证 Accepted 并已
+  Staple；Submission `67ae8361-068b-4adf-aecf-de2f2b174e07`；
+- GitHub Release 已发布为 Latest、非 Draft、非 Pre-release；回下载资产与
+  本地公证包逐字节一致，并在宿主环境通过嵌套签名、Staple、Gatekeeper、
+  版本、资源与四目标双架构复核；
+- 中英文 README 已使用 `Resources/QuotaView-0.4.5-Activity-Bridge.png`，
+  下载入口指向正式资产；Release Notes 以
+  `docs/releases/QuotaView-0.4.5-build.1.md` 为单份英文源文；
+- Stable appcast 由 `gh-pages` 提交
+  `9fc9745a9464f42d890c119a13dabf87896d09a5` 发布，线上 Feed SHA-256 为
+  `d4e1d5a218742b743c04305c3ab29e27bbfaece1f0f4b7d7ab788b16bb6a3b01`；
+  线上文件与本地签名文件逐字节一致且 EdDSA 验证通过；
+- 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 交叉
+  矩阵未单独记录为全量通过。

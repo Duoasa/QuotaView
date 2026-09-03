@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012`
 >
-> 状态：`Accepted / Publishing`
+> 状态：`Accepted / Released`
 >
 > 目标版本：`0.4.5 Build 1`（Sparkle 内部 Build `17`）
 
@@ -53,5 +53,6 @@
 - 开发 ZIP `dist/QuotaView-v0.4.5-build.1.zip` 的 SHA-256 为
   `fc247a259f9f25f6f405bccbd5308ad1582667ff7bfa55ec34a77c635c99c297`。
 - 量子噪点进度条及真实分步计划对应关系已由产品所有者完成视觉确认；产品
-  所有者已批准包含本规格在内的 0.4.5 候选发布。完整交互与辅助功能交叉矩阵
-  不作为本次发布的已验证结论。
+  所有者已批准包含本规格在内的 0.4.5 候选发布；本规格已随
+  `v0.4.5-build.1` 正式发布。完整交互与辅助功能交叉矩阵不作为本次发布的
+  已验证结论。
