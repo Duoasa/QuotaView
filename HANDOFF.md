@@ -11,10 +11,10 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 稳定版 | `0.4.3 Build 1` / `v0.4.3-build.1` / GitHub Latest |
-| 回滚基线 | `0.4.2 Build 1` / `v0.4.2-build.1` |
+| 稳定版 | `0.4.5 Build 1` / `v0.4.5-build.1` / GitHub Latest |
+| 回滚基线 | `0.4.3 Build 1` / `v0.4.3-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.5 Build 1` / Sparkle 内部 Build `17`；产品所有者已批准，正在发布 |
+| 当前候选 | 无；`0.4.5 Build 1` 已正式发布 |
 | 当前主题 | 只读本地任务流主通道，Socket/Hook 回退；灵动岛显示本次 turn Token 与完成额度回执，悬停进入 80% 透明态，等待确认满 10 秒后显示黄色描边和光晕 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
@@ -24,11 +24,11 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
-| [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Publishing` | 产品所有者已批准；README、产品图、Developer ID、公证、GitHub Latest 与 Stable appcast 正在执行 |
-| [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Publishing` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；两次 25 秒状态链通过，产品所有者已批准发布 |
-| [`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Publishing` | rollout 主通道的运行态实时 Token、真实成功终态左右回执、当前额度与紧凑额度环已实现；产品所有者已批准发布 |
-| [`QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012`](docs/design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Publishing` | 悬停时整个灵动岛保留 20% 可见度且继续点击穿透；产品所有者已批准发布 |
-| [`QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011`](docs/design/quotaview-codex-socket-autoconnect-0.4.5.md) | `Accepted / Publishing` | 只读本地任务流主通道、共享 Socket/Hook 回退及真实四步计划已验证；产品所有者已批准发布 |
+| [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
+| [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；已随 0.4.5 发布 |
+| [`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | rollout 主通道的实时 Token、真实成功终态左右回执、当前额度与紧凑额度环已随 0.4.5 发布 |
+| [`QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012`](docs/design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Released` | 悬停时整个灵动岛保留 20% 可见度且继续点击穿透；已随 0.4.5 发布 |
+| [`QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011`](docs/design/quotaview-codex-socket-autoconnect-0.4.5.md) | `Accepted / Released` | 只读本地任务流主通道、共享 Socket/Hook 回退及真实四步计划已验证并随 0.4.5 发布 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-CODEX-PLAN-010`](docs/design/quotaview-codex-plan-compatibility-0.4.4.md) | `Accepted / Superseded` | 0.4.4 未发布；原生计划、Goal、等待、真实终态和共享桥成果已由 0.4.5 继承 |
 | [`QV-RELEASE-0.4.3-001`](docs/design/quotaview-0.4.3-release.md) | `Accepted / Released` | 104 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009`](docs/design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Released` | 保留 `dropField` 持久化兼容；连续换色、增强闪灭、压缩上下文与完成反馈已随 0.4.3 发布 |
@@ -41,9 +41,9 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 | [`QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005`](docs/design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 已发布的 AI 球尺寸能力作为历史保留；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | [`QV-PRODUCT-QUOTA-WINDOWS-003`](docs/design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 多周期额度已随 0.3.7 Build 1 发布并进入 Stable Feed |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-004`](docs/design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；不包含多任务 Preview |
-| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.3 已进入 Stable Feed；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
+| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.5 已进入 Stable Feed；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
 
-### 2.1 0.4.5 Build 1 开发候选（2026-09-04）
+### 2.1 0.4.5 Build 1 发布（2026-09-04）
 
 0.4.5 在 0.4.4 未发布候选上继续开发；当前分支已提升为
 `codex/0.4.5-development`，物理工作树目录保留原名以保护连续的未提交工作。
@@ -107,10 +107,22 @@ Reduce Motion 下两者保持静态。完成态仍独占紫蓝青反馈，不与
 Build、资源和干净临时副本的 ad-hoc 严格校验通过。开发 ZIP SHA-256 为
 `fc247a259f9f25f6f405bccbd5308ad1582667ff7bfa55ec34a77c635c99c297`。
 新干净副本以 PID `80828` 启动；只读额度探针确认主数据可用，已用 `52%`、
-剩余 `48%`。产品所有者已检查关键视觉路径并批准发布。Developer ID、公证、
-GitHub Release、Stable appcast 与最终远端回读由
-[`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) 继续执行；完整
-交互与辅助功能交叉矩阵不作为本次发布的已验证结论。
+剩余 `48%`。产品所有者已检查关键视觉路径并批准发布。
+
+PR #42 的 GitHub CI 通过后已合并到 `main`；发布提交与 tag commit 为
+`75913c07e4457b5f6451f286522799d36982ff0c`。正式资产
+`QuotaView-v0.4.5-build.1.zip` 为 `13,477,643 bytes`，SHA-256 为
+`d5308880d9dc096e46cdbf715db414ae79a4bc92a1dcc4f433d315a6a7bd7e5a`。
+Developer ID 与 Hardened Runtime 有效；Apple 公证 Accepted 并已 Staple，
+Submission 为 `67ae8361-068b-4adf-aecf-de2f2b174e07`。GitHub Release 已设为
+Latest、非 Draft、非 Pre-release；回下载资产与本地公证包逐字节一致，并在
+宿主环境通过嵌套签名、Staple、Gatekeeper、版本、资源和四目标双架构复核。
+
+Stable appcast 已由 `gh-pages` 提交
+`9fc9745a9464f42d890c119a13dabf87896d09a5` 发布；线上 Feed SHA-256 为
+`d4e1d5a218742b743c04305c3ab29e27bbfaece1f0f4b7d7ab788b16bb6a3b01`，
+与本地签名文件逐字节一致且 EdDSA 验证通过。完整交互与辅助功能交叉矩阵
+不作为本次发布的已验证结论。
 
 ### 2.2 0.4.4 Build 1 未发布候选（2026-09-03）
 
@@ -173,10 +185,10 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 3. 长期边界
 
-- 后续版本必须由产品所有者针对精确版本重新批准，不能沿用 0.4.3 的
+- 后续版本必须由产品所有者针对精确版本重新批准，不能沿用 0.4.5 的
   appcast 准入；
-- `0.4.3 Build 1` 是当前正式 Release、GitHub Latest 与 Stable appcast
-  条目；`0.4.2 Build 1` 是封存回滚基线，0.4.0 不创建公开 Release；
+- `0.4.5 Build 1` 是当前正式 Release、GitHub Latest 与 Stable appcast
+  条目；`0.4.3 Build 1` 是封存回滚基线，0.4.0 不创建公开 Release；
 - GitHub push、tag 或 Release 默认不进入自动更新序列；
 - 稳定版只保留单任务灵动岛。多任务 Preview 的 tag、Release 和归档分支
   `codex/archive-0.3.2-preview.1-multitask-island` 仅供历史参考；
@@ -184,12 +196,9 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 4. 下一步
 
-1. 完成 0.4.5 Developer ID 构建、Apple 公证/Staple、GitHub Latest、回下载
-   验证与 Stable appcast 在线 EdDSA 核验；
-2. 远端事实完成后同步 `VERSION_HISTORY.md`、本 Handoff、SDD 注册表和相关
-   功能规格，不能提前写入最终提交、资产散列或 Submission；
-3. 更新器规格的 `APP-UPDATES-07` 保持独立待办，不影响本次发布；
-4. 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 矩阵
+1. 更新器规格的 `APP-UPDATES-07` 保持独立待办，后续记录一次由旧版客户端
+   发起的真实 N → N+1 替换与重启；
+2. 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 矩阵
    仍由产品所有者按需补充，不记录为本次全量通过。
 
 ## 5. 文档入口

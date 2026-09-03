@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`
 >
-> 状态：`Accepted / Publishing`
+> 状态：`Accepted / Released`
 >
 > 目标版本：`0.4.5 Build 1`（Sparkle 内部 Build `17`）
 
@@ -81,5 +81,5 @@ JSON，但只把允许的数值、枚举、工作区末级名称和哈希标识�
 - 宿主权限额度探针同时确认主数据可用：`Pro 5x` 协议值 `prolite`，已用
   `52%`、剩余 `48%`；该真实主周期快照现已接入完成态右栏和紧凑额度环。
 - 产品所有者已检查运行态与完成态视觉，并批准包含实时 Token、左右布局、
-  额度环和紫蓝青完成效果的 0.4.5 候选发布；Developer ID、公证、GitHub
-  Release 与 Stable appcast 由发布规格继续执行。
+  额度环和紫蓝青完成效果的 0.4.5 候选发布；本规格已随
+  `v0.4.5-build.1` 正式发布。

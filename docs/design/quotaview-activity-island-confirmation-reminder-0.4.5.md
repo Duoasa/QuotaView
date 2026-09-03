@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`
 >
-> 状态：`Accepted / Publishing`
+> 状态：`Accepted / Released`
 >
 > 目标版本：`0.4.5 Build 1`（Sparkle 内部 Build `17`）
 
@@ -55,3 +55,4 @@ Codex 任务进入真实“等待确认”或“等待用户输入”状态后�
   门槛，随后切换运行态并以 `Stop` 自然结束；对应事件被正式状态机接收。
 - 产品所有者已批准包含本提醒效果的 0.4.5 候选发布；完整 Reduce Motion 与
   辅助功能交叉矩阵不作为本次发布的已验证结论。
+- 本规格已随 `v0.4.5-build.1` 正式发布。
