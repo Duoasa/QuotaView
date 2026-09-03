@@ -257,8 +257,7 @@ struct CodexActivityIslandCompletionGlowGeometry {
     static let outlineWidth: CGFloat = 1
     static let restingShadowRadius: CGFloat = 5.5
     static let peakShadowRadius: CGFloat = 9.5
-    static let restingShadowOpacity: Float = 0.65
-    static let peakShadowOpacity: Float = 1
+    static let shadowOpacity: Float = 1
 
     static func sourceRect(in islandRect: NSRect) -> NSRect {
         islandRect.insetBy(dx: sourceInset, dy: sourceInset)
@@ -277,8 +276,12 @@ struct CodexActivityIslandCompletionGlowGeometry {
 }
 
 struct CodexActivityIslandTextContrast {
-    static let secondaryTextColor =
-        NSColor.white.withAlphaComponent(0.72)
+    static let progressTaskTitleColor =
+        NSColor(calibratedWhite: 0.88, alpha: 1)
+    static let progressOperationColor =
+        NSColor(calibratedWhite: 0.76, alpha: 1)
+    static let operationShimmerShoulderAlpha: CGFloat = 0.24
+    static let operationShimmerPeakAlpha: CGFloat = 1
     static let statusDotBorderWidth: CGFloat = 0.5
     static let statusDotBorderColor =
         NSColor.black.withAlphaComponent(0.82)
@@ -773,9 +776,18 @@ private final class ActivitySingleLineTextView: NSView {
 
         shimmerLayer.colors = [
             NSColor.clear.cgColor,
-            NSColor.white.withAlphaComponent(0.08).cgColor,
-            NSColor.white.withAlphaComponent(0.92).cgColor,
-            NSColor.white.withAlphaComponent(0.08).cgColor,
+            NSColor.white.withAlphaComponent(
+                CodexActivityIslandTextContrast
+                    .operationShimmerShoulderAlpha
+            ).cgColor,
+            NSColor.white.withAlphaComponent(
+                CodexActivityIslandTextContrast
+                    .operationShimmerPeakAlpha
+            ).cgColor,
+            NSColor.white.withAlphaComponent(
+                CodexActivityIslandTextContrast
+                    .operationShimmerShoulderAlpha
+            ).cgColor,
             NSColor.clear.cgColor
         ]
         shimmerLayer.locations = [-0.58, -0.42, -0.26, -0.10, 0.06]
@@ -1964,8 +1976,6 @@ private let activityCompletionHighlightColor = NSColor(
 private final class ActivityIslandCompletionGlowView: NSView {
     private enum AnimationKey {
         static let reveal = "quotaview.activity.completion-glow.reveal"
-        static let breathOpacity =
-            "quotaview.activity.completion-glow.opacity"
         static let breathRadius =
             "quotaview.activity.completion-glow.radius"
     }
@@ -2082,7 +2092,7 @@ private final class ActivityIslandCompletionGlowView: NSView {
         completionGlowLayer.opacity = shouldShow ? 1 : 0
         completionGlowLayer.shadowOpacity = shouldShow
             ? CodexActivityIslandCompletionGlowGeometry
-                .restingShadowOpacity
+                .shadowOpacity
             : 0
         completionGlowLayer.shadowRadius = shouldShow
             ? CodexActivityIslandCompletionGlowGeometry
@@ -2113,32 +2123,6 @@ private final class ActivityIslandCompletionGlowView: NSView {
             completionGlowLayer.add(reveal, forKey: AnimationKey.reveal)
             breathBeginTime = reveal.beginTime + reveal.duration
         }
-
-        let breathOpacity = CAKeyframeAnimation(
-            keyPath: "shadowOpacity"
-        )
-        breathOpacity.values = [
-            CodexActivityIslandCompletionGlowGeometry
-                .restingShadowOpacity,
-            CodexActivityIslandCompletionGlowGeometry
-                .peakShadowOpacity,
-            CodexActivityIslandCompletionGlowGeometry
-                .restingShadowOpacity,
-        ]
-        breathOpacity.keyTimes = [0, 0.5, 1]
-        breathOpacity.beginTime = breathBeginTime
-        breathOpacity.duration =
-            CodexActivityStateSmokeContract
-                .completionGlowBreathDuration
-        breathOpacity.repeatCount = .infinity
-        breathOpacity.timingFunctions = [
-            CAMediaTimingFunction(name: .easeInEaseOut),
-            CAMediaTimingFunction(name: .easeInEaseOut),
-        ]
-        completionGlowLayer.add(
-            breathOpacity,
-            forKey: AnimationKey.breathOpacity
-        )
 
         let breathRadius = CAKeyframeAnimation(keyPath: "shadowRadius")
         breathRadius.values = [
@@ -2649,10 +2633,10 @@ private final class ActivityIslandContentView: NSView {
         if usesProgressTextStyle {
             kickerLabel.textColor =
                 CodexActivityIslandTextContrast
-                .secondaryTextColor
+                .progressTaskTitleColor
             detailLabel.textColor =
                 CodexActivityIslandTextContrast
-                .secondaryTextColor
+                .progressOperationColor
             statusDot.layer?.borderWidth =
                 CodexActivityIslandTextContrast
                 .statusDotBorderWidth

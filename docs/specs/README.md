@@ -6,7 +6,7 @@
 >
 > 生产基线：`0.4.2 Build 1`
 >
-> 当前候选：无；`0.4.2 Build 1` / Sparkle 内部更新序号 `14` 已发布
+> 当前候选：`0.4.3 Build 1` / Sparkle 内部更新序号 `15`；正在发布验证
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,6 +14,8 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-RELEASE-0.4.3-001` | [0.4.3 Build 1 发布](../design/quotaview-0.4.3-release.md) | `Accepted / Verifying` | 104 项测试已通过；签名、公证、GitHub Release 与 appcast 正在验证 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009` | [量子噪点效果修正](../design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Verifying` | 本地候选已冻结；主体改造曾通过 104 项测试，最终视觉微调通过对应定向冒烟与 Universal 构建，完整视觉矩阵仍待验收 |
 | `QV-RELEASE-0.4.2-001` | [0.4.2 Build 1 发布](../design/quotaview-0.4.2-release.md) | `Accepted / Released` | 103 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-LIFECYCLE-008` | [0.4.2 任务连续性修正](../design/quotaview-activity-island-lifecycle-continuity-0.4.2.md) | `Accepted / Released` | 实时事件不再因局部步骤结束而误隐藏或提前完成；完成态只接受真实 `Stop`，已随 0.4.2 发布 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-PROGRESS-EFFECTS-007` | [0.4.2 进度条效果库](../design/quotaview-progress-effects-0.4.2.md) | `Accepted / Released` | 四种真实预览、状态配色适配、平滑进度与三个新增效果的完成高亮已随 0.4.2 发布 |

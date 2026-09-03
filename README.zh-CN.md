@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.2-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.2-build.1/QuotaView-v0.4.2-build.1.zip"><strong>下载 QuotaView v0.4.2 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.3-build.1/QuotaView-v0.4.3-build.1.zip"><strong>下载 QuotaView v0.4.3 Build 1</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -53,11 +53,11 @@ QuotaView 是一款开源、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.4.2 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.2-build.1) 下载 `QuotaView-v0.4.2-build.1.zip`。
+2. 前往 [v0.4.3 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1) 下载 `QuotaView-v0.4.3-build.1.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.4.2 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
+> v0.4.3 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
 > 可在解压后正常打开，不再需要旧版未签名构建所使用的 Finder 右键打开
 > 方式。
 
@@ -89,19 +89,19 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 原生设置窗口包含菜单栏、面板内容、Codex 灵动岛、外观、语言和通用选项
 - 提供小号与中号两种原生 WidgetKit 小组件
 
-## 0.4.2 新功能：更多进度效果，更稳定的任务状态
+## 0.4.3 新功能：更清晰的进度反馈
 
-QuotaView 0.4.2 扩展进度条样式，并提升 Codex 灵动岛的任务连续性。
+QuotaView 0.4.3 进一步打磨 0.4.2 引入的进度条体验。
 
 <p align="center">
-  <img src="Resources/QuotaView-0.4.2-Progress-Mode.jpg" alt="QuotaView 0.4.2 进度条灵动岛产品概览" width="49%">
-  <img src="Resources/QuotaView-0.4.2-Progress-Styles.jpg" alt="QuotaView 0.4.2 状态烟雾、液滴涌动、液态涌浪与晶钻前沿四种进度效果" width="49%">
+  <img src="Resources/QuotaView-0.4.2-Progress-Mode.jpg" alt="QuotaView 进度条灵动岛产品概览" width="49%">
+  <img src="Resources/QuotaView-0.4.2-Progress-Styles.jpg" alt="QuotaView 进度条样式" width="49%">
 </p>
 
-- 在真实预览中选择**状态烟雾**、**晶钻前沿**、**液滴涌动**或**液态涌浪**；
-  四种效果统一跟随当前 Codex 状态配色；
-- 多步骤进度切换更平滑，三个新增效果在走满后提供克制的完成高亮；
-- 工具步骤之间持续保持任务进行态，只有真实任务结束才显示**已完成**。
+- **量子噪点**切换状态颜色时不再上下移动，并增强压缩上下文可见性、
+  星点闪灭与完成段亮度；
+- 标题和状态文字改用更清晰的不透明淡灰，同时保留操作状态流光；
+- 完成描边与呼吸光晕统一使用同一种绿色。
 
 ## 0.4.1 新功能：感知进度的 Codex 灵动岛
 
@@ -188,7 +188,7 @@ QuotaView 0.3.5 将 0.3.4 扩展的用量概览纳入稳定版本，并首次支
   不会访问更新源。
 
 0.3.5 Build 5 是首个包含更新器的版本，因此需要手动安装；符合正式签名
-环境的安装现在可以通过 Stable 通道更新到 0.4.2 Build 1。
+环境的安装现在可以通过 Stable 通道更新到 0.4.3 Build 1。
 
 ## 0.3.3 新功能：Token 活动统计
 
@@ -214,7 +214,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
 
 > [!NOTE]
 > 0.3.2 Preview 1 是用于验证 Codex 灵动岛多任务体验的抢先预览版。
-> v0.4.2 Build 1 是推荐稳定版，不包含这套实验性多任务实现。
+> v0.4.3 Build 1 是推荐稳定版，不包含这套实验性多任务实现。
 
 [下载 QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
@@ -237,7 +237,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
   发生调整时，可能出现跟随滞后或未命中；
 - 任务切换、长标题跑马灯以及最大态/紧凑态切换节奏仍需要继续优化体验与
   性能；
-- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.4.2 Build 1。
+- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.4.3 Build 1。
 
 ## 0.3.1 Build 2 小组件热修复
 
