@@ -219,6 +219,10 @@ final class AppBehaviorTests: XCTestCase {
     func testCodexActivityProductionInactivityTiming() {
         XCTAssertEqual(CodexActivityStore.compactDelay, 20)
         XCTAssertEqual(
+            CodexActivityStore.confirmationReminderDelay,
+            10
+        )
+        XCTAssertEqual(
             CodexActivityStore.settledEventReplayAgeThreshold,
             20
         )
@@ -227,6 +231,40 @@ final class AppBehaviorTests: XCTestCase {
                 + CodexActivityStore.hiddenDelayAfterCompact,
             120
         )
+    }
+
+    @MainActor
+    func testConfirmationReminderActivatesOnlyAfterSustainedWait()
+        async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil),
+            confirmationReminderDelay: 0.01
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .permissionRequest,
+                sessionHash: "session",
+                turnHash: "turn",
+                waitReason: .approval
+            )
+        )
+        XCTAssertFalse(store.isConfirmationReminderActive)
+
+        for _ in 0..<100
+        where !store.isConfirmationReminderActive {
+            try? await Task.sleep(nanoseconds: 2_000_000)
+        }
+        XCTAssertTrue(store.isConfirmationReminderActive)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                turnHash: "turn"
+            )
+        )
+        XCTAssertFalse(store.isConfirmationReminderActive)
+        await store.stop()
     }
 
     @MainActor
@@ -1939,20 +1977,12 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(preferences.showResetAction)
         XCTAssertTrue(preferences.codexActivityIslandEnabled)
         XCTAssertEqual(
-            preferences.codexActivityIslandStyle,
-            .aiOrb
-        )
-        XCTAssertEqual(
-            preferences.codexActivityOrbAnimation,
-            .particleOrb
-        )
-        XCTAssertEqual(
             preferences.codexActivityScreenPlacement,
             .followHotspot
         )
         XCTAssertEqual(
-            preferences.codexActivityExpandedSize,
-            .oneHundredPercent
+            preferences.codexActivityProgressEffect,
+            .dropField
         )
         XCTAssertEqual(preferences.codexActivityCompactDelay, 20)
         XCTAssertEqual(
@@ -1970,6 +2000,15 @@ final class AppBehaviorTests: XCTestCase {
             ),
             "clear"
         )
+        XCTAssertNil(defaults.string(
+            forKey: "preferences.codexActivity.islandStyle"
+        ))
+        XCTAssertNil(defaults.string(
+            forKey: "preferences.codexActivity.orbAnimation"
+        ))
+        XCTAssertNil(defaults.string(
+            forKey: "preferences.codexActivity.expandedSize"
+        ))
     }
 
     @MainActor
@@ -2069,14 +2108,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(savedPreferences.tokenActivityRange, .sixMonths)
         XCTAssertFalse(savedPreferences.codexActivityIslandEnabled)
         XCTAssertEqual(
-            savedPreferences.codexActivityIslandStyle,
-            .progressBar
-        )
-        XCTAssertEqual(
-            savedPreferences.codexActivityOrbAnimation,
-            .rippleGlow
-        )
-        XCTAssertEqual(
             savedPreferences.codexActivityProgressEffect,
             .sloshFlow
         )
@@ -2093,16 +2124,23 @@ final class AppBehaviorTests: XCTestCase {
             .codexScreen
         )
         XCTAssertEqual(
-            savedPreferences.codexActivityExpandedSize,
-            .seventyFivePercent
+            savedDefaults.string(
+                forKey: "preferences.codexActivity.islandStyle"
+            ),
+            AppPreferences.CodexActivityIslandStyle
+                .progressBar.rawValue
         )
-        savedPreferences.codexActivityExpandedSize = .eightyFivePercent
+        XCTAssertEqual(
+            savedDefaults.string(
+                forKey: "preferences.codexActivity.orbAnimation"
+            ),
+            AppPreferences.CodexActivityOrbAnimation.rippleGlow.rawValue
+        )
         XCTAssertEqual(
             savedDefaults.string(
                 forKey: "preferences.codexActivity.expandedSize"
             ),
-            AppPreferences.CodexActivityExpandedSize
-                .eightyFivePercent.rawValue
+            "60"
         )
         XCTAssertEqual(savedPreferences.codexActivityCompactDelay, 60)
         XCTAssertEqual(
@@ -2125,11 +2163,6 @@ final class AppBehaviorTests: XCTestCase {
             "legacy-ultra-thin",
             forKey: "preferences.appearance.glassPreset"
         )
-        legacyDefaults.set(
-            "80",
-            forKey: "preferences.codexActivity.expandedSize"
-        )
-
         let migratedPreferences = AppPreferences(defaults: legacyDefaults)
 
         XCTAssertEqual(migratedPreferences.glassMode, .clear)
@@ -2139,97 +2172,40 @@ final class AppBehaviorTests: XCTestCase {
             ),
             "clear"
         )
-        XCTAssertEqual(
-            migratedPreferences.codexActivityExpandedSize,
-            .eightyFivePercent
-        )
-        XCTAssertEqual(
-            legacyDefaults.string(
-                forKey: "preferences.codexActivity.expandedSize"
-            ),
-            AppPreferences.CodexActivityExpandedSize
-                .eightyFivePercent.rawValue
-        )
-
-        let invalidSuiteName = "QuotaViewTests.\(UUID().uuidString)"
-        let invalidDefaults = UserDefaults(suiteName: invalidSuiteName)!
-        defer {
-            invalidDefaults.removePersistentDomain(forName: invalidSuiteName)
-        }
-        invalidDefaults.set(
-            "custom",
-            forKey: "preferences.codexActivity.expandedSize"
-        )
-
-        let fallbackPreferences = AppPreferences(defaults: invalidDefaults)
-
-        XCTAssertEqual(
-            fallbackPreferences.codexActivityExpandedSize,
-            .oneHundredPercent
-        )
-        XCTAssertEqual(
-            invalidDefaults.string(
-                forKey: "preferences.codexActivity.expandedSize"
-            ),
-            AppPreferences.CodexActivityExpandedSize
-                .oneHundredPercent.rawValue
-        )
     }
 
     @MainActor
-    func testStateSmokeLegacyPreferenceMigratesToProgressBarStyle() {
+    func testRemovedAIOrbPreferencesArePreservedButIgnored() {
         let suiteName = "QuotaViewTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
         defaults.set(
-            "smokeProgress",
+            AppPreferences.CodexActivityIslandStyle.aiOrb.rawValue,
+            forKey: "preferences.codexActivity.islandStyle"
+        )
+        defaults.set(
+            AppPreferences.CodexActivityOrbAnimation.rippleGlow.rawValue,
             forKey: "preferences.codexActivity.orbAnimation"
+        )
+        defaults.set(
+            "75",
+            forKey: "preferences.codexActivity.expandedSize"
         )
 
         let preferences = AppPreferences(defaults: defaults)
 
         XCTAssertEqual(
-            preferences.codexActivityIslandStyle,
-            .progressBar
-        )
-        XCTAssertEqual(
-            preferences.codexActivityOrbAnimation,
-            .particleOrb
-        )
-        XCTAssertEqual(
             preferences.codexActivityProgressEffect,
-            .stateSmoke
+            .dropField
         )
         XCTAssertEqual(
             defaults.string(
                 forKey: "preferences.codexActivity.islandStyle"
             ),
             AppPreferences.CodexActivityIslandStyle
-                .progressBar.rawValue
-        )
-        XCTAssertEqual(
-            defaults.string(
-                forKey: "preferences.codexActivity.orbAnimation"
-            ),
-            AppPreferences.CodexActivityOrbAnimation
-                .particleOrb.rawValue
-        )
-        XCTAssertEqual(
-            defaults.string(
-                forKey: "preferences.codexActivity.progressEffect"
-            ),
-            AppPreferences.CodexActivityProgressEffect
-                .stateSmoke.rawValue
-        )
-        preferences.codexActivityIslandStyle = .aiOrb
-        preferences.codexActivityOrbAnimation = .rippleGlow
-        XCTAssertEqual(
-            defaults.string(
-                forKey: "preferences.codexActivity.islandStyle"
-            ),
-            AppPreferences.CodexActivityIslandStyle.aiOrb.rawValue
+                .aiOrb.rawValue
         )
         XCTAssertEqual(
             defaults.string(
@@ -2238,27 +2214,19 @@ final class AppBehaviorTests: XCTestCase {
             AppPreferences.CodexActivityOrbAnimation
                 .rippleGlow.rawValue
         )
-
-        let invalidSuiteName = "QuotaViewTests.\(UUID().uuidString)"
-        let invalidDefaults = UserDefaults(suiteName: invalidSuiteName)!
-        defer {
-            invalidDefaults.removePersistentDomain(
-                forName: invalidSuiteName
-            )
-        }
-        invalidDefaults.set(
-            "unknown-style",
-            forKey: "preferences.codexActivity.islandStyle"
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.expandedSize"
+            ),
+            "75"
         )
-        invalidDefaults.set(
-            "unknown-visual",
-            forKey: "preferences.codexActivity.orbAnimation"
+        XCTAssertEqual(
+            defaults.string(
+                forKey: "preferences.codexActivity.progressEffect"
+            ),
+            AppPreferences.CodexActivityProgressEffect
+                .dropField.rawValue
         )
-
-        let fallback = AppPreferences(defaults: invalidDefaults)
-
-        XCTAssertEqual(fallback.codexActivityIslandStyle, .aiOrb)
-        XCTAssertEqual(fallback.codexActivityOrbAnimation, .particleOrb)
     }
 
     @MainActor
@@ -2302,13 +2270,13 @@ final class AppBehaviorTests: XCTestCase {
 
         XCTAssertEqual(
             preferences.codexActivityProgressEffect,
-            .stateSmoke
+            .dropField
         )
         XCTAssertEqual(
             defaults.string(
                 forKey: "preferences.codexActivity.progressEffect"
             ),
-            AppPreferences.CodexActivityProgressEffect.stateSmoke.rawValue
+            AppPreferences.CodexActivityProgressEffect.dropField.rawValue
         )
     }
 
@@ -2447,42 +2415,18 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(displayID, 2)
     }
 
-    func testCodexActivityExpandedSizeScalesOnlyExpandedAIOrbGeometry() {
+    func testCodexActivityIslandUsesOnlyProgressBarGeometry() {
         let expanded = CodexActivityIslandGeometry.panelSize(
             presentation: .expanded,
-            state: .working,
-            style: .aiOrb,
-            expandedSize: .eightyFivePercent
+            state: .working
         )
-        XCTAssertEqual(expanded.width, 377.4, accuracy: 0.001)
-        XCTAssertEqual(expanded.height, 129.2, accuracy: 0.001)
+        XCTAssertEqual(expanded, NSSize(width: 462, height: 128))
 
-        let compactAtFullSize = CodexActivityIslandGeometry.panelSize(
+        let compact = CodexActivityIslandGeometry.panelSize(
             presentation: .compact,
-            state: .working,
-            style: .aiOrb,
-            expandedSize: .oneHundredPercent
+            state: .working
         )
-        let compactAtSmallSize = CodexActivityIslandGeometry.panelSize(
-            presentation: .compact,
-            state: .working,
-            style: .aiOrb,
-            expandedSize: .seventyFivePercent
-        )
-        XCTAssertEqual(compactAtFullSize, compactAtSmallSize)
-        XCTAssertEqual(compactAtSmallSize, NSSize(width: 270, height: 72))
-
-        let progressBarAtSmallSize =
-            CodexActivityIslandGeometry.panelSize(
-                presentation: .expanded,
-                state: .working,
-                style: .progressBar,
-                expandedSize: .seventyFivePercent
-            )
-        XCTAssertEqual(
-            progressBarAtSmallSize,
-            NSSize(width: 462, height: 128)
-        )
+        XCTAssertEqual(compact.height, 112, accuracy: 0.0001)
         XCTAssertEqual(
             CodexActivityIslandProgressBarGeometry.textInset,
             20
@@ -2497,12 +2441,6 @@ final class AppBehaviorTests: XCTestCase {
                 .expandedStatusAlignment(style: .progressBar),
             .trailing
         )
-        XCTAssertEqual(
-            CodexActivityIslandTextGeometry
-                .expandedStatusAlignment(style: .aiOrb),
-            .leading
-        )
-
         let progressCompactState = CodexActivityRenderState(
             visualState: .thinking,
             approximateProgressFraction: 0.42,
@@ -2513,9 +2451,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         let progressCompactSize = CodexActivityIslandGeometry.panelSize(
             presentation: .compact,
-            renderState: progressCompactState,
-            style: .progressBar,
-            expandedSize: .seventyFivePercent
+            renderState: progressCompactState
         )
         let maximumCompactTextWidth =
             CodexActivityIslandProgressBarGeometry
@@ -2555,6 +2491,239 @@ final class AppBehaviorTests: XCTestCase {
                     .fixedCompactSurfaceWidth
             )
         }
+    }
+
+    func testCodexActivityTurnTokenUsageCopyAndGeometry() {
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry.tokenUsageFontSize,
+            CodexActivityIslandProgressBarGeometry.detailFontSize
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry
+                .completionStatusFontSize,
+            16
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry
+                .completionDetailFontSize,
+            11
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry
+                .completionQuotaValueFontSize,
+            28
+        )
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry
+                .compactQuotaRingDiameter,
+            30
+        )
+        let compactSurfaceBounds = NSRect(
+            origin: .zero,
+            size: NSSize(
+                width:
+                    CodexActivityIslandProgressBarGeometry
+                    .fixedCompactSurfaceWidth,
+                height:
+                    CodexActivityIslandPresentation
+                    .compactSurfaceSize.height
+            )
+        )
+        let compactRingFrame =
+            CodexActivityIslandProgressBarGeometry
+            .compactQuotaRingFrame(in: compactSurfaceBounds)
+        XCTAssertEqual(
+            compactRingFrame.midX,
+            compactSurfaceBounds.maxX
+                - compactSurfaceBounds.height / 2,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            compactRingFrame.midY,
+            compactSurfaceBounds.midY,
+            accuracy: 0.0001
+        )
+        let expandedSurfaceWidth =
+            CodexActivityIslandProgressBarGeometry
+            .maximumExpandedPanelWidth
+            - CodexActivityIslandProgressBarGeometry.effectInset * 2
+        XCTAssertEqual(
+            CodexActivityIslandProgressBarGeometry.textInset * 2
+                + CodexActivityIslandProgressBarGeometry
+                    .completionLeftColumnWidth
+                + CodexActivityIslandProgressBarGeometry
+                    .completionColumnGap
+                + CodexActivityIslandProgressBarGeometry
+                    .completionRightColumnWidth,
+            expandedSurfaceWidth,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityTokenUsageFormatter.string(for: 999),
+            "999"
+        )
+        XCTAssertEqual(
+            CodexActivityTokenUsageFormatter.string(for: 12_800),
+            "12.8K"
+        )
+        XCTAssertEqual(
+            CodexActivityTokenUsageFormatter.string(for: 1_000_000),
+            "1M"
+        )
+
+        let chinese = CodexActivityCopy(language: .simplifiedChinese)
+        XCTAssertEqual(
+            chinese.tokenUsageTitle(totalTokens: 12_800),
+            "本次 12.8K tokens"
+        )
+        XCTAssertEqual(
+            chinese.completionTokenUsageDetail(totalTokens: 12_800),
+            "本次消耗 12.8K tokens"
+        )
+        XCTAssertEqual(
+            chinese.completionQuotaAccessibilitySuffix(
+                remainingPercent: 52
+            ),
+            "，当前额度剩余 52%"
+        )
+        XCTAssertTrue(
+            chinese.accessibilityLabel(
+                windowTitle: "Codex",
+                statusTitle: "工作中",
+                operation: "正在分析任务数据",
+                approximateProgressFraction: 0.5,
+                tokenUsageTitle: "本次 12.8K tokens"
+            ).contains("本次 12.8K tokens")
+        )
+
+        let english = CodexActivityCopy(language: .english)
+        XCTAssertEqual(
+            english.tokenUsageTitle(totalTokens: 12_800),
+            "This turn 12.8K tokens"
+        )
+        XCTAssertEqual(
+            english.completionTokenUsageDetail(totalTokens: 12_800),
+            "12.8K tokens this turn"
+        )
+        XCTAssertEqual(
+            CodexActivityQuotaRingContract.riskBand(
+                for: nil
+            ),
+            .unavailable
+        )
+        XCTAssertEqual(
+            CodexActivityQuotaRingContract.riskBand(
+                for: 82
+            ),
+            .healthy
+        )
+        XCTAssertEqual(
+            CodexActivityQuotaRingContract.riskBand(
+                for: 49
+            ),
+            .warning
+        )
+        XCTAssertEqual(
+            CodexActivityQuotaRingContract.riskBand(
+                for: 19
+            ),
+            .critical
+        )
+        XCTAssertTrue(
+            CodexActivityTurnTokenUsagePresentationContract
+                .showsCompletionReceipt(
+                    visualState: .completed,
+                    operationKey: .turnCompleted,
+                    totalTokens: 12_800
+                )
+        )
+        XCTAssertFalse(
+            CodexActivityTurnTokenUsagePresentationContract
+                .showsCompletionReceipt(
+                    visualState: .error,
+                    operationKey: .turnFailed,
+                    totalTokens: 12_800
+                )
+        )
+        XCTAssertFalse(
+            CodexActivityTurnTokenUsagePresentationContract
+                .showsCompletionReceipt(
+                    visualState: .completed,
+                    operationKey: .goalCompleted,
+                    totalTokens: 12_800
+                )
+        )
+    }
+
+    func testConfirmationReminderUsesStaticWarningEdgeEmphasis() {
+        XCTAssertEqual(
+            CodexActivityIslandConfirmationReminderContract
+                .edgeEmphasis(
+                    visualState: .awaitingConfirmation,
+                    reminderActive: false,
+                    completionEffectAvailable: true
+                ),
+            .none
+        )
+        XCTAssertEqual(
+            CodexActivityIslandConfirmationReminderContract
+                .edgeEmphasis(
+                    visualState: .awaitingConfirmation,
+                    reminderActive: true,
+                    completionEffectAvailable: false
+                ),
+            .confirmationReminder
+        )
+        XCTAssertEqual(
+            CodexActivityIslandConfirmationReminderContract
+                .edgeEmphasis(
+                    visualState: .completed,
+                    reminderActive: false,
+                    completionEffectAvailable: true
+                ),
+            .completion
+        )
+        XCTAssertTrue(
+            CodexActivityIslandConfirmationReminderContract
+                .warningColor.isEqual(
+                    CodexActivityQuotaRingContract.color(for: 49)
+                )
+        )
+    }
+
+    func testCodexActivityIslandHoverTransparencyContract() {
+        XCTAssertEqual(
+            CodexActivityIslandHoverTransparencyContract.restingAlpha,
+            1,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandHoverTransparencyContract.hoveredAlpha,
+            0.20,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandHoverTransparencyContract
+                .transitionDuration,
+            0.14,
+            accuracy: 0.0001
+        )
+
+        let hoverFrame =
+            CodexActivityIslandHoverTransparencyContract
+            .visibleSurfaceFrame(
+                panelFrame: NSRect(
+                    x: 100,
+                    y: 200,
+                    width: 462,
+                    height: 128
+                ),
+                panelInset: 30
+            )
+        XCTAssertEqual(
+            hoverFrame,
+            NSRect(x: 130, y: 230, width: 402, height: 68)
+        )
     }
 
     func testStateSmokeSimulationKeepsStateSpecificMotion() {
@@ -2791,6 +2960,278 @@ final class AppBehaviorTests: XCTestCase {
         await store.stop()
     }
 
+    @MainActor
+    func testCurrentTurnTokenUsageUsesCumulativeDeltaAndFreezesAtStop()
+        async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                source: .appServer
+            )
+        )
+        store.receive(
+            CodexActivityTokenUsageUpdate(
+                sessionHash: "session",
+                turnHash: "turn-1",
+                cumulativeTotalTokens: 10_000,
+                lastReportedTotalTokens: 4_000
+            )
+        )
+        XCTAssertEqual(store.currentTurnTokenUsage, 4_000)
+
+        store.receive(
+            CodexActivityTokenUsageUpdate(
+                sessionHash: "session",
+                turnHash: "turn-1",
+                cumulativeTotalTokens: 16_000,
+                lastReportedTotalTokens: 6_000
+            )
+        )
+        XCTAssertEqual(store.currentTurnTokenUsage, 10_000)
+
+        // A rate-limit-only rebroadcast can repeat the last request usage.
+        // The cumulative delta must not double count it.
+        store.receive(
+            CodexActivityTokenUsageUpdate(
+                sessionHash: "session",
+                turnHash: "turn-1",
+                cumulativeTotalTokens: 16_000,
+                lastReportedTotalTokens: 6_000
+            )
+        )
+        XCTAssertEqual(store.currentTurnTokenUsage, 10_000)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                source: .appServer,
+                turnCompletionStatus: .completed
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .completed)
+        XCTAssertEqual(store.currentTurnTokenUsage, 10_000)
+        await store.stop()
+    }
+
+    @MainActor
+    func testNewTurnTokenUsageStartsFromPreviousThreadTotal() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                source: .appServer
+            )
+        )
+        store.receive(
+            CodexActivityTokenUsageUpdate(
+                sessionHash: "session",
+                turnHash: "turn-1",
+                cumulativeTotalTokens: 16_000,
+                lastReportedTotalTokens: 6_000
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-1",
+                source: .appServer,
+                turnCompletionStatus: .completed
+            )
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                source: .appServer
+            )
+        )
+        XCTAssertNil(store.currentTurnTokenUsage)
+        store.receive(
+            CodexActivityTokenUsageUpdate(
+                sessionHash: "session",
+                turnHash: "turn-2",
+                cumulativeTotalTokens: 20_500,
+                lastReportedTotalTokens: 4_500
+            )
+        )
+        XCTAssertEqual(store.currentTurnTokenUsage, 4_500)
+        await store.stop()
+    }
+
+    @MainActor
+    func testLocalPlanWinsAppServerAndLegacyWithoutMovingBackward()
+        async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn",
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 2,
+                    inProgressSteps: 1,
+                    pendingSteps: 1
+                ),
+                source: .localRollout,
+                planSource: .localRollout
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.525
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn",
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 3,
+                    inProgressSteps: 1,
+                    pendingSteps: 0
+                ),
+                source: .hook,
+                planSource: .legacyTool
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.525
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn",
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 1,
+                    inProgressSteps: 1,
+                    pendingSteps: 2
+                ),
+                source: .appServer,
+                planSource: .appServer
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.525
+        )
+
+        store.receive(
+            CodexActivityEvent(
+                event: .preToolUse,
+                sessionHash: "session",
+                turnHash: "turn",
+                planProgress: CodexActivityPlanProgress(
+                    completedSteps: 0,
+                    inProgressSteps: 0,
+                    pendingSteps: 0
+                ),
+                source: .appServer,
+                planSource: .appServer
+            )
+        )
+        XCTAssertEqual(
+            store.snapshot?.approximateProgressFraction,
+            0.525
+        )
+        await store.stop()
+    }
+
+    @MainActor
+    func testInterruptedAndFailedTurnsNeverShowCompletion() async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .interrupt,
+                sessionHash: "session",
+                turnHash: "turn",
+                source: .appServer,
+                turnCompletionStatus: .interrupted
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .idle)
+        XCTAssertEqual(store.snapshot?.state, .standby)
+        XCTAssertEqual(store.snapshot?.operationKey, .turnInterrupted)
+        XCTAssertNil(store.snapshot?.approximateProgressFraction)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .userPromptSubmit,
+                sessionHash: "session",
+                turnHash: "turn-2"
+            )
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn-2",
+                source: .appServer,
+                turnCompletionStatus: .failed
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .idle)
+        XCTAssertEqual(store.snapshot?.state, .error)
+        XCTAssertEqual(store.snapshot?.operationKey, .turnFailed)
+        XCTAssertNil(store.snapshot?.approximateProgressFraction)
+        await store.stop()
+    }
+
+    @MainActor
+    func testActiveGoalPreventsTurnCompletionFromFakingGoalCompletion()
+        async {
+        let store = CodexActivityStore(
+            titleClient: CodexAppServerClient(executablePath: nil)
+        )
+        store.receive(
+            CodexActivityEvent(
+                event: .postToolUse,
+                sessionHash: "session",
+                turnHash: "turn",
+                toolCategory: .goal,
+                source: .appServer,
+                goalStatus: .active
+            )
+        )
+        XCTAssertNil(store.snapshot?.approximateProgressFraction)
+
+        store.receive(
+            CodexActivityEvent(
+                event: .stop,
+                sessionHash: "session",
+                turnHash: "turn",
+                source: .appServer,
+                turnCompletionStatus: .completed
+            )
+        )
+        XCTAssertEqual(store.lifecycle, .idle)
+        XCTAssertEqual(store.snapshot?.state, .standby)
+        XCTAssertEqual(store.snapshot?.operationKey, .followingGoal)
+        XCTAssertNil(store.snapshot?.approximateProgressFraction)
+        await store.stop()
+    }
+
     func testStateSmokeProgressProjectionTracksApproximateProgress() {
         var projection = CodexActivityStateSmokeProgressProjection()
         XCTAssertEqual(
@@ -2854,9 +3295,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         let compactPanelSize = CodexActivityIslandGeometry.panelSize(
             presentation: .expanded,
-            renderState: compactRenderState,
-            style: .progressBar,
-            expandedSize: .oneHundredPercent
+            renderState: compactRenderState
         )
         XCTAssertEqual(
             compactPanelSize.height,
@@ -2882,9 +3321,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         let widePanelSize = CodexActivityIslandGeometry.panelSize(
             presentation: .expanded,
-            renderState: wideRenderState,
-            style: .progressBar,
-            expandedSize: .seventyFivePercent
+            renderState: wideRenderState
         )
         XCTAssertEqual(widePanelSize, compactPanelSize)
         XCTAssertEqual(
@@ -3391,6 +3828,14 @@ final class AppBehaviorTests: XCTestCase {
             CodexActivityIslandCompletionGlowGeometry.shadowOpacity,
             1,
             accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            CodexActivityIslandCompletionPalette.gradientLocations,
+            [0, 0.52, 1]
+        )
+        XCTAssertNotEqual(
+            CodexActivityIslandCompletionPalette.violet,
+            CodexActivityIslandCompletionPalette.cyan
         )
     }
 

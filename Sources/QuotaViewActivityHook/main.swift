@@ -22,6 +22,7 @@ private enum HookEvent: String, Codable {
     case postCompact = "PostCompact"
     case subagentStart = "SubagentStart"
     case subagentStop = "SubagentStop"
+    case interrupt = "Interrupt"
     case stop = "Stop"
 }
 
@@ -30,7 +31,16 @@ private enum ToolCategory: String, Codable {
     case fileEdit
     case mcp
     case subagent
+    case goal
     case localTool
+}
+
+private enum ActivitySource: String, Codable {
+    case hook
+}
+
+private enum PlanSource: String, Codable {
+    case legacyTool
 }
 
 private enum SessionStartSource: String, Codable {
@@ -55,6 +65,8 @@ private struct SanitizedActivity: Codable {
     let toolCategory: ToolCategory?
     let sessionStartSource: SessionStartSource?
     let planProgress: SanitizedPlanProgress?
+    let source: ActivitySource
+    let planSource: PlanSource?
     let occurredAt: Date
 }
 
@@ -137,6 +149,14 @@ private func toolCategory(_ canonicalName: String?) -> ToolCategory? {
     if canonicalName.hasPrefix("mcp__") {
         return .mcp
     }
+    if ["create_goal", "get_goal", "update_goal"].contains(
+        canonicalName
+    ) || canonicalName.hasSuffix("__create_goal")
+        || canonicalName.hasSuffix("__get_goal")
+        || canonicalName.hasSuffix("__update_goal")
+    {
+        return .goal
+    }
     return .localTool
 }
 
@@ -172,8 +192,13 @@ private func sanitize(_ data: Data) -> SanitizedActivity? {
 
     let turnID = input["turn_id"] as? String
     let toolName = input["tool_name"] as? String
+    let planProgress = sanitizedPlanProgress(
+        event: event,
+        toolName: toolName,
+        toolInput: input["tool_input"]
+    )
     return SanitizedActivity(
-        schemaVersion: 2,
+        schemaVersion: 3,
         event: event,
         sessionHash: hashIdentifier(sessionID),
         turnHash: turnID.map(hashIdentifier),
@@ -181,11 +206,9 @@ private func sanitize(_ data: Data) -> SanitizedActivity? {
         toolCategory: toolCategory(toolName),
         sessionStartSource: (input["source"] as? String)
             .flatMap(SessionStartSource.init(rawValue:)),
-        planProgress: sanitizedPlanProgress(
-            event: event,
-            toolName: toolName,
-            toolInput: input["tool_input"]
-        ),
+        planProgress: planProgress,
+        source: .hook,
+        planSource: planProgress == nil ? nil : .legacyTool,
         occurredAt: Date()
     )
 }

@@ -15,6 +15,7 @@ final class CodexActivityModelsTests: XCTestCase {
             .postCompact: .thinking,
             .subagentStart: .working,
             .subagentStop: .thinking,
+            .interrupt: .standby,
             .stop: .completed
         ]
 
@@ -80,6 +81,10 @@ final class CodexActivityModelsTests: XCTestCase {
             CodexActivityPrivacy.toolCategory(for: "update_plan"),
             .localTool
         )
+        XCTAssertEqual(
+            CodexActivityPrivacy.toolCategory(for: "update_goal"),
+            .goal
+        )
     }
 
     func testSessionHashIsStableAndDoesNotContainSourceIdentifier() {
@@ -100,6 +105,23 @@ final class CodexActivityModelsTests: XCTestCase {
             "QuotaView"
         )
         XCTAssertNil(CodexActivityPrivacy.workspaceName(from: nil))
+    }
+
+    func testSchemaTwoEventsDecodeWithoutSchemaThreeFields() throws {
+        let data = Data(
+            #"{"schemaVersion":2,"event":"PreToolUse","sessionHash":"legacy-session","turnHash":null,"workspaceName":null,"toolCategory":"localTool","sessionStartSource":null,"planProgress":null,"occurredAt":0}"#.utf8
+        )
+
+        let event = try JSONDecoder().decode(
+            CodexActivityEvent.self,
+            from: data
+        )
+
+        XCTAssertEqual(event.schemaVersion, 2)
+        XCTAssertNil(event.source)
+        XCTAssertNil(event.planSource)
+        XCTAssertNil(event.turnCompletionStatus)
+        XCTAssertNotNil(CodexActivityReducer.snapshot(for: event))
     }
 
     func testThreadMetadataPrefersExplicitNameWithoutUsingPreview() {
@@ -134,6 +156,14 @@ final class CodexActivityModelsTests: XCTestCase {
             CodexActivityReducer.shouldStartInactivityCycle(
                 after: CodexActivityEvent(
                     event: .stop,
+                    sessionHash: "session"
+                )
+            )
+        )
+        XCTAssertTrue(
+            CodexActivityReducer.shouldStartInactivityCycle(
+                after: CodexActivityEvent(
+                    event: .interrupt,
                     sessionHash: "session"
                 )
             )

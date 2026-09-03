@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.5-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.3-build.1/QuotaView-v0.4.3-build.1.zip"><strong>下载 QuotaView v0.4.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.5-build.1/QuotaView-v0.4.5-build.1.zip"><strong>下载 QuotaView v0.4.5 Build 1</strong></a>
   ·
   <a href="#隐私设计">隐私说明</a>
   ·
@@ -40,12 +40,12 @@ QuotaView 是一款开源、轻量的原生 macOS Codex 助手，使用本机已
 
 | | |
 | --- | --- |
-| **Codex 灵动岛** | 通过 AI 球或进度烟雾界面查看思考、工具调用、权限确认、上下文压缩、完成与失败状态。 |
+| **Codex 灵动岛** | 通过统一的进度界面查看思考、工具调用、权限确认、上下文压缩、完成与失败状态。 |
 | **一眼掌握** | 无需离开当前应用，即可从菜单栏或原生桌面小组件查看本周期与 Spark 额度、重置倒计时、Credits 和可用状态。 |
 | **用量概览** | 查看最近一天、30 日 Token，以及明确标注为估算值的本地 30 日成本估算。 |
 | **Token 活动** | 通过紧凑的单色图表查看每日 Token 用量，并切换周、月、三个月和半年。 |
 | **应用更新** | 安装本版本后可手动检查 Stable 通道，或主动开启每 24 小时一次的原生自动检查。 |
-| **本地连接** | 通过 JSON-RPC 与本机启动的 `codex app-server` 进程通信。 |
+| **本地任务桥** | 新版 Codex 首次启动即可使用：QuotaView 只读跟随本地任务流，无需配置 Hook。 |
 | **简洁设计** | 专注必要的额度信息，以紧凑、无冗余的界面降低干扰。 |
 | **轻量原生** | 使用 SwiftUI 和 AppKit 原生构建，不包含嵌入式浏览器运行层。 |
 | **按需显示** | 可以选择菜单栏显示的数值，以及面板中需要出现的内容区域。 |
@@ -53,11 +53,11 @@ QuotaView 是一款开源、轻量的原生 macOS Codex 助手，使用本机已
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 前往 [v0.4.3 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1) 下载 `QuotaView-v0.4.3-build.1.zip`。
+2. 前往 [v0.4.5 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.5-build.1) 下载 `QuotaView-v0.4.5-build.1.zip`。
 3. 解压后打开 `QuotaView.app`。
 
 > [!IMPORTANT]
-> v0.4.3 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
+> v0.4.5 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成 Staple，
 > 可在解压后正常打开，不再需要旧版未签名构建所使用的 Finder 右键打开
 > 方式。
 
@@ -76,7 +76,7 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 ## 原生使用体验
 
-- Codex 灵动岛提供最大态、紧凑态、AI 球和进度条两种样式、状态化 Metal
+- Codex 灵动岛提供最大态、紧凑态、感知进度的量子噪点界面、状态化 Metal
   动效，并在任务完成后自动收起
 - 紧凑的状态栏入口和可动态调整高度的菜单面板
 - 每 60 秒自动刷新，同时支持手动刷新
@@ -88,6 +88,27 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 - 支持简体中文和英文界面
 - 原生设置窗口包含菜单栏、面板内容、Codex 灵动岛、外观、语言和通用选项
 - 提供小号与中号两种原生 WidgetKit 小组件
+
+## 0.4.5 新功能：Codex 即开即用
+
+QuotaView 0.4.5 为新版 Codex 接入只读本地任务桥，不再要求首次安装 Hook，
+同时让灵动岛在运行、等待确认和完成时提供更完整的任务反馈。
+
+<p align="center">
+  <img src="Resources/QuotaView-0.4.5-Activity-Bridge.png" alt="QuotaView 0.4.5 实时显示 Codex 任务状态与本次 Token 消耗" width="100%">
+</p>
+
+- **新版 Codex 无需 Hook：** QuotaView 自动发现正在运行的本地任务，并持续
+  跟随生命周期、计划步骤计数和 Token 总量；签名 Hook 仅作为旧环境兼容回退。
+- **数据桥保持隐私边界：** QuotaView 只接收脱敏标识、状态、计划计数、
+  粗粒度工具类别、工作区名称、时间和 Token 数值；提示词、推理、消息、命令、
+  参数、工具输出、Diff 与完成正文都会被忽略。
+- **灵动岛信息更完整：** 量子噪点成为默认且唯一的灵动岛样式；运行时显示
+  本次任务 Token，成功完成后显示本次总量和剩余额度，缩小后通过额度圆环
+  保留关键信息。
+- **状态提醒更明确：** Hover 时灵动岛保留 20% 可见度，减少对后方内容的
+  遮挡；等待确认超过 10 秒会出现黄色描边和光晕，完成态则保留紫蓝青描边
+  与光晕。
 
 ## 0.4.3 新功能：更清晰的进度反馈
 
@@ -188,7 +209,7 @@ QuotaView 0.3.5 将 0.3.4 扩展的用量概览纳入稳定版本，并首次支
   不会访问更新源。
 
 0.3.5 Build 5 是首个包含更新器的版本，因此需要手动安装；符合正式签名
-环境的安装现在可以通过 Stable 通道更新到 0.4.3 Build 1。
+环境的安装现在可以通过 Stable 通道更新到 0.4.5 Build 1。
 
 ## 0.3.3 新功能：Token 活动统计
 
@@ -214,7 +235,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
 
 > [!NOTE]
 > 0.3.2 Preview 1 是用于验证 Codex 灵动岛多任务体验的抢先预览版。
-> v0.4.3 Build 1 是推荐稳定版，不包含这套实验性多任务实现。
+> v0.4.5 Build 1 是推荐稳定版，不包含这套实验性多任务实现。
 
 [下载 QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 
@@ -237,7 +258,7 @@ QuotaView 0.3.3 在状态栏菜单的用量数据下方新增紧凑的每日 Tok
   发生调整时，可能出现跟随滞后或未命中；
 - 任务切换、长标题跑马灯以及最大态/紧凑态切换节奏仍需要继续优化体验与
   性能；
-- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.4.3 Build 1。
+- 本版本用于预览验证。如果更重视稳定体验，请使用 v0.4.5 Build 1。
 
 ## 0.3.1 Build 2 小组件热修复
 
@@ -285,11 +306,15 @@ QuotaView 会启动本地 `codex app-server` 进程，并通过 JSON-RPC 请求�
 主 App 只会向 App Group 写入有界、脱敏的快照供 WidgetKit 扩展读取；
 其中不包含身份认证 Token、Cookie、账号标识、完整服务器响应或用量历史。
 
-Codex 灵动岛使用官方 Codex Hooks 与独立签名的本地 Helper，只转发哈希
-会话标识、工作区路径最后一级、事件类型、粗粒度工具类别、会话来源、时间，
-以及存在计划时的完成/进行中/待处理步骤数量。它不会转发步骤文字、计划说明、
-包装器原始脚本、提示词、命令、参数、工具输出或会话记录路径，也不会绕过
-官方 Hook 信任确认。
+对于新版 Codex，灵动岛会以只读方式跟随本地任务流。QuotaView 只查询
+`~/.codex/state_5.sqlite` 中有界的 rollout 路径，只接受
+`~/.codex/sessions` 内的文件，并增量提取哈希会话与 turn 标识、工作区路径
+最后一级、事件类型、粗粒度工具类别、时间、Token 数值，以及存在计划时的
+完成/进行中/待处理步骤数量。提示词、推理、消息、命令、参数、工具输出、
+Diff、完成正文和原始会话内容都不会进入 QuotaView 的模型、缓存或诊断。
+
+独立签名的 Codex Hook 继续作为旧环境兼容回退，并保持相同的脱敏边界；
+需要使用时仍遵循 Codex 官方信任流程，新版 Codex 则无需安装 Hook 或重启。
 
 本地诊断命令：
 

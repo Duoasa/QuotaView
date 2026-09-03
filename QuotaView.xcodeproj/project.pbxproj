@@ -54,6 +54,9 @@
 		B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */; };
 		B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* CodexActivityStateSmoke.swift */; };
 		B10000000000000000000030 /* PlanProgressParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000034 /* PlanProgressParser.swift */; };
+		B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */; };
+		B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */; };
+		B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -176,6 +179,9 @@
 		F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/CodexActivityRippleGlowShader.txt; sourceTree = "<group>"; };
 		F10000000000000000000033 /* CodexActivityStateSmoke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityStateSmoke.swift; sourceTree = "<group>"; };
 		F10000000000000000000034 /* PlanProgressParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressParser.swift; sourceTree = "<group>"; };
+		F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerActivityNotificationDecoder.swift; sourceTree = "<group>"; };
+		F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSharedAppServerActivityClient.swift; sourceTree = "<group>"; };
+		F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalRolloutActivityClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -273,6 +279,9 @@
 		G10000000000000000000004 /* QuotaViewCore */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */,
+				F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */,
+				F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */,
 				F10000000000000000000004 /* CodexAppServerClient.swift */,
 				F10000000000000000000005 /* CodexExecutableLocator.swift */,
 				F10000000000000000000006 /* CodexModels.swift */,
@@ -615,6 +624,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */,
+				B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */,
+				B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */,
 				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,
 				B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */,
 				B10000000000000000000008 /* CodexModels.swift in Sources */,

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.5-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.3-build.1/QuotaView-v0.4.3-build.1.zip"><strong>Download QuotaView v0.4.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.5-build.1/QuotaView-v0.4.5-build.1.zip"><strong>Download QuotaView v0.4.5 Build 1</strong></a>
   ·
   <a href="#privacy-by-design">Privacy</a>
   ·
@@ -40,12 +40,12 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 
 | | |
 | --- | --- |
-| **Codex Island** | Follow thinking, tool use, approvals, context compaction, completion, and failures through an AI Orb or progress-aware smoke surface. |
+| **Codex Island** | Follow thinking, tool use, approvals, context compaction, completion, and failures through one progress-aware surface. |
 | **At a glance** | See period and Spark quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
 | **Usage overview** | Review the latest day, 30-day tokens, and a clearly labeled 30-day local cost estimate. |
 | **Token Activity** | Review daily token usage in a compact monochrome chart with week, month, three-month, and six-month ranges. |
 | **App updates** | Manually check the Stable channel or opt into a native 24-hour automatic check after installing this version. |
-| **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
+| **Local activity bridge** | Current Codex releases work on first launch: QuotaView follows the local task stream read-only, with no Hook setup required. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
 | **Lightweight** | Built natively with SwiftUI and AppKit, with no embedded browser runtime. |
 | **Made to fit** | Choose what appears in the menu bar and which sections appear in the panel. |
@@ -53,11 +53,11 @@ QuotaView is an open-source, lightweight, native macOS companion for the Codex a
 ## Quick start
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.4.3-build.1.zip` from the [v0.4.3 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1).
+2. Download `QuotaView-v0.4.5-build.1.zip` from the [v0.4.5 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.5-build.1).
 3. Unzip it and open `QuotaView.app`.
 
 > [!IMPORTANT]
-> v0.4.3 Build 1 is signed with a Developer ID certificate, notarized by Apple, and
+> v0.4.5 Build 1 is signed with a Developer ID certificate, notarized by Apple, and
 > stapled for offline Gatekeeper verification. It can be opened normally after
 > unzipping, without using the Finder right-click workaround required by older
 > unsigned builds.
@@ -77,8 +77,8 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 ## Native experience
 
-- Codex Island with expanded and compact states, AI Orb and Progress Bar
-  styles, status-aware Metal motion, and automatic dismissal after completion
+- Codex Island with expanded and compact states, a progress-aware Quantum
+  Noise surface, status-aware Metal motion, and automatic dismissal after completion
 - Compact status item with a dynamically sized menu panel
 - Automatic refresh every 60 seconds and manual refresh
 - Manual Stable update checks and an opt-in 24-hour automatic check
@@ -89,6 +89,33 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 - English and Simplified Chinese interfaces
 - Native Settings window for Menu Bar, Popover, Codex Island, Appearance, Language, and General options
 - Native WidgetKit widgets in Small and Medium sizes
+
+## What's new in 0.4.5: Codex activity, ready on first launch
+
+QuotaView 0.4.5 replaces first-run Hook setup for current Codex releases with a
+read-only local activity bridge and gives Codex Island a clearer running and
+completion story.
+
+<p align="center">
+  <img src="Resources/QuotaView-0.4.5-Activity-Bridge.png" alt="QuotaView 0.4.5 showing live Codex task status and turn token usage" width="100%">
+</p>
+
+- **No Hook setup for current Codex:** QuotaView discovers active local tasks
+  automatically and follows their lifecycle, plan counts, and token totals as
+  they change. The signed Hook remains only as a compatibility fallback for
+  older environments.
+- **A privacy-bounded data bridge:** Only sanitized identifiers, state, plan
+  counts, coarse tool categories, workspace name, timestamps, and token numbers
+  reach QuotaView's model. Prompts, reasoning, messages, commands, arguments,
+  tool output, diffs, and completion text are ignored.
+- **A more useful Codex Island:** Quantum Noise is now the default and only
+  Island style. Running tasks show live turn tokens; successful completion
+  shows the turn total and remaining quota, with a compact quota ring after the
+  Island shrinks.
+- **Stronger state feedback:** Hovering leaves the Island 20% visible so content
+  behind it stays readable. A confirmation that waits longer than 10 seconds
+  gains a yellow outline and halo; completion keeps its violet-blue-cyan
+  outline and glow.
 
 ## What's new in 0.4.3: Clearer progress feedback
 
@@ -214,7 +241,7 @@ version that can check future signed releases from inside the app.
   or unexpected-signing-team builds.
 
 Because 0.3.5 Build 5 was the first release containing the updater, it required
-a manual install. Approved installations can update to 0.4.3 Build 1 through
+a manual install. Approved installations can update to 0.4.5 Build 1 through
 the Stable channel.
 
 ## What's new in 0.3.3: Token Activity
@@ -246,7 +273,7 @@ in the stable 0.3.3 source.
 
 > [!NOTE]
 > 0.3.2 Preview 1 is an early-access release for validating multi-task Codex
-> Island behavior. v0.4.3 Build 1 is the recommended stable version and does
+> Island behavior. v0.4.5 Build 1 is the recommended stable version and does
 > not include this experimental multi-task implementation.
 
 [Download QuotaView 0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
@@ -273,7 +300,7 @@ Known preview limitations:
   unresolved, duplicated, changed quickly, or affected by Codex UI changes.
 - Task switching, title marquee behavior, and compact/expanded transition
   rhythm still need experience and performance refinement.
-- This build is intended for preview validation. Use v0.4.3 Build 1 when stable
+- This build is intended for preview validation. Use v0.4.5 Build 1 when stable
   behavior is more important than multi-task support.
 
 ## 0.3.1 Build 2 widget hotfix
@@ -328,13 +355,19 @@ The main app writes only a bounded, sanitized snapshot to its App Group for the
 WidgetKit extension. The snapshot contains no authentication token, cookie,
 account identifier, complete server response, or usage history.
 
-Codex Island uses official Codex Hooks and a signed local helper. It forwards
-only hashed session identifiers, the final workspace path component, event
-type, coarse tool category, session source, timestamp, and—when available—only
-the completed, in-progress, and pending plan-step counts. It never forwards
-step text, plan explanations, raw wrapper scripts, prompts, commands,
-arguments, tool output, or transcript paths, and it never bypasses the
-official Hook trust confirmation.
+For current Codex releases, Codex Island follows the local task stream
+read-only. It queries `~/.codex/state_5.sqlite` for bounded rollout locations,
+accepts only files inside `~/.codex/sessions`, and incrementally extracts only
+hashed session and turn identifiers, the final workspace path component, event
+type, coarse tool category, timestamp, token numbers, and—when available—the
+completed, in-progress, and pending plan-step counts. Prompts, reasoning,
+messages, commands, arguments, tool output, diffs, completion text, and raw
+transcript content never enter QuotaView's model, cache, or diagnostics.
+
+The signed Codex Hook remains a compatibility fallback for older environments.
+It keeps the same sanitized event boundary and continues to use Codex's
+official trust flow when it is needed; current Codex releases require no Hook
+installation or restart.
 
 For local diagnostics:
 

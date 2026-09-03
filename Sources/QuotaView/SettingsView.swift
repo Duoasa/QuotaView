@@ -521,77 +521,6 @@ struct SettingsView: View {
 
                 NativeSettingsRow(
                     title: copy.text(
-                        "灵动岛样式",
-                        "Island Style"
-                    ),
-                    subtitle: copy.text(
-                        "在 AI 球与独立的进度条灵动岛之间切换。",
-                        "Switch between the AI Orb and the independent Progress Bar island."
-                    )
-                ) {
-                    NativeSettingsSegmentedPicker(
-                        copy.text("灵动岛样式", "Island Style"),
-                        selection:
-                            $preferences.codexActivityIslandStyle
-                    ) {
-                        Text(copy.text("AI 球", "AI Orb"))
-                            .tag(
-                                AppPreferences
-                                    .CodexActivityIslandStyle.aiOrb
-                            )
-                        Text(copy.text("进度条", "Progress Bar"))
-                            .tag(
-                                AppPreferences
-                                    .CodexActivityIslandStyle.progressBar
-                            )
-                    }
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsRow(
-                    title: copy.text(
-                        "展开尺寸",
-                        "Expanded Size"
-                    ),
-                    subtitle: copy.text(
-                        "仅缩放 AI 球灵动岛的展开状态；进度条与紧凑状态保持原尺寸。",
-                        "Scale only the expanded AI Orb island. The Progress Bar and compact states keep their original size."
-                    )
-                ) {
-                    NativeSettingsSegmentedPicker(
-                        copy.text("展开尺寸", "Expanded Size"),
-                        selection: $preferences.codexActivityExpandedSize
-                    ) {
-                        ForEach(
-                            AppPreferences.CodexActivityExpandedSize
-                                .allCases
-                        ) { size in
-                            Text("\(size.rawValue)%")
-                                .tag(size)
-                        }
-                    }
-                    .disabled(
-                        preferences.codexActivityIslandStyle
-                            != .aiOrb
-                    )
-                    .help(copy.text(
-                        "选择 AI 球灵动岛展开状态的固定缩放档位。",
-                        "Choose a fixed scale for the expanded AI Orb island."
-                    ))
-                    .accessibilityLabel(copy.text(
-                        "AI 球灵动岛展开尺寸",
-                        "AI Orb island expanded size"
-                    ))
-                    .accessibilityValue(
-                        "\(preferences.codexActivityExpandedSize.rawValue)%"
-                    )
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsRow(
-                    title: copy.text(
                         "锁定到 Codex 屏幕",
                         "Lock to Codex Screen"
                     ),
@@ -679,6 +608,8 @@ struct SettingsView: View {
                         .disabled(
                             activityRuntime.isConfiguring
                                 || activityRuntime.isOpeningSecurityReview
+                                || activityRuntime
+                                    .isNativeActivityConnected
                         )
                         .help(codexActivityActionHelp)
                         .accessibilityLabel(codexActivityActionTitle)
@@ -697,10 +628,7 @@ struct SettingsView: View {
                 NativeSettingsDivider()
 
                 NativeSettingsNote(
-                    text: copy.text(
-                        "首次连接只需进行一次 Codex 安全确认。QuotaView 不读取提示词、命令正文、工具输出或会话记录。",
-                        "First-time setup requires one Codex security review. QuotaView does not read prompts, command text, tool output, or transcripts."
-                    )
+                    text: codexActivityPrivacyNote
                 )
 
                 NativeSettingsDivider()
@@ -741,60 +669,33 @@ struct SettingsView: View {
                 .padding(.vertical, 11)
             }
 
-            if preferences.codexActivityIslandStyle == .aiOrb {
-                NativeSettingsCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(copy.text(
-                                "AI 球动画",
-                                "AI Orb Animation"
-                            ))
-                            .font(.body.weight(.medium))
+            NativeSettingsCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(copy.text(
+                            "进度条效果",
+                            "Progress Effect"
+                        ))
+                        .font(.body.weight(.medium))
 
-                            Text(copy.text(
-                                "选择 AI 球灵动岛使用的球体动画。",
-                                "Choose the orb animation used by the AI Orb island."
-                            ))
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                        }
+                        Text(copy.text(
+                            "选择进度条灵动岛内部使用的动态效果。预览固定展示 60% 工作状态。",
+                            "Choose the animated effect inside the Progress Bar island. Previews show a fixed 60% working state."
+                        ))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    }
 
-                        HStack(spacing: 12) {
-                            codexActivityAnimationOption(.particleOrb)
-                            codexActivityAnimationOption(.rippleGlow)
+                    HStack(spacing: 10) {
+                        ForEach(
+                            AppPreferences
+                                .CodexActivityProgressEffect.allCases
+                        ) { effect in
+                            codexActivityProgressEffectOption(effect)
                         }
                     }
-                    .padding(18)
                 }
-            } else {
-                NativeSettingsCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(copy.text(
-                                "进度条效果",
-                                "Progress Effect"
-                            ))
-                            .font(.body.weight(.medium))
-
-                            Text(copy.text(
-                                "选择进度条灵动岛内部使用的动态效果。预览固定展示 60% 工作状态。",
-                                "Choose the animated effect inside the Progress Bar island. Previews show a fixed 60% working state."
-                            ))
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                        }
-
-                        HStack(spacing: 10) {
-                            ForEach(
-                                AppPreferences
-                                    .CodexActivityProgressEffect.allCases
-                            ) { effect in
-                                codexActivityProgressEffectOption(effect)
-                            }
-                        }
-                    }
-                    .padding(18)
-                }
+                .padding(18)
             }
 
             NativeSettingsCard {
@@ -840,8 +741,8 @@ struct SettingsView: View {
 
                 NativeSettingsNote(
                     text: copy.text(
-                        "任何新活动都会立即重新展开。开启“减少动态效果”时，窗口与球体使用静态状态反馈。",
-                        "New activity immediately expands the island. With Reduce Motion enabled, the window and orb use static state feedback."
+                        "任何新活动都会立即重新展开。开启“减少动态效果”时，窗口与内部效果使用静态状态反馈。",
+                        "New activity immediately expands the island. With Reduce Motion enabled, the window and internal effect use static state feedback."
                     )
                 )
             }
@@ -849,76 +750,6 @@ struct SettingsView: View {
         .onAppear {
             activityRuntime.refreshConnectionStatus()
         }
-    }
-
-    private func codexActivityAnimationOption(
-        _ animation: AppPreferences.CodexActivityOrbAnimation
-    ) -> some View {
-        let isSelected = preferences.codexActivityOrbAnimation == animation
-        let title = switch animation {
-        case .particleOrb:
-            copy.text("粒子球", "Particle Orb")
-        case .rippleGlow:
-            copy.text("波澜光晕", "Ripple Glow")
-        }
-
-        return Button {
-            preferences.codexActivityOrbAnimation = animation
-        } label: {
-            VStack(spacing: 8) {
-                codexActivityAnimationPreview(
-                    animation: animation,
-                    reduceMotion: reduceMotion
-                )
-                .frame(width: 88, height: 88)
-
-                Text(title)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                isSelected
-                    ? Color(nsColor: .controlAccentColor)
-                        .opacity(0.10)
-                    : Color(nsColor: .windowBackgroundColor),
-                in: RoundedRectangle(
-                    cornerRadius: 10,
-                    style: .continuous
-                )
-            )
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: 10,
-                    style: .continuous
-                )
-                .strokeBorder(
-                    isSelected
-                        ? Color(nsColor: .controlAccentColor)
-                        : Color(nsColor: .separatorColor),
-                    lineWidth: isSelected ? 1.5 : 0.5
-                )
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityValue(
-            isSelected
-                ? copy.text("已选择", "Selected")
-                : copy.text("未选择", "Not selected")
-        )
-    }
-
-    private func codexActivityAnimationPreview(
-        animation: AppPreferences.CodexActivityOrbAnimation,
-        reduceMotion: Bool
-    ) -> some View {
-        CodexActivityOrbPreview(
-            animation: animation,
-            reduceMotion: reduceMotion
-        )
     }
 
     private func codexActivityProgressEffectOption(
@@ -1315,6 +1146,9 @@ struct SettingsView: View {
         if activityRuntime.isOpeningSecurityReview {
             return copy.text("正在打开", "Opening")
         }
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text("自动连接", "Automatic")
+        }
         return switch activityRuntime.connectionStatus {
         case .notInstalled:
             copy.text("连接 Codex", "Connect Codex")
@@ -1330,6 +1164,12 @@ struct SettingsView: View {
     }
 
     private var codexActivityActionHelp: String {
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text(
+                "已自动连接 Codex 本地任务流，无需安装或信任 Hook。",
+                "Connected automatically to the local Codex task stream; no Hook installation or trust is required."
+            )
+        }
         return switch activityRuntime.connectionStatus {
         case .installedNeedsRestart:
             copy.text(
@@ -1386,10 +1226,15 @@ struct SettingsView: View {
                 "Restart is complete. Send a new Codex message to finish connecting."
             )
         case .connected:
-            copy.text(
-                "连接已激活，灵动岛会实时显示 Codex 当前状态。",
-                "The connection is active and the island now reflects the current Codex status."
-            )
+            activityRuntime.isNativeActivityConnected
+                ? copy.text(
+                    "已自动连接 Codex 本地任务流，灵动岛会直接接收实时状态。",
+                    "Connected automatically to the local Codex task stream for live island updates."
+                )
+                : copy.text(
+                    "连接已激活，灵动岛会实时显示 Codex 当前状态。",
+                    "The connection is active and the island now reflects the current Codex status."
+                )
         case .abnormal(let message):
             message
         }
@@ -1410,7 +1255,9 @@ struct SettingsView: View {
         case .awaitingFirstEvent:
             copy.text("等待第一条消息", "Waiting for First Message")
         case .connected:
-            copy.text("已连接", "Connected")
+            activityRuntime.isNativeActivityConnected
+                ? copy.text("本地任务流已连接", "Local Task Stream Connected")
+                : copy.text("已连接", "Connected")
         case .abnormal:
             copy.text("需要处理", "Needs Attention")
         }
@@ -1445,7 +1292,13 @@ struct SettingsView: View {
     }
 
     private var codexHooksFeatureTitle: String {
-        switch activityRuntime.hooksFeatureStatus {
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text(
+                "只读本地任务流",
+                "Read-only Local Task Stream"
+            )
+        }
+        return switch activityRuntime.hooksFeatureStatus {
         case .checking:
             copy.text("检测中", "Checking")
         case .enabled:
@@ -1508,7 +1361,13 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeSubtitle: String {
-        switch activityRuntime.bridgeStatus {
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text(
+                "只读跟随 Codex 本地任务事件；仅提取任务状态、计划计数、Token 数值和脱敏标识，Socket 与 Hook 保留为回退。",
+                "Follows local Codex task events read-only; only task state, plan counts, token values, and sanitized identifiers are extracted, with Socket and Hook retained as fallbacks."
+            )
+        }
+        return switch activityRuntime.bridgeStatus {
         case .listening:
             copy.text(
                 "通过当前用户的本地 Unix Socket 接收脱敏事件；受限时自动回退到权限隔离的本地队列。",
@@ -1525,7 +1384,10 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeStatusTitle: String {
-        switch activityRuntime.bridgeStatus {
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text("本地任务流", "Local Task Stream")
+        }
+        return switch activityRuntime.bridgeStatus {
         case .listening:
             copy.text("监听中", "Listening")
         case .stopped:
@@ -1536,7 +1398,10 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeColor: Color {
-        switch activityRuntime.bridgeStatus {
+        if activityRuntime.isNativeActivityConnected {
+            return Color(nsColor: .systemGreen)
+        }
+        return switch activityRuntime.bridgeStatus {
         case .listening:
             Color(nsColor: .systemGreen)
         case .stopped:
@@ -1544,6 +1409,19 @@ struct SettingsView: View {
         case .failed:
             Color(nsColor: .systemRed)
         }
+    }
+
+    private var codexActivityPrivacyNote: String {
+        if activityRuntime.isNativeActivityConnected {
+            return copy.text(
+                "QuotaView 会只读解析 Codex 的结构化任务记录，但不会保存提示词、回复、推理、命令正文、工具输出或会话原文。",
+                "QuotaView reads structured Codex task records without storing prompts, responses, reasoning, command text, tool output, or transcript content."
+            )
+        }
+        return copy.text(
+            "共享 App Server 不可用时，可启用兼容 Hook。QuotaView 不读取提示词、命令正文、工具输出或会话记录。",
+            "When the shared App Server is unavailable, the compatibility Hook can be enabled. QuotaView does not read prompts, command text, tool output, or transcripts."
+        )
     }
 }
 
@@ -1722,24 +1600,6 @@ private struct SettingsTrafficLightHost: NSViewRepresentable {
                 )
             }
         }
-    }
-}
-
-private struct CodexActivityOrbPreview: NSViewRepresentable {
-    let animation: AppPreferences.CodexActivityOrbAnimation
-    let reduceMotion: Bool
-
-    func makeNSView(context: Context) -> CodexActivityOrbPreviewHostView {
-        let view = CodexActivityOrbPreviewHostView(animation: animation)
-        view.update(animation: animation, reduceMotion: reduceMotion)
-        return view
-    }
-
-    func updateNSView(
-        _ view: CodexActivityOrbPreviewHostView,
-        context: Context
-    ) {
-        view.update(animation: animation, reduceMotion: reduceMotion)
     }
 }
 
