@@ -2,7 +2,7 @@
 
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009`
 >
-> 状态：`Accepted / Verifying`
+> 状态：`Accepted / Released`
 >
 > 日期：2026-08-30
 >
@@ -41,7 +41,7 @@
 - 不改变近似进度算法、Hook 事件、完成真相或隐藏时机；
 - 不改变 `stateSmoke`、`diamondFront`、`sloshFlow` 的运动语言；
 - 不建立新纹理、网络读取、文件读取或新的持久化字段；
-- 本轮不封包、不发布、不更新 appcast。
+- 实现阶段不自行封包或发布；只有产品所有者指定精确版本并批准后进入发布链。
 
 ## 验证
 
@@ -98,7 +98,9 @@
 - 量子噪点保留既有闪灭曲线并将粒子不透明度提高 `10%`、峰值钳制为
   `1.0`；生产渲染契约定向冒烟测试 1 项通过、0 失败，Universal Release
   无签名构建通过；
-- 2026-08-30 按产品所有者要求冻结为未指定发布版本的本地检查点；最终视觉
-  微调后未重跑完整测试，继续保留各项定向冒烟与 Universal 构建证据；
-- 尚未封包、签名、公证、推送、创建 tag 或修改 appcast；颜色换色稳定性、闪灭强度、
-  完成亮度与高亮粒子覆盖率等待产品所有者手动验收。
+- 2026-09-03 定版前重跑完整 `swift test`：104 项通过、0 失败；PR #40 CI
+  通过并合并到 `main`；
+- 已随 `0.4.3 Build 1` / 内部序号 `15` 发布；Developer ID、公证/Staple、
+  GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成；
+- 完整深浅色、多屏、VoiceOver、Increase Contrast 与 Reduce Motion 交叉
+  矩阵仍等待产品所有者按需验收。

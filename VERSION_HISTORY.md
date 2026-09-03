@@ -15,29 +15,29 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.4.2 (Build 1)` |
-| Git tag | `v0.4.2-build.1` |
-| Tag commit | `6c8434950d59afd9439b2f6f50d8c8b091a40f6d` |
-| GitHub Release | [QuotaView 0.4.2 Build 1 — More Progress Styles, Steadier Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.2-build.1) |
-| Release 资产 | `QuotaView-v0.4.2-build.1.zip` |
-| 资产大小 | `13,166,133 bytes` |
-| SHA-256 | `a87f7f03da644fb014a8c90b617b99697bbb6aae72a7c35928d3386bbf2c05a3` |
+| 最新推荐版本 | `0.4.3 (Build 1)` |
+| Git tag | `v0.4.3-build.1` |
+| Tag commit | `b76c317d640e73621b6e2119e4363d0cac6ddff6` |
+| GitHub Release | [QuotaView 0.4.3 Build 1 — Clearer Progress Feedback](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1) |
+| Release 资产 | `QuotaView-v0.4.3-build.1.zip` |
+| 资产大小 | `13,166,345 bytes` |
+| SHA-256 | `a2b35249c3c146444207fc82d041121e790d099cc534b597775262e42160d54c` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
 | 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，证书 SHA-1 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `5cad0ca0-7f2e-49ef-beda-34b151ed2f45` |
+| 公证 | Apple Accepted，已 Staple；Submission `e3f5f0fa-8f36-4ed3-8b26-3b6ef1861344` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；`gh-pages` 提交 `ead810f540261fbd3e67d17f0f0d32401606b0c0`；Feed SHA-256 `a8ddb8809340caed56dbf0743ab71f51bb2bae6a1a8a067676853cfd76185e8b`；线上文件逐字节一致且 EdDSA 验证通过 |
+| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；`gh-pages` 提交 `56c02c07cebfbeb19a2684ee3dff2bce2f6bbe0c`；Feed SHA-256 `2e5b058592c5b823511391e54a4d873c962d787f54899c1dc1e9da034a9eb40a`；线上文件逐字节一致且 EdDSA 验证通过 |
 
 上一稳定回滚基线：
 
 | 项目 | 封存值 |
 |---|---|
-| 版本 | `0.4.1 (Build 1)` |
-| tag / commit | `v0.4.1-build.1` / `e14039eeb7021041f384b10db386a80844694b0f` |
-| Release | [QuotaView 0.4.1 Build 1 — A Progress-Aware Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.1-build.1) |
-| 资产 / SHA-256 | `QuotaView-v0.4.1-build.1.zip` / `ae8cf53acc6e6473ebf33bb853b7448672b48c4e849ef4b219efd74b18a9a2a3` |
-| 状态 | 不可移动历史正式版；发生 0.4.2 回滚时使用该 tag 与已核验资产 |
+| 版本 | `0.4.2 (Build 1)` |
+| tag / commit | `v0.4.2-build.1` / `6c8434950d59afd9439b2f6f50d8c8b091a40f6d` |
+| Release | [QuotaView 0.4.2 Build 1 — More Progress Styles, Steadier Activity](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.2-build.1) |
+| 资产 / SHA-256 | `QuotaView-v0.4.2-build.1.zip` / `a87f7f03da644fb014a8c90b617b99697bbb6aae72a7c35928d3386bbf2c05a3` |
+| 状态 | 不可移动历史正式版；发生 0.4.3 回滚时使用该 tag 与已核验资产 |
 
 当前公开预览版：
 
@@ -56,18 +56,18 @@
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-> 当前生产版本为 `0.4.2 (Build 1)`。本版增加四种进度条效果与真实设置
-> 预览，并修正多步骤任务中的误隐藏、提前完成和空闲动画；不迁入多任务
-> Preview。
+> 当前生产版本为 `0.4.3 (Build 1)`。本版让量子噪点换色保持连续相位，
+> 增强压缩上下文、闪灭与完成段可见性，并统一文字层级和完成绿色辉光；
+> 不迁入多任务 Preview。
 > 正式签名、公证/Staple、GitHub Release/Latest、回下载和公开签名 appcast
-> 均已完成；详细证据见本文件的 `0.4.2 (Build 1)` 章节。
+> 均已完成；详细证据见本文件的 `0.4.3 (Build 1)` 章节。
 
 > 未发布开发版本不在本历史文件登记；当前迭代身份与验证状态只以
 > [HANDOFF.md](HANDOFF.md) 为准，不得把候选版本提前写成已发布。
 
 > “Codex 灵动岛多任务适配”已作为 `0.3.2 Preview 1` 发布，交付状态为
 > `Released`。响应速度、当前任务跟随、任务切换与收展节奏仍是公开已知
-> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.4.2 稳定版中。
+> 不足，因此该版本不晋升为稳定版；其实现不包含在 0.4.3 稳定版中。
 > GitHub Pre-release、tag 和本地归档分支继续保留供社区测试和后续开发
 > 参照。当前状态以
 > [SDD 当前规格](docs/specs/README.md#当前规格) 为准。
@@ -76,8 +76,9 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.4.2 (Build 1)` | 2026-08-30 | **当前最新** | 四种进度效果、真实设置预览与可靠的任务连续性 |
-| `0.4.1 (Build 1)` | 2026-08-30 | 历史正式版 / 0.4.2 回滚基线 | 独立进度条灵动岛、近似进度、AI 球三档尺寸与完成高光 |
+| `0.4.3 (Build 1)` | 2026-09-03 | **当前最新** | 量子噪点连续换色、更清晰的文字与统一完成辉光 |
+| `0.4.2 (Build 1)` | 2026-08-30 | 历史正式版 / 0.4.3 回滚基线 | 四种进度效果、真实设置预览与可靠的任务连续性 |
+| `0.4.1 (Build 1)` | 2026-08-30 | 历史正式版 | 独立进度条灵动岛、近似进度、AI 球三档尺寸与完成高光 |
 | `0.3.7 (Build 1)` | 2026-08-26 | 历史正式版 | 多周期额度完整展示与灵动岛多屏锁定 |
 | `0.3.6 (Build 2)` | 2026-08-23 | 历史正式版 | 单任务 Codex 灵动岛动画、显示与事件时间个性化 |
 | `0.3.5 (Build 5)` | 2026-08-11 | 历史正式版 | Spark 与 30 日用量概览、半年 Token 活动、Stable 应用更新检查 |
@@ -93,12 +94,61 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.4.3 (Build 1)
+
+Tag：`v0.4.3-build.1`
+
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
+已进入公开 Stable appcast。
+
+发布提交：
+`b76c317d640e73621b6e2119e4363d0cac6ddff6`
+
+主要特性：
+
+- 量子噪点在 Codex 状态换色时保持独立连续相位，不再产生纵向跳动；
+- 提高压缩上下文灰白可见性、星点闪灭与粒子不透明度，并让更多中密度
+  粒子参与克制的完成高亮；
+- 标题与操作状态使用两级不透明淡灰，保留更清晰的状态流光；
+- 完成描边与呼吸光晕统一使用 sRGB `#00FF11`，呼吸只改变外部半径；
+- Product Build 为 1，Sparkle 内部更新序号为 15。
+
+验证与发布资产：
+
+- `swift test`：104 项通过、0 失败；PR #40 GitHub CI 通过并合并到 `main`；
+- Universal Release 构建通过；App、Widget 与 Activity Hook 均为
+  `x86_64 arm64`；版本为 Marketing `0.4.3`、内部 `15`、产品 Build `1`；
+- 文件名：`QuotaView-v0.4.3-build.1.zip`
+- 大小：`13,166,345 bytes`
+- SHA-256：
+  `a2b35249c3c146444207fc82d041121e790d099cc534b597775262e42160d54c`
+- Developer ID：`Developer ID Application: Chenchen Xu (BUUH229D5Q)`，
+  证书 SHA-1 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，启用
+  Hardened Runtime；
+- Apple 公证：Accepted，已 Staple；Submission
+  `e3f5f0fa-8f36-4ed3-8b26-3b6ef1861344`；
+- GitHub 回下载资产与本地公证包逐字节一致；重新解压后通过嵌套
+  `codesign --deep --strict`、Staple、Gatekeeper、版本、资源与三目标双架构
+  复核，并从 `/Applications/QuotaView.app` 完成启动冒烟；WidgetKit 只保留
+  一个 0.4.3 扩展注册；
+- GitHub Release Notes 使用
+  `docs/releases/QuotaView-0.4.3-build.1.md` 的单份简洁英文源文；
+- 公开 Feed：`https://duoasa.github.io/QuotaView/appcast.xml`；`gh-pages`
+  提交 `56c02c07cebfbeb19a2684ee3dff2bce2f6bbe0c`；Feed SHA-256
+  `2e5b058592c5b823511391e54a4d873c962d787f54899c1dc1e9da034a9eb40a`；
+  线上文件与本地签名文件逐字节一致，Feed EdDSA 验证通过；
+- 产品所有者已批准当前结果发布；完整深浅色、多屏、VoiceOver、Increase
+  Contrast 与 Reduce Motion 交叉矩阵未单独记录为全量通过。
+
+Release：
+[QuotaView 0.4.3 Build 1 — Clearer Progress Feedback](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.3-build.1)
+
 ## 0.4.2 (Build 1)
 
 Tag：`v0.4.2-build.1`
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
-已进入公开 Stable appcast。
+状态：历史正式 Release、0.4.3 的封存回滚基线、非 Draft、非 Pre-release；
+已由 0.4.3 Build 1 替代并继续保留在公开 Stable appcast。
 
 发布提交：
 `6c8434950d59afd9439b2f6f50d8c8b091a40f6d`
