@@ -2,10 +2,10 @@
   <img src="Resources/QuotaView-ICON.png" alt="QuotaView icon" width="160">
 </p>
 
-<h1 align="center">QuotaView</h1>
+<h1 align="center">QuotaView • Codex Island</h1>
 
-<p align="center">
-  A simple, lightweight macOS companion for Codex quota and live task activity.
+  <p align="center">
+  A Codex-native activity surface for macOS, with Codex Island as its core real-time monitoring experience.
 </p>
 
 <p align="center">
@@ -32,13 +32,13 @@
   <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView light appearance preview" width="49%">
 </p>
 
-QuotaView is a simple, lightweight, native macOS companion for the Codex account already signed in on your Mac. Its new **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep quota, Credits, token usage, and reset time close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
+QuotaView is a Codex-native, Island-first monitor for your account already signed in on your Mac. Its **Codex Island** turns live task activity into a glanceable surface beneath the menu bar, while the menu panel and desktop widgets keep quota, credits, token usage, and reset timing close at hand. It stays focused without web scraping or reading login credentials from `~/.codex`.
 
 ## Why QuotaView
 
 | | |
 | --- | --- |
-| **Codex Island** | Follow thinking, tool use, approvals, context compaction, subagents, completion, and failures through a live Metal-rendered activity surface. |
+| **Codex Island** | A living activity surface that mirrors Codex task flow in real time: thinking, tools, approvals, context compaction, subagents, completion, and errors—rendered as a live Island. |
 | **At a glance** | See used and remaining quota, reset countdowns, Credits, and availability from the menu bar or a native desktop widget. |
 | **Local connection** | Communicates with a locally launched `codex app-server` process through its JSON-RPC interface. |
 | **Simple by design** | Focuses on essential quota information with a compact, uncluttered interface. |
@@ -85,7 +85,7 @@ The universal app supports macOS 14 or later on both Apple Silicon and Intel Mac
 
 ## What's new in 0.3.1: Codex Island
 
-v0.3.1 introduces **Codex Island**, QuotaView's biggest update yet: a native,
+v0.3.1 introduces **Codex Island** as the center of the experience: a native,
 real-time macOS activity surface for Codex.
 
 <p align="center">
