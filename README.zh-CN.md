@@ -2,10 +2,10 @@
   <img src="Resources/QuotaView-ICON.png" alt="QuotaView 图标" width="160">
 </p>
 
-<h1 align="center">QuotaView</h1>
+<h1 align="center">QuotaView • Codex 灵动岛</h1>
 
 <p align="center">
-  简洁、轻量地查看 Codex 额度与实时任务状态。
+  以 Codex 灵动岛为核心的 macOS Codex 活动监控表面。
 </p>
 
 <p align="center">
@@ -32,13 +32,13 @@
   <img src="Resources/QuotaView-Preview-Light.jpg" alt="QuotaView 浅色外观预览" width="49%">
 </p>
 
-QuotaView 是一款简洁、轻量的原生 macOS Codex 助手，使用本机已经登录的 Codex 账户。全新的 **Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让额度、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
+QuotaView 是一款面向本机已登录 Codex 账户的 Island-first 监测器。新的 **Codex 灵动岛**会在菜单栏下方实时呈现任务状态，菜单面板和桌面小组件则让额度、Credits、Token 用量和重置时间保持触手可及；不抓取网页，也不读取 `~/.codex` 中的登录凭据。
 
 ## 为什么选择 QuotaView
 
 | | |
 | --- | --- |
-| **Codex 灵动岛** | 通过实时 Metal 流体球查看思考、工具调用、权限确认、上下文压缩、子任务、完成与失败状态。 |
+| **Codex 灵动岛** | 通过实时活动面镜像 Codex 任务流程：思考、工具调用、权限确认、上下文压缩、子任务、完成与异常，并以动态灵动岛方式呈现。 |
 | **一眼掌握** | 无需离开当前应用，即可从菜单栏或原生桌面小组件查看已用与剩余额度、重置倒计时、Credits 和可用状态。 |
 | **本地连接** | 通过 JSON-RPC 与本机启动的 `codex app-server` 进程通信。 |
 | **简洁设计** | 专注必要的额度信息，以紧凑、无冗余的界面降低干扰。 |
@@ -84,8 +84,8 @@ Universal 应用支持 macOS 14 或更高版本，同时兼容 Apple 芯片和 I
 
 ## 0.3.1 最大更新：Codex 灵动岛
 
-v0.3.1 带来 QuotaView 至今最大的一次更新：原生、实时的
-**Codex 灵动岛**。
+v0.3.1 将 **Codex 灵动岛**设为体验核心：这次更新把 QuotaView 打造成原生、实时的
+Codex 活动监控表面。
 
 <p align="center">
   <img src="Resources/QuotaView-Codex-Island.png" alt="QuotaView Codex 灵动岛任务完成状态" width="100%">
