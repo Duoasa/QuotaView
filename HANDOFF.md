@@ -11,10 +11,10 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 稳定版 | `0.4.5 Build 1` / `v0.4.5-build.1` / GitHub Latest |
-| 回滚基线 | `0.4.3 Build 1` / `v0.4.3-build.1` |
+| 稳定版 | `0.4.6 Build 1` / internal `18` / `v0.4.6-build.1` / GitHub Latest |
+| 回滚基线 | `0.4.5 Build 1` / `v0.4.5-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.6 Build 1` / internal `18`，Token 与任务归属重构；未发布 |
+| 当前候选 | 无；0.4.6 已正式发布 |
 | 当前主题 | 0.4.6 统一任务准入、turn 生命周期与渲染身份，保留 Token 兼容和完整启动恢复 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
@@ -24,19 +24,19 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 从 0.4.5 发布源码及发布文档提交建立独立分支；已有 Kimi 预览工作区保持独立。
 当前修复见 [0.4.6 Token 兼容规格](docs/design/quotaview-codex-token-compatibility-0.4.6.md)。
 用户曾确认单一四步任务的实机视觉并授权发布，随后发现主任务运行时出现错误
-完成回执，要求审计整条逻辑链路。审计期间暂停了发布；现已修复并获本轮视觉确认，恢复发布流程，线上暂仍为 0.4.5。
+完成回执，要求审计整条逻辑链路。审计期间暂停了发布；现已修复并获本轮视觉确认，正式发布 0.4.6。
 见 [0.4.6 灵动岛逻辑审计](docs/design/quotaview-activity-logic-audit-0.4.6.md)：
 9 个诊断场景已复现，涉及内部任务准入、展示归属、turn 终态、重复开始与恢复。
 已按审计完成系统重构；9 个诊断场景已转为永久回归，完整测试 166 项通过。
 详见 [重构验证记录](docs/design/quotaview-activity-refactor-verification-0.4.6.md)。
 已完成 Universal 构建及真实主任务 / guardian / 四步计划的数据链路验证。
-用户已确认本轮真实五步任务视觉无问题并要求继续发布。此前公证候选对应旧源码，正在重新打包、公证；不能沿用旧 ZIP。
+用户已确认本轮真实五步任务视觉无问题并要求继续发布。本次使用重构源码重新打包、公证；审计前旧 ZIP 未发布。
 
 ## 2. 当前规格与状态
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
-| [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Verifying` | 系统重构后本地 166 项测试、Universal 和实机数据链路通过；真实五步视觉已获用户确认，正在推送 PR #45 并重新打包、公证 |
+| [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | 本地及 CI 166 项测试、Universal、真实五步视觉通过；PR #45 已合并，签名、公证、Latest、回下载与公开 appcast 验证完成 |
 | [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；已随 0.4.5 发布 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | rollout 主通道的实时 Token、真实成功终态左右回执、当前额度与紧凑额度环已随 0.4.5 发布 |
@@ -54,7 +54,23 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 | [`QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005`](docs/design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 已发布的 AI 球尺寸能力作为历史保留；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | [`QV-PRODUCT-QUOTA-WINDOWS-003`](docs/design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 多周期额度已随 0.3.7 Build 1 发布并进入 Stable Feed |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-004`](docs/design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；不包含多任务 Preview |
-| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.5 已进入 Stable Feed；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
+| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.6 已进入 Stable Feed；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
+
+### 2.0 0.4.6 Build 1 发布（2026-09-05）
+
+- tag `v0.4.6-build.1`，发布提交 `2b071bea2f0af6fc4de042cf25084fc8524133d9`；
+  [GitHub Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) 为 Latest。
+- ZIP `QuotaView-v0.4.6-build.1.zip`：`13,564,435 bytes`；SHA-256
+  `00bf1a23d4424de534538871e667681ee7f27b5e475a7052e34d73cc06548174`。
+- Developer ID `Chenchen Xu (BUUH229D5Q)`、Hardened Runtime；Apple Accepted
+  并 Staple，Submission `456d3e31-7c35-4cca-8db1-4538abca1d6a`。
+- 公开 appcast 提交 `81a16a81183cc854b97962d3a9fef613fbcc3344`，SHA-256
+  `c28fb25f46501d027f58595886909f3b3663d4461bde433fd190318cd76768ca`。线上文件逐字节一致；
+  Feed 和回下载 ZIP 均以应用内公钥通过 Ed25519 验证。
+- 166 项测试、Universal 四目标双架构、版本/资源、签名、Staple 与 Gatekeeper
+  均通过；真实五步视觉已由用户确认。回滚基线为 0.4.5 Build 1。
+- 下一步：按用户新反馈迭代；等待确认/压缩的视觉组合、完整辅助功能矩阵和
+  真实旧版客户端 N → N+1 替换重启仍未记录为通过。
 
 ### 2.1 0.4.5 Build 1 发布（2026-09-04）
 
