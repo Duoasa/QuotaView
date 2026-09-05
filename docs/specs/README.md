@@ -4,9 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 生产基线：`0.4.5 Build 1`
+> 生产基线：`0.4.6 Build 1`（内部 `18`）
 >
-> 当前候选：`0.4.6 Build 1`（内部 `18`），Token 兼容修复
+> 当前候选：无；0.4.6 已正式发布
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,7 +14,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Verifying` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地 166 项测试通过，用户已确认真实五步视觉，正在重新打包发布 |
+| `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |
 | `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014` | [0.4.5 灵动岛等待确认提醒](../design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 等待确认满 10 秒显示静态黄色描边和四周光晕；已随 0.4.5 发布 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013` | [0.4.5 灵动岛本次任务 Token](../design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | rollout 主通道显示实时 turn Token 与成功完成回执；已随 0.4.5 发布 |
@@ -30,7 +30,7 @@
 | `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 的 AI 球尺寸能力保留为发布历史；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.5 已进入 Stable Feed；真实 N → N+1 安装操作待记录 |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.6 已进入 Stable Feed；真实 N → N+1 安装操作待记录 |
 
 ## 已替代的当前迭代规格
 
