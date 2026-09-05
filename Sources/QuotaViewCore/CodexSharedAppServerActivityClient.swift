@@ -182,7 +182,9 @@ public actor CodexSharedAppServerActivityClient {
     private var connectionGeneration: UInt64 = 0
     private var initialized = false
     private var isStarted = false
+    private var runGeneration: UInt64 = 0
     private var subscribedThreadHashes: Set<String> = []
+    private var threadKinds: [String: CodexActivitySessionKind] = [:]
     private var frameDecoder = CodexAppServerWebSocketMessageDecoder()
     private var activityNotificationHandler:
         (@Sendable (CodexActivityEvent) async -> Void)?
@@ -224,16 +226,19 @@ public actor CodexSharedAppServerActivityClient {
             return
         }
         isStarted = true
+        runGeneration &+= 1
+        let run = runGeneration
         await publishConnectionState(.discovering)
-
+        guard isStarted, run == runGeneration else { return }
         let client = self
         maintenanceTask = Task(priority: .utility) {
-            await client.runMaintenanceLoop()
+            await client.runMaintenanceLoop(generation: run)
         }
     }
 
     public func stop() async {
         isStarted = false
+        runGeneration &+= 1
         maintenanceTask?.cancel()
         maintenanceTask = nil
         activityNotificationHandler = nil
@@ -243,18 +248,21 @@ public actor CodexSharedAppServerActivityClient {
         // The App Server is shared with Codex Desktop. Never terminate a
         // process that may still be serving another connected client.
         serverProcess = nil
-        await publishConnectionState(.disabled)
+        let stoppedHandler = connectionStateHandler
         connectionStateHandler = nil
+        connectionState = .disabled
+        await stoppedHandler?(.disabled)
     }
 
-    private func runMaintenanceLoop() async {
+    private func runMaintenanceLoop(generation run: UInt64) async {
         var retryDelayNanoseconds: UInt64 = 1_000_000_000
         let maximumRetryDelayNanoseconds: UInt64 = 8_000_000_000
 
-        while isStarted, !Task.isCancelled {
+        while isStarted, run == runGeneration, !Task.isCancelled {
             do {
                 if !initialized {
-                    try await connectAndInitialize()
+                    try await connectAndInitialize(generation: run)
+                    guard isStarted, run == runGeneration, !Task.isCancelled else { return }
                     retryDelayNanoseconds = 1_000_000_000
                 }
                 try await refreshThreadSubscriptions()
@@ -264,6 +272,7 @@ public actor CodexSharedAppServerActivityClient {
             } catch is CancellationError {
                 return
             } catch {
+                guard isStarted, run == runGeneration, !Task.isCancelled else { return }
                 closeConnection(error: error)
                 await publishConnectionState(.discovering)
                 try? await Task.sleep(
@@ -277,7 +286,7 @@ public actor CodexSharedAppServerActivityClient {
         }
     }
 
-    private func connectAndInitialize() async throws {
+    private func connectAndInitialize(generation run: UInt64) async throws {
         closeConnection(error: ClientError.connectionClosed)
 
         let opened: OpenedSocket
@@ -289,6 +298,10 @@ public actor CodexSharedAppServerActivityClient {
             opened = try await waitForServerSocket()
         }
 
+        guard isStarted, run == runGeneration, !Task.isCancelled else {
+            Darwin.close(opened.fileDescriptor)
+            throw CancellationError()
+        }
         connectionGeneration &+= 1
         let generation = connectionGeneration
         let handle = FileHandle(
@@ -339,13 +352,18 @@ public actor CodexSharedAppServerActivityClient {
                 ]
             ]
         )
+        guard isStarted, run == runGeneration, generation == connectionGeneration, !Task.isCancelled else {
+            throw CancellationError()
+        }
         try sendNotification(method: "initialized", params: [:])
         initialized = true
         subscribedThreadHashes.removeAll(keepingCapacity: true)
+        threadKinds.removeAll(keepingCapacity: true)
         await publishConnectionState(.connected)
     }
 
     private func refreshThreadSubscriptions() async throws {
+        let generation = connectionGeneration
         var cursor: String?
         var pageCount = 0
 
@@ -359,6 +377,7 @@ public actor CodexSharedAppServerActivityClient {
                 params: params
             )
             for threadID in response.data.prefix(100) {
+                guard generation == connectionGeneration, !Task.isCancelled else { throw CancellationError() }
                 do {
                     try await subscribeIfNeeded(threadID: threadID)
                 } catch let error as ClientError {
@@ -378,16 +397,30 @@ public actor CodexSharedAppServerActivityClient {
     private func subscribeIfNeeded(threadID: String) async throws {
         guard !threadID.isEmpty else { return }
         let hash = CodexActivityPrivacy.hashIdentifier(threadID)
-        guard !subscribedThreadHashes.contains(hash) else { return }
+        guard !subscribedThreadHashes.contains(hash), subscribedThreadHashes.count < 1024 else { return }
 
-        let _: EmptyResult = try await request(
+        let generation = connectionGeneration
+        let data = try await requestData(
             method: "thread/resume",
             params: [
                 "threadId": threadID,
                 "excludeTurns": true
             ]
         )
+        guard generation == connectionGeneration else { return }
+        if let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let thread = result["thread"] as? [String: Any] {
+            rememberThread(thread, hash: hash)
+        } else { threadKinds[hash] = .unknown }
         subscribedThreadHashes.insert(hash)
+    }
+
+    private func rememberThread(_ thread: [String: Any], hash: String) {
+        if threadKinds.count >= 1024, threadKinds[hash] == nil { return }
+        threadKinds[hash] = CodexActivitySessionKind.classify(
+            source: thread["source"],
+            threadSource: (thread["threadSource"] ?? thread["thread_source"]) as? String
+        )
     }
 
     private func request<Response: Decodable>(
@@ -489,6 +522,7 @@ public actor CodexSharedAppServerActivityClient {
         guard generation == connectionGeneration else { return }
         let events = try frameDecoder.append(data)
         for event in events {
+            guard generation == connectionGeneration else { return }
             switch event {
             case .text(let payload):
                 try await handleJSONMessage(payload)
@@ -500,7 +534,7 @@ public actor CodexSharedAppServerActivityClient {
         }
     }
 
-    private func handleJSONMessage(_ data: Data) async throws {
+    func handleJSONMessage(_ data: Data) async throws {
         guard data.count <= configuration.maximumMessageBytes,
               let object = try? JSONSerialization.jsonObject(with: data),
               let message = object as? [String: Any]
@@ -542,13 +576,21 @@ public actor CodexSharedAppServerActivityClient {
             return
         }
 
+        if message["method"] as? String == "thread/started",
+           let params = message["params"] as? [String: Any],
+           let thread = params["thread"] as? [String: Any], let id = thread["id"] as? String {
+            rememberThread(thread, hash: CodexActivityPrivacy.hashIdentifier(id))
+        }
+
         if let event = CodexAppServerActivityNotificationDecoder.decode(
             data: data
-        ), let activityNotificationHandler {
-            await activityNotificationHandler(event)
+        ), let kind = threadKinds[event.sessionHash], kind != .internalTask,
+           let activityNotificationHandler {
+            await activityNotificationHandler(event.classified(as: kind))
         }
         if let tokenUsage = CodexAppServerActivityNotificationDecoder
             .decodeTokenUsage(data: data),
+           let kind = threadKinds[tokenUsage.sessionHash], kind != .internalTask,
            let tokenUsageNotificationHandler
         {
             await tokenUsageNotificationHandler(tokenUsage)
@@ -563,6 +605,7 @@ public actor CodexSharedAppServerActivityClient {
             return
         }
 
+        guard isStarted, threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)] != .internalTask else { return }
         let client = self
         Task(priority: .utility) {
             try? await client.subscribeIfNeeded(threadID: threadID)
@@ -614,6 +657,7 @@ public actor CodexSharedAppServerActivityClient {
         connectionGeneration &+= 1
         initialized = false
         subscribedThreadHashes.removeAll(keepingCapacity: true)
+        threadKinds.removeAll(keepingCapacity: true)
         readTask?.cancel()
         readTask = nil
         socketHandle?.closeFile()

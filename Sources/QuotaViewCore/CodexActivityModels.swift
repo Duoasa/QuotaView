@@ -85,7 +85,9 @@ public struct CodexActivityPlanProgress: Codable, Equatable, Sendable {
     }
 
     public var totalSteps: Int {
-        completedSteps + inProgressSteps + pendingSteps
+        let (partial, firstOverflow) = completedSteps.addingReportingOverflow(inProgressSteps)
+        let (total, secondOverflow) = partial.addingReportingOverflow(pendingSteps)
+        return firstOverflow || secondOverflow ? -1 : total
     }
 
     public var approximateFraction: Double? {
@@ -118,6 +120,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let toolCategory: CodexActivityToolCategory?
     public let sessionStartSource: CodexActivitySessionStartSource?
     public let planProgress: CodexActivityPlanProgress?
+    public let sessionKind: CodexActivitySessionKind?
     public let source: CodexActivityEventSource?
     public let planSource: CodexActivityPlanSource?
     public let turnCompletionStatus: CodexActivityTurnCompletionStatus?
@@ -134,6 +137,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         toolCategory: CodexActivityToolCategory? = nil,
         sessionStartSource: CodexActivitySessionStartSource? = nil,
         planProgress: CodexActivityPlanProgress? = nil,
+        sessionKind: CodexActivitySessionKind? = nil,
         source: CodexActivityEventSource? = nil,
         planSource: CodexActivityPlanSource? = nil,
         turnCompletionStatus: CodexActivityTurnCompletionStatus? = nil,
@@ -149,12 +153,24 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.toolCategory = toolCategory
         self.sessionStartSource = sessionStartSource
         self.planProgress = planProgress
+        self.sessionKind = sessionKind
         self.source = source
         self.planSource = planSource
         self.turnCompletionStatus = turnCompletionStatus
         self.goalStatus = goalStatus
         self.waitReason = waitReason
         self.occurredAt = occurredAt
+    }
+}
+
+public extension CodexActivityEvent {
+    func classified(as kind: CodexActivitySessionKind) -> Self {
+        Self(schemaVersion: schemaVersion, event: event, sessionHash: sessionHash,
+             turnHash: turnHash, workspaceName: workspaceName, toolCategory: toolCategory,
+             sessionStartSource: sessionStartSource, planProgress: planProgress,
+             sessionKind: kind, source: source, planSource: planSource,
+             turnCompletionStatus: turnCompletionStatus, goalStatus: goalStatus,
+             waitReason: waitReason, occurredAt: occurredAt)
     }
 }
 
@@ -205,6 +221,9 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
     public let turnHash: String
     public let cumulativeTotalTokens: Int64
     public let lastReportedTotalTokens: Int64
+    /// Authoritative per-turn sum from Codex's response usage records.
+    /// Nil keeps compatibility with legacy cumulative notifications.
+    public let directTurnTotalTokens: Int64?
     public let occurredAt: Date
 
     public init(
@@ -212,12 +231,14 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
         turnHash: String,
         cumulativeTotalTokens: Int64,
         lastReportedTotalTokens: Int64,
+        directTurnTotalTokens: Int64? = nil,
         occurredAt: Date = Date()
     ) {
         self.sessionHash = sessionHash
         self.turnHash = turnHash
         self.cumulativeTotalTokens = cumulativeTotalTokens
         self.lastReportedTotalTokens = lastReportedTotalTokens
+        self.directTurnTotalTokens = directTurnTotalTokens
         self.occurredAt = occurredAt
     }
 }
@@ -248,6 +269,7 @@ public enum CodexActivityTurnLifecycle: String, Codable, Sendable {
 }
 
 public struct CodexActivitySnapshot: Equatable, Sendable {
+    public let taskIdentity: CodexActivityTaskIdentity?
     public let sessionHash: String
     public let state: CodexActivityVisualState
     public let workspaceName: String?
@@ -258,6 +280,7 @@ public struct CodexActivitySnapshot: Equatable, Sendable {
 
     public init(
         sessionHash: String,
+        taskIdentity: CodexActivityTaskIdentity? = nil,
         state: CodexActivityVisualState,
         workspaceName: String?,
         operationKey: CodexActivityOperationKey,
@@ -266,6 +289,7 @@ public struct CodexActivitySnapshot: Equatable, Sendable {
         occurredAt: Date
     ) {
         self.sessionHash = sessionHash
+        self.taskIdentity = taskIdentity
         self.state = state
         self.workspaceName = workspaceName
         self.operationKey = operationKey
@@ -364,7 +388,7 @@ public enum CodexActivityReducer {
                 state = .unavailable
                 operation = .goalLimited
             case .complete:
-                state = .completed
+                state = .thinking
                 operation = .goalCompleted
             case nil:
                 state = .thinking
@@ -449,7 +473,7 @@ public enum CodexActivityReducer {
         case .stop, .interrupt:
             true
         case .postToolUse:
-            event.goalStatus != nil && event.goalStatus != .active
+            event.goalStatus != nil && event.goalStatus != .active && event.goalStatus != .complete
         case .sessionStart:
             event.sessionStartSource != .compact
         default:
@@ -574,4 +598,27 @@ public struct CodexThreadMetadata: Decodable, Equatable, Sendable {
         }
         return CodexActivityPrivacy.workspaceName(from: cwd)
     }
+}
+
+enum CodexActivityNumeric {
+    static func nonnegativeInteger(_ value: Any?) -> Int64? {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID()
+        else {
+            return nil
+        }
+        if let integer = Int64(number.stringValue) {
+            return integer >= 0 ? integer : nil
+        }
+        let double = number.doubleValue
+        guard double.isFinite,
+              double >= 0,
+              double.rounded(.towardZero) == double,
+              double < 9_223_372_036_854_775_808.0
+        else {
+            return nil
+        }
+        return number.int64Value
+    }
+
 }

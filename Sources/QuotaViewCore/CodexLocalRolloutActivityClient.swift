@@ -4,6 +4,7 @@ import SQLite3
 public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case activity(CodexActivityEvent)
     case tokenUsage(CodexActivityTokenUsageUpdate)
+    case tokenUsageReplay([CodexActivityTokenUsageUpdate])
 }
 
 public struct CodexLocalRolloutDecodedRecord: Equatable, Sendable {
@@ -24,11 +25,13 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
 
     private let sessionHash: String
     private let workspaceName: String?
+    private let sessionKind: CodexActivitySessionKind
     private var activeTurnHash: String?
 
-    public init(sessionHash: String, workspaceName: String? = nil) {
+    public init(sessionHash: String, workspaceName: String? = nil, sessionKind: CodexActivitySessionKind = .unknown) {
         self.sessionHash = sessionHash
         self.workspaceName = workspaceName
+        self.sessionKind = sessionKind
     }
 
     public mutating func decode(
@@ -56,6 +59,31 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             payloadType: payload["type"] as? String
         )
 
+        if recordType == "token_usage_record" {
+            guard let turnHash = activeTurnHash,
+                  Self.hashedIdentifier(payload["turn_id"]) == turnHash,
+                  Self.hashedIdentifier(payload["thread_id"]) == sessionHash,
+                  let turn = payload["turn_token_usage"] as? [String: Any],
+                  let thread = payload["thread_token_usage"] as? [String: Any],
+                  let usage = payload["usage"] as? [String: Any],
+                  let direct = CodexActivityNumeric.nonnegativeInteger(turn["total_tokens"]),
+                  let cumulative = CodexActivityNumeric.nonnegativeInteger(thread["total_tokens"]),
+                  let last = CodexActivityNumeric.nonnegativeInteger(usage["total_tokens"]),
+                  cumulative >= direct, direct >= last
+            else { return nil }
+            return CodexLocalRolloutDecodedRecord(
+                eventID: eventID,
+                update: .tokenUsage(CodexActivityTokenUsageUpdate(
+                    sessionHash: sessionHash,
+                    turnHash: turnHash,
+                    cumulativeTotalTokens: cumulative,
+                    lastReportedTotalTokens: last,
+                    directTurnTotalTokens: direct,
+                    occurredAt: occurredAt
+                ))
+            )
+        }
+
         if recordType == "event_msg" {
             return decodeEventMessage(
                 payload,
@@ -80,6 +108,26 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         guard let type = payload["type"] as? String else { return nil }
 
         switch type {
+        case "item_started", "item_completed":
+            guard let turnHash = activeTurnHash,
+                  Self.hashedIdentifier(payload["turn_id"]) == turnHash,
+                  Self.hashedIdentifier(payload["thread_id"]) == sessionHash,
+                  let item = payload["item"] as? [String: Any],
+                  item["type"] as? String == "ContextCompaction"
+            else { return nil }
+            return CodexLocalRolloutDecodedRecord(
+                eventID: eventID,
+                update: .activity(CodexActivityEvent(
+                    event: type == "item_started" ? .preCompact : .postCompact,
+                    sessionHash: sessionHash,
+                    turnHash: turnHash,
+                    workspaceName: workspaceName,
+                    sessionKind: sessionKind,
+                    source: .localRollout,
+                    occurredAt: occurredAt
+                ))
+            )
+
         case "task_started":
             guard let turnHash = Self.hashedIdentifier(
                 payload["turn_id"]
@@ -95,6 +143,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                         sessionHash: sessionHash,
                         turnHash: turnHash,
                         workspaceName: workspaceName,
+                        sessionKind: sessionKind,
                         source: .localRollout,
                         occurredAt: occurredAt
                     )
@@ -108,10 +157,10 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                     as? [String: Any],
                   let last = info["last_token_usage"]
                     as? [String: Any],
-                  let cumulative = Self.nonnegativeInteger(
+                  let cumulative = CodexActivityNumeric.nonnegativeInteger(
                     total["total_tokens"]
                   ),
-                  let lastReported = Self.nonnegativeInteger(
+                  let lastReported = CodexActivityNumeric.nonnegativeInteger(
                     last["total_tokens"]
                   ),
                   cumulative >= lastReported
@@ -134,7 +183,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         case "task_complete":
             guard let turnHash = Self.hashedIdentifier(
                 payload["turn_id"]
-            ) else {
+            ), turnHash == activeTurnHash else {
                 return nil
             }
             activeTurnHash = nil
@@ -146,6 +195,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                         sessionHash: sessionHash,
                         turnHash: turnHash,
                         workspaceName: workspaceName,
+                        sessionKind: sessionKind,
                         source: .localRollout,
                         turnCompletionStatus: .completed,
                         occurredAt: occurredAt
@@ -154,11 +204,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             )
 
         case "turn_aborted":
-            guard let turnHash = activeTurnHash
-                ?? Self.hashedIdentifier(payload["turn_id"])
-            else {
-                return nil
-            }
+            guard let turnHash = activeTurnHash else { return nil }
+            if let reportedTurn = Self.hashedIdentifier(payload["turn_id"]),
+               reportedTurn != turnHash { return nil }
             activeTurnHash = nil
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
@@ -168,6 +216,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                         sessionHash: sessionHash,
                         turnHash: turnHash,
                         workspaceName: workspaceName,
+                        sessionKind: sessionKind,
                         source: .localRollout,
                         turnCompletionStatus: .interrupted,
                         occurredAt: occurredAt
@@ -212,6 +261,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                         for: name
                     ),
                     planProgress: planProgress,
+                    sessionKind: sessionKind,
                     source: .localRollout,
                     planSource: planProgress == nil
                         ? nil
@@ -235,27 +285,10 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         recordType: String,
         payloadType: String?
     ) -> String? {
-        guard let ordinal = nonnegativeInteger(ordinal) else {
+        guard let ordinal = CodexActivityNumeric.nonnegativeInteger(ordinal) else {
             return nil
         }
         return "rollout:\(sessionHash):\(ordinal):\(recordType):\(payloadType ?? "-")"
-    }
-
-    private static func nonnegativeInteger(_ value: Any?) -> Int64? {
-        guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID()
-        else {
-            return nil
-        }
-        let double = number.doubleValue
-        guard double.isFinite,
-              double >= 0,
-              double.rounded(.towardZero) == double,
-              double <= Double(Int64.max)
-        else {
-            return nil
-        }
-        return number.int64Value
     }
 
     private static func eventDate(
@@ -299,10 +332,10 @@ public actor CodexLocalRolloutActivityClient {
                 candidateRefreshSeconds,
                 pollIntervalSeconds
             )
-            self.maximumCandidateCount = max(1, maximumCandidateCount)
+            self.maximumCandidateCount = min(128, max(1, maximumCandidateCount))
             self.startupTailBytes = max(
                 CodexLocalRolloutLineDecoder.maximumLineBytes,
-                startupTailBytes
+                min(startupTailBytes, 16 * 1_048_576)
             )
         }
 
@@ -340,11 +373,13 @@ public actor CodexLocalRolloutActivityClient {
         let fileURL: URL
         let sessionHash: String
         let workspaceName: String?
+        let sessionKind: CodexActivitySessionKind
     }
 
     private struct TailState: Sendable {
         var offset: UInt64
         var pending = Data()
+        var discardingOversizedLine = false
         var decoder: CodexLocalRolloutLineDecoder
     }
 
@@ -357,6 +392,8 @@ public actor CodexLocalRolloutActivityClient {
     private var candidates: [Candidate] = []
     private var lastCandidateRefresh = Date.distantPast
     private var isStarted = false
+    private var generation: UInt64 = 0
+    private var pollingGeneration: UInt64?
     private var connectionState:
         CodexSharedAppServerConnectionState = .disabled
 
@@ -383,15 +420,20 @@ public actor CodexLocalRolloutActivityClient {
             return
         }
         isStarted = true
+        generation &+= 1
+        let run = generation
         await publishConnectionState(.discovering)
+        guard isStarted, generation == run else { return }
         let client = self
         maintenanceTask = Task(priority: .utility) {
-            await client.runMaintenanceLoop()
+            await client.runMaintenanceLoop(generation: run)
         }
     }
 
     public func stop() async {
         isStarted = false
+        generation &+= 1
+        lastCandidateRefresh = .distantPast
         maintenanceTask?.cancel()
         maintenanceTask = nil
         updateHandler = nil
@@ -405,8 +447,8 @@ public actor CodexLocalRolloutActivityClient {
         await pollOnce(now: Date())
     }
 
-    private func runMaintenanceLoop() async {
-        while isStarted, !Task.isCancelled {
+    private func runMaintenanceLoop(generation run: UInt64) async {
+        while isStarted, generation == run, !Task.isCancelled {
             await pollOnce(now: Date())
             do {
                 try await Task.sleep(
@@ -422,6 +464,10 @@ public actor CodexLocalRolloutActivityClient {
     }
 
     private func pollOnce(now: Date) async {
+        let run = generation
+        guard isStarted, pollingGeneration != run else { return }
+        pollingGeneration = run
+        defer { if pollingGeneration == run { pollingGeneration = nil } }
         if now.timeIntervalSince(lastCandidateRefresh)
             >= configuration.candidateRefreshSeconds
         {
@@ -431,21 +477,22 @@ public actor CodexLocalRolloutActivityClient {
             tailStates = tailStates.filter { retained.contains($0.key) }
         }
 
-        let sessionsURL = configuration.codexHomeURL
-            .appendingPathComponent("sessions", isDirectory: true)
-        if fileManager.fileExists(atPath: sessionsURL.path) {
-            await publishConnectionState(.connected)
-        }
-
         for candidate in candidates {
-            guard !Task.isCancelled else { return }
-            await consume(candidate: candidate)
+            guard isStarted, generation == run, !Task.isCancelled else { return }
+            await consume(candidate: candidate, generation: run)
         }
+        guard isStarted, generation == run else { return }
+        await publishConnectionState(tailStates.isEmpty ? .discovering : .connected)
     }
 
-    private func consume(candidate: Candidate) async {
+    private func consume(candidate: Candidate, generation run: UInt64) async {
+        let root = configuration.codexHomeURL.appendingPathComponent("sessions")
+        guard Self.isAllowedRollout(candidate.fileURL, sessionsURL: root) else {
+            tailStates.removeValue(forKey: candidate.fileURL)
+            return
+        }
         if tailStates[candidate.fileURL] == nil {
-            await bootstrap(candidate: candidate)
+            await bootstrap(candidate: candidate, generation: run)
             return
         }
 
@@ -460,7 +507,7 @@ public actor CodexLocalRolloutActivityClient {
 
         if size < state.offset {
             tailStates.removeValue(forKey: candidate.fileURL)
-            await bootstrap(candidate: candidate)
+            await bootstrap(candidate: candidate, generation: run)
             return
         }
         guard size > state.offset,
@@ -471,21 +518,25 @@ public actor CodexLocalRolloutActivityClient {
         defer { try? handle.close() }
         do {
             try handle.seek(toOffset: state.offset)
-            let data = try handle.readToEnd() ?? Data()
-            state.offset = size
+            let data = try handle.read(upToCount: 1_048_576) ?? Data()
+            state.offset = try handle.offset()
             state.pending.append(data)
-            await emitCompleteLines(
-                from: &state.pending,
-                decoder: &state.decoder,
-                isStartupReplay: false
-            )
+            var records: [CodexLocalRolloutDecodedRecord] = []
+            consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine) { line in
+                if let record = state.decoder.decode(line: line) { records.append(record) }
+            }
+            // Commit the cursor before any reentrant callback can stop/restart us.
             tailStates[candidate.fileURL] = state
+            for record in records {
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+                await updateHandler?(record, false)
+            }
         } catch {
             return
         }
     }
 
-    private func bootstrap(candidate: Candidate) async {
+    private func bootstrap(candidate: Candidate, generation run: UInt64) async {
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
             return
@@ -498,67 +549,59 @@ public actor CodexLocalRolloutActivityClient {
                 ? size - UInt64(configuration.startupTailBytes)
                 : 0
             try handle.seek(toOffset: start)
-            var data = try handle.readToEnd() ?? Data()
-            if start > 0, let newline = data.firstIndex(of: 0x0A) {
-                data.removeSubrange(data.startIndex...newline)
+            var data = try handle.read(upToCount: Int(size - start)) ?? Data()
+            let actualOffset = try handle.offset()
+            var discarding = false
+            if start > 0 {
+                if let newline = data.firstIndex(of: 0x0A) {
+                    data.removeSubrange(data.startIndex...newline)
+                } else { data.removeAll(); discarding = true }
             }
 
             var decoder = CodexLocalRolloutLineDecoder(
                 sessionHash: candidate.sessionHash,
-                workspaceName: candidate.workspaceName
+                workspaceName: candidate.workspaceName,
+                sessionKind: candidate.sessionKind
             )
             var replay = BootstrapReplay()
             var pending = data
-            consumeCompleteLines(from: &pending) { line in
+            consumeCompleteLines(from: &pending, discarding: &discarding) { line in
                 guard let record = decoder.decode(line: line) else {
                     return
                 }
                 replay.record(record)
             }
+            tailStates[candidate.fileURL] = TailState(
+                offset: actualOffset, pending: pending,
+                discardingOversizedLine: discarding, decoder: decoder
+            )
             if replay.isActive {
                 for record in replay.records {
+                    guard isStarted, generation == run, !Task.isCancelled else { return }
                     await updateHandler?(record, true)
                 }
             }
-            tailStates[candidate.fileURL] = TailState(
-                offset: size,
-                pending: pending,
-                decoder: decoder
-            )
         } catch {
             return
         }
     }
 
-    private func emitCompleteLines(
-        from data: inout Data,
-        decoder: inout CodexLocalRolloutLineDecoder,
-        isStartupReplay: Bool
-    ) async {
-        var records: [CodexLocalRolloutDecodedRecord] = []
-        consumeCompleteLines(from: &data) { line in
-            if let record = decoder.decode(line: line) {
-                records.append(record)
-            }
-        }
-        for record in records {
-            await updateHandler?(record, isStartupReplay)
-        }
-    }
-
     private func consumeCompleteLines(
         from data: inout Data,
+        discarding: inout Bool,
         body: (Data) -> Void
     ) {
         while let newline = data.firstIndex(of: 0x0A) {
             let line = Data(data[..<newline])
             data.removeSubrange(data.startIndex...newline)
-            if line.count <= CodexLocalRolloutLineDecoder.maximumLineBytes {
+            if !discarding, line.count <= CodexLocalRolloutLineDecoder.maximumLineBytes {
                 body(line)
             }
+            discarding = false
         }
         if data.count > CodexLocalRolloutLineDecoder.maximumLineBytes {
             data.removeAll(keepingCapacity: true)
+            discarding = true
         }
     }
 
@@ -596,28 +639,25 @@ public actor CodexLocalRolloutActivityClient {
         sqlite3_busy_timeout(database, 100)
 
         let sql = """
-        SELECT id, rollout_path, cwd
+        SELECT id, rollout_path, cwd, source, thread_source
         FROM threads
         WHERE archived = 0
         ORDER BY updated_at_ms DESC, id DESC
         LIMIT ?
         """
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(
-            database,
-            sql,
-            -1,
-            &statement,
-            nil
-        ) == SQLITE_OK, let statement
-        else {
-            return nil
+        if sqlite3_prepare_v2(database, sql, -1, &statement, nil) != SQLITE_OK {
+            if let statement { sqlite3_finalize(statement) }
+            statement = nil
+            let legacySQL = sql.replacingOccurrences(of: ", source, thread_source", with: "")
+            guard sqlite3_prepare_v2(database, legacySQL, -1, &statement, nil) == SQLITE_OK else { return nil }
         }
+        guard let statement else { return nil }
         defer { sqlite3_finalize(statement) }
-        sqlite3_bind_int(statement, 1, Int32(configuration.maximumCandidateCount))
+        sqlite3_bind_int(statement, 1, Int32(max(configuration.maximumCandidateCount, 1024)))
 
         var result: [Candidate] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        while result.count < configuration.maximumCandidateCount, sqlite3_step(statement) == SQLITE_ROW {
             guard let idPointer = sqlite3_column_text(statement, 0),
                   let pathPointer = sqlite3_column_text(statement, 1)
             else {
@@ -635,6 +675,15 @@ public actor CodexLocalRolloutActivityClient {
             ) else {
                 continue
             }
+            guard let metadata = Self.readSessionMetadata(from: fileURL),
+                  metadata.sessionHash == sessionHash,
+                  metadata.kind != .internalTask else { continue }
+            let databaseKind = CodexActivitySessionKind.classify(
+                source: sqlite3_column_text(statement, 3).map { String(cString: $0) },
+                threadSource: sqlite3_column_text(statement, 4).map { String(cString: $0) }
+            )
+            guard databaseKind != .internalTask else { continue }
+            let kind = databaseKind == .unknown ? metadata.kind : databaseKind
             let workspaceName: String?
             if let cwdPointer = sqlite3_column_text(statement, 2) {
                 workspaceName = CodexActivityPrivacy.workspaceName(
@@ -647,7 +696,8 @@ public actor CodexLocalRolloutActivityClient {
                 Candidate(
                     fileURL: fileURL,
                     sessionHash: sessionHash,
-                    workspaceName: workspaceName
+                    workspaceName: workspaceName,
+                    sessionKind: kind
                 )
             )
         }
@@ -680,26 +730,31 @@ public actor CodexLocalRolloutActivityClient {
                 continue
             }
             files.append((fileURL, values.contentModificationDate ?? .distantPast))
+            if files.count >= 2048 {
+                files.sort { $0.1 > $1.1 }
+                files.removeLast(files.count - 1024)
+            }
         }
         files.sort { $0.1 > $1.1 }
 
-        return files.prefix(configuration.maximumCandidateCount).compactMap {
+        return Array(files.prefix(1024).lazy.filter { Self.isAllowedRollout($0.0, sessionsURL: sessionsURL) }.compactMap {
             fileURL, _ in
-            guard let metadata = Self.readSessionMetadata(from: fileURL)
+            guard let metadata = Self.readSessionMetadata(from: fileURL), metadata.kind != .internalTask
             else {
                 return nil
             }
             return Candidate(
                 fileURL: fileURL.standardizedFileURL,
                 sessionHash: metadata.sessionHash,
-                workspaceName: metadata.workspaceName
+                workspaceName: metadata.workspaceName,
+                sessionKind: metadata.kind
             )
-        }
+        }.prefix(configuration.maximumCandidateCount))
     }
 
     private static func readSessionMetadata(
         from fileURL: URL
-    ) -> (sessionHash: String, workspaceName: String?)? {
+    ) -> (sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind)? {
         guard let handle = try? FileHandle(forReadingFrom: fileURL)
         else {
             return nil
@@ -722,7 +777,8 @@ public actor CodexLocalRolloutActivityClient {
             CodexActivityPrivacy.hashIdentifier(id),
             CodexActivityPrivacy.workspaceName(
                 from: payload["cwd"] as? String
-            )
+            ),
+            CodexActivitySessionKind.classify(source: payload["source"], threadSource: payload["thread_source"] as? String)
         )
     }
 
@@ -730,9 +786,10 @@ public actor CodexLocalRolloutActivityClient {
         _ fileURL: URL,
         sessionsURL: URL
     ) -> Bool {
-        let path = fileURL.standardizedFileURL.path
-        let root = sessionsURL.standardizedFileURL.path + "/"
-        return path.hasPrefix(root) && fileURL.pathExtension == "jsonl"
+        let path = fileURL.resolvingSymlinksInPath().standardizedFileURL.path
+        let root = sessionsURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        guard path.hasPrefix(root), fileURL.pathExtension == "jsonl" else { return false }
+        return (try? fileURL.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
     }
 
     private func publishConnectionState(
@@ -747,45 +804,56 @@ public actor CodexLocalRolloutActivityClient {
 private struct BootstrapReplay {
     private var start: CodexLocalRolloutDecodedRecord?
     private var plan: CodexLocalRolloutDecodedRecord?
-    private var firstTokens: CodexLocalRolloutDecodedRecord?
-    private var latestTokens: CodexLocalRolloutDecodedRecord?
+    private var compaction: CodexLocalRolloutDecodedRecord?
+    private var legacyTokens: [CodexActivityTokenUsageUpdate] = []
+    private var directTokens: CodexLocalRolloutDecodedRecord?
     private(set) var isActive = false
 
     mutating func record(_ record: CodexLocalRolloutDecodedRecord) {
         switch record.update {
+        case .tokenUsageReplay:
+            break // Only the recovery projector creates batches, never the line decoder.
         case .activity(let event):
             switch event.event {
             case .userPromptSubmit:
+                self = BootstrapReplay()
                 start = record
-                plan = nil
-                firstTokens = nil
-                latestTokens = nil
                 isActive = true
             case .stop, .interrupt, .sessionEnd:
-                isActive = false
-                start = nil
-                plan = nil
-                firstTokens = nil
-                latestTokens = nil
-            case .preToolUse where event.planProgress != nil:
-                if isActive { plan = record }
+                self = BootstrapReplay()
+            case .preCompact, .postCompact:
+                if isActive { compaction = record }
+            case .preToolUse:
+                if isActive {
+                    compaction = nil
+                    if event.planProgress != nil { plan = record }
+                }
             default:
                 break
             }
-        case .tokenUsage:
+        case .tokenUsage(let update):
             if isActive {
-                if firstTokens == nil { firstTokens = record }
-                latestTokens = record
+                if let total = update.directTurnTotalTokens {
+                    if case .tokenUsage(let previous) = directTokens?.update,
+                       let previousTotal = previous.directTurnTotalTokens,
+                       previousTotal > total { break }
+                    directTokens = record
+                } else {
+                    legacyTokens.append(update)
+                }
             }
         }
     }
 
     var records: [CodexLocalRolloutDecodedRecord] {
-        var result = [start, firstTokens, plan].compactMap { $0 }
-        if latestTokens?.eventID != firstTokens?.eventID,
-           let latestTokens
-        {
-            result.append(latestTokens)
+        // Usage and activity are independent streams. Preserve direct usage
+        // even when the final record is a legacy rebroadcast without ordinal.
+        var result = [start, plan, compaction].compactMap { $0 }
+        var usage = legacyTokens
+        if case .tokenUsage(let direct) = directTokens?.update { usage.append(direct) }
+        // Preserve every numeric segment, but publish only the recovered total.
+        if !usage.isEmpty {
+            result.append(.init(eventID: nil, update: .tokenUsageReplay(usage)))
         }
         return result
     }

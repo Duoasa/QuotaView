@@ -57,6 +57,7 @@
 		B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */; };
 		B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */; };
 		B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */; };
+		B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000042 /* CodexActivityTaskIdentity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -182,6 +183,7 @@
 		F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerActivityNotificationDecoder.swift; sourceTree = "<group>"; };
 		F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSharedAppServerActivityClient.swift; sourceTree = "<group>"; };
 		F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalRolloutActivityClient.swift; sourceTree = "<group>"; };
+		F10000000000000000000042 /* CodexActivityTaskIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityTaskIdentity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -280,6 +282,7 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */,
+				F10000000000000000000042 /* CodexActivityTaskIdentity.swift */,
 				F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */,
 				F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */,
 				F10000000000000000000004 /* CodexAppServerClient.swift */,
@@ -625,6 +628,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */,
+				B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */,
 				B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */,
 				B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */,
 				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,

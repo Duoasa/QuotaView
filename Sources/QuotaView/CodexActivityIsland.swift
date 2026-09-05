@@ -6,6 +6,7 @@ import QuotaViewCore
 import simd
 
 struct CodexActivityRenderState: Equatable {
+    let taskIdentity: CodexActivityTaskIdentity?
     let visualState: CodexActivityVisualState
     let approximateProgressFraction: Double?
     let windowTitle: String
@@ -19,6 +20,7 @@ struct CodexActivityRenderState: Equatable {
     let accessibilityLabel: String
 
     init(
+        taskIdentity: CodexActivityTaskIdentity? = nil,
         visualState: CodexActivityVisualState,
         approximateProgressFraction: Double?,
         windowTitle: String,
@@ -31,6 +33,7 @@ struct CodexActivityRenderState: Equatable {
         isConfirmationReminderActive: Bool = false,
         accessibilityLabel: String
     ) {
+        self.taskIdentity = taskIdentity
         self.visualState = visualState
         self.approximateProgressFraction = approximateProgressFraction
         self.windowTitle = windowTitle
@@ -3129,7 +3132,7 @@ private final class ActivityIslandContentView: NSView {
             renderState.visualState.activityAccentColor.cgColor
         orbView.setAnimation(.particleOrb)
         orbView.setState(renderState.visualState)
-        stateSmokeView.setState(renderState.visualState)
+        stateSmokeView.setState(renderState.visualState, taskIdentity: renderState.taskIdentity)
         stateSmokeView.setEffect(progressEffect)
         stateSmokeView.setApproximateProgress(
             renderState.approximateProgressFraction
