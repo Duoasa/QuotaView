@@ -228,9 +228,16 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         ] { data.append(record); data.append(0x0A) }
         try data.write(to: file)
         let sink = TokenCompatibilitySink()
+        let replayed = expectation(description: "Automatic startup replay")
+        replayed.expectedFulfillmentCount = 4
         let client = CodexLocalRolloutActivityClient(configuration: .init(isEnabled: true, codexHomeURL: root))
-        await client.start(handler: { record, _ in await sink.append(record) }, connectionStateHandler: { _ in })
-        await client.pollOnceForTesting()
+        // start() already schedules polling. Driving a second poll while its
+        // async handler is suspended can replay the same bootstrap twice.
+        await client.start(handler: { record, _ in
+            await sink.append(record)
+            replayed.fulfill()
+        }, connectionStateHandler: { _ in })
+        await fulfillment(of: [replayed], timeout: 3)
         await client.stop()
         let records = await sink.records
         let totals = records.compactMap { record -> Int64? in
@@ -248,9 +255,14 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         completed.append(0x0A)
         try completed.write(to: file)
         let completedSink = TokenCompatibilitySink()
+        let unexpectedReplay = expectation(description: "No historical completion replay")
+        unexpectedReplay.isInverted = true
         let completedClient = CodexLocalRolloutActivityClient(configuration: .init(isEnabled: true, codexHomeURL: root))
-        await completedClient.start(handler: { record, _ in await completedSink.append(record) }, connectionStateHandler: { _ in })
-        await completedClient.pollOnceForTesting()
+        await completedClient.start(handler: { record, _ in
+            await completedSink.append(record)
+            unexpectedReplay.fulfill()
+        }, connectionStateHandler: { _ in })
+        await fulfillment(of: [unexpectedReplay], timeout: 0.6)
         await completedClient.stop()
         let completedRecords = await completedSink.records
         XCTAssertTrue(completedRecords.isEmpty)
