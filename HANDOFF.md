@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-09-04
+更新日期：2026-09-05
 
 公开版本、tag、资产、签名、公证与撤回记录的唯一事实源：
 **[VERSION_HISTORY.md → 当前最新版本](VERSION_HISTORY.md#当前最新版本)**。
@@ -14,16 +14,23 @@
 | 稳定版 | `0.4.5 Build 1` / `v0.4.5-build.1` / GitHub Latest |
 | 回滚基线 | `0.4.3 Build 1` / `v0.4.3-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | 无；`0.4.5 Build 1` 已正式发布 |
-| 当前主题 | 只读本地任务流主通道，Socket/Hook 回退；灵动岛显示本次 turn Token 与完成额度回执，悬停进入 80% 透明态，等待确认满 10 秒后显示黄色描边和光晕 |
+| 当前候选 | `0.4.6 Build 1` / internal `18`，Token 兼容修复；未发布 |
+| 当前主题 | 0.4.6 修复本次 turn Token 统计，兼容直接汇总、累计重置、压缩与上下文连续性 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
 Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
+
+0.4.6 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6`。
+从 0.4.5 发布源码及发布文档提交建立独立分支；已有 Kimi 预览工作区保持独立。
+当前修复见 [0.4.6 Token 兼容规格](docs/design/quotaview-codex-token-compatibility-0.4.6.md)。
+用户已确认本轮实机视觉无问题，并授权 GitHub Release、推送与 appcast。
+正式发布进行中，线上仍为 0.4.5；完整辅助功能交叉矩阵不据此标记通过。
 
 ## 2. 当前规格与状态
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
+| [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Releasing` | 140 项测试、Universal Release、真实四步计划与用户视觉确认完成；正式发布进行中 |
 | [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；已随 0.4.5 发布 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | rollout 主通道的实时 Token、真实成功终态左右回执、当前额度与紧凑额度环已随 0.4.5 发布 |
@@ -195,6 +202,8 @@ PR #40 已合并到 `main`，发布提交为
 - 完整视觉、交互与辅助功能结论只能由产品所有者验收后记录。
 
 ## 4. 下一步
+
+0.4.6 代码与自动化验证已完成，下一步由用户运行候选验收；以下旧待办仍独立保留。
 
 1. 更新器规格的 `APP-UPDATES-07` 保持独立待办，后续记录一次由旧版客户端
    发起的真实 N → N+1 替换与重启；

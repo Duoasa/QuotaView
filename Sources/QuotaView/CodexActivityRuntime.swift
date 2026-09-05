@@ -89,6 +89,7 @@ final class CodexActivityStore: ObservableObject {
     private var planProgressBySession: [String: StoredPlanProgress] = [:]
     private var goalStatusBySession: [String: CodexActivityGoalStatus] = [:]
     private var cumulativeTokensBySession: [String: Int64] = [:]
+    private var latestLegacyTokenAtBySession: [String: Date] = [:]
     private var activeTurnHashBySession: [String: String] = [:]
     private var turnTokenUsageBySession: [String: StoredTurnTokenUsage] = [:]
     private var revision: UInt64 = 0
@@ -107,6 +108,8 @@ final class CodexActivityStore: ObservableObject {
         let turnHash: String
         let baselineTotalTokens: Int64?
         let consumedTokens: Int64?
+        var segmentOffset: Int64 = 0
+        var directTotalTokens: Int64? = nil
     }
 
     private struct ConfirmationReminderContext: Equatable {
@@ -406,53 +409,72 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func receive(_ update: CodexActivityTokenUsageUpdate) {
-        let previousCumulative = cumulativeTokensBySession[
-            update.sessionHash
-        ]
-        cumulativeTokensBySession[update.sessionHash] =
-            update.cumulativeTotalTokens
+        // Token records never start a new turn or revive a terminal one.
+        guard activeTurnHashBySession[update.sessionHash] == update.turnHash,
+              terminalTurnsBySession[update.sessionHash] == nil,
+              update.cumulativeTotalTokens >= 0,
+              update.lastReportedTotalTokens >= 0,
+              update.cumulativeTotalTokens >= update.lastReportedTotalTokens
+        else { return }
 
         let existing = turnTokenUsageBySession[update.sessionHash]
-        let baseline: Int64
-        if let existing,
-           existing.turnHash == update.turnHash,
-           let existingBaseline = existing.baselineTotalTokens {
-            baseline = existingBaseline
-        } else if let previousCumulative,
-                  previousCumulative <= update.cumulativeTotalTokens {
-            baseline = previousCumulative
+        let resolved: StoredTurnTokenUsage
+        if let direct = update.directTurnTotalTokens {
+            guard direct >= update.lastReportedTotalTokens,
+                  direct <= update.cumulativeTotalTokens
+            else { return }
+            // Do not mix response-ledger totals with legacy context totals.
+            // The first authoritative value can correct a fallback estimate.
+            let total = max(existing?.directTotalTokens ?? 0, direct)
+            resolved = StoredTurnTokenUsage(
+                turnHash: update.turnHash,
+                baselineTotalTokens: existing?.baselineTotalTokens,
+                consumedTokens: total > 0 ? total : nil,
+                segmentOffset: existing?.segmentOffset ?? 0,
+                directTotalTokens: total
+            )
         } else {
-            baseline = max(
-                0,
-                update.cumulativeTotalTokens
-                    - update.lastReportedTotalTokens
+            if let latest = latestLegacyTokenAtBySession[update.sessionHash],
+               update.occurredAt < latest { return }
+            let previousCumulative = cumulativeTokensBySession[update.sessionHash]
+            // Keep the legacy baseline fresh for subsequent old-format turns,
+            // but never let a legacy rebroadcast overwrite direct turn usage.
+            if existing?.directTotalTokens != nil {
+                latestLegacyTokenAtBySession[update.sessionHash] = update.occurredAt
+                cumulativeTokensBySession[update.sessionHash] = update.cumulativeTotalTokens
+                return
+            }
+
+            var baseline = existing?.baselineTotalTokens
+                ?? previousCumulative
+                ?? max(0, update.cumulativeTotalTokens - update.lastReportedTotalTokens)
+            var offset = existing?.segmentOffset ?? 0
+            if update.cumulativeTotalTokens < baseline
+                || previousCumulative.map({ update.cumulativeTotalTokens < $0 }) == true {
+                // A restart/context reset begins a new cumulative segment.
+                // Count its first reported response once, then use deltas again.
+                offset = existing?.consumedTokens ?? 0
+                baseline = update.cumulativeTotalTokens - update.lastReportedTotalTokens
+            }
+            let (measured, overflow) = offset.addingReportingOverflow(
+                update.cumulativeTotalTokens - baseline
+            )
+            guard !overflow else { return }
+            latestLegacyTokenAtBySession[update.sessionHash] = update.occurredAt
+            cumulativeTokensBySession[update.sessionHash] = update.cumulativeTotalTokens
+            let total = max(existing?.consumedTokens ?? 0, measured)
+            resolved = StoredTurnTokenUsage(
+                turnHash: update.turnHash,
+                baselineTotalTokens: baseline,
+                consumedTokens: total > 0 ? total : nil,
+                segmentOffset: offset
             )
         }
-
-        let measuredTokens = max(
-            0,
-            update.cumulativeTotalTokens - baseline
-        )
-        let previousMeasuredTokens = existing?.turnHash == update.turnHash
-            ? existing?.consumedTokens
-            : nil
-        let resolvedTokens = max(
-            previousMeasuredTokens ?? 0,
-            measuredTokens
-        )
-        activeTurnHashBySession[update.sessionHash] = update.turnHash
-        turnTokenUsageBySession[update.sessionHash] = StoredTurnTokenUsage(
-            turnHash: update.turnHash,
-            baselineTotalTokens: baseline,
-            consumedTokens: resolvedTokens > 0 ? resolvedTokens : nil
-        )
-
-        guard previousMeasuredTokens != resolvedTokens,
+        turnTokenUsageBySession[update.sessionHash] = resolved
+        guard existing?.consumedTokens != resolved.consumedTokens,
               snapshot?.sessionHash == update.sessionHash,
               presentation != .hidden
-        else {
-            return
-        }
+        else { return }
         notifyChange()
     }
 
@@ -523,6 +545,7 @@ final class CodexActivityStore: ObservableObject {
             cumulativeTokensBySession.removeValue(
                 forKey: event.sessionHash
             )
+            latestLegacyTokenAtBySession.removeValue(forKey: event.sessionHash)
         case .userPromptSubmit:
             guard let turnHash = event.turnHash else {
                 activeTurnHashBySession.removeValue(

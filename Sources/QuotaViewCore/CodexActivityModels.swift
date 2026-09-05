@@ -205,6 +205,9 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
     public let turnHash: String
     public let cumulativeTotalTokens: Int64
     public let lastReportedTotalTokens: Int64
+    /// Authoritative per-turn sum from Codex's response usage records.
+    /// Nil keeps compatibility with legacy cumulative notifications.
+    public let directTurnTotalTokens: Int64?
     public let occurredAt: Date
 
     public init(
@@ -212,12 +215,14 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
         turnHash: String,
         cumulativeTotalTokens: Int64,
         lastReportedTotalTokens: Int64,
+        directTurnTotalTokens: Int64? = nil,
         occurredAt: Date = Date()
     ) {
         self.sessionHash = sessionHash
         self.turnHash = turnHash
         self.cumulativeTotalTokens = cumulativeTotalTokens
         self.lastReportedTotalTokens = lastReportedTotalTokens
+        self.directTurnTotalTokens = directTurnTotalTokens
         self.occurredAt = occurredAt
     }
 }

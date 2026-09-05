@@ -56,6 +56,31 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             payloadType: payload["type"] as? String
         )
 
+        if recordType == "token_usage_record" {
+            guard let turnHash = activeTurnHash,
+                  Self.hashedIdentifier(payload["turn_id"]) == turnHash,
+                  Self.hashedIdentifier(payload["thread_id"]) == sessionHash,
+                  let turn = payload["turn_token_usage"] as? [String: Any],
+                  let thread = payload["thread_token_usage"] as? [String: Any],
+                  let usage = payload["usage"] as? [String: Any],
+                  let direct = Self.nonnegativeInteger(turn["total_tokens"]),
+                  let cumulative = Self.nonnegativeInteger(thread["total_tokens"]),
+                  let last = Self.nonnegativeInteger(usage["total_tokens"]),
+                  cumulative >= direct, direct >= last
+            else { return nil }
+            return CodexLocalRolloutDecodedRecord(
+                eventID: eventID,
+                update: .tokenUsage(CodexActivityTokenUsageUpdate(
+                    sessionHash: sessionHash,
+                    turnHash: turnHash,
+                    cumulativeTotalTokens: cumulative,
+                    lastReportedTotalTokens: last,
+                    directTurnTotalTokens: direct,
+                    occurredAt: occurredAt
+                ))
+            )
+        }
+
         if recordType == "event_msg" {
             return decodeEventMessage(
                 payload,
@@ -80,6 +105,25 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         guard let type = payload["type"] as? String else { return nil }
 
         switch type {
+        case "item_started", "item_completed":
+            guard let turnHash = activeTurnHash,
+                  Self.hashedIdentifier(payload["turn_id"]) == turnHash,
+                  Self.hashedIdentifier(payload["thread_id"]) == sessionHash,
+                  let item = payload["item"] as? [String: Any],
+                  item["type"] as? String == "ContextCompaction"
+            else { return nil }
+            return CodexLocalRolloutDecodedRecord(
+                eventID: eventID,
+                update: .activity(CodexActivityEvent(
+                    event: type == "item_started" ? .preCompact : .postCompact,
+                    sessionHash: sessionHash,
+                    turnHash: turnHash,
+                    workspaceName: workspaceName,
+                    source: .localRollout,
+                    occurredAt: occurredAt
+                ))
+            )
+
         case "task_started":
             guard let turnHash = Self.hashedIdentifier(
                 payload["turn_id"]
@@ -134,7 +178,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         case "task_complete":
             guard let turnHash = Self.hashedIdentifier(
                 payload["turn_id"]
-            ) else {
+            ), turnHash == activeTurnHash else {
                 return nil
             }
             activeTurnHash = nil
@@ -154,11 +198,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             )
 
         case "turn_aborted":
-            guard let turnHash = activeTurnHash
-                ?? Self.hashedIdentifier(payload["turn_id"])
-            else {
-                return nil
-            }
+            guard let turnHash = activeTurnHash else { return nil }
+            if let reportedTurn = Self.hashedIdentifier(payload["turn_id"]),
+               reportedTurn != turnHash { return nil }
             activeTurnHash = nil
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
@@ -247,11 +289,14 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         else {
             return nil
         }
+        if let integer = Int64(number.stringValue) {
+            return integer >= 0 ? integer : nil
+        }
         let double = number.doubleValue
         guard double.isFinite,
               double >= 0,
               double.rounded(.towardZero) == double,
-              double <= Double(Int64.max)
+              double < 9_223_372_036_854_775_808.0
         else {
             return nil
         }
@@ -747,8 +792,10 @@ public actor CodexLocalRolloutActivityClient {
 private struct BootstrapReplay {
     private var start: CodexLocalRolloutDecodedRecord?
     private var plan: CodexLocalRolloutDecodedRecord?
+    private var compaction: CodexLocalRolloutDecodedRecord?
     private var firstTokens: CodexLocalRolloutDecodedRecord?
     private var latestTokens: CodexLocalRolloutDecodedRecord?
+    private var directTokens: CodexLocalRolloutDecodedRecord?
     private(set) var isActive = false
 
     mutating func record(_ record: CodexLocalRolloutDecodedRecord) {
@@ -756,37 +803,44 @@ private struct BootstrapReplay {
         case .activity(let event):
             switch event.event {
             case .userPromptSubmit:
+                self = BootstrapReplay()
                 start = record
-                plan = nil
-                firstTokens = nil
-                latestTokens = nil
                 isActive = true
             case .stop, .interrupt, .sessionEnd:
-                isActive = false
-                start = nil
-                plan = nil
-                firstTokens = nil
-                latestTokens = nil
-            case .preToolUse where event.planProgress != nil:
-                if isActive { plan = record }
+                self = BootstrapReplay()
+            case .preCompact, .postCompact:
+                if isActive { compaction = record }
+            case .preToolUse:
+                if isActive {
+                    compaction = nil
+                    if event.planProgress != nil { plan = record }
+                }
             default:
                 break
             }
-        case .tokenUsage:
+        case .tokenUsage(let update):
             if isActive {
-                if firstTokens == nil { firstTokens = record }
-                latestTokens = record
+                if let total = update.directTurnTotalTokens {
+                    if case .tokenUsage(let previous) = directTokens?.update,
+                       let previousTotal = previous.directTurnTotalTokens,
+                       previousTotal > total { break }
+                    directTokens = record
+                } else {
+                    if firstTokens == nil { firstTokens = record }
+                    latestTokens = record
+                }
             }
         }
     }
 
     var records: [CodexLocalRolloutDecodedRecord] {
-        var result = [start, firstTokens, plan].compactMap { $0 }
-        if latestTokens?.eventID != firstTokens?.eventID,
-           let latestTokens
-        {
+        // Usage and activity are independent streams. Preserve direct usage
+        // even when the final record is a legacy rebroadcast without ordinal.
+        var result = [start, firstTokens, plan, compaction].compactMap { $0 }
+        if latestTokens != firstTokens, let latestTokens {
             result.append(latestTokens)
         }
+        if let directTokens { result.append(directTokens) }
         return result
     }
 }
