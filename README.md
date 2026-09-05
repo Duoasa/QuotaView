@@ -42,6 +42,10 @@ Codex can keep working after its window leaves the foreground, but its state sho
 
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
+## What's new in 0.4.6
+
+More accurate Codex turn token counts and task progress. Internal reviews and background tasks no longer cause premature completion receipts; progress and token recovery remain consistent across task changes and restarts.
+
 ## The Codex Island
 
 The Island is the primary QuotaView experience—not an add-on to a quota dashboard.

@@ -274,6 +274,7 @@ final class AppBehaviorTests: XCTestCase {
             compactDelay: 1,
             hiddenDelayAfterCompact: 1
         )
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", occurredAt: Date().addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -986,6 +987,7 @@ final class AppBehaviorTests: XCTestCase {
             compactDelay: 0.02,
             hiddenDelayAfterCompact: 0.20
         )
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", occurredAt: Date().addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -1014,6 +1016,7 @@ final class AppBehaviorTests: XCTestCase {
             compactDelay: 0.02,
             hiddenDelayAfterCompact: 0.02
         )
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", occurredAt: Date().addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -1244,6 +1247,7 @@ final class AppBehaviorTests: XCTestCase {
             hiddenDelayAfterCompact: 1
         )
         let now = Date()
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", turnHash: "turn-1", occurredAt: now.addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -1286,6 +1290,7 @@ final class AppBehaviorTests: XCTestCase {
             hiddenDelayAfterCompact: 1
         )
         let now = Date()
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", turnHash: "turn-1", occurredAt: now.addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -1298,6 +1303,7 @@ final class AppBehaviorTests: XCTestCase {
             CodexActivityEvent(
                 event: .preToolUse,
                 sessionHash: "session",
+                turnHash: "turn-2",
                 toolCategory: .shell,
                 occurredAt: now.addingTimeInterval(0.01)
             )
@@ -1319,6 +1325,7 @@ final class AppBehaviorTests: XCTestCase {
             hiddenDelayAfterCompact: 1
         )
         let now = Date()
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", turnHash: "turn-1", occurredAt: now.addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .stop,
@@ -3161,6 +3168,7 @@ final class AppBehaviorTests: XCTestCase {
         let store = CodexActivityStore(
             titleClient: CodexAppServerClient(executablePath: nil)
         )
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", turnHash: "turn", source: .appServer, occurredAt: Date().addingTimeInterval(-0.01)))
         store.receive(
             CodexActivityEvent(
                 event: .interrupt,

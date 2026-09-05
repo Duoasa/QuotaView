@@ -590,6 +590,15 @@ struct CodexActivityStateSmokeSimulation {
 
 struct CodexActivityStateSmokeProgressProjection {
     private(set) var displayedFrontPosition: Float?
+    private var taskIdentity: CodexActivityTaskIdentity?
+
+    @discardableResult
+    mutating func bindTask(_ identity: CodexActivityTaskIdentity?) -> Bool {
+        guard taskIdentity != identity else { return false }
+        taskIdentity = identity
+        reset()
+        return true
+    }
 
     mutating func reset() {
         displayedFrontPosition = nil
@@ -1499,11 +1508,13 @@ private final class ActivityStateSmokeRenderer:
 
     func setState(
         _ newState: CodexActivityVisualState,
+        taskIdentity newIdentity: CodexActivityTaskIdentity? = nil,
         in view: MTKView
     ) {
-        guard state != newState else { return }
+        let changedTask = progressProjection.bindTask(newIdentity)
+        guard state != newState || changedTask else { return }
         let previousState = state
-        let startsFreshProgress = newState.activityStartsFreshProgress(
+        let startsFreshProgress = changedTask || newState.activityStartsFreshProgress(
             after: previousState
         )
         state = newState
@@ -1745,8 +1756,8 @@ final class ActivityStateSmokeMetalView: MTKView {
         smokeRenderer?.setReduceMotion(enabled, in: self)
     }
 
-    func setState(_ state: CodexActivityVisualState) {
-        smokeRenderer?.setState(state, in: self)
+    func setState(_ state: CodexActivityVisualState, taskIdentity: CodexActivityTaskIdentity? = nil) {
+        smokeRenderer?.setState(state, taskIdentity: taskIdentity, in: self)
     }
 
     func setEffect(

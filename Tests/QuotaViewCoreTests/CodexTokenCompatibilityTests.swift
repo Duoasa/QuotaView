@@ -96,8 +96,8 @@ final class CodexTokenCompatibilityTests: XCTestCase {
     func testLegacyResetAtNewTurnDoesNotSubtractPriorSessionBaseline() async {
         let store = store()
         store.receive(update(32_375_978, last: 100))
-        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: turn))
-        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "second"))
+        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: turn, source: .localRollout))
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "second", source: .localRollout))
         store.receive(update(151_228, last: 151_228, turn: "second"))
         XCTAssertEqual(store.currentTurnTokenUsage, 151_228)
         await store.stop()
@@ -135,8 +135,8 @@ final class CodexTokenCompatibilityTests: XCTestCase {
     func testDirectTotalsWinMixedStreamsDuplicatesAndTerminalFreeze() async {
         let store = store()
         store.receive(update(348_097, last: 348_097))
-        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: turn))
-        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "second"))
+        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: turn, source: .localRollout))
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "second", source: .localRollout))
         store.receive(update(1_003_450, last: 100, turn: "second"))
         XCTAssertEqual(store.currentTurnTokenUsage, 655_353)
         store.receive(update(2_000_000, last: 100, direct: 1_003_450, turn: "second"))
@@ -145,10 +145,10 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         store.receive(update(2_000_000, last: 100, direct: 1_003_450, turn: "second"))
         store.receive(update(2_000_000, last: 100, direct: 151_228, turn: "second"))
         XCTAssertEqual(store.currentTurnTokenUsage, 1_003_450)
-        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: "second"))
+        store.receive(CodexActivityEvent(event: .stop, sessionHash: session, turnHash: "second", source: .localRollout))
         store.receive(update(4_000_000, last: 200, direct: 2_000_000, turn: "second"))
         XCTAssertEqual(store.currentTurnTokenUsage, 1_003_450)
-        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "third"))
+        store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: "third", source: .localRollout))
         store.receive(update(4_000_000, last: 200, direct: 2_000_000, turn: "second"))
         XCTAssertNil(store.currentTurnTokenUsage)
         store.receive(update(100, last: 100, direct: 100, turn: "third"))
@@ -229,7 +229,7 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         try data.write(to: file)
         let sink = TokenCompatibilitySink()
         let replayed = expectation(description: "Automatic startup replay")
-        replayed.expectedFulfillmentCount = 4
+        replayed.expectedFulfillmentCount = 2
         let client = CodexLocalRolloutActivityClient(configuration: .init(isEnabled: true, codexHomeURL: root))
         // start() already schedules polling. Driving a second poll while its
         // async handler is suspended can replay the same bootstrap twice.
@@ -240,13 +240,14 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         await fulfillment(of: [replayed], timeout: 3)
         await client.stop()
         let records = await sink.records
-        let totals = records.compactMap { record -> Int64? in
-            guard case .tokenUsage(let update) = record.update else { return nil }
-            return update.directTurnTotalTokens
+        let updates = records.flatMap { record -> [CodexActivityTokenUsageUpdate] in
+            guard case .tokenUsageReplay(let updates) = record.update else { return [] }
+            return updates
         }
+        let totals = updates.compactMap(\.directTurnTotalTokens)
         XCTAssertEqual(totals, [1_003_450])
-        let legacy = records.compactMap { record -> Int64? in
-            guard case .tokenUsage(let update) = record.update, update.directTurnTotalTokens == nil else { return nil }
+        let legacy = updates.compactMap { update -> Int64? in
+            guard update.directTurnTotalTokens == nil else { return nil }
             return update.cumulativeTotalTokens
         }
         XCTAssertEqual(legacy, [100, 200])

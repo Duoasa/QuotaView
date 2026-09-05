@@ -92,6 +92,11 @@ final class CodexActivityStore: ObservableObject {
     private var latestLegacyTokenAtBySession: [String: Date] = [:]
     private var activeTurnHashBySession: [String: String] = [:]
     private var turnTokenUsageBySession: [String: StoredTurnTokenUsage] = [:]
+    private let sessionClassifier = CodexActivitySessionClassifier()
+    private var nativeGeneration: UInt64 = 0
+    private var nativeStartTask: Task<Void, Never>?
+    private var taskRegistry = CodexActivityTaskRegistry()
+    private var sessionKinds: [String: CodexActivitySessionKind] = [:]
     private var revision: UInt64 = 0
 
     private struct StoredPlanProgress {
@@ -146,13 +151,6 @@ final class CodexActivityStore: ObservableObject {
         confirmationReminderDelayNanoseconds = Self.nanoseconds(
             for: confirmationReminderDelay
         )
-
-        Task { [weak self, titleClient] in
-            await titleClient.setActivityNotificationHandler {
-                [weak self] event in
-                await self?.receive(event)
-            }
-        }
     }
 
     var shouldPlayVisualEffects: Bool {
@@ -161,9 +159,17 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func startNativeActivityNotifications() {
+        nativeStartTask?.cancel()
+        nativeGeneration &+= 1
+        let run = nativeGeneration
         let sharedActivityClient = sharedActivityClient
         let localRolloutActivityClient = localRolloutActivityClient
-        Task { [weak self] in
+        nativeStartTask = Task { [weak self] in
+            guard let self, self.nativeGeneration == run, !Task.isCancelled else { return }
+            await self.titleClient.setActivityNotificationHandler { [weak self] event in
+                await self?.receiveClassified(.init(source: .liveSocket, activity: event), generation: run)
+            }
+            guard self.nativeGeneration == run, !Task.isCancelled else { return }
             await localRolloutActivityClient.start(
                 handler: { [weak self] record, isStartupReplay in
                     guard let self else { return }
@@ -176,7 +182,7 @@ final class CodexActivityStore: ObservableObject {
                                 : .localRollout,
                             activity: event
                         )
-                        await self.receive(delivery)
+                        await self.receiveClassified(delivery, generation: run)
                         CodexActivityDiagnostics.record(
                             delivery: delivery,
                             outcome: isStartupReplay
@@ -184,33 +190,59 @@ final class CodexActivityStore: ObservableObject {
                                 : "local_rollout_received"
                         )
                     case .tokenUsage(let update):
-                        await self.receive(update)
+                        await self.receiveNativeToken(update, generation: run)
+                    case .tokenUsageReplay(let updates):
+                        await self.receiveNativeTokenReplay(updates, generation: run)
                     }
                 },
                 connectionStateHandler: { [weak self] state in
-                    await self?.setLocalRolloutConnectionState(state)
+                    await self?.setNativeConnectionState(state, local: true, generation: run)
                 }
             )
+            guard self.nativeGeneration == run, !Task.isCancelled else { return }
             await sharedActivityClient.start(
                 handler: { [weak self] event in
                     let delivery = CodexActivityDelivery(
                         source: .liveSocket,
                         activity: event
                     )
-                    await self?.receive(delivery)
+                    await self?.receiveClassified(delivery, generation: run)
                     CodexActivityDiagnostics.record(
                         delivery: delivery,
                         outcome: "native_received"
                     )
                 },
                 tokenUsageHandler: { [weak self] update in
-                    await self?.receive(update)
+                    await self?.receiveNativeToken(update, generation: run)
                 },
                 connectionStateHandler: { [weak self] state in
-                    await self?.setSharedConnectionState(state)
+                    await self?.setNativeConnectionState(state, local: false, generation: run)
                 }
             )
         }
+    }
+
+    private func receiveNativeTokenReplay(_ updates: [CodexActivityTokenUsageUpdate], generation run: UInt64) {
+        guard run == nativeGeneration else { return }
+        receiveTokenReplay(updates)
+    }
+
+    func receiveTokenReplay(_ updates: [CodexActivityTokenUsageUpdate]) {
+        let before = currentTurnTokenUsage
+        for update in updates { receive(update, publish: false) }
+        if currentTurnTokenUsage != before, presentation != .hidden { notifyChange() }
+    }
+
+    private func receiveNativeToken(_ update: CodexActivityTokenUsageUpdate, generation run: UInt64) {
+        guard run == nativeGeneration else { return }
+        receive(update)
+    }
+
+    private func setNativeConnectionState(_ state: CodexSharedAppServerConnectionState,
+                                          local: Bool, generation run: UInt64) {
+        guard run == nativeGeneration else { return }
+        if local { setLocalRolloutConnectionState(state) }
+        else { setSharedConnectionState(state) }
     }
 
     private func setSharedConnectionState(
@@ -245,6 +277,17 @@ final class CodexActivityStore: ObservableObject {
         nativeConnectionStateDidChange?(state)
     }
 
+    func receiveClassified(_ delivery: CodexActivityDelivery, generation expected: UInt64? = nil) async {
+        let run = expected ?? nativeGeneration
+        let kind = await sessionClassifier.kind(for: delivery.activity)
+        guard run == nativeGeneration else { return }
+        let before = snapshot
+        receive(CodexActivityDelivery(eventID: delivery.eventID, source: delivery.source,
+                                      activity: delivery.activity.classified(as: kind)))
+        CodexActivityDiagnostics.record(delivery: delivery,
+            outcome: before != snapshot ? "task_applied" : "task_ignored")
+    }
+
     func receive(_ event: CodexActivityEvent) {
         receive(
             CodexActivityDelivery(
@@ -256,8 +299,8 @@ final class CodexActivityStore: ObservableObject {
 
     func receive(_ delivery: CodexActivityDelivery) {
         let event = delivery.activity
-        guard registerEventID(delivery.eventID) else { return }
-        let knownGoalStatus = event.goalStatus
+        if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
+        var knownGoalStatus = event.goalStatus
             ?? goalStatusBySession[event.sessionHash]
         guard CodexActivityReducer.snapshot(
             for: event,
@@ -267,55 +310,58 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        if let latestEventAt = latestEventAtBySession[event.sessionHash],
-           event.occurredAt < latestEventAt
-        {
-            return
+        let kind = sessionKinds[event.sessionHash] ?? .unknown
+        let resolvedKind = kind == .internalTask ? kind : event.sessionKind ?? kind
+        guard let admission = taskRegistry.admit(event, kind: resolvedKind,
+                                                selectedSession: snapshot?.sessionHash,
+                                                selectedOccurredAt: snapshot?.occurredAt) else { return }
+        _ = registerEventID(delivery.eventID)
+        for session in admission.evictedSessions { discardSession(session) }
+        if resolvedKind != .unknown { sessionKinds[event.sessionHash] = resolvedKind }
+        if admission.startsTurn {
+            planProgressBySession.removeValue(forKey: event.sessionHash)
+            goalStatusBySession.removeValue(forKey: event.sessionHash)
+            terminalTurnsBySession.removeValue(forKey: event.sessionHash)
         }
-        if let snapshot,
-           event.sessionHash != snapshot.sessionHash,
-           event.occurredAt < snapshot.occurredAt
-        {
-            return
-        }
-        if shouldIgnoreEventAfterTerminalState(event) {
-            return
-        }
+        // A repeated transport start is an acknowledgement, not new activity.
+        if admission.duplicateStart { return }
         latestEventAtBySession[event.sessionHash] = event.occurredAt
         if let goalStatus = event.goalStatus {
             goalStatusBySession[event.sessionHash] = goalStatus
         }
+        if admission.startsTurn { knownGoalStatus = event.goalStatus }
         synchronizeTokenTurn(for: event)
+        var nextLifecycle = lifecycle
 
         switch event.event {
         case .userPromptSubmit:
             terminalTurnsBySession.removeValue(forKey: event.sessionHash)
-            lifecycle = .active
+            nextLifecycle = .active
         case .sessionStart:
             if event.sessionStartSource != .compact {
                 terminalTurnsBySession.removeValue(
                     forKey: event.sessionHash
                 )
-                lifecycle = .idle
+                nextLifecycle = .idle
             } else {
-                lifecycle = .active
+                nextLifecycle = .active
             }
         case .sessionEnd:
             terminalTurnsBySession[event.sessionHash] = TerminalTurn(
                 turnHash: event.turnHash
             )
-            lifecycle = .idle
+            nextLifecycle = .idle
             goalStatusBySession.removeValue(forKey: event.sessionHash)
         case .interrupt:
             terminalTurnsBySession[event.sessionHash] = TerminalTurn(
                 turnHash: event.turnHash
             )
-            lifecycle = .idle
+            nextLifecycle = .idle
         case .stop:
             terminalTurnsBySession[event.sessionHash] = TerminalTurn(
                 turnHash: event.turnHash
             )
-            lifecycle = event.turnCompletionStatus == .failed
+            nextLifecycle = event.turnCompletionStatus == .failed
                 || event.turnCompletionStatus == .interrupted
                 || (knownGoalStatus != nil && knownGoalStatus != .complete)
                 ? .idle
@@ -327,14 +373,14 @@ final class CodexActivityStore: ObservableObject {
             // evidence of a new turn after the terminal guard has rejected
             // any same-turn late event.
             terminalTurnsBySession.removeValue(forKey: event.sessionHash)
-            lifecycle = .active
+            nextLifecycle = .active
         case .postToolUse:
-            lifecycle = event.goalStatus != nil
+            nextLifecycle = event.goalStatus != nil
                 && event.goalStatus != .active
-                ? (event.goalStatus == .complete ? .completed : .idle)
-                : .active
+                && event.goalStatus != .complete
+                ? .idle : .active
         case .postCompact, .subagentStop:
-            lifecycle = .active
+            nextLifecycle = .active
         }
 
         let approximateProgress = approximateProgress(
@@ -349,13 +395,23 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
+        // Background state may settle, but only the selected task owns UI timers.
+        guard admission.selectsTask else { return }
+        lifecycle = nextLifecycle
+        let identifiedSnapshot = CodexActivitySnapshot(
+            sessionHash: nextSnapshot.sessionHash, taskIdentity: admission.identity,
+            state: nextSnapshot.state, workspaceName: nextSnapshot.workspaceName,
+            operationKey: nextSnapshot.operationKey, toolCategory: nextSnapshot.toolCategory,
+            approximateProgressFraction: nextSnapshot.approximateProgressFraction,
+            occurredAt: nextSnapshot.occurredAt
+        )
         revision &+= 1
         let eventRevision = revision
         inactivityTask?.cancel()
 
         if CodexActivityReducer.shouldHideImmediately(after: event) {
             if snapshot?.sessionHash == event.sessionHash {
-                snapshot = nextSnapshot
+                snapshot = identifiedSnapshot
                 presentation = .hidden
                 resolvedThreadTitle = nil
                 resetConfirmationReminder()
@@ -380,7 +436,7 @@ final class CodexActivityStore: ObservableObject {
             titleTask = nil
             titleTaskSessionHash = nil
         }
-        snapshot = nextSnapshot
+        snapshot = identifiedSnapshot
         resolvedThreadTitle = titleCache[event.sessionHash]
         if isStaleSettledContinuationEvent(delivery) {
             lifecycle = .unconfirmed
@@ -390,7 +446,7 @@ final class CodexActivityStore: ObservableObject {
             return
         }
         updateConfirmationReminder(
-            for: nextSnapshot,
+            for: identifiedSnapshot,
             turnHash: event.turnHash
                 ?? activeTurnHashBySession[event.sessionHash],
             occurredAt: event.occurredAt
@@ -408,7 +464,7 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
-    func receive(_ update: CodexActivityTokenUsageUpdate) {
+    func receive(_ update: CodexActivityTokenUsageUpdate, publish: Bool = true) {
         // Token records never start a new turn or revive a terminal one.
         guard activeTurnHashBySession[update.sessionHash] == update.turnHash,
               terminalTurnsBySession[update.sessionHash] == nil,
@@ -471,7 +527,7 @@ final class CodexActivityStore: ObservableObject {
             )
         }
         turnTokenUsageBySession[update.sessionHash] = resolved
-        guard existing?.consumedTokens != resolved.consumedTokens,
+        guard publish, existing?.consumedTokens != resolved.consumedTokens,
               snapshot?.sessionHash == update.sessionHash,
               presentation != .hidden
         else { return }
@@ -490,11 +546,26 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func stop() async {
+        nativeGeneration &+= 1
+        let run = nativeGeneration
+        nativeStartTask?.cancel()
+        nativeStartTask = nil
         hide()
         lifecycle = .idle
+        taskRegistry = CodexActivityTaskRegistry()
+        for session in Array(latestEventAtBySession.keys) { discardSession(session) }
+        acceptedEventIDs.removeAll()
+        acceptedEventIDOrder.removeAll()
+        snapshot = nil
+        localRolloutConnectionState = .disabled
+        sharedConnectionState = .disabled
+        publishAggregateConnectionState()
         await titleClient.setActivityNotificationHandler(nil)
+        guard run == nativeGeneration else { return }
         await titleClient.stop()
+        guard run == nativeGeneration else { return }
         await localRolloutActivityClient.stop()
+        guard run == nativeGeneration else { return }
         await sharedActivityClient.stop()
     }
 
@@ -849,30 +920,18 @@ final class CodexActivityStore: ObservableObject {
         return elapsed >= replayAgeThreshold
     }
 
-    private func shouldIgnoreEventAfterTerminalState(
-        _ event: CodexActivityEvent
-    ) -> Bool {
-        guard let terminalTurn =
-            terminalTurnsBySession[event.sessionHash]
-        else {
-            return false
-        }
-        switch event.event {
-        case .userPromptSubmit, .sessionEnd:
-            return false
-        case .sessionStart:
-            return event.sessionStartSource == .compact
-        case .preToolUse, .permissionRequest, .preCompact,
-             .subagentStart:
-            guard let completedTurnHash = terminalTurn.turnHash,
-                  let eventTurnHash = event.turnHash
-            else {
-                return false
-            }
-            return completedTurnHash == eventTurnHash
-        case .postToolUse, .postCompact, .subagentStop, .interrupt, .stop:
-            return true
-        }
+    private func discardSession(_ session: String) {
+        latestEventAtBySession.removeValue(forKey: session)
+        terminalTurnsBySession.removeValue(forKey: session)
+        planProgressBySession.removeValue(forKey: session)
+        goalStatusBySession.removeValue(forKey: session)
+        cumulativeTokensBySession.removeValue(forKey: session)
+        latestLegacyTokenAtBySession.removeValue(forKey: session)
+        activeTurnHashBySession.removeValue(forKey: session)
+        turnTokenUsageBySession.removeValue(forKey: session)
+        titleCache.removeValue(forKey: session)
+        titleAttemptedAt.removeValue(forKey: session)
+        sessionKinds.removeValue(forKey: session)
     }
 
     private func registerEventID(_ eventID: String?) -> Bool {
@@ -1111,7 +1170,7 @@ final class CodexActivityRuntime: ObservableObject {
                     completion(false)
                     return
                 }
-                completion(self.receive(delivery))
+                completion(await self.receive(delivery))
             }
         }
         var isListening = false
@@ -1496,7 +1555,7 @@ final class CodexActivityRuntime: ObservableObject {
         }
     }
 
-    private func receive(_ delivery: CodexActivityDelivery) -> Bool {
+    private func receive(_ delivery: CodexActivityDelivery) async -> Bool {
         let activity = delivery.activity
         if defaults.bool(forKey: DefaultsKey.setupEnabled) {
             guard canAcceptActivityAfterRequiredRestart() else {
@@ -1541,7 +1600,7 @@ final class CodexActivityRuntime: ObservableObject {
         let snapshotBeforeDelivery = store.snapshot
         let presentationBeforeDelivery = store.presentation
         let lifecycleBeforeDelivery = store.lifecycle
-        store.receive(delivery)
+        await store.receiveClassified(delivery)
         let didApplyDelivery = store.snapshot != snapshotBeforeDelivery
             || store.presentation != presentationBeforeDelivery
             || store.lifecycle != lifecycleBeforeDelivery
@@ -1770,6 +1829,7 @@ final class CodexActivityRuntime: ObservableObject {
             tokenUsageTitle: tokenUsageTitle
         )
         let renderState = CodexActivityRenderState(
+            taskIdentity: snapshot.taskIdentity,
             visualState: snapshot.state,
             approximateProgressFraction:
                 snapshot.approximateProgressFraction,

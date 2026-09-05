@@ -14,8 +14,8 @@
 | 稳定版 | `0.4.5 Build 1` / `v0.4.5-build.1` / GitHub Latest |
 | 回滚基线 | `0.4.3 Build 1` / `v0.4.3-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.6 Build 1` / internal `18`，Token 兼容修复；未发布 |
-| 当前主题 | 0.4.6 修复本次 turn Token 统计，兼容直接汇总、累计重置、压缩与上下文连续性 |
+| 当前候选 | `0.4.6 Build 1` / internal `18`，Token 与任务归属重构；未发布 |
+| 当前主题 | 0.4.6 统一任务准入、turn 生命周期与渲染身份，保留 Token 兼容和完整启动恢复 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
 Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
@@ -23,14 +23,20 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 0.4.6 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6`。
 从 0.4.5 发布源码及发布文档提交建立独立分支；已有 Kimi 预览工作区保持独立。
 当前修复见 [0.4.6 Token 兼容规格](docs/design/quotaview-codex-token-compatibility-0.4.6.md)。
-用户已确认本轮实机视觉无问题，并授权 GitHub Release、推送与 appcast。
-正式发布进行中，线上仍为 0.4.5；完整辅助功能交叉矩阵不据此标记通过。
+用户曾确认单一四步任务的实机视觉并授权发布，随后发现主任务运行时出现错误
+完成回执，要求审计整条逻辑链路。审计期间暂停了发布；现已修复并获本轮视觉确认，恢复发布流程，线上暂仍为 0.4.5。
+见 [0.4.6 灵动岛逻辑审计](docs/design/quotaview-activity-logic-audit-0.4.6.md)：
+9 个诊断场景已复现，涉及内部任务准入、展示归属、turn 终态、重复开始与恢复。
+已按审计完成系统重构；9 个诊断场景已转为永久回归，完整测试 166 项通过。
+详见 [重构验证记录](docs/design/quotaview-activity-refactor-verification-0.4.6.md)。
+已完成 Universal 构建及真实主任务 / guardian / 四步计划的数据链路验证。
+用户已确认本轮真实五步任务视觉无问题并要求继续发布。此前公证候选对应旧源码，正在重新打包、公证；不能沿用旧 ZIP。
 
 ## 2. 当前规格与状态
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
-| [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Releasing` | 140 项测试、Universal Release、真实四步计划与用户视觉确认完成；正式发布进行中 |
+| [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Verifying` | 系统重构后本地 166 项测试、Universal 和实机数据链路通过；真实五步视觉已获用户确认，正在推送 PR #45 并重新打包、公证 |
 | [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；已随 0.4.5 发布 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013`](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | rollout 主通道的实时 Token、真实成功终态左右回执、当前额度与紧凑额度环已随 0.4.5 发布 |

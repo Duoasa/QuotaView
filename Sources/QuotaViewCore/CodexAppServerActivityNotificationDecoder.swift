@@ -30,10 +30,10 @@ public enum CodexAppServerActivityNotificationDecoder {
                 as? [String: Any],
               let total = tokenUsage["total"] as? [String: Any],
               let last = tokenUsage["last"] as? [String: Any],
-              let cumulativeTotalTokens = nonnegativeInteger(
+              let cumulativeTotalTokens = CodexActivityNumeric.nonnegativeInteger(
                   total["totalTokens"]
               ),
-              let lastReportedTotalTokens = nonnegativeInteger(
+              let lastReportedTotalTokens = CodexActivityNumeric.nonnegativeInteger(
                   last["totalTokens"]
               ),
               cumulativeTotalTokens >= lastReportedTotalTokens
@@ -245,16 +245,4 @@ public enum CodexAppServerActivityNotificationDecoder {
         return Date(timeIntervalSince1970: value / 1_000)
     }
 
-    private static func nonnegativeInteger(_ rawValue: Any?) -> Int64? {
-        guard let number = rawValue as? NSNumber else { return nil }
-        let value = number.doubleValue
-        guard value.isFinite,
-              value >= 0,
-              value <= Double(Int64.max),
-              value.rounded(.towardZero) == value
-        else {
-            return nil
-        }
-        return number.int64Value
-    }
 }
