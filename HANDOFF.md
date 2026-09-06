@@ -11,10 +11,10 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 稳定版 | `0.4.6 Build 1` / internal `18` / `v0.4.6-build.1` / GitHub Latest |
-| 回滚基线 | `0.4.5 Build 1` / `v0.4.5-build.1` |
+| 稳定版 | `0.4.6 Build 2` / internal `19` / `v0.4.6-build.2` / GitHub Latest |
+| 回滚基线 | `0.4.6 Build 1` / `v0.4.6-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.6 Build 2` / internal `19`；用户已验收并授权 GitHub 与 appcast 热更新发布，发布验证中 |
+| 当前候选 | 无；Build 2 已正式发布并进入 Stable appcast |
 | 当前主题 | Build 2 迁入新版量子噪点，保留 Build 1 的真实任务生命周期与近似进度算法 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
@@ -34,42 +34,32 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 
 ## 2. 当前规格与状态
 
-### 0.4.6 Build 2 本地候选（2026-09-06）
+### 0.4.6 Build 2 发布完成（2026-09-06）
 
-最新局部试调：用户已确认真实 Codex 上下文压缩时的聚簇动效效果不错，
-随后要求“思考中”保留原配色、复用该运动方式。现仅将思考态运动配置映射到
-压缩态，星点参数、着色、其他状态与真实数据链路保持原实现。
-177 项测试与 Universal Release 构建通过；本次本地验收应用位于
-`/private/tmp/QuotaView-0.4.6-build.2-thinking/QuotaView.app`，
-下述 ZIP 为此前候选，不包含本次思考态调整。用户已验收当前效果并明确授权
-作为 Build 1 的热更新发布 GitHub 与 appcast；将从本次提交重新构建正式包。
+用户已验收真实上下文压缩与蓝紫色思考聚簇，并明确授权作为 Build 1 的热更新
+发布 GitHub、appcast 与 Apple 公证。当前生产保留原版颗粒，增强状态运动、
+配色与低进度渐隐；真实任务生命周期、近似进度来源和其他特效保持原实现。
 
-用户明确授权迁入新版量子噪点、构建、冒烟测试并启动。已接入生产
-`CodexActivityStateSmoke.swift`，保留 `dropField` 设置兼容、真实状态与
-近似进度来源、原生完成时序、Reduce Motion 及其他三种效果。
-生产源码无控制台、模拟数据或手动进度注入。
-
-- `swift test`：177 项通过（既有 166 项 + 11 项生产量子动效检查）。
-- Universal Xcode Release 无签名构建通过；App、Widget、Hook 均为
-  `x86_64 arm64`；App/Widget 为 `0.4.6` / internal `19` / display `2`。
-- AppIcon.icns、Assets.car 齐全。本地 Developer ID / Hardened Runtime
-  签名，运行副本与 ZIP 解压副本的 `codesign --verify --deep --strict` 通过。
-- 本地包 `dist/QuotaView-v0.4.6-build.2-local.zip`，13,547,756 bytes，SHA-256
-  `040d7562be191fda291ced334232a1f90bc0a4d44ddee36d07dd49e1217a1997`。
-- 已启动 `/private/tmp/QuotaView-0.4.6-build.2/QuotaView.app`，运行路径已核对，
-  原生灵动岛已读取真实 Codex 任务。生产视觉与交互等待用户检查。
-- 用户随后报告效果闪回，进程核对发现 Applications 中的 Build 1 仍并行运行。
-  已退出旧实例并核对仅 Build 2 主应用在运行；先前启动检查只匹配候选路径，
-  未排除同 bundle ID 旧实例，是本轮验收疏漏。闪回是否消失等待用户复核。
-- 本地验收包未公证、未发布、未加入 appcast；公开稳定版仍为 Build 1。
-  未提交或推送。本地签名复核需与签名时相同权限，受限沙盒可能误报失败。
+- [Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) / `v0.4.6-build.2` / 提交 `ae9f17d415fb1968d9ef843be771b6a5211213c7`。
+- App / Widget：`0.4.6` / 产品 `2` / internal `19`；本地与 CI 177 项测试通过，Universal Release 通过。
+- `QuotaView-v0.4.6-build.2.zip`，13,487,447 bytes，SHA-256 `5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916`。
+- Developer ID / Hardened Runtime；Apple Accepted / Staple，Submission
+  `f466177a-2fea-4e61-9c11-1e405ed32bde`；最终包、解压及回下载严格签名和 Gatekeeper 通过。
+- [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml) 已更新；提交 `94ae0ec0d63d4a50f77ba3a836afc98d2cb1009d`，
+  SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；线上与本地一致，Feed / ZIP 内置公钥签名验证通过。
+- 回下载包启动通过，运行于 `/private/tmp/quotaview-build2-public-download/extracted/QuotaView.app`；
+  已退出旧验收实例并核对仅一份主应用运行，避免此前双实例视觉闪回。
+- 完整发布证据及 Build 1 回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本)。
+- 剩余验证：完整外观/语言/辅助功能矩阵，以及由旧客户端实际执行的 N → N+1 安装。
 
 ### 控制台迭代历史
 
+以下保留各阶段当时的结论；最终生产效果已按上文验收并发布。独立控制台仅在本地保留。
+
 当前独立实验：[量子噪点 Demo 控制台](docs/design/quotaview-quantum-motion-console.md)，
 位于 `Prototypes/QuantumNoiseConsole`。复用 0.4.6 原生岛体进行原版 / 候选
-运动对照；仅手动 DEBUG 数据，不连接真实活动桥。等待用户视觉与交互验收，
-公开资产仍为 Build 1；用户现已授权将当前量子噪点迁入 Build 2 本地候选。
+运动对照；仅手动 DEBUG 数据，不连接真实活动桥。最终选定的生产动效
+已迁入 Build 2 并发布；控制台代码未包含在生产提交中。
 
 全部候选状态与过渡已按临时规范重做，采用全高离散星点；压缩通过局部
 重排表达。最新调整缩小星点、增强彩色状态，并将执行态改为单个轮廓起伏、
@@ -97,10 +87,11 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 当前开发台的临时验收约束：全高覆盖上下沿，以及清晰离散、明灭闪烁的
 点点星光；禁止整体缩成中央横带或糊成光团/光圈。仅适用于
 `Prototypes/QuantumNoiseConsole`，不作为项目通用或生产设计规范。
-当前实现已按约束重做，等待用户验收。
+控制台阶段的历史验证见规格；当前生产验收以上文为准。
 
 | Spec | 状态 | 结论 / 未完成项 |
 |---|---|---|
+| [`QV-PROTOTYPE-QUANTUM-MOTION-016`](docs/design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 当前效果已获用户验收；177 项本地及 CI 测试、Universal、公证、回下载与 appcast 已验证，Build 2 正式发布 |
 | [`QV-FIX-CODEX-TOKEN-COMPATIBILITY-015`](docs/design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | 本地及 CI 166 项测试、Universal、真实五步视觉通过；PR #45 已合并，签名、公证、Latest、回下载与公开 appcast 验证完成 |
 | [`QV-RELEASE-0.4.5-001`](docs/design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014`](docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 真实等待确认持续满 10 秒后显示静态黄色描边与四周黄色光晕；已随 0.4.5 发布 |
@@ -124,7 +115,7 @@ Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
 ### 2.0 0.4.6 Build 1 发布（2026-09-05）
 
 - tag `v0.4.6-build.1`，发布提交 `2b071bea2f0af6fc4de042cf25084fc8524133d9`；
-  [GitHub Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) 为 Latest。
+  [GitHub Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) 发布时为 Latest，现为 Build 2 回滚基线。
 - ZIP `QuotaView-v0.4.6-build.1.zip`：`13,564,435 bytes`；SHA-256
   `00bf1a23d4424de534538871e667681ee7f27b5e475a7052e34d73cc06548174`。
 - Developer ID `Chenchen Xu (BUUH229D5Q)`、Hardened Runtime；Apple Accepted
@@ -279,10 +270,9 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 3. 长期边界
 
-- 后续版本必须由产品所有者针对精确版本重新批准，不能沿用 0.4.5 的
+- 后续版本必须由产品所有者针对精确版本重新批准，不能沿用 Build 2 的
   appcast 准入；
-- `0.4.5 Build 1` 是当前正式 Release、GitHub Latest 与 Stable appcast
-  条目；`0.4.3 Build 1` 是封存回滚基线，0.4.0 不创建公开 Release；
+- 当前稳定版与回滚基线以本文第 1 节及版本历史为准；历史 tag 和资产不可覆盖；
 - GitHub push、tag 或 Release 默认不进入自动更新序列；
 - 稳定版只保留单任务灵动岛。多任务 Preview 的 tag、Release 和归档分支
   `codex/archive-0.3.2-preview.1-multitask-island` 仅供历史参考；
@@ -290,7 +280,7 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 4. 下一步
 
-0.4.6 代码与自动化验证已完成，下一步由用户运行候选验收；以下旧待办仍独立保留。
+0.4.6 Build 2 已完成当前效果验收与正式热更新发布；下一轮按用户新反馈迭代，以下待办独立保留。
 
 1. 更新器规格的 `APP-UPDATES-07` 保持独立待办，后续记录一次由旧版客户端
    发起的真实 N → N+1 替换与重启；
