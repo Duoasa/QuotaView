@@ -847,6 +847,75 @@ private extension CodexActivityVisualState {
     }
 }
 
+// State-driven quantum motion. Velocity is integrated, never multiplied by wall time
+// after a state change. The same particle seeds therefore survive interruptions.
+struct ActivityQuantumMotionProfile {
+    var weights: SIMD4<Float> // exploration, transport, compression, waiting
+    var velocity: SIMD2<Float>
+    var rate: Float
+    var failure: Float
+    var visibility: Float
+
+    static func profile(_ state: CodexActivityVisualState) -> Self {
+        switch state {
+        case .thinking:
+            // Share the natural gathering motion; state colors remain independent.
+            return profile(.compactingContext)
+        case .working:
+            return .init(weights: [0, 1, 0, 0], velocity: [-16, 0], rate: 1.5,
+                         failure: 0, visibility: 1)
+        case .compactingContext:
+            return .init(weights: [0, 0, 1, 0], velocity: [-0.8, 0], rate: 1.0,
+                         failure: 0, visibility: 1)
+        case .awaitingConfirmation:
+            return .init(weights: [0, 0, 0, 1], velocity: .zero, rate: 1,
+                         failure: 0, visibility: 1)
+        case .error:
+            return .init(weights: .zero, velocity: .zero, rate: 0.38,
+                         failure: 1, visibility: 1)
+        case .completed:
+            return .init(weights: [0, 0.3, 0.4, 0], velocity: [-2, 0], rate: 0.45,
+                         failure: 0, visibility: 1)
+        case .standby, .disconnectedCodex, .unavailable:
+            return .init(weights: .zero, velocity: .zero, rate: 0,
+                         failure: 0, visibility: 0.3)
+        }
+    }
+
+    func interpolated(to target: Self, amount: Float) -> Self {
+        let t = min(max(amount, 0), 1)
+        return .init(weights: weights + (target.weights - weights) * t,
+                     velocity: velocity + (target.velocity - velocity) * t,
+                     rate: rate + (target.rate - rate) * t,
+                     failure: failure + (target.failure - failure) * t,
+                     visibility: visibility + (target.visibility - visibility) * t)
+    }
+}
+
+struct ActivityQuantumMotion {
+    private(set) var profile = ActivityQuantumMotionProfile.profile(.working)
+    private(set) var displacement = SIMD2<Float>.zero
+    private(set) var phase: Float = 0
+
+    mutating func advance(state: CodexActivityVisualState, elapsed: Float,
+                          reduceMotion: Bool) {
+        let target = ActivityQuantumMotionProfile.profile(state)
+        if reduceMotion {
+            profile = target
+            return
+        }
+        // Fixed substeps make interrupted transitions independent of frame rate.
+        let delta = min(max(elapsed, 0), 0.25)
+        let steps = max(1, Int(ceil(delta / (1.0 / 120.0))))
+        let dt = delta / Float(steps)
+        for _ in 0..<steps {
+            profile = profile.interpolated(to: target, amount: 1 - exp(-5 * dt))
+            displacement += profile.velocity * dt
+            phase += profile.rate * dt
+        }
+    }
+}
+
 private struct ActivityStateSmokeUniforms {
     var resolution: SIMD2<Float>
     var frontPosition: Float
@@ -865,6 +934,9 @@ private struct ActivityStateSmokeUniforms {
     var completionDarkening: Float
     var completionSmokeOpacity: Float
     var completionActive: Float
+    var quantumWeights: SIMD4<Float>
+    var quantumClock: SIMD4<Float>
+    var quantumEnabled: SIMD4<Float>
     var opacityStopPositions: SIMD4<Float>
     var opacityStopOpacities: SIMD4<Float>
     var background: SIMD4<Float>
@@ -900,6 +972,9 @@ struct ActivityStateSmokeUniforms {
     float completionDarkening;
     float completionSmokeOpacity;
     float completionActive;
+    float4 quantumWeights;
+    float4 quantumClock;
+    float4 quantumEnabled;
     float4 opacityStopPositions;
     float4 opacityStopOpacities;
     float4 background;
@@ -1133,6 +1208,244 @@ float activityProgressDropDensity(
     );
 }
 
+float3 activityQuantumOriginalColor(float density, ActivityStateSmokeUniforms u) {
+    float breathing = 1.0 + (u.pulse - 0.5) * 0.18;
+
+    float3 color = u.background.rgb;
+    color += u.deepColor.rgb * density * 0.72 * u.energy;
+    color +=
+        u.midColor.rgb
+        * pow(density, 2.2)
+        * 0.68
+        * u.energy;
+    color +=
+        u.highlightColor.rgb
+        * pow(density, 7.0)
+        * 0.55
+        * breathing
+        * u.energy;
+    if (u.effectStyle > 0.5) {
+        float completionHighlightDensity = pow(density, 3.0);
+        if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
+            completionHighlightDensity = pow(density, 1.5);
+        }
+        color +=
+            u.highlightColor.rgb
+            * completionHighlightDensity
+            * clamp(u.completionEffectHighlight, 0.0, 1.0)
+            * u.energy;
+    }
+    return color;
+}
+// State-aware quantum starlight renderer. The particle field has no vertical envelope:
+// only the production island's rounded clipping and horizontal progress apply.
+float activityQuantumPulseCenter(float phase) {
+    float cycle = fract(phase * 0.24);
+    float eased = cycle * cycle * cycle * (cycle * (cycle * 6.0 - 15.0) + 10.0);
+    return mix(-0.28, 1.28, eased);
+}
+
+float activityQuantumTransportPulse(float2 pixel, float2 resolution, float front, float phase) {
+    float position = pixel.x / max(resolution.x * front, 1.0);
+    float height = pixel.y / resolution.y;
+    // A single irregular cluster passes through the field. Its centre accelerates
+    // and decelerates; its curved, broken edge never becomes a straight light bar.
+    float bend = 0.065 * sin(height * 7.0 + phase * 0.6)
+        + 0.035 * sin(height * 19.0 - phase * 0.35);
+    float width = 0.080 + 0.025 * sin(height * 11.0 + phase * 0.4);
+    float cycle = fract(phase * 0.24);
+    float gate = smoothstep(0.04, 0.16, cycle) * (1.0 - smoothstep(0.84, 0.96, cycle));
+    return exp(-0.5 * pow((position - activityQuantumPulseCenter(phase) - bend) / width, 2.0)) * gate;
+}
+
+float activityQuantumFrontCoverage(float2 pixel, float2 resolution, float front, float completion) {
+    if (front <= 0.0) { return 0.0; }
+    float x = pixel.x / resolution.x;
+    float y = pixel.y / resolution.y;
+    // Estimated progress retains a visible dissolve even at 1%. A short front is
+    // an uncertainty region, not a tiny precisely clipped bar. Keep dots crisp.
+    float minimumFeather = min(48.0 / resolution.x, 0.18);
+    float feather = clamp(front * 0.70, minimumFeather, 0.18);
+    float retreat = feather * (0.10 + 0.05 * sin(y * 7.0) + 0.025 * sin(y * 19.0));
+    float edge = max(front, minimumFeather) - retreat;
+    float coverage = 1.0 - smoothstep(max(0.0, edge - feather), edge, x);
+    // Approach zero continuously as progress first appears; standby stays empty.
+    coverage *= smoothstep(0.0, 0.005, front);
+    return mix(coverage, 1.0, smoothstep(0.75, 1.0, completion));
+}
+
+// Restore the early full-height prototype's independently phased neighbourhoods.
+// Interpolate their influence so grouped light has no rectangular cell boundary.
+float activityQuantumCompressionCoherence(float2 pixel, float phase) {
+    float2 grid = pixel / 33.6; // Original neighbourhood: 7 grains at 4.8 px.
+    float2 cell = floor(grid);
+    float2 fraction = fract(grid);
+    float2 blend = fraction * fraction * (3.0 - 2.0 * fraction);
+    float value = 0.0;
+    for (int row = 0; row < 2; ++row) {
+        for (int column = 0; column < 2; ++column) {
+            float2 neighbour = cell + float2(column, row);
+            float seed = activityStateSmokeHash(neighbour + 263.0);
+            float organize = 0.5 + 0.5 * sin(phase * 3.2 + seed * 6.283185);
+            float weight = (column == 0 ? 1.0 - blend.x : blend.x)
+                         * (row == 0 ? 1.0 - blend.y : blend.y);
+            value += organize * weight;
+        }
+    }
+    return value;
+}
+
+float3 activityQuantumCompressionClusters(float2 pixel, float2 resolution, float front, float phase) {
+    float organize = activityQuantumCompressionCoherence(pixel, phase);
+    float2 cell = floor(pixel / 2.35);
+    float2 jitter = float2(activityStateSmokeHash(cell + 47.0),
+                          activityStateSmokeHash(cell + 83.0)) - 0.5;
+    // Original local reordering: jitter gently tightens and loosens with the group.
+    // Keep the current original-grain scale and occupancy; do not adjoin stars.
+    float2 flow = jitter * (0.22 * 2.35 * 0.49) * organize;
+    return float3(flow, smoothstep(0.30, 0.88, organize));
+}
+
+// Completion retains its previous fill/settle field. This revision targets only
+// context compression; the renderer passes completion through quantumEnabled.z.
+float3 activityQuantumCompletionClusters(float2 pixel, float2 resolution, float front, float phase) {
+    // Staggered, short-lived star clusters form, loosen and re-form elsewhere.
+    // Smooth envelopes hide reseeding; no tiles, aligned edges or solid glow layer.
+    float width = max(resolution.x * front, 1.0);
+    float count = clamp(ceil(width / 220.0), 1.0, 3.0);
+    float highlight = 0.0;
+    float2 flow = float2(0.0);
+    for (int i = 0; i < 3; ++i) {
+        if (float(i) >= count) { break; }
+        float clock = phase / 4.8 - float(i) * 0.10;
+        float generation = floor(clock);
+        float age = fract(clock);
+        float2 key = float2(generation, float(i) * 17.0);
+        float rx = activityStateSmokeHash(key + 419.0);
+        float ry = activityStateSmokeHash(key + 461.0);
+        float life = smoothstep(0.0, 0.28, age) * (1.0 - smoothstep(0.65, 1.0, age));
+        float gather = smoothstep(0.08, 0.48, age);
+        float release = smoothstep(0.56, 1.0, age);
+        float tightness = gather * (1.0 - release);
+        // A shared curved spine gives neighbouring clusters a family resemblance.
+        // Spacing and sequential gathering create order without rectangular cells.
+        float slot = (float(i) + 0.40 + rx * 0.20) / count;
+        float arc = slot * 4.2 + generation * 1.7;
+        float2 center = float2(width * slot,
+                              resolution.y * (0.50 + 0.38 * sin(arc)));
+        center += float2(sin(age * 5.0 + ry * 6.28) * 9.0,
+                         sin(age * 4.0 + rx * 6.28) * 5.0);
+        float radius = mix(66.0, 35.0, tightness);
+        float2 delta = pixel - center;
+        float angle = atan2(resolution.y * 0.38 * 4.2 * cos(arc), width)
+                    + sin(age * 3.0 + ry * 6.28) * 0.22;
+        float2 local = float2(delta.x * cos(angle) + delta.y * sin(angle),
+                            -delta.x * sin(angle) + delta.y * cos(angle));
+        local /= float2(radius * (1.1 + rx * 0.35), radius * (0.75 + ry * 0.25));
+        float theta = atan2(local.y, local.x);
+        float contour = 1.0 + 0.14 * sin(theta * 3.0 + age * 5.0 + ry * 6.28)
+                            + 0.08 * sin(theta * 5.0 - age * 3.0);
+        float distance = length(local) / contour;
+        float cluster = exp(-distance * distance * 1.6) * life;
+        highlight += cluster * (0.70 + tightness * 0.90)
+            * (1.0 - float(i) * 0.10);
+        // A small continuous advection accompanies gathering and release, retaining
+        // the original grain scale instead of collapsing the entire particle field.
+        flow += delta / max(length(delta), 1.0) * cluster * tightness * 3.2;
+    }
+    return float3(flow, min(highlight, 1.5));
+}
+
+// Same grain geometry and interior occupancy as the original 0.4.6 drop field.
+float activityQuantumGrain(float2 point, thread float2 &cell, thread float &seed) {
+    float2 coordinate = point / 2.35;
+    cell = floor(coordinate);
+    seed = activityStateSmokeHash(cell + 31.0);
+    float2 jitter = float2(activityStateSmokeHash(cell + 47.0),
+                          activityStateSmokeHash(cell + 83.0)) - 0.5;
+    float2 local = fract(coordinate) - 0.5 - jitter * 0.22;
+    float radius = mix(0.17, 0.31, seed);
+    float distance = length(local);
+    float microDrop = 1.0 - smoothstep(radius, radius + 0.10, distance);
+    float microBloom = exp(-max(distance - radius, 0.0) * 12.0);
+    float occupancy = step(1.0 - 0.88, activityStateSmokeHash(cell + 151.0));
+    return (microDrop + microBloom * 0.08) * occupancy;
+}
+
+float activityQuantumMotionDensity(float2 pixel, float2 resolution, float front,
+                                  ActivityStateSmokeUniforms u) {
+    float4 mode = u.quantumWeights;
+    float phase = u.quantumClock.z;
+    float failure = u.quantumClock.w;
+    float3 clusters = u.quantumEnabled.z > 0.5
+        ? activityQuantumCompletionClusters(pixel, resolution, front, phase)
+        : activityQuantumCompressionClusters(pixel, resolution, front, phase);
+    float2 point = pixel + u.quantumClock.xy + mode.z * clusters.xy;
+    // State motion acts on the original fine-grain field, not on grain size/count.
+    point.x += mode.x * sin(pixel.y * 0.044 + phase * 1.2) * 7.0
+        + mode.z * sin(pixel.y * 0.037 + phase * 1.6) * 0.35;
+    point.y += mode.x * sin(pixel.x * 0.023 + phase * 1.5) * 6.0
+        + mode.z * sin(pixel.x * 0.028 - phase * 1.8) * 0.35;
+    float2 cell;
+    float seed;
+    float particle = activityQuantumGrain(point, cell, seed);
+    float activation = activityQuantumFrontCoverage(pixel, resolution, front, u.completionFillProgress);
+    float packet = activityQuantumTransportPulse(pixel, resolution, front, phase);
+    float restingWeight = max(0.0, 1.0 - dot(mode, float4(1.0)) - failure);
+    float groupSeed = activityStateSmokeHash(floor(cell / 7.0) + 263.0);
+    float twinkleRate = mix(2.4, 4.0, activityStateSmokeHash(cell + 197.0));
+    float wave = 0.5 + 0.5 * sin(phase * twinkleRate + seed * 6.2831853);
+    float sparkle = min((0.22 + wave * 0.62 + pow(wave, 5.0) * 0.16) * 1.10, 1.0);
+    float threshold = activityStateSmokeHash(cell + 347.0) * 0.60;
+    float dissolve = smoothstep(threshold, threshold + 0.40, activation);
+    // Preserve the original ratio of dim/bright stars. State gestures modulate
+    // that sparkle instead of imposing an always-bright floor on every point.
+    float thinking = sparkle;
+    float working = sparkle * (0.84 + 0.50 * packet);
+    float compacting = sparkle * (u.quantumEnabled.z > 0.5
+        ? 0.70 + 2.60 * clusters.z
+        : 0.62 + 1.85 * pow(clusters.z, 2.0));
+    float waiting = sparkle;
+    float interrupted = sparkle * (0.90 + 0.16
+        * (0.5 + 0.5 * sin(phase * 5.3 + groupSeed * 6.283185)));
+    float intensity = restingWeight * 0.70 + mode.x * thinking + mode.y * working
+        + mode.z * compacting + mode.w * waiting + failure * interrupted;
+    return clamp(particle * intensity * dissolve * pow(activation, 0.55)
+                 * u.quantumEnabled.y, 0.0, 1.0);
+}
+
+float3 activityQuantumMotionColor(float density, ActivityStateSmokeUniforms u) {
+    float3 tint = mix(u.midColor.rgb, u.highlightColor.rgb, 0.26);
+    tint /= max(max(tint.r, max(tint.g, tint.b)), 0.001);
+    float minimum = min(tint.r, min(tint.g, tint.b));
+    // Keep the compression state's neutral silver; only chromatic states gain saturation.
+    float chromatic = smoothstep(0.12, 0.45, 1.0 - minimum);
+    float neutral = minimum * 0.85 * chromatic;
+    tint = max((tint - neutral) / max(1.0 - neutral, 0.001), float3(0.0));
+    float luminance = dot(tint, float3(0.2126, 0.7152, 0.0722));
+    float target = 0.54;
+    tint = luminance < target
+        ? mix(tint, float3(1.0), (target - luminance) / max(1.0 - luminance, 0.001))
+        : tint * target / max(luminance, 0.001);
+    // Stronger color in each star, with more exposure in the dim/mid range.
+    // Neutral silver stays neutral; zero-density gaps and the front dissolve stay black.
+    tint = pow(tint, float3(mix(1.0, 1.50, chromatic)));
+    // Original microBloom is very faint. Do not let the brighter transfer curve
+    // amplify it into a veil between the original fine, closely spaced stars.
+    float light = pow(max(density, 0.0), 0.78) * smoothstep(0.03, 0.18, density);
+    float exposure = mix(1.55, 1.78, chromatic) * (1.0 + u.quantumClock.w * 0.12);
+    float3 enhanced = u.background.rgb + tint * light * exposure
+        + tint * light * u.completionEffectHighlight;
+    // Match the original VISIBLE warm gold, including density-dependent highlights
+    // and energy. The same native opacity/compositing pipeline follows both paths.
+    float3 reference = activityQuantumOriginalColor(density, u);
+    // Breathe AFTER the original transfer so dimming cannot shift gold toward red.
+    float breath = 0.65 + 0.35 * (0.5 + 0.5 * sin(u.quantumClock.z * 2.618));
+    reference = u.background.rgb + (reference - u.background.rgb) * breath;
+    return mix(enhanced, reference,
+               clamp(u.quantumWeights.w, 0.0, 1.0));
+}
+
 float activityProgressSloshDensity(
     float2 uv,
     float front,
@@ -1280,12 +1593,7 @@ fragment float4 activityStateSmokeFragment(
             u.turbulence
         );
     } else if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
-        density = activityProgressDropDensity(
-            pixel,
-            resolution,
-            completionFront,
-            u.effectTime
-        );
+        density = activityQuantumMotionDensity(pixel, resolution, completionFront, u);
     } else if (u.effectStyle >= 2.5) {
         density = activityProgressSloshDensity(
             uv,
@@ -1328,6 +1636,9 @@ fragment float4 activityStateSmokeFragment(
             * completionHighlightDensity
             * clamp(u.completionEffectHighlight, 0.0, 1.0)
             * u.energy;
+    }
+    if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
+        color = activityQuantumMotionColor(density, u);
     }
     color = mix(
         color,
@@ -1439,6 +1750,7 @@ private final class ActivityStateSmokeRenderer:
     private let commandQueue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
     private var simulation = CodexActivityStateSmokeSimulation()
+    private var quantumMotion = ActivityQuantumMotion()
     private var completionTransition =
         CodexActivityStateSmokeCompletionTransition()
     private var currentProfile =
@@ -1628,6 +1940,7 @@ private final class ActivityStateSmokeRenderer:
             )
         }
         lastFrameAt = now
+        quantumMotion.advance(state: state, elapsed: elapsed, reduceMotion: reduceMotion)
 
         let resolvedApproximateProgress = progressResolver.resolve(
             state: state,
@@ -1676,6 +1989,11 @@ private final class ActivityStateSmokeRenderer:
             completionDarkening: completionSnapshot.darkening,
             completionSmokeOpacity: completionSnapshot.smokeOpacity,
             completionActive: state == .completed ? 1 : 0,
+            quantumWeights: quantumMotion.profile.weights,
+            quantumClock: SIMD4<Float>(quantumMotion.displacement.x,
+                quantumMotion.displacement.y, quantumMotion.phase, quantumMotion.profile.failure),
+            quantumEnabled: SIMD4<Float>(1, quantumMotion.profile.visibility,
+                state == .completed ? 1 : 0, 0),
             opacityStopPositions: currentProfile.opacityCurve.stopPositions,
             opacityStopOpacities: currentProfile.opacityCurve.stopOpacities,
             background: currentProfile.background,
