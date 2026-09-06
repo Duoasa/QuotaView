@@ -2,10 +2,11 @@
 
 Spec ID: `QV-PROTOTYPE-QUANTUM-MOTION-016`
 
-Status: `Accepted / Verifying` — the owner has authorized production migration
+Status: `Accepted / Released` — the owner has authorized production migration
 into 0.4.6 Build 2. Local build and smoke checks passed. The owner accepted the production
 effect and authorized the Build 2 hot update on GitHub and appcast on 2026-09-06.
-Publication is being verified. Earlier sections record console iteration history.
+GitHub Latest, the notarized public archive and the signed Stable appcast are verified.
+Earlier sections record console iteration history; the console itself remains local.
 
 ## Requirements
 
@@ -193,3 +194,12 @@ The final source passes all 177 tests and a Universal Release build. No runtime
 mock, manual progress injection or console entry point is included in production.
 The full appearance, language and accessibility matrix remains a separate check;
 the owner's acceptance here covers the demonstrated activity effect.
+
+## Release verification · 2026-09-06
+
+Published as 0.4.6 Build 2 (internal 19), tag `v0.4.6-build.2`. All 177 local and
+GitHub CI tests pass. Universal production packaging, Developer ID / Hardened Runtime,
+Apple notarization / Staple, strict signatures, Gatekeeper and public-download launch
+checks pass. The public ZIP matches the final local archive byte for byte; both the
+public feed and ZIP verify with the packaged public key. Full immutable evidence and
+Build 1 rollback details are in [Version History](../../VERSION_HISTORY.md#当前最新版本).

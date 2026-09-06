@@ -4,9 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 生产基线：`0.4.6 Build 1`（内部 `18`）
+> 生产基线：`0.4.6 Build 2`（内部 `19`）
 >
-> 当前候选：`0.4.6 Build 2`（内部 `19`）；用户已验收，GitHub 与 appcast 热更新发布验证中
+> 当前候选：无；Build 2 已发布 GitHub Latest 与 Stable appcast
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,7 +14,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Verifying` | 用户已授权迁入 0.4.6 Build 2；177 项生产测试、Universal、签名及启动检查通过；用户已验收并授权 GitHub 与 appcast 热更新，发布验证中 |
+| `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |
 | `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |
 | `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014` | [0.4.5 灵动岛等待确认提醒](../design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 等待确认满 10 秒显示静态黄色描边和四周光晕；已随 0.4.5 发布 |

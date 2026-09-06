@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.6-build.1/QuotaView-v0.4.6-build.1.zip"><strong>下载 QuotaView v0.4.6 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.6-build.2/QuotaView-v0.4.6-build.2.zip"><strong>下载 QuotaView v0.4.6 Build 2</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -42,7 +42,9 @@
 
 QuotaView 开源、轻量，并以本地处理为核心。新版 Codex 首次启动即可使用，无需配置 Hook；额度与用量则保留在菜单面板和原生小组件中，需要时一次点击即可查看。
 
-## 0.4.6 更新
+## 0.4.6 Build 2 更新
+
+量子噪点更明亮鲜明：思考与压缩自然聚簇，执行使用单个非匀速弯曲脉冲，待确认保留暖金呼吸。从进度开始就以稀疏渐隐表达模糊末端，保留原版星点尺寸与疏密。
 
 改善 Codex 本轮 Token 统计与任务进度：修复内部审核、后台任务导致的提前完成回执，并保持任务切换和重启后的进度与 Token 恢复一致。
 
@@ -90,12 +92,12 @@ QuotaView 0.4.5 为新版 Codex 增加了只读本地任务桥：
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 从 [v0.4.6 Build 1 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) 下载 `QuotaView-v0.4.6-build.1.zip`。
+2. 从 [v0.4.6 Build 2 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) 下载 `QuotaView-v0.4.6-build.2.zip`。
 3. 解压后打开 `QuotaView.app`。
 4. 开始一个 Codex 任务。新版 Codex 会自动连接，不需要安装 Hook 或重启。
 
 > [!IMPORTANT]
-> v0.4.6 Build 1 已使用 Developer ID 证书签名、通过 Apple 公证并完成
+> v0.4.6 Build 2 已使用 Developer ID 证书签名、通过 Apple 公证并完成
 > Staple。解压后可以正常打开，不再需要旧版未签名构建使用的 Finder
 > 右键打开方式。
 
@@ -217,7 +219,7 @@ Tests/
 
 ## 发布与项目状态
 
-- **推荐稳定版：** [QuotaView v0.4.6 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1)
+- **推荐稳定版：** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **版本历史与发布验证：** [VERSION_HISTORY.md](VERSION_HISTORY.md)
 - **当前工程交接：** [HANDOFF.md](HANDOFF.md)

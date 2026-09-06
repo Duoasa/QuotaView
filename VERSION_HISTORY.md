@@ -15,29 +15,31 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.4.6 (Build 1)`；Sparkle 内部 Build `18` |
-| Git tag | `v0.4.6-build.1` |
-| Tag commit | `2b071bea2f0af6fc4de042cf25084fc8524133d9` |
-| GitHub Release | [QuotaView 0.4.6 Build 1 — Reliable Codex Task Progress](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) |
-| Release 资产 | `QuotaView-v0.4.6-build.1.zip` |
-| 资产大小 | `13,564,435 bytes` |
-| SHA-256 | `00bf1a23d4424de534538871e667681ee7f27b5e475a7052e34d73cc06548174` |
+| 最新推荐版本 | `0.4.6 (Build 2)`；Sparkle 内部 Build `19` |
+| Git tag | `v0.4.6-build.2` |
+| Tag commit | `ae9f17d415fb1968d9ef843be771b6a5211213c7` |
+| GitHub Release | [QuotaView 0.4.6 Build 2 — Expressive Quantum Noise](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) |
+| Release 资产 | `QuotaView-v0.4.6-build.2.zip` |
+| 资产大小 | `13,487,447 bytes` |
+| SHA-256 | `5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916` |
 | 最低系统版本 | macOS 14 |
 | 架构 | Universal `arm64 + x86_64` |
-| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，证书 SHA-1 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `456d3e31-7c35-4cca-8db1-4538abca1d6a` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted 并 Staple；Submission `f466177a-2fea-4e61-9c11-1e405ed32bde` |
 | 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；`gh-pages` 提交 `81a16a81183cc854b97962d3a9fef613fbcc3344`；Feed SHA-256 `c28fb25f46501d027f58595886909f3b3663d4461bde433fd190318cd76768ca`；线上文件逐字节一致，Feed 与 ZIP 均以应用内公钥通过 Ed25519 验证 |
+| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；提交 `94ae0ec0d63d4a50f77ba3a836afc98d2cb1009d`；SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；线上文件与本地一致，Feed 与回下载 ZIP 均通过内置公钥 Ed25519 验证 |
 
 上一稳定回滚基线：
 
 | 项目 | 封存值 |
 |---|---|
-| 版本 | `0.4.5 (Build 1)`；Sparkle 内部 Build `17` |
-| tag / commit | `v0.4.5-build.1` / `75913c07e4457b5f6451f286522799d36982ff0c` |
-| Release | [QuotaView 0.4.5 Build 1 — Native Codex Activity Bridge](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.5-build.1) |
-| 资产 / SHA-256 | `QuotaView-v0.4.5-build.1.zip` / `d5308880d9dc096e46cdbf715db414ae79a4bc92a1dcc4f433d315a6a7bd7e5a` |
-| 状态 | 不可移动历史正式版；发生 0.4.6 回滚时使用该 tag 与已核验资产 |
+| 版本 | `0.4.6 (Build 1)`；内部 `18` |
+| tag / commit | `v0.4.6-build.1` / `2b071bea2f0af6fc4de042cf25084fc8524133d9` |
+| Release | [QuotaView 0.4.6 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.1) |
+| 资产 / 大小 | `QuotaView-v0.4.6-build.1.zip` / `13,564,435 bytes` |
+| SHA-256 | `00bf1a23d4424de534538871e667681ee7f27b5e475a7052e34d73cc06548174` |
+| 签名与公证 | Developer ID / Hardened Runtime；Apple Accepted / Staple，详见 Build 1 章节 |
+| 状态 | 不可移动历史正式版；Build 2 的回滚基线，仍保留在 Stable appcast |
 
 当前公开预览版：
 
@@ -56,10 +58,10 @@
 | 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
 
-> 当前生产版本为 `0.4.6 (Build 1)`。本版修复内部审核与后台任务导致的
-> 提前完成回执，统一任务身份、进度与真实终态，并改善新版 Codex Token
-> 计数及重启恢复。正式签名、公证/Staple、GitHub Latest、回下载与公开
-> appcast 签名验证已完成；详细证据见本文件的 `0.4.6 (Build 1)` 章节。
+> 当前生产版本为 `0.4.6 (Build 2)`，作为 Build 1 的量子噪点动效热更新。
+> 思考与压缩使用自然聚簇运动并保留各自配色，执行使用单个非匀速脉冲，
+> 等待保留暖金呼吸，低进度末端也保持稀疏渐隐。真实任务生命周期与近似
+> 进度来源保持不变。发布和验证证据见本文件 Build 2 章节。
 
 > 未发布开发版本不在本历史文件登记；当前迭代身份与验证状态只以
 > [HANDOFF.md](HANDOFF.md) 为准，不得把候选版本提前写成已发布。
@@ -75,7 +77,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.4.6 (Build 1)` | 2026-09-05 | **当前最新** | 可靠的任务归属、真实完成与 Codex Token 恢复 |
+| `0.4.6 (Build 2)` | 2026-09-06 | **当前最新** | 自然聚簇、非匀速脉冲与低进度渐隐的量子噪点热更新 |
+| `0.4.6 (Build 1)` | 2026-09-05 | 历史正式版 / Build 2 回滚基线 | 可靠的任务归属、真实完成与 Codex Token 恢复 |
 | `0.4.5 (Build 1)` | 2026-09-04 | 历史正式版 / 0.4.6 回滚基线 | 只读本地任务流数据桥、无需 Hook 的开箱连接与状态灵动岛升级 |
 | `0.4.3 (Build 1)` | 2026-09-03 | 历史正式版 / 0.4.5 回滚基线 | 量子噪点连续换色、更清晰的文字与统一完成辉光 |
 | `0.4.2 (Build 1)` | 2026-08-30 | 历史正式版 | 四种进度效果、真实设置预览与可靠的任务连续性 |
@@ -95,12 +98,52 @@
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
+## 0.4.6 (Build 2)
+
+Tag：`v0.4.6-build.2`；发布提交：`ae9f17d415fb1968d9ef843be771b6a5211213c7`（[PR #47](https://github.com/Duoasa/QuotaView/pull/47)）。
+状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
+已进入 Stable appcast，作为同版本 Build 1 的热更新。
+
+主要特性：
+
+- 保留原版星点的细度、尺寸、疏密和间隙，提高亮度与彩色状态鲜明度。
+- 思考态保留蓝紫色，使用自然聚簇、散开再汇聚；上下文压缩保留银白色聚簇。
+- 执行态使用单个弯曲且非匀速的脉冲；待确认保持原版可见暖金色与呼吸闪烁。
+- 所有状态在低进度起始阶段也保留稀疏、不规则渐隐末端，避免暗示精确进度。
+- 状态切换连续插值，不重启粒子时钟；真实状态、近似进度、完成时序、
+  Reduce Motion、其他三种特效、设置兼容与隐私边界保持原实现。
+- 独立 DEBUG 控制台保留在本地，未进入发布提交或生产 Target。
+
+验证与分发：
+
+- 本地与 [GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34018170849)
+  均为 177 项测试、0 失败，包含生产 Metal/GPU 回归。
+- Universal Release：App、Widget、Hook 及框架均为 `arm64 x86_64`；
+  App / Widget 为 `0.4.6`、产品 Build `2`、内部 `19`；图标与资源齐全。
+- ZIP：`QuotaView-v0.4.6-build.2.zip`，`13,487,447 bytes`；SHA-256 `5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916`。
+- Developer ID `Chenchen Xu (BUUH229D5Q)`，证书 SHA-1
+  `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`，Hardened Runtime。
+- Apple Accepted / Staple，Submission `f466177a-2fea-4e61-9c11-1e405ed32bde`。
+  清理封票后出现的 FinderInfo 非代码元数据，最终 ZIP 不携带扩展属性；
+  `dist`、最终解压副本及 GitHub 回下载副本的严格签名、票据与 Gatekeeper 均通过。
+- GitHub 回下载 ZIP 与本地逐字节一致；从回下载包启动通过，确认仅一份正式实例运行。
+- appcast 提交 `94ae0ec0d63d4a50f77ba3a836afc98d2cb1009d`，SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；线上文件逐字节一致。
+  Feed 与回下载 ZIP 均使用应用内置公钥通过 Ed25519 验证；更新序列为 `19 → 18 → 17`。
+- 用户已验收真实 Codex 压缩及随后思考动效，并明确批准 GitHub、appcast 和 Apple 公证。
+  完整外观/语言/辅助功能矩阵与旧客户端实际 N → N+1 安装仍未记录为通过。
+- 单份英文 Release Notes：`docs/releases/QuotaView-0.4.6-build.2.md`。
+- 回滚：Build 1 不可变 tag、ZIP、签名和公证保留，不覆盖原资产。
+
+Release：[QuotaView 0.4.6 Build 2 — Expressive Quantum Noise](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)。
+
+---
+
 ## 0.4.6 (Build 1)
 
 Tag：`v0.4.6-build.1`；发布提交：`2b071bea2f0af6fc4de042cf25084fc8524133d9`（PR #45）。
 
-状态：当前最新正式 Release、GitHub Latest、非 Draft、非 Pre-release；
-已进入公开 Stable appcast，替代 0.4.5 Build 1。
+状态：历史正式 Release、Build 2 回滚基线、非 Draft、非 Pre-release；
+仍保留在 Stable appcast，最新版本已由 0.4.6 Build 2 替代。
 
 主要特性：
 
