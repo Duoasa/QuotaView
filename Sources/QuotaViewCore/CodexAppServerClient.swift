@@ -38,11 +38,14 @@ public actor CodexAppServerClient {
         let continuation: CheckedContinuation<Data, Error>
     }
 
+    private let proxyConfiguration: ProxyConfiguration
+    private let inheritedEnvironment: [String: String]
     private let executablePath: String?
     private let startupTimeoutNanoseconds: UInt64
     private let requestTimeoutNanoseconds: UInt64
     private let maximumLineBytes: Int
     private let clientVersion: String
+    private var socksBridge: SOCKS5HTTPBridge?
     private var process: Process?
     private var inputHandle: FileHandle?
     private var outputTask: Task<Void, Never>?
@@ -70,6 +73,8 @@ public actor CodexAppServerClient {
 
     public init(
         executablePath: String? = CodexExecutableLocator.locate(),
+        proxyConfiguration: ProxyConfiguration = .default,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
         startupTimeoutSeconds: TimeInterval = 45,
         requestTimeoutSeconds: TimeInterval = 15,
         maximumLineBytes: Int = 1_048_576,
@@ -77,6 +82,8 @@ public actor CodexAppServerClient {
             forInfoDictionaryKey: "CFBundleShortVersionString"
         ) as? String ?? "0.4.0"
     ) {
+        self.proxyConfiguration = proxyConfiguration
+        self.inheritedEnvironment = environment
         self.executablePath = executablePath
         self.startupTimeoutNanoseconds = UInt64(
             max(startupTimeoutSeconds, 1) * 1_000_000_000
@@ -180,6 +187,8 @@ public actor CodexAppServerClient {
 
     public func stop() {
         connectionGeneration &+= 1
+        socksBridge?.stop()
+        socksBridge = nil
         outputTask?.cancel()
         errorTask?.cancel()
         outputTask = nil
@@ -214,6 +223,23 @@ public actor CodexAppServerClient {
 
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = ["app-server"]
+        var effectiveProxy = proxyConfiguration
+        if proxyConfiguration.isEnabled, proxyConfiguration.scheme == .socks5 {
+            let generation = connectionGeneration
+            let bridge = SOCKS5HTTPBridge()
+            socksBridge = bridge
+            do {
+                let port = try await bridge.start(configuration: proxyConfiguration)
+                try Task.checkCancellation()
+                guard generation == connectionGeneration else { throw ClientError.cancelled }
+                effectiveProxy = ProxyConfiguration(isEnabled: true, port: String(port))
+            } catch {
+                bridge.stop()
+                if generation == connectionGeneration { socksBridge = nil }
+                throw error
+            }
+        }
+        process.environment = try effectiveProxy.applying(to: inheritedEnvironment)
         process.standardInput = standardInput
         process.standardOutput = standardOutput
         process.standardError = standardError
@@ -221,6 +247,8 @@ public actor CodexAppServerClient {
         do {
             try process.run()
         } catch {
+            socksBridge?.stop()
+            socksBridge = nil
             throw ClientError.launchFailed(error.localizedDescription)
         }
 

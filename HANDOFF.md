@@ -1,11 +1,27 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-09-06
+更新日期：2026-09-08
 
 公开版本、tag、资产、签名、公证与撤回记录的唯一事实源：
 **[VERSION_HISTORY.md → 当前最新版本](VERSION_HISTORY.md#当前最新版本)**。
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
+
+## 0.4.7 Preview 1 当前迭代
+
+工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
+从 0.4.6 Build 2 及其发布文档提交建立独立分支；旧工作区和 Prototype 保留。
+当前规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
+默认关闭、HTTP/SOCKS5、地址与端口、连接测试、恢复默认。用户已授权实现，
+实现和自动化验证已完成：186 项测试全部通过，包含实际安装的 Codex CLI
+0.153.4 使用隔离虚拟账户经 HTTP/SOCKS5 完成 HTTPS 额度查询。当前 CLI 的
+SOCKS5 兼容由仅监听本机的临时转接层完成；HTTP 直接传给查询子进程。
+Universal Release 无签名构建通过，App/Widget 版本为 0.4.7 / Build 1 / internal 20，
+App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过。
+开发产物：`dist/QuotaView.app`；完整日志：`dist/verification/`。
+视觉、交互、辅助功能及用户真实代理环境等待验收。
+用户已授权 GitHub Preview 发布；准备 `v0.4.7-preview.1`，不加入 appcast，
+不改变稳定版 Latest。预览版反馈完成后再由用户决定是否推送更新。
 
 ## 1. 当前定位
 
@@ -14,8 +30,8 @@
 | 稳定版 | `0.4.6 Build 2` / internal `19` / `v0.4.6-build.2` / GitHub Latest |
 | 回滚基线 | `0.4.6 Build 1` / `v0.4.6-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | 无；Build 2 已正式发布并进入 Stable appcast |
-| 当前主题 | Build 2 迁入新版量子噪点，保留 Build 1 的真实任务生命周期与近似进度算法 |
+| 当前候选 | `0.4.7 Preview 1` / Build `1` / internal `20`；准备 GitHub Pre-release，禁止加入 appcast |
+| 当前主题 | 0.4.7 自定义代理：默认关闭、HTTP/SOCKS5、连接测试和恢复默认 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
 Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。

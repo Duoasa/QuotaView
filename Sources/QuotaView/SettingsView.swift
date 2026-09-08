@@ -31,6 +31,8 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection: SettingsPage? = .menuBar
+    @State private var proxyDraft = ProxyConfiguration.default
+    @State private var proxySaveFailure: ProxyConnectionFailure?
     @State private var codexActivityDetailsExpanded = false
     @State private var hoveredProgressEffect:
         AppPreferences.CodexActivityProgressEffect?
@@ -43,6 +45,7 @@ struct SettingsView: View {
         case codexActivity
         case appearance
         case language
+        case proxy
         case general
 
         var id: String { rawValue }
@@ -54,6 +57,7 @@ struct SettingsView: View {
             case .codexActivity: "waveform.path.ecg.rectangle"
             case .appearance: "circle.lefthalf.filled"
             case .language: "globe"
+            case .proxy: "network"
             case .general: "gearshape"
             }
         }
@@ -70,6 +74,8 @@ struct SettingsView: View {
                 copy.text("外观", "Appearance")
             case .language:
                 copy.text("语言", "Language")
+            case .proxy:
+                copy.text("代理设置", "Proxy")
             case .general:
                 copy.text("通用", "General")
             }
@@ -102,6 +108,8 @@ struct SettingsView: View {
                     "选择 QuotaView 界面使用的语言。",
                     "Choose the language used throughout QuotaView."
                 )
+            case .proxy:
+                copy.text("为额度和账户用量查询设置代理。", "Set a proxy for quota and account usage requests.")
             case .general:
                 copy.text(
                     "查看应用信息和软件更新状态。",
@@ -199,6 +207,8 @@ struct SettingsView: View {
                     appearanceSettings
                 case .language:
                     languageSettings
+                case .proxy:
+                    proxySettings
                 case .general:
                     generalSettings
                 }
@@ -223,6 +233,111 @@ struct SettingsView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var proxyValidationFailure: ProxyConnectionFailure? {
+        do { _ = try proxyDraft.validated(); return nil }
+        catch { return .classify(error) }
+    }
+
+    private var proxySettings: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            NativeSettingsCard {
+                NativeSettingsRow(
+                    title: copy.text("自定义代理", "Custom proxy"),
+                    subtitle: copy.text("默认关闭，修改后保存生效。", "Off by default. Save to apply changes.")
+                ) {
+                    Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                        .help(copy.text("使用指定代理查询额度和账户用量。", "Use this proxy for quota and account usage."))
+                }
+                NativeSettingsDivider()
+                NativeSettingsRow(title: copy.text("协议", "Protocol")) {
+                    Picker(copy.text("代理协议", "Proxy protocol"), selection: $proxyDraft.scheme) {
+                        Text("HTTP").tag(ProxyConfiguration.Scheme.http)
+                        Text("SOCKS5").tag(ProxyConfiguration.Scheme.socks5)
+                    }
+                    .labelsHidden().frame(width: 160)
+                    .disabled(!proxyDraft.isEnabled)
+                }
+                NativeSettingsDivider()
+                NativeSettingsRow(
+                    title: copy.text("服务器地址", "Server address"),
+                    subtitle: copy.text("填写 IP 或主机名，无需协议前缀。", "Enter an IP or hostname without a protocol prefix.")
+                ) {
+                    TextField("127.0.0.1", text: $proxyDraft.host)
+                        .textFieldStyle(.roundedBorder).frame(width: 190)
+                        .accessibilityLabel(copy.text("代理服务器地址", "Proxy server address"))
+                        .disabled(!proxyDraft.isEnabled)
+                }
+                NativeSettingsDivider()
+                NativeSettingsRow(title: copy.text("端口", "Port")) {
+                    TextField("7890", text: $proxyDraft.port)
+                        .textFieldStyle(.roundedBorder).frame(width: 100)
+                        .accessibilityLabel(copy.text("代理端口", "Proxy port"))
+                        .disabled(!proxyDraft.isEnabled)
+                }
+            }
+            Text(copy.text(
+                "支持无需账号密码的 HTTP / SOCKS5 代理。仅影响 QuotaView 的额度和账户用量查询。",
+                "Supports HTTP / SOCKS5 proxies without authentication. Applies only to QuotaView quota and account usage requests."
+            ))
+            .font(.callout).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+            if let failure = proxySaveFailure ?? proxyValidationFailure {
+                Text(copy.proxyFailure(failure))
+                    .font(.callout).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 12) {
+                Button(copy.text("恢复默认", "Restore Defaults")) {
+                    store.cancelProxyTest()
+                    preferences.restoreProxyDefaults()
+                    proxyDraft = preferences.proxyConfiguration
+                    proxySaveFailure = nil
+                }
+                .help(copy.text("关闭自定义代理并恢复默认设置。", "Turn off the custom proxy and restore default settings."))
+                Spacer(minLength: 0)
+                if store.proxyTestState == .testing {
+                    Button(copy.text("取消测试", "Cancel Test")) { store.cancelProxyTest() }
+                } else {
+                    Button(copy.text("连接测试", "Test Connection")) {
+                        store.testProxyConnection(proxyDraft)
+                    }
+                    .disabled(!proxyDraft.isEnabled || proxyValidationFailure != nil)
+                    .help(copy.text("使用当前填写的代理实际查询额度，不保存设置。", "Query quota using this draft proxy without saving it."))
+                }
+                Button(copy.text("保存", "Save")) {
+                    do {
+                        try preferences.saveProxyConfiguration(proxyDraft)
+                        proxyDraft = preferences.proxyConfiguration
+                        proxySaveFailure = nil
+                    } catch { proxySaveFailure = .classify(error) }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(proxyDraft == preferences.proxyConfiguration || proxyValidationFailure != nil)
+            }
+            HStack(spacing: 8) {
+                if store.proxyTestState == .testing {
+                    ProgressView().controlSize(.small)
+                }
+                Text(copy.proxyTestStatus(store.proxyTestState))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(proxyDraft == preferences.proxyConfiguration
+                 ? copy.text("当前设置已保存。", "Current settings are saved.")
+                 : copy.text("有未保存的更改。", "You have unsaved changes."))
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .onAppear { proxyDraft = preferences.proxyConfiguration }
+        .onDisappear { store.cancelProxyTest() }
+        .onChange(of: proxyDraft) { _, _ in
+            proxySaveFailure = nil
+            store.cancelProxyTest()
         }
     }
 
@@ -1004,9 +1119,16 @@ struct SettingsView: View {
         ) as? String ?? Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "1"
+        let isPreview = Bundle.main.object(
+            forInfoDictionaryKey: "QuotaViewReleaseChannel"
+        ) as? String == "preview"
+        let previewNumber = Bundle.main.object(
+            forInfoDictionaryKey: "QuotaViewPreviewNumber"
+        ) as? String ?? "1"
+        let channelSuffix = isPreview ? " · Preview \(previewNumber)" : ""
         return copy.text(
-            "版本 \(version)（\(build)）",
-            "Version \(version) (\(build))"
+            "版本 \(version)（\(build)）\(channelSuffix)",
+            "Version \(version) (\(build))\(channelSuffix)"
         )
     }
 
@@ -2042,5 +2164,38 @@ struct MenuBarBrandIcon: View {
                 width: Metrics.canvasWidth,
                 height: Metrics.height
             )
+    }
+}
+
+
+extension AppCopy {
+    func proxyFailure(_ failure: ProxyConnectionFailure) -> String {
+        switch failure {
+        case .invalidHost:
+            text("请输入有效 IP 或主机名，不要包含协议、路径或账号密码。", "Enter a valid IP or hostname without a protocol, path, or credentials.")
+        case .invalidPort:
+            text("端口必须是 1–65535 的整数。", "Port must be an integer from 1 to 65535.")
+        case .authenticationUnsupported:
+            text("首版不支持需要账号密码的代理。", "Proxies requiring a username or password are not supported.")
+        case .codexNotFound:
+            text("找不到 Codex，请先安装 Codex。", "Codex was not found. Install Codex first.")
+        case .timedOut:
+            text("查询超时，请检查代理地址、端口和网络。", "The request timed out. Check the proxy address, port, and network.")
+        case .permissionDenied:
+            text("无法访问账户额度，请检查 Codex 登录状态和账户权限。", "Quota access was denied. Check your Codex sign-in and account permissions.")
+        case .invalidResponse:
+            text("连接未返回有效额度数据。", "The connection did not return valid quota data.")
+        case .connectionFailed:
+            text("额度查询失败，请检查代理是否可用，以及 Codex 是否已登录。", "Quota request failed. Check that the proxy is available and Codex is signed in.")
+        }
+    }
+
+    func proxyTestStatus(_ state: ProxyConnectionTestState) -> String {
+        switch state {
+        case .idle: text("连接测试会通过代理查询账户额度。", "The connection test queries account quota through the proxy.")
+        case .testing: text("正在通过代理查询额度…", "Querying quota through the proxy…")
+        case .success: text("连接成功，已获取有效额度数据。", "Connected. Valid quota data was received.")
+        case .failed(let failure): proxyFailure(failure)
+        }
     }
 }

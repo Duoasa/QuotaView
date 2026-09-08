@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000052 /* SOCKS5HTTPBridge.swift */; };
+		B10000000000000000000051 /* ProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000051 /* ProxyConfiguration.swift */; };
 		B10000000000000000000001 /* QuotaViewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* QuotaViewApp.swift */; };
 		B10000000000000000000002 /* CodexStatusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* CodexStatusStore.swift */; };
 		B10000000000000000000003 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* MenuBarView.swift */; };
@@ -128,6 +130,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F10000000000000000000052 /* SOCKS5HTTPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOCKS5HTTPBridge.swift; sourceTree = "<group>"; };
+		F10000000000000000000051 /* ProxyConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyConfiguration.swift; sourceTree = "<group>"; };
 		F10000000000000000000001 /* QuotaViewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* CodexStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexStatusStore.swift; sourceTree = "<group>"; };
 		F10000000000000000000003 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
@@ -285,6 +289,8 @@
 				F10000000000000000000042 /* CodexActivityTaskIdentity.swift */,
 				F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */,
 				F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */,
+				F10000000000000000000052 /* SOCKS5HTTPBridge.swift */,
+				F10000000000000000000051 /* ProxyConfiguration.swift */,
 				F10000000000000000000004 /* CodexAppServerClient.swift */,
 				F10000000000000000000005 /* CodexExecutableLocator.swift */,
 				F10000000000000000000006 /* CodexModels.swift */,
@@ -631,6 +637,8 @@
 				B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */,
 				B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */,
 				B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */,
+				B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */,
+				B10000000000000000000051 /* ProxyConfiguration.swift in Sources */,
 				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,
 				B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */,
 				B10000000000000000000008 /* CodexModels.swift in Sources */,

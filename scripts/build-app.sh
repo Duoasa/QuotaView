@@ -39,6 +39,19 @@ sparkle_public_key="$(
         "${info_plist}"
 )"
 release_name="QuotaView-v${version}-build.${display_build_number}"
+release_channel="$(
+    /usr/libexec/PlistBuddy -c 'Print :QuotaViewReleaseChannel' "${info_plist}" 2>/dev/null || true
+)"
+if [[ "${release_channel}" == "preview" ]]; then
+    preview_number="$(
+        /usr/libexec/PlistBuddy -c 'Print :QuotaViewPreviewNumber' "${info_plist}"
+    )"
+    if [[ "${preview_number}" != <1-> ]]; then
+        print -u2 "Expected a positive QuotaViewPreviewNumber."
+        exit 2
+    fi
+    release_name="QuotaView-v${version}-preview.${preview_number}"
+fi
 staging_dir="$(mktemp -d "/tmp/quotaview-package.XXXXXX")"
 verification_dir="$(mktemp -d "/tmp/quotaview-verify.XXXXXX")"
 derived_data="${staging_dir}/DerivedData"

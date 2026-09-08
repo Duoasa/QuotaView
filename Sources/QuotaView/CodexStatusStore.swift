@@ -12,7 +12,13 @@ final class CodexStatusStore: ObservableObject {
     @Published private(set) var operationAvailability:
         AccountOperationAvailability = .demoOnly
 
-    private let coordinator: RefreshCoordinator
+    @Published private(set) var proxyTestState: ProxyConnectionTestState = .idle
+    private var proxyTestTask: Task<Void, Never>?
+    private var proxyTestRevision: UInt64 = 0
+    private var configurationRevision: UInt64 = 0
+    private var proxyCancellable: AnyCancellable?
+    private let proxyClientFactory: @Sendable (ProxyConfiguration) -> CodexAppServerClient
+    private var coordinator: RefreshCoordinator
     private let providerID: ProviderID
     private let projector: CurrentCodexPresentationProjector
     private let diagnostics: UserDefaults
@@ -31,9 +37,14 @@ final class CodexStatusStore: ObservableObject {
             CurrentCodexPresentationProjector(),
         demoExecutor: any QuotaActionExecutor =
             DemoQuotaActionExecutor(),
-        widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter? = nil
+        widgetSnapshotWriter: QuotaViewWidgetSnapshotWriter? = nil,
+        proxyClientFactory: @escaping @Sendable (ProxyConfiguration) -> CodexAppServerClient = {
+            CodexAppServerClient(proxyConfiguration: $0)
+        }
     ) {
-        let provider = provider ?? CodexProviderAdapter()
+        self.proxyClientFactory = proxyClientFactory
+        let provider = provider ?? CodexProviderAdapter(client:
+            proxyClientFactory(preferences?.proxyConfiguration ?? .default))
         let showsTokenUsage = preferences.map {
             $0.showDailyTokens
                 || $0.showThirtyDayTokens
@@ -60,6 +71,14 @@ final class CodexStatusStore: ObservableObject {
         self.preferences = preferences
 
         if let preferences {
+            proxyCancellable = preferences.$proxyConfiguration
+                .removeDuplicates()
+                .dropFirst()
+                .receive(on: RunLoop.main)
+                .sink { [weak self] configuration in
+                    self?.replaceProxyConfiguration(configuration)
+                }
+
             demandCancellable = Publishers.CombineLatest(
                 Publishers.CombineLatest3(
                     preferences.$showDailyTokens,
@@ -154,6 +173,8 @@ final class CodexStatusStore: ObservableObject {
         reason: RefreshReason = .manual,
         policy: RefreshReplacementPolicy = .replace
     ) async {
+        let revision = configurationRevision
+        let coordinator = self.coordinator
         let previous = providerState.latestSnapshot
         providerState = .refreshing(previous: previous)
         isRefreshing = true
@@ -163,6 +184,7 @@ final class CodexStatusStore: ObservableObject {
             policy: policy
         )
 
+        guard revision == configurationRevision else { return }
         switch outcome {
         case .applied(let result, _):
             guard let presentation =
@@ -199,11 +221,69 @@ final class CodexStatusStore: ObservableObject {
             break
         }
 
-        isRefreshing = await coordinator.isRefreshing
+        let stillRefreshing = await coordinator.isRefreshing
+        guard revision == configurationRevision else { return }
+        isRefreshing = stillRefreshing
         if !isRefreshing,
            case .refreshing(let previous) = providerState {
             providerState = .idle(lastSnapshot: previous)
         }
+    }
+
+    private func replaceProxyConfiguration(_ configuration: ProxyConfiguration) {
+        configurationRevision &+= 1
+        let revision = configurationRevision
+        cancelProxyTest()
+        let oldCoordinator = coordinator
+        let provider = CodexProviderAdapter(client: proxyClientFactory(configuration))
+        let includesUsage = preferences.map {
+            $0.showDailyTokens || $0.showThirtyDayTokens || $0.showLifetimeTokens
+                || $0.showTokenActivity || $0.showEstimatedCost
+        } ?? true
+        coordinator = RefreshCoordinator(provider: provider, demand: Self.makeDemandPlan(
+            providerID: provider.descriptor.id, includesTokenUsage: includesUsage))
+        Task { [weak self] in
+            await oldCoordinator.stop()
+            guard let self, self.configurationRevision == revision else { return }
+            await self.refresh()
+        }
+    }
+
+    func testProxyConnection(_ configuration: ProxyConfiguration) {
+        cancelProxyTest()
+        let validated: ProxyConfiguration
+        do {
+            validated = try configuration.validated()
+        } catch {
+            proxyTestState = .failed(.classify(error))
+            return
+        }
+        let revision = proxyTestRevision
+        let client = proxyClientFactory(validated)
+        proxyTestState = .testing
+        proxyTestTask = Task { [weak self] in
+            let result: ProxyConnectionTestState
+            do {
+                try Task.checkCancellation()
+                let payload = try await client.fetchPayload(includeUsage: false)
+                _ = try CodexProviderAdapter.makeResult(payload: payload)
+                result = .success
+            } catch {
+                result = .failed(.classify(error))
+            }
+            await client.stop()
+            guard !Task.isCancelled, let self,
+                  self.proxyTestRevision == revision else { return }
+            self.proxyTestState = result
+            self.proxyTestTask = nil
+        }
+    }
+
+    func cancelProxyTest() {
+        proxyTestRevision &+= 1
+        proxyTestTask?.cancel()
+        proxyTestTask = nil
+        proxyTestState = .idle
     }
 
     func performDemoReset() async -> Bool {
@@ -229,6 +309,8 @@ final class CodexStatusStore: ObservableObject {
     }
 
     func stop() async {
+        cancelProxyTest()
+        configurationRevision &+= 1
         pollingTask?.cancel()
         pollingTask = nil
         await coordinator.stop()

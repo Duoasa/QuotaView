@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import QuotaViewCore
 import SwiftUI
 
 @MainActor
@@ -117,6 +118,7 @@ final class AppPreferences: ObservableObject {
     }
 
     private enum Key {
+        static let proxyConfiguration = "preferences.network.proxyConfiguration"
         static let showStatusIcon = "preferences.menuBar.showStatusIcon"
         static let showRemainingQuota = "preferences.menuBar.showRemainingQuota"
         static let showResetCountdown = "preferences.menuBar.showResetCountdown"
@@ -339,10 +341,26 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    @Published private(set) var proxyConfiguration: ProxyConfiguration
+
+    func saveProxyConfiguration(_ value: ProxyConfiguration) throws {
+        let validated = try value.validated()
+        defaults.set(try JSONEncoder().encode(validated), forKey: Key.proxyConfiguration)
+        proxyConfiguration = validated
+    }
+
+    func restoreProxyDefaults() {
+        defaults.removeObject(forKey: Key.proxyConfiguration)
+        proxyConfiguration = .default
+    }
+
     @Published private(set) var systemLocaleRevision = 0
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        proxyConfiguration = defaults.data(forKey: Key.proxyConfiguration)
+            .flatMap { try? JSONDecoder().decode(ProxyConfiguration.self, from: $0) }
+            ?? .default
         showStatusIcon = defaults.storedBool(
             forKey: Key.showStatusIcon,
             defaultValue: true
