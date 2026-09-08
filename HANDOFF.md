@@ -25,7 +25,7 @@ App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过
 App、Widget、Hook 双架构和资源检查通过；通用页显示 Preview 1。
 本地 186 项测试全部通过；[GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34196167764)
 186 项、0 失败、1 跳过（CI 未安装 Codex；对应实际 CLI 测试已在本机通过）。
-[GitHub Release 草稿](https://github.com/Duoasa/QuotaView/releases/tag/untagged-30e2cfb3ea8071e2b7e5)
+[GitHub Release 草稿](https://github.com/Duoasa/QuotaView/releases)
 已创建（ID 384499146，Pre-release、非 Latest），尚未公开下载包。
 Apple 公证上传被自动审批拒绝，要求针对 Apple 上传的明确授权；已询问用户，
 等待回复。获得授权后提交现有签名包、公证/Staple、重新归档与核验，再发布草稿、
