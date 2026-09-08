@@ -46,7 +46,7 @@ Spec ID: `QV-PRODUCT-PROXY-017`
 | 资源边界 | 超大请求头被关闭；停止后监听端口无法再连接；无临时生产 mock、截图、自动展开或点击入口 |
 | Universal Release | 无签名构建通过；App / Widget 均为 0.4.7 / 产品 Build 1 / internal 20；App、Widget、Hook 均含 x86_64 与 arm64 |
 | 打包资源 | AppIcon.icns、App/Widget Assets.car、Widget、Hook 完整；git diff --check 通过 |
-| 发布事实 | GitHub Latest 仍是 v0.4.6-build.2，资产大小和 digest 与 VERSION_HISTORY 一致；未提交、推送、签名、公证或发布 |
+| 预览准备 | 源码 75982b6 与 v0.4.7-preview.1 已推送，双架构 Developer ID 包通过；GitHub Pre-release 草稿待 Apple 公证授权，尚未公开下载；Latest / appcast 保持 0.4.6 Build 2 |
 | 人工验收 | 等待用户确认页面、交互、中英文、辅助功能及其真实代理环境；模拟测试不代表已覆盖所有代理服务实现 |
 
 开发产物：`dist/QuotaView.app`。完整日志：`dist/verification/swift-tests.log`、`dist/verification/universal-build.log`（本地产物，不进入 Git）。

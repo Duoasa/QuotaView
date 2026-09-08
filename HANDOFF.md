@@ -18,10 +18,21 @@
 SOCKS5 兼容由仅监听本机的临时转接层完成；HTTP 直接传给查询子进程。
 Universal Release 无签名构建通过，App/Widget 版本为 0.4.7 / Build 1 / internal 20，
 App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过。
-开发产物：`dist/QuotaView.app`；完整日志：`dist/verification/`。
-视觉、交互、辅助功能及用户真实代理环境等待验收。
-用户已授权 GitHub Preview 发布；准备 `v0.4.7-preview.1`，不加入 appcast，
-不改变稳定版 Latest。预览版反馈完成后再由用户决定是否推送更新。
+预览源码提交：`75982b6a4fbae6f83ced1bd9ebf12467669b34f3`，已推送独立分支
+`codex/0.4.7-development` 与标签 `v0.4.7-preview.1`。
+用户已授权 GitHub Preview 发布，禁止加入 appcast，不改变稳定版 Latest。
+签名包：`dist/QuotaView-v0.4.7-preview.1.zip`；Developer ID / Hardened Runtime，
+App、Widget、Hook 双架构和资源检查通过；通用页显示 Preview 1。
+本地 186 项测试全部通过；[GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34196167764)
+186 项、0 失败、1 跳过（CI 未安装 Codex；对应实际 CLI 测试已在本机通过）。
+[GitHub Release 草稿](https://github.com/Duoasa/QuotaView/releases/tag/untagged-30e2cfb3ea8071e2b7e5)
+已创建（ID 384499146，Pre-release、非 Latest），尚未公开下载包。
+Apple 公证上传被自动审批拒绝，要求针对 Apple 上传的明确授权；已询问用户，
+等待回复。获得授权后提交现有签名包、公证/Staple、重新归档与核验，再发布草稿、
+回下载检查，并同步版本历史和 README 预览入口。
+完整日志：`dist/verification/`。当前正式 Latest 与 appcast 仍为 0.4.6 Build 2；
+发布前 Feed SHA-256：`de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`。
+视觉、交互、辅助功能及用户真实代理环境等待验收；反馈完成后再由用户决定是否推送更新。
 
 ## 1. 当前定位
 
@@ -30,7 +41,7 @@ App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过
 | 稳定版 | `0.4.6 Build 2` / internal `19` / `v0.4.6-build.2` / GitHub Latest |
 | 回滚基线 | `0.4.6 Build 1` / `v0.4.6-build.1` |
 | 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.7 Preview 1` / Build `1` / internal `20`；准备 GitHub Pre-release，禁止加入 appcast |
+| 当前候选 | `0.4.7 Preview 1` / Build `1` / internal `20`；已推送源码与标签，Release 草稿等待 Apple 公证授权；禁止加入 appcast |
 | 当前主题 | 0.4.7 自定义代理：默认关闭、HTTP/SOCKS5、连接测试和恢复默认 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；

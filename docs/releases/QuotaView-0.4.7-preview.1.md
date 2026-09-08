@@ -29,6 +29,7 @@ Please report your macOS and Codex versions, proxy type and software, whether it
 
 - 186 local Swift tests passed, including HTTP/SOCKS5 simulated-network success, refusal, timeout, disconnect, recovery, and cancellation cases.
 - Installed Codex CLI 0.153.4 completed HTTPS quota queries through both simulated proxy protocols using an isolated test account and temporary test certificate authority.
+- GitHub CI passed with zero failures; the installed-Codex test is opt-in and was verified locally instead.
 - Universal macOS build for Apple silicon and Intel; macOS 14 or later.
 - Real-world proxy compatibility, visual behavior, and accessibility still need user feedback. Authenticated proxies and PAC configuration are outside this preview's scope.
 
