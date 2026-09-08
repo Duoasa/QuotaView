@@ -34,3 +34,13 @@ Please report your macOS and Codex versions, proxy type and software, whether it
 - Real-world proxy compatibility, visual behavior, and accessibility still need user feedback. Authenticated proxies and PAC configuration are outside this preview's scope.
 
 To return to stable, restore the proxy defaults, quit the preview, and reinstall [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2). Both versions use the same local preferences. The stable update feed will not offer this preview.
+
+## Download verification
+
+`QuotaView-v0.4.7-preview.1.zip` — 13,669,207 bytes. Signed with Developer ID, notarized by Apple, and stapled. The public download matches the local ZIP byte-for-byte. Its extracted app passed strict signature verification, stapled-ticket validation, and Gatekeeper assessment.
+
+SHA-256:
+
+```text
+850000a08285687312d5fc8a3868c1b3add11220b3e49c2b26f525e5161a7dca
+```

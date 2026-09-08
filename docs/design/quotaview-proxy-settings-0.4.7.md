@@ -1,7 +1,7 @@
 # 0.4.7 自定义代理
 
 Spec ID: `QV-PRODUCT-PROXY-017`  
-状态：Accepted / Verifying；2026-09-08 用户授权沿用 0.4.6 架构实现。  
+状态：Accepted / Released（仅 Preview）；2026-09-08 用户授权沿用 0.4.6 架构实现并发布预览。
 预览身份：0.4.7 Preview 1 / Build 1 / internal 20；基线：0.4.6 Build 2 / internal 19。
 
 ## 范围与 Requirement
@@ -46,10 +46,11 @@ Spec ID: `QV-PRODUCT-PROXY-017`
 | 资源边界 | 超大请求头被关闭；停止后监听端口无法再连接；无临时生产 mock、截图、自动展开或点击入口 |
 | Universal Release | 无签名构建通过；App / Widget 均为 0.4.7 / 产品 Build 1 / internal 20；App、Widget、Hook 均含 x86_64 与 arm64 |
 | 打包资源 | AppIcon.icns、App/Widget Assets.car、Widget、Hook 完整；git diff --check 通过 |
-| 预览准备 | 源码 75982b6 与 v0.4.7-preview.1 已推送，双架构 Developer ID 包通过；GitHub Pre-release 草稿待 Apple 公证授权，尚未公开下载；Latest / appcast 保持 0.4.6 Build 2 |
+| 预览发布 | [v0.4.7-preview.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) / 75982b6；Developer ID、Apple Accepted / Staple；公开下载逐字节一致，签名、票据和 Gatekeeper 通过；Latest / appcast 保持 0.4.6 Build 2 |
 | 人工验收 | 等待用户确认页面、交互、中英文、辅助功能及其真实代理环境；模拟测试不代表已覆盖所有代理服务实现 |
 
-开发产物：`dist/QuotaView.app`。完整日志：`dist/verification/swift-tests.log`、`dist/verification/universal-build.log`（本地产物，不进入 Git）。
+发布包：`dist/QuotaView-v0.4.7-preview.1.zip`；不可变发布事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)。
+开发产物：`dist/QuotaView.app`（用户当前运行实例保持原状）；分发验收以公证 ZIP 为准。完整日志：`dist/verification/swift-tests.log`、`dist/verification/universal-build.log`（本地产物，不进入 Git）。
 
 复现测试：
 

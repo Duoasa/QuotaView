@@ -45,18 +45,19 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新预览版本 | `0.3.2 (Build 1) Preview 1` |
-| Git tag | `v0.3.2-preview.1` |
-| Tag commit | `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c` |
-| GitHub Release | [QuotaView 0.3.2 Preview 1 — Multi-task Codex Island](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) |
-| Release 资产 | `QuotaView-v0.3.2-preview.1.zip` |
-| 资产大小 | `11,543,516 bytes` |
-| SHA-256 | `e39b0d004c2ce2d7d739f5b1f1dc9037335c63d2ee6d663d8129327433f13587` |
-| 最低系统版本 | macOS 14 |
-| 架构 | Universal `arm64 + x86_64` |
-| 签名 | `Developer ID Application: Chenchen Xu (BUUH229D5Q)`，启用 Hardened Runtime |
-| 公证 | Apple Accepted，已 Staple；Submission `47c6d413-465f-4632-b7d2-1e48ed03f9a0` |
-| 发布状态 | GitHub Pre-release、非 Draft、非 Latest |
+| 最新预览版本 | `0.4.7 Preview 1` / 产品 Build `1` / 内部 `20` |
+| Git tag | `v0.4.7-preview.1` |
+| Tag commit | `75982b6a4fbae6f83ced1bd9ebf12467669b34f3` |
+| GitHub Release | [QuotaView 0.4.7 Preview 1 — Custom Proxy](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) |
+| Release 资产 | `QuotaView-v0.4.7-preview.1.zip` |
+| 资产大小 | `13,669,207 bytes` |
+| SHA-256 | `850000a08285687312d5fc8a3868c1b3add11220b3e49c2b26f525e5161a7dca` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `a56a008b-835e-4ca5-abc9-847770cb227e` |
+| 发布状态 | GitHub Pre-release、非 Draft、非 Latest；仅手动下载，未进入 appcast |
+| 回滚版本 | [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)，仍为推荐稳定版；资产与签名信息见上表 |
+
 
 > 当前生产版本为 `0.4.6 (Build 2)`，作为 Build 1 的量子噪点动效热更新。
 > 思考与压缩使用自然聚簇运动并保留各自配色，执行使用单个非匀速脉冲，
@@ -77,7 +78,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.4.6 (Build 2)` | 2026-09-06 | **当前最新** | 自然聚簇、非匀速脉冲与低进度渐隐的量子噪点热更新 |
+| `0.4.7 Preview 1` | 2026-09-08 | **当前预览版** / 无 appcast | HTTP/SOCKS5 自定义代理、连接测试与恢复默认 |
+| `0.4.6 (Build 2)` | 2026-09-06 | **当前最新稳定版** | 自然聚簇、非匀速脉冲与低进度渐隐的量子噪点热更新 |
 | `0.4.6 (Build 1)` | 2026-09-05 | 历史正式版 / Build 2 回滚基线 | 可靠的任务归属、真实完成与 Codex Token 恢复 |
 | `0.4.5 (Build 1)` | 2026-09-04 | 历史正式版 / 0.4.6 回滚基线 | 只读本地任务流数据桥、无需 Hook 的开箱连接与状态灵动岛升级 |
 | `0.4.3 (Build 1)` | 2026-09-03 | 历史正式版 / 0.4.5 回滚基线 | 量子噪点连续换色、更清晰的文字与统一完成辉光 |
@@ -87,7 +89,7 @@
 | `0.3.6 (Build 2)` | 2026-08-23 | 历史正式版 | 单任务 Codex 灵动岛动画、显示与事件时间个性化 |
 | `0.3.5 (Build 5)` | 2026-08-11 | 历史正式版 | Spark 与 30 日用量概览、半年 Token 活动、Stable 应用更新检查 |
 | `0.3.3 (Build 3)` | 2026-08-11 | 历史正式版 | Token 活动统计、单色方格图与顶部固定动态面板 |
-| `0.3.2 (Build 1) Preview 1` | 2026-08-05 | **当前预览版** | Codex 灵动岛多任务支持与可选当前任务跟随 |
+| `0.3.2 (Build 1) Preview 1` | 2026-08-05 | 历史实验预览 | Codex 灵动岛多任务支持与可选当前任务跟随 |
 | `0.3.1 (Build 2)` | 2026-08-01 | 历史正式版 / 0.3.3 回滚基线 | Widget 共享容器热修复与可变额度周期文案 |
 | `0.3.1 (Build 1)` | 2026-07-30 | 历史正式版 | Codex 灵动岛实时任务状态与官方 Hooks 连接 |
 | `0.2.1 (Build 1)` | 2026-07-30 | 历史正式版 | 原生 WidgetKit 小组件与 Developer ID 公证分发 |
@@ -97,6 +99,27 @@
 | `0.1.5 (Build 6)` | 2026-07-27 | 历史正式版 | 原生菜单面板、玻璃外观、设置窗口和状态标签热修复 |
 | `0.1.3` | 2026-07-26 | 历史正式版 | 设置、外观、语言、图标和发布流程完善 |
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
+
+## 0.4.7 Preview 1
+
+Tag：`v0.4.7-preview.1`；发布提交：`75982b6a4fbae6f83ced1bd9ebf12467669b34f3`。
+2026-09-08 发布为 GitHub Pre-release，非 Draft、非 Latest；不修改 Stable appcast。
+用户要求先收集真实代理环境反馈，再决定是否推送更新。源码位于独立分支
+`codex/0.4.7-development`，未将预览功能合并到稳定主分支。
+
+- 沿用 0.4.6 架构，新增默认关闭的代理设置页；HTTP/SOCKS5，无账号密码，支持连接测试与恢复默认。
+- 保存后仅重建 QuotaView 自有额度查询客户端；灵动岛本地活动和当前任务 Token 读取保持原架构。
+- SOCKS5 使用临时本机转接层以兼容当前 Codex CLI；HTTPS 不解密，保留证书验证。
+- 本地 186 项测试、0 失败，含真实 Codex CLI 0.153.4 在隔离账户下经两种模拟代理完成 HTTPS 查询。
+- [GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34196167764)：186 项、0 失败、1 跳过；CI 不运行需本机安装 Codex 的可选测试，该项已在本地通过。
+- Universal App / Widget / Hook，版本 0.4.7 / 产品 Build 1 / 内部 20；图标与资源完整。
+- ZIP：`QuotaView-v0.4.7-preview.1.zip`，13,669,207 bytes；SHA-256 `850000a08285687312d5fc8a3868c1b3add11220b3e49c2b26f525e5161a7dca`。
+- Developer ID / Hardened Runtime；Apple Accepted / Staple，Submission `a56a008b-835e-4ca5-abc9-847770cb227e`。
+- 最终包及公开回下载解压副本均通过严格签名、公证票据和 Gatekeeper；公开 ZIP 与本地逐字节一致。
+- appcast 发布前后逐字节一致，SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；gh-pages 仍为 `94ae0ec0d63d4a50f77ba3a836afc98d2cb1009d`，GitHub Latest 仍为 v0.4.6-build.2。
+- 设置视觉、交互、中英文、辅助功能及真实代理服务兼容性等待用户验收；未自动启动替换用户当前应用或进行 UI 验收。
+- 回滚：恢复代理默认值、退出预览版，手动安装 0.4.6 Build 2；两版共用本地偏好设置。
+- [英文 Release Notes](docs/releases/QuotaView-0.4.7-preview.1.md) 包含手动测试流程和 Issue #49 反馈入口。
 
 ## 0.4.6 (Build 2)
 
@@ -612,8 +635,8 @@ Release：
 
 Tag：`v0.3.2-preview.1`
 
-状态：当前公开预览版、非 Draft、非 Latest；`0.3.6 (Build 2)` 是
-推荐稳定版与 GitHub Latest。
+状态：历史公开预览版、非 Draft、非 Latest；保留多任务实验供参照。
+当前推荐稳定版与最新代理预览见本文件顶部。
 
 发布提交：
 `f835bcd46a3d0197e9dc09e0b5a25a6d5d69521c`

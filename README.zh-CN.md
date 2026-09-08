@@ -220,6 +220,7 @@ Tests/
 ## 发布与项目状态
 
 - **推荐稳定版：** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
+- **自定义代理预览（仅手动下载）：** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — HTTP/SOCKS5、连接测试与恢复默认；不加入 appcast，等待真实环境反馈。
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **版本历史与发布验证：** [VERSION_HISTORY.md](VERSION_HISTORY.md)
 - **当前工程交接：** [HANDOFF.md](HANDOFF.md)

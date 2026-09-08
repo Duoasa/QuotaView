@@ -6,7 +6,7 @@
 >
 > 生产基线：`0.4.6 Build 2`（内部 `19`）
 >
-> 当前候选：0.4.7 Preview 1 / Build 1（内部 20），源码已推送、Release 草稿待 Apple 公证授权；不加入 appcast
+> 当前预览：0.4.7 Preview 1 / Build 1（内部 20）已发布；等待真实反馈，不加入 appcast
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
@@ -14,7 +14,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Verifying` | 186 项测试、真实 CLI 代理 HTTPS 模拟和 Universal 通过；等待用户视觉/交互与真实代理环境验收；已推送源码与标签，Release 草稿待 Apple 公证授权 |
+| `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | 仅 GitHub Preview；186 项本地测试、CI、Universal、公证和回下载验证通过；等待用户视觉/交互与真实代理反馈，无 appcast |
 | `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |
 | `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |
 | `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |

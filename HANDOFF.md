@@ -25,13 +25,16 @@ App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过
 App、Widget、Hook 双架构和资源检查通过；通用页显示 Preview 1。
 本地 186 项测试全部通过；[GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34196167764)
 186 项、0 失败、1 跳过（CI 未安装 Codex；对应实际 CLI 测试已在本机通过）。
-[GitHub Release 草稿](https://github.com/Duoasa/QuotaView/releases)
-已创建（ID 384499146，Pre-release、非 Latest），尚未公开下载包。
-Apple 公证上传被自动审批拒绝，要求针对 Apple 上传的明确授权；已询问用户，
-等待回复。获得授权后提交现有签名包、公证/Staple、重新归档与核验，再发布草稿、
-回下载检查，并同步版本历史和 README 预览入口。
+[GitHub Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1)
+已公开发布（ID 384499146，Pre-release、非 Latest）。用户已明确授权 Apple 公证，
+Submission `a56a008b-835e-4ca5-abc9-847770cb227e` 为 Accepted，已 Staple。
+最终 ZIP：13,669,207 bytes；SHA-256
+`850000a08285687312d5fc8a3868c1b3add11220b3e49c2b26f525e5161a7dca`。
+公开下载与本地 ZIP 逐字节一致；解压后严格签名、票据和 Gatekeeper 均通过。
+源码、版本历史、README 预览入口与英文发布说明同步在独立预览分支，未合并稳定主分支。
+当前应用实例保持原状，没有自动启动替换或代替用户进行 UI 验收。
 完整日志：`dist/verification/`。当前正式 Latest 与 appcast 仍为 0.4.6 Build 2；
-发布前 Feed SHA-256：`de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`。
+发布前后 Feed 逐字节一致，SHA-256：`de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`。
 视觉、交互、辅助功能及用户真实代理环境等待验收；反馈完成后再由用户决定是否推送更新。
 
 ## 1. 当前定位
@@ -40,12 +43,12 @@ Apple 公证上传被自动审批拒绝，要求针对 Apple 上传的明确授�
 |---|---|
 | 稳定版 | `0.4.6 Build 2` / internal `19` / `v0.4.6-build.2` / GitHub Latest |
 | 回滚基线 | `0.4.6 Build 1` / `v0.4.6-build.1` |
-| 公开预览 | `0.3.2 Preview 1`；不属于稳定源码或 Stable appcast |
-| 当前候选 | `0.4.7 Preview 1` / Build `1` / internal `20`；已推送源码与标签，Release 草稿等待 Apple 公证授权；禁止加入 appcast |
+| 公开预览 | `0.4.7 Preview 1` / 产品 Build `1` / 内部 `20`；GitHub Pre-release，无 appcast |
+| 当前阶段 | 0.4.7 Preview 1 已发布；等待真实代理环境反馈，由用户决定是否晋升更新 |
 | 当前主题 | 0.4.7 自定义代理：默认关闭、HTTP/SOCKS5、连接测试和恢复默认 |
 
 产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
-Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增。
+Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增；后续 0.4.7 预览或正式包必须使用大于 `20` 的内部 Build。
 
 0.4.6 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6`。
 从 0.4.5 发布源码及发布文档提交建立独立分支；已有 Kimi 预览工作区保持独立。

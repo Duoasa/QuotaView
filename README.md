@@ -221,6 +221,7 @@ Tests/
 ## Releases and project status
 
 - **Recommended stable:** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
+- **Custom proxy preview (manual download only):** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — HTTP/SOCKS5, connection test, and restore defaults. Not in the appcast; real-world feedback is welcome.
 - **Experimental multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **Release history and verification:** [VERSION_HISTORY.md](VERSION_HISTORY.md)
 - **Current engineering handoff:** [HANDOFF.md](HANDOFF.md)
