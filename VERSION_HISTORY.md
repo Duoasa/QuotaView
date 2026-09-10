@@ -15,32 +15,41 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.4.7 (Build 2)`；Sparkle 内部 Build `21` |
+| 最新推荐版本 | `0.4.6 (Build 2)`；Sparkle 内部 Build `19` |
+| Git tag | `v0.4.6-build.2` |
+| Tag commit | `ae9f17d415fb1968d9ef843be771b6a5211213c7` |
+| GitHub Release | [QuotaView 0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) |
+| Release 资产 | `QuotaView-v0.4.6-build.2.zip` |
+| 资产大小 | `13,487,447 bytes` |
+| SHA-256 | `5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `f466177a-2fea-4e61-9c11-1e405ed32bde` |
+| 发布状态 | 2026-09-10 恢复为 Latest；正式 Release、非 Draft、非 Pre-release；复用原始签名资产 |
+| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；回退提交 `61c47115bdbd24224149f629abdb8d3f906707c7`；恢复原始签名 Feed，SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；更新序列 19 → 18 → 17；公开 Feed / ZIP 内置公钥验证通过，Pages 部署 `34496622243` 成功 |
+
+0.4.7 因用户报告显示 bug 撤回，具体根因尚未确认。已安装 0.4.7 的用户需退出应用后
+手动安装 0.4.6 Build 2；appcast 回退只停止继续推荐 0.4.7，不会自动降级。
+main 暂保留 0.4.7 源码用于后续排查；稳定源码必须从上述 0.4.6 tag 获取。
+
+已撤回版本（保留发布事实，不得作为下载或开发基线）：
+
+| 项目 | 当前值 |
+|---|---|
+| 已撤回版本 | `0.4.7 (Build 2)`；Sparkle 内部 Build `21` |
 | Git tag | `v0.4.7-build.2` |
 | Tag commit | `2d5eeb4aa6f79bde124881d1647ead20fbe9da87`；已合并 main |
-| GitHub Release | [QuotaView 0.4.7 Build 2 — Custom Proxy](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2) |
+| GitHub Release | [QuotaView 0.4.7 Build 2 — Withdrawn](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2) |
 | Release 资产 | `QuotaView-v0.4.7-build.2.zip` |
 | 资产大小 | `13,669,247 bytes` |
 | SHA-256 | `de828160dc89fd7990959944ed3a1695936d0d080d472eb3e8c908c2ba8e6a8e` |
 | 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64` |
 | 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
 | 公证 | Apple Accepted / Staple；Submission `e14f5a2d-7fe5-4947-bfae-1b680c73f5d5` |
-| 发布状态 | 正式 Release、Latest、非 Draft、非 Pre-release |
-| 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；提交 `d552063f33da8bce98425bbb7aa7478689f4cada`；SHA-256 `84b58999ae30d73c7f37bc8d4be8ff6bd7d6fbbedae7e6a3a0b43b2a4fe42e9c`；线上与本地逐字节一致，内置公钥验证通过；更新序列 21 → 19 → 18 |
+| 发布状态 | 2026-09-10 因显示问题已撤回；GitHub 标为 Pre-release、非 Latest，tag 与资产保留 |
+| 原发布 Feed（已撤回） | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；提交 `d552063f33da8bce98425bbb7aa7478689f4cada`；SHA-256 `84b58999ae30d73c7f37bc8d4be8ff6bd7d6fbbedae7e6a3a0b43b2a4fe42e9c`；线上与本地逐字节一致，内置公钥验证通过；更新序列 21 → 19 → 18 |
 
-上一稳定回滚基线：
-
-| 项目 | 封存值 |
-|---|---|
-| 版本 | `0.4.6 (Build 2)`；内部 `19` |
-| tag / commit | `v0.4.6-build.2` / `ae9f17d415fb1968d9ef843be771b6a5211213c7` |
-| Release | [QuotaView 0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) |
-| 资产 / 大小 | `QuotaView-v0.4.6-build.2.zip` / `13,487,447 bytes` |
-| SHA-256 | `5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916` |
-| 签名与公证 | Developer ID / Hardened Runtime；Apple Accepted / Staple，Submission f466177a-2fea-4e61-9c11-1e405ed32bde |
-| 状态 | 不可移动历史正式版；0.4.7 回滚基线，仍保留在 Stable appcast |
-
-历史代理预览版（已由正式 0.4.7 Build 2 替代）：
+历史代理预览版（非推荐版本）：
 
 | 项目 | 当前值 |
 |---|---|
@@ -55,12 +64,11 @@
 | 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
 | 公证 | Apple Accepted / Staple；Submission `a56a008b-835e-4ca5-abc9-847770cb227e` |
 | 发布状态 | GitHub Pre-release、非 Draft、非 Latest；仅手动下载，未进入 appcast |
-| 回滚版本 | [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)；为预览测试时的稳定基线，当前推荐正式 0.4.7 Build 2 |
+| 回滚版本 | [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)；已恢复为当前推荐稳定版 |
 
 
-> 当前生产版本为 `0.4.7 (Build 2)`：自定义代理由 Preview 转为正式功能，
-> 默认关闭，支持 HTTP/SOCKS5、连接测试与恢复默认，已进入 Stable appcast。
-> 灵动岛完成收起逻辑保持原行为；真实代理测试反馈与代码审查未复现永久停留。
+> 当前推荐生产版本为 `0.4.6 (Build 2)`。0.4.7 Build 2 因显示问题已撤回，
+> 不在 Stable appcast 中；此前自动化测试通过不代表此次实机显示问题已解决。
 
 > 未发布开发版本不在本历史文件登记；当前迭代身份与验证状态只以
 > [HANDOFF.md](HANDOFF.md) 为准，不得把候选版本提前写成已发布。
@@ -76,9 +84,9 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.4.7 (Build 2)` | 2026-09-10 | **当前最新稳定版** | 自定义代理正式版、连接测试与恢复默认 |
-| `0.4.7 Preview 1` | 2026-09-08 | 历史预览 / 已晋升正式版 | HTTP/SOCKS5 自定义代理、连接测试与恢复默认 |
-| `0.4.6 (Build 2)` | 2026-09-06 | 历史正式版 / 0.4.7 回滚基线 | 自然聚簇、非匀速脉冲与低进度渐隐的量子噪点热更新 |
+| `0.4.7 (Build 2)` | 2026-09-10 | **已撤回：显示 bug** | 自定义代理正式版、连接测试与恢复默认 |
+| `0.4.7 Preview 1` | 2026-09-08 | 历史预览 / 非推荐版本 | HTTP/SOCKS5 自定义代理、连接测试与恢复默认 |
+| `0.4.6 (Build 2)` | 2026-09-06 | **当前最新稳定版 / 已恢复推荐** | 自然聚簇、非匀速脉冲与低进度渐隐的量子噪点热更新 |
 | `0.4.6 (Build 1)` | 2026-09-05 | 历史正式版 / Build 2 回滚基线 | 可靠的任务归属、真实完成与 Codex Token 恢复 |
 | `0.4.5 (Build 1)` | 2026-09-04 | 历史正式版 / 0.4.6 回滚基线 | 只读本地任务流数据桥、无需 Hook 的开箱连接与状态灵动岛升级 |
 | `0.4.3 (Build 1)` | 2026-09-03 | 历史正式版 / 0.4.5 回滚基线 | 量子噪点连续换色、更清晰的文字与统一完成辉光 |
@@ -100,6 +108,10 @@
 | `0.1.0` | 2026-07-26 | 首个公开版本 | Codex 额度、Credits、Token 与重置时间基础能力 |
 
 ## 0.4.7 (Build 2)
+
+**2026-09-10 已撤回**：用户反馈显示 bug，根因待排查。Latest、README 下载和
+Stable appcast 已回退 0.4.6 Build 2；历史 tag、资产与源码保留，GitHub Release
+标为 Pre-release 并注明 Withdrawn。以下为撤回前发布时的验证记录。
 
 Tag：`v0.4.7-build.2`；发布提交：`2d5eeb4aa6f79bde124881d1647ead20fbe9da87`，已快进合并 main。
 用户已确认转正式、合并 main、同步中英文 README 与 appcast，并单独授权正式包 Apple 公证。

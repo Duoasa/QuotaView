@@ -7,31 +7,28 @@
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
 
-## 0.4.7 当前状态
+## 当前状态：0.4.7 撤回，稳定版恢复 0.4.6
 
-正式版本：**0.4.7 Build 2 / internal 21**；`v0.4.7-build.2`，已合并 main，GitHub Latest。
-代理功能由 Preview 晋升正式版；应用内 Preview 标识已移除，中英文 README
-下载入口与更新说明同步。用户已授权 main、README、appcast 和正式包 Apple 公证。
-本次新增提交统一使用 `xuchen1995@gmail.com`。
+2026-09-10 用户反馈 0.4.7 存在显示 bug，要求先回退版本及 appcast。
+GitHub Latest 与中英文 README 恢复 **0.4.6 Build 2 / internal 19 / v0.4.6-build.2**。
+0.4.7 Build 2 标为 Withdrawn / Pre-release / 非 Latest，历史 tag、资产与源码保留。
+Stable appcast 回退提交 `61c47115bdbd24224149f629abdb8d3f906707c7`，
+逐字节恢复原始签名 Feed；内部版本序列 19 → 18 → 17，排除 20/21。
+资产大小、SHA-256、签名、公证与发布提交见顶部版本历史。
 
-当前规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
-本地 190 项测试全部通过，包括真实 Codex HTTPS 代理模拟和真实 120 秒收起计时；
-main CI 190 项、0 失败、2 个可选测试跳过，本机已覆盖。
-Universal Release、Developer ID、公证/Staple、公开回下载严格签名与 Gatekeeper 通过。
-Stable appcast 发布内部 21，保留内部 19/18；Feed 与 ZIP 的内置公钥验证通过。
-完整不可变发布事实见顶部版本历史；产物 `dist/QuotaView-v0.4.7-build.2.zip`，
-日志 `dist/verification/`。
+本次仅修改发布指针、appcast 和文档，不重新构建或公证，不重复运行 Swift 测试。
+核验公开 Latest、Feed 签名与 ZIP 哈希；用户本机应用保持不动。
+已安装 0.4.7 的用户需要手动安装 0.4.6，恢复 Feed 不会自动降级。
 
-用户已反馈其真实代理可用；缩小后永久显示问题经专项审查未复现，生产计时未改。
-等待用户验证实际更新安装和完整视觉/辅助功能矩阵，不自动替换当前运行实例。
-下一轮构建须递增产品 Build 与内部序号；不要覆盖 Preview 或正式历史 tag/资产。
+main 与 `codex/0.4.7-development` 暂保留 0.4.7 / internal 21 源码供排查；
+这不是当前推荐生产基线。稳定源码应使用 tag `v0.4.6-build.2`，不要仅改版本号重打包。
+0.4.7 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
+代理规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
 
-| 项目 | 当前值 |
-|---|---|
-| 稳定版 | 0.4.7 Build 2 / internal 21 / v0.4.7-build.2 / Latest |
-| 回滚基线 | 0.4.6 Build 2 / internal 19 / v0.4.6-build.2 |
-| 历史代理预览 | 0.4.7 Preview 1 / internal 20，保留资产，已由正式版替代 |
-| 当前阶段 | 已正式发布并进入 appcast；等待实际安装与后续反馈 |
+下一步：获取具体显示症状、触发步骤与环境并排查；本轮不将显示问题视为已修复。
+此前 190 项本地测试与 CI 通过、代理用户反馈可用，以及完成态计时未复现的结论
+仅保留为历史证据，不能覆盖此次显示问题反馈。恢复发布需用户新的明确决定。
+后续发布必须递增内部 Build，不覆盖历史 tag / ZIP。本次提交邮箱 `xuchen1995@gmail.com`。
 
 ## 0.4.6 历史工作记录
 

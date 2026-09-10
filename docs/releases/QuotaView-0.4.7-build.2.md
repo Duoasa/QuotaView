@@ -1,4 +1,8 @@
-# QuotaView 0.4.7 Build 2 — Custom Proxy
+# QuotaView 0.4.7 Build 2 — Withdrawn
+
+**Withdrawn on September 10, 2026 due to a reported display bug.** The recommended stable release and update feed have reverted to [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2). If you already installed 0.4.7, quit QuotaView and manually install 0.4.6 Build 2; automatic updates do not downgrade an installed version. The existing tag and archive are retained for investigation.
+
+The following describes the original release and its verification at publication.
 
 QuotaView 0.4.7 adds a custom proxy for Codex quota and account usage requests. Following the public preview and user feedback confirming proxy connectivity, this release promotes the feature to stable.
 
@@ -18,9 +22,7 @@ The completed Island still shrinks after 20 seconds and hides 100 seconds later 
 
 ## Install and update
 
-Download the Universal ZIP for Apple silicon and Intel (macOS 14 or later), or use **Check for Updates** through the stable update feed. Quit the running QuotaView instance before replacing it manually. Preview users can update to this stable build as well.
-
-The previous stable [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) remains available for rollback. Preview 1 is retained as historical test evidence.
+Use [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2). This withdrawn 0.4.7 build is no longer offered through the stable update feed.
 
 ## Verification
 

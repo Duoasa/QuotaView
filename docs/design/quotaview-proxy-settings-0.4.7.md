@@ -1,8 +1,8 @@
 # 0.4.7 自定义代理
 
 Spec ID: `QV-PRODUCT-PROXY-017`  
-状态：Accepted / Released；2026-09-10 用户授权转正式、合并 main、更新 README / appcast 并完成正式包公证。
-正式身份：0.4.7 Build 2 / internal 21；Preview 1 / internal 20 保留为历史。
+状态：Accepted / Withdrawn；2026-09-10 用户反馈显示 bug，已撤回稳定发布，Latest / README / appcast 恢复 0.4.6 Build 2。根因待排查；下文为原实现与发布历史。
+已撤回身份：0.4.7 Build 2 / internal 21；Preview 1 / internal 20 保留为历史。
 完整发布证据见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 ## 范围与 Requirement

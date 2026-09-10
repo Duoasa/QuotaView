@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.7-build.2/QuotaView-v0.4.7-build.2.zip"><strong>Download QuotaView v0.4.7 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.6-build.2/QuotaView-v0.4.6-build.2.zip"><strong>Download QuotaView v0.4.6 Build 2</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -42,11 +42,9 @@ Codex can keep working after its window leaves the foreground, but its state sho
 
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
-## What's new in 0.4.7 Build 2
+## Stable release restored to 0.4.6 Build 2
 
-Custom proxy support is now stable after public-preview feedback. In **Settings → Proxy**, enable an HTTP or SOCKS5 proxy, enter its server address and port, test the connection, then save. The feature is off by default and supports proxies without username/password authentication.
-
-**Restore Defaults** returns to the original connection behavior. The proxy applies to quota and account usage queries; the local Island activity bridge and current-task Token reading keep the 0.4.6 architecture. Completion timing remains configurable: 20 seconds to shrink, then another 100 seconds to hide by default.
+September 10, 2026: 0.4.7 was withdrawn following a reported display bug. Downloads and the stable update feed now point to 0.4.6 Build 2. If you installed 0.4.7, quit QuotaView and install 0.4.6 manually; automatic updates do not downgrade installed versions. Custom proxy support is not part of the recommended stable release.
 
 ## The Codex Island
 
@@ -92,12 +90,12 @@ The Island leads the experience, while the rest of QuotaView provides the contex
 ## Get started
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.4.7-build.2.zip` from the [v0.4.7 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2).
+2. Download `QuotaView-v0.4.6-build.2.zip` from the [v0.4.6 Build 2 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2).
 3. Unzip it and open `QuotaView.app`.
 4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required.
 
 > [!IMPORTANT]
-> v0.4.7 Build 2 is signed with a Developer ID certificate, notarized by Apple,
+> v0.4.6 Build 2 is signed with a Developer ID certificate, notarized by Apple,
 > and stapled for offline Gatekeeper verification. It opens normally after
 > unzipping, without the Finder right-click workaround used by older unsigned
 > builds.
@@ -220,9 +218,9 @@ Tests/
 
 ## Releases and project status
 
-- **Recommended stable:** [QuotaView v0.4.7 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2)
-- **Custom proxy:** Settings → Proxy supports HTTP/SOCKS5 without authentication, connection testing, and restoring defaults. Off by default.
-- **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — superseded by stable 0.4.7 Build 2.
+- **Recommended stable:** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
+- **Withdrawn:** [QuotaView v0.4.7 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.2) — display bug under investigation; retained for historical reference.
+- **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.
 - **Experimental multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **Release history and verification:** [VERSION_HISTORY.md](VERSION_HISTORY.md)
 - **Current engineering handoff:** [HANDOFF.md](HANDOFF.md)
