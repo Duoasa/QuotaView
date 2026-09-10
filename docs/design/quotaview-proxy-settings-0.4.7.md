@@ -1,8 +1,9 @@
 # 0.4.7 自定义代理
 
 Spec ID: `QV-PRODUCT-PROXY-017`  
-状态：Accepted / Released（仅 Preview）；2026-09-08 用户授权沿用 0.4.6 架构实现并发布预览。
-预览身份：0.4.7 Preview 1 / Build 1 / internal 20；基线：0.4.6 Build 2 / internal 19。
+状态：Accepted / Released；2026-09-10 用户授权转正式、合并 main、更新 README / appcast 并完成正式包公证。
+正式身份：0.4.7 Build 2 / internal 21；Preview 1 / internal 20 保留为历史。
+完整发布证据见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 ## 范围与 Requirement
 
@@ -28,7 +29,7 @@ Spec ID: `QV-PRODUCT-PROXY-017`
 - 模拟 HTTP 与 SOCKS5 服务验证请求确实穿过代理；成功、拒绝、超时、断开、恢复和切换。
 - 实际安装 Codex CLI 配合隔离临时配置和虚拟身份的网络验证；不读取或修改用户 auth.json/config.toml。
 - swift test；Universal Xcode Release 无签名构建；版本、架构、图标和资源；git diff --check；临时生产注入检查。
-- 用户已授权发布 GitHub Preview，标签 v0.4.7-preview.1；不加入 appcast，不替换稳定 Latest。用户验收及真实代理反馈待完成。
+- Preview 阶段不加入 appcast；2026-09-10 用户明确授权正式 Build 2、main、README 与 appcast。用户代理反馈可用，完整视觉/辅助功能验收仍待完成。
 
 ## 实现依据
 
@@ -62,3 +63,11 @@ QUOTAVIEW_RUN_CODEX_PROXY_TESTS=1 swift test
 
 本轮测试夹具曾因 Foundation 的同步 waitUntilExit 在异步测试线程阻塞，已移除该同步等待；此问题不属于生产代理代码。HTTPS 夹具使用独立 CA 与服务器叶证书，保留正常证书链校验。
 
+
+## 正式发布验证（2026-09-10）
+
+0.4.7 Build 2 / internal 21 已合并 main 并正式发布。完整本地 190 项通过（0 跳过）；
+main CI 190 项、0 失败、2 个可选测试跳过，本机已运行对应真实 CLI 和真实 120 秒测试。
+15 项完成收起专项审查未复现永久停留，未更改生产计时；窗口层为代码审查，未自动 UI 验收。
+正式包完成 Universal、签名、公证/Staple、公开回下载、Gatekeeper 与内置公钥 Feed/ZIP 验证。
+发行包以 `dist/QuotaView-v0.4.7-build.2.zip` 为准；上述 9 月 8 日记录为 Preview 阶段事实。

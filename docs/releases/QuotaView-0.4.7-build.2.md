@@ -18,6 +18,18 @@ The completed Island still shrinks after 20 seconds and hides 100 seconds later 
 
 ## Install and update
 
-Download the Universal ZIP for Apple silicon and Intel (macOS 14 or later), or use **Check for Updates** once the stable feed is published. Quit the running QuotaView instance before replacing it manually. Preview users can update to this stable build as well.
+Download the Universal ZIP for Apple silicon and Intel (macOS 14 or later), or use **Check for Updates** through the stable update feed. Quit the running QuotaView instance before replacing it manually. Preview users can update to this stable build as well.
 
 The previous stable [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2) remains available for rollback. Preview 1 is retained as historical test evidence.
+
+## Verification
+
+- 190 local Swift tests passed with zero failures or skips, including installed-Codex HTTPS proxy tests and the real 120-second completion countdown.
+- Universal App, Widget, and Hook binaries for Apple silicon and Intel.
+- Developer ID signing, Hardened Runtime, Apple notarization, and a stapled ticket.
+- Archive: `QuotaView-v0.4.7-build.2.zip` (13,669,247 bytes).
+- SHA-256: `de828160dc89fd7990959944ed3a1695936d0d080d472eb3e8c908c2ba8e6a8e`.
+
+The public ZIP matches the local release byte-for-byte and passes strict signature, stapled-ticket, and Gatekeeper checks. The live appcast and archive signatures were verified against the application's bundled public key.
+
+[Main CI](https://github.com/Duoasa/QuotaView/actions/runs/34494932631) passed with zero failures. Two opt-in tests (installed Codex and the real-duration countdown) were skipped in CI and passed locally.

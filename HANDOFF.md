@@ -7,56 +7,33 @@
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
 
-## 0.4.7 正式发布准备
+## 0.4.7 当前状态
 
-用户已授权将代理功能转为正式版、合并 main，并同步 README 与 appcast。
-正式候选为 0.4.7 Build 2 / internal 21，保留 Preview 1 历史；本次提交邮箱
-为 xuchen1995@gmail.com。用户已反馈真实代理可用；缩小后不隐藏问题未复现，
-15 项针对性测试通过，默认真实计时约 20.02 秒缩小、再过 100.01 秒隐藏。
-完整视觉/辅助功能矩阵不据此标记通过。公开发布前，当前正式版仍为 0.4.6 Build 2。
+正式版本：**0.4.7 Build 2 / internal 21**；`v0.4.7-build.2`，已合并 main，GitHub Latest。
+代理功能由 Preview 晋升正式版；应用内 Preview 标识已移除，中英文 README
+下载入口与更新说明同步。用户已授权 main、README、appcast 和正式包 Apple 公证。
+本次新增提交统一使用 `xuchen1995@gmail.com`。
 
-## 0.4.7 Preview 1 当前迭代
-
-工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
-从 0.4.6 Build 2 及其发布文档提交建立独立分支；旧工作区和 Prototype 保留。
 当前规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
-默认关闭、HTTP/SOCKS5、地址与端口、连接测试、恢复默认。用户已授权实现，
-实现和自动化验证已完成：186 项测试全部通过，包含实际安装的 Codex CLI
-0.153.4 使用隔离虚拟账户经 HTTP/SOCKS5 完成 HTTPS 额度查询。当前 CLI 的
-SOCKS5 兼容由仅监听本机的临时转接层完成；HTTP 直接传给查询子进程。
-Universal Release 无签名构建通过，App/Widget 版本为 0.4.7 / Build 1 / internal 20，
-App、Widget、Hook 均为双架构，图标和资源完整，差异检查通过。
-预览源码提交：`75982b6a4fbae6f83ced1bd9ebf12467669b34f3`，已推送独立分支
-`codex/0.4.7-development` 与标签 `v0.4.7-preview.1`。
-用户已授权 GitHub Preview 发布，禁止加入 appcast，不改变稳定版 Latest。
-签名包：`dist/QuotaView-v0.4.7-preview.1.zip`；Developer ID / Hardened Runtime，
-App、Widget、Hook 双架构和资源检查通过；通用页显示 Preview 1。
-本地 186 项测试全部通过；[GitHub CI](https://github.com/Duoasa/QuotaView/actions/runs/34196167764)
-186 项、0 失败、1 跳过（CI 未安装 Codex；对应实际 CLI 测试已在本机通过）。
-[GitHub Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1)
-已公开发布（ID 384499146，Pre-release、非 Latest）。用户已明确授权 Apple 公证，
-Submission `a56a008b-835e-4ca5-abc9-847770cb227e` 为 Accepted，已 Staple。
-最终 ZIP：13,669,207 bytes；SHA-256
-`850000a08285687312d5fc8a3868c1b3add11220b3e49c2b26f525e5161a7dca`。
-公开下载与本地 ZIP 逐字节一致；解压后严格签名、票据和 Gatekeeper 均通过。
-源码、版本历史、README 预览入口与英文发布说明同步在独立预览分支，未合并稳定主分支。
-当前应用实例保持原状，没有自动启动替换或代替用户进行 UI 验收。
-完整日志：`dist/verification/`。当前正式 Latest 与 appcast 仍为 0.4.6 Build 2；
-发布前后 Feed 逐字节一致，SHA-256：`de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`。
-视觉、交互、辅助功能及用户真实代理环境等待验收；反馈完成后再由用户决定是否推送更新。
+本地 190 项测试全部通过，包括真实 Codex HTTPS 代理模拟和真实 120 秒收起计时；
+main CI 190 项、0 失败、2 个可选测试跳过，本机已覆盖。
+Universal Release、Developer ID、公证/Staple、公开回下载严格签名与 Gatekeeper 通过。
+Stable appcast 发布内部 21，保留内部 19/18；Feed 与 ZIP 的内置公钥验证通过。
+完整不可变发布事实见顶部版本历史；产物 `dist/QuotaView-v0.4.7-build.2.zip`，
+日志 `dist/verification/`。
 
-## 1. 当前定位
+用户已反馈其真实代理可用；缩小后永久显示问题经专项审查未复现，生产计时未改。
+等待用户验证实际更新安装和完整视觉/辅助功能矩阵，不自动替换当前运行实例。
+下一轮构建须递增产品 Build 与内部序号；不要覆盖 Preview 或正式历史 tag/资产。
 
 | 项目 | 当前值 |
 |---|---|
-| 稳定版 | `0.4.6 Build 2` / internal `19` / `v0.4.6-build.2` / GitHub Latest |
-| 回滚基线 | `0.4.6 Build 1` / `v0.4.6-build.1` |
-| 公开预览 | `0.4.7 Preview 1` / 产品 Build `1` / 内部 `20`；GitHub Pre-release，无 appcast |
-| 当前阶段 | 0.4.7 Preview 1 已发布；等待真实代理环境反馈，由用户决定是否晋升更新 |
-| 当前主题 | 0.4.7 自定义代理：默认关闭、HTTP/SOCKS5、连接测试和恢复默认 |
+| 稳定版 | 0.4.7 Build 2 / internal 21 / v0.4.7-build.2 / Latest |
+| 回滚基线 | 0.4.6 Build 2 / internal 19 / v0.4.6-build.2 |
+| 历史代理预览 | 0.4.7 Preview 1 / internal 20，保留资产，已由正式版替代 |
+| 当前阶段 | 已正式发布并进入 appcast；等待实际安装与后续反馈 |
 
-产品可见 Build 在 Marketing Version 变化后归 `1`，同一版本内逐次递增；
-Sparkle `CFBundleVersion` 跨 Marketing Version 单调递增；后续 0.4.7 预览或正式包必须使用大于 `20` 的内部 Build。
+## 0.4.6 历史工作记录
 
 0.4.6 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6`。
 从 0.4.5 发布源码及发布文档提交建立独立分支；已有 Kimi 预览工作区保持独立。
