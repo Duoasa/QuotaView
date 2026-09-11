@@ -87,3 +87,10 @@ main CI 190 项、0 失败、2 个可选测试跳过，本机已运行对应真�
 本轮验证：197 项 Swift 测试，0 失败、2 项可选跳过；Universal Release 构建通过，
 版本为 0.4.7 Build 3 / internal 22，App、Core 和 Widget 双架构及图标资源已检查。
 未新增生产调试入口；`git diff --check` 通过。
+
+## 2026-09-11 Build 3 release authorization
+
+After opening Build 3, the owner explicitly requested main, GitHub, README
+and appcast publication for `v0.4.7-build.3` / internal 22. Complete artifact
+verification before publication; move withdrawn Build 2 to draft only after
+Build 3 is verified live, retaining the old tag and asset for investigation.

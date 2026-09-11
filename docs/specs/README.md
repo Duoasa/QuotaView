@@ -6,7 +6,7 @@
 >
 > 生产基线：`0.4.6 Build 2`（内部 `19`），2026-09-10 恢复推荐
 >
-> 当前迭代：0.4.7 Build 3 / internal 22 本地修复文字宽度边界；未发布，Stable 保持 0.4.6
+> 当前迭代：0.4.7 Build 3 / internal 22 已获 main、GitHub、README 与 appcast 发布授权；发布验证中，Stable 暂保持 0.4.6
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 
