@@ -1,7 +1,7 @@
 # 0.4.8 首次连接引导修复
 
 Spec ID：`QV-FIX-CODEX-FIRST-CONNECTION-019`  
-状态：`Accepted / Verifying`，2026-09-12。用户批准首次连接新方案，版本保持 0.4.8。
+状态：`Accepted / Released`，2026-09-12。用户批准首次连接新方案，版本保持 0.4.8。
 
 基线为 0.4.7 Build 3 / internal 22。用户在全新安装的 Intel Mac 上确认：
 Hook 尚未信任，但运行 Codex 桌面任务后灵动岛可以显示。代码确认自动任务流
@@ -129,3 +129,11 @@ Build 4 最终验证：Swift 221 项、219 通过、2 项既有 opt-in 跳过、
 0.4.8 Build 4 / internal 26，四个主要二进制均为双架构。版本、资源、源码
 指纹及日志保存在 `dist/verification/build4/`。没有重启当前应用或替换正式安装；
 视觉、交互与真实 Intel 首装仍等待用户验收。
+
+## 正式发布
+
+2026-09-12 用户授权完整发布，并补充明确签名/Apple 公证授权。0.4.8 Build 4
+已合并 main、发布为 GitHub Latest、更新中英文 README 与稳定 appcast。
+正式包公证、公开回下载与线上 Feed 验证完成，本机正式安装及有效 Widget 快照
+检查通过；完整视觉/Intel 实机矩阵仍待用户验收。不可变证据见
+[版本历史](../../VERSION_HISTORY.md#当前最新版本)，当前状态见 [Handoff](../../HANDOFF.md)。

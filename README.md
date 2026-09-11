@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.7-build.3/QuotaView-v0.4.7-build.3.zip"><strong>Download QuotaView v0.4.7 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.8-build.4/QuotaView-v0.4.8-build.4.zip"><strong>Download QuotaView v0.4.8 Build 4</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -43,8 +43,6 @@ Codex can keep working after its window leaves the foreground, but its state sho
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
 ## 0.4.8 Build 4: clearer first connection and reliable recovery
-
-> Release preparation: the signed 0.4.8 package is not published yet. The download above remains the current stable release.
 
 Automatic connection now distinguishes first-run waiting, readable records, received activity, and read errors. Recheck or choose the Codex data directory from settings. Compatibility Hook setup is optional; opening settings only inspects it, and an untrusted installation can be removed manually.
 
@@ -96,12 +94,12 @@ The Island leads the experience, while the rest of QuotaView provides the contex
 ## Get started
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.4.7-build.3.zip` from the [v0.4.7 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3).
+2. Download `QuotaView-v0.4.8-build.4.zip` from the [v0.4.8 Build 4 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4).
 3. Unzip it and open `QuotaView.app`.
-4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required.
+4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required. If records are not found, use the Island settings to recheck or choose the Codex data directory.
 
 > [!IMPORTANT]
-> v0.4.7 Build 3 is signed with a Developer ID certificate, notarized by Apple,
+> v0.4.8 Build 4 is signed with a Developer ID certificate, notarized by Apple,
 > and stapled for offline Gatekeeper verification. It opens normally after
 > unzipping, without the Finder right-click workaround used by older unsigned
 > builds.
@@ -117,7 +115,7 @@ QuotaView does **not**:
 - ingest prompts, reasoning, messages, commands, arguments, tool output, diffs, or completion text into its model or diagnostics;
 - store authentication tokens, cookies, complete account responses, or raw task transcripts.
 
-For current Codex releases, the activity bridge reads only bounded local task records under `~/.codex/sessions`. It projects hashed session and turn identifiers, the final workspace path component, lifecycle state, plan-status counts, coarse tool category, timestamps, and token numbers. The signed Hook fallback follows the same sanitized boundary.
+For current Codex releases, the activity bridge reads only bounded local task records under the selected Codex data directory’s `sessions` folder (by default `~/.codex/sessions`). It projects hashed session and turn identifiers, the final workspace path component, lifecycle state, plan-status counts, coarse tool category, timestamps, and token numbers. The signed Hook fallback follows the same sanitized boundary.
 
 Quota information is requested from the locally installed `codex app-server` over JSON-RPC. QuotaView stores only display preferences, compact availability/error state, and the latest successful refresh time in its own preferences domain. A bounded, sanitized snapshot is written to the app's App Group for WidgetKit; it contains no credential, account identifier, complete response, or usage history.
 
@@ -228,9 +226,9 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 
 ## Releases and project status
 
-- **Recommended stable:** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
-- **Stable rollback:** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
-- **Withdrawn Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
+- **Recommended stable:** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
+- **Stable rollback:** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **Withdrawn 0.4.7 Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
 - **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.
 - **Experimental multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **Release history and verification:** [VERSION_HISTORY.md](VERSION_HISTORY.md)

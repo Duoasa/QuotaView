@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.7-build.3/QuotaView-v0.4.7-build.3.zip"><strong>下载 QuotaView v0.4.7 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.8-build.4/QuotaView-v0.4.8-build.4.zip"><strong>下载 QuotaView v0.4.8 Build 4</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -43,8 +43,6 @@
 QuotaView 开源、轻量，并以本地处理为核心。新版 Codex 首次启动即可使用，无需配置 Hook；额度与用量则保留在菜单面板和原生小组件中，需要时一次点击即可查看。
 
 ## 0.4.8 Build 4：清晰的首次连接与可靠的任务恢复
-
-> 发布准备中：0.4.8 正式签名安装包尚未发布，上方下载入口仍为当前稳定版。
 
 自动连接现在分别显示首次等待、记录可读、已收到活动和读取错误；可在设置中重新检查或选择 Codex 数据目录。兼容 Hook 为可选功能，打开设置只检查状态，未信任的旧安装也可手动移除。
 
@@ -96,12 +94,12 @@ QuotaView 0.4.5 为新版 Codex 增加了只读本地任务桥：
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 从 [v0.4.7 Build 3 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3) 下载 `QuotaView-v0.4.7-build.3.zip`。
+2. 从 [v0.4.8 Build 4 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4) 下载 `QuotaView-v0.4.8-build.4.zip`。
 3. 解压后打开 `QuotaView.app`。
 4. 开始一个 Codex 任务。新版 Codex 会自动连接，不需要安装 Hook 或重启。
 
 > [!IMPORTANT]
-> v0.4.7 Build 3 已使用 Developer ID 证书签名、通过 Apple 公证并完成
+> v0.4.8 Build 4 已使用 Developer ID 证书签名、通过 Apple 公证并完成
 > Staple。解压后可以正常打开，不再需要旧版未签名构建使用的 Finder
 > 右键打开方式。
 
@@ -116,7 +114,7 @@ QuotaView **不会**：
 - 将提示词、推理、消息、命令、参数、工具输出、Diff 或完成正文带入自身模型或诊断；
 - 保存身份认证 Token、Cookie、完整账户响应或原始任务记录。
 
-对于新版 Codex，本地任务桥只会有界读取 `~/.codex/sessions` 内的任务记录，并投影哈希后的会话与 turn 标识、工作区路径最后一级、生命周期状态、计划步骤状态计数、粗粒度工具类别、时间和 Token 数值。签名 Hook 回退遵循相同的脱敏边界。
+对于新版 Codex，本地任务桥只会有界读取 所选 Codex 数据目录内 `sessions` 文件夹中的任务记录（默认 `~/.codex/sessions`），并投影哈希后的会话与 turn 标识、工作区路径最后一级、生命周期状态、计划步骤状态计数、粗粒度工具类别、时间和 Token 数值。签名 Hook 回退遵循相同的脱敏边界。
 
 额度信息通过 JSON-RPC 从本机安装的 `codex app-server` 请求。QuotaView 只在自己的偏好设置域中保存显示偏好、紧凑的可用/错误状态和最近一次成功刷新时间；写入 App Group 供 WidgetKit 使用的快照也经过有界和脱敏处理，不包含凭据、账号标识、完整响应或用量历史。
 
@@ -227,9 +225,9 @@ Tests/
 
 ## 发布与项目状态
 
-- **推荐稳定版：** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
-- **稳定回滚版本：** [QuotaView v0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2)
-- **已撤回的 Build 2：** Release 转为草稿，不再显示在公开时间线；撤回原因和历史证据见 [版本历史](VERSION_HISTORY.md)。
+- **推荐稳定版：** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
+- **稳定回滚版本：** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **已撤回的 0.4.7 Build 2：** Release 转为草稿，不再显示在公开时间线；撤回原因和历史证据见 [版本历史](VERSION_HISTORY.md)。
 - **历史代理预览：** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — 仅保留历史测试记录，不是推荐稳定版。
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **版本历史与发布验证：** [VERSION_HISTORY.md](VERSION_HISTORY.md)

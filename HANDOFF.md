@@ -7,48 +7,36 @@
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
 
-## 当前迭代：0.4.8 Build 4 连接链路审计与重构
+## 当前公开稳定版：0.4.8 Build 4
 
-开发身份：**0.4.8 Build 4 / internal 26**；基于已发布的 0.4.7 Build 3。
-工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`，
-分支 `codex/0.4.8-development`；状态与 HEAD 通过 Git 实查。
-[当前规格](docs/design/quotaview-codex-first-connection-0.4.8.md)：
-`QV-FIX-CODEX-FIRST-CONNECTION-019` / `Accepted / Verifying`。
-[完整审计与职责边界](docs/design/quotaview-connection-audit-0.4.8.md)。
+**0.4.8 Build 4 / internal 26 / v0.4.8-build.4** 已正式发布并设为 GitHub Latest。
+发布源码提交 `09c5a2cc9c1505cdbc7897e9c5e9433f05b00d97`，PR #51 已合并 main；完整资产、公证、
+签名、Feed 哈希与 CI 证据见顶部版本历史。回滚基线为 0.4.7 Build 3。
 
-- 保留已批准的首次连接新方案：自动读取、健康状态、只读重查、目录选择和可选 Hook。
-- 修复文件原子替换串 turn、健康订阅遗漏、历史任务确认无法重新选择、候选分页丢失内部排除。
-- 自动连接改为单一事实快照并统一推导文案；删除旧测试依赖的失效文案分支。
-- Runtime、Store、文案、发现、恢复、Hook 支持与传输按职责拆分；统一目录环境。
-- Hook 操作用互斥枚举和代次管理；分类完成后再检查是否仍允许接收。
-  停止和目录切换期间的旧结果不得重新激活活动或覆盖当前目录。
-- 保留 Build 2 设置图标边距修正及 Build 3 首次连接行为；不改变代理、额度、Widget 数据和渲染器。
+- 首次连接健康状态、只读重新检查、数据目录选择和可选 Hook 流程已发布。
+- 文件替换、历史恢复、内部任务分页过滤、订阅通知和在途事件边界已修复。
+- Runtime / Store / 发现 / 恢复 / 文案 / Hook / 传输按职责整理，设置图标边距统一。
+- [当前规格](docs/design/quotaview-codex-first-connection-0.4.8.md)：
+  `QV-FIX-CODEX-FIRST-CONNECTION-019` / `Accepted / Released`。
+  [链路审计](docs/design/quotaview-connection-audit-0.4.8.md) 保留反例和验证边界。
 
-最终验证：Swift **221 项、219 通过、2 项既有 opt-in 跳过、0 失败**，其中连接与恢复 24 项。
-Universal Release 无签名构建通过；App / Widget 为 0.4.8 Build 4 / internal 26，
-App、Widget、Core、Hook 均含 arm64 + x86_64，正式图标与 Asset Catalog 完整。
-永久开发台从新源码重新构建且独立归档/解压签名检查通过，未修改其源码或运行生产 Store。
-`git diff --check` 通过；没有临时模拟、截图、自动点击或自动展开注入。
+验证：221 项 Swift 测试，219 通过、2 项既有 opt-in 跳过、0 失败；PR 与发布提交
+main CI 均通过；Universal、永久开发台、Developer ID、公证/Staple、公开包回下载、
+内置公钥和线上 Feed 验证通过。Feed 内部序列 26 → 22 → 19，Pages 部署成功。
+签名、公证曾被自动审批阻止，用户已补充明确授权并完成，当前无此阻塞。
 
-本地完整构建：`.build/DerivedData-0.4.8/Build/Products/Release/QuotaView.app`；
-测试、构建、版本/架构/资源与源码指纹见 `dist/verification/build4/`。
-2026-09-12 按用户要求启动 Build 4 独立 ad-hoc 调试副本，启动时核实 PID 26933，
-stderr 为空；Codex hooks.json / config.toml 启动前后指纹一致。
-副本排除 Widget 扩展，原安装版 Widget PID 8118 保持运行；没有替换正式安装。
-实际副本路径与启动证据见 `dist/verification/build4/debug-launch-{path.txt,result.json}`。
-启动成功不代替视觉验收；进程号仅为当次核实记录。
-Build 1～3 证据保留；真实 120 秒周期与真实 Codex 代理 opt-in 未重跑。
-视觉、交互、Intel 首装和持续运行仍 **等待用户验收**。
+本机已安装并启动公开下载的 `/Applications/QuotaView.app` 正式签名版。
+Build 2/3/4 临时调试副本已备份后清理，永久开发台保持独立；安装版小组件规范化
+为唯一注册，正式 App 写入新的有效共享快照。没有清空账户、Codex 配置或有效数据。
+实际画面仍需用户确认，不能由注册和快照检查推定视觉通过。
+发布与清理证据、备份清单位于 `dist/verification/build4/release/`（忽略目录）。
 
-用户已授权推送 GitHub、合并 main、更新 README/appcast 和清理临时调试残留。
-当前进入发布准备：自动审批拒绝 Developer ID / Sparkle 密钥操作及向 Apple 上传公证，
-需用户补充明确授权后再签名、发布安装包和切换 Feed。不能将该候选标为已发布。
-代码、README 版本说明与发布材料先行准备；尚未打 tag 或创建 0.4.8 Release。
-两个停用的 Build 2/3 临时副本已备份并清理，小组件进程已重启；有效共享快照、
-当前 Build 4 调试副本和永久开发台保留。显示效果等待用户确认。
-公开 README / Latest / Feed 保持 0.4.7 Build 3，发布事实见顶部版本历史。
+真实 Intel 首次安装、长时间运行和完整视觉/辅助功能矩阵仍待用户验收。
+后续开发使用新的产品 Build 与递增内部序号；本轮没有新增未发布代码。
+工作区 `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`；
+Git 分支、HEAD 和远端状态需实时核实，不据历史记录判断。
 
-## 当前公开稳定版：0.4.7 Build 3
+## 历史稳定版：0.4.7 Build 3
 
 
 2026-09-11 按用户授权合并 main、发布 GitHub Stable/Latest、更新中英文 README，
