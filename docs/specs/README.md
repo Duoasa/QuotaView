@@ -4,7 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 生产基线：`0.4.6 Build 2`（内部 `19`），2026-09-10 恢复推荐
+> 生产基线：`0.4.7 Build 3`（内部 `22`）
+>
+> 当前开发：`0.4.8 Build 4`（内部 `26`），连接链路审计、职责重构和边界修复，等待用户验收
 >
 > 当前稳定版：0.4.7 Build 3 / internal 22；main、GitHub Latest、README 与 appcast 已同步
 
@@ -14,6 +16,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Verifying` | [Build 4 全链路审计](../design/quotaview-connection-audit-0.4.8.md)：职责拆分、单一连接快照、恢复与在途事件边界；221 项测试零失败（2 跳过）、Universal 和永久开发台构建通过，用户已授权发布，签名/Apple 公证被自动审批拦截，待补充授权；未发布 |
 | `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 用户确认当前手动检查通过；源码和固定启动入口随 Build 3 保留，独立于正式应用 |
 | `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | Build 3 修复文字显示、代理菜单对齐和设置图标，已合并 main 并发布到 GitHub / appcast；旧 Build 2 转为草稿 |
 | `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |

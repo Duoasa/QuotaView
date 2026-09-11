@@ -1,13 +1,55 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-09-11
+更新日期：2026-09-12
 
 公开版本、tag、资产、签名、公证与撤回记录的唯一事实源：
 **[VERSION_HISTORY.md → 当前最新版本](VERSION_HISTORY.md#当前最新版本)**。
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
 
-## 当前状态：0.4.7 Build 3 已发布
+## 当前迭代：0.4.8 Build 4 连接链路审计与重构
+
+开发身份：**0.4.8 Build 4 / internal 26**；基于已发布的 0.4.7 Build 3。
+工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`，
+分支 `codex/0.4.8-development`；状态与 HEAD 通过 Git 实查。
+[当前规格](docs/design/quotaview-codex-first-connection-0.4.8.md)：
+`QV-FIX-CODEX-FIRST-CONNECTION-019` / `Accepted / Verifying`。
+[完整审计与职责边界](docs/design/quotaview-connection-audit-0.4.8.md)。
+
+- 保留已批准的首次连接新方案：自动读取、健康状态、只读重查、目录选择和可选 Hook。
+- 修复文件原子替换串 turn、健康订阅遗漏、历史任务确认无法重新选择、候选分页丢失内部排除。
+- 自动连接改为单一事实快照并统一推导文案；删除旧测试依赖的失效文案分支。
+- Runtime、Store、文案、发现、恢复、Hook 支持与传输按职责拆分；统一目录环境。
+- Hook 操作用互斥枚举和代次管理；分类完成后再检查是否仍允许接收。
+  停止和目录切换期间的旧结果不得重新激活活动或覆盖当前目录。
+- 保留 Build 2 设置图标边距修正及 Build 3 首次连接行为；不改变代理、额度、Widget 数据和渲染器。
+
+最终验证：Swift **221 项、219 通过、2 项既有 opt-in 跳过、0 失败**，其中连接与恢复 24 项。
+Universal Release 无签名构建通过；App / Widget 为 0.4.8 Build 4 / internal 26，
+App、Widget、Core、Hook 均含 arm64 + x86_64，正式图标与 Asset Catalog 完整。
+永久开发台从新源码重新构建且独立归档/解压签名检查通过，未修改其源码或运行生产 Store。
+`git diff --check` 通过；没有临时模拟、截图、自动点击或自动展开注入。
+
+本地完整构建：`.build/DerivedData-0.4.8/Build/Products/Release/QuotaView.app`；
+测试、构建、版本/架构/资源与源码指纹见 `dist/verification/build4/`。
+2026-09-12 按用户要求启动 Build 4 独立 ad-hoc 调试副本，启动时核实 PID 26933，
+stderr 为空；Codex hooks.json / config.toml 启动前后指纹一致。
+副本排除 Widget 扩展，原安装版 Widget PID 8118 保持运行；没有替换正式安装。
+实际副本路径与启动证据见 `dist/verification/build4/debug-launch-{path.txt,result.json}`。
+启动成功不代替视觉验收；进程号仅为当次核实记录。
+Build 1～3 证据保留；真实 120 秒周期与真实 Codex 代理 opt-in 未重跑。
+视觉、交互、Intel 首装和持续运行仍 **等待用户验收**。
+
+用户已授权推送 GitHub、合并 main、更新 README/appcast 和清理临时调试残留。
+当前进入发布准备：自动审批拒绝 Developer ID / Sparkle 密钥操作及向 Apple 上传公证，
+需用户补充明确授权后再签名、发布安装包和切换 Feed。不能将该候选标为已发布。
+代码、README 版本说明与发布材料先行准备；尚未打 tag 或创建 0.4.8 Release。
+两个停用的 Build 2/3 临时副本已备份并清理，小组件进程已重启；有效共享快照、
+当前 Build 4 调试副本和永久开发台保留。显示效果等待用户确认。
+公开 README / Latest / Feed 保持 0.4.7 Build 3，发布事实见顶部版本历史。
+
+## 当前公开稳定版：0.4.7 Build 3
+
 
 2026-09-11 按用户授权合并 main、发布 GitHub Stable/Latest、更新中英文 README，
 并纳入 appcast。当前身份为 **0.4.7 Build 3 / internal 22 / v0.4.7-build.3**，
@@ -17,7 +59,7 @@ tag 和 ZIP 保留，internal 21 继续排除。
 
 回滚基线为 `v0.4.6-build.2` / `ae9f17d415fb1968d9ef843be771b6a5211213c7`。
 本轮重新下载验证其归档哈希，未覆盖稳定回滚资产或旧 tag。
-工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`，分支和 HEAD 以 Git 实查为准。
+已完成的发布工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
 提交身份：`Douasa <xuchen1995@gmail.com>`。
 
 本轮交付：
@@ -300,7 +342,7 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 4. 下一步
 
-0.4.7 Build 3 已完成本轮修复与正式发布；下一轮按用户新反馈迭代，以下待办独立保留。
+先由产品所有者验收 0.4.8 首次连接引导及中英文兼容选项。后续发布 / appcast 需绑定本版本另行授权。以下待办独立保留。
 
 1. 更新器规格的 `APP-UPDATES-07` 保持独立待办，后续记录一次由旧版客户端
    发起的真实 N → N+1 替换与重启；

@@ -34,6 +34,7 @@ struct SettingsView: View {
     @State private var proxyDraft = ProxyConfiguration.default
     @State private var proxySaveFailure: ProxyConnectionFailure?
     @State private var codexActivityDetailsExpanded = false
+    @State private var codexCompatibilityExpanded = false
     @State private var hoveredProgressEffect:
         AppPreferences.CodexActivityProgressEffect?
 
@@ -689,108 +690,178 @@ struct SettingsView: View {
 
             NativeSettingsCard {
                 NativeSettingsRow(
-                    title: copy.text(
-                        "Codex 连接",
-                        "Codex Connection"
-                    ),
-                    subtitle: codexActivityConnectionSubtitle
+                    title: copy.text("Codex 自动连接", "Automatic Codex Connection"),
+                    subtitle: activityRuntime.connectionPresentation.automaticSubtitle(copy)
                 ) {
-                    HStack(spacing: 10) {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(codexActivityConnectionColor)
-                                .frame(width: 5, height: 5)
-                                .accessibilityHidden(true)
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(activityRuntime.isNativeActivityConnected
+                                  ? Color(nsColor: .systemGreen)
+                                  : activityRuntime.localHealth.hasReadError
+                                    ? Color(nsColor: .systemRed)
+                                    : Color(nsColor: .tertiaryLabelColor))
+                            .frame(width: 5, height: 5)
+                            .accessibilityHidden(true)
+                        Text(activityRuntime.connectionPresentation.automaticStatusTitle(copy))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
 
-                            Text(codexActivityConnectionStatusTitle)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .accessibilityElement(children: .combine)
+                NativeSettingsDivider()
+                NativeSettingsRow(
+                    title: copy.text("自动连接数据目录", "Automatic Connection Directory"),
+                    subtitle: activityRuntime.dataDirectoryURL.path
+                ) {
+                    HStack(spacing: 8) {
+                        Button(copy.text("重新检查", "Recheck")) { activityRuntime.recheckAutomaticConnection() }
+                            .help(copy.text("只读检查当前目录，不修改 Hook。", "Check the current directory without changing Hooks."))
+                        Menu {
+                            Button(copy.text("选择目录…", "Choose Directory…")) { activityRuntime.chooseDataDirectory() }
+                            Button(copy.text("恢复默认目录", "Restore Default Directory")) { activityRuntime.selectDataDirectory(nil) }
+                                .disabled(!activityRuntime.usesCustomDataDirectory)
+                        } label: { Text(copy.text("目录", "Directory")) }
+                    }
+                    .controlSize(.small)
+                    .disabled(activityRuntime.isChangingDataDirectory)
+                }
+                if activityRuntime.directorySelectionFailed {
+                    NativeSettingsNote(text: copy.text(
+                        "所选目录必须包含可读取的 sessions 文件夹。原目录保持不变。",
+                        "Choose a directory containing a readable sessions folder. The original directory is still selected."
+                    ))
+                }
 
-                        Button {
-                            switch activityRuntime.connectionStatus {
-                            case .notInstalled, .abnormal:
-                                activityRuntime.enableCodexActivity()
-                            case .installedNeedsRestart:
-                                activityRuntime.restartCodex()
-                            case .awaitingTrust:
-                                activityRuntime.openCodexSecurityReview()
-                            case .awaitingFirstEvent, .connected:
-                                activityRuntime.disableCodexActivity()
+                NativeSettingsDivider()
+                NativeSettingsNote(text: codexActivityPrivacyNote)
+                NativeSettingsDivider()
+
+                DisclosureGroup(isExpanded: $codexCompatibilityExpanded) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        NativeSettingsNote(text: copy.text(
+                            "仅在自动连接无法满足使用需要时手动配置。Hook 的安装和信任状态独立于自动连接；自动连接的数据目录选择不会移动已有 Hook。",
+                            "Configure manually only if automatic connection does not meet your needs. Hook installation and trust are independent; changing the automatic connection directory does not move existing Hooks."
+                        ), horizontalPadding: 0)
+                        NativeSettingsRow(
+                            title: copy.text(
+                                "兼容 Hook",
+                                "Compatibility Hook"
+                            ),
+                            subtitle: codexActivityConnectionSubtitle,
+                            horizontalPadding: 0
+                        ) {
+                            HStack(spacing: 10) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(codexActivityConnectionColor)
+                                        .frame(width: 5, height: 5)
+                                        .accessibilityHidden(true)
+
+                                    Text(codexActivityConnectionStatusTitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .accessibilityElement(children: .combine)
+
+                                Button {
+                                    switch activityRuntime.hookConnectionStatus {
+                                    case .notInstalled, .abnormal:
+                                        activityRuntime.enableCompatibilityHook()
+                                    case .installedNeedsRestart:
+                                        activityRuntime.restartCodex()
+                                    case .awaitingTrust:
+                                        activityRuntime.openCodexSecurityReview()
+                                    case .awaitingFirstEvent, .connected:
+                                        activityRuntime.disableCompatibilityHook()
+                                    }
+                                } label: {
+                                    if activityRuntime.isConfiguring
+                                        || activityRuntime.isOpeningSecurityReview
+                                    {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                            .frame(minWidth: 92)
+                                    } else {
+                                        Text(codexActivityActionTitle)
+                                            .frame(minWidth: 92)
+                                    }
+                                }
+                                .nativeSettingsActionStyle()
+                                .controlSize(.small)
+                                .disabled(
+                                    activityRuntime.isConfiguring
+                                        || activityRuntime.isOpeningSecurityReview
+                                )
+                                .help(codexActivityActionHelp)
+                                .accessibilityLabel(codexActivityActionTitle)
                             }
-                        } label: {
-                            if activityRuntime.isConfiguring
-                                || activityRuntime.isOpeningSecurityReview
-                            {
-                                ProgressView()
+                        }
+
+                        if activityRuntime.hasCompatibilityHook,
+                           activityRuntime.hookConnectionStatus != .connected,
+                           activityRuntime.hookConnectionStatus != .awaitingFirstEvent {
+                            NativeSettingsRow(
+                                title: copy.text("移除兼容 Hook", "Remove Compatibility Hook"),
+                                subtitle: copy.text("仅移除 QuotaView 的 Hook，自动连接继续工作。", "Remove only QuotaView Hooks; automatic connection keeps working."),
+                                horizontalPadding: 0
+                            ) {
+                                Button(copy.text("移除", "Remove")) { activityRuntime.disableCompatibilityHook() }
+                                    .nativeSettingsActionStyle()
                                     .controlSize(.small)
-                                    .frame(minWidth: 92)
-                            } else {
-                                Text(codexActivityActionTitle)
-                                    .frame(minWidth: 92)
+                                    .disabled(activityRuntime.isConfiguring || activityRuntime.isOpeningSecurityReview)
                             }
                         }
-                        .nativeSettingsActionStyle()
-                        .controlSize(.small)
-                        .disabled(
-                            activityRuntime.isConfiguring
-                                || activityRuntime.isOpeningSecurityReview
-                                || activityRuntime
-                                    .isNativeActivityConnected
-                        )
-                        .help(codexActivityActionHelp)
-                        .accessibilityLabel(codexActivityActionTitle)
+
+                        if codexActivityShowsNextStep {
+                            Divider()
+
+                            NativeSettingsRow(
+                                title: codexActivityNextStepTitle,
+                                subtitle: codexActivityNextStepSubtitle,
+                                horizontalPadding: 0
+                            ) {}
+                        }
+
+                        DisclosureGroup(
+                            isExpanded: $codexActivityDetailsExpanded
+                        ) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                LabeledContent(copy.text("Hook 配置目录", "Hook Configuration Directory"),
+                                               value: activityRuntime.hookDirectoryPath)
+                                LabeledContent(
+                                    copy.text("Codex 版本", "Codex version"),
+                                    value: codexEnvironmentSubtitle
+                                )
+                                LabeledContent(
+                                    copy.text("活动支持", "Activity support"),
+                                    value: codexHooksFeatureTitle
+                                )
+                                LabeledContent(
+                                    copy.text("本地连接", "Local connection"),
+                                    value: codexActivityBridgeStatusTitle
+                                )
+                                Text(codexActivityBridgeSubtitle)
+                                    .foregroundStyle(.tertiary)
+                                Text(copy.text(
+                                    "诊断日志：\(activityRuntime.diagnosticLogPath)",
+                                    "Diagnostic log: \(activityRuntime.diagnosticLogPath)"
+                                ))
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 10)
+                        } label: {
+                            Text(copy.text("连接详情", "Connection Details"))
+                                .font(.body.weight(.medium))
+                        }
+                        .padding(.vertical, 11)
                     }
-                }
-
-                if codexActivityShowsNextStep {
-                    NativeSettingsDivider()
-
-                    NativeSettingsRow(
-                        title: codexActivityNextStepTitle,
-                        subtitle: codexActivityNextStepSubtitle
-                    ) {}
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsNote(
-                    text: codexActivityPrivacyNote
-                )
-
-                NativeSettingsDivider()
-
-                DisclosureGroup(
-                    isExpanded: $codexActivityDetailsExpanded
-                ) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        LabeledContent(
-                            copy.text("Codex 版本", "Codex version"),
-                            value: codexEnvironmentSubtitle
-                        )
-                        LabeledContent(
-                            copy.text("活动支持", "Activity support"),
-                            value: codexHooksFeatureTitle
-                        )
-                        LabeledContent(
-                            copy.text("本地连接", "Local connection"),
-                            value: codexActivityBridgeStatusTitle
-                        )
-                        Text(codexActivityBridgeSubtitle)
-                            .foregroundStyle(.tertiary)
-                        Text(copy.text(
-                            "诊断日志：\(activityRuntime.diagnosticLogPath)",
-                            "Diagnostic log: \(activityRuntime.diagnosticLogPath)"
-                        ))
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                     .padding(.top, 10)
                 } label: {
-                    Text(copy.text("连接详情", "Connection Details"))
+                    Text(copy.text("兼容选项：Hook", "Compatibility Options: Hook"))
                         .font(.body.weight(.medium))
                 }
                 .padding(.horizontal, 18)
@@ -1281,31 +1352,22 @@ struct SettingsView: View {
         if activityRuntime.isOpeningSecurityReview {
             return copy.text("正在打开", "Opening")
         }
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text("自动连接", "Automatic")
-        }
-        return switch activityRuntime.connectionStatus {
+        return switch activityRuntime.hookConnectionStatus {
         case .notInstalled:
-            copy.text("连接 Codex", "Connect Codex")
+            copy.text("配置 Hook", "Configure Hook")
         case .abnormal:
-            copy.text("修复连接", "Fix Connection")
+            copy.text("重试配置", "Retry Setup")
         case .installedNeedsRestart:
             copy.text("重新启动 Codex", "Restart Codex")
         case .awaitingTrust:
             copy.text("打开安全确认", "Open Security Review")
         case .awaitingFirstEvent, .connected:
-            copy.text("停用", "Disable")
+            copy.text("停用 Hook", "Disable Hook")
         }
     }
 
     private var codexActivityActionHelp: String {
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text(
-                "已自动连接 Codex 本地任务流，无需安装或信任 Hook。",
-                "Connected automatically to the local Codex task stream; no Hook installation or trust is required."
-            )
-        }
-        return switch activityRuntime.connectionStatus {
+        return switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart:
             copy.text(
                 "安全确认已完成；重新启动 Codex 以激活连接。",
@@ -1318,13 +1380,13 @@ struct SettingsView: View {
             )
         case .awaitingFirstEvent, .connected:
             copy.text(
-                "停用 Codex 灵动岛连接。",
-                "Disable the Codex island connection."
+                "仅停用兼容 Hook，保留自动任务流。",
+                "Disable only the compatibility Hook; keep automatic task streams running."
             )
         case .notInstalled, .abnormal:
             copy.text(
-                "自动准备 Codex 连接，并立即显示未连接状态的灵动岛。",
-                "Prepare the Codex connection automatically and show the disconnected activity island immediately."
+                "安装兼容 Hook，并进入 Codex 安全确认流程。",
+                "Install the compatibility Hook and open the Codex security review."
             )
         }
     }
@@ -1334,16 +1396,16 @@ struct SettingsView: View {
             || activityRuntime.isOpeningSecurityReview
         {
             return copy.text(
-                "正在自动准备连接，并立即显示“未连接 Codex”的灵动岛。",
-                "Preparing the connection automatically and showing the Codex Not Connected island immediately."
+                "正在准备兼容 Hook，自动任务流仍会独立连接。",
+                "Preparing the compatibility Hook; automatic task streams connect independently."
             )
         }
 
-        return switch activityRuntime.connectionStatus {
+        return switch activityRuntime.hookConnectionStatus {
         case .notInstalled:
             copy.text(
-                "连接后会立即呼出灵动岛，并自动完成连接准备。",
-                "Connecting immediately shows the island and prepares the connection automatically."
+                "按需安装兼容 Hook；自动连接无需此步骤。",
+                "Install the compatibility Hook if needed; automatic connection does not require this step."
             )
         case .installedNeedsRestart:
             copy.text(
@@ -1361,15 +1423,10 @@ struct SettingsView: View {
                 "Restart is complete. Send a new Codex message to finish connecting."
             )
         case .connected:
-            activityRuntime.isNativeActivityConnected
-                ? copy.text(
-                    "已自动连接 Codex 本地任务流，灵动岛会直接接收实时状态。",
-                    "Connected automatically to the local Codex task stream for live island updates."
-                )
-                : copy.text(
-                    "连接已激活，灵动岛会实时显示 Codex 当前状态。",
-                    "The connection is active and the island now reflects the current Codex status."
-                )
+            copy.text(
+                "已收到兼容 Hook 事件。停用 Hook 不会关闭自动任务流。",
+                "Compatibility Hook events have been received. Disabling the Hook keeps automatic task streams running."
+            )
         case .abnormal(let message):
             message
         }
@@ -1382,7 +1439,7 @@ struct SettingsView: View {
             return copy.text("正在准备", "Preparing")
         }
 
-        return switch activityRuntime.connectionStatus {
+        return switch activityRuntime.hookConnectionStatus {
         case .notInstalled:
             copy.text("未启用", "Not Enabled")
         case .installedNeedsRestart, .awaitingTrust:
@@ -1390,9 +1447,7 @@ struct SettingsView: View {
         case .awaitingFirstEvent:
             copy.text("等待第一条消息", "Waiting for First Message")
         case .connected:
-            activityRuntime.isNativeActivityConnected
-                ? copy.text("本地任务流已连接", "Local Task Stream Connected")
-                : copy.text("已连接", "Connected")
+            copy.text("Hook 已连接", "Hook Connected")
         case .abnormal:
             copy.text("需要处理", "Needs Attention")
         }
@@ -1405,7 +1460,7 @@ struct SettingsView: View {
             return Color(nsColor: .systemBlue)
         }
 
-        return switch activityRuntime.connectionStatus {
+        return switch activityRuntime.hookConnectionStatus {
         case .connected:
             Color(nsColor: .systemGreen)
         case .installedNeedsRestart,
@@ -1427,12 +1482,6 @@ struct SettingsView: View {
     }
 
     private var codexHooksFeatureTitle: String {
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text(
-                "只读本地任务流",
-                "Read-only Local Task Stream"
-            )
-        }
         return switch activityRuntime.hooksFeatureStatus {
         case .checking:
             copy.text("检测中", "Checking")
@@ -1446,7 +1495,7 @@ struct SettingsView: View {
     }
 
     private var codexActivityShowsNextStep: Bool {
-        switch activityRuntime.connectionStatus {
+        switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart, .awaitingTrust, .awaitingFirstEvent:
             true
         case .notInstalled, .connected, .abnormal:
@@ -1455,7 +1504,7 @@ struct SettingsView: View {
     }
 
     private var codexActivityNextStepTitle: String {
-        switch activityRuntime.connectionStatus {
+        switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart:
             copy.text(
                 "重新启动 Codex",
@@ -1474,7 +1523,7 @@ struct SettingsView: View {
     }
 
     private var codexActivityNextStepSubtitle: String {
-        switch activityRuntime.connectionStatus {
+        switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart:
             copy.text(
                 "QuotaView 会安全退出并重新打开 Codex；重新启动后无需再次配置。",
@@ -1496,12 +1545,6 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeSubtitle: String {
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text(
-                "只读跟随 Codex 本地任务事件；仅提取任务状态、计划计数、Token 数值和脱敏标识，Socket 与 Hook 保留为回退。",
-                "Follows local Codex task events read-only; only task state, plan counts, token values, and sanitized identifiers are extracted, with Socket and Hook retained as fallbacks."
-            )
-        }
         return switch activityRuntime.bridgeStatus {
         case .listening:
             copy.text(
@@ -1519,9 +1562,6 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeStatusTitle: String {
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text("本地任务流", "Local Task Stream")
-        }
         return switch activityRuntime.bridgeStatus {
         case .listening:
             copy.text("监听中", "Listening")
@@ -1533,9 +1573,6 @@ struct SettingsView: View {
     }
 
     private var codexActivityBridgeColor: Color {
-        if activityRuntime.isNativeActivityConnected {
-            return Color(nsColor: .systemGreen)
-        }
         return switch activityRuntime.bridgeStatus {
         case .listening:
             Color(nsColor: .systemGreen)
@@ -1547,15 +1584,9 @@ struct SettingsView: View {
     }
 
     private var codexActivityPrivacyNote: String {
-        if activityRuntime.isNativeActivityConnected {
-            return copy.text(
-                "QuotaView 会只读解析 Codex 的结构化任务记录，但不会保存提示词、回复、推理、命令正文、工具输出或会话原文。",
-                "QuotaView reads structured Codex task records without storing prompts, responses, reasoning, command text, tool output, or transcript content."
-            )
-        }
-        return copy.text(
-            "共享 App Server 不可用时，可启用兼容 Hook。QuotaView 不读取提示词、命令正文、工具输出或会话记录。",
-            "When the shared App Server is unavailable, the compatibility Hook can be enabled. QuotaView does not read prompts, command text, tool output, or transcripts."
+        copy.text(
+            "QuotaView 只读解析本地任务记录中的状态、计划计数和 Token 数值，不保存提示词、回复、推理、命令或工具输出。",
+            "QuotaView reads task state, plan counts, and token values from local task records without storing prompts, responses, reasoning, commands, or tool output."
         )
     }
 }
@@ -1899,18 +1930,30 @@ private struct SettingsSidebarIcon: View {
     let color: Color
     @Environment(\.colorSchemeContrast) private var contrast
 
+    private enum Metrics {
+        static let size: CGFloat = 20
+        static let inset: CGFloat = 3
+        static let symbolSize = size - inset * 2
+        static let cornerRadius: CGFloat = 5
+    }
+
     var body: some View {
         Image(systemName: symbol)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
             .symbolRenderingMode(.monochrome)
-            .font(.system(size: 14, weight: .medium))
+            .font(.system(size: Metrics.symbolSize, weight: .medium))
             .foregroundStyle(.white)
-            .frame(width: 20, height: 20)
+            .frame(width: Metrics.symbolSize, height: Metrics.symbolSize)
+            .padding(Metrics.inset)
+            .frame(width: Metrics.size, height: Metrics.size)
+            .fixedSize()
             .background {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                RoundedRectangle(cornerRadius: Metrics.cornerRadius, style: .continuous)
                     .fill(color.gradient)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                RoundedRectangle(cornerRadius: Metrics.cornerRadius, style: .continuous)
                     .strokeBorder(.white.opacity(contrast == .increased ? 0.6 : 0.18), lineWidth: 0.5)
             }
             .accessibilityHidden(true)
@@ -1958,15 +2001,18 @@ private struct NativeSettingsCard<Content: View>: View {
 struct NativeSettingsRow<Control: View>: View {
     let title: String
     let subtitle: String?
+    let horizontalPadding: CGFloat
     let control: Control
 
     init(
         title: String,
         subtitle: String? = nil,
+        horizontalPadding: CGFloat = 18,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.horizontalPadding = horizontalPadding
         self.control = control()
     }
 
@@ -1989,7 +2035,7 @@ struct NativeSettingsRow<Control: View>: View {
             control
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 18)
+        .padding(.horizontal, horizontalPadding)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity, minHeight: 52)
         .contentShape(Rectangle())
@@ -2034,13 +2080,14 @@ private struct NativeSettingsDivider: View {
 
 private struct NativeSettingsNote: View {
     let text: String
+    var horizontalPadding: CGFloat = 18
 
     var body: some View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 18)
+            .padding(.horizontal, horizontalPadding)
             .padding(.vertical, 13)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

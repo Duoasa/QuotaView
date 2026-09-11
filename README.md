@@ -42,13 +42,15 @@ Codex can keep working after its window leaves the foreground, but its state sho
 
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
-## 0.4.7 Build 3: complete Island text and custom proxy
+## 0.4.8 Build 4: clearer first connection and reliable recovery
 
-Build 3 fixes missing percent signs such as **27%** and text clipping at exact-fit boundaries. It also right-aligns the proxy protocol control and gives the settings sidebar colored rounded icons.
+> Release preparation: the signed 0.4.8 package is not published yet. The download above remains the current stable release.
 
-**Settings → Proxy** supports HTTP and SOCKS5 addresses without a username or password, with Test Connection, Save, and Restore Defaults. It is off by default and affects QuotaView's quota and account usage queries. Local Island activity and current-turn Token reading retain their existing sources.
+Automatic connection now distinguishes first-run waiting, readable records, received activity, and read errors. Recheck or choose the Codex data directory from settings. Compatibility Hook setup is optional; opening settings only inspects it, and an untrusted installation can be removed manually.
 
-This replaces the withdrawn 0.4.7 Build 2 and is available through the stable update feed. Completion shrink/hide timing is unchanged.
+This release fixes task recovery after file replacement, missed connection-state subscriptions, and internal-task filtering at candidate-page boundaries. Connection, recovery, and Hook lifecycle code now have separate responsibilities. Settings icons use consistent padding.
+
+HTTP/SOCKS5 proxy settings and the reusable Island development console remain available. Quota, Widget payloads, and completion shrink/hide timing retain their existing contracts.
 
 ## The Codex Island
 

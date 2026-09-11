@@ -95,7 +95,8 @@ public struct CodexActivityTaskRegistry {
     public init() {}
 
     public mutating func admit(_ event: CodexActivityEvent, kind: CodexActivitySessionKind,
-                               selectedSession: String?, selectedOccurredAt: Date? = nil) -> Admission? {
+                               selectedSession: String?, selectedOccurredAt: Date? = nil,
+                               selectionEvidenceAt: Date? = nil) -> Admission? {
         guard kind != .internalTask else { return nil }
         let session = event.sessionHash
         let authority = event.source == .localRollout ? 3 : event.source == .appServer ? 2 : 1
@@ -130,7 +131,9 @@ public struct CodexActivityTaskRegistry {
         // Unknown legacy streams may update their own state but cannot select
         // over a verified user task. Arrival ordering is never terminal authority.
         let selectedKind = selectedSession.flatMap { tasks[$0]?.kind }
-        let isRecentEnough = selectedOccurredAt.map { event.occurredAt >= $0 } ?? true
+        // A recovered context keeps its original timestamp; fresh confirmation supplies
+        // selection evidence separately, without fabricating another start event.
+        let isRecentEnough = selectedOccurredAt.map { (selectionEvidenceAt ?? event.occurredAt) >= $0 } ?? true
         let canSelect = (kind != .unknown || selectedKind != .user) && isRecentEnough
         let duplicate = isStart && event.turnHash != nil && (existing.map {
             $0.hasTurn && !$0.terminal && $0.identity.turnHash == event.turnHash

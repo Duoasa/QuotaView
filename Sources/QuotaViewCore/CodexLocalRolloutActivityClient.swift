@@ -1,5 +1,5 @@
 import Foundation
-import SQLite3
+import Darwin
 
 public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case activity(CodexActivityEvent)
@@ -10,13 +10,17 @@ public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
 public struct CodexLocalRolloutDecodedRecord: Equatable, Sendable {
     public let eventID: String?
     public let update: CodexLocalRolloutDecodedUpdate
+    /// Context recovered from disk is not proof that a task is currently running.
+    public let requiresLiveConfirmation: Bool
 
     public init(
         eventID: String?,
-        update: CodexLocalRolloutDecodedUpdate
+        update: CodexLocalRolloutDecodedUpdate,
+        requiresLiveConfirmation: Bool = false
     ) {
         self.eventID = eventID
         self.update = update
+        self.requiresLiveConfirmation = requiresLiveConfirmation
     }
 }
 
@@ -308,6 +312,12 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     }
 }
 
+public enum CodexLocalActivityHealth: Sendable, Equatable {
+    case disabled, checking, waitingForRecords, ready, receiving, unreadable, unsupported
+
+    public var hasReadError: Bool { self == .unreadable || self == .unsupported }
+}
+
 public actor CodexLocalRolloutActivityClient {
     public struct Configuration: Sendable, Equatable {
         public let isEnabled: Bool
@@ -368,25 +378,49 @@ public actor CodexLocalRolloutActivityClient {
     public typealias ConnectionStateHandler = @Sendable (
         CodexSharedAppServerConnectionState
     ) async -> Void
+    public typealias HealthHandler = @Sendable (CodexLocalActivityHealth) async -> Void
 
-    private struct Candidate: Sendable, Equatable {
-        let fileURL: URL
-        let sessionHash: String
-        let workspaceName: String?
-        let sessionKind: CodexActivitySessionKind
+    private typealias Candidate = CodexLocalRolloutDiscovery.Candidate
+
+    private struct FileIdentity: Equatable, Sendable {
+        let device: UInt64
+        let inode: UInt64
+
+        init?(attributes: [FileAttributeKey: Any]) {
+            guard let device = attributes[.systemNumber] as? NSNumber,
+                  let inode = attributes[.systemFileNumber] as? NSNumber else { return nil }
+            self.device = device.uint64Value
+            self.inode = inode.uint64Value
+        }
+
+        init?(handle: FileHandle) {
+            var info = stat()
+            guard fstat(handle.fileDescriptor, &info) == 0 else { return nil }
+            device = UInt64(info.st_dev)
+            inode = UInt64(info.st_ino)
+        }
     }
 
     private struct TailState: Sendable {
+        let fileIdentity: FileIdentity
+        let sessionHash: String
         var offset: UInt64
         var pending = Data()
         var discardingOversizedLine = false
         var decoder: CodexLocalRolloutLineDecoder
     }
 
-    private let configuration: Configuration
+    private var configuration: Configuration
     private let fileManager: FileManager
     private var updateHandler: UpdateHandler?
     private var connectionStateHandler: ConnectionStateHandler?
+    private var healthHandler: HealthHandler?
+    private var health: CodexLocalActivityHealth = .disabled
+    private var startedAt = Date.distantFuture
+    private var receivedActivity = false
+    private var readFailed = false
+    private var unsupportedMetadata = false
+    private var discovery: CodexLocalRolloutDiscovery
     private var maintenanceTask: Task<Void, Never>?
     private var tailStates: [URL: TailState] = [:]
     private var candidates: [Candidate] = []
@@ -403,26 +437,37 @@ public actor CodexLocalRolloutActivityClient {
     ) {
         self.configuration = configuration
         self.fileManager = fileManager
+        discovery = CodexLocalRolloutDiscovery(codexHomeURL: configuration.codexHomeURL,
+            maximumCandidateCount: configuration.maximumCandidateCount, fileManager: fileManager)
     }
 
     public func start(
         handler: @escaping UpdateHandler,
-        connectionStateHandler: @escaping ConnectionStateHandler
+        connectionStateHandler: @escaping ConnectionStateHandler,
+        healthHandler: HealthHandler? = nil
     ) async {
         updateHandler = handler
         self.connectionStateHandler = connectionStateHandler
+        self.healthHandler = healthHandler
         guard configuration.isEnabled else {
+            await publishHealth(.disabled, force: true)
             await publishConnectionState(.disabled)
             return
         }
         guard !isStarted else {
+            let run = generation
             await connectionStateHandler(connectionState)
+            guard isStarted, generation == run else { return }
+            await publishHealth(health, force: true)
             return
         }
         isStarted = true
+        startedAt = Date()
         generation &+= 1
         let run = generation
         await publishConnectionState(.discovering)
+        guard isStarted, generation == run else { return }
+        await publishHealth(.checking)
         guard isStarted, generation == run else { return }
         let client = self
         maintenanceTask = Task(priority: .utility) {
@@ -436,15 +481,49 @@ public actor CodexLocalRolloutActivityClient {
         lastCandidateRefresh = .distantPast
         maintenanceTask?.cancel()
         maintenanceTask = nil
+        let callback = healthHandler
         updateHandler = nil
         connectionStateHandler = nil
+        healthHandler = nil
+        receivedActivity = false
+        discovery.reset()
         tailStates.removeAll()
         candidates.removeAll()
-        await publishConnectionState(.disabled)
+        health = .disabled
+        connectionState = .disabled
+        // Finish all mutation before the callback can reenter and start another run.
+        await callback?(.disabled)
     }
 
     func pollOnceForTesting() async {
         await pollOnce(now: Date())
+    }
+
+    /// Recheck preserves live cursors and task state; it never touches Codex configuration.
+    public func recheck() async {
+        guard isStarted, configuration.isEnabled else {
+            await publishHealth(.disabled, force: true)
+            return
+        }
+        lastCandidateRefresh = .distantPast
+        discovery.recheck()
+        let run = generation
+        await publishHealth(.checking)
+        guard isStarted, generation == run, !Task.isCancelled else { return }
+        await pollOnce(now: Date())
+    }
+
+    @discardableResult
+    public func setDataDirectory(_ url: URL) -> Bool {
+        guard !isStarted else { return false }
+        configuration = .init(isEnabled: configuration.isEnabled, codexHomeURL: url,
+                              pollIntervalSeconds: configuration.pollIntervalSeconds,
+                              candidateRefreshSeconds: configuration.candidateRefreshSeconds,
+                              maximumCandidateCount: configuration.maximumCandidateCount,
+                              startupTailBytes: configuration.startupTailBytes)
+        discovery = CodexLocalRolloutDiscovery(codexHomeURL: url,
+            maximumCandidateCount: configuration.maximumCandidateCount, fileManager: fileManager)
+        return true
     }
 
     private func runMaintenanceLoop(generation run: UInt64) async {
@@ -471,7 +550,9 @@ public actor CodexLocalRolloutActivityClient {
         if now.timeIntervalSince(lastCandidateRefresh)
             >= configuration.candidateRefreshSeconds
         {
-            candidates = recentCandidates()
+            candidates = discovery.recentCandidates()
+            readFailed = discovery.readFailed
+            unsupportedMetadata = discovery.unsupportedMetadata
             lastCandidateRefresh = now
             let retained = Set(candidates.map(\.fileURL))
             tailStates = tailStates.filter { retained.contains($0.key) }
@@ -482,12 +563,17 @@ public actor CodexLocalRolloutActivityClient {
             await consume(candidate: candidate, generation: run)
         }
         guard isStarted, generation == run else { return }
-        await publishConnectionState(tailStates.isEmpty ? .discovering : .connected)
+        let next: CodexLocalActivityHealth = readFailed ? .unreadable
+            : !tailStates.isEmpty ? (receivedActivity ? .receiving : .ready)
+            : unsupportedMetadata ? .unsupported : .waitingForRecords
+        await publishHealth(next)
+        guard isStarted, generation == run else { return }
+        await publishConnectionState(next == .ready || next == .receiving ? .connected : .discovering)
     }
 
     private func consume(candidate: Candidate, generation run: UInt64) async {
         let root = configuration.codexHomeURL.appendingPathComponent("sessions")
-        guard Self.isAllowedRollout(candidate.fileURL, sessionsURL: root) else {
+        guard CodexLocalRolloutDiscovery.isAllowedRollout(candidate.fileURL, sessionsURL: root) else {
             tailStates.removeValue(forKey: candidate.fileURL)
             return
         }
@@ -502,20 +588,28 @@ public actor CodexLocalRolloutActivityClient {
               ),
               let size = (attributes[.size] as? NSNumber)?.uint64Value
         else {
+            readFailed = true
             return
         }
 
-        if size < state.offset {
+        if size < state.offset || FileIdentity(attributes: attributes) != state.fileIdentity
+            || state.sessionHash != candidate.sessionHash {
             tailStates.removeValue(forKey: candidate.fileURL)
             await bootstrap(candidate: candidate, generation: run)
             return
         }
-        guard size > state.offset,
-              let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
+        guard size > state.offset else { return }
+        guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
+            readFailed = true
             return
         }
         defer { try? handle.close() }
+        guard FileIdentity(handle: handle) == state.fileIdentity else {
+            tailStates.removeValue(forKey: candidate.fileURL)
+            await bootstrap(candidate: candidate, generation: run)
+            return
+        }
         do {
             try handle.seek(toOffset: state.offset)
             let data = try handle.read(upToCount: 1_048_576) ?? Data()
@@ -529,9 +623,11 @@ public actor CodexLocalRolloutActivityClient {
             tailStates[candidate.fileURL] = state
             for record in records {
                 guard isStarted, generation == run, !Task.isCancelled else { return }
+                receivedActivity = true
                 await updateHandler?(record, false)
             }
         } catch {
+            readFailed = true
             return
         }
     }
@@ -539,11 +635,17 @@ public actor CodexLocalRolloutActivityClient {
     private func bootstrap(candidate: Candidate, generation run: UInt64) async {
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
+            readFailed = true
             return
         }
         defer { try? handle.close() }
 
         do {
+            guard let fileIdentity = FileIdentity(handle: handle),
+                  CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL)?.sessionHash == candidate.sessionHash else {
+                lastCandidateRefresh = .distantPast
+                return
+            }
             let size = try handle.seekToEnd()
             let start = size > UInt64(configuration.startupTailBytes)
                 ? size - UInt64(configuration.startupTailBytes)
@@ -564,24 +666,40 @@ public actor CodexLocalRolloutActivityClient {
                 sessionKind: candidate.sessionKind
             )
             var replay = BootstrapReplay()
+            var freshStart = false
             var pending = data
             consumeCompleteLines(from: &pending, discarding: &discarding) { line in
                 guard let record = decoder.decode(line: line) else {
                     return
                 }
+                if case .activity(let event) = record.update, event.event == .userPromptSubmit {
+                    // Do not use the decoder's missing-timestamp fallback as live evidence.
+                    let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any]
+                    let rawDate = object?["timestamp"] as? String
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    let timestamp = rawDate.flatMap { formatter.date(from: $0) ?? ISO8601DateFormatter().date(from: $0) }
+                    let now = Date()
+                    freshStart = timestamp.map { $0 >= startedAt && $0 >= now.addingTimeInterval(-5)
+                        && $0 <= now.addingTimeInterval(2) } ?? false
+                }
                 replay.record(record)
             }
             tailStates[candidate.fileURL] = TailState(
+                fileIdentity: fileIdentity, sessionHash: candidate.sessionHash,
                 offset: actualOffset, pending: pending,
                 discardingOversizedLine: discarding, decoder: decoder
             )
             if replay.isActive {
+                if freshStart { receivedActivity = true }
                 for record in replay.records {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
-                    await updateHandler?(record, true)
+                    await updateHandler?(.init(eventID: record.eventID, update: record.update,
+                                              requiresLiveConfirmation: !freshStart), true)
                 }
             }
         } catch {
+            readFailed = true
             return
         }
     }
@@ -605,191 +723,10 @@ public actor CodexLocalRolloutActivityClient {
         }
     }
 
-    private func recentCandidates() -> [Candidate] {
-        let databaseURL = configuration.codexHomeURL
-            .appendingPathComponent("state_5.sqlite")
-        let sessionsURL = configuration.codexHomeURL
-            .appendingPathComponent("sessions", isDirectory: true)
-            .standardizedFileURL
-        if let fromDatabase = candidatesFromDatabase(
-            databaseURL: databaseURL,
-            sessionsURL: sessionsURL
-        ), !fromDatabase.isEmpty {
-            return fromDatabase
-        }
-        return candidatesFromSessionsDirectory(sessionsURL)
-    }
-
-    private func candidatesFromDatabase(
-        databaseURL: URL,
-        sessionsURL: URL
-    ) -> [Candidate]? {
-        var database: OpaquePointer?
-        guard sqlite3_open_v2(
-            databaseURL.path,
-            &database,
-            SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX,
-            nil
-        ) == SQLITE_OK, let database
-        else {
-            if let database { sqlite3_close(database) }
-            return nil
-        }
-        defer { sqlite3_close(database) }
-        sqlite3_busy_timeout(database, 100)
-
-        let sql = """
-        SELECT id, rollout_path, cwd, source, thread_source
-        FROM threads
-        WHERE archived = 0
-        ORDER BY updated_at_ms DESC, id DESC
-        LIMIT ?
-        """
-        var statement: OpaquePointer?
-        if sqlite3_prepare_v2(database, sql, -1, &statement, nil) != SQLITE_OK {
-            if let statement { sqlite3_finalize(statement) }
-            statement = nil
-            let legacySQL = sql.replacingOccurrences(of: ", source, thread_source", with: "")
-            guard sqlite3_prepare_v2(database, legacySQL, -1, &statement, nil) == SQLITE_OK else { return nil }
-        }
-        guard let statement else { return nil }
-        defer { sqlite3_finalize(statement) }
-        sqlite3_bind_int(statement, 1, Int32(max(configuration.maximumCandidateCount, 1024)))
-
-        var result: [Candidate] = []
-        while result.count < configuration.maximumCandidateCount, sqlite3_step(statement) == SQLITE_ROW {
-            guard let idPointer = sqlite3_column_text(statement, 0),
-                  let pathPointer = sqlite3_column_text(statement, 1)
-            else {
-                continue
-            }
-            let sessionHash = CodexActivityPrivacy.hashIdentifier(
-                String(cString: idPointer)
-            )
-            let fileURL = URL(
-                fileURLWithPath: String(cString: pathPointer)
-            ).standardizedFileURL
-            guard Self.isAllowedRollout(
-                fileURL,
-                sessionsURL: sessionsURL
-            ) else {
-                continue
-            }
-            guard let metadata = Self.readSessionMetadata(from: fileURL),
-                  metadata.sessionHash == sessionHash,
-                  metadata.kind != .internalTask else { continue }
-            let databaseKind = CodexActivitySessionKind.classify(
-                source: sqlite3_column_text(statement, 3).map { String(cString: $0) },
-                threadSource: sqlite3_column_text(statement, 4).map { String(cString: $0) }
-            )
-            guard databaseKind != .internalTask else { continue }
-            let kind = databaseKind == .unknown ? metadata.kind : databaseKind
-            let workspaceName: String?
-            if let cwdPointer = sqlite3_column_text(statement, 2) {
-                workspaceName = CodexActivityPrivacy.workspaceName(
-                    from: String(cString: cwdPointer)
-                )
-            } else {
-                workspaceName = nil
-            }
-            result.append(
-                Candidate(
-                    fileURL: fileURL,
-                    sessionHash: sessionHash,
-                    workspaceName: workspaceName,
-                    sessionKind: kind
-                )
-            )
-        }
-        return result
-    }
-
-    private func candidatesFromSessionsDirectory(
-        _ sessionsURL: URL
-    ) -> [Candidate] {
-        let keys: [URLResourceKey] = [
-            .isRegularFileKey,
-            .contentModificationDateKey
-        ]
-        guard let enumerator = fileManager.enumerator(
-            at: sessionsURL,
-            includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
-        ) else {
-            return []
-        }
-
-        var files: [(URL, Date)] = []
-        for case let fileURL as URL in enumerator {
-            guard fileURL.pathExtension == "jsonl",
-                  let values = try? fileURL.resourceValues(
-                    forKeys: Set(keys)
-                  ),
-                  values.isRegularFile == true
-            else {
-                continue
-            }
-            files.append((fileURL, values.contentModificationDate ?? .distantPast))
-            if files.count >= 2048 {
-                files.sort { $0.1 > $1.1 }
-                files.removeLast(files.count - 1024)
-            }
-        }
-        files.sort { $0.1 > $1.1 }
-
-        return Array(files.prefix(1024).lazy.filter { Self.isAllowedRollout($0.0, sessionsURL: sessionsURL) }.compactMap {
-            fileURL, _ in
-            guard let metadata = Self.readSessionMetadata(from: fileURL), metadata.kind != .internalTask
-            else {
-                return nil
-            }
-            return Candidate(
-                fileURL: fileURL.standardizedFileURL,
-                sessionHash: metadata.sessionHash,
-                workspaceName: metadata.workspaceName,
-                sessionKind: metadata.kind
-            )
-        }.prefix(configuration.maximumCandidateCount))
-    }
-
-    private static func readSessionMetadata(
-        from fileURL: URL
-    ) -> (sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind)? {
-        guard let handle = try? FileHandle(forReadingFrom: fileURL)
-        else {
-            return nil
-        }
-        defer { try? handle.close() }
-        guard let data = try? handle.read(upToCount: 1_048_576),
-              let newline = data.firstIndex(of: 0x0A),
-              let object = try? JSONSerialization.jsonObject(
-                with: Data(data[..<newline])
-              ),
-              let envelope = object as? [String: Any],
-              envelope["type"] as? String == "session_meta",
-              let payload = envelope["payload"] as? [String: Any],
-              let id = payload["id"] as? String,
-              !id.isEmpty
-        else {
-            return nil
-        }
-        return (
-            CodexActivityPrivacy.hashIdentifier(id),
-            CodexActivityPrivacy.workspaceName(
-                from: payload["cwd"] as? String
-            ),
-            CodexActivitySessionKind.classify(source: payload["source"], threadSource: payload["thread_source"] as? String)
-        )
-    }
-
-    private static func isAllowedRollout(
-        _ fileURL: URL,
-        sessionsURL: URL
-    ) -> Bool {
-        let path = fileURL.resolvingSymlinksInPath().standardizedFileURL.path
-        let root = sessionsURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
-        guard path.hasPrefix(root), fileURL.pathExtension == "jsonl" else { return false }
-        return (try? fileURL.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
+    private func publishHealth(_ value: CodexLocalActivityHealth, force: Bool = false) async {
+        guard force || health != value else { return }
+        health = value
+        await healthHandler?(value)
     }
 
     private func publishConnectionState(
