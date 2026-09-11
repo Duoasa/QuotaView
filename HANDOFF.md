@@ -1,6 +1,6 @@
 # QuotaView 项目 Handoff
 
-更新日期：2026-09-10
+更新日期：2026-09-11
 
 公开版本、tag、资产、签名、公证与撤回记录的唯一事实源：
 **[VERSION_HISTORY.md → 当前最新版本](VERSION_HISTORY.md#当前最新版本)**。
@@ -20,12 +20,24 @@ Stable appcast 回退提交 `61c47115bdbd24224149f629abdb8d3f906707c7`，
 核验公开 Latest、Feed 签名与 ZIP 哈希；用户本机应用保持不动。
 已安装 0.4.7 的用户需要手动安装 0.4.6，恢复 Feed 不会自动降级。
 
-main 与 `codex/0.4.7-development` 暂保留 0.4.7 / internal 21 源码供排查；
+main 与 `codex/0.4.7-development` 发布基线保留 0.4.7 / internal 21 源码；本工作区已在其上完成文字边界修复；
 这不是当前推荐生产基线。稳定源码应使用 tag `v0.4.6-build.2`，不要仅改版本号重打包。
 0.4.7 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
 代理规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
 
-下一步：获取具体显示症状、触发步骤与环境并排查；本轮不将显示问题视为已修复。
+当前本地迭代：0.4.7 Build 3 / internal 22，修复完成态 27% 百分号误截断，
+并审查共用文字绘制的浮点边界。详见 [文字边界修复](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md#6-2026-09-11-百分号与文字边界修复)。
+7 项专项回归通过，完整 197 项、0 失败、2 个可选跳过；Universal Release 通过。
+2026-09-11 按用户要求退出原始 0.4.7 Build 2，启动 Build 3 本地调试副本；候选未发布。
+启动路径记录在 `/private/tmp/quotaview-047-debug-20260911/build3-launch-path.txt`，
+Developer ID 本地签名严格验证通过，启动 stderr 为空。调试副本不含 Widget 扩展，
+已安装的 0.4.6 小组件仍为唯一注册项；已安装应用和独立内容开发台保留。
+新增[独立内容控制台](docs/design/quotaview-island-text-console.md)，默认完成额度 27%，
+支持全部状态、文字、额度、语言和 20 秒演示；2026-09-11 用户确认当前手动检查通过。
+用户要求长期保留开发台：项目内 `Prototypes/IslandTextConsole/Open Console.command` 为固定入口，
+源码与脚本保留在版本管理，归档可重建。完整辅助功能矩阵与真实计时不由此次手动内容验收推定通过。
+随后用户要求修正代理协议菜单右侧空白，并将设置侧栏七个图标改为系统设置风格的彩色圆角矩形。
+本轮仅改设置布局与图标；设置页的新视觉效果仍待用户验收。
 此前 190 项本地测试与 CI 通过、代理用户反馈可用，以及完成态计时未复现的结论
 仅保留为历史证据，不能覆盖此次显示问题反馈。恢复发布需用户新的明确决定。
 后续发布必须递增内部 Build，不覆盖历史 tag / ZIP。本次提交邮箱 `xuchen1995@gmail.com`。

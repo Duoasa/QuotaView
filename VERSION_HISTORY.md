@@ -28,7 +28,8 @@
 | 发布状态 | 2026-09-10 恢复为 Latest；正式 Release、非 Draft、非 Pre-release；复用原始签名资产 |
 | 自动更新 Feed | [公开 appcast](https://duoasa.github.io/QuotaView/appcast.xml)；回退提交 `61c47115bdbd24224149f629abdb8d3f906707c7`；恢复原始签名 Feed，SHA-256 `de8c07cc356ebf5d0c813a8e3fbd97703e879343a839a38fc30419bd4a118dce`；更新序列 19 → 18 → 17；公开 Feed / ZIP 内置公钥验证通过，Pages 部署 `34496622243` 成功 |
 
-0.4.7 因用户报告显示 bug 撤回，具体根因尚未确认。已安装 0.4.7 的用户需退出应用后
+0.4.7 因用户报告显示 bug 撤回。2026-09-11 已定位完成百分号宽度相减的浮点误差；
+本地修复与用户验收状态见 [HANDOFF.md](HANDOFF.md)，尚未恢复发布。已安装 0.4.7 的用户需退出应用后
 手动安装 0.4.6 Build 2；appcast 回退只停止继续推荐 0.4.7，不会自动降级。
 main 暂保留 0.4.7 源码用于后续排查；稳定源码必须从上述 0.4.6 tag 获取。
 
@@ -109,7 +110,7 @@ main 暂保留 0.4.7 源码用于后续排查；稳定源码必须从上述 0.4.
 
 ## 0.4.7 (Build 2)
 
-**2026-09-10 已撤回**：用户反馈显示 bug，根因待排查。Latest、README 下载和
+**2026-09-10 已撤回**：用户反馈显示 bug；后续定位与候选验证见 [HANDOFF.md](HANDOFF.md)。Latest、README 下载和
 Stable appcast 已回退 0.4.6 Build 2；历史 tag、资产与源码保留，GitHub Release
 标为 Pre-release 并注明 Withdrawn。以下为撤回前发布时的验证记录。
 

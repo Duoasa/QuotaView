@@ -62,6 +62,15 @@ struct SettingsView: View {
             }
         }
 
+        var iconColor: Color {
+            switch self {
+            case .menuBar, .general: Color(nsColor: .systemGray)
+            case .popover, .language, .proxy: Color(nsColor: .systemBlue)
+            case .codexActivity: Color(nsColor: .systemPurple)
+            case .appearance: Color(white: 0.16)
+            }
+        }
+
         func title(_ copy: AppCopy) -> String {
             switch self {
             case .menuBar:
@@ -165,10 +174,11 @@ struct SettingsView: View {
             List(selection: $selection) {
                 Section {
                     ForEach(SettingsPage.allCases) { page in
-                        Label(
-                            page.title(copy),
-                            systemImage: page.symbol
-                        )
+                        Label {
+                            Text(page.title(copy))
+                        } icon: {
+                            SettingsSidebarIcon(symbol: page.symbol, color: page.iconColor)
+                        }
                         .font(.body.weight(.medium))
                         .padding(.vertical, 4)
                         .tag(page)
@@ -258,7 +268,10 @@ struct SettingsView: View {
                         Text("HTTP").tag(ProxyConfiguration.Scheme.http)
                         Text("SOCKS5").tag(ProxyConfiguration.Scheme.socks5)
                     }
-                    .labelsHidden().frame(width: 160)
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize(horizontal: true, vertical: true)
+                    .frame(width: 160, alignment: .trailing)
                     .disabled(!proxyDraft.isEnabled)
                 }
                 NativeSettingsDivider()
@@ -1878,6 +1891,29 @@ private struct CodexActivityTimingControl: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct SettingsSidebarIcon: View {
+    let symbol: String
+    let color: Color
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    var body: some View {
+        Image(systemName: symbol)
+            .symbolRenderingMode(.monochrome)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(.white)
+            .frame(width: 20, height: 20)
+            .background {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(color.gradient)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(.white.opacity(contrast == .increased ? 0.6 : 0.18), lineWidth: 0.5)
+            }
+            .accessibilityHidden(true)
     }
 }
 
