@@ -322,10 +322,32 @@ struct CodexActivityIslandProgressBarGeometry {
         for text: String,
         font: NSFont
     ) -> CGFloat {
-        NSAttributedString(
-            string: text,
-            attributes: [.font: font]
-        ).size().width
+        activitySingleLineWidth(text: text, font: font)
+    }
+
+    static func completionQuotaTextWidths(
+        value: String,
+        symbol: String,
+        valueFont: NSFont,
+        symbolFont: NSFont,
+        backingScaleFactor: CGFloat
+    ) -> (value: CGFloat, symbol: CGFloat) {
+        let scale = max(1, backingScaleFactor)
+        func pixelWidth(_ text: String, font: NSFont) -> CGFloat {
+            ceil(activitySingleLineWidth(text: text, font: font) * scale) / scale
+        }
+
+        // Reserve the symbol independently: (value + symbol) - value can be
+        // slightly narrower than the glyph at values such as 27.
+        let symbolWidth = min(
+            pixelWidth(symbol, font: symbolFont),
+            completionRightColumnWidth
+        )
+        let valueWidth = min(
+            pixelWidth(value, font: valueFont),
+            max(0, completionRightColumnWidth - symbolWidth)
+        )
+        return (valueWidth, symbolWidth)
     }
 }
 
@@ -721,7 +743,14 @@ private func activitySingleLinePlacement(
     )
 }
 
-private func activityTruncatedLine(
+func activitySingleLineWidth(text: String, font: NSFont) -> CGFloat {
+    let line = CTLineCreateWithAttributedString(
+        NSAttributedString(string: text, attributes: [.font: font])
+    )
+    return CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+}
+
+func activityTruncatedLine(
     text: String,
     font: NSFont,
     color: NSColor,
@@ -739,17 +768,34 @@ private func activityTruncatedLine(
     let sourceWidth = CGFloat(
         CTLineGetTypographicBounds(sourceLine, nil, nil, nil)
     )
-    guard sourceWidth > maximumWidth else { return sourceLine }
+    // Layout arithmetic can lose a few ULPs at an exact-fit boundary. Do not
+    // replace otherwise fitting text with an ellipsis; real overflow still
+    // takes the normal truncation path. This is far smaller than a pixel.
+    let roundingTolerance = max(1, max(sourceWidth, abs(maximumWidth))).ulp * 8
+    guard sourceWidth - maximumWidth > roundingTolerance else { return sourceLine }
 
     let tokenLine = CTLineCreateWithAttributedString(
         NSAttributedString(string: "…", attributes: attributes)
     )
-    return CTLineCreateTruncatedLine(
-        sourceLine,
-        Double(max(0, maximumWidth)),
-        .end,
-        tokenLine
-    ) ?? tokenLine
+    let tokenWidth = CGFloat(CTLineGetTypographicBounds(tokenLine, nil, nil, nil))
+    guard tokenWidth - maximumWidth <= roundingTolerance else {
+        return CTLineCreateWithAttributedString(NSAttributedString(string: ""))
+    }
+
+    // Mixed-script fallback and emoji shaping can produce a truncated line
+    // wider than CoreText's requested width. Verify the result before drawing
+    // into the clipped label, with a bounded retry using the measured excess.
+    var truncationWidth = max(0, maximumWidth)
+    for _ in 0..<4 {
+        guard let line = CTLineCreateTruncatedLine(
+            sourceLine, Double(truncationWidth), .end, tokenLine
+        ) else { return tokenLine }
+        let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        let excess = width - maximumWidth
+        if excess <= roundingTolerance { return line }
+        truncationWidth = max(0, truncationWidth - excess - roundingTolerance)
+    }
+    return tokenLine
 }
 
 private func activityDrawSingleLine(
@@ -2988,24 +3034,16 @@ private final class ActivityIslandContentView: NSView {
             width: completionLeftWidth,
             height: activitySupportingLineHeight
         )
-        let completionQuotaValueWidth = min(
-            NSAttributedString(
-                string: completionQuotaValueLabel.stringValue,
-                attributes: [.font: completionQuotaValueLabel.font]
-            ).size().width,
-            completionRightWidth
-        )
-        let completionQuotaSymbolWidth = min(
-            NSAttributedString(
-                string: completionQuotaSymbolLabel.stringValue,
-                attributes: [.font: completionQuotaSymbolLabel.font]
-            ).size().width,
-            completionRightWidth
-        )
-        let completionQuotaGroupWidth = min(
-            completionQuotaValueWidth + completionQuotaSymbolWidth,
-            completionRightWidth
-        )
+        let completionQuotaWidths =
+            CodexActivityIslandProgressBarGeometry.completionQuotaTextWidths(
+                value: completionQuotaValueLabel.stringValue,
+                symbol: completionQuotaSymbolLabel.stringValue,
+                valueFont: completionQuotaValueLabel.font,
+                symbolFont: completionQuotaSymbolLabel.font,
+                backingScaleFactor: window?.backingScaleFactor ?? 2
+            )
+        let completionQuotaGroupWidth = completionQuotaWidths.value
+            + completionQuotaWidths.symbol
         let completionQuotaGroupX = completionRightX
             + completionRightWidth
             - completionQuotaGroupWidth
@@ -3015,20 +3053,13 @@ private final class ActivityIslandContentView: NSView {
         completionQuotaValueLabel.frame = NSRect(
             x: completionQuotaGroupX,
             y: completionQuotaGroupY,
-            width: min(
-                completionQuotaValueWidth,
-                completionQuotaGroupWidth
-            ),
+            width: completionQuotaWidths.value,
             height: completionQuotaGroupHeight
         )
         completionQuotaSymbolLabel.frame = NSRect(
             x: completionQuotaValueLabel.frame.maxX,
             y: completionQuotaGroupY + 2,
-            width: max(
-                0,
-                completionQuotaGroupWidth
-                    - completionQuotaValueLabel.frame.width
-            ),
+            width: completionQuotaWidths.symbol,
             height: completionQuotaGroupHeight - 4
         )
         if showsCompletionReceipt {

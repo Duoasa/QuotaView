@@ -63,3 +63,11 @@
 真实旧版客户端独立记录一次完整 N → N+1 检查、下载、替换与重启，因此
 `APP-UPDATES-07` 和本规格保持 `Verifying`。这不改变各版本已经 Released
 的事实。
+
+## 2026-09-11 Build 3 update admission
+
+The owner explicitly authorized 0.4.7 Build 3 / internal 22, tag
+`v0.4.7-build.3`, archive `QuotaView-v0.4.7-build.3.zip`, for main,
+GitHub Stable, README and appcast. Publish after signing, notarization,
+immutable archive and public-download checks. The feed will move from
+19/18/17 to 22/19/18 and continue excluding withdrawn internal 21.

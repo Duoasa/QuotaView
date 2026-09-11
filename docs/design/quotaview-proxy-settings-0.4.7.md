@@ -71,3 +71,26 @@ main CI 190 项、0 失败、2 个可选测试跳过，本机已运行对应真�
 15 项完成收起专项审查未复现永久停留，未更改生产计时；窗口层为代码审查，未自动 UI 验收。
 正式包完成 Universal、签名、公证/Staple、公开回下载、Gatekeeper 与内置公钥 Feed/ZIP 验证。
 发行包以 `dist/QuotaView-v0.4.7-build.2.zip` 为准；上述 9 月 8 日记录为 Preview 阶段事实。
+
+## 2026-09-11 设置视觉修正
+
+复用 R6；用户要求代理协议选项与其他行的右侧控件对齐，并参考所附 macOS
+系统设置截图，为设置侧栏更换彩色圆角矩形图标。协议菜单保留原生 Picker，
+其 160 pt 控件区域改为靠右放置，保持设置行统一 18 pt 右边距；HTTP / SOCKS5
+选项及禁用逻辑不变。七个侧栏图标使用 20 pt 圆角底和白色 SF Symbols，
+按页面用途配置系统蓝、紫、灰及外观深色底；保留原生 List 的选中、键盘及
+本地化文字，图标作为装饰不重复播报。无新增业务模块或代理行为变化。
+
+验收条件：默认/最小窗口宽度、中英文、启用/禁用代理、选中/未选中侧栏、
+深浅色及 Increase Contrast 保持布局与可读性。新增视觉效果等待用户确认。
+
+本轮验证：197 项 Swift 测试，0 失败、2 项可选跳过；Universal Release 构建通过，
+版本为 0.4.7 Build 3 / internal 22，App、Core 和 Widget 双架构及图标资源已检查。
+未新增生产调试入口；`git diff --check` 通过。
+
+## 2026-09-11 Build 3 release authorization
+
+After opening Build 3, the owner explicitly requested main, GitHub, README
+and appcast publication for `v0.4.7-build.3` / internal 22. Complete artifact
+verification before publication; move withdrawn Build 2 to draft only after
+Build 3 is verified live, retaining the old tag and asset for investigation.
