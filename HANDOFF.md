@@ -7,47 +7,36 @@
 本文件只保存当前迭代、未完成验证和下一步；分支、HEAD 与工作树状态必须
 通过 Git 实时读取。
 
-## 当前状态：0.4.7 撤回，稳定版恢复 0.4.6
+## 当前状态：0.4.7 Build 3 已发布
 
-2026-09-10 用户反馈 0.4.7 存在显示 bug，要求先回退版本及 appcast。
-GitHub Latest 与中英文 README 恢复 **0.4.6 Build 2 / internal 19 / v0.4.6-build.2**。
-0.4.7 Build 2 标为 Withdrawn / Pre-release / 非 Latest，历史 tag、资产与源码保留。
-Stable appcast 回退提交 `61c47115bdbd24224149f629abdb8d3f906707c7`，
-逐字节恢复原始签名 Feed；内部版本序列 19 → 18 → 17，排除 20/21。
-资产大小、SHA-256、签名、公证与发布提交见顶部版本历史。
+2026-09-11 按用户授权合并 main、发布 GitHub Stable/Latest、更新中英文 README，
+并纳入 appcast。当前身份为 **0.4.7 Build 3 / internal 22 / v0.4.7-build.3**，
+发布提交 `d185c9ae913c15a237ac2d223ed0a868f999f091`（PR #50）；完整资产和验证见顶部版本历史。
+appcast 序列为 22 → 19 → 18。被撤回的 Build 2 已转为草稿，公开时间线不再显示，
+tag 和 ZIP 保留，internal 21 继续排除。
 
-本次仅修改发布指针、appcast 和文档，不重新构建或公证，不重复运行 Swift 测试。
-核验公开 Latest、Feed 签名与 ZIP 哈希；用户本机应用保持不动。
-已安装 0.4.7 的用户需要手动安装 0.4.6，恢复 Feed 不会自动降级。
+回滚基线为 `v0.4.6-build.2` / `ae9f17d415fb1968d9ef843be771b6a5211213c7`。
+本轮重新下载验证其归档哈希，未覆盖稳定回滚资产或旧 tag。
+工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`，分支和 HEAD 以 Git 实查为准。
+提交身份：`Douasa <xuchen1995@gmail.com>`。
 
-main 与 `codex/0.4.7-development` 发布基线保留 0.4.7 / internal 21 源码；本工作区已在其上完成文字边界修复；
-这不是当前推荐生产基线。稳定源码应使用 tag `v0.4.6-build.2`，不要仅改版本号重打包。
-0.4.7 工作区：`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7`。
-代理规格：[自定义代理](docs/design/quotaview-proxy-settings-0.4.7.md)。
+本轮交付：
+- 修复完成态 27% 百分号丢失、单行浮点边界和中英文 / Emoji 长文字越界；
+  [文字边界规格](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md#6-2026-09-11-百分号与文字边界修复)。
+- 代理协议菜单靠右对齐、七个设置侧栏图标改为彩色圆角矩形；
+  [代理规格](docs/design/quotaview-proxy-settings-0.4.7.md)。
+- 永久保留 [灵动岛内容开发台](Prototypes/IslandTextConsole/README.md)，固定入口
+  `Prototypes/IslandTextConsole/Open Console.command`；源码随 Git 保存，缓存 / 本机包保持忽略。
+  用户确认当前内容手动检查通过；开发台模拟数据不进入正式应用。
 
-当前本地迭代：0.4.7 Build 3 / internal 22，修复完成态 27% 百分号误截断，
-并审查共用文字绘制的浮点边界。详见 [文字边界修复](docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md#6-2026-09-11-百分号与文字边界修复)。
-7 项专项回归通过，完整 197 项、0 失败、2 个可选跳过；Universal Release 通过。
-2026-09-11 按用户要求退出原始 0.4.7 Build 2，启动 Build 3 本地调试副本；候选未发布。
-启动路径记录在 `/private/tmp/quotaview-047-debug-20260911/build3-launch-path.txt`，
-Developer ID 本地签名严格验证通过，启动 stderr 为空。调试副本不含 Widget 扩展，
-已安装的 0.4.6 小组件仍为唯一注册项；已安装应用和独立内容开发台保留。
-新增[独立内容控制台](docs/design/quotaview-island-text-console.md)，默认完成额度 27%，
-支持全部状态、文字、额度、语言和 20 秒演示；2026-09-11 用户确认当前手动检查通过。
-用户要求长期保留开发台：项目内 `Prototypes/IslandTextConsole/Open Console.command` 为固定入口，
-源码与脚本保留在版本管理，归档可重建。完整辅助功能矩阵与真实计时不由此次手动内容验收推定通过。
-随后用户要求修正代理协议菜单右侧空白，并将设置侧栏七个图标改为系统设置风格的彩色圆角矩形。
-本轮仅改设置布局与图标；设置页的新视觉效果仍待用户验收。
-此前 190 项本地测试与 CI 通过、代理用户反馈可用，以及完成态计时未复现的结论
-仅保留为历史证据，不能替代本次修复验证。
+验证：197 项本地测试无失败，两个 opt-in 项另行通过（真实 20 秒缩小 + 100 秒隐藏、
+实际安装 Codex 的 HTTP/SOCKS5 隔离账户查询）。PR CI 与 main CI 通过，Universal、
+Developer ID、公证/Staple、公开回下载、签名、公钥 Feed/ZIP 验证均完成。
+main 首次因测试夹具 5 秒启动等待未生成端口文件失败，同提交重跑通过；已保留失败日志。
+完整辅助功能矩阵没有新增逐项验收记录，不能由当前内容检查推定全部通过。
+本地验证日志与发布清单位于 `dist/verification/build3/`，不进入 Git。
 
-发布授权（2026-09-11）：用户明确要求当前 0.4.7 Build 3 / internal 22 合并 main、
-发布 GitHub、更新 README 并纳入 appcast。身份为 `v0.4.7-build.3` /
-`QuotaView-v0.4.7-build.3.zip`，完整签名、公证、回下载与 Feed 验证后上线。
-旧 Build 2 在新版本上线验证后转为草稿，退出公开时间线，保留 tag 与资产。
-发布前回滚基线为 `v0.4.6-build.2` / `ae9f17d415fb1968d9ef843be771b6a5211213c7`，
-本轮已重新回下载，SHA-256 与版本历史一致。
-后续发布必须递增内部 Build，不覆盖历史 tag / ZIP。本次提交邮箱 `xuchen1995@gmail.com`。
+后续版本必须使用新的 Build / 内部序号和唯一 tag、资产；appcast 仍需按版本单独授权。
 
 ## 0.4.6 历史工作记录
 
@@ -63,7 +52,7 @@ Developer ID 本地签名严格验证通过，启动 stderr 为空。调试副�
 已完成 Universal 构建及真实主任务 / guardian / 四步计划的数据链路验证。
 用户已确认本轮真实五步任务视觉无问题并要求继续发布。本次使用重构源码重新打包、公证；审计前旧 ZIP 未发布。
 
-## 2. 当前规格与状态
+## 2. 历史规格与验证记录
 
 ### 0.4.6 Build 2 发布完成（2026-09-06）
 
@@ -141,7 +130,7 @@ Developer ID 本地签名严格验证通过，启动 stderr 为空。调试副�
 | [`QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005`](docs/design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 已发布的 AI 球尺寸能力作为历史保留；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | [`QV-PRODUCT-QUOTA-WINDOWS-003`](docs/design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 多周期额度已随 0.3.7 Build 1 发布并进入 Stable Feed |
 | [`QV-PRODUCT-ACTIVITY-ISLAND-004`](docs/design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；不包含多任务 Preview |
-| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.6 已进入 Stable Feed；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
+| [`QV-PRODUCT-APP-UPDATES-003`](docs/design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.7 Build 3 已进入 Stable Feed，线上签名已验证；尚缺一次由旧版客户端发起的真实 N → N+1 替换与重启记录 |
 
 ### 2.0 0.4.6 Build 1 发布（2026-09-05）
 
@@ -311,7 +300,7 @@ PR #40 已合并到 `main`，发布提交为
 
 ## 4. 下一步
 
-0.4.6 Build 2 已完成当前效果验收与正式热更新发布；下一轮按用户新反馈迭代，以下待办独立保留。
+0.4.7 Build 3 已完成本轮修复与正式发布；下一轮按用户新反馈迭代，以下待办独立保留。
 
 1. 更新器规格的 `APP-UPDATES-07` 保持独立待办，后续记录一次由旧版客户端
    发起的真实 N → N+1 替换与重启；

@@ -71,3 +71,11 @@ The owner explicitly authorized 0.4.7 Build 3 / internal 22, tag
 GitHub Stable, README and appcast. Publish after signing, notarization,
 immutable archive and public-download checks. The feed will move from
 19/18/17 to 22/19/18 and continue excluding withdrawn internal 21.
+
+## 2026-09-11 Build 3 发布完成
+
+0.4.7 Build 3 / internal 22 已通过 PR #50 合并 main，正式发布并进入 appcast。
+最终发布提交、ZIP、哈希、签名、公证与公开回下载证据见
+[版本历史](../../VERSION_HISTORY.md#当前最新版本)。两项 opt-in 实测已补跑通过。
+main CI 首次因测试夹具 5 秒启动窗口未生成端口文件失败，同提交重跑通过；未更改断言。
+Build 2 转为草稿，公开时间线不再显示；其 tag / 资产保留且继续排除在 Feed 之外。

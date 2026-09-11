@@ -19,7 +19,7 @@ zsh 'Prototypes/IslandTextConsole/Open Console.command' --rebuild
 zsh 'Prototypes/IslandTextConsole/Open Console.command' --verify-only
 ```
 
-源码和入口纳入本地 Git；`dist/IslandTextConsole.zip`、`SHA256SUMS` 和来源哈希
+源码和入口随 Build 3 纳入 GitHub 版本管理；`dist/IslandTextConsole.zip`、`SHA256SUMS` 和来源哈希
 保存在本项目的忽略目录。归档是本机架构、ad-hoc 签名，其他架构应在当地重建。
 启动器校验归档后解包运行，临时目录被清理也不会丢失入口或保存包。
 `.build` 与 `dist` 均可由源码重建，不提交二进制。不要把固定 `/tmp` 路径用作长期入口。

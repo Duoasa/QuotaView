@@ -1,6 +1,7 @@
 # QuotaView 0.4.7 Build 2 — Withdrawn
 
-**Withdrawn on September 10, 2026 due to a reported display bug.** The recommended stable release and update feed have reverted to [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2). If you already installed 0.4.7, quit QuotaView and manually install 0.4.6 Build 2; automatic updates do not downgrade an installed version. The existing tag and archive are retained for investigation.
+**Withdrawn on September 10, 2026 due to a display bug; replaced by [0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3) on September 11.** This Release is now a draft outside the public timeline. Its original tag, asset and verification record remain available for investigation. Internal 21 remains excluded from the stable feed.
+
 
 The following describes the original release and its verification at publication.
 
@@ -22,7 +23,7 @@ The completed Island still shrinks after 20 seconds and hides 100 seconds later 
 
 ## Install and update
 
-Use [0.4.6 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2). This withdrawn 0.4.7 build is no longer offered through the stable update feed.
+Use [0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3). This withdrawn build is no longer offered through the stable update feed.
 
 ## Verification
 

@@ -1,7 +1,7 @@
 # 灵动岛内容检查控制台
 
 Spec ID: `QV-PROTOTYPE-ISLAND-TEXT-018`
-状态：Accepted / Verifying（本地交付，未发布）。2026-09-11 用户要求提供并长期保留控制台，随后确认“目前手动检查通过”。
+状态：Accepted / Released（开发工具源码随 Build 3 保留，独立于正式 App）。2026-09-11 用户要求提供并长期保留控制台，随后确认“目前手动检查通过”。
 
 复用现有量子噪点控制台的隔离构建方式，直接使用当前修复后的生产视图和渲染器。
 新增原型位于 `Prototypes/IslandTextConsole`，不修改旧的 QuantumNoiseConsole。
@@ -17,7 +17,7 @@ Spec ID: `QV-PROTOTYPE-ISLAND-TEXT-018`
 
 构建和使用说明见 [控制台 README](../../Prototypes/IslandTextConsole/README.md)。
 当前灵动岛内容手动检查已由用户确认通过；不推导完整辅助功能矩阵或真实生命周期计时均通过。
-本轮没有发布授权，Stable / appcast 保持 0.4.6。
+用户随后明确授权 Build 3 的完整发布；正式 App 不包含控制台模拟数据，开发工具源码随 Git 保留。
 
 验证：独立 arm64 Debug 控制台构建、ad-hoc 严格签名和启动通过；无 stderr，
 Bundle ID 为 `com.quotaview.island-text-console`，不包含 Widget 或 App Group。
