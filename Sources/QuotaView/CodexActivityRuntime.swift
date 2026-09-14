@@ -509,7 +509,7 @@ final class CodexActivityRuntime: ObservableObject {
         fileBridge.stop()
         bridgeStatus = .stopped
         await store.stop()
-        island?.hide()
+        island?.hide(animated: false)
     }
 
     var hookDirectoryPath: String { installer.hooksURL.deletingLastPathComponent().path }
@@ -877,7 +877,7 @@ final class CodexActivityRuntime: ObservableObject {
         defer { reconcileScreenTracking() }
 
         guard preferences.codexActivityIslandEnabled else {
-            island?.hide()
+            island?.hide(animated: false)
             return
         }
 

@@ -271,6 +271,11 @@ final class ProxySettingsTests: XCTestCase {
 }
 
 private final class ProxyFixture: @unchecked Sendable {
+    private enum StartupError: Error {
+        case processExited(Int32)
+        case portNotReadyBeforeDeadline
+    }
+
     let root: URL
     let port: String
     let executable: URL
@@ -298,13 +303,20 @@ private final class ProxyFixture: @unchecked Sendable {
         process.standardError = FileHandle.nullDevice
         do {
             try process.run()
-            let deadline = Date().addingTimeInterval(tls ? 15 : 5)
+            // A fresh CI runner can spend several seconds starting Python for the first time.
+            // Bound readiness separately from the requests and cancellation behavior under test.
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: .seconds(tls ? 30 : 15))
             let portFile = root.appendingPathComponent("port")
-            while !FileManager.default.fileExists(atPath: portFile.path) && Date() < deadline {
+            while clock.now < deadline {
+                guard process.isRunning else { throw StartupError.processExited(process.terminationStatus) }
+                if let contents = try? String(contentsOf: portFile, encoding: .utf8),
+                   let port = UInt16(contents.trimmingCharacters(in: .whitespacesAndNewlines)), port > 0 {
+                    return ProxyFixture(root: root, port: String(port), executable: executable, process: process)
+                }
                 try await Task.sleep(for: .milliseconds(20))
             }
-            let port = try String(contentsOf: portFile, encoding: .utf8)
-            return ProxyFixture(root: root, port: port, executable: executable, process: process)
+            throw StartupError.portNotReadyBeforeDeadline
         } catch {
             if process.isRunning { process.terminate() }
             try? FileManager.default.removeItem(at: root)

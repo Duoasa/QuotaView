@@ -510,12 +510,27 @@ struct CodexActivityStateSmokeCompletionTransition {
     }
 }
 
+// Shader evaluation crossfades the final eight units into the next epoch.
+// Keep this period in sync with activityStateSmokeFragment below.
+struct ActivityEffectClock {
+    static let period: Double = 256
+    private(set) var value: Double = 0
+
+    mutating func advance(_ delta: Double) {
+        guard delta.isFinite, delta >= 0 else { return }
+        value = (value + delta.truncatingRemainder(dividingBy: Self.period))
+            .truncatingRemainder(dividingBy: Self.period)
+    }
+}
+
 struct CodexActivityStateSmokeSimulation {
-    private(set) var fieldTime: Float = 0
-    private(set) var effectTime: Float = 0
+    private var fieldClock = ActivityEffectClock()
+    private var effectClock = ActivityEffectClock()
+    var fieldTime: Float { Float(fieldClock.value) }
+    var effectTime: Float { Float(effectClock.value) }
     private(set) var pulse: Float = 0.5
 
-    private var motionPhase: Float = 0
+    private var motionPhase: Double = 0
     private var accumulator: Float = 0
 
     static let reducedMotionSnapshot = CodexActivityStateSmokeSnapshot(
@@ -558,33 +573,19 @@ struct CodexActivityStateSmokeSimulation {
         profile: CodexActivityStateSmokeProfile,
         effectPlaybackEnabled: Bool = true
     ) {
-        let safeDelta = max(delta, 0)
-        motionPhase +=
-            safeDelta * profile.motionFrequency * Float.pi * 2
-        fieldTime += safeDelta * profile.fieldSpeed
+        guard delta.isFinite else { return }
+        let safeDelta = Double(max(delta, 0))
+        motionPhase = (motionPhase + safeDelta * Double(profile.motionFrequency) * .pi * 2 * 1.9)
+            .truncatingRemainder(dividingBy: .pi * 2)
+        fieldClock.advance(safeDelta * Double(profile.fieldSpeed))
         if effectPlaybackEnabled {
-            effectTime +=
-                safeDelta
-                * CodexActivityStateSmokeContract
-                    .quantumNoiseEffectClockRate
+            effectClock.advance(safeDelta * Double(CodexActivityStateSmokeContract.quantumNoiseEffectClockRate))
         }
-
-        pulse =
-            0.5
-            + 0.5 * sin(motionPhase * 1.9 + 0.35)
-
-        if motionPhase > Float.pi * 2_048 {
-            motionPhase.formTruncatingRemainder(
-                dividingBy: Float.pi * 2
-            )
-        }
-        if fieldTime > 4_096 {
-            fieldTime.formTruncatingRemainder(dividingBy: 4_096)
-        }
+        pulse = Float(0.5 + 0.5 * sin(motionPhase + 0.35))
     }
 
     mutating func resetEffectTime() {
-        effectTime = 0
+        effectClock = ActivityEffectClock()
     }
 }
 
@@ -894,11 +895,17 @@ struct ActivityQuantumMotionProfile {
 
 struct ActivityQuantumMotion {
     private(set) var profile = ActivityQuantumMotionProfile.profile(.working)
-    private(set) var displacement = SIMD2<Float>.zero
-    private(set) var phase: Float = 0
+    // Exact lattice period, not an arbitrary pixel modulus. The shader wraps
+    // particle identity at 4096 cells, including neighbourhood seeds.
+    static let displacementPeriod: Double = 4096 * 2.35
+    private var position = SIMD2<Double>.zero
+    private var clock = ActivityEffectClock()
+    var displacement: SIMD2<Float> { SIMD2<Float>(Float(position.x), Float(position.y)) }
+    var phase: Float { Float(clock.value) }
 
     mutating func advance(state: CodexActivityVisualState, elapsed: Float,
                           reduceMotion: Bool) {
+        guard elapsed.isFinite else { return }
         let target = ActivityQuantumMotionProfile.profile(state)
         if reduceMotion {
             profile = target
@@ -910,8 +917,11 @@ struct ActivityQuantumMotion {
         let dt = delta / Float(steps)
         for _ in 0..<steps {
             profile = profile.interpolated(to: target, amount: 1 - exp(-5 * dt))
-            displacement += profile.velocity * dt
-            phase += profile.rate * dt
+            position += SIMD2<Double>(Double(profile.velocity.x), Double(profile.velocity.y)) * Double(dt)
+            for axis in 0..<2 {
+                position[axis].formTruncatingRemainder(dividingBy: Self.displacementPeriod)
+            }
+            clock.advance(Double(profile.rate) * Double(dt))
         }
     }
 }
@@ -999,9 +1009,14 @@ vertex VertexOut activityStateSmokeVertex(
 }
 
 float activityStateSmokeHash(float2 p0) {
-    float2 p = fract(p0 * float2(123.34, 345.45));
-    p += dot(p, p + 34.345);
-    return fract(p.x * p.y);
+    // Integer avalanche avoids losing fractional randomness at large coordinates.
+    // Quantization retains fractional seed offsets without large float products.
+    uint2 p = as_type<uint2>(int2(floor(p0 * 16.0)));
+    uint h = p.x * 0x9e3779b9u ^ p.y * 0x85ebca6bu;
+    h ^= h >> 16; h *= 0x7feb352du;
+    h ^= h >> 15; h *= 0x846ca68bu;
+    h ^= h >> 16;
+    return float(h >> 8) * (1.0 / 16777216.0);
 }
 
 float activityStateSmokeValueNoise(float2 p) {
@@ -1360,6 +1375,7 @@ float3 activityQuantumCompletionClusters(float2 pixel, float2 resolution, float 
 float activityQuantumGrain(float2 point, thread float2 &cell, thread float &seed) {
     float2 coordinate = point / 2.35;
     cell = floor(coordinate);
+    cell -= floor(cell / 4096.0) * 4096.0;
     seed = activityStateSmokeHash(cell + 31.0);
     float2 jitter = float2(activityStateSmokeHash(cell + 47.0),
                           activityStateSmokeHash(cell + 83.0)) - 0.5;
@@ -1433,7 +1449,8 @@ float3 activityQuantumMotionColor(float density, ActivityStateSmokeUniforms u) {
     // Original microBloom is very faint. Do not let the brighter transfer curve
     // amplify it into a veil between the original fine, closely spaced stars.
     float light = pow(max(density, 0.0), 0.78) * smoothstep(0.03, 0.18, density);
-    float exposure = mix(1.55, 1.78, chromatic) * (1.0 + u.quantumClock.w * 0.12);
+    // Preserve the existing neutral-star luminance ceiling with uniform integer noise.
+    float exposure = mix(1.51, 1.78, chromatic) * (1.0 + u.quantumClock.w * 0.12);
     float3 enhanced = u.background.rgb + tint * light * exposure
         + tint * light * u.completionEffectHighlight;
     // Match the original VISIBLE warm gold, including density-dependent highlights
@@ -1489,10 +1506,7 @@ float activityProgressSloshDensity(
     );
 }
 
-fragment float4 activityStateSmokeFragment(
-    VertexOut in [[stage_in]],
-    constant ActivityStateSmokeUniforms &u [[buffer(0)]]
-) {
+float4 activityStateSmokeSample(VertexOut in, ActivityStateSmokeUniforms u) {
     float2 resolution = max(u.resolution, float2(1.0));
     float2 pixel = floor(in.uv * resolution) + 0.5;
     float2 uv = pixel / resolution;
@@ -1669,6 +1683,26 @@ fragment float4 activityStateSmokeFragment(
         clamp(u.completionSmokeOpacity, 0.0, 1.0)
         * horizontalOpacity;
     return float4(max(color, 0.0) * smokeOpacity, smokeOpacity);
+}
+
+float4 activityStateSmokeLoopedSample(VertexOut in, ActivityStateSmokeUniforms u) {
+    bool quantum = u.effectStyle >= 1.5 && u.effectStyle < 2.5;
+    float clock = quantum ? u.quantumClock.z : u.fieldTime;
+    float4 current = activityStateSmokeSample(in, u);
+    // The incoming epoch reaches zero exactly at rollover. Do not simply wrap
+    // arbitrary sin/noise frequencies: their periods differ, including twinkles.
+    if (clock <= 248.0) { return current; }
+    float blend = smoothstep(248.0, 256.0, clock);
+    if (quantum) { u.quantumClock.z -= 256.0; }
+    else { u.fieldTime -= 256.0; }
+    return mix(current, activityStateSmokeSample(in, u), blend);
+}
+
+fragment float4 activityStateSmokeFragment(
+    VertexOut in [[stage_in]],
+    constant ActivityStateSmokeUniforms &u [[buffer(0)]]
+) {
+    return activityStateSmokeLoopedSample(in, u);
 }
 """
 
