@@ -4,9 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 公开稳定版：[版本历史当前节](../../VERSION_HISTORY.md#当前最新版本)
+> 最近同步：2026-09-13。公开稳定版：[0.4.8 Build 4](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 开发最新版与工作区：[Handoff](../../HANDOFF.md#工作区与版本定位)
+> 开发最新版：[0.5.0 Build 3，主应用与开发台同步运行](../../HANDOFF.md#工作区与版本定位)
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
@@ -16,9 +16,10 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Verifying` | 四种现用特效已修复；226 项测试零失败（2 跳过）、Universal/开发台构建通过；GPU 长时间分布及回绕连续性通过，等待实机验收，未发布 |
+| `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Verifying` | Build 3 统一纯黑底色并纳入审计修复；Build 2 正常动效保持。主应用 / 开发台来源一致并已启动；本轮 AppKit 4 项、Universal 和启动冒烟通过，240 项完整回归为前轮审计证据；待手动检查，未发布 |
+| `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Verifying` | 已纳入 0.5.0 Build 3，特效源码未变；5 项 GPU/时钟回归在前轮 240 项套件中通过，本轮离屏播放检查及 Universal 通过；真实长时间 / Intel 验收待补，未发布 |
 | `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` | [链路审计](../design/quotaview-connection-audit-0.4.8.md)完成；221 项测试零失败（2 跳过）、Universal/永久开发台及 PR/main CI 通过；Developer ID、公证、公开包和 Feed 验证通过，已发布；完整实机/视觉矩阵仍待验收 |
-| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 用户确认当前手动检查通过；源码和固定启动入口随 Build 3 保留，独立于正式应用 |
+| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Verifying` | Build 3 开发台与主应用同时运行，57 项生产来源一致；含纯黑底色和审计修复，AppKit 4 项、签名及单实例检查通过，等待手动体验；0.4.7 首发记录保留 |
 | `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | Build 3 修复文字显示、代理菜单对齐和设置图标，已合并 main 并发布到 GitHub / appcast；旧 Build 2 转为草稿 |
 | `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |
 | `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |

@@ -76,7 +76,7 @@ enum CodexActivityIslandPresentation: Int, CaseIterable {
 
     var transitionDuration: TimeInterval {
         switch self {
-        case .expanded: 0.30
+        case .expanded: ActivityIslandMotion.revealDuration
         case .compact: 0.28
         }
     }
@@ -1998,7 +1998,6 @@ private final class ActivitySelectableOrbView: NSView {
 }
 
 private final class ActivityIslandSurfaceView: NSView {
-    private let materialView = NSVisualEffectView()
     private let tintView = NSView()
     private var resolvedCornerRadius: CGFloat = 34
 
@@ -2012,15 +2011,10 @@ private final class ActivityIslandSurfaceView: NSView {
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
 
-        materialView.material = .hudWindow
-        materialView.blendingMode = .behindWindow
-        materialView.state = .active
-        addSubview(materialView)
-
         tintView.wantsLayer = true
-        tintView.layer?.backgroundColor = NSColor.black
-            .withAlphaComponent(0.72)
-            .cgColor
+        // The effects fade to transparent on completion. Keep a solid black base
+        // underneath instead of revealing desktop-dependent HUD material.
+        tintView.layer?.backgroundColor = NSColor.black.cgColor
         tintView.layer?.borderColor = NSColor.white
             .withAlphaComponent(0.10)
             .cgColor
@@ -2036,7 +2030,6 @@ private final class ActivityIslandSurfaceView: NSView {
     override func layout() {
         super.layout()
         applyCornerRadius()
-        materialView.frame = bounds
         tintView.frame = bounds
     }
 
@@ -2633,6 +2626,9 @@ private final class ActivityIslandQuotaRingView: NSView {
 }
 
 private final class ActivityIslandContentView: NSView {
+    private let textHost = NSView()
+    private var textLayoutFrame: NSRect?
+    private var presentationLayoutSize: NSSize?
     private let shadowHost = NSView()
     private let completionGlowView =
         ActivityIslandCompletionGlowView(frame: .zero)
@@ -2696,6 +2692,7 @@ private final class ActivityIslandContentView: NSView {
         shadowHost.addSubview(completionOutlineView)
         surface.addSubview(stateSmokeView)
         surface.addSubview(orbView)
+        surface.addSubview(textHost)
 
         stateSmokeView.isHidden = true
         stateSmokeView.setEffect(progressEffect)
@@ -2707,7 +2704,7 @@ private final class ActivityIslandContentView: NSView {
             fallbackWeight: .semibold
         )
         kickerLabel.textColor = NSColor.white.withAlphaComponent(0.46)
-        surface.addSubview(kickerLabel)
+        textHost.addSubview(kickerLabel)
 
         titleLabel.font = activityFont(
             "AstaSans-SemiBold",
@@ -2715,7 +2712,7 @@ private final class ActivityIslandContentView: NSView {
             fallbackWeight: .semibold
         )
         titleLabel.textColor = .white
-        surface.addSubview(titleLabel)
+        textHost.addSubview(titleLabel)
 
         compactTitleLabel.font = activityFont(
             "AstaSans-SemiBold",
@@ -2726,41 +2723,41 @@ private final class ActivityIslandContentView: NSView {
         )
         compactTitleLabel.textColor = .white
         compactTitleLabel.horizontalAlignment = .center
-        surface.addSubview(compactTitleLabel)
+        textHost.addSubview(compactTitleLabel)
 
         detailLabel.font = activityFont(
             "AstaSans-Regular",
             size: 11.5,
             fallbackWeight: .regular
         )
-        surface.addSubview(detailLabel)
+        textHost.addSubview(detailLabel)
 
         tokenUsageLabel.horizontalAlignment = .trailing
-        surface.addSubview(tokenUsageLabel)
+        textHost.addSubview(tokenUsageLabel)
 
         completionStatusLabel.horizontalAlignment = .leading
         completionStatusLabel.textColor = .white
-        surface.addSubview(completionStatusLabel)
+        textHost.addSubview(completionStatusLabel)
 
         completionDetailLabel.horizontalAlignment = .leading
         completionDetailLabel.textColor = NSColor.white.withAlphaComponent(
             0.68
         )
-        surface.addSubview(completionDetailLabel)
+        textHost.addSubview(completionDetailLabel)
 
         completionQuotaValueLabel.horizontalAlignment = .leading
         completionQuotaValueLabel.textColor = .white
-        surface.addSubview(completionQuotaValueLabel)
+        textHost.addSubview(completionQuotaValueLabel)
 
         completionQuotaSymbolLabel.horizontalAlignment = .leading
         completionQuotaSymbolLabel.textColor = .white
-        surface.addSubview(completionQuotaSymbolLabel)
+        textHost.addSubview(completionQuotaSymbolLabel)
 
-        surface.addSubview(compactQuotaRingView)
+        textHost.addSubview(compactQuotaRingView)
 
         statusDot.wantsLayer = true
         statusDot.layer?.cornerRadius = activityStatusDotSide / 2
-        surface.addSubview(statusDot)
+        textHost.addSubview(statusDot)
 
         update(
             renderState: initialState,
@@ -2790,6 +2787,9 @@ private final class ActivityIslandContentView: NSView {
         completionOutlineView.frame = shadowHost.bounds
 
         let surfaceBounds = surface.bounds
+        // Keep logical text layout stable; the common parent supplies visual spring scaling.
+        textHost.frame = surface.convert((textLayoutFrame ?? bounds).insetBy(dx: panelInset, dy: panelInset), from: self)
+        let textBounds = textHost.bounds
         stateSmokeView.frame = surfaceBounds
         stateSmokeView.redrawIfPaused()
 
@@ -2805,6 +2805,10 @@ private final class ActivityIslandContentView: NSView {
             )
         let progress = activityExpansionProgress(
             surfaceHeight: surfaceBounds.height,
+            expandedSurfaceHeight: expandedSurfaceHeight
+        )
+        let textProgress = activityExpansionProgress(
+            surfaceHeight: textBounds.height,
             expandedSurfaceHeight: expandedSurfaceHeight
         )
         let surfaceCornerRadius = activityIslandSurfaceCornerRadius(
@@ -2865,7 +2869,7 @@ private final class ActivityIslandContentView: NSView {
             style: islandStyle,
             compactStart: compactTextStart,
             expandedStart: expandedTextStart,
-            expansionProgress: progress
+            expansionProgress: textProgress
         )
         let usesProgressLayout = islandStyle == .progressBar
         let statusColumnWidth =
@@ -2878,25 +2882,25 @@ private final class ActivityIslandContentView: NSView {
             : 18
         let textWidth = max(
             0,
-            surfaceBounds.width - textStart - textTrailing
+            textBounds.width - textStart - textTrailing
         )
         let supportingAlpha = min(
-            max((progress - 0.42) / 0.58, 0),
+            max((textProgress - 0.42) / 0.58, 0),
             1
         )
         let expandedTitleAlpha = min(
-            max((progress - 0.18) / 0.82, 0),
+            max((textProgress - 0.18) / 0.82, 0),
             1
         )
         let compactTitleAlpha = min(
-            max((0.58 - progress) / 0.58, 0),
+            max((0.58 - textProgress) / 0.58, 0),
             1
         )
         let textLayout = activityCenteredTextLayout(
-            surfaceHeight: surfaceBounds.height
+            surfaceHeight: textBounds.height
         )
         let progressTextLayout = activityProgressTextLayout(
-            surfaceHeight: surfaceBounds.height
+            surfaceHeight: textBounds.height
         )
 
         let showsCompletionReceipt =
@@ -2927,7 +2931,7 @@ private final class ActivityIslandContentView: NSView {
             : 0
         compactTitleLabel.alphaValue = compactTitleAlpha
         let centeredStatusY =
-            (surfaceBounds.height - activityStatusLineHeight) / 2
+            (textBounds.height - activityStatusLineHeight) / 2
 
         if usesProgressLayout {
             kickerLabel.frame = NSRect(
@@ -2959,7 +2963,7 @@ private final class ActivityIslandContentView: NSView {
                 height: activitySupportingLineHeight
             )
             let statusColumnX =
-                surfaceBounds.width
+                textBounds.width
                 - CodexActivityIslandProgressBarGeometry.textInset
                 - statusColumnWidth
             let hasTokenUsage = renderState.tokenUsageTitle != nil
@@ -2997,7 +3001,7 @@ private final class ActivityIslandContentView: NSView {
                 y: activityInterpolate(
                     from: centeredStatusY,
                     to: textLayout.titleY,
-                    progress: progress
+                    progress: textProgress
                 ),
                 width: textWidth,
                 height: activityStatusLineHeight
@@ -3049,7 +3053,7 @@ private final class ActivityIslandContentView: NSView {
             - completionQuotaGroupWidth
         let completionQuotaGroupHeight: CGFloat = 34
         let completionQuotaGroupY =
-            (surfaceBounds.height - completionQuotaGroupHeight) / 2
+            (textBounds.height - completionQuotaGroupHeight) / 2
         completionQuotaValueLabel.frame = NSRect(
             x: completionQuotaGroupX,
             y: completionQuotaGroupY,
@@ -3069,7 +3073,7 @@ private final class ActivityIslandContentView: NSView {
             compactQuotaRingView.frame =
                 CodexActivityIslandProgressBarGeometry
                 .compactQuotaRingFrame(
-                    in: surfaceBounds
+                    in: textBounds
                 )
             compactTitleLabel.horizontalAlignment = .leading
             compactTitleLabel.frame = NSRect(
@@ -3082,7 +3086,7 @@ private final class ActivityIslandContentView: NSView {
                             .compactCompletionGap
                         - compactInset
                 ),
-                height: surfaceBounds.height
+                height: textBounds.height
             )
         } else {
             compactQuotaRingView.frame = .zero
@@ -3090,9 +3094,9 @@ private final class ActivityIslandContentView: NSView {
             var compactTitleFrame =
                 CodexActivityIslandTextGeometry.compactTitleFrame(
                     style: islandStyle,
-                    surfaceWidth: surfaceBounds.width
+                    surfaceWidth: textBounds.width
                 )
-            compactTitleFrame.size.height = surfaceBounds.height
+            compactTitleFrame.size.height = textBounds.height
             compactTitleLabel.frame = compactTitleFrame
         }
         shadowHost.layer?.shadowOpacity = Float(
@@ -3107,6 +3111,25 @@ private final class ActivityIslandContentView: NSView {
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         synchronizeLogicalBounds()
+    }
+
+    func setTextLayoutFrame(_ frame: NSRect, opacity: CGFloat = 1) {
+        textHost.alphaValue = min(max(opacity, 0), 1)
+        guard textLayoutFrame != frame else { return }
+        textLayoutFrame = frame
+        needsLayout = true
+    }
+
+    func setPresentationLayoutSize(_ size: NSSize) {
+        guard presentationLayoutSize != size else { return }
+        presentationLayoutSize = size
+        synchronizeLogicalBounds()
+        needsLayout = true
+    }
+
+    func visibleSurfaceFrame(in target: NSView?) -> NSRect {
+        // Convert the actual surface so elastic scaling also applies to its inset.
+        surface.convert(surface.bounds, to: target)
     }
 
     func update(
@@ -3260,7 +3283,8 @@ private final class ActivityIslandContentView: NSView {
     }
 
     private func synchronizeLogicalBounds() {
-        let logicalSize = frame.size
+        // Frame is the animated visual size. Bounds is the layout before shared elastic scaling.
+        let logicalSize = presentationLayoutSize ?? frame.size
 
         guard bounds.origin != .zero || bounds.size != logicalSize else {
             return
@@ -3433,10 +3457,16 @@ struct CodexActivityScreenLocator {
 final class CodexActivityIslandPanelController {
     private let panel: CodexActivityPanel
     private let content: ActivityIslandContentView
-    private var presentationMode:
-        CodexActivityIslandPresentation = .expanded
-    private var targetSize: NSSize
+    private let canvas = NSView()
+    private let canvasSize = NSSize(width: 640, height: 210)
+    private var motion: ActivityIslandMotion
+    private var pose: ActivityIslandMotion.Pose
+    private var layoutPose: ActivityIslandMotion.Pose
+    private var textPose: ActivityIslandMotion.Pose
+    private var compactSize: NSSize
     private let panelInset: CGFloat
+    private var transitionTimer: Timer?
+    private var requestedPlayback = false
     private var reduceMotion = false
     private var isPointerHovering = false
     private var localMouseMonitor: Any?
@@ -3445,61 +3475,45 @@ final class CodexActivityIslandPanelController {
     init(
         initialState: CodexActivityRenderState,
         progressEffect: AppPreferences.CodexActivityProgressEffect,
-        screenPlacement:
-            AppPreferences.CodexActivityScreenPlacement,
+        screenPlacement: AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?
     ) {
-        panelInset = CodexActivityIslandGeometry.panelInset
-        targetSize = CodexActivityIslandGeometry.panelSize(
-            presentation: .expanded,
-            renderState: initialState
-        )
-        content = ActivityIslandContentView(
-            initialState: initialState,
-            progressEffect: progressEffect
-        )
+        let inset = CodexActivityIslandGeometry.panelInset
+        panelInset = inset
+        let hidden = ActivityIslandMotion.hiddenPose(inset: inset)
+        pose = hidden
+        layoutPose = hidden
+        textPose = hidden
+        motion = ActivityIslandMotion(pose: hidden)
+        compactSize = CodexActivityIslandGeometry.panelSize(presentation: .compact, renderState: initialState)
+        content = ActivityIslandContentView(initialState: initialState, progressEffect: progressEffect)
         panel = CodexActivityPanel(
-            contentRect: NSRect(
-                origin: .zero,
-                size: targetSize
-            ),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 210),
+            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false
         )
-
         panel.isReleasedWhenClosed = false
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.level = .statusBar
-        panel.collectionBehavior = [
-            .transient,
-            .moveToActiveSpace,
-            .fullScreenAuxiliary
-        ]
+        panel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.animationBehavior = .none
-        panel.contentView = content
-
-        positionPanel(
-            size: targetSize,
-            animated: false,
-            screenPlacement: screenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
-        )
+        canvas.wantsLayer = true
+        canvas.layer?.masksToBounds = true
+        canvas.addSubview(content)
+        panel.contentView = canvas
+        positionPanel(animated: false, screenPlacement: screenPlacement, codexProcessIdentifier: codexProcessIdentifier)
+        renderPose()
         installHoverMonitors()
     }
 
     deinit {
-        if let localMouseMonitor {
-            NSEvent.removeMonitor(localMouseMonitor)
-        }
-        if let globalMouseMonitor {
-            NSEvent.removeMonitor(globalMouseMonitor)
-        }
+        transitionTimer?.invalidate()
+        if let localMouseMonitor { NSEvent.removeMonitor(localMouseMonitor) }
+        if let globalMouseMonitor { NSEvent.removeMonitor(globalMouseMonitor) }
     }
 
     func update(
@@ -3508,121 +3522,120 @@ final class CodexActivityIslandPanelController {
         presentationAccessibilityValue: String,
         reduceMotion: Bool,
         progressEffect: AppPreferences.CodexActivityProgressEffect,
-        screenPlacement:
-            AppPreferences.CodexActivityScreenPlacement,
+        screenPlacement: AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?,
         playbackEnabled: Bool
     ) {
-        let modeChanged = self.presentationMode != presentationMode
-        self.presentationMode = presentationMode
+        let wasHidden = motion.target.visibility == 0
         self.reduceMotion = reduceMotion
-
+        requestedPlayback = playbackEnabled
         content.setReduceMotion(reduceMotion)
-        content.update(
-            renderState: renderState,
-            progressEffect: progressEffect
-        )
-        content.setPresentationMode(
-            presentationMode,
-            accessibilityValue: presentationAccessibilityValue
-        )
-        content.setPlaybackVisible(playbackEnabled)
-
-        let duration = modeChanged
-            ? presentationMode.transitionDuration
-            : 0.44
-        targetSize = CodexActivityIslandGeometry.panelSize(
-            presentation: presentationMode,
-            renderState: renderState
-        )
-        positionPanel(
-            size: targetSize,
-            animated: !reduceMotion,
-            duration: duration,
-            screenPlacement: screenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
-        )
+        content.update(renderState: renderState, progressEffect: progressEffect)
+        content.setPresentationMode(presentationMode, accessibilityValue: presentationAccessibilityValue)
+        compactSize = CodexActivityIslandGeometry.panelSize(presentation: .compact, renderState: renderState)
+        let size = CodexActivityIslandGeometry.panelSize(presentation: presentationMode, renderState: renderState)
+        motion.present(.init(width: size.width, height: size.height, visibility: 1),
+                       at: ProcessInfo.processInfo.systemUptime,
+                       resizeDuration: presentationMode.transitionDuration,
+                       elasticResize: presentationMode == .expanded, reduceMotion: reduceMotion)
+        positionPanel(animated: false, screenPlacement: screenPlacement, codexProcessIdentifier: codexProcessIdentifier)
+        if wasHidden {
+            isPointerHovering = false
+            panel.alphaValue = CodexActivityIslandHoverTransparencyContract.restingAlpha
+        }
+        // Apply the small/transparent first frame before exposing the window.
+        advanceTransition()
         panel.orderFrontRegardless()
+        synchronizePlayback()
+        startTransitionIfNeeded()
         updateHoverAppearance(animated: !reduceMotion)
     }
 
-    func hide() {
-        content.setPlaybackVisible(false)
-        isPointerHovering = false
-        panel.alphaValue =
-            CodexActivityIslandHoverTransparencyContract.restingAlpha
-        panel.orderOut(nil)
+    func hide(animated: Bool = true) {
+        motion.hide(compact: .init(width: compactSize.width, height: compactSize.height, visibility: 1),
+                    inset: panelInset, at: ProcessInfo.processInfo.systemUptime,
+                    animated: animated && !reduceMotion && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        advanceTransition()
+        startTransitionIfNeeded()
     }
 
-    var isVisible: Bool {
-        panel.isVisible
-    }
+    // Logical visibility ends when dismissal starts, so runtime screen polling can stop immediately.
+    var isVisible: Bool { motion.target.visibility > 0 && panel.isVisible }
 
     func reposition(
-        screenPlacement:
-            AppPreferences.CodexActivityScreenPlacement,
+        screenPlacement: AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?
     ) {
-        positionPanel(
-            size: targetSize,
-            animated: true,
-            duration: 0.20,
-            screenPlacement: screenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
-        )
+        guard isVisible else { return }
+        positionPanel(animated: !reduceMotion, screenPlacement: screenPlacement,
+                      codexProcessIdentifier: codexProcessIdentifier)
+        updateHoverAppearance(animated: !reduceMotion)
     }
 
     private func positionPanel(
-        size: NSSize,
         animated: Bool,
-        duration: TimeInterval = 0.44,
-        screenPlacement:
-            AppPreferences.CodexActivityScreenPlacement,
+        screenPlacement: AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?
     ) {
-        guard let screen = targetScreen(
-            for: screenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier
-        ) else {
-            return
-        }
+        guard let screen = targetScreen(for: screenPlacement, codexProcessIdentifier: codexProcessIdentifier) else { return }
         let visibleFrame = screen.visibleFrame
-        let topInsetCompensation = max(
-            0,
-            panelInset - CodexActivityIslandPresentation.panelInset
-        )
-        let targetFrame = NSRect(
-            x: visibleFrame.midX - size.width / 2,
-            y:
-                visibleFrame.maxY
-                - size.height
-                - 6
-                + topInsetCompensation,
-            width: size.width,
-            height: size.height
-        )
-
-        guard panel.frame != targetFrame else { return }
-
-        guard animated, panel.isVisible else {
-            panel.setFrame(targetFrame, display: true)
-            return
+        let frame = NSRect(x: visibleFrame.midX - canvasSize.width / 2,
+                           y: visibleFrame.maxY - canvasSize.height,
+                           width: canvasSize.width, height: canvasSize.height)
+        guard panel.frame != frame else { return }
+        if animated && panel.isVisible {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.20
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                panel.animator().setFrame(frame, display: true)
+            }
+        } else {
+            panel.setFrame(frame, display: true)
         }
+    }
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
-            context.timingFunction = CAMediaTimingFunction(
-                name: .easeInEaseOut
-            )
-            panel.animator().setFrame(targetFrame, display: true)
-        } completionHandler: { [weak self] in
-            Task { @MainActor in
-                guard let self else { return }
-                self.updateHoverAppearance(
-                    animated: !self.reduceMotion
-                )
+    private func startTransitionIfNeeded() {
+        guard transitionTimer == nil, motion.isAnimating(at: ProcessInfo.processInfo.systemUptime) else { return }
+        let timer = Timer(timeInterval: 1 / 60.0, repeats: true) { [weak self] _ in
+            // This timer is installed exclusively on RunLoop.main below.
+            MainActor.assumeIsolated { self?.advanceTransition() }
+        }
+        timer.tolerance = 0.002
+        RunLoop.main.add(timer, forMode: .common)
+        transitionTimer = timer
+    }
+
+    private func advanceTransition() {
+        let now = ProcessInfo.processInfo.systemUptime
+        pose = motion.sample(at: now)
+        layoutPose = motion.sampleLayout(at: now)
+        textPose = motion.sampleText(at: now)
+        renderPose()
+        if !motion.isAnimating(at: now) {
+            transitionTimer?.invalidate()
+            transitionTimer = nil
+            if motion.target.visibility == 0 {
+                panel.orderOut(nil)
+                isPointerHovering = false
+                panel.alphaValue = CodexActivityIslandHoverTransparencyContract.restingAlpha
             }
         }
+        synchronizePlayback()
+        updateHoverAppearance(animated: !reduceMotion)
+    }
+
+    private func renderPose() {
+        content.setPresentationLayoutSize(NSSize(width: layoutPose.width, height: layoutPose.height))
+        content.frame = pose.frame(in: canvas.bounds, inset: panelInset)
+        content.setTextLayoutFrame(textPose.frame(relativeTo: layoutPose, inset: panelInset), opacity: textPose.visibility)
+        content.alphaValue = pose.visibility
+        content.isHidden = pose.visibility == 0
+        content.layoutSubtreeIfNeeded()
+    }
+
+    private func synchronizePlayback() {
+        content.setPlaybackVisible(requestedPlayback && panel.isVisible
+            && (pose.visibility > 0 || motion.target.visibility > 0))
     }
 
     private func installHoverMonitors() {
@@ -3650,15 +3663,11 @@ final class CodexActivityIslandPanelController {
     }
 
     private func updateHoverAppearance(animated: Bool = true) {
-        let hoverFrame =
-            CodexActivityIslandHoverTransparencyContract
-            .visibleSurfaceFrame(
-                panelFrame: panel.frame,
-                panelInset: panelInset
-            )
+        let hoverFrame = panel.convertToScreen(content.visibleSurfaceFrame(in: nil))
         let isHovering =
             panel.isVisible
-            && hoverFrame.contains(NSEvent.mouseLocation)
+            && pose.visibility > 0
+            && hoverFrame.intersection(panel.frame).contains(NSEvent.mouseLocation)
         guard isHovering != isPointerHovering else { return }
 
         isPointerHovering = isHovering

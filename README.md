@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.8-build.4/QuotaView-v0.4.8-build.4.zip"><strong>Download QuotaView v0.4.8 Build 4</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.5.0-build.3/QuotaView-v0.5.0-build.3.zip"><strong>Download QuotaView v0.5.0 Build 3</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -35,20 +35,24 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island showing live task progress and quota on macOS" width="100%">
+  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/"><img src="Resources/QuotaView-0.5.0-Video-Poster.png" alt="Watch the QuotaView 0.5.0 introduction video" width="100%"></a>
+  <br>
+  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/">▶ Watch the 27-second demo: appearance, activity, and dismissal</a>
 </p>
 
 Codex can keep working after its window leaves the foreground, but its state should not disappear with it. QuotaView turns the active task into a native, click-through **Codex Island** beneath the menu bar. It shows what Codex is doing, how far a planned task has progressed, when approval is waiting, how many tokens the turn has used, and what remains when the task finishes.
 
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
-## 0.4.8 Build 4: clearer first connection and reliable recovery
+## 0.5.0 Build 3: a more natural Island in motion
 
-Automatic connection now distinguishes first-run waiting, readable records, received activity, and read errors. Recheck or choose the Codex data directory from settings. Compatibility Hook setup is optional; opening settings only inspects it, and an untrusted installation can be removed manually.
+The Island emerges from a small capsule beneath the menu bar and settles into its expanded state with a soft spring. Text, icons, and the surface move together while text layout stays stable through the rebound. Compact transitions ease into place; dismissal shrinks the Island before it disappears.
 
-This release fixes task recovery after file replacement, missed connection-state subscriptions, and internal-task filtering at candidate-page boundaries. Connection, recovery, and Hook lifecycle code now have separate responsibilities. Settings icons use consistent padding.
+- **A consistently black surface.** Working and completed tasks share a pure-black background at both sizes, with no gray material exposed as effects fade.
+- **Four effects built for longer sessions.** Bounded clocks and improved noise calculations prevent floating-point degradation and keep clock transitions continuous.
+- **Reliable transitions.** Interrupted animations continue from the current pose. This build fixes early-dismissal sizing and hover bounds during rebound, and respects Reduce Motion.
 
-HTTP/SOCKS5 proxy settings and the reusable Island development console remain available. Quota, Widget payloads, and completion shrink/hide timing retain their existing contracts.
+The development console and app share the motion and rendering code. Automatic connection, HTTP/SOCKS5 proxies, quota, and native widgets remain available.
 
 ## The Codex Island
 
@@ -94,12 +98,12 @@ The Island leads the experience, while the rest of QuotaView provides the contex
 ## Get started
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.4.8-build.4.zip` from the [v0.4.8 Build 4 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4).
+2. Download `QuotaView-v0.5.0-build.3.zip` from the [v0.5.0 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3).
 3. Unzip it and open `QuotaView.app`.
 4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required. If records are not found, use the Island settings to recheck or choose the Codex data directory.
 
 > [!IMPORTANT]
-> v0.4.8 Build 4 is signed with a Developer ID certificate, notarized by Apple,
+> v0.5.0 Build 3 is signed with a Developer ID certificate, notarized by Apple,
 > and stapled for offline Gatekeeper verification. It opens normally after
 > unzipping, without the Finder right-click workaround used by older unsigned
 > builds.
@@ -226,7 +230,7 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 
 ## Releases and project status
 
-- **Recommended stable:** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
+- **Recommended stable:** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
 - **Stable rollback:** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
 - **Withdrawn 0.4.7 Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
 - **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.
