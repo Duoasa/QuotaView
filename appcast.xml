@@ -6,6 +6,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>QuotaView</title>
         <item>
+            <title>0.5.0</title>
+            <pubDate>Mon, 14 Sep 2026 19:43:14 +0800</pubDate>
+            <link>https://github.com/Duoasa/QuotaView</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3</sparkle:fullReleaseNotesLink>
+            <sparkle:version>29</sparkle:version>
+            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.5.0-build.3/QuotaView-v0.5.0-build.3.zip" length="13926087" type="application/octet-stream" sparkle:edSignature="bDO+yYSXtb8DhoO0mvShPMzezybBLkPUvvuyTflJ7Zz+AsONH9UXM3hLw1jcFgWpqokM9oBCENFlU40HFc+wDA=="/>
+        </item>
+        <item>
             <title>0.4.8</title>
             <pubDate>Sat, 12 Sep 2026 03:15:14 +0800</pubDate>
             <link>https://github.com/Duoasa/QuotaView</link>
@@ -25,19 +35,9 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.4.7-build.3/QuotaView-v0.4.7-build.3.zip" length="13768352" type="application/octet-stream" sparkle:edSignature="XbIrY4uciOMGz+9DdAvJnvUhud42elvX0tJddhiF1xBEWEV8rBXq1JybbhOXsS6KWSJJcBoVQhfeSjr8OIOeAg=="/>
         </item>
-        <item>
-            <title>0.4.6</title>
-            <pubDate>Sun, 06 Sep 2026 15:09:45 +0800</pubDate>
-            <link>https://github.com/Duoasa/QuotaView</link>
-            <sparkle:fullReleaseNotesLink>https://github.com/Duoasa/QuotaView/releases/tag/v0.4.6-build.2</sparkle:fullReleaseNotesLink>
-            <sparkle:version>19</sparkle:version>
-            <sparkle:shortVersionString>0.4.6</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.4.6-build.2/QuotaView-v0.4.6-build.2.zip" length="13487447" type="application/octet-stream" sparkle:edSignature="vrV3e6r95Z5q6e1+TSvBdMzZ3rgZbk0DhtXtmXYL2B52HaujJdBwRBUtM2SaPgTBjsXrxLm9R/Ay8Eb8uNU7AA=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: yWQiAGR3Dt5a1NYPL5jNtmCgiALUhtBQM8VDN8g1pNCkInF55XNH0QdkWqqoRNqpnFNuKUxbVPjobtBH3ACcBw==
+edSignature: N3vnhlBKzO6t9xloDsRPz73zDFKl/B4PAN4SST7Ec7uB+vKWieX6IUlfNMXfmslDW3rgqjYH7jJ94UQ0s8YNAg==
 length: 2887
 -->
