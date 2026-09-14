@@ -230,7 +230,7 @@ Tests/
 ## 发布与项目状态
 
 - **推荐稳定版：** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
-- **稳定回滚版本：** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **稳定回滚版本：** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
 - **已撤回的 0.4.7 Build 2：** Release 转为草稿，不再显示在公开时间线；撤回原因和历史证据见 [版本历史](VERSION_HISTORY.md)。
 - **历史代理预览：** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — 仅保留历史测试记录，不是推荐稳定版。
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
