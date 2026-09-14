@@ -35,9 +35,7 @@
 </p>
 
 <p align="center">
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/"><img src="Resources/QuotaView-0.5.0-Video-Poster.png" alt="观看 QuotaView 0.5.0 介绍视频" width="100%"></a>
-  <br>
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/">▶ 观看 27 秒实际演示：呼出、运行与收起</a>
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex 灵动岛在 macOS 上显示实时任务进度与额度" width="100%">
 </p>
 
 当 Codex 在后台继续工作时，它的状态不应该随着窗口离开前台而消失。QuotaView 把当前任务变成菜单栏下方原生、点击穿透的 **Codex 灵动岛**：正在做什么、计划进度如何、是否等待确认、本轮消耗了多少 Token，以及任务完成后还剩多少额度，都可以直接看到。

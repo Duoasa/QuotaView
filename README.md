@@ -35,9 +35,7 @@
 </p>
 
 <p align="center">
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/"><img src="Resources/QuotaView-0.5.0-Video-Poster.png" alt="Watch the QuotaView 0.5.0 introduction video" width="100%"></a>
-  <br>
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/">▶ Watch the 27-second demo: appearance, activity, and dismissal</a>
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island showing live task progress and quota on macOS" width="100%">
 </p>
 
 Codex can keep working after its window leaves the foreground, but its state should not disappear with it. QuotaView turns the active task into a native, click-through **Codex Island** beneath the menu bar. It shows what Codex is doing, how far a planned task has progressed, when approval is waiting, how many tokens the turn has used, and what remains when the task finishes.
