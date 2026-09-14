@@ -35,9 +35,7 @@
 </p>
 
 <p align="center">
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/"><img src="Resources/QuotaView-0.5.0-Video-Poster.png" alt="Watch the QuotaView 0.5.0 introduction video" width="100%"></a>
-  <br>
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/">▶ Watch the 27-second demo: appearance, activity, and dismissal</a>
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island showing live task progress and quota on macOS" width="100%">
 </p>
 
 Codex can keep working after its window leaves the foreground, but its state should not disappear with it. QuotaView turns the active task into a native, click-through **Codex Island** beneath the menu bar. It shows what Codex is doing, how far a planned task has progressed, when approval is waiting, how many tokens the turn has used, and what remains when the task finishes.
@@ -45,6 +43,8 @@ Codex can keep working after its window leaves the foreground, but its state sho
 QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
 
 ## 0.5.0 Build 3: a more natural Island in motion
+
+https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90
 
 The Island emerges from a small capsule beneath the menu bar and settles into its expanded state with a soft spring. Text, icons, and the surface move together while text layout stays stable through the rebound. Compact transitions ease into place; dismissal shrinks the Island before it disappears.
 
@@ -231,7 +231,7 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 ## Releases and project status
 
 - **Recommended stable:** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
-- **Stable rollback:** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **Stable rollback:** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
 - **Withdrawn 0.4.7 Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
 - **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.
 - **Experimental multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)

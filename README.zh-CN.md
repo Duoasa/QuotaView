@@ -35,9 +35,7 @@
 </p>
 
 <p align="center">
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/"><img src="Resources/QuotaView-0.5.0-Video-Poster.png" alt="观看 QuotaView 0.5.0 介绍视频" width="100%"></a>
-  <br>
-  <a href="https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/">▶ 观看 27 秒实际演示：呼出、运行与收起</a>
+  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex 灵动岛在 macOS 上显示实时任务进度与额度" width="100%">
 </p>
 
 当 Codex 在后台继续工作时，它的状态不应该随着窗口离开前台而消失。QuotaView 把当前任务变成菜单栏下方原生、点击穿透的 **Codex 灵动岛**：正在做什么、计划进度如何、是否等待确认、本轮消耗了多少 Token，以及任务完成后还剩多少额度，都可以直接看到。
@@ -45,6 +43,8 @@
 QuotaView 开源、轻量，并以本地处理为核心。新版 Codex 首次启动即可使用，无需配置 Hook；额度与用量则保留在菜单面板和原生小组件中，需要时一次点击即可查看。
 
 ## 0.5.0 Build 3：更自然的灵动岛动效
+
+https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90
 
 灵动岛从菜单栏下方的小胶囊自然冒出，展开时带有柔和的果冻回弹。文字、图标与岛体共同缩放，末端回弹保持文字排版稳定；缩略时平滑收拢，隐藏时先缩小再消失。
 
@@ -230,7 +230,7 @@ Tests/
 ## 发布与项目状态
 
 - **推荐稳定版：** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
-- **稳定回滚版本：** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **稳定回滚版本：** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
 - **已撤回的 0.4.7 Build 2：** Release 转为草稿，不再显示在公开时间线；撤回原因和历史证据见 [版本历史](VERSION_HISTORY.md)。
 - **历史代理预览：** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — 仅保留历史测试记录，不是推荐稳定版。
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
