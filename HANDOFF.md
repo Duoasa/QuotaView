@@ -23,7 +23,7 @@
 ## 0.5.0 Build 3 已发布
 
 2026-09-14 用户明确授权 main、GitHub Stable Release 与 appcast。该链路已完成：
-共用动效、纯黑底色和 LONG-020 正式发布，中英文 README 使用用户提供的[介绍录屏](https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/)。
+共用动效、纯黑底色和 LONG-020 正式发布，中英文 README 的 0.5.0 更新章节直接播放用户提供的[介绍录屏](https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90)，顶部保留原产品图。
 完整 240 项回归、4 项 AppKit、57 项生产来源核对、Universal、Developer ID、公证 / Staple、
 公开回下载与签名 Feed 验证通过；公开包 15 秒启动冒烟通过，Codex 配置指纹不变。
 首轮 CI 的代理夹具冷启动超时已作测试范围修复并复验；生产源码和公证资产未变化。

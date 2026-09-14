@@ -44,6 +44,8 @@ QuotaView is open source, lightweight, and local-first. Current Codex releases w
 
 ## 0.5.0 Build 3: a more natural Island in motion
 
+https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90
+
 The Island emerges from a small capsule beneath the menu bar and settles into its expanded state with a soft spring. Text, icons, and the surface move together while text layout stays stable through the rebound. Compact transitions ease into place; dismissal shrinks the Island before it disappears.
 
 - **A consistently black surface.** Working and completed tasks share a pure-black background at both sizes, with no gray material exposed as effects fade.

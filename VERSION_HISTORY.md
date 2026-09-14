@@ -24,7 +24,7 @@
 | 公证 | Apple Accepted / Staple；Submission `75e22303-d6ad-46cc-89df-5a65d0ba9c31` |
 | 发布状态 | 2026-09-14 正式 Release、Latest、非 Draft / Pre-release；用户明确批准此版本 appcast 准入 |
 | 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `29 → 26 → 22`；提交 `fed39ad51b9c0ea70768022e696052fdca02da34`；SHA-256 `14984c03f06afca2f9c16846281c42b146f4bf97a28129ae5cd1cea7e2ee9cba`；Pages `34840915254` 成功；公开文件逐字节一致，应用内置公钥验证通过 |
-| 介绍视频 | [完整 27 秒录屏](https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/)；中英文 README 使用录屏封面入口；Release 附 `QuotaView-0.5.0-Introduction.mp4`；SHA-256 `676bc6ee7e22ae086188cc41612eaf67434b85f37406857086c160627a2d2b61` |
+| 介绍视频 | [完整 27 秒录屏](https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/)；中英文 README 顶部保留产品图，0.5.0 更新章节使用 [GitHub 内嵌视频](https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90) 直接播放；Release 附 `QuotaView-0.5.0-Introduction.mp4`；SHA-256 `676bc6ee7e22ae086188cc41612eaf67434b85f37406857086c160627a2d2b61` |
 | 回滚基线 | [0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4) / `09c5a2cc9c1505cdbc7897e9c5e9433f05b00d97`；既有 tag、资产与公证记录保留 |
 
 ### 0.5.0 Build 3 发布内容与验证
