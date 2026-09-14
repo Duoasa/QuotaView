@@ -2,7 +2,7 @@
 
 Spec ID：`QV-FIX-EFFECT-LONGEVITY-020`
 
-状态：`Accepted / Verifying`；2026-09-13 同步，用户已授权修复全部现用特效。
+状态：`Accepted / Released`；2026-09-14 随 0.5.0 Build 3 正式发布并进入 appcast。
 
 ## 要求与边界
 
@@ -16,8 +16,8 @@ Spec ID：`QV-FIX-EFFECT-LONGEVITY-020`
 旧 AI 球与 Ripple Glow 不在当前产品可选效果中：前者保留为主渲染器不可用时的
 回退，后者无当前选择入口。其遗留无界时钟未在本轮改写；若后续恢复或扩展这些
 路径，仍需单独处理，不能将本轮四种现用特效的验证扩大到旧渲染器。
-最初验证身份沿用 0.4.8 Build 4 / internal 26；现随 [0.5.0 Build 3 开发候选](quotaview-island-motion-0.5.0.md)
-继续验证，仍未发布。
+最初验证身份沿用 0.4.8 Build 4 / internal 26；现随 [0.5.0 Build 3](quotaview-island-motion-0.5.0.md)
+正式发布；完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 无 Metal 时沿用现有降级。实机视觉、Intel GPU 和长时间使用仍由用户验收。
 
 ## 原因与验证入口
@@ -42,7 +42,9 @@ Spec ID：`QV-FIX-EFFECT-LONGEVITY-020`
 
 ## 验证结果
 
-最新结果：2026-09-13 的 0.5.0 动效审计再次通过全部 5 项 LONG-020 GPU / 时钟回归；
+2026-09-14 发布回归：完整 240 项全部通过（无跳过），包含 5 项 LONG-020 GPU / 时钟检查；正式包与签名 Feed 验证完成。真实长时间与 Intel GPU 仍待人工验收。
+
+前轮结果：2026-09-13 的 0.5.0 动效审计再次通过全部 5 项 LONG-020 GPU / 时钟回归；
 完整套件 240 项（239 通过、1 项代理集成未启用、0 失败），四种效果的 AppKit 播放停止检查
 及 Universal 构建通过。证据：`dist/verification/0.5.0-build2-audit/`。
 用户已确认 Build 2 的正常灵动岛动效；该确认不等于真实长时间或 Intel GPU 验收。
@@ -62,6 +64,6 @@ Spec ID：`QV-FIX-EFFECT-LONGEVITY-020`
 
 这是加速数值推进与离屏 GPU 验证，不等于已在真实桌面连续运行 24 小时。
 交叠窗口的视觉、颗粒排列、Intel GPU 和实际长时间表现仍等待用户验收。
-用户随后要求启动修复版，已退出安装版主进程并启动独立临时 ad-hoc 副本；
+在最初修复验证时，用户随后要求启动修复版，已退出安装版主进程并启动独立临时 ad-hoc 副本；
 副本不含 Widget，启动检查通过、stderr 为空、Codex 配置指纹一致。
 未替换正式安装，未进行 Developer ID 签名公证、推送或更新 appcast。

@@ -1,8 +1,8 @@
 # 灵动岛内容检查控制台
 
 Spec ID: `QV-PROTOTYPE-ISLAND-TEXT-018`
-状态：Accepted / Verifying（2026-09-13 当前开发源码；独立于正式 App）。
-当前开发台与主应用均为 0.5.0 Build 3 / internal 29，已同步重建并启动，包含纯黑底色及两处审计修复；
+状态：Accepted / Released（2026-09-14 源码随 0.5.0 Build 3 合并 main；开发台保持独立）。
+当前开发台与主应用均为 0.5.0 Build 3 / internal 29，此前已同步重建并启动；主应用现已正式发布，包含纯黑底色及两处审计修复；
 归档、签名、单实例与 57 项生产来源指纹核验通过。
 当前身份以 [Handoff](../../HANDOFF.md) 为准；启动与源码一致性证据为 `dist/verification/0.5.0-build3/`。
 
@@ -31,6 +31,10 @@ Spec ID: `QV-PROTOTYPE-ISLAND-TEXT-018`
 现已进入 Build 3 主应用与开发台，连同纯黑底色等待用户手动检查，不推导为已获人工确认。
 本轮 AppKit 4 项与双端构建 / 启动检查通过；前轮完整回归 240 项（239 通过、1 跳过、0 失败）
 保留在 `dist/verification/0.5.0-build2-audit/`，不当作本轮重跑结果。
+
+## 2026-09-14 发布验证
+
+本轮正式回归 240 项、4 项实际 AppKit 渲染和 57 项生产来源核对通过；开发台源码随 0.5.0 Build 3 进入 main，生产模拟边界不变。前述运行 / 手动验收记录为开发过程证据。
 
 ## 0.4.7 Build 3 首发记录
 
