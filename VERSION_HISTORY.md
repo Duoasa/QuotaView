@@ -13,19 +13,27 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.5.0 (Build 3)`；Sparkle 内部 Build `29` |
-| Git tag | `v0.5.0-build.3` |
-| Tag / 发布提交 | `cf92f76cd856bfa7c47dd6d2e25c0312580ddc9a`；[PR #53](https://github.com/Duoasa/QuotaView/pull/53) 已合并 main |
-| GitHub Release | [QuotaView 0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3) |
-| Release 资产 | `QuotaView-v0.5.0-build.3.zip`；`13,926,087 bytes` |
-| SHA-256 | `5397e2f7a10e8dd9f4105632b44e8b74e5cfe64774d91b5cf35573feed35776e` |
+| 最新推荐版本 | `0.5.1 (Build 9)`；Sparkle 内部 Build `38` |
+| Git tag | `v0.5.1-build.9` |
+| Tag / 发布提交 | `927749b1a205495c86b6090e69044b0c39d85730`；已合并并推送 main |
+| GitHub Release | [QuotaView 0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9) |
+| Release 资产 | `QuotaView-v0.5.1-build.9.zip`；`13,946,237 bytes` |
+| SHA-256 | `678831531aefe8a29224596cb4539bf234f817abdf8f48b8ceca62f67177db2e` |
 | 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64`；App、Widget、Core、Hook |
 | 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
-| 公证 | Apple Accepted / Staple；Submission `75e22303-d6ad-46cc-89df-5a65d0ba9c31` |
-| 发布状态 | 2026-09-14 正式 Release、Latest、非 Draft / Pre-release；用户明确批准此版本 appcast 准入 |
-| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `29 → 26 → 22`；提交 `fed39ad51b9c0ea70768022e696052fdca02da34`；SHA-256 `14984c03f06afca2f9c16846281c42b146f4bf97a28129ae5cd1cea7e2ee9cba`；Pages `34840915254` 成功；公开文件逐字节一致，应用内置公钥验证通过 |
+| 公证 | Apple Accepted / Staple；Submission `e6120807-7d60-414a-8952-9293e06c1e1b` |
+| 发布状态 | 2026-09-18 正式 Release、Latest、非 Draft / Pre-release；用户明确批准此版本 appcast 准入 |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `38 → 29 → 26`；提交 `b00d414e5d96e7146e14cbfb3a233de3de8f3c8d`；SHA-256 `411ac183f4c3c10d3d1e865c7853e48adb8296aaabd6f9af47d12f90a59c9296`；Pages `35295667903` 成功；公开文件逐字节一致，应用内置公钥验证通过 |
 | 介绍视频 | [完整 27 秒录屏](https://duoasa.github.io/QuotaView/releases/0.5.0-build.3/)；中英文 README 顶部保留产品图，0.5.0 更新章节使用 [GitHub 内嵌视频](https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90) 直接播放；Release 附 `QuotaView-0.5.0-Introduction.mp4`；SHA-256 `676bc6ee7e22ae086188cc41612eaf67434b85f37406857086c160627a2d2b61` |
-| 回滚基线 | [0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4) / `09c5a2cc9c1505cdbc7897e9c5e9433f05b00d97`；既有 tag、资产与公证记录保留 |
+| 回滚基线 | [0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3) / `cf92f76cd856bfa7c47dd6d2e25c0312580ddc9a`；既有 tag、资产与公证记录保留 |
+
+### 0.5.1 Build 9 发布内容与验证
+
+- 菜单栏额度快捷显示按真实窗口提供 Plus 的五小时 / 七天双窗口单色进度条、剩余百分比和逐窗口重置信息；单窗口方案保持紧凑纯文字显示。
+- 单周期菜单栏文字统一为 14 pt Regular，并将原生状态栏基线下移 1.5 pt，修正与 CodexBar 对照时的垂直偏移。
+- 正式包继续使用真实 Codex 额度来源，开发用虚拟 Plus 数据未进入生产源码或正式包；README 保持不变。
+- 完整 Swift 测试 244 项通过，2 项按规则跳过；Developer ID Universal 包、动态库、资源、Staple、Gatekeeper 与公开回下载验证通过。
+- 证据：Submission `e6120807-7d60-414a-8952-9293e06c1e1b`；ZIP SHA-256 `678831531aefe8a29224596cb4539bf234f817abdf8f48b8ceca62f67177db2e`；公开 appcast 与本地逐字节一致。
 
 ### 0.5.0 Build 3 发布内容与验证
 
@@ -43,7 +51,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.5.0 (Build 3)` | 2026-09-14 | 最新稳定版 | 灵动岛共同回弹、纯黑底色与长时间特效修复 |
+| `0.5.1 (Build 9)` | 2026-09-18 | 最新稳定版 | 菜单栏额度快捷显示与单周期文字对齐 |
+| `0.5.0 (Build 3)` | 2026-09-14 | 历史稳定 / 0.5.1 回滚基线 | 灵动岛共同回弹、纯黑底色与长时间特效修复 |
 | `0.4.8 (Build 4)` | 2026-09-12 | 历史稳定 / 回滚基线 | 自动连接、历史恢复与连接链路重构 |
 | `0.4.7 (Build 3)` | 2026-09-11 | 历史稳定 / 回滚基线 | 灵动岛文字修复、自定义代理与设置图标 |
 | `0.4.7 (Build 2)` | 2026-09-10 | **已撤回 / 已转草稿** | 自定义代理正式版、连接测试与恢复默认 |

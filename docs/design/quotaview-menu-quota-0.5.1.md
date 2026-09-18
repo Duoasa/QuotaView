@@ -1,6 +1,6 @@
 # 0.5.1 菜单栏额度快捷显示
 
-Spec ID：`QV-PRODUCT-MENU-QUOTA-022` · `Accepted / Verifying`
+Spec ID：`QV-PRODUCT-MENU-QUOTA-022` · `Accepted / Released`
 
 2026-09-17 用户授权：以 0.5.0 Build 3 开始 0.5.1，按所提供图片的红框
 采用双行用量快捷显示，进度条为单色。初始开发身份为 Build 1 / internal 30；当前 Build 9 / internal 38。
@@ -29,7 +29,7 @@ Spec ID：`QV-PRODUCT-MENU-QUOTA-022` · `Accepted / Verifying`
 针对周期身份、未知值/零值、模板图片与稳定宽度执行局部冒烟测试；Universal
 Release 无签名构建检查 App / Widget 版本与架构。
 
-结果：2 项局部冒烟测试通过（包含双窗口、周单窗口、缺失窗口、已知零值、
+结果：局部冒烟测试通过（包含双窗口、周单窗口、缺失窗口、已知零值、
 固定宽度与模板图片渲染），Universal Release 构建通过；App / Widget 均为
 0.5.1 / internal 30 / Build 1、x86_64 + arm64，AppIcon / Assets 资源存在。
 `git diff --check` 通过。未运行完整回归，未启动开发 App。
@@ -153,3 +153,5 @@ Build 7 Universal 构建、App / Widget 版本检查与启动冒烟通过。已�
 保留 14 pt Regular、系统着色与原图标位置。双周期无原生文字标题，布局不变。
 此项是根据截图的光学校正，实际菜单栏居中观感仍等待用户确认。
 Universal 构建与实际启动冒烟通过，证据见 `dist/verification/0.5.1-build9/launch.md`。
+0.5.1 Build 9 已完成 244 项 Swift 测试（2 项按规则跳过）、Developer ID 签名、
+Apple 公证 / Staple、Gatekeeper、GitHub Release、公开回下载和 Stable appcast 签名验证。

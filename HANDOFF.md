@@ -1,6 +1,6 @@
 # QuotaView Handoff
 
-更新日期：2026-09-17
+更新日期：2026-09-18
 
 当前公开版本：[版本历史](VERSION_HISTORY.md#当前最新版本)。当前规格：[SDD 注册表](docs/specs/README.md)。
 更早交接按需查阅[历史快照](docs/archive/handoff-2026-09-12.md)，不从历史“下一步”恢复任务。
@@ -9,9 +9,9 @@
 
 | 项目 | 当前状态 |
 |---|---|
-| 公开稳定版 | [0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)；internal 29，已进入 Stable appcast |
-| 发布源码 | `cf92f76cd856bfa7c47dd6d2e25c0312580ddc9a`；PR #53 已合并 main |
-| 当前配置身份 | `0.5.1 / display Build 9 / internal 38`；本地开发，未发布 |
+| 公开稳定版 | [0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9)；internal 38，已进入 Stable appcast |
+| 发布源码 | `927749b1a205495c86b6090e69044b0c39d85730`；已合并 main |
+| 当前配置身份 | `0.5.1 / display Build 9 / internal 38`；已发布 |
 | 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`；目录名不是产品版本 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.0-build.3` / `cf92f76cd856bfa7c47dd6d2e25c0312580ddc9a`；完整资产记录见版本历史 |
@@ -20,13 +20,19 @@
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
 不能将分支名或旧 HEAD 当成当前源码版本。下一可分发迭代使用新的 Build 身份。
 
-## 0.5.1 Build 9：单周期文字垂直对齐
+## 0.5.1 Build 9：单周期文字垂直对齐（已发布）
 
 根据用户与右侧 CodexBar 的对比截图，将原生状态栏文字基线下移 1.5 pt，
 修正 14 pt Regular 文字视觉偏上。保留原生系统着色、图标位置与双周期布局。
-当前构建与启动验证见 `dist/verification/0.5.1-build9/`；视觉待用户确认。
-Universal Release 与 35 秒启动冒烟通过，已运行
+正式 Release 与 Stable appcast 已完成。Universal Release、完整测试、Apple 公证 / Staple、
+Gatekeeper、公开回下载和 Feed 签名验证通过。构建与启动验证见 `dist/verification/0.5.1-build9/`；
+视觉仍由用户持续验收。
+Universal Release 与 35 秒启动冒烟通过，曾运行
 `/tmp/quotaview-051-build9-real.gV2CL7/QuotaView.app`，旧 Build 8 已退出。
+
+发布事实：tag `v0.5.1-build.9`，ZIP `QuotaView-v0.5.1-build.9.zip`，
+Apple Submission `e6120807-7d60-414a-8952-9293e06c1e1b`，Stable appcast 提交
+`b00d414e5d96e7146e14cbfb3a233de3de8f3c8d`。
 
 ## 0.5.1 Build 7：单周期常规字重
 
