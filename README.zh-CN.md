@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.4.8-build.4/QuotaView-v0.4.8-build.4.zip"><strong>下载 QuotaView v0.4.8 Build 4</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.5.0-build.3/QuotaView-v0.5.0-build.3.zip"><strong>下载 QuotaView v0.5.0 Build 3</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -42,13 +42,17 @@
 
 QuotaView 开源、轻量，并以本地处理为核心。新版 Codex 首次启动即可使用，无需配置 Hook；额度与用量则保留在菜单面板和原生小组件中，需要时一次点击即可查看。
 
-## 0.4.8 Build 4：清晰的首次连接与可靠的任务恢复
+## 0.5.0 Build 3：更自然的灵动岛动效
 
-自动连接现在分别显示首次等待、记录可读、已收到活动和读取错误；可在设置中重新检查或选择 Codex 数据目录。兼容 Hook 为可选功能，打开设置只检查状态，未信任的旧安装也可手动移除。
+https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90
 
-本版修复文件替换后的任务恢复、连接状态订阅遗漏及候选分页时内部任务过滤失效，按职责整理连接、恢复和 Hook 生命周期代码，并统一设置图标内边距。
+灵动岛从菜单栏下方的小胶囊自然冒出，展开时带有柔和的果冻回弹。文字、图标与岛体共同缩放，末端回弹保持文字排版稳定；缩略时平滑收拢，隐藏时先缩小再消失。
 
-继续提供 HTTP/SOCKS5 代理设置和长期保留的灵动岛开发台。额度、小组件数据格式以及完成后的缩小和隐藏计时保持原有规则。
+- **始终纯黑的岛体。** 运行与完成、展开与缩略使用相同的纯黑底色，特效淡出后不再显露灰色磨砂背景。
+- **适合持续运行的四种特效。** 修复长时间运行后的浮点精度退化，并保持时钟回绕时的连续性。
+- **可靠的状态切换。** 快速打断动效时从当前画面接续，修正呼出中隐藏与回弹悬停区域的边界问题，继续支持减少动态效果。
+
+开发台与正式应用共用动效和渲染源码。自动连接、HTTP/SOCKS5 代理、额度与小组件继续沿用既有功能。
 
 ## Codex 灵动岛
 
@@ -94,12 +98,12 @@ QuotaView 0.4.5 为新版 Codex 增加了只读本地任务桥：
 ## 快速开始
 
 1. 确认已经安装并登录 ChatGPT 或 Codex。
-2. 从 [v0.4.8 Build 4 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4) 下载 `QuotaView-v0.4.8-build.4.zip`。
+2. 从 [v0.5.0 Build 3 Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3) 下载 `QuotaView-v0.5.0-build.3.zip`。
 3. 解压后打开 `QuotaView.app`。
 4. 开始一个 Codex 任务。新版 Codex 会自动连接，不需要安装 Hook 或重启。
 
 > [!IMPORTANT]
-> v0.4.8 Build 4 已使用 Developer ID 证书签名、通过 Apple 公证并完成
+> v0.5.0 Build 3 已使用 Developer ID 证书签名、通过 Apple 公证并完成
 > Staple。解压后可以正常打开，不再需要旧版未签名构建使用的 Finder
 > 右键打开方式。
 
@@ -225,8 +229,8 @@ Tests/
 
 ## 发布与项目状态
 
-- **推荐稳定版：** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
-- **稳定回滚版本：** [QuotaView v0.4.7 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-build.3)
+- **推荐稳定版：** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
+- **稳定回滚版本：** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
 - **已撤回的 0.4.7 Build 2：** Release 转为草稿，不再显示在公开时间线；撤回原因和历史证据见 [版本历史](VERSION_HISTORY.md)。
 - **历史代理预览：** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — 仅保留历史测试记录，不是推荐稳定版。
 - **实验性多任务预览：** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)

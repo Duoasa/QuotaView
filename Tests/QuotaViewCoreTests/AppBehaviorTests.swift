@@ -26,6 +26,75 @@ private extension NSView {
 
 final class AppBehaviorTests: XCTestCase {
     @MainActor
+    func testMenuBarSingleWindowTextUsesRealWindow() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let window = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
+            usedPercent: 90, remainingPercent: 10, windowDurationMinutes: 10080,
+            resetsAt: now.addingTimeInterval(86400))
+        let row = MenuBarQuotaImage.singleRow(windows: [window], showsCountdown: true,
+            now: now, copy: AppCopy(language: .english))
+        XCTAssertEqual(row, .init(label: "7d", remaining: 10, countdown: "1d"))
+        let missing = MenuBarQuotaImage.singleRow(windows: [], showsCountdown: true,
+            now: now, copy: AppCopy(language: .english))
+        XCTAssertEqual(missing, .init(label: "—", remaining: nil, countdown: "—"))
+    }
+
+    @MainActor
+    func testMenuBarQuotaCountdownsStayWithTheirWindow() {
+        let now = Date(timeIntervalSince1970: 1000)
+        let en = AppCopy(language: .english)
+        let zh = AppCopy(language: .simplifiedChinese)
+        let primary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
+            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 300,
+            resetsAt: now.addingTimeInterval(7200))
+        let weekly = CodexQuotaWindowPresentation(id: CodexDomainCatalog.secondaryRateWindowID,
+            usedPercent: 22, remainingPercent: 78, windowDurationMinutes: 10080,
+            resetsAt: now.addingTimeInterval(259200))
+        let rows = MenuBarQuotaImage.rows(windows: [weekly, primary], showsCountdown: true, now: now, copy: en)
+        XCTAssertEqual(rows.map(\.countdown), ["2h", "3d"])
+        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [primary], showsCountdown: true, now: now)[1].countdown, "—")
+        XCTAssertNil(MenuBarQuotaImage.rows(windows: [primary], now: now)[0].countdown)
+        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now, now: now, copy: en), "Due")
+        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now.addingTimeInterval(-60), now: now, copy: zh), "待刷新")
+        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now.addingTimeInterval(30), now: now, copy: en), "1m")
+        XCTAssertEqual(MenuBarQuotaImage.countdown(until: primary.resetsAt, now: now, copy: zh), "2时")
+        let full = MenuBarQuotaImage.make(rows: rows, showsIcon: true)
+        let countdownOnly = MenuBarQuotaImage.make(rows: rows, showsIcon: false, showsQuota: false)
+        XCTAssertLessThan(countdownOnly.size.width, full.size.width)
+        XCTAssertNotNil(countdownOnly.tiffRepresentation)
+    }
+
+    func testMenuBarQuotaUsesWindowIdentityAndRealDurations() {
+        let primary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
+            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 300, resetsAt: nil)
+        let secondary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.secondaryRateWindowID,
+            usedPercent: 100, remainingPercent: 0, windowDurationMinutes: 10_080, resetsAt: nil)
+        XCTAssertTrue(MenuBarQuotaImage.showsDualQuota(windows: [secondary, primary]))
+        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: [secondary]))
+        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: []))
+        let weeklyOnly = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
+            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 10_080, resetsAt: nil)
+        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: [weeklyOnly]))
+        let rows = MenuBarQuotaImage.rows(windows: [secondary, primary])
+        XCTAssertEqual(rows, [.init(label: "5h", remaining: 90), .init(label: "7d", remaining: 0)])
+        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [primary])[1].value, "—%")
+        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [secondary])[0].value, "—%")
+        XCTAssertEqual(rows[1].value, "0%")
+    }
+
+    @MainActor
+    func testMenuBarQuotaTemplateHasStableWidthAcrossQuotaChanges() {
+        let full = [MenuBarQuotaImage.Row(label: "5h", remaining: 100), .init(label: "7d", remaining: 100)]
+        let empty = [MenuBarQuotaImage.Row(label: "5h", remaining: 0), .init(label: "7d", remaining: nil)]
+        let image = MenuBarQuotaImage.make(rows: full, showsIcon: true)
+        XCTAssertTrue(image.isTemplate)
+        XCTAssertEqual(image.size.height, 22)
+        XCTAssertEqual(image.size, MenuBarQuotaImage.make(rows: empty, showsIcon: true).size)
+        XCTAssertEqual(image.size.width - MenuBarQuotaImage.make(rows: full, showsIcon: false).size.width, 23)
+        XCTAssertNotNil(image.tiffRepresentation)
+    }
+
+    @MainActor
     func testNativeSettingsRowPinsVisibleSegmentedControlToTrailingInset() {
         let row = NativeSettingsRow(
             title: "Island Style",

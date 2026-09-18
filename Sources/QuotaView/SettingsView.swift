@@ -383,12 +383,12 @@ struct SettingsView: View {
             menuBarToggle(
                 component: .remainingQuota,
                 title: copy.text(
-                    "剩余额度百分比",
-                    "Remaining quota percentage"
+                    "用量快捷显示",
+                    "Quota at a glance"
                 ),
                 subtitle: copy.text(
-                    "显示当前周期的剩余额度。",
-                    "Show the quota remaining in the current cycle."
+                    "双窗口显示双行横向条；单窗口使用紧凑的纯文字百分比。",
+                    "Show horizontal bars for two windows, or compact percentage text for one window."
                 )
             )
 
@@ -401,8 +401,8 @@ struct SettingsView: View {
                     "Next reset countdown"
                 ),
                 subtitle: copy.text(
-                    "显示距离下次用量周期重置的时间。",
-                    "Show the time until the next usage-cycle reset."
+                    "在各周期对应行显示距重置时间；悬停始终可查看。",
+                    "Show reset countdowns on their corresponding rows; always available on hover."
                 )
             )
 
@@ -1217,11 +1217,10 @@ struct SettingsView: View {
     }
 
     private var menuBarPreview: some View {
-        MenuBarStatusLabel(
-            store: store,
-            preferences: preferences
-        )
-        .font(.system(size: 12, weight: .semibold))
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            MenuBarStatusLabel(store: store, preferences: preferences, now: context.date)
+        }
+        .font(.system(size: 14, weight: .regular))
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(
@@ -2096,51 +2095,74 @@ private struct NativeSettingsNote: View {
 struct MenuBarStatusLabel: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
+    var now: Date = Date()
 
     private var copy: AppCopy { preferences.copy }
 
     var body: some View {
-        MenuBarStatusContent(
-            showsIcon: preferences.showStatusIcon,
-            textParts: statusTextParts,
-            accessibilityText: statusAccessibilityText
-        )
+        HStack(spacing: 3) {
+            if let image = statusImage {
+                Image(nsImage: image)
+            }
+            if !statusTextParts.isEmpty {
+                Text(verbatim: statusTextParts.joined(separator: " "))
+                    .monospacedDigit()
+            }
+        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(statusAccessibilityText)
+    }
+
+    var statusImage: NSImage? {
+        if showsDualQuota && (preferences.showRemainingQuota || preferences.showResetCountdown) {
+            return MenuBarQuotaImage.make(
+                rows: quotaRows, showsIcon: preferences.showStatusIcon,
+                showsQuota: preferences.showRemainingQuota
+            )
+        }
+        return preferences.showStatusIcon ? MenuBarBrandIcon.statusImage : nil
+    }
+
+    var showsDualQuota: Bool {
+        MenuBarQuotaImage.showsDualQuota(windows: store.snapshot?.quotaWindows ?? [])
+    }
+
+    var quotaRows: [MenuBarQuotaImage.Row] {
+        MenuBarQuotaImage.rows(windows: store.snapshot?.quotaWindows ?? [],
+            showsCountdown: preferences.showResetCountdown, now: now, copy: copy)
+    }
+
+    var singleQuotaRow: MenuBarQuotaImage.Row {
+        MenuBarQuotaImage.singleRow(windows: store.snapshot?.quotaWindows ?? [],
+            showsCountdown: preferences.showResetCountdown, now: now, copy: copy)
     }
 
     var statusTextParts: [String] {
-        [
-            preferences.showRemainingQuota
-                ? remainingLabel
-                : nil,
-            preferences.showResetCountdown
-                ? countdownLabel
-                : nil
-        ].compactMap { $0 }
+        guard !showsDualQuota else { return [] }
+        var parts: [String] = []
+        if preferences.showRemainingQuota { parts.append(singleQuotaRow.value) }
+        if preferences.showResetCountdown { parts.append(countdownLabel) }
+        return parts
     }
 
     var statusAccessibilityText: String {
-        accessibilityStatus
-    }
-
-    private var remainingLabel: String {
-        guard let snapshot = store.snapshot else { return "—%" }
-        return "\(snapshot.remainingPercent)%"
+        var parts = [accessibilityStatus]
+        if showsDualQuota {
+            parts += MenuBarQuotaImage.rows(windows: store.snapshot?.quotaWindows ?? [],
+                showsCountdown: true, now: now, copy: copy).map { row in
+                copy.text("\(row.label) 剩余 \(row.value)，距重置 \(row.countdown ?? "—")",
+                          "\(row.label) \(row.value) remaining, resets in \(row.countdown ?? "—")")
+            }
+        } else {
+            parts.append(copy.text("\(singleQuotaRow.label) 剩余 \(singleQuotaRow.value)，距重置 \(countdownLabel)",
+                                   "\(singleQuotaRow.label) \(singleQuotaRow.value) remaining, resets in \(countdownLabel)"))
+        }
+        return parts.joined(separator: ", ")
     }
 
     private var countdownLabel: String {
-        guard let resetDate = store.snapshot?.resetsAt else { return "—" }
-        let remaining = max(Int(resetDate.timeIntervalSinceNow), 0)
-        let days = remaining / 86_400
-        let hours = (remaining % 86_400) / 3_600
-        let minutes = (remaining % 3_600) / 60
-
-        if days > 0 {
-            return copy.text("\(days)天", "\(days)d")
-        }
-        if hours > 0 {
-            return copy.text("\(hours)时", "\(hours)h")
-        }
-        return copy.text("\(max(minutes, 1))分", "\(max(minutes, 1))m")
+        MenuBarQuotaImage.countdown(until: store.snapshot?.resetsAt, now: now, copy: copy)
     }
 
     private var accessibilityStatus: String {
@@ -2173,28 +2195,104 @@ struct MenuBarStatusLabel: View {
     }
 }
 
-private struct MenuBarStatusContent: View {
-    let showsIcon: Bool
-    let textParts: [String]
-    let accessibilityText: String
+// A template image lets NSStatusBarButton apply the system menu-bar tint,
+// including highlighted, light and dark appearances. Settings uses the same image.
+enum MenuBarQuotaImage {
+    struct Row: Equatable {
+        let label: String
+        let remaining: Int?
+        var countdown: String? = nil
+        var value: String { remaining.map { "\($0)%" } ?? "—%" }
+    }
 
-    var body: some View {
-        HStack(spacing: 3) {
+    // Follow the actual windows, not a subscription-name assumption. A weekly-only
+    // Pro snapshot uses a native percentage and countdown text.
+    static func showsDualQuota(windows: [CodexQuotaWindowPresentation]) -> Bool {
+        windows.contains { $0.id == CodexDomainCatalog.primaryRateWindowID }
+            && windows.contains { $0.id == CodexDomainCatalog.secondaryRateWindowID }
+    }
+
+    static func countdown(until reset: Date?, now: Date, copy: AppCopy) -> String {
+        guard let reset else { return "—" }
+        let seconds = max(0, reset.timeIntervalSince(now))
+        if seconds == 0 { return copy.text("待刷新", "Due") }
+        if seconds >= 86_400 { return copy.text("\(Int(seconds / 86_400))天", "\(Int(seconds / 86_400))d") }
+        if seconds >= 3_600 { return copy.text("\(Int(seconds / 3_600))时", "\(Int(seconds / 3_600))h") }
+        return copy.text("\(max(1, Int(ceil(seconds / 60))))分", "\(max(1, Int(ceil(seconds / 60))))m")
+    }
+
+    static func rows(windows: [CodexQuotaWindowPresentation], showsCountdown: Bool = false,
+                     now: Date = Date(), copy: AppCopy = AppCopy(language: .english)) -> [Row] {
+        [CodexDomainCatalog.primaryRateWindowID, CodexDomainCatalog.secondaryRateWindowID]
+            .map { id in
+                let window = windows.first { $0.id == id }
+                return Row(label: periodLabel(window?.windowDurationMinutes),
+                           remaining: window.map { min(100, max(0, $0.remainingPercent)) },
+                           countdown: showsCountdown ? countdown(until: window?.resetsAt, now: now, copy: copy) : nil)
+            }
+    }
+
+    static func singleRow(windows: [CodexQuotaWindowPresentation], showsCountdown: Bool,
+                          now: Date, copy: AppCopy) -> Row {
+        let window = windows.first { $0.id == CodexDomainCatalog.primaryRateWindowID }
+            ?? windows.first { $0.id == CodexDomainCatalog.secondaryRateWindowID }
+        return Row(label: periodLabel(window?.windowDurationMinutes),
+                   remaining: window.map { min(100, max(0, $0.remainingPercent)) },
+                   countdown: showsCountdown ? countdown(until: window?.resetsAt, now: now, copy: copy) : nil)
+    }
+
+    private static func periodLabel(_ minutes: Int?) -> String {
+        guard let minutes, minutes > 0 else { return "—" }
+        if minutes % 1_440 == 0 { return "\(minutes / 1_440)d" }
+        if minutes % 60 == 0 { return "\(minutes / 60)h" }
+        return "\(minutes)m"
+    }
+
+    static func make(rows: [Row], showsIcon: Bool, showsQuota: Bool = true) -> NSImage {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .semibold)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        let labelWidth = max(14, rows.map { ($0.label as NSString).size(withAttributes: attributes).width }.max() ?? 14)
+        let valueWidth = ("100%" as NSString).size(withAttributes: attributes).width.rounded(.up)
+        let origin: CGFloat = showsIcon ? 23 : 0
+        let barX = origin + labelWidth + 5
+        let barWidth: CGFloat = 24
+        let valueX = barX + barWidth + 5
+        let countdownX = showsQuota ? valueX + valueWidth + 6 : barX
+        let countdownWidth = rows.compactMap(\.countdown).map {
+            max(("00m" as NSString).size(withAttributes: attributes).width,
+                ($0 as NSString).size(withAttributes: attributes).width)
+        }.max()
+        let size = NSSize(width: countdownWidth.map { countdownX + $0 } ?? (valueX + valueWidth), height: 22)
+        let image = NSImage(size: size, flipped: false) { _ in
             if showsIcon {
-                MenuBarBrandIcon()
+                MenuBarBrandIcon.statusImage.draw(in: NSRect(x: 0, y: 3, width: 20, height: 16))
             }
-
-            if !textParts.isEmpty {
-                Text(verbatim: textParts.joined(separator: " "))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .layoutPriority(1)
+            for (index, row) in rows.prefix(2).enumerated() {
+                let y: CGFloat = index == 0 ? 11 : 0
+                (row.label as NSString).draw(at: NSPoint(x: origin, y: y), withAttributes: attributes)
+                if showsQuota {
+                let track = NSRect(x: barX, y: y + 4, width: barWidth, height: 4)
+                NSColor.black.withAlphaComponent(0.22).setFill()
+                NSBezierPath(roundedRect: track, xRadius: 2, yRadius: 2).fill()
+                if let remaining = row.remaining, remaining > 0 {
+                    NSColor.black.setFill()
+                    NSGraphicsContext.saveGraphicsState()
+                    NSBezierPath(roundedRect: track, xRadius: 2, yRadius: 2).addClip()
+                    NSRect(x: track.minX, y: track.minY,
+                           width: barWidth * CGFloat(remaining) / 100, height: track.height).fill()
+                    NSGraphicsContext.restoreGraphicsState()
+                }
+                let width = (row.value as NSString).size(withAttributes: attributes).width
+                (row.value as NSString).draw(at: NSPoint(x: valueX + valueWidth - width, y: y), withAttributes: attributes)
+                }
+                if let countdown = row.countdown {
+                    (countdown as NSString).draw(at: NSPoint(x: countdownX, y: y), withAttributes: attributes)
+                }
             }
+            return true
         }
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
+        image.isTemplate = true
+        return image
     }
 }
 

@@ -20,6 +20,8 @@ if [[ "${mode}" == --verify-only ]]; then
     print -r -- '控制台归档、解包和签名检查通过。'
     rm -rf "${runtime_dir}"
 else
-    # Do not terminate an existing console or discard its current manual inputs.
-    open -a "${app_dir}"
+    # Open this exact archive, even if an older console with the same bundle ID is running.
+    open -n -a "${app_dir}"
+    # The user requested that each update replace old console sessions after a successful launch.
+    osascript -l JavaScript "${console_dir}/close-previous.js" "${app_dir}"
 fi

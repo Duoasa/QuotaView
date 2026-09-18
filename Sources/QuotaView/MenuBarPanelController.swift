@@ -110,8 +110,8 @@ final class MenuBarPanelController: NSObject {
             button.action = #selector(togglePanel(_:))
             button.imageScaling = .scaleProportionallyDown
             button.font = .systemFont(
-                ofSize: NSFont.systemFontSize,
-                weight: .semibold
+                ofSize: 14,
+                weight: .regular
             )
             button.toolTip = "QuotaView"
         }
@@ -210,6 +210,15 @@ final class MenuBarPanelController: NSObject {
     }
 
     private func observeApplicationState() {
+        // Keep local countdowns and hover information current without fetching quota.
+        Timer.publish(every: 30, tolerance: 2, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self, self.store.snapshot != nil else { return }
+                self.updateStatusItem()
+            }
+            .store(in: &cancellables)
+
         store.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -299,12 +308,19 @@ final class MenuBarPanelController: NSObject {
         )
         let title = presentation.statusTextParts.joined(separator: " ")
 
-        button.image = preferences.showStatusIcon
-            ? MenuBarBrandIcon.statusImage
-            : nil
+        button.image = presentation.statusImage
         button.title = title
+        // SF's native title baseline sits slightly above the template icon's
+        // optical center at 14 pt. Move only the text, preserving native tint.
+        button.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 14, weight: .regular),
+                .baselineOffset: -1.5
+            ]
+        )
         button.imagePosition = switch (
-            preferences.showStatusIcon,
+            button.image != nil,
             title.isEmpty
         ) {
         case (true, false):

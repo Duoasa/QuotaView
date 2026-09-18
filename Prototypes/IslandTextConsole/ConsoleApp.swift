@@ -8,7 +8,7 @@ struct IslandTextConsoleApp: App {
     @NSApplicationDelegateAdaptor(IslandTextConsoleDelegate.self) var delegate
     init() { AstaSansFontRegistrar.registerBundledFonts() }
     var body: some Scene {
-        WindowGroup("灵动岛内容检查 · DEBUG") { IslandTextConsoleView() }
+        WindowGroup("灵动岛动效开发台 · DEBUG") { IslandTextConsoleView() }
             .defaultSize(width: 1040, height: 800)
     }
 }
@@ -37,8 +37,9 @@ private final class TextConsoleModel: ObservableObject {
     @Published var paused = false
     @Published var reduceMotion = false
     @Published var hover = false
-    @Published var darkBackground = true
     @Published var reminder = false
+    @Published var presentation: CodexActivityIslandPresentation = .expanded
+    @Published var visible = true
     @Published var effect: AppPreferences.CodexActivityProgressEffect = .dropField
     @Published var playing = false
     @Published var elapsed = 0.0
@@ -97,7 +98,7 @@ private final class TextConsoleModel: ObservableObject {
         }
     }
     func playDemo() {
-        preset("normal"); paused = false; playing = true; elapsed = 0
+        preset("normal"); paused = false; presentation = .expanded; visible = true; playing = true; elapsed = 0
         task = Task { @MainActor [weak self] in
             let started = ProcessInfo.processInfo.systemUptime
             while !Task.isCancelled {
@@ -132,21 +133,34 @@ private struct IslandTextConsoleView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("灵动岛内容检查").font(.title2.bold())
-                    Text("\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") Build \(Bundle.main.object(forInfoDictionaryKey: "QuotaViewDisplayBuildNumber") as? String ?? "—") · 生产渲染 · 仅用于调试 / DEBUG")
+                    Text("灵动岛动效开发台").font(.title2.bold())
+                    Text("\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") Build \(Bundle.main.object(forInfoDictionaryKey: "QuotaViewDisplayBuildNumber") as? String ?? "—") · 系统顶部弹性呼出 · 仅用于调试 / DEBUG")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Toggle("English 文案", isOn: manual(\.english)).toggleStyle(.switch).fixedSize()
             }
-            HStack(spacing: 8) {
-                preview(compact: false, width: 486)
-                Divider().frame(height: 142)
-                preview(compact: true, width: 390)
+            HStack(spacing: 12) {
+                Picker("尺寸", selection: manual(\.presentation)) {
+                    Text("展开").tag(CodexActivityIslandPresentation.expanded)
+                    Text("缩略").tag(CodexActivityIslandPresentation.compact)
+                }.pickerStyle(.segmented).frame(width: 220).disabled(!model.visible)
+                Button("呼出") { model.stop(); model.presentation = .expanded; model.visible = true }
+                    .disabled(model.visible)
+                Button("隐藏") { model.stop(); model.visible = false }
+                    .disabled(!model.visible)
+                Spacer()
+                Text(model.visible ? "\(model.presentation == .expanded ? "展开" : "缩略") · DEBUG" : "已隐藏 · DEBUG")
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity)
-            .background(model.darkBackground ? Color(white: 0.10) : Color(white: 0.88), in: RoundedRectangle(cornerRadius: 12))
+            TextIslandPreview(state: model.renderState, presentation: model.presentation,
+                visible: model.visible, effect: model.effect,
+                reduceMotion: model.reduceMotion || systemReduceMotion,
+                playback: !model.paused, hover: model.hover)
+                .frame(maxWidth: .infinity).frame(height: 1)
+                .accessibilityHidden(true)
+            Text("预览在当前屏幕的系统状态栏下方。呼出从小到大冒出并弹性回稳；隐藏先缩略，再收起。")
+                .font(.caption).foregroundStyle(.secondary)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -210,10 +224,9 @@ private struct IslandTextConsoleView: View {
                         }.frame(width: 235)
                         Toggle("确认提醒", isOn: manual(\.reminder))
                         Toggle("减少动态效果", isOn: manual(\.reduceMotion))
-                        Toggle("暂停动画", isOn: manual(\.paused))
+                        Toggle("暂停特效", isOn: manual(\.paused))
                     }
                     HStack {
-                        Toggle("深色预览底", isOn: manual(\.darkBackground))
                         Toggle("模拟悬停透明", isOn: manual(\.hover))
                         Spacer()
                         Text("可把窗口移至其他显示器检查不同缩放倍率").font(.caption).foregroundStyle(.secondary)
@@ -242,68 +255,180 @@ private struct IslandTextConsoleView: View {
                 .accessibilityLabel("DEBUG · \(title)")
         }
     }
-    private func preview(compact: Bool, width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(compact ? "缩略态 · DEBUG" : "展开态 · DEBUG")
-                .font(.caption).foregroundStyle(model.darkBackground ? .white : .black).padding(.leading, 20)
-            TextIslandPreview(state: model.renderState, compact: compact, effect: model.effect,
-                reduceMotion: model.reduceMotion || systemReduceMotion, playback: !model.paused, hover: model.hover)
-                .frame(width: width, height: 142)
-                .help("仅用于调试 / DEBUG · 真实字号与尺寸，模拟数据")
-        }
-    }
 }
 
 private struct TextIslandPreview: NSViewRepresentable {
     let state: CodexActivityRenderState
-    let compact: Bool
+    let presentation: CodexActivityIslandPresentation
+    let visible: Bool
     let effect: AppPreferences.CodexActivityProgressEffect
     let reduceMotion: Bool
     let playback: Bool
     let hover: Bool
     func makeNSView(context: Context) -> TextIslandHost { .init(state: state) }
     func updateNSView(_ view: TextIslandHost, context: Context) {
-        view.update(state: state, compact: compact, effect: effect, reduceMotion: reduceMotion, playback: playback, hover: hover)
+        view.update(state: state, presentation: presentation, visible: visible, effect: effect,
+                    reduceMotion: reduceMotion, playback: playback, hover: hover)
     }
     static func dismantleNSView(_ view: TextIslandHost, coordinator: ()) { view.stop() }
 }
 
 private final class TextIslandHost: NSView {
     private let island: ActivityIslandContentView
-    private var size = NSSize(width: 462, height: 128)
+    private let previewPanel: NSPanel
+    private let canvas = NSView()
+    private var motion: ConsoleMotion?
+    private var pose = ConsoleMotion.Pose(width: 462, height: 128, visibility: 1)
+    private var layoutPose = ConsoleMotion.Pose(width: 462, height: 128, visibility: 1)
+    private var textPose = ConsoleMotion.Pose(width: 462, height: 128, visibility: 1)
+    private var transitionTimer: Timer?
+    private var hover = false
     private var requestedPlayback = true
-    private var observer: NSObjectProtocol?
+    private var observers: [NSObjectProtocol] = []
+    private var stopped = false
     init(state: CodexActivityRenderState) {
         island = .init(initialState: state, progressEffect: .dropField)
+        previewPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 640, height: 210),
+                               styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         super.init(frame: .zero)
-        addSubview(island)
+        previewPanel.isReleasedWhenClosed = false
+        previewPanel.isFloatingPanel = true
+        previewPanel.hidesOnDeactivate = false
+        // Keep the DEBUG preview above a running production island without stopping it.
+        previewPanel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+        previewPanel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]
+        previewPanel.backgroundColor = .clear
+        previewPanel.isOpaque = false
+        previewPanel.hasShadow = false
+        previewPanel.ignoresMouseEvents = true
+        previewPanel.animationBehavior = .none
+        canvas.wantsLayer = true
+        canvas.layer?.masksToBounds = true
+        canvas.addSubview(island)
+        previewPanel.contentView = canvas
     }
     required init?(coder: NSCoder) { fatalError() }
-    deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
+    deinit {
+        transitionTimer?.invalidate()
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if let observer { NotificationCenter.default.removeObserver(observer) }
-        observer = NotificationCenter.default.addObserver(forName: NSWindow.didChangeOcclusionStateNotification,
-            object: window, queue: .main) { [weak self] _ in self?.refreshPlayback() }
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers.removeAll()
+        if let window {
+            for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMoveNotification,
+                         NSWindow.didChangeScreenNotification] {
+                observers.append(NotificationCenter.default.addObserver(forName: name,
+                    object: window, queue: .main) { [weak self] _ in
+                        self?.positionPanel()
+                        self?.refreshPlayback()
+                    })
+            }
+        }
+        positionPanel()
         refreshPlayback()
     }
-    func update(state: CodexActivityRenderState, compact: Bool, effect: AppPreferences.CodexActivityProgressEffect,
+    func update(state: CodexActivityRenderState, presentation: CodexActivityIslandPresentation,
+                visible: Bool, effect: AppPreferences.CodexActivityProgressEffect,
                 reduceMotion: Bool, playback: Bool, hover: Bool) {
         requestedPlayback = playback
-        size = CodexActivityIslandGeometry.panelSize(presentation: compact ? .compact : .expanded, renderState: state)
+        stopped = false
+        self.hover = hover
+        let size = CodexActivityIslandGeometry.panelSize(presentation: presentation, renderState: state)
         island.setReduceMotion(reduceMotion)
         island.update(renderState: state, progressEffect: effect)
-        island.setPresentationMode(compact ? .compact : .expanded, accessibilityValue: "DEBUG")
-        island.alphaValue = hover ? 0.8 : 1
+        island.setPresentationMode(presentation, accessibilityValue: "DEBUG · \(visible ? "显示" : "隐藏")")
+        let inset = CodexActivityIslandGeometry.panelInset
+        let target = visible ? ConsoleMotion.Pose(width: size.width, height: size.height, visibility: 1)
+            : ConsoleMotion.hiddenPose(inset: inset)
+        if motion == nil {
+            motion = ConsoleMotion(pose: target)
+            pose = target
+            layoutPose = target
+            textPose = target
+        } else if motion?.target != target || reduceMotion {
+            let now = ProcessInfo.processInfo.systemUptime
+            let animated = !reduceMotion && isWindowVisible
+            if !visible {
+                let compactSize = CodexActivityIslandGeometry.panelSize(presentation: .compact, renderState: state)
+                motion?.hide(compact: .init(width: compactSize.width, height: compactSize.height, visibility: 1),
+                             inset: inset, at: now, animated: animated)
+            } else {
+                motion?.present(target, at: now, resizeDuration: presentation.transitionDuration,
+                                elasticResize: presentation == .expanded, reduceMotion: !animated)
+            }
+            advanceTransition()
+            if motion?.isAnimating(at: ProcessInfo.processInfo.systemUptime) == true {
+                startTimer()
+            }
+        }
         refreshPlayback(); needsLayout = true
     }
     override func layout() {
         super.layout()
-        island.frame = NSRect(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2,
-                              width: size.width, height: size.height)
+        positionPanel()
+        renderPose()
+    }
+    private func positionPanel() {
+        guard let screen = window?.screen else { return }
+        let visibleFrame = screen.visibleFrame
+        let frame = NSRect(x: visibleFrame.midX - 320, y: visibleFrame.maxY - 210, width: 640, height: 210)
+        if previewPanel.frame != frame { previewPanel.setFrame(frame, display: false) }
+    }
+    private func renderPose() {
+        let inset = CodexActivityIslandGeometry.panelInset
+        island.setPresentationLayoutSize(NSSize(width: layoutPose.width, height: layoutPose.height))
+        island.frame = pose.frame(in: canvas.bounds, inset: inset)
+        island.setTextLayoutFrame(textPose.frame(relativeTo: layoutPose, inset: inset), opacity: textPose.visibility)
+        island.alphaValue = pose.visibility * (hover
+            ? CodexActivityIslandHoverTransparencyContract.hoveredAlpha : 1)
+        island.isHidden = pose.visibility == 0
+        island.layoutSubtreeIfNeeded()
+    }
+    private var isWindowVisible: Bool { window?.occlusionState.contains(.visible) ?? false }
+    private func startTimer() {
+        guard transitionTimer == nil else { return }
+        let timer = Timer(timeInterval: 1 / 60.0, repeats: true) { [weak self] _ in self?.advanceTransition() }
+        timer.tolerance = 0.002
+        RunLoop.main.add(timer, forMode: .common)
+        transitionTimer = timer
+    }
+    private func advanceTransition() {
+        guard let motion else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        pose = motion.sample(at: now)
+        layoutPose = motion.sampleLayout(at: now)
+        textPose = motion.sampleText(at: now)
+        renderPose()
+        if !motion.isAnimating(at: now) {
+            transitionTimer?.invalidate(); transitionTimer = nil
+        }
+        refreshPlayback()
     }
     func refreshPlayback() {
-        island.setPlaybackVisible(requestedPlayback && (window?.occlusionState.contains(.visible) ?? false))
+        guard !stopped else { return }
+        if !isWindowVisible, let target = motion?.target {
+            transitionTimer?.invalidate(); transitionTimer = nil
+            motion = ConsoleMotion(pose: target)
+            pose = target
+            layoutPose = target
+            textPose = target
+            renderPose()
+        }
+        let shown = isWindowVisible && (pose.visibility > 0 || motion?.target.visibility == 1)
+        if shown {
+            if !previewPanel.isVisible { previewPanel.orderFrontRegardless() }
+        } else {
+            previewPanel.orderOut(nil)
+        }
+        island.setPlaybackVisible(requestedPlayback && shown)
     }
-    func stop() { island.setPlaybackVisible(false) }
+    func stop() {
+        requestedPlayback = false
+        stopped = true
+        transitionTimer?.invalidate(); transitionTimer = nil
+        island.setPlaybackVisible(false)
+        previewPanel.orderOut(nil)
+    }
 }

@@ -6,9 +6,9 @@ Thanks for helping improve QuotaView. Bug reports, Codex compatibility reports, 
 
 - Search existing issues before opening a new one.
 - Use the issue forms for bugs and feature requests.
-- Open an issue before starting a large behavioral or architectural change.
-- Read the [SDD specification index](docs/specs/README.md) and the specification
-  that owns the affected behavior.
+- Discuss a large behavioral or architectural proposal in an issue when the scope has not already been agreed with the maintainer.
+- For behavior or architecture changes, use the [SDD index](docs/specs/README.md)
+  to find the owning specification, or go directly to it when already known.
 - Never post authentication tokens, login credentials, or an unredacted `~/.codex` file.
 
 ## Specification-driven development
@@ -33,11 +33,12 @@ The standard lifecycle and exit criteria are documented in
 Small fixes may reuse an existing Requirement ID. When a change has no spec
 impact, the pull request must state `Spec impact: None` and explain why.
 
-The current stable production baseline is `0.3.3 (Build 3)`. The released
-`0.3.2 Preview 1` multi-task Codex Island remains a separate public pre-release
-and an archived local reference; its production implementation is intentionally
-not part of the 0.3.3 stable source. Any renewed multi-task work requires a new
-iteration, version, build, and explicit product decision.
+Find the public stable release in [Version History](VERSION_HISTORY.md#当前最新版本).
+Find the latest development workspace and unpublished changes in [Handoff](HANDOFF.md).
+The development source can be newer than the stable artifact even while its
+configuration still carries the same version number. Preserve that work.
+Historical multi-task prototypes require an explicit product decision before
+entering the stable single-task Island.
 
 ## Development setup
 
@@ -82,16 +83,15 @@ Keep pull requests focused and explain:
 
 For user-facing changes, update both `README.md` and `README.zh-CN.md` when the documented behavior changes. Keep English and Simplified Chinese interface strings aligned.
 
-Before opening a pull request that changes source, resources, configuration, or
-build scripts:
+Choose checks from [the verification rules](docs/workflow/VALIDATION.md) for the
+actual change. Use focused tests for a local fix; run the standard suite when
+shared behavior, integration boundaries, or release readiness require it. Build
+and inspect the affected deliverable when compilation or packaging is at risk.
+Once relevant checks pass, repeat them only after a new change, failure, or gap.
 
-```bash
-swift test
-```
-
-A Markdown-only change may skip `swift test` when it does not touch production
-behavior, but the pull request must say that it is docs-only and still run link,
-consistency, and `git diff --check` validation.
+Markdown-only work checks affected links, document consistency, and
+`git diff --check`; it does not require Swift tests or a Universal build. Report
+material verification gaps rather than listing every unrelated check as N/A.
 
 Do not add real account responses, credentials, tokens, signing identities, or local machine paths to tests or fixtures.
 
@@ -134,7 +134,7 @@ bundle integrity but does not prove that `dyld` can load embedded frameworks.
 
 - Treat Credits and remaining plan quota as separate values.
 - Keep the account probe read-only.
-- Do not enable quota reset consumption without idempotency, explicit result handling, and protocol compatibility tests.
+- Quota reset remains demonstration-only; do not enable `account/rateLimitResetCredit/consume` as part of UI or maintenance work.
 - Preserve offline, missing executable, cold-start, and App Server error handling.
 - Prefer native SwiftUI/AppKit behavior over web-based UI dependencies.
 

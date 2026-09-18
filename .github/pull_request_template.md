@@ -1,46 +1,27 @@
-## Summary
+## Change
 
-Describe the problem and the focused change that solves it.
+Describe the problem, resulting behavior, and relevant scope limits.
 
 ## Specification
 
-- Spec ID:
-- Requirement ID(s):
-- Spec state: `Draft / Review / Accepted / Superseded / Archived`
-- Delivery state: `Discovery / Prototype / Planned / Implementing / Verifying / Released`
-- Spec impact: `Updated / None` (explain `None`)
-
-Link the owning specification and describe any changed acceptance criteria.
-
-## Scope
-
-- In scope:
-- Explicitly out of scope:
-- Production behavior before/after:
+Link the owning Spec and Requirement IDs and any changed acceptance criteria.
+Without spec impact, write `Spec impact: None` and a short reason.
+Include specification/delivery states only when this PR changes them.
 
 ## Verification
 
-- [ ] `swift test`, or documented N/A for a Markdown-only change.
-- [ ] Prototype tests were not used as a substitute for production tests.
-- [ ] Requirement IDs are mapped to the affected source and tests, when applicable.
-- [ ] I reviewed the affected state transitions and error handling.
-- [ ] I did not add credentials, tokens, real account responses, or local machine paths.
-- [ ] I updated English and Simplified Chinese documentation or strings when needed.
-- [ ] Visual/interaction status is recorded as either product-owner accepted or waiting for acceptance.
-- [ ] I removed temporary runtime mocks, auto-click, auto-expand, screenshot, and UI-QA paths.
+List checks and results using [the verification rules](../docs/workflow/VALIDATION.md).
+Explain material gaps and affected visual/interaction scenarios waiting for owner
+acceptance. Markdown-only changes need link, consistency, and diff checks, not
+Swift tests or builds.
 
-## Compatibility and privacy
+## Additional impact (omit when unrelated)
 
-List any Codex App Server schema assumptions, supported macOS changes, or privacy implications. Write `None` when not applicable.
+Describe changed protocol, compatibility, privacy, localization, or debug paths.
+Prototype checks do not prove production behavior. Preserve the permanent Island
+Text Console; remove temporary production injection before submission.
 
-## Release impact
-
-State `None`, or list the required version, Handoff, version-history, README,
-asset, signing, notarization, tag, and Release updates. Do not record planned
-release work as completed.
-
-- [ ] For a new release cycle, the previous stable version is recorded as an
-  immutable rollback baseline with tag, commit, Release asset, SHA-256,
-  signing, and notarization evidence.
-- [ ] A Preview/Beta/RC leaves the stable GitHub Latest and README download
-  entry unchanged unless the product owner explicitly authorizes otherwise.
+For release work, state the exact version and authorized channels, following
+[the release rules](../docs/workflow/RELEASE.md). Include immutable rollback and
+artifact evidence. Implementation approval does not authorize publication;
+report only release operations that actually happened.

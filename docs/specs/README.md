@@ -4,20 +4,23 @@
 >
 > 状态：`Accepted`
 >
-> 生产基线：`0.4.8 Build 4`（内部 `26`）
+> 最近同步：2026-09-17。公开稳定版：[0.5.0 Build 3](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 当前交付：`0.4.8 Build 4`（内部 `26`）已发布；没有新增未发布迭代
->
-> 当前稳定版：0.4.8 Build 4 / internal 26；main、GitHub Latest、README 与 appcast 已同步
+> 当前源码：[0.5.1 Build 9 开发：单周期文字垂直对齐](../../HANDOFF.md#工作区与版本定位)
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
+0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
+本机小组件显示、实机与自动更新待验收项统一跟踪于 [Handoff](../../HANDOFF.md)。
 
 ## 当前规格
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Verifying` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留横条，视觉待验收，未发布 |
+| `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |
+| `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Released` | 随 0.5.0 Build 3 正式发布；5 项 GPU / 时钟检查随完整 240 项回归通过。真实长时间 / Intel 验收待补 |
 | `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` | [链路审计](../design/quotaview-connection-audit-0.4.8.md)完成；221 项测试零失败（2 跳过）、Universal/永久开发台及 PR/main CI 通过；Developer ID、公证、公开包和 Feed 验证通过，已发布；完整实机/视觉矩阵仍待验收 |
-| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 用户确认当前手动检查通过；源码和固定启动入口随 Build 3 保留，独立于正式应用 |
+| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 单岛手动开发台源码随 Build 3 合并 main；共用生产动效与渲染器，57 项来源一致、4 项 AppKit 通过；不单独发布开发台二进制 |
 | `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | Build 3 修复文字显示、代理菜单对齐和设置图标，已合并 main 并发布到 GitHub / appcast；旧 Build 2 转为草稿 |
 | `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |
 | `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |
@@ -36,7 +39,7 @@
 | `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 的 AI 球尺寸能力保留为发布历史；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.4.7 Build 3 已进入 Stable Feed，线上签名验证通过；真实 N → N+1 安装操作待记录 |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.5.0 Build 3 已进入 Stable Feed，线上签名验证通过；真实 N → N+1 安装操作待记录 |
 
 ## 已替代的当前迭代规格
 
@@ -62,15 +65,12 @@
 
 ## 阅读与维护规则
 
-1. 默认只读 `AGENTS.md`、`HANDOFF.md`、版本历史当前节、本注册表和任务对应
-   的一份规格；历史参考按需读取。
-2. 状态采用：规格 `Draft / Review / Accepted / Superseded / Archived`；
-   交付 `Discovery / Prototype / Planned / Implementing / Verifying / Released`。
-3. 新功能、用户可见行为或架构边界变化注册唯一 Spec ID；小型修复可复用
-   现有 Requirement，文档修复可标记 `Spec impact: None`。
-4. 当前迭代或规格状态变化同步 Handoff；发布、撤回、Latest 或资产变化同步
-   Version History 与 Handoff。
-5. 历史规格中的计划不构成当前授权。Prototype 验收不等于生产验收，构建
-   通过不等于发布。
-
-状态出口和授权边界见 [SDD 开发流程](DEVELOPMENT_PROCESS.md)。
+- 已知规格时直接阅读受影响章节；本表用于查找，不要求逐条打开。
+- 恢复开发任务查阅 Handoff 的开发最新版；核对发布身份才读版本历史当前节。
+  两者可能使用相同配置版本号，不能据此把未发布源码当作稳定版。
+- 新功能或新的架构边界注册唯一 Spec ID；现有行为修复复用其 Requirement。
+  无行为影响的文档修复注明 `Spec impact: None` 即可，不新增产品规格。
+- 状态词汇、完成条件、授权与维护规则统一见 [SDD 开发流程](DEVELOPMENT_PROCESS.md)。
+  仅在这些条件需要解释或变更时读取该流程。
+- 本次文档整理维护 `QV-SDD-PROCESS-001` / `QV-SDD-INDEX-001`，保留上表
+  既有产品交付和验收状态。历史计划不构成新任务授权。

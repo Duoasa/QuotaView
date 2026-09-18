@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B50000000000000000000001 /* CodexActivityIslandMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* CodexActivityIslandMotion.swift */; };
 		B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000052 /* SOCKS5HTTPBridge.swift */; };
 		B10000000000000000000051 /* ProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000051 /* ProxyConfiguration.swift */; };
 		B10000000000000000000001 /* QuotaViewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* QuotaViewApp.swift */; };
@@ -137,6 +138,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F50000000000000000000001 /* CodexActivityIslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIslandMotion.swift; sourceTree = "<group>"; };
 		F10000000000000000000052 /* SOCKS5HTTPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOCKS5HTTPBridge.swift; sourceTree = "<group>"; };
 		F10000000000000000000051 /* ProxyConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyConfiguration.swift; sourceTree = "<group>"; };
 		F10000000000000000000001 /* QuotaViewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewApp.swift; sourceTree = "<group>"; };
@@ -294,6 +296,7 @@
 				F48800000000000000000002 /* CodexActivityStore.swift */,
 				F48800000000000000000001 /* CodexActivityConnectionPresentation.swift */,
 				F1000000000000000000002D /* CodexActivityIsland.swift */,
+				F50000000000000000000001 /* CodexActivityIslandMotion.swift */,
 				F10000000000000000000031 /* CodexActivityRippleGlow.swift */,
 				F10000000000000000000033 /* CodexActivityStateSmoke.swift */,
 				F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */,
@@ -650,6 +653,7 @@
 				B48800000000000000000002 /* CodexActivityStore.swift in Sources */,
 				B48800000000000000000001 /* CodexActivityConnectionPresentation.swift in Sources */,
 				B10000000000000000000028 /* CodexActivityIsland.swift in Sources */,
+				B50000000000000000000001 /* CodexActivityIslandMotion.swift in Sources */,
 				B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */,
 				B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */,
 			);
