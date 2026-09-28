@@ -10,7 +10,7 @@
 | 项目 | 当前状态 |
 |---|---|
 | 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，Stable appcast 已发布并验证 |
-| 发布源码 | `b49de8a7f5a3dc1b7919dbfab8ba51a0be9a6c1f`；已推送 main |
+| 发布源码 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
 | 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；GitHub / appcast 已发布并验证 |
 | 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`；分支 `codex/0.5.1-build.13-codex-path-fix` |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
@@ -41,6 +41,9 @@ README 不变。授权身份：0.5.1 / Build 13 / internal 49，tag `v0.5.1-buil
 本地 ad-hoc 候选已保留于 `dist/local-candidate/`；正式发布包使用同一源码重新签名
 并公证，最终不可变资产信息已写入版本历史。发布证据：
 `dist/verification/0.5.1-build13-release/`。CI 249 项、2 跳过、0 失败；15 秒解压启动通过。未覆盖当前正式安装。
+
+2026-09-28 按用户要求将本次三笔提交和 Build 13 tag 邮箱改为 `xuchen1995@gmail.com`。
+提交文件树、已发布包及签名 Feed 不变；发布引用同步到新 SHA，原 CI / Pages 证据保留。
 
 ## 0.5.1 Build 9：单周期文字垂直对齐（已发布）
 

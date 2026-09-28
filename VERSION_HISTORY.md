@@ -15,7 +15,7 @@
 |---|---|
 | 最新推荐版本 | `0.5.1 (Build 13)`；Sparkle 内部 Build `49` |
 | Git tag | `v0.5.1-build.13` |
-| Tag / 发布提交 | `b49de8a7f5a3dc1b7919dbfab8ba51a0be9a6c1f`；已推送 main |
+| Tag / 发布提交 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
 | GitHub Release | [QuotaView 0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13) |
 | Release 资产 | `QuotaView-v0.5.1-build.13.zip`；`13,946,374 bytes` |
 | SHA-256 | `0dd106920245881abdecb33e768275eb00f6158272fb7de128ac438800fd4f35` |
@@ -23,7 +23,7 @@
 | 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
 | 公证 | Apple Accepted / Staple；Submission `806b1bfa-2467-49f2-9701-d3123d982c3e` |
 | 发布状态 | 2026-09-28 GitHub Stable / Latest；非 Draft / Pre-release；用户明确批准精确版本的 appcast 准入，热更新，README 不变 |
-| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `49 → 38 → 29`；提交 `5a245edea98680525e1337d1c9350b3ad588fc66`；SHA-256 `58bce04b87a7783ae14144e137d0cd7dc125609f8b984938767839d548c31c66`；Pages `36408068235` 成功；线上文件逐字节一致，旧版内置公钥验证通过 |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `49 → 38 → 29`；提交 `742fda1c755aa05faef778b3bffe52dd06fb0582`；SHA-256 `58bce04b87a7783ae14144e137d0cd7dc125609f8b984938767839d548c31c66`；Pages `36408068235` 成功；线上文件逐字节一致，旧版内置公钥验证通过 |
 | 验证 | 主提交 CI `36407668107` 成功：249 项、2 跳过、0 失败；5 项路径冒烟、系统 PATH 真实额度读取、Universal 构建、严格签名、公证/Staple、Gatekeeper、15 秒解压启动通过；GitHub 回下载逐字节一致，旧版内置公钥验证新包和 Feed 通过 |
 | 回滚基线 | [0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9) / `927749b1a205495c86b6090e69044b0c39d85730`；历史资产与公证记录见下文 |
 
@@ -34,6 +34,18 @@
 - 5 项定位器冒烟及真实额度读取验证通过；GitHub CI 执行完整 249 项（2 跳过、0 失败）。正式包签名、公证、解压启动、公开下载及旧版公钥兼容验证通过。
 - 实际 Intel 设备和视觉/交互仍由用户验收；本次未替换 `/Applications/QuotaView.app`。
 - 证据目录：`dist/verification/0.5.1-build13-release/`。
+
+### Build 13 提交邮箱修正（2026-09-28）
+
+按用户明确要求，将本次代码、发布文档、appcast 提交的作者/提交者及版本 tag 的邮箱
+统一为 `xuchen1995@gmail.com`。三笔提交的文件树逐一相同；仅署名和相应父提交/tag
+引用发生变化，未改动代码、README、签名 Feed 或已公证 ZIP。此处是用户授权的署名修正，
+不产生新的产品 Build，不替换 GitHub Release 资产。
+
+- 代码：`b49de8a7f5a3dc1b7919dbfab8ba51a0be9a6c1f` → `ec99dc184d84fbb011f3e337c95be1f3d82c775c`。
+- 原发布文档：`c689b7dc56f890d0887a43b6a8eee79dc10b1010` → `175e04400ee719db377494399c6e3cd82de98602`。
+- appcast：`5a245edea98680525e1337d1c9350b3ad588fc66` → `742fda1c755aa05faef778b3bffe52dd06fb0582`。
+- 上述 CI 和 Pages 编号保留为改写前同一文件树的验证证据；后续仅同步文档中的提交引用。
 
 ## 0.5.1 (Build 9)
 
