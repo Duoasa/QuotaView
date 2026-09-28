@@ -12,7 +12,12 @@ public enum CodexExecutableLocator {
         }
 
         candidates.append(contentsOf: [
+            // Recent desktop builds embed the CLI in its own app bundle.
+            // GUI launches do not inherit Codex's terminal PATH additions.
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
             "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "/Applications/Codex.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+            "/Applications/Codex.app/Contents/Resources/codex",
             "/opt/homebrew/bin/codex",
             "/usr/local/bin/codex"
         ])

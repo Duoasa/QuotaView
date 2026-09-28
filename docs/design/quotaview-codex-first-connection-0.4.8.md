@@ -146,3 +146,17 @@ PR、发布源码 main CI 及发布文档合并后的最终 main CI（`346386127
 矩阵仍待用户验收；真实 N → N+1 自动更新安装也未记录通过。发布成功不替代这些验收。
 本地证据入口与后续事项统一维护在 Handoff；不可变证据见
 [版本历史](../../VERSION_HISTORY.md#当前最新版本)，当前状态见 [Handoff](../../HANDOFF.md)。
+
+## 0.5.1 Build 13：Codex 内置程序路径兼容
+
+2026-09-28 本地候选已获 GitHub / Stable appcast 发布授权，正式验证进行中。新版 Codex 0.158.0-alpha.2.1 随桌面端
+26.924.22138 将程序放在 `Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`。
+旧定位器在无终端 PATH 的桌面启动环境无法发现该安装。
+
+- 为 ChatGPT.app 与 Codex.app 增加新路径，优先于各自旧版路径；只选择可执行候选。
+- 保持显式 CODEX_EXECUTABLE 的优先级和旧版、Homebrew、PATH 的回退行为。
+- 不修改账户目录、认证、额度解码、缺失数据含义或已安装应用。
+
+5 项隔离路径冒烟覆盖上述边界；收窄 PATH 且移除显式路径的真实额度探针通过。
+Universal 本地包构建、版本和签名核验通过。当前本地故障记录还包含无法识别数据，
+本修复不将此类错误一概归因于路径。产物与限制见 [Handoff](../../HANDOFF.md)。

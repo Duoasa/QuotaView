@@ -1,6 +1,6 @@
 # QuotaView Handoff
 
-更新日期：2026-09-18
+更新日期：2026-09-28
 
 当前公开版本：[版本历史](VERSION_HISTORY.md#当前最新版本)。当前规格：[SDD 注册表](docs/specs/README.md)。
 更早交接按需查阅[历史快照](docs/archive/handoff-2026-09-12.md)，不从历史“下一步”恢复任务。
@@ -11,14 +11,36 @@
 |---|---|
 | 公开稳定版 | [0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9)；internal 38，已进入 Stable appcast |
 | 发布源码 | `927749b1a205495c86b6090e69044b0c39d85730`；已合并 main |
-| 当前配置身份 | `0.5.1 / display Build 9 / internal 38`；已发布 |
-| 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`；目录名不是产品版本 |
+| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；本地修复候选，未发布 |
+| 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`；分支 `codex/0.5.1-build.13-codex-path-fix` |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
-| 回滚入口 | `v0.5.0-build.3` / `cf92f76cd856bfa7c47dd6d2e25c0312580ddc9a`；完整资产记录见版本历史 |
+| 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
 
 进入后先用 `git worktree list`、`git status --short --branch` 与 `git log -1` 核实实时状态。
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
 不能将分支名或旧 HEAD 当成当前源码版本。下一可分发迭代使用新的 Build 身份。
+
+## 0.5.1 Build 13：Codex 程序路径修复候选
+
+基于公开 Build 9 的生产代码（`927749b`）；`71932fd` 仅补齐其发布文档。
+新增 ChatGPT.app / Codex.app 内 `Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`
+查找路径；保留旧版 `Resources/codex`、独立 CLI、PATH 及 CODEX_EXECUTABLE 优先级。
+读取协议、真实数据及界面保持原实现，未带入后续多任务或压缩实验。
+
+Build 10–12 已用于开发，故使用 display Build 13；internal 49 高于现有开发序号 48。
+后续生产/开发包均须继续递增内部序号。5 项路径冒烟通过；移除 CODEX_EXECUTABLE、
+将 PATH 收窄到系统目录后，新建的真实 App Server 读取成功。此证据证明新路径自动发现
+恢复，不代表其他用户所有“无法识别数据”错误已归因或修复。
+
+本地开发阶段已通过 Universal 构建、5 项路径冒烟及系统 PATH 下的真实额度读取。
+2026-09-28 用户明确授权此精确版本推送 GitHub 和 Stable appcast，作为热更新，
+README 不变。授权身份：0.5.1 / Build 13 / internal 49，tag `v0.5.1-build.13`，
+资产 `QuotaView-v0.5.1-build.13.zip`；包含正式签名、公证、回下载及 Feed 部署链路。
+正式打包与发布验证进行中，公开稳定版仍以版本历史为准。视觉由用户验收。
+
+本地 ad-hoc 候选已保留于 `dist/local-candidate/`；正式发布包使用同一源码重新签名
+并公证，最终资产信息在发布后写入版本历史。发布证据：
+`dist/verification/0.5.1-build13-release/`。未覆盖当前正式安装。
 
 ## 0.5.1 Build 9：单周期文字垂直对齐（已发布）
 
