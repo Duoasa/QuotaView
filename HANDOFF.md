@@ -9,9 +9,9 @@
 
 | 项目 | 当前状态 |
 |---|---|
-| 公开稳定版 | [0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9)；internal 38，已进入 Stable appcast |
-| 发布源码 | `927749b1a205495c86b6090e69044b0c39d85730`；已合并 main |
-| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；本地修复候选，未发布 |
+| 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，Stable appcast 已发布并验证 |
+| 发布源码 | `b49de8a7f5a3dc1b7919dbfab8ba51a0be9a6c1f`；已推送 main |
+| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；GitHub / appcast 已发布并验证 |
 | 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`；分支 `codex/0.5.1-build.13-codex-path-fix` |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
@@ -20,7 +20,7 @@
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
 不能将分支名或旧 HEAD 当成当前源码版本。下一可分发迭代使用新的 Build 身份。
 
-## 0.5.1 Build 13：Codex 程序路径修复候选
+## 0.5.1 Build 13：Codex 程序路径热修复
 
 基于公开 Build 9 的生产代码（`927749b`）；`71932fd` 仅补齐其发布文档。
 新增 ChatGPT.app / Codex.app 内 `Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`
@@ -36,11 +36,11 @@ Build 10–12 已用于开发，故使用 display Build 13；internal 49 高于�
 2026-09-28 用户明确授权此精确版本推送 GitHub 和 Stable appcast，作为热更新，
 README 不变。授权身份：0.5.1 / Build 13 / internal 49，tag `v0.5.1-build.13`，
 资产 `QuotaView-v0.5.1-build.13.zip`；包含正式签名、公证、回下载及 Feed 部署链路。
-正式打包与发布验证进行中，公开稳定版仍以版本历史为准。视觉由用户验收。
+正式 Developer ID 包已公证/Staple；GitHub Latest 及回下载已确认。Pages 已成功部署；线上 Feed 与本地逐字节一致并通过旧版内置公钥验证。视觉由用户验收。
 
 本地 ad-hoc 候选已保留于 `dist/local-candidate/`；正式发布包使用同一源码重新签名
-并公证，最终资产信息在发布后写入版本历史。发布证据：
-`dist/verification/0.5.1-build13-release/`。未覆盖当前正式安装。
+并公证，最终不可变资产信息已写入版本历史。发布证据：
+`dist/verification/0.5.1-build13-release/`。CI 249 项、2 跳过、0 失败；15 秒解压启动通过。未覆盖当前正式安装。
 
 ## 0.5.1 Build 9：单周期文字垂直对齐（已发布）
 

@@ -149,7 +149,7 @@ PR、发布源码 main CI 及发布文档合并后的最终 main CI（`346386127
 
 ## 0.5.1 Build 13：Codex 内置程序路径兼容
 
-2026-09-28 本地候选已获 GitHub / Stable appcast 发布授权，正式验证进行中。新版 Codex 0.158.0-alpha.2.1 随桌面端
+2026-09-28 正式包已发布 GitHub；用户已批准 Stable appcast 准入，Feed 已发布并完成线上验证。新版 Codex 0.158.0-alpha.2.1 随桌面端
 26.924.22138 将程序放在 `Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`。
 旧定位器在无终端 PATH 的桌面启动环境无法发现该安装。
 
@@ -158,5 +158,5 @@ PR、发布源码 main CI 及发布文档合并后的最终 main CI（`346386127
 - 不修改账户目录、认证、额度解码、缺失数据含义或已安装应用。
 
 5 项隔离路径冒烟覆盖上述边界；收窄 PATH 且移除显式路径的真实额度探针通过。
-Universal 本地包构建、版本和签名核验通过。当前本地故障记录还包含无法识别数据，
+Universal Developer ID 包、版本、Apple 公证/Staple、Gatekeeper、解压启动、公开回下载及 249 项 CI（2 跳过、0 失败）通过。当前本地故障记录还包含无法识别数据，
 本修复不将此类错误一概归因于路径。产物与限制见 [Handoff](../../HANDOFF.md)。

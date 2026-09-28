@@ -4,15 +4,15 @@
 >
 > 状态：`Accepted`
 >
-> 最近同步：2026-09-28。公开稳定版：[0.5.1 Build 9](../../VERSION_HISTORY.md#当前最新版本)
+> 最近同步：2026-09-28。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 当前源码：[0.5.1 Build 13：Codex 程序路径修复候选](../../HANDOFF.md#工作区与版本定位)
+> 当前源码：[0.5.1 Build 13：Codex 程序路径热修复](../../HANDOFF.md#工作区与版本定位)
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
 本机小组件显示、实机与自动更新待验收项统一跟踪于 [Handoff](../../HANDOFF.md)。
 
-0.5.1 Build 13 已获 GitHub / Stable appcast 准入授权（2026-09-28）；正式签名、公证及发布验证进行中，README 不变。
+0.5.1 Build 13 已获 GitHub / Stable appcast 准入授权（2026-09-28）；GitHub Latest、签名公证与 CI / 公开包验证完成，Stable appcast 已发布并验证，README 不变。
 
 ## 当前规格
 
@@ -21,7 +21,7 @@
 | `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
 | `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |
 | `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Released` | 随 0.5.0 Build 3 正式发布；5 项 GPU / 时钟检查随完整 240 项回归通过。真实长时间 / Intel 验收待补 |
-| `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` | [链路审计](../design/quotaview-connection-audit-0.4.8.md)完成；221 项测试零失败（2 跳过）、Universal/永久开发台及 PR/main CI 通过；Developer ID、公证、公开包和 Feed 验证通过，已发布；完整实机/视觉矩阵仍待验收；Build 13 新增内置 CLI 路径兼容，本地路径/真实额度冒烟及 Universal 构建通过，未发布 |
+| `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` | [链路审计](../design/quotaview-connection-audit-0.4.8.md)完成；221 项测试零失败（2 跳过）、Universal/永久开发台及 PR/main CI 通过；Developer ID、公证、公开包和 Feed 验证通过，已发布；完整实机/视觉矩阵仍待验收；Build 13 内置 CLI 路径修复已发布 GitHub，249 项 CI（2 跳过）与正式产物验证通过，appcast 已发布并验证 |
 | `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 单岛手动开发台源码随 Build 3 合并 main；共用生产动效与渲染器，57 项来源一致、4 项 AppKit 通过；不单独发布开发台二进制 |
 | `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | Build 3 修复文字显示、代理菜单对齐和设置图标，已合并 main 并发布到 GitHub / appcast；旧 Build 2 转为草稿 |
 | `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |

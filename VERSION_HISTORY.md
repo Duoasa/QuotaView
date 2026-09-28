@@ -13,7 +13,35 @@
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.5.1 (Build 9)`；Sparkle 内部 Build `38` |
+| 最新推荐版本 | `0.5.1 (Build 13)`；Sparkle 内部 Build `49` |
+| Git tag | `v0.5.1-build.13` |
+| Tag / 发布提交 | `b49de8a7f5a3dc1b7919dbfab8ba51a0be9a6c1f`；已推送 main |
+| GitHub Release | [QuotaView 0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13) |
+| Release 资产 | `QuotaView-v0.5.1-build.13.zip`；`13,946,374 bytes` |
+| SHA-256 | `0dd106920245881abdecb33e768275eb00f6158272fb7de128ac438800fd4f35` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64`；App、Widget、Core、Hook |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `806b1bfa-2467-49f2-9701-d3123d982c3e` |
+| 发布状态 | 2026-09-28 GitHub Stable / Latest；非 Draft / Pre-release；用户明确批准精确版本的 appcast 准入，热更新，README 不变 |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `49 → 38 → 29`；提交 `5a245edea98680525e1337d1c9350b3ad588fc66`；SHA-256 `58bce04b87a7783ae14144e137d0cd7dc125609f8b984938767839d548c31c66`；Pages `36408068235` 成功；线上文件逐字节一致，旧版内置公钥验证通过 |
+| 验证 | 主提交 CI `36407668107` 成功：249 项、2 跳过、0 失败；5 项路径冒烟、系统 PATH 真实额度读取、Universal 构建、严格签名、公证/Staple、Gatekeeper、15 秒解压启动通过；GitHub 回下载逐字节一致，旧版内置公钥验证新包和 Feed 通过 |
+| 回滚基线 | [0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9) / `927749b1a205495c86b6090e69044b0c39d85730`；历史资产与公证记录见下文 |
+
+### 0.5.1 Build 13 发布内容与验证
+
+- 从公开 Build 9 生产源码修复 Codex 桌面更新后的内置 CLI 路径迁移；支持 ChatGPT.app / Codex.app 的新旧布局，保留自定义路径与独立 CLI 回退。
+- 菜单栏、额度解析与真实数据来源保持原实现，不含后续多任务或压缩实验；中英文 README 与 Build 9 发布后 main 逐字节一致。
+- 5 项定位器冒烟及真实额度读取验证通过；GitHub CI 执行完整 249 项（2 跳过、0 失败）。正式包签名、公证、解压启动、公开下载及旧版公钥兼容验证通过。
+- 实际 Intel 设备和视觉/交互仍由用户验收；本次未替换 `/Applications/QuotaView.app`。
+- 证据目录：`dist/verification/0.5.1-build13-release/`。
+
+## 0.5.1 (Build 9)
+
+> 历史稳定版，Build 13 的回滚基线。下方 Feed 和验证为当时发布事实。
+
+| 项目 | 当前值 |
+|---|---|
+| 历史稳定版本 | `0.5.1 (Build 9)`；Sparkle 内部 Build `38` |
 | Git tag | `v0.5.1-build.9` |
 | Tag / 发布提交 | `927749b1a205495c86b6090e69044b0c39d85730`；已合并并推送 main |
 | GitHub Release | [QuotaView 0.5.1 Build 9](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.9) |
@@ -51,7 +79,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.5.1 (Build 9)` | 2026-09-18 | 最新稳定版 | 菜单栏额度快捷显示与单周期文字对齐 |
+| `0.5.1 (Build 13)` | 2026-09-28 | 最新稳定版 | Codex 更新后内置程序路径兼容热修复 |
+| `0.5.1 (Build 9)` | 2026-09-18 | 历史稳定 / Build 13 回滚基线 | 菜单栏额度快捷显示与单周期文字对齐 |
 | `0.5.0 (Build 3)` | 2026-09-14 | 历史稳定 / 0.5.1 回滚基线 | 灵动岛共同回弹、纯黑底色与长时间特效修复 |
 | `0.4.8 (Build 4)` | 2026-09-12 | 历史稳定 / 回滚基线 | 自动连接、历史恢复与连接链路重构 |
 | `0.4.7 (Build 3)` | 2026-09-11 | 历史稳定 / 回滚基线 | 灵动岛文字修复、自定义代理与设置图标 |
