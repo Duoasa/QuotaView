@@ -131,13 +131,14 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
     }
 
     func stop() {
+        let wasListening = descriptor >= 0
         source?.cancel()
         source = nil
         if descriptor >= 0 {
             Darwin.close(descriptor)
             descriptor = -1
         }
-        unlink(socketURL.path)
+        if wasListening { unlink(socketURL.path) }
         handler = nil
     }
 

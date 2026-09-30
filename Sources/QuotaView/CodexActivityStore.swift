@@ -17,6 +17,66 @@ final class CodexActivityStore: ObservableObject {
     @Published private(set) var lifecycle:
         CodexActivityTurnLifecycle = .idle
     @Published private(set) var isConfirmationReminderActive = false
+    private(set) var multitask = CodexActivityMultitaskState()
+    // Shared admitted snapshots permit enabling midway through existing work.
+    // No extra observer, timer, or title request runs while multitask is disabled.
+    private var admittedSnapshots: [String: CodexActivityMultitaskState.Entry] = [:]
+    private var multitaskTask: Task<Void, Never>?
+    private var multitaskDeadline: TimeInterval?
+    private var multitaskGeneration: UInt64 = 0
+    private var multitaskTitleTasks: [String: Task<Void, Never>] = [:]
+
+    func tokenUsage(for session: String) -> Int64? {
+        guard let turn = activeTurnHashBySession[session],
+              let usage = turnTokenUsageBySession[session], usage.turnHash == turn,
+              let count = usage.consumedTokens, count > 0 else { return nil }
+        return count
+    }
+
+    // Sum the current turns in this displayed group, never formatted labels or
+    // account totals. Missing data remains unknown rather than a partial total.
+    var multitaskTotalTokenUsage: Int64? {
+        guard !multitask.entries.isEmpty else { return nil }
+        var total: Int64 = 0
+        for entry in multitask.entries {
+            guard let count = tokenUsage(for: entry.snapshot.sessionHash) else { return nil }
+            let sum = total.addingReportingOverflow(count)
+            guard !sum.overflow else { return nil }
+            total = sum.partialValue
+        }
+        return total
+    }
+
+    func title(for session: String) -> String? { titleCache[session] }
+
+    func setMultitaskEnabled(_ enabled: Bool) {
+        guard multitask.enabled != enabled else { return }
+        multitaskGeneration &+= 1
+        multitaskTask?.cancel(); multitaskTask = nil; multitaskDeadline = nil
+        multitaskTitleTasks.values.forEach { $0.cancel() }; multitaskTitleTasks.removeAll()
+        multitask.setEnabled(enabled)
+        guard enabled else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        multitask.updateDelays(compact: Double(compactDelayNanoseconds) / 1e9,
+                               hidden: Double(hiddenDelayNanoseconds) / 1e9, now: now)
+        let seeds = admittedSnapshots.values.filter { $0.lifecycle == .active }
+            .sorted { $0.snapshot.occurredAt < $1.snapshot.occurredAt }
+        for entry in seeds {
+            multitask.receive(entry.snapshot, lifecycle: entry.lifecycle,
+                              compactionSource: entry.compactionSource, now: now, permitsNewEntry: true)
+        }
+        if let session = snapshot?.sessionHash,
+           let entry = multitask.entries.first(where: { $0.snapshot.sessionHash == session }) {
+            multitask.select(entry.id)
+        }
+        resolveMultitaskTitles()
+    }
+
+    func selectMultitaskTask(_ id: Int) {
+        guard multitask.enabled else { return }
+        multitask.select(id)
+        notifyChange()
+    }
 
     var currentTurnTokenUsage: Int64? {
         guard let snapshot,
@@ -33,6 +93,10 @@ final class CodexActivityStore: ObservableObject {
         return consumedTokens
     }
 
+    var localPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
+    var publicMessageDidReceive: ((Data) -> Void)?
+    var admittedActivityDidReceive: ((CodexActivityEvent) -> Void)?
+    var cumulativeTokensDidReceive: ((CodexActivityTokenUsageUpdate) -> Void)?
     var stateDidChange: (() -> Void)?
     var automaticConnectionDidChange: ((CodexAutomaticActivityConnection) -> Void)?
     private(set) var automaticConnection = CodexAutomaticActivityConnection()
@@ -69,6 +133,7 @@ final class CodexActivityStore: ObservableObject {
     private let hookSessionClassifier = CodexActivitySessionClassifier(codexHome: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex"))
     private var localRecovery = CodexLocalActivityRecovery()
     private var selectedActivityAt: Date?
+    private var selectedCompactionSource: CodexActivityEventSource?
     private let sessionKindResolver: (@Sendable (CodexActivityEvent) async -> CodexActivitySessionKind)?
     private var nativeGeneration: UInt64 = 0
     private var nativeStartTask: Task<Void, Never>?
@@ -154,6 +219,9 @@ final class CodexActivityStore: ObservableObject {
                 await self?.receiveClassified(.init(source: .liveSocket, activity: event), generation: run)
             }
             guard self.nativeGeneration == run, !Task.isCancelled else { return }
+            await localRolloutActivityClient.setPublicContentHandler { [weak self] content in
+                guard let self else { return }; await self.receiveLocalPublicContent(content, generation: run)
+            }
             await localRolloutActivityClient.start(
                 handler: { [weak self] record, isStartupReplay in
                     await self?.receiveLocalRecord(record, replay: isStartupReplay, generation: run)
@@ -164,6 +232,9 @@ final class CodexActivityStore: ObservableObject {
                 }
             )
             guard self.nativeGeneration == run, !Task.isCancelled else { return }
+            await sharedActivityClient.setPublicMessageHandler { [weak self] data in
+                await self?.receivePublicMessage(data, generation: run)
+            }
             await sharedActivityClient.start(
                 handler: { [weak self] event in
                     let delivery = CodexActivityDelivery(
@@ -187,8 +258,15 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    private func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation run: UInt64) {
+        guard nativeGeneration == run else { return }; localPublicContentDidReceive?(content)
+    }
+    private func receivePublicMessage(_ data: Data, generation run: UInt64) {
+        guard nativeGeneration == run else { return }; publicMessageDidReceive?(data)
+    }
     private func setLocalHealth(_ health: CodexLocalActivityHealth, generation run: UInt64) {
         guard nativeGeneration == run else { return }
+        if health.hasReadError || health == .disabled { compactionSourceUnavailable(.localRollout) }
         var next = automaticConnection
         next.localHealth = health
         updateAutomaticConnection(next)
@@ -243,7 +321,7 @@ final class CodexActivityStore: ObservableObject {
     func receiveTokenReplay(_ updates: [CodexActivityTokenUsageUpdate]) {
         let before = currentTurnTokenUsage
         for update in updates { receive(update, publish: false) }
-        if currentTurnTokenUsage != before, presentation != .hidden { notifyChange() }
+        if multitask.enabled || (currentTurnTokenUsage != before && presentation != .hidden) { notifyChange() }
     }
 
     private func receiveNativeToken(_ update: CodexActivityTokenUsageUpdate, generation run: UInt64) {
@@ -253,9 +331,37 @@ final class CodexActivityStore: ObservableObject {
 
     private func setSharedConnectionState(_ state: CodexSharedAppServerConnectionState, generation run: UInt64) {
         guard nativeGeneration == run else { return }
+        if state != .connected { compactionSourceUnavailable(.appServer) }
         var next = automaticConnection
         next.sharedState = state
         updateAutomaticConnection(next)
+    }
+
+    func compactionSourceUnavailable(_ source: CodexActivityEventSource) {
+        for (session, entry) in admittedSnapshots where entry.compactionSource == source && entry.snapshot.state == .compactingContext {
+            let old = entry.snapshot
+            let unavailable = CodexActivitySnapshot(sessionHash: session, taskIdentity: old.taskIdentity,
+                state: .unavailable, workspaceName: old.workspaceName, operationKey: .bridgeUnavailable,
+                toolCategory: old.toolCategory, approximateProgressFraction: old.approximateProgressFraction,
+                occurredAt: old.occurredAt)
+            admittedSnapshots[session] = .init(id: 0, snapshot: unavailable, lifecycle: .unconfirmed, compactionSource: nil)
+            multitask.receive(unavailable, lifecycle: .unconfirmed, compactionSource: nil,
+                              now: ProcessInfo.processInfo.systemUptime, permitsNewEntry: false)
+        }
+        if multitask.enabled { notifyChange() }
+        guard selectedCompactionSource == source, let current = snapshot,
+              current.state == .compactingContext else { return }
+        // Losing the start source is not evidence that compaction finished.
+        // Preserve identity and counters until a real continuation or end arrives.
+        snapshot = CodexActivitySnapshot(
+            sessionHash: current.sessionHash, taskIdentity: current.taskIdentity,
+            state: .unavailable, workspaceName: current.workspaceName,
+            operationKey: .bridgeUnavailable, toolCategory: current.toolCategory,
+            approximateProgressFraction: current.approximateProgressFraction,
+            occurredAt: current.occurredAt
+        )
+        lifecycle = .unconfirmed
+        notifyChange()
     }
 
     private func updateAutomaticConnection(_ value: CodexAutomaticActivityConnection) {
@@ -308,6 +414,7 @@ final class CodexActivityStore: ObservableObject {
                                                 selectedSession: snapshot?.sessionHash,
                                                 selectedOccurredAt: selectedActivityAt ?? snapshot?.occurredAt,
                                                 selectionEvidenceAt: selectionEvidenceAt) else { return }
+        admittedActivityDidReceive?(event)
         _ = registerEventID(delivery.eventID)
         for session in admission.evictedSessions { discardSession(session) }
         if resolvedKind != .unknown { sessionKinds[event.sessionHash] = resolvedKind }
@@ -390,10 +497,6 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        // Background state may settle, but only the selected task owns UI timers.
-        guard admission.selectsTask else { return }
-        selectedActivityAt = max(selectedActivityAt ?? .distantPast, selectionEvidenceAt ?? event.occurredAt)
-        lifecycle = nextLifecycle
         let identifiedSnapshot = CodexActivitySnapshot(
             sessionHash: nextSnapshot.sessionHash, taskIdentity: admission.identity,
             state: nextSnapshot.state, workspaceName: nextSnapshot.workspaceName,
@@ -401,6 +504,23 @@ final class CodexActivityStore: ObservableObject {
             approximateProgressFraction: nextSnapshot.approximateProgressFraction,
             occurredAt: nextSnapshot.occurredAt
         )
+        let source: CodexActivityEventSource? = nextSnapshot.state == .compactingContext ? event.source : nil
+        let eligible = !isStaleSettledContinuationEvent(delivery) || selectionEvidenceAt != nil
+        if resolvedKind == .user {
+            let admittedLifecycle: CodexActivityTurnLifecycle = eligible ? nextLifecycle : .unconfirmed
+            admittedSnapshots[event.sessionHash] = .init(id: 0, snapshot: identifiedSnapshot,
+                lifecycle: admittedLifecycle, compactionSource: source)
+            multitask.receive(identifiedSnapshot, lifecycle: admittedLifecycle, compactionSource: source,
+                              now: ProcessInfo.processInfo.systemUptime, permitsNewEntry: eligible)
+        }
+        // Single-island selection and timers retain their existing behavior.
+        guard admission.selectsTask else {
+            if multitask.enabled { notifyChange() }
+            return
+        }
+        selectedActivityAt = max(selectedActivityAt ?? .distantPast, selectionEvidenceAt ?? event.occurredAt)
+        selectedCompactionSource = source
+        lifecycle = nextLifecycle
         revision &+= 1
         let eventRevision = revision
         inactivityTask?.cancel()
@@ -461,6 +581,9 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func receive(_ update: CodexActivityTokenUsageUpdate, publish: Bool = true) {
+        guard update.cumulativeTotalTokens >= 0, update.lastReportedTotalTokens >= 0,
+              update.cumulativeTotalTokens >= update.lastReportedTotalTokens else { return }
+        cumulativeTokensDidReceive?(update)
         // Token records never start a new turn or revive a terminal one.
         guard activeTurnHashBySession[update.sessionHash] == update.turnHash,
               terminalTurnsBySession[update.sessionHash] == nil,
@@ -524,8 +647,7 @@ final class CodexActivityStore: ObservableObject {
         }
         turnTokenUsageBySession[update.sessionHash] = resolved
         guard publish, existing?.consumedTokens != resolved.consumedTokens,
-              snapshot?.sessionHash == update.sessionHash,
-              presentation != .hidden
+              multitask.enabled || (snapshot?.sessionHash == update.sessionHash && presentation != .hidden)
         else { return }
         notifyChange()
     }
@@ -543,6 +665,8 @@ final class CodexActivityStore: ObservableObject {
 
     @discardableResult
     func stop() async -> UInt64 {
+        setMultitaskEnabled(false)
+        admittedSnapshots.removeAll()
         nativeIsRunning = false
         nativeGeneration &+= 1
         let run = nativeGeneration
@@ -557,6 +681,7 @@ final class CodexActivityStore: ObservableObject {
         snapshot = nil
         localRecovery = CodexLocalActivityRecovery()
         selectedActivityAt = nil
+        selectedCompactionSource = nil
         updateAutomaticConnection(.init())
         await titleClient.setActivityNotificationHandler(nil)
         guard run == nativeGeneration else { return run }
@@ -584,6 +709,9 @@ final class CodexActivityStore: ObservableObject {
 
         compactDelayNanoseconds = compactNanoseconds
         hiddenDelayNanoseconds = hiddenNanoseconds
+        multitask.updateDelays(compact: compactDelay, hidden: hiddenDelayAfterCompact,
+                               now: ProcessInfo.processInfo.systemUptime)
+        scheduleMultitaskTransition()
         guard snapshot?.state == .completed
                 || snapshot?.state == .standby
         else {
@@ -920,6 +1048,9 @@ final class CodexActivityStore: ObservableObject {
     }
 
     private func discardSession(_ session: String) {
+        admittedSnapshots.removeValue(forKey: session)
+        multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
+        multitaskTitleTasks.removeValue(forKey: session)?.cancel()
         latestEventAtBySession.removeValue(forKey: session)
         terminalTurnsBySession.removeValue(forKey: session)
         planProgressBySession.removeValue(forKey: session)
@@ -970,6 +1101,44 @@ final class CodexActivityStore: ObservableObject {
     }
 
     private func notifyChange() {
+        scheduleMultitaskTransition()
+        resolveMultitaskTitles()
         stateDidChange?()
+    }
+
+    private func scheduleMultitaskTransition() {
+        let deadline = multitask.enabled ? multitask.nextDeadline : nil
+        guard deadline != multitaskDeadline else { return }
+        multitaskTask?.cancel(); multitaskTask = nil; multitaskDeadline = deadline
+        guard let deadline else { return }
+        let generation = multitaskGeneration
+        multitaskTask = Task { [weak self] in
+            let remaining = max(0, deadline - ProcessInfo.processInfo.systemUptime)
+            do { try await Task.sleep(nanoseconds: Self.nanoseconds(for: remaining)) } catch { return }
+            guard let self, !Task.isCancelled, self.multitask.enabled,
+                  self.multitaskGeneration == generation, self.multitask.nextDeadline == deadline else { return }
+            self.multitask.advance(now: ProcessInfo.processInfo.systemUptime)
+            self.notifyChange()
+        }
+    }
+
+    private func resolveMultitaskTitles() {
+        guard multitask.enabled else { return }
+        let generation = multitaskGeneration
+        for entry in multitask.entries where multitaskTitleTasks.count < 2 {
+            let session = entry.snapshot.sessionHash
+            guard titleCache[session] == nil, multitaskTitleTasks[session] == nil,
+                  titleAttemptedAt[session].map({ Date().timeIntervalSince($0) >= 10 }) ?? true else { continue }
+            titleAttemptedAt[session] = Date()
+            multitaskTitleTasks[session] = Task { [weak self, titleClient] in
+                let title = try? await titleClient.fetchThreadDisplayName(matchingSessionHash: session)
+                guard let self, !Task.isCancelled, self.multitask.enabled,
+                      self.multitaskGeneration == generation else { return }
+                self.multitaskTitleTasks.removeValue(forKey: session)
+                if let title { self.titleCache[session] = title }
+                if self.snapshot?.sessionHash == session { self.resolvedThreadTitle = title }
+                self.notifyChange()
+            }
+        }
     }
 }

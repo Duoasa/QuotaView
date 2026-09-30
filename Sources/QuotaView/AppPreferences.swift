@@ -138,6 +138,7 @@ final class AppPreferences: ObservableObject {
         static let showResetAction = "preferences.panel.showResetAction"
         static let codexActivityIslandEnabled =
             "preferences.codexActivity.islandEnabled"
+        static let codexActivityMultitaskEnabled = "preferences.codexActivity.multitaskEnabled"
         static let codexActivityProgressEffect =
             "preferences.codexActivity.progressEffect"
         static let codexActivityScreenPlacement =
@@ -231,6 +232,10 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(showResetAction, forKey: Key.showResetAction) }
     }
 
+    @Published var codexIslandPrivacy: Bool {
+        didSet { defaults.set(codexIslandPrivacy, forKey: "island.privacyMode") }
+    }
+
     @Published var codexActivityIslandEnabled: Bool {
         didSet {
             defaults.set(
@@ -238,6 +243,10 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.codexActivityIslandEnabled
             )
         }
+    }
+
+    @Published var codexActivityMultitaskEnabled: Bool {
+        didSet { defaults.set(codexActivityMultitaskEnabled, forKey: Key.codexActivityMultitaskEnabled) }
     }
 
     @Published var codexActivityProgressEffect:
@@ -425,9 +434,13 @@ final class AppPreferences: ObservableObject {
             forKey: Key.showResetAction,
             defaultValue: true
         )
+        codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
         codexActivityIslandEnabled = defaults.storedBool(
             forKey: Key.codexActivityIslandEnabled,
             defaultValue: true
+        )
+        codexActivityMultitaskEnabled = defaults.storedBool(
+            forKey: Key.codexActivityMultitaskEnabled, defaultValue: false
         )
         codexActivityProgressEffect = CodexActivityProgressEffect(
             rawValue: defaults.string(

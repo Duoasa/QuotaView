@@ -11,8 +11,8 @@ public enum CodexSharedAppServerConnectionState: String, Sendable {
 public actor CodexSharedAppServerActivityClient {
     public nonisolated static let contentNotificationOptOutMethods = [
         "turn/diff/updated",
-        "item/started",
-        "item/completed",
+        // Item lifecycle carries contextCompaction. The decoder projects only
+        // compaction metadata and immediately discards every other item.
         "item/agentMessage/delta",
         "item/plan/delta",
         "item/reasoning/summaryTextDelta",
@@ -190,6 +190,9 @@ public actor CodexSharedAppServerActivityClient {
         (@Sendable (CodexActivityEvent) async -> Void)?
     private var tokenUsageNotificationHandler:
         (@Sendable (CodexActivityTokenUsageUpdate) async -> Void)?
+    private var publicMessageHandler: (@Sendable (Data) async -> Void)?
+    public func setPublicMessageHandler(_ handler: (@Sendable (Data) async -> Void)?) { publicMessageHandler = handler }
+
     private var connectionStateHandler:
         (@Sendable (CodexSharedAppServerConnectionState) async -> Void)?
     private var connectionState:
@@ -242,6 +245,7 @@ public actor CodexSharedAppServerActivityClient {
         maintenanceTask?.cancel()
         maintenanceTask = nil
         activityNotificationHandler = nil
+        publicMessageHandler = nil
         tokenUsageNotificationHandler = nil
         closeConnection(error: ClientError.connectionClosed)
 
@@ -347,8 +351,7 @@ public actor CodexSharedAppServerActivityClient {
                     "version": configuration.clientVersion
                 ],
                 "capabilities": [
-                    "optOutNotificationMethods": Self
-                        .contentNotificationOptOutMethods
+                    "optOutNotificationMethods": publicMessageHandler == nil ? Self.contentNotificationOptOutMethods : Self.contentNotificationOptOutMethods.filter { $0.contains("reasoning") || $0.contains("hook/") }
                 ]
             ]
         )
@@ -411,6 +414,10 @@ public actor CodexSharedAppServerActivityClient {
         if let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let thread = result["thread"] as? [String: Any] {
             rememberThread(thread, hash: hash)
+            if threadKinds[hash] != .internalTask, let publicMessageHandler,
+               let envelope = try? JSONSerialization.data(withJSONObject: ["method": "thread/snapshot", "params": ["thread": thread]]) {
+                await publicMessageHandler(envelope)
+            }
         } else { threadKinds[hash] = .unknown }
         subscribedThreadHashes.insert(hash)
     }
@@ -542,7 +549,7 @@ public actor CodexSharedAppServerActivityClient {
             throw ClientError.invalidMessage
         }
 
-        if let id = message["id"] as? Int {
+        if message["method"] == nil, let id = message["id"] as? Int {
             guard let request = pending.removeValue(forKey: id) else {
                 return
             }
@@ -580,6 +587,14 @@ public actor CodexSharedAppServerActivityClient {
            let params = message["params"] as? [String: Any],
            let thread = params["thread"] as? [String: Any], let id = thread["id"] as? String {
             rememberThread(thread, hash: CodexActivityPrivacy.hashIdentifier(id))
+        }
+
+        if let method = message["method"] as? String, !method.contains("reasoning"), !method.contains("hook/"),
+           let params = message["params"] as? [String: Any],
+           let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
+           threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)] == .user,
+           (params["item"] as? [String: Any])?["type"] as? String != "reasoning", let publicMessageHandler {
+            await publicMessageHandler(data)
         }
 
         if let event = CodexAppServerActivityNotificationDecoder.decode(

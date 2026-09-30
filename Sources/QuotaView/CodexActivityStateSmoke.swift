@@ -1405,7 +1405,8 @@ float activityQuantumMotionDensity(float2 pixel, float2 resolution, float front,
     float2 cell;
     float seed;
     float particle = activityQuantumGrain(point, cell, seed);
-    float activation = activityQuantumFrontCoverage(pixel, resolution, front, u.completionFillProgress);
+    float activation = u.quantumEnabled.w > 0.5 ? 1.0
+        : activityQuantumFrontCoverage(pixel, resolution, front, u.completionFillProgress);
     float packet = activityQuantumTransportPulse(pixel, resolution, front, phase);
     float restingWeight = max(0.0, 1.0 - dot(mode, float4(1.0)) - failure);
     float groupSeed = activityStateSmokeHash(floor(cell / 7.0) + 263.0);
@@ -1457,7 +1458,7 @@ float3 activityQuantumMotionColor(float density, ActivityStateSmokeUniforms u) {
     // and energy. The same native opacity/compositing pipeline follows both paths.
     float3 reference = activityQuantumOriginalColor(density, u);
     // Breathe AFTER the original transfer so dimming cannot shift gold toward red.
-    float breath = 0.65 + 0.35 * (0.5 + 0.5 * sin(u.quantumClock.z * 2.618));
+    float breath = 1.0; // Island waiting opacity is synchronized with the island glow.
     reference = u.background.rgb + (reference - u.background.rgb) * breath;
     return mix(enhanced, reference,
                clamp(u.quantumWeights.w, 0.0, 1.0));
@@ -1513,8 +1514,11 @@ float4 activityStateSmokeSample(VertexOut in, ActivityStateSmokeUniforms u) {
     float aspect = resolution.x / resolution.y;
     float2 p = float2(uv.x * aspect, uv.y);
 
-    float boundedFront = clamp(u.frontPosition, 0.0, 0.95);
-    float completionFront = mix(
+    // Optional satellite presentation: all pixels participate, without encoding
+    // plan progress or pretending the task completed. Main islands keep w = 0.
+    bool fullSurface = u.quantumEnabled.w > 0.5;
+    float boundedFront = fullSurface ? 1.0 : clamp(u.frontPosition, 0.0, 0.95);
+    float completionFront = fullSurface ? 1.35 : mix(
         boundedFront,
         1.12,
         clamp(u.completionFillProgress, 0.0, 1.0)
@@ -1674,7 +1678,7 @@ float4 activityStateSmokeSample(VertexOut in, ActivityStateSmokeUniforms u) {
         u.opacityStopPositions,
         u.opacityStopOpacities
     );
-    float horizontalOpacity = mix(
+    float horizontalOpacity = fullSurface ? 1.0 : mix(
         normalHorizontalOpacity,
         1.0,
         clamp(u.completionActive, 0.0, 1.0)
@@ -1806,6 +1810,7 @@ private final class ActivityStateSmokeRenderer:
     private var lastFrameAt = CACurrentMediaTime()
     private var reduceMotion = false
     private var playbackEnabled = true
+    private var fullSurface = false
 
     init(view: MTKView) throws {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -1837,6 +1842,13 @@ private final class ActivityStateSmokeRenderer:
     func setPlaybackEnabled(_ enabled: Bool, in view: MTKView) {
         guard playbackEnabled != enabled else { return }
         playbackEnabled = enabled
+        applyPlaybackState(in: view)
+    }
+
+    func setFullSurfacePresentation(_ enabled: Bool, in view: MTKView) {
+        guard fullSurface != enabled else { return }
+        fullSurface = enabled
+        view.preferredFramesPerSecond = enabled ? 30 : 60
         applyPlaybackState(in: view)
     }
 
@@ -1922,6 +1934,12 @@ private final class ActivityStateSmokeRenderer:
         }
     }
 
+    var displayedProgressPosition: Float? { progressProjection.displayedFrontPosition }
+    func restoreProgressPosition(_ fraction: Double?) {
+        // A newly mounted card resumes its task's position without replaying 0 -> p.
+        _ = progressProjection.resolve(approximateProgressFraction: fraction, elapsed: 0, reduceMotion: true)
+    }
+
     func mtkView(
         _ view: MTKView,
         drawableSizeWillChange size: CGSize
@@ -1976,13 +1994,13 @@ private final class ActivityStateSmokeRenderer:
         lastFrameAt = now
         quantumMotion.advance(state: state, elapsed: elapsed, reduceMotion: reduceMotion)
 
-        let resolvedApproximateProgress = progressResolver.resolve(
+        let resolvedApproximateProgress = fullSurface ? nil : progressResolver.resolve(
             state: state,
             plannedFraction: approximateProgressFraction,
             elapsed: elapsed,
             reduceMotion: reduceMotion
         )
-        let frontPosition = progressProjection.resolve(
+        let frontPosition: Float = fullSurface ? 1 : progressProjection.resolve(
             approximateProgressFraction: resolvedApproximateProgress,
             elapsed: elapsed,
             reduceMotion: reduceMotion
@@ -2027,7 +2045,7 @@ private final class ActivityStateSmokeRenderer:
             quantumClock: SIMD4<Float>(quantumMotion.displacement.x,
                 quantumMotion.displacement.y, quantumMotion.phase, quantumMotion.profile.failure),
             quantumEnabled: SIMD4<Float>(1, quantumMotion.profile.visibility,
-                state == .completed ? 1 : 0, 0),
+                state == .completed ? 1 : 0, fullSurface ? 1 : 0),
             opacityStopPositions: currentProfile.opacityCurve.stopPositions,
             opacityStopOpacities: currentProfile.opacityCurve.stopOpacities,
             background: currentProfile.background,
@@ -2066,6 +2084,7 @@ private final class ActivityStateSmokeRenderer:
             && completionTransition.snapshot.smokeOpacity <= 0.001
         let resolvingPlanWithoutMotion =
             reduceMotion
+            && !fullSurface
             && state.activitySupportsUnplannedProgress
             && approximateProgressFraction == nil
             && (progressResolver.mode == .inactive
@@ -2085,6 +2104,7 @@ private final class ActivityStateSmokeRenderer:
 
 final class ActivityStateSmokeMetalView: MTKView {
     private var smokeRenderer: ActivityStateSmokeRenderer?
+    private(set) var fullSurfacePresentation = false
 
     var isRendererAvailable: Bool {
         smokeRenderer != nil
@@ -2104,6 +2124,11 @@ final class ActivityStateSmokeMetalView: MTKView {
         smokeRenderer?.setPlaybackEnabled(enabled, in: self)
     }
 
+    func setFullSurfacePresentation(_ enabled: Bool) {
+        fullSurfacePresentation = enabled
+        smokeRenderer?.setFullSurfacePresentation(enabled, in: self)
+    }
+
     func setReduceMotion(_ enabled: Bool) {
         smokeRenderer?.setReduceMotion(enabled, in: self)
     }
@@ -2121,6 +2146,9 @@ final class ActivityStateSmokeMetalView: MTKView {
     func setApproximateProgress(_ fraction: Double?) {
         smokeRenderer?.setApproximateProgress(fraction, in: self)
     }
+
+    var displayedProgressPosition: Float? { smokeRenderer?.displayedProgressPosition }
+    func restoreProgressPosition(_ fraction: Double?) { smokeRenderer?.restoreProgressPosition(fraction) }
 
     func redrawIfPaused() {
         if isPaused {

@@ -19,6 +19,7 @@ final class CodexActivityRuntime: ObservableObject {
     @Published private(set) var isChangingDataDirectory = false
     @Published private(set) var directorySelectionFailed = false
     @Published private(set) var hasCompatibilityHook = false
+    @Published private(set) var compatibilityHookScope: CodexActivityHookInstaller.Scope?
     private var directoryTask: Task<Void, Never>?
     private static let dataDirectoryKey = "codexActivity.localDataDirectory"
     private let defaultDataDirectory: URL
@@ -38,11 +39,11 @@ final class CodexActivityRuntime: ObservableObject {
     private let installer: CodexActivityHookInstaller
     private let environmentInspector: CodexActivityEnvironmentInspector
     private let securityReviewLauncher: CodexSecurityReviewLauncher
-    private var island: CodexActivityIslandPanelController?
+    let liveIsland = IslandSession()
     private var preferenceCancellable: AnyCancellable?
-    private var timingPreferenceCancellable: AnyCancellable?
+    private var observationTask: Task<Void, Never>?
+    private var observationsEnabled = false
     private var accessibilityCancellable: AnyCancellable?
-    private var screenTrackingCancellable: AnyCancellable?
     private var quotaStatusCancellable: AnyCancellable?
     private var currentQuotaPresentation: CurrentCodexPresentation?
     private var workspaceCancellables: Set<AnyCancellable> = []
@@ -103,7 +104,7 @@ final class CodexActivityRuntime: ObservableObject {
             defaults.set(token, forKey: tokenKey)
         }
 
-        let socketURL = Self.defaultSocketURL()
+        let socketURL = hookInstaller?.socketURL ?? Self.defaultSocketURL()
         let queueURL = Self.defaultQueueURL()
         let installer = hookInstaller ?? CodexActivityHookInstaller(
             socketURL: socketURL,
@@ -125,6 +126,11 @@ final class CodexActivityRuntime: ObservableObject {
             codexExecutablePath: environmentInspector.executablePath
         )
 
+        liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
+        store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
+        store.publicMessageDidReceive = { [weak self] data in self?.liveIsland.model.receive(data) }
+        store.admittedActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveLegacy(event) }
+        store.cumulativeTokensDidReceive = { [weak self] update in self?.liveIsland.model.receiveToken(update) }
         store.stateDidChange = { [weak self] in
             self?.render()
         }
@@ -154,18 +160,6 @@ final class CodexActivityRuntime: ObservableObject {
                     self?.render()
                 }
             }
-        timingPreferenceCancellable = Publishers.CombineLatest(
-            preferences.$codexActivityCompactDelay,
-            preferences.$codexActivityHiddenDelayAfterCompact
-        )
-        .dropFirst()
-        .receive(on: RunLoop.main)
-        .sink { [weak self] compactDelay, hiddenDelay in
-            self?.store.updateInactivityDelays(
-                compactDelay: TimeInterval(compactDelay),
-                hiddenDelayAfterCompact: TimeInterval(hiddenDelay)
-            )
-        }
         accessibilityCancellable = NotificationCenter.default.publisher(
             for: NSWorkspace
                 .accessibilityDisplayOptionsDidChangeNotification
@@ -217,7 +211,6 @@ final class CodexActivityRuntime: ObservableObject {
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        store.startNativeActivityNotifications()
         let handler: CodexActivityDeliveryHandler = {
             [weak self] delivery, completion in
             Task { @MainActor in
@@ -342,6 +335,8 @@ final class CodexActivityRuntime: ObservableObject {
                 setupIslandRequested = false
                 hookConnectionStatus = .notInstalled
                 hasCompatibilityHook = false
+                compatibilityHookScope = nil
+                store.compactionSourceUnavailable(.hook)
                 // Removing a fallback must not erase the native task presentation.
                 render()
             case .failure(let error):
@@ -475,6 +470,7 @@ final class CodexActivityRuntime: ObservableObject {
                 if !Task.isCancelled { isChangingDataDirectory = false }
                 return
             }
+            liveIsland.model.reset()
             dataDirectoryURL = target
             if root == nil { defaults.removeObject(forKey: Self.dataDirectoryKey) }
             else { defaults.set(target.path, forKey: Self.dataDirectoryKey) }
@@ -509,7 +505,8 @@ final class CodexActivityRuntime: ObservableObject {
         fileBridge.stop()
         bridgeStatus = .stopped
         await store.stop()
-        island?.hide(animated: false)
+        observationTask?.cancel(); observationTask = nil; observationsEnabled = false
+        liveIsland.stop()
     }
 
     var hookDirectoryPath: String { installer.hooksURL.deletingLastPathComponent().path }
@@ -587,8 +584,9 @@ final class CodexActivityRuntime: ObservableObject {
                         forKey: DefaultsKey.reviewConfirmedInstallation
                     )
                 }
-                updateConnectionStatusFromInstalledState()
                 hasCompatibilityHook = true
+                compatibilityHookScope = .all
+                updateConnectionStatusFromInstalledState()
                 if hookConnectionStatus != .connected
                 {
                     openCodexSecurityReview()
@@ -611,19 +609,21 @@ final class CodexActivityRuntime: ObservableObject {
         setupTask = Task { [weak self] in
             let inspection = await Task.detached(priority: .utility) {
                 let handlers = Result { try installer.hasQuotaViewHandlers() }
-                let installed = (try? installer.isInstalled()) ?? false
+                let scope = try? installer.installedScope()
                 // A first install has no reason to invoke Hook feature commands.
                 let environment = (try? handlers.get()) == true
                     ? Result { try inspector.inspect() } : nil
-                return (handlers, installed, environment)
+                return (handlers, scope, environment)
             }.value
             guard let self, !Task.isCancelled, hookOperationRevision == operation else { return }
             hookOperation = .idle
-            let (handlers, installed, environment) = inspection
+            let (handlers, scope, environment) = inspection
+            compatibilityHookScope = scope
             switch handlers {
             case .success(let exists):
                 hasCompatibilityHook = exists
                 if !exists {
+                    store.compactionSourceUnavailable(.hook)
                     hooksFeatureStatus = .unavailable
                     hookConnectionStatus = .notInstalled
                     setupIslandRequested = false
@@ -632,7 +632,7 @@ final class CodexActivityRuntime: ObservableObject {
                     case .success(let value):
                         codexVersion = value.version
                         hooksFeatureStatus = value.hooksEnabled ? .enabled : .disabled
-                        if installed, value.hooksEnabled { updateConnectionStatusFromInstalledState() }
+                        if scope != nil, value.hooksEnabled { updateConnectionStatusFromInstalledState() }
                         else { hookConnectionStatus = .abnormal(preferences.copy.text("兼容 Hook 需要手动修复。", "Compatibility Hook needs manual repair.")) }
                     case .failure(let error):
                         hooksFeatureStatus = .unavailable
@@ -647,6 +647,12 @@ final class CodexActivityRuntime: ObservableObject {
             }
             render()
         }
+    }
+
+    private var hookEvidenceIdentifier: String {
+        let identifier = installer.installationIdentifier
+        // Full Hook activity cannot verify delivery of compression-only events.
+        return compatibilityHookScope == .compaction ? identifier + ":compaction" : identifier
     }
 
     func receiveCompatibilityActivity(_ delivery: CodexActivityDelivery) async -> Bool {
@@ -664,7 +670,7 @@ final class CodexActivityRuntime: ObservableObject {
             return false
         }
 
-        let installationID = installer.installationIdentifier
+        let installationID = hookEvidenceIdentifier
         var evidence = CodexActivityConnectionEvidence(
             observedInstallationID: defaults.string(
                 forKey: DefaultsKey.observedInstallation
@@ -675,7 +681,8 @@ final class CodexActivityRuntime: ObservableObject {
         )
         evidence.record(
             event: activity.event,
-            installationID: installationID
+            installationID: installationID,
+            compactionOnly: compatibilityHookScope == .compaction
         )
         defaults.set(
             evidence.observedInstallationID,
@@ -789,7 +796,7 @@ final class CodexActivityRuntime: ObservableObject {
                 forKey: DefaultsKey.connectedInstallation
             )
         )
-        let evidenceStatus = evidence.status(for: installationID)
+        let evidenceStatus = evidence.status(for: hookEvidenceIdentifier)
         hookConnectionStatus = CodexActivitySetupStatusResolver.resolve(
             evidenceStatus: evidenceStatus,
             reviewConfirmed: reviewConfirmed,
@@ -874,205 +881,27 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     private func render() {
-        defer { reconcileScreenTracking() }
-
-        guard preferences.codexActivityIslandEnabled else {
-            island?.hide(animated: false)
-            return
-        }
-
-        if shouldRenderDisconnectedIsland {
-            renderDisconnectedIsland()
-            return
-        }
-
-        guard let snapshot = store.snapshot,
-              store.presentation != .hidden
-        else {
-            island?.hide()
-            return
-        }
-
-        let title = store.resolvedThreadTitle
-            ?? snapshot.workspaceName.map { "Codex · \($0)" }
-            ?? "Codex"
-        let copy = CodexActivityCopy(
-            language: preferences.resolvedLanguage
-        )
-        let currentTurnTokenUsage = store.currentTurnTokenUsage
-        let tokenUsageTitle = currentTurnTokenUsage.map {
-            copy.tokenUsageTitle(totalTokens: $0)
-        }
-        let showsCompletionReceipt =
-            CodexActivityTurnTokenUsagePresentationContract
-            .showsCompletionReceipt(
-                visualState: snapshot.state,
-                operationKey: snapshot.operationKey,
-                totalTokens: currentTurnTokenUsage
-            )
-        let completionQuotaRemainingPercent = showsCompletionReceipt
-            ? currentQuotaPresentation?.remainingPercent
-            : nil
-        let baseAccessibilityLabel = copy.accessibilityLabel(
-            windowTitle: title,
-            statusTitle: copy.statusTitle(for: snapshot.state),
-            operation: copy.operation(for: snapshot.operationKey),
-            approximateProgressFraction:
-                snapshot.approximateProgressFraction,
-            tokenUsageTitle: tokenUsageTitle
-        )
-        let renderState = CodexActivityRenderState(
-            taskIdentity: snapshot.taskIdentity,
-            visualState: snapshot.state,
-            approximateProgressFraction:
-                snapshot.approximateProgressFraction,
-            windowTitle: title,
-            statusTitle: copy.statusTitle(for: snapshot.state),
-            operation: copy.operation(
-                for: snapshot.operationKey
-            ),
-            tokenUsageTitle: tokenUsageTitle,
-            completionReceiptStatus: showsCompletionReceipt
-                ? copy.statusTitle(for: snapshot.state)
-                : nil,
-            completionReceiptDetail: showsCompletionReceipt
-                ? currentTurnTokenUsage.map {
-                    copy.completionTokenUsageDetail(totalTokens: $0)
-                }
-                : nil,
-            completionQuotaRemainingPercent:
-                completionQuotaRemainingPercent,
-            isConfirmationReminderActive:
-                store.isConfirmationReminderActive,
-            accessibilityLabel: showsCompletionReceipt
-                ? baseAccessibilityLabel
-                    + copy.completionQuotaAccessibilitySuffix(
-                        remainingPercent:
-                            completionQuotaRemainingPercent
-                    )
-                : baseAccessibilityLabel
-        )
-        let presentation: CodexActivityIslandPresentation =
-            store.presentation == .compact ? .compact : .expanded
-        let codexProcessIdentifier =
-            Self.runningCodexProcessIdentifier()
-
-        if island == nil {
-            island = CodexActivityIslandPanelController(
-                initialState: renderState,
-                progressEffect:
-                    preferences.codexActivityProgressEffect,
-                screenPlacement:
-                    preferences.codexActivityScreenPlacement,
-                codexProcessIdentifier: codexProcessIdentifier
-            )
-        }
-        island?.update(
-            renderState: renderState,
-            presentationMode: presentation,
-            presentationAccessibilityValue:
-                copy.presentationAccessibilityValue(presentation),
-            reduceMotion:
-                NSWorkspace.shared
-                .accessibilityDisplayShouldReduceMotion,
-            progressEffect: preferences.codexActivityProgressEffect,
-            screenPlacement: preferences.codexActivityScreenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier,
-            playbackEnabled: store.shouldPlayVisualEffects
-        )
-    }
-
-    private func reconcileScreenTracking() {
-        let shouldTrack = preferences.codexActivityIslandEnabled
-            && preferences.codexActivityScreenPlacement == .codexScreen
-            && island?.isVisible == true
-
-        guard shouldTrack else {
-            screenTrackingCancellable?.cancel()
-            screenTrackingCancellable = nil
-            return
-        }
-        guard screenTrackingCancellable == nil else { return }
-
-        screenTrackingCancellable = Timer.publish(
-            every: 1,
-            on: .main,
-            in: .common
-        )
-        .autoconnect()
-        .sink { [weak self] _ in
-            Task { @MainActor in
-                guard let self,
-                      let island = self.island,
-                      island.isVisible
-                else {
-                    return
-                }
-                island.reposition(
-                    screenPlacement: .codexScreen,
-                    codexProcessIdentifier:
-                        Self.runningCodexProcessIdentifier()
-                )
+        guard isRunning else { return }
+        let enabled = preferences.codexActivityIslandEnabled
+        if observationsEnabled != enabled {
+            observationsEnabled = enabled
+            let previous = observationTask
+            observationTask = Task { [weak self] in
+                await previous?.value
+                guard let self, isRunning, observationsEnabled == enabled else { return }
+                if enabled { store.startNativeActivityNotifications() }
+                else { await store.stop() }
             }
         }
-    }
-
-    private var shouldRenderDisconnectedIsland: Bool {
-        connectionPresentation.showsHookSetupIsland(
-            explicitlyRequested: setupIslandRequested
-        )
-    }
-
-    private func renderDisconnectedIsland() {
-        let copy = CodexActivityCopy(
-            language: preferences.resolvedLanguage
-        )
-        let statusTitle = copy.statusTitle(
-            for: .disconnectedCodex
-        )
-        let operation = copy.disconnectedOperation(
-            for: hookConnectionStatus,
-            isConfiguring: isConfiguring || isOpeningSecurityReview
-        )
-        let renderState = CodexActivityRenderState(
-            visualState: .disconnectedCodex,
-            approximateProgressFraction: nil,
-            windowTitle: "QuotaView",
-            statusTitle: statusTitle,
-            operation: operation,
-            accessibilityLabel: copy.accessibilityLabel(
-                windowTitle: "QuotaView",
-                statusTitle: statusTitle,
-                operation: operation,
-                approximateProgressFraction: nil
-            )
-        )
-        let codexProcessIdentifier =
-            Self.runningCodexProcessIdentifier()
-
-        if island == nil {
-            island = CodexActivityIslandPanelController(
-                initialState: renderState,
-                progressEffect:
-                    preferences.codexActivityProgressEffect,
-                screenPlacement:
-                    preferences.codexActivityScreenPlacement,
-                codexProcessIdentifier: codexProcessIdentifier
-            )
+        store.setMultitaskEnabled(enabled)
+        liveIsland.model.setConnection(store.automaticConnection.sharedState)
+        for entry in store.multitask.entries {
+            liveIsland.model.setTitle(store.title(for: entry.snapshot.sessionHash), for: entry.snapshot.sessionHash)
         }
-        island?.update(
-            renderState: renderState,
-            presentationMode: .expanded,
-            presentationAccessibilityValue:
-                copy.presentationAccessibilityValue(.expanded),
-            reduceMotion:
-                NSWorkspace.shared
-                .accessibilityDisplayShouldReduceMotion,
-            progressEffect: preferences.codexActivityProgressEffect,
-            screenPlacement: preferences.codexActivityScreenPlacement,
-            codexProcessIdentifier: codexProcessIdentifier,
-            playbackEnabled: false
-        )
+        liveIsland.update(english: preferences.resolvedLanguage == .english,
+            remaining: currentQuotaPresentation?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
+            weeklyRemaining: currentQuotaPresentation?.weeklyRemainingPercent,
+            quotaResetsAt: currentQuotaPresentation?.resetsAt)
     }
 
     private static func defaultSocketURL() -> URL {
@@ -1081,14 +910,14 @@ final class CodexActivityRuntime: ObservableObject {
             in: .userDomainMask
         ).first ?? FileManager.default.temporaryDirectory
         return base
-            .appendingPathComponent("QuotaView", isDirectory: true)
+            .appendingPathComponent(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "QuotaView-073-Development" : "QuotaView", isDirectory: true)
             .appendingPathComponent("codex-activity.sock")
     }
 
     private static func defaultQueueURL() -> URL {
         URL(
             fileURLWithPath:
-                "/tmp/com.quotaview.codex-activity-\(getuid())",
+                "/tmp/\(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "com.quotaview.development073" : "com.quotaview").codex-activity-\(getuid())",
             isDirectory: true
         )
     }

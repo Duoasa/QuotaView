@@ -318,6 +318,70 @@ final class CodexFirstConnectionTests: XCTestCase {
         await runtime.stop()
     }
 
+    func testStoppingAnUnstartedBridgeCannotRemoveAnActiveListener() throws {
+        let root = URL(fileURLWithPath: "/tmp/qv-listener-\(UUID().uuidString.prefix(8))")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let socket = root.appendingPathComponent("active.sock")
+        let active = CodexActivityUnixBridge(socketURL: socket,
+            authenticationToken: "fixture", installationIdentifier: "fixture")
+        defer { active.stop() }
+        try active.start { _, accepted in accepted(true) }
+        let unused = CodexActivityUnixBridge(socketURL: socket,
+            authenticationToken: "fixture", installationIdentifier: "fixture")
+        unused.stop()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: socket.path))
+        active.stop()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: socket.path))
+    }
+
+    func testCompactionOnlyInspectionDoesNotReuseFullHookConnectionEvidence() async throws {
+        let root = try fixtureRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let helper = root.appendingPathComponent("QuotaViewActivityHook")
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: helper)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: helper.path)
+        let codex = root.appendingPathComponent("codex")
+        try Data("#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo codex-cli-test; else echo 'hooks stable true'; fi\n".utf8).write(to: codex)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: codex.path)
+        let hooks = root.appendingPathComponent("hooks.json")
+        let installer = CodexActivityHookInstaller(socketURL: root.appendingPathComponent("test.sock"),
+            authenticationToken: "fixture-token", hooksURL: hooks, helperURL: helper)
+        _ = try installer.install(scope: .compaction)
+        let original = try Data(contentsOf: hooks)
+        let domain = "QuotaViewCompactionScope-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
+        defer { defaults.removePersistentDomain(forName: domain) }
+        for key in ["codexActivity.setup.connectedInstallation", "codexActivity.setup.reviewConfirmedInstallation"] {
+            defaults.set(installer.installationIdentifier, forKey: key)
+        }
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.codexActivityIslandEnabled = false
+        let store = makeStore(root: root, localEnabled: false, sessionKindResolver: { _ in .user })
+        let runtime = CodexActivityRuntime(preferences: preferences, defaults: defaults,
+            hookInstaller: installer, hookEnvironmentInspector: .init(executablePath: codex.path), activityStore: store)
+        runtime.refreshConnectionStatus()
+        try await waitUntil { runtime.hooksFeatureStatus == .enabled }
+        XCTAssertEqual(runtime.compatibilityHookScope, .compaction)
+        XCTAssertEqual(runtime.hookConnectionStatus, .awaitingFirstEvent,
+                       "An old full-Hook connection cannot prove compression delivery")
+        XCTAssertEqual(try Data(contentsOf: hooks), original, "Inspection must remain read-only")
+        let ordinary = await runtime.receiveCompatibilityActivity(.init(source: .liveSocket,
+            activity: .init(event: .userPromptSubmit, sessionHash: "fixture-session", source: .hook)))
+        XCTAssertTrue(ordinary)
+        XCTAssertEqual(runtime.hookConnectionStatus, .awaitingFirstEvent,
+                       "A cached ordinary-message handler cannot verify compression-only setup")
+        let compact = await runtime.receiveCompatibilityActivity(.init(source: .liveSocket,
+            activity: .init(event: .preCompact, sessionHash: "fixture-session", source: .hook)))
+        XCTAssertTrue(compact)
+        XCTAssertEqual(runtime.hookConnectionStatus, .connected)
+        XCTAssertEqual(store.snapshot?.state, .compactingContext)
+        runtime.refreshConnectionStatus()
+        try await waitUntil { runtime.hooksFeatureStatus == .enabled && !runtime.isConfiguring }
+        XCTAssertEqual(runtime.hookConnectionStatus, .connected, "Verified compaction evidence survives reinspection")
+        await runtime.stop()
+    }
+
     func testCustomDirectoryValidationPersistenceAndSourceReset() async throws {
         let first = try fixtureRoot(), second = try fixtureRoot()
         defer { try? FileManager.default.removeItem(at: first); try? FileManager.default.removeItem(at: second) }

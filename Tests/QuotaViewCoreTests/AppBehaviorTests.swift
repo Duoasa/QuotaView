@@ -809,7 +809,7 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(view.isRendererAvailable)
     }
 
-    func testCodexActivityConnectionRequiresRealPromptSubmission() {
+    func testCodexActivityConnectionRequiresRealPromptOrCompaction() {
         var evidence = CodexActivityConnectionEvidence(
             observedInstallationID: nil,
             connectedInstallationID: nil
