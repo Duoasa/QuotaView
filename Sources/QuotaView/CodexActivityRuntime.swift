@@ -976,6 +976,7 @@ final class CodexActivityRuntime: ObservableObject {
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
             progressEffect: preferences.codexActivityProgressEffect,
+            hoverTransparencyPercent: preferences.codexActivityHoverTransparency,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier,
             playbackEnabled: store.shouldPlayVisualEffects
@@ -1069,6 +1070,7 @@ final class CodexActivityRuntime: ObservableObject {
                 NSWorkspace.shared
                 .accessibilityDisplayShouldReduceMotion,
             progressEffect: preferences.codexActivityProgressEffect,
+            hoverTransparencyPercent: preferences.codexActivityHoverTransparency,
             screenPlacement: preferences.codexActivityScreenPlacement,
             codexProcessIdentifier: codexProcessIdentifier,
             playbackEnabled: false
