@@ -1,6 +1,6 @@
 # QuotaView Handoff
 
-更新日期：2026-09-28
+更新日期：2026-09-30
 
 当前公开版本：[版本历史](VERSION_HISTORY.md#当前最新版本)。当前规格：[SDD 注册表](docs/specs/README.md)。
 更早交接按需查阅[历史快照](docs/archive/handoff-2026-09-12.md)，不从历史“下一步”恢复任务。
@@ -11,7 +11,7 @@
 |---|---|
 | 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，Stable appcast 已发布并验证 |
 | 发布源码 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
-| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；GitHub / appcast 已发布并验证 |
+| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；沿用上游配置，PR 源码含未发布的悬停可见度设置 |
 | 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`；分支 `codex/0.5.1-build.13-codex-path-fix` |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
@@ -19,6 +19,24 @@
 进入后先用 `git worktree list`、`git status --short --branch` 与 `git log -1` 核实实时状态。
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
 不能将分支名或旧 HEAD 当成当前源码版本。下一可分发迭代使用新的 Build 身份。
+
+## 2026-09-30：悬停可见度 PR（未发布）
+
+提交分支 `feat/island-hover-visibility`，基于上游 `main` 的 `cef1c23`，保留 Build 13
+的 Codex 路径热修复和发布记录。原 Build 9 开发目录与已有产物保留，未清空或覆盖。
+当前配置仍为 `0.5.1 / Build 13 / internal 49`，本次不修改版本、签名或发布渠道。
+
+[ISLAND-HOVER-012](docs/design/quotaview-activity-island-hover-transparency-0.4.5.md)
+扩展为设置中“进度条效果”卡片下的悬停可见度：0–100% 整数、默认20%、即时生效、
+持久保存与单项恢复默认；保持点击穿透、全透明移出恢复及旧偏好实际外观。中英文
+README 和界面说明已同步。状态为 `Accepted / Verifying`，等待代码审查与实机验收。
+
+上游整合后完整测试255项（253通过、2项显式可选检查跳过、0失败），Universal Release
+无签名构建及App双架构、版本、图标资源检查通过。原开发目录中的日志为
+`.build/pr-hover-tests.log`、`.build/pr-hover-build.log`；新包为
+`.build/pr-hover-universal/Build/Products/Release/QuotaView.app`，未启动或安装。
+早期Build9构建证据保留在规格中，不作为当前上游整合后的测试结论。
+未改 Codex 协议、账户读写、生产模拟入口或永久开发台；无发布或合并授权。
 
 ## 0.5.1 Build 13：Codex 程序路径热修复
 

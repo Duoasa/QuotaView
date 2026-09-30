@@ -4,9 +4,9 @@
 >
 > 状态：`Accepted`
 >
-> 最近同步：2026-09-28。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
+> 最近同步：2026-09-30。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 当前源码：[0.5.1 Build 13：Codex 程序路径热修复](../../HANDOFF.md#工作区与版本定位)
+> 当前源码：[0.5.1 Build 13 基线 + 未发布的悬停可见度设置](../../HANDOFF.md#工作区与版本定位)
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
@@ -29,7 +29,7 @@
 | `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014` | [0.4.5 灵动岛等待确认提醒](../design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 等待确认满 10 秒显示静态黄色描边和四周光晕；已随 0.4.5 发布 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013` | [0.4.5 灵动岛本次任务 Token](../design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | 原功能随 0.4.5 发布；0.4.7 Build 3 已修复共用文字边界和完成百分号，用户已通过控制台手动检查，参见规格第 6 节 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012` | [0.4.5 灵动岛悬停透明](../design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Released` | 悬停时整个灵动岛进入 80% 透明态并保持点击穿透；已随 0.4.5 发布 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012` | [灵动岛悬停透明](../design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Verifying` | 原固定透明度已发布；现扩展为0–100%悬停可见度、默认20%、即时保存与单项恢复默认；已整合上游Build13，255项回归（2跳过、0失败）及Universal无签名构建通过。待PR审查和实机验收，未发布 |
 | `QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011` | [0.4.5 Codex 本地任务流自动连接](../design/quotaview-codex-socket-autoconnect-0.4.5.md) | `Accepted / Released` | 只读本地任务流主通道、共享 Socket/Hook 回退及量子噪点单一灵动岛已随 0.4.5 发布 |
 | `QV-RELEASE-0.4.3-001` | [0.4.3 Build 1 发布](../design/quotaview-0.4.3-release.md) | `Accepted / Released` | 104 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009` | [量子噪点效果修正](../design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Released` | 连续相位、压缩上下文可见性、闪灭、文字层级与完成反馈已随 0.4.3 发布；完整视觉矩阵仍待验收 |

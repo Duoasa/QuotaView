@@ -65,7 +65,7 @@ The Island is the primary QuotaView experience—not an add-on to a quota dashbo
 | **Approval required** | The waiting state appears immediately. After 10 seconds, a yellow outline and halo make the blocked task harder to miss. |
 | **Task completed** | The expanded Island becomes a completion receipt with turn tokens on the left and current remaining quota on the right. |
 | **Compact completion** | “Completed” stays visible beside a small, risk-colored remaining-quota ring before the Island hides. |
-| **Hover** | The whole Island becomes 80% transparent and remains click-through, keeping the content behind it readable. |
+| **Hover** | The whole Island defaults to 20% visibility (80% transparent) and remains click-through. In development builds, **Settings → Codex Island → Hover Visibility** adjusts it from 0–100%, applies changes immediately, and can restore the default. |
 
 The Island understands thinking, work, tool calls, approvals, context compaction, completion, interruption, and failure. It can follow the screen where Codex is visible, respects Reduce Motion, adapts to light and dark appearance, and lets you tune its completion timing.
 

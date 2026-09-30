@@ -2088,6 +2088,118 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
+    func testCodexActivityHoverTransparencyPreferencePersistence() {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "preferences.codexActivity.hoverTransparency"
+        let preferences = AppPreferences(defaults: defaults)
+
+        XCTAssertEqual(preferences.codexActivityHoverTransparency, 80)
+        XCTAssertEqual(preferences.codexActivityHoverVisibility, 20)
+        XCTAssertEqual(CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent, 20)
+        XCTAssertEqual(defaults.integer(forKey: key), 80)
+
+        for (input, expected) in [(0, 0), (100, 100), (37, 37), (-1, 0), (101, 100)] {
+            preferences.codexActivityHoverTransparency = input
+            XCTAssertEqual(preferences.codexActivityHoverTransparency, expected)
+            XCTAssertEqual(defaults.integer(forKey: key), expected)
+            XCTAssertEqual(
+                AppPreferences(defaults: defaults).codexActivityHoverTransparency,
+                expected
+            )
+        }
+    }
+
+    @MainActor
+    func testCodexActivityHoverTransparencyNormalizesStoredValues() {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "preferences.codexActivity.hoverTransparency"
+
+        for (stored, expected) in [(Int.min, 0), (Int.max, 100), (0, 0), (100, 100), (81, 81)] {
+            defaults.set(stored, forKey: key)
+            let preferences = AppPreferences(defaults: defaults)
+            XCTAssertEqual(preferences.codexActivityHoverTransparency, expected)
+            XCTAssertEqual(defaults.integer(forKey: key), expected)
+        }
+    }
+
+    @MainActor
+    func testCodexActivityHoverVisibilityPreservesStoredAppearanceAndRestoresDefault() {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "preferences.codexActivity.hoverTransparency"
+        defaults.set(35, forKey: key)
+        let preferences = AppPreferences(defaults: defaults)
+
+        XCTAssertEqual(preferences.codexActivityHoverVisibility, 65)
+        XCTAssertEqual(defaults.integer(forKey: key), 35)
+        XCTAssertEqual(
+            CodexActivityIslandHoverTransparencyContract.alpha(
+                isHovering: true,
+                transparencyPercent: preferences.codexActivityHoverTransparency
+            ),
+            0.65,
+            accuracy: 0.0001
+        )
+
+        preferences.codexActivityIslandEnabled = false
+        preferences.codexActivityCompactDelay = 30
+        preferences.restoreCodexActivityHoverVisibilityDefault()
+        let reloaded = AppPreferences(defaults: defaults)
+        XCTAssertEqual(reloaded.codexActivityHoverVisibility, 20)
+        XCTAssertEqual(reloaded.codexActivityHoverTransparency, 80)
+        XCTAssertEqual(defaults.integer(forKey: key), 80)
+        XCTAssertFalse(reloaded.codexActivityIslandEnabled)
+        XCTAssertEqual(reloaded.codexActivityCompactDelay, 30)
+        XCTAssertEqual(
+            CodexActivityIslandHoverTransparencyContract.alpha(
+                isHovering: true,
+                transparencyPercent: reloaded.codexActivityHoverTransparency
+            ),
+            0.20,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
+    func testCodexActivityHoverVisibilityMappingAndPersistence() {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let preferences = AppPreferences(defaults: defaults)
+        var publishedTransparency: [Int] = []
+        let observation = preferences.$codexActivityHoverTransparency
+            .dropFirst()
+            .sink { publishedTransparency.append($0) }
+        defer { observation.cancel() }
+
+        for visibility in 0...100 {
+            preferences.codexActivityHoverVisibility = visibility
+            XCTAssertEqual(preferences.codexActivityHoverVisibility, visibility)
+            XCTAssertEqual(publishedTransparency.last, 100 - visibility)
+            XCTAssertEqual(defaults.integer(forKey: "preferences.codexActivity.hoverTransparency"), 100 - visibility)
+            XCTAssertEqual(
+                CodexActivityIslandHoverTransparencyContract.alpha(
+                    isHovering: true,
+                    transparencyPercent: preferences.codexActivityHoverTransparency
+                ),
+                CGFloat(visibility) / 100,
+                accuracy: 0.0001
+            )
+        }
+
+        for (input, expected) in [(Int.min, 0), (Int.max, 100), (35, 35)] {
+            preferences.codexActivityHoverVisibility = input
+            XCTAssertEqual(preferences.codexActivityHoverVisibility, expected)
+            XCTAssertEqual(AppPreferences(defaults: defaults).codexActivityHoverVisibility, expected)
+        }
+    }
+
+    @MainActor
     func testSavedNativePreferencesAndLegacyGlassMigration() {
         let savedSuiteName = "QuotaViewTests.\(UUID().uuidString)"
         let savedDefaults = UserDefaults(suiteName: savedSuiteName)!
@@ -2774,7 +2886,7 @@ final class AppBehaviorTests: XCTestCase {
             accuracy: 0.0001
         )
         XCTAssertEqual(
-            CodexActivityIslandHoverTransparencyContract.hoveredAlpha,
+            CodexActivityIslandHoverTransparencyContract.alpha(isHovering: true),
             0.20,
             accuracy: 0.0001
         )
@@ -2800,6 +2912,43 @@ final class AppBehaviorTests: XCTestCase {
             hoverFrame,
             NSRect(x: 130, y: 230, width: 402, height: 68)
         )
+    }
+
+    func testCodexActivityIslandHoverTransparencyPercentMapping() {
+        typealias Contract = CodexActivityIslandHoverTransparencyContract
+        for percent in 0...100 {
+            XCTAssertEqual(
+                Contract.alpha(isHovering: true, transparencyPercent: percent),
+                CGFloat(100 - percent) / 100,
+                accuracy: 0.0001
+            )
+            XCTAssertEqual(Contract.alpha(isHovering: false, transparencyPercent: percent), 1)
+        }
+        XCTAssertEqual(Contract.alpha(isHovering: true, transparencyPercent: Int.min), 1)
+        XCTAssertEqual(Contract.alpha(isHovering: true, transparencyPercent: Int.max), 0)
+    }
+
+    func testCodexActivityIslandHoverTransparencyUpdatesWithoutPointerMovement() {
+        var hover = CodexActivityIslandHoverTransparencyContract()
+        XCTAssertEqual(hover.targetAlpha, 1)
+        XCTAssertTrue(hover.update(isHovering: true, transparencyPercent: 80))
+        XCTAssertEqual(hover.targetAlpha, 0.20, accuracy: 0.0001)
+        XCTAssertFalse(hover.update(isHovering: true, transparencyPercent: 80))
+
+        XCTAssertTrue(hover.update(isHovering: true, transparencyPercent: 100))
+        XCTAssertEqual(hover.targetAlpha, 0)
+        XCTAssertFalse(hover.update(isHovering: true, transparencyPercent: 100))
+        XCTAssertTrue(hover.update(isHovering: false, transparencyPercent: 100))
+        XCTAssertEqual(hover.targetAlpha, 1)
+        XCTAssertTrue(hover.update(isHovering: true, transparencyPercent: 100))
+        XCTAssertEqual(hover.targetAlpha, 0)
+
+        hover = CodexActivityIslandHoverTransparencyContract()
+        XCTAssertEqual(hover.targetAlpha, 1)
+        XCTAssertTrue(hover.update(isHovering: true, transparencyPercent: 100))
+        XCTAssertTrue(hover.update(isHovering: true, transparencyPercent: 0))
+        XCTAssertEqual(hover.targetAlpha, 1)
+        XCTAssertFalse(hover.update(isHovering: false, transparencyPercent: 0))
     }
 
     func testStateSmokeSimulationKeepsStateSpecificMotion() {

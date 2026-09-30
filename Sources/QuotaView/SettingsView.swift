@@ -895,6 +895,61 @@ struct SettingsView: View {
                     }
                 }
                 .padding(18)
+
+                NativeSettingsDivider()
+
+                NativeSettingsRow(
+                    title: copy.text("悬停可见度", "Hover Visibility"),
+                    subtitle: copy.text(
+                        "降低鼠标悬停时的可见度，便于查看下方内容。",
+                        "Lower visibility on hover to see the content underneath."
+                    )
+                ) {
+                    HStack(spacing: 8) {
+                        Slider(
+                            value: Binding(
+                                get: { Double(preferences.codexActivityHoverVisibility) },
+                                set: { preferences.codexActivityHoverVisibility = Int($0.rounded()) }
+                            ),
+                            in: Double(
+                                CodexActivityIslandHoverTransparencyContract.transparencyRange.lowerBound
+                            )...Double(
+                                CodexActivityIslandHoverTransparencyContract.transparencyRange.upperBound
+                            )
+                        )
+                        .controlSize(.small)
+                        .frame(width: 130)
+                        .accessibilityLabel(copy.text("悬停可见度", "Hover Visibility"))
+                        .accessibilityValue("\(preferences.codexActivityHoverVisibility)%")
+                        .help(copy.text(
+                            "数值越大，灵动岛越明显。仅悬停时生效，移出后恢复；鼠标操作始终穿透。",
+                            "Higher values make the island more visible on hover. Moving away restores full visibility; mouse events always pass through."
+                        ))
+
+                        Text("\(preferences.codexActivityHoverVisibility)%")
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 42, alignment: .trailing)
+                            .accessibilityHidden(true)
+
+                        Button {
+                            preferences.restoreCodexActivityHoverVisibilityDefault()
+                        } label: {
+                            Image(systemName: "arrow.counterclockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                        .help(copy.text(
+                            "恢复默认可见度（\(CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent)%）",
+                            "Restore default visibility (\(CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent)%)"
+                        ))
+                        .accessibilityLabel(copy.text("恢复默认可见度", "Reset Hover Visibility"))
+                        .disabled(
+                            preferences.codexActivityHoverVisibility
+                                == CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent
+                        )
+                    }
+                }
             }
 
             NativeSettingsCard {
