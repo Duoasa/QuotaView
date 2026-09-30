@@ -141,8 +141,31 @@ struct CodexActivityIslandGeometry {
 
 struct CodexActivityIslandHoverTransparencyContract {
     static let restingAlpha: CGFloat = 1
-    static let hoveredAlpha: CGFloat = 0.20
+    static let defaultVisibilityPercent = 20
+    static let defaultTransparencyPercent = 100 - defaultVisibilityPercent
+    static let transparencyRange = 0...100
     static let transitionDuration: TimeInterval = 0.14
+
+    private(set) var targetAlpha: CGFloat = restingAlpha
+
+    mutating func update(isHovering: Bool, transparencyPercent: Int) -> Bool {
+        let alpha = Self.alpha(isHovering: isHovering, transparencyPercent: transparencyPercent)
+        guard alpha != targetAlpha else { return false }
+        targetAlpha = alpha
+        return true
+    }
+
+    static func normalizedTransparencyPercent(_ value: Int) -> Int {
+        min(max(value, transparencyRange.lowerBound), transparencyRange.upperBound)
+    }
+
+    static func alpha(
+        isHovering: Bool,
+        transparencyPercent: Int = defaultTransparencyPercent
+    ) -> CGFloat {
+        guard isHovering else { return restingAlpha }
+        return CGFloat(100 - normalizedTransparencyPercent(transparencyPercent)) / 100
+    }
 
     static func visibleSurfaceFrame(
         panelFrame: NSRect,
@@ -3545,7 +3568,8 @@ final class CodexActivityIslandPanelController {
     private var transitionTimer: Timer?
     private var requestedPlayback = false
     private var reduceMotion = false
-    private var isPointerHovering = false
+    private var hoverTransparency = CodexActivityIslandHoverTransparencyContract()
+    private var hoverTransparencyPercent = CodexActivityIslandHoverTransparencyContract.defaultTransparencyPercent
     private var localMouseMonitor: Any?
     private var globalMouseMonitor: Any?
 
@@ -3599,12 +3623,14 @@ final class CodexActivityIslandPanelController {
         presentationAccessibilityValue: String,
         reduceMotion: Bool,
         progressEffect: AppPreferences.CodexActivityProgressEffect,
+        hoverTransparencyPercent: Int,
         screenPlacement: AppPreferences.CodexActivityScreenPlacement,
         codexProcessIdentifier: pid_t?,
         playbackEnabled: Bool
     ) {
         let wasHidden = motion.target.visibility == 0
         self.reduceMotion = reduceMotion
+        self.hoverTransparencyPercent = hoverTransparencyPercent
         requestedPlayback = playbackEnabled
         content.setReduceMotion(reduceMotion)
         content.update(renderState: renderState, progressEffect: progressEffect)
@@ -3617,7 +3643,7 @@ final class CodexActivityIslandPanelController {
                        elasticResize: presentationMode == .expanded, reduceMotion: reduceMotion)
         positionPanel(animated: false, screenPlacement: screenPlacement, codexProcessIdentifier: codexProcessIdentifier)
         if wasHidden {
-            isPointerHovering = false
+            hoverTransparency = CodexActivityIslandHoverTransparencyContract()
             panel.alphaValue = CodexActivityIslandHoverTransparencyContract.restingAlpha
         }
         // Apply the small/transparent first frame before exposing the window.
@@ -3693,7 +3719,7 @@ final class CodexActivityIslandPanelController {
             transitionTimer = nil
             if motion.target.visibility == 0 {
                 panel.orderOut(nil)
-                isPointerHovering = false
+                hoverTransparency = CodexActivityIslandHoverTransparencyContract()
                 panel.alphaValue = CodexActivityIslandHoverTransparencyContract.restingAlpha
             }
         }
@@ -3745,17 +3771,17 @@ final class CodexActivityIslandPanelController {
             panel.isVisible
             && pose.visibility > 0
             && hoverFrame.intersection(panel.frame).contains(NSEvent.mouseLocation)
-        guard isHovering != isPointerHovering else { return }
-
-        isPointerHovering = isHovering
-        let targetAlpha = isHovering
-            ? CodexActivityIslandHoverTransparencyContract.hoveredAlpha
-            : CodexActivityIslandHoverTransparencyContract.restingAlpha
+        let targetChanged = hoverTransparency.update(
+            isHovering: isHovering,
+            transparencyPercent: hoverTransparencyPercent
+        )
+        let targetAlpha = hoverTransparency.targetAlpha
 
         guard animated, !reduceMotion else {
             panel.alphaValue = targetAlpha
             return
         }
+        guard targetChanged else { return }
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration =

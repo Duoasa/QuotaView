@@ -143,6 +143,8 @@ final class AppPreferences: ObservableObject {
             "preferences.codexActivity.progressEffect"
         static let codexActivityScreenPlacement =
             "preferences.codexActivity.screenPlacement"
+        static let codexActivityHoverTransparency =
+            "preferences.codexActivity.hoverTransparency"
         static let codexActivityCompactDelay =
             "preferences.codexActivity.compactDelay"
         static let codexActivityHiddenDelayAfterCompact =
@@ -267,6 +269,26 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.codexActivityScreenPlacement
             )
         }
+    }
+
+    @Published var codexActivityHoverTransparency: Int {
+        didSet {
+            let normalized = CodexActivityIslandHoverTransparencyContract
+                .normalizedTransparencyPercent(codexActivityHoverTransparency)
+            if normalized != codexActivityHoverTransparency {
+                codexActivityHoverTransparency = normalized
+            }
+            defaults.set(normalized, forKey: Key.codexActivityHoverTransparency)
+        }
+    }
+
+    var codexActivityHoverVisibility: Int {
+        get { 100 - codexActivityHoverTransparency }
+        set { codexActivityHoverTransparency = 100 - min(max(newValue, 0), 100) }
+    }
+
+    func restoreCodexActivityHoverVisibilityDefault() {
+        codexActivityHoverVisibility = CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent
     }
 
     @Published var codexActivityCompactDelay: Int {
@@ -452,6 +474,11 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.codexActivityScreenPlacement
             ) ?? ""
         ) ?? .followHotspot
+        codexActivityHoverTransparency = CodexActivityIslandHoverTransparencyContract
+            .normalizedTransparencyPercent(defaults.storedInt(
+                forKey: Key.codexActivityHoverTransparency,
+                defaultValue: CodexActivityIslandHoverTransparencyContract.defaultTransparencyPercent
+            ))
         codexActivityCompactDelay = Self.normalizedTimingValue(
             defaults.storedInt(
                 forKey: Key.codexActivityCompactDelay,
@@ -493,6 +520,10 @@ final class AppPreferences: ObservableObject {
         defaults.set(
             codexActivityScreenPlacement.rawValue,
             forKey: Key.codexActivityScreenPlacement
+        )
+        defaults.set(
+            codexActivityHoverTransparency,
+            forKey: Key.codexActivityHoverTransparency
         )
         defaults.set(
             codexActivityCompactDelay,
