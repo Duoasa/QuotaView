@@ -52,7 +52,8 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle")
             ],
             resources: [
-                .copy("Resources/CodexActivityRippleGlowShader.txt")
+                .copy("Resources/CodexActivityRippleGlowShader.txt"),
+                .copy("Resources/CodexProviderIcon.png")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

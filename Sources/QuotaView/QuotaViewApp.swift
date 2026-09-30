@@ -32,6 +32,10 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
 
     override init() {
         let preferences = AppPreferences()
+        if UserDefaults.standard.object(forKey: "development073.initialized") == nil {
+            preferences.codexActivityIslandEnabled = true
+            UserDefaults.standard.set(true, forKey: "development073.initialized")
+        }
         let statusStore = CodexStatusStore(preferences: preferences)
         self.preferences = preferences
         self.store = statusStore
@@ -47,7 +51,7 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         _ notification: Notification
     ) {
         AstaSansFontRegistrar.registerBundledFonts()
-        updateController.start()
+        // Local development build: updater is intentionally not started.
         store.start()
         activityRuntime.start()
         menuBarController = MenuBarPanelController(

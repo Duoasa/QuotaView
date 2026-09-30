@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B05200000000000000000003 /* CodexMultitaskIslandMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */; };
+		B05200000000000000000002 /* CodexMultitaskIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000002 /* CodexMultitaskIsland.swift */; };
+		B05200000000000000000001 /* CodexActivityMultitaskState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000001 /* CodexActivityMultitaskState.swift */; };
 		B50000000000000000000001 /* CodexActivityIslandMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* CodexActivityIslandMotion.swift */; };
 		B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000052 /* SOCKS5HTTPBridge.swift */; };
 		B10000000000000000000051 /* ProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000051 /* ProxyConfiguration.swift */; };
@@ -68,6 +71,18 @@
 		B48800000000000000000005 /* CodexActivityHookSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000005 /* CodexActivityHookSupport.swift */; };
 		B48800000000000000000011 /* CodexLocalRolloutDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000011 /* CodexLocalRolloutDiscovery.swift */; };
 		B48800000000000000000012 /* CodexLocalActivityRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000012 /* CodexLocalActivityRecovery.swift */; };
+		B07300000000000000000001 /* IslandApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000001 /* IslandApproval.swift */; };
+		B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000002 /* IslandApprovalProtocol.swift */; };
+		B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000003 /* IslandApprovalTypedContent.swift */; };
+		B07300000000000000000004 /* IslandConceptBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000004 /* IslandConceptBoard.swift */; };
+		B07300000000000000000005 /* IslandLiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000005 /* IslandLiveStore.swift */; };
+		B07300000000000000000006 /* IslandPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000006 /* IslandPresentationModels.swift */; };
+		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
+		B07300000000000000000008 /* IslandSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000008 /* IslandSession.swift */; };
+		B07300000000000000000009 /* IslandTaskDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000009 /* IslandTaskDetail.swift */; };
+		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
+		B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000B /* CodexLocalPublicContent.swift */; };
+		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -138,6 +153,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIslandMotion.swift; sourceTree = "<group>"; };
+		A05200000000000000000002 /* CodexMultitaskIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIsland.swift; sourceTree = "<group>"; };
+		A05200000000000000000001 /* CodexActivityMultitaskState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityMultitaskState.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* CodexActivityIslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIslandMotion.swift; sourceTree = "<group>"; };
 		F10000000000000000000052 /* SOCKS5HTTPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOCKS5HTTPBridge.swift; sourceTree = "<group>"; };
 		F10000000000000000000051 /* ProxyConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyConfiguration.swift; sourceTree = "<group>"; };
@@ -204,6 +222,18 @@
 		F48800000000000000000005 /* CodexActivityHookSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityHookSupport.swift; sourceTree = "<group>"; };
 		F48800000000000000000011 /* CodexLocalRolloutDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalRolloutDiscovery.swift; sourceTree = "<group>"; };
 		F48800000000000000000012 /* CodexLocalActivityRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalActivityRecovery.swift; sourceTree = "<group>"; };
+		F07300000000000000000001 /* IslandApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApproval.swift; sourceTree = "<group>"; };
+		F07300000000000000000002 /* IslandApprovalProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalProtocol.swift; sourceTree = "<group>"; };
+		F07300000000000000000003 /* IslandApprovalTypedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalTypedContent.swift; sourceTree = "<group>"; };
+		F07300000000000000000004 /* IslandConceptBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandConceptBoard.swift; sourceTree = "<group>"; };
+		F07300000000000000000005 /* IslandLiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandLiveStore.swift; sourceTree = "<group>"; };
+		F07300000000000000000006 /* IslandPresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPresentationModels.swift; sourceTree = "<group>"; };
+		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
+		F07300000000000000000008 /* IslandSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandSession.swift; sourceTree = "<group>"; };
+		F07300000000000000000009 /* IslandTaskDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskDetail.swift; sourceTree = "<group>"; };
+		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
+		F0730000000000000000000B /* CodexLocalPublicContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalPublicContent.swift; sourceTree = "<group>"; };
+		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -276,6 +306,17 @@
 		G10000000000000000000003 /* QuotaView */ = {
 			isa = PBXGroup;
 			children = (
+				F0730000000000000000000C /* CodexProviderIcon.png */,
+				F0730000000000000000000A /* IslandTaskScrolling.swift */,
+				F07300000000000000000009 /* IslandTaskDetail.swift */,
+				F07300000000000000000008 /* IslandSession.swift */,
+				F07300000000000000000007 /* IslandScrollingText.swift */,
+				F07300000000000000000006 /* IslandPresentationModels.swift */,
+				F07300000000000000000005 /* IslandLiveStore.swift */,
+				F07300000000000000000004 /* IslandConceptBoard.swift */,
+				F07300000000000000000003 /* IslandApprovalTypedContent.swift */,
+				F07300000000000000000002 /* IslandApprovalProtocol.swift */,
+				F07300000000000000000001 /* IslandApproval.swift */,
 				F10000000000000000000001 /* QuotaViewApp.swift */,
 				F10000000000000000000030 /* AppUpdateController.swift */,
 				F10000000000000000000002 /* CodexStatusStore.swift */,
@@ -290,6 +331,9 @@
 				F1000000000000000000001E /* CurrentCodexPresentation.swift */,
 				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
 				F1000000000000000000002C /* CodexActivityRuntime.swift */,
+				A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */,
+				A05200000000000000000002 /* CodexMultitaskIsland.swift */,
+				A05200000000000000000001 /* CodexActivityMultitaskState.swift */,
 				F48800000000000000000005 /* CodexActivityHookSupport.swift */,
 				F48800000000000000000004 /* CodexActivityBridges.swift */,
 				F48800000000000000000003 /* CodexActivityCopy.swift */,
@@ -307,6 +351,7 @@
 		G10000000000000000000004 /* QuotaViewCore */ = {
 			isa = PBXGroup;
 			children = (
+				F0730000000000000000000B /* CodexLocalPublicContent.swift */,
 				F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */,
 				F48800000000000000000011 /* CodexLocalRolloutDiscovery.swift */,
 				F48800000000000000000012 /* CodexLocalActivityRecovery.swift */,
@@ -588,6 +633,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0730000000000000000000C /* CodexProviderIcon.png in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,
@@ -632,6 +678,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */,
+				B07300000000000000000009 /* IslandTaskDetail.swift in Sources */,
+				B07300000000000000000008 /* IslandSession.swift in Sources */,
+				B07300000000000000000007 /* IslandScrollingText.swift in Sources */,
+				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,
+				B07300000000000000000005 /* IslandLiveStore.swift in Sources */,
+				B07300000000000000000004 /* IslandConceptBoard.swift in Sources */,
+				B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */,
+				B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */,
+				B07300000000000000000001 /* IslandApproval.swift in Sources */,
 				B10000000000000000000001 /* QuotaViewApp.swift in Sources */,
 				B1000000000000000000002B /* AppUpdateController.swift in Sources */,
 				B10000000000000000000002 /* CodexStatusStore.swift in Sources */,
@@ -647,6 +703,9 @@
 				B1000000000000000000001C /* QuotaViewWidgetSnapshotWriter.swift in Sources */,
 				B1000000000000000000001D /* WidgetSnapshot.swift in Sources */,
 				B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */,
+				B05200000000000000000003 /* CodexMultitaskIslandMotion.swift in Sources */,
+				B05200000000000000000002 /* CodexMultitaskIsland.swift in Sources */,
+				B05200000000000000000001 /* CodexActivityMultitaskState.swift in Sources */,
 				B48800000000000000000005 /* CodexActivityHookSupport.swift in Sources */,
 				B48800000000000000000004 /* CodexActivityBridges.swift in Sources */,
 				B48800000000000000000003 /* CodexActivityCopy.swift in Sources */,
@@ -663,6 +722,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */,
 				B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */,
 				B48800000000000000000011 /* CodexLocalRolloutDiscovery.swift in Sources */,
 				B48800000000000000000012 /* CodexLocalActivityRecovery.swift in Sources */,

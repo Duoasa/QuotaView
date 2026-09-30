@@ -245,6 +245,8 @@ final class CodexAppServerClientTests: XCTestCase {
         XCTAssertFalse(methods.contains("thread/started"))
         XCTAssertFalse(methods.contains("turn/plan/updated"))
         XCTAssertFalse(methods.contains("turn/completed"))
+        XCTAssertFalse(methods.contains("item/started"))
+        XCTAssertFalse(methods.contains("item/completed"))
     }
 
     func testSharedDaemonClientFramesAreMasked() throws {

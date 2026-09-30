@@ -435,6 +435,7 @@ final class CodexStatusStore: ObservableObject {
     }
 
     private func publishWidgetSnapshot() {
+        if Bundle.main.bundleIdentifier == "com.quotaview.development073" { return }
         let localeIdentifier = preferences?.resolvedLanguage
             .localeIdentifier
             ?? AppPreferences.Language.systemResolved.localeIdentifier

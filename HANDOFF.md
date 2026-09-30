@@ -1,18 +1,454 @@
 # QuotaView Handoff
 
-更新日期：2026-09-30
+## 2026-10-01 收工源码合并
+
+用户授权提交当前 0.7.3 开发源码并合并 main，提交邮箱 `xuchen1995@gmail.com`。分支 `codex/island-0.7.3-source`；合入远端 0.5.1 Build 13 路径热修复和悬停可见度基础实现。旧单岛的悬停偏好/控制器保留；新多任务刘海沿用已确认的悬停展开与可点击交互，不恢复旧穿透悬停设置页。独立开发身份不变，不发布 Release、appcast 或覆盖稳定安装。
+
+当前运行仍为此前构建 PID 49675，合并后的源码通过本轮构建/必要冒烟后提交，不自动重启。冻结开发台、其真实内容夹具、截图、归档包及本机诊断文件保留本机，未纳入本次源码提交；文档中的相关本机链接属于历史证据。下一步等待用户继续与视觉验收。
+
+最新修订（2026-10-01）：PID **49675** 已启动。移除任务列表 ScrollViewReader 及 detailID/onAppear 自动 scrollTo：不再把卡片与长详情整体滚入视口，保持原生滚动位置，初始停在顶部并保留 12 pt 内边距。内容缩短时仍由系统限制合法滚动范围。构建、签名与启动检查通过（`.build/073-preserve-scroll-build.log`）；真实交互待用户验收。
+
+最新修订（2026-10-01）：PID **47588** 已启动。恢复原生严格列表裁剪，取消向外扩展遮罩；列表内部上下各 12 pt，滚动可见性坐标同步更新。点击选中只发布一次模型更新，去掉旧选中布局的重复刷新。命令默认最多两行/120 字预览，输出默认折叠，查看原文恢复完整缓存内容。1 项冒烟与 128 任务基准通过，P95 1.58 ms、最大 56.67 ms；该基准不代表真实展开流畅度验收。最终构建与签名通过，日志 `.build/073-list-insets-*`，视觉与偶发卡顿待用户确认。本条覆盖下方放宽裁剪的方案。
+
+最新修订（2026-10-01）：PID **44437** 已启动。用户发现青色实心辉光串到其他卡片；撤销上轮跨层辉光与坐标同步/观察器，恢复辉光归属卡片，列表裁剪仅向上下放宽 12 pt。完成描边切换不再重播 1.16 秒等待及 0.24 秒淡入，外围辉光保持 3 秒节奏。2 项相关冒烟与构建/签名通过（`.build/073-glow-ownership-*`），视觉待用户验收。本条覆盖下方独立辉光层方案。
+
+最新修订（2026-10-01）：PID **38846** 已启动。固定后岛外点击不再收起，仅手动收起；完成卡片外围辉光脱离列表裁剪并跟随原生滚动，仍受整岛遮罩约束。左上角改为百分比 + 重置倒计时（同一额度窗口），圆环 14 pt / 2.8 pt 环线，复用额度风险色。2 项相关冒烟、arm64 Debug 构建与签名通过；日志 `.build/073-glow-clip-pin-*`。实际视觉与交互待用户验收。下方运行记录为历史。
+
+最新修订（2026-10-01）：PID **34477** 已启动。「已完成」状态标签改为不透明绿色 RGB (0.36, 0.80, 0.55)，完成详情保持白色。构建及签名通过；日志 `.build/073-completed-label-build.log`，运行清单更新，视觉由用户验收。
+
+最新修订（2026-10-01）：PID **31792** 已启动。按用户追加要求，完成描边保持常亮，仅外围辉光采用 3 秒周期并在暗段全灭，覆盖此前描边同步熄灭的记录。1 项针对性冒烟、构建及签名通过；日志 `.build/073-steady-outline-*`，清单已更新，视觉待用户验收。
+
+更新日期：2026-10-01
+
+## 当前开发入口：0.7.3 独立版本
+
+最新运行 PID **26630**：完成态选中卡片的辉光与发光边缘改为同步 3 秒周期，暗段完全熄灭（每轮约 0.6 秒）；复用已有合成层节奏，无新增计时器。未选中淡绿描边/慢速球保持。1 项针对性冒烟、arm64 Debug 构建及签名通过，日志 `.build/073-completed-pulse-*`，清单已更新，视觉待用户验收。下方 PID 均为历史。
+
+### 2026-10-01 最新运行修订：PID 23170
+
+后续用户反馈覆盖下方五段/双行设计：普通底栏恢复单行 28 pt，左会话、中间周额度、右状态统计，统一 10 pt medium；移除「本地活动数据」等来源标签。三段额度条宽 146.4 pt（+20%）、厚 3 pt，59% 填充 `[1, 0.77, 0]`，沿用真实周窗口与额度风险色。审批页仍为独立确认底栏。
+
+文字流光按用户录屏和本机 Codex `cadencedShimmer` 调整：示例文字一半约 85 pt 固定高光宽度（不是每条文案的一半），40%～60% 平顶，1 秒/48 步扫动，每 4 秒重复，首次 600 ms 延迟；用不透明 RGB 灰阶表现。此前窄亮点方案已替换。2 项针对性冒烟、最终构建和签名通过；日志 `.build/073-reference-footer-*`，清单已更新，实际效果由用户验收。
+
+### 2026-10-01 最新运行修订：PID 17305
+
+0.7.3 / Build 1 / 内部 49 最新包已启动，覆盖下方旧 PID。完成卡片保留慢速球、未选中淡绿边框、选中复用单岛辉光；运行状态标签和详情共用更窄、更亮的文字流光。进度解析改为任务持有，共用原单岛算法，选择/重建恢复原位置，新轮才归零。只有固定按钮触发固定，卡片/筛选/紧凑态点击不会自动固定。
+
+展开页最下方居中显示真实周额度五段条（上方保留会话统计）。每段 20%，59% 的填充为 `[1, 1, 0.95, 0, 0]`；≥50% 绿、20%～49% 黄、<20% 红。只取 10080 分钟窗口，缺值显示「—」，不使用短周期主额度代替。审批页同样保留底栏，最大正文高度扣除该 24 pt。
+
+本轮分步完成 4 项针对性冒烟与 1 项 128 任务展示基准（P95 1.516 ms，最大 7.696 ms），不是视觉验收。最终 arm64 Debug 构建、身份和签名验证通过。日志 `.build/073-completion-card-*`、`.build/073-card-switch-*`、`.build/073-weekly-quota-*`，运行清单已更新。固定 Demo、稳定安装不变。
+
+2026-10-01 完成状态与进度修复已构建并启动，PID **5058**，版本身份保持不变。`IslandLiveStore` 不再将 Socket 接收时间与 rollout 发生时间做全局先后比较，按来源校验，避免当前轮明确完成被误丢；终态清理活动工具，旧轮事件仍不能覆盖新轮。无结构化计划传 `nil`，恢复单岛已有的 4 秒识别 / 无计划 50% 上限估算，而非固定 1%。两项针对性冒烟、arm64 Debug 构建和签名核验通过；原开发台冻结包未改。日志 `.build/073-completion-progress-{smoke,build}.log`，运行清单已更新，实际效果待用户验收。
+
+用户于 2026-09-30 授权按照交互与显示规则实施 **0.7.3**，采用推荐默认值。开发工作区为 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`，detached HEAD 基于 `71932fd` 并复制原有未提交开发输入；没有提交。
+
+身份 **0.7.3 / 显示 Build 1 / 内部 49**，Bundle `com.quotaview.development073`；包在 `dist/development-0.7.3/QuotaView 0.7.3 Development.app`，只作本机开发，未发布或替换稳定安装。
+
+[规则](docs/design/quotaview-island-production-interaction-review-2026-09-30.md)为 Accepted / Verifying；[分类交付记录](docs/design/quotaview-0.7.3-development-delivery-2026-10-01.md)记录当前覆盖及边界。真实请求处于观察模式，提供“在 Codex 处理”，没有真实回传。8 项必要冒烟和 1 项基准通过，实际效果等待用户验收。构建、签名与运行证据见 `dist/development-0.7.3/development-manifest.json`。
+
+原工作区源码和固定开发台 **2026-09-30-3s-sync-noise65** 保留。下方为历史记录；不按历史“下一步”自动恢复任务。公开版仍由 [版本历史](VERSION_HISTORY.md#当前最新版本) 定位。
+
+## 历史基线：开发台固定与生产规则审核稿
+
+用户要求将开发台固定在 **2026-09-30-3s-sync-noise65**，暂不继续 UI 修改。[持久快照与恢复说明](Prototypes/MultitaskIslandConsole/Frozen/2026-09-30-3s-sync-noise65/README.md)保存现有应用包、129 项构建输入、SHA256 与上一轮证据；运行主程序、源码清单和归档输入核验一致。本次没有重建或重启，冻结时仍为 PID 35278；身份保持 0.5.2 / 显示 Build 7 / 内部 48。冻结不等于生产/视觉验收。
+
+[生产交互与显示规则审核稿](docs/design/quotaview-island-production-interaction-review-2026-09-30.md)已整理，Spec 为 QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003，Review / Discovery。覆盖显示、十类待确认、通信生命周期、异常、性能与 14 项审核决策。只读核对源码及官方协议，不做真实连接/回传。下一步仅等待用户审核；本文下方历史“下一步”不恢复执行。新的明确修改要求应从固定版本副本继续，不覆盖快照。
+
+新会话接手当前多任务开发台，先读[专项交接（2026-09-27）](HANDOFF-NEXT-SESSION-2026-09-27.md)，含最新刘海轮廓、代码入口、授权边界及启动验证。
 
 当前公开版本：[版本历史](VERSION_HISTORY.md#当前最新版本)。当前规格：[SDD 注册表](docs/specs/README.md)。
 更早交接按需查阅[历史快照](docs/archive/handoff-2026-09-12.md)，不从历史“下一步”恢复任务。
+
+## 2026-09-30 待确认辉光与量子噪点同步
+
+用户追加指定 3 秒周期，并要求噪点不要全灭，覆盖上一轮 5 秒。待确认卡片与整岛辉光共用 ConsoleConfirmationPulse 的时间原点、关键帧与 3 秒周期，明暗节奏一致：外围辉光最低为 0，每轮约 0.6 秒全灭；噪点保留原等待态 65% 的低亮下限。卡片重新挂载、离屏返回或暂停恢复均接入同一相位。
+
+开发台组装副本移除量子噪点等待态原有的独立正弦明暗，只给 Metal 效果层添加共用节奏的合成动画；粒子连续运动时钟、进度范围、颜色映射与其他状态保留，文字和黑底不参与明灭。不增加计时器或逐帧 SwiftUI 更新，仅适配组装副本的 CodexActivityStateSmoke.swift。
+
+2 项必要冒烟通过，覆盖原生 Metal 渲染器、3 秒相同相位、两种明暗下限、离屏返回、刷新不重启、暂停/减少动态与清理。源码清单一致，69 项生产文件哈希未变，实际观感由用户验收。
+
+新版 PID 35278，关闭旧实例 [33255]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.a8tklx/Multitask Island Console.app`。最终证据位于开发台 `.build/confirmation-noise-floor-20260930/`，此前同步阶段证据保留在 `.build/confirmation-pulse-sync-20260930/`。
+
+## 2026-09-30 辉光慢速明灭
+
+按最新反馈，仅调整整岛待确认辉光：周期 5 秒，亮度从 0 渐亮到 1 再降到 0，每轮完全熄灭约 1 秒；保留原黄色与辉光扩散范围，两层同相播放。使用同一 CAAnimationGroup 同步透明度与半径，不增加计时器；显示数据刷新与展开/收起不重启周期。暂停/减少动态仍为静态辉光，隐藏与请求清理沿用现有停止逻辑。
+
+2 项必要冒烟通过，覆盖全灭关键帧、周期、两层同步、刷新不重启及停止/减少动态。首次断言读取整数关键帧时误转为 Double 数组，已修正为 NSNumber 读取并复验；日志保留。生产 69 项文件哈希不变，实际节奏由用户验收。
+
+新版 PID 29151，关闭旧实例 [25964]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.6rlEOE/Multitask Island Console.app`，源码清单一致。证据位于开发台 `.build/confirmation-glow-breath-20260930/`。
+
+## 2026-09-30 待确认整岛辉光
+
+待确认提示提升到整个刘海外缘：复用原单岛 ActivityIslandCompletionGlowView 的黄色、显现与呼吸动画，仅在开发台组装副本增加可选刘海轮廓。辉光位于黑色外壳下方、内容遮罩外，跟随收起/展开路径过渡；任务卡片、文字和按钮保持原布局。
+
+任何任务处于待确认时显示整岛辉光，返回列表或收起仍保留；全部待确认任务离开该状态后清除。暂停/减少动态显示静态辉光，隐藏、移出窗口与退出清理动画。窗口两侧和屏幕可用底边统一预留原单岛 30 pt 效果空间；原生窗口仍固定，不增加逐帧布局或新计时器。
+
+4 项必要冒烟通过，覆盖整岛轮廓、明确图层顺序、状态清理、暂停/减少动态、固定窗口、透明区域穿透及确认面板自适应。首次冒烟直接检查离屏窗口的 backing layer 插入顺序失败；改为显式 zPosition 并核验外壳与辉光层级，保留初次日志。未做视觉或真实交互验收。
+
+新版运行 PID 25964，关闭旧实例 [16470]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.Pvtz6p/Multitask Island Console.app`。源码清单一致，69 项生产文件哈希未变；证据在开发台 `.build/confirmation-shell-glow-20260930/`。仍为纯 Demo，实际效果由用户验收。
+
+## 2026-09-30 待确认顶部复用选中任务卡片
+
+待确认页删除独立的图标、任务标题与“请求确认”副标题，直接复用列表的 ConsoleTaskCard 展示组件：60 pt 行高、选中描边与量子噪点，任务标题、待确认状态/操作、模型/推理强度、Codex 来源、运行时长和会话 Token 均来自同一任务。确认页中的卡片只展示信息，返回仍使用顶栏入口；各类确认内容及底部操作保持原有布局。
+
+移除旧标题高度测量，以共用卡片高度参与内容自适应。卡片仍随请求正文连续滚动，复用现有可见性观察，离屏后停止文字与特效播放，不增加滚动吸附、逐帧状态或窗口 resize。
+
+4 项必要冒烟通过，覆盖十类场景中英文本高度、自适应高度与草稿、单一选中卡片宿主及离屏停止。1 项离屏表单滚动基准（120 次）同步布局 P95 1.28 ms，主循环 P95 12.28 ms、最大 19.53 ms；这些结果不代表视觉/实际交互验收。源码清单一致，69 项生产文件哈希未变。仍为独立纯 Demo，无真实回传，实际效果由用户验收。
+
+运行 PID 16470，关闭旧实例 [128]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.Z1Ot7T/Multitask Island Console.app`。证据位于开发台 `.build/approval-task-card-20260930/`。
+
+## 2026-09-30 待确认面板按内容与屏幕自适应高度
+
+用户反馈第三方工具选项仍被截在滚动区域下沿。根因是正文固定上限 320 pt，且原生窗口只预留列表/详情固定画布。本轮移除该固定正文上限：待确认面板优先按实际内容展开，最大高度来自当前屏幕顶部到可用底边的空间，避开底部 Dock 并保留 24 pt 余量；扣除顶栏和固定操作底栏后才限制正文，超长内容在内部滚动。普通短请求不被撑高，既有按钮配色、1/2/3 个按钮布局与其他任务详情保持。
+
+原生画布按屏幕可用高度预留，不随请求内容或展开/收起逐帧 resize；只有屏幕几何变化才调整。审批尺寸缓存纳入可用高度，屏幕缩小和恢复都会重新计算；虚拟刘海同样使用真实可用底边。
+
+4 项必要冒烟与 1 项离屏表单滚动基准通过：十类场景在 900 pt 高测试屏幕上完整展开，截图对应第三方选项超过旧 320 pt 后仍完整显示；小屏/Dock 边界回退到内部滚动，屏幕恢复后缓存正确更新；长正文、固定原生窗口和透明区域穿透也通过。基准在 600 pt 测试屏幕触发滚动，同步布局 P95 0.90 ms，主循环最大 12.06 ms，不代表视觉验收。
+
+当前运行 PID 128，关闭旧实例 91692；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.s4JNTj/Multitask Island Console.app`。源码清单一致，69 项生产文件哈希未变；证据位于开发台 `.build/approval-adaptive-height-20260930/`。仍为纯 Demo，实际效果由用户验收。
+
+## 2026-09-30 操作按钮铺满底栏
+
+按用户最新反馈，取消、拒绝、通过统一为实体按钮：取消沿用深灰底，拒绝红底白字，通过保留白底黑字。底栏共用 `ConsoleApprovalActionLayout`，只计算实际存在的按钮：单个占满，两个等宽，三个从左至右取消/拒绝/通过按 3:3:4 分配；同为 42 pt 高、8 pt 间距、10 pt 圆角，没有中间 Spacer 或不存在操作的占位。这覆盖上一轮 248 pt 固定主按钮及文字取消样式。无额外批准/取消操作被伪造，草稿和模拟通信行为未变。
+
+十类场景必要冒烟通过、构建及签名/源码清单核验通过。之前几何冒烟曾出现屏幕原点变化（宽高相同），未经源码修改重试通过；记录原始失败，未扩大回归或重复基准。当前 PID 91692，关闭旧实例 76242，运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.rPRSFF/Multitask Island Console.app`。69 项生产文件哈希未变，仍为纯 Demo；证据在开发台 `.build/approval-buttons-20260930/`，实际效果由用户验收。
+
+## 2026-09-30 待确认 UI 统一与批准范围优化
+
+用户已确认十类场景可见，本轮按现有刘海风格全面优化：保持 680 pt 黑色外壳、13/12/11/10 pt 字级和不透明白灰文字；来源任务与正文用细线分区，控件采用统一深色表面、10 pt 圆角及选中/悬停/输入焦点反馈。
+
+问题增加编号、整行选择、补充输入与回答进度；权限按访问项及期限分组；表单采用标签/控件双列。命令、目录与差异完整展示，文件名/路径/增删分层，第三方参数以键值对展示，外部授权采用两步流程，原生验证保留独立入口。固定底栏主按钮在右侧（248×42 pt），拒绝与取消在左侧。
+
+针对用户指出的「更多选择」问题，已删除通用菜单。命令/文件的批准范围、网络的允许/阻止域名规则直接列在正文；选择只更新请求草稿，主按钮才提交原始 decision。外部授权/表单/验证直接取消，不生成额外范围菜单。模拟网络阻止规则不再错误恢复工作中。仍为纯 Demo，无真实连接、回传或打开外部页面。
+
+9 项必要冒烟通过，覆盖十类最终面板数据、中文/English 真实正文高度、草稿及响应生命周期、范围选择和阻止规则。1 项离屏表单滚动基准（120 次）同步布局 P95 0.61 ms，主循环 P95 11.13 ms、最大 11.61 ms；不是视觉或真实输入验收。源码清单一致，69 项生产文件哈希未变，版本仍为 0.5.2 / 显示 Build 7 / 内部 48。实际效果由用户验收。
+
+当前运行 PID 76242，已关闭旧实例 54580；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.SaXAL2/Multitask Island Console.app`。证据位于开发台 `.build/approval-polish-20260930/`。
+
+## 2026-09-30 按 Codex 请求结构区分待确认 UI
+
+2026-09-30 请求覆盖修复（上一运行版）：此前入口调整没有修复根因，`MultitaskState.update` 在操作文案改变后重新生成通用确认，覆盖了场景刚安装的 `protocolRequest`，导致十类 UI 都退回「拒绝／允许一次」。现保留显式安装的新请求；仅在未提供新请求时生成默认确认，旧请求仍随手动操作变化或离开待确认状态失效。补充最终面板数据断言后先复现失败，再通过 7 项必要冒烟，覆盖十类场景的类型、参数、问题选项、表单字段和上下文，以及请求替换／清理。此前冒烟只覆盖夹具和尺寸，不能证明类型数据到达面板。已重新构建启动 PID 54580，关闭旧实例 [46479]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.nJpwOt/Multitask Island Console.app`，源码清单一致，69 项生产文件哈希未变。证据位于开发台 `.build/approval-payload-fix-20260930/`。仍为纯 Demo，无真实回传；实际界面待用户验收。
+
+以下为前两次构建记录，入口修正当时仍存在上述覆盖问题：
+
+2026-09-30 入口修正：用户反馈新版看不出变化。核对原运行 PID 39331 确为新包，但启动仍显示旧日常预设，下拉框改值也未立即载入。现启动即展开命令批准，类型切换即时载入并展开；「只剩待确认」进入当前类型，按钮改为「重载当前场景」。1 项受影响冒烟通过，未重复基准或视觉验收。新版 PID 46479，已关闭旧实例 [39331]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.s8Hdch/Multitask Island Console.app`，源码清单一致，生产文件哈希未变。证据 `.build/typed-approval-ui-20260930/entry-delivery.json` 位于开发台目录。
+
+新版独立 DEBUG 开发台已构建并启动，PID 39331，启动器关闭的旧实例为 [6453]；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.zFxhVX/Multitask Island Console.app`。运行包源码清单与当前源码一致，归档校验和签名验证通过，69 项生产文件哈希未变，版本身份仍为 0.5.2 Build 7 / 内部 48。实际 UI 待用户验收。
+
+用户反馈上一版各场景过于相同；旧的「标题＋通用内容框」没有形成有效适配。本轮保留刘海外壳与公共操作条，正文改由 `Editable/ConsoleApprovalTypedContent.swift` 按真实请求字段选择独立布局。Demo 任务标题与请求说明分开，不再重复类型名称。
+
+| 场景 | 当前正文与操作 |
+|---|---|
+| 命令批准 | 命令终端块、工作目录、请求原因；允许执行及批准范围 |
+| 终端输入 | 已有终端标识、转义显示的待发送输入；发送输入 |
+| 文件修改 | 每个文件的路径与逐行差异；增删以克制底色和符号区分，允许修改 |
+| 网络访问 | 域名目标面板及协议；允许访问，更多选择中保留网络规则 |
+| 权限范围 | 读取、写入与网络分项授权块，勾选及本轮/会话期限 |
+| 第三方操作 | MCP 工具名称、参数与独立并排选择；不凭任务名推断，依据 `mcpToolCall` 上下文识别 |
+| 问题选择 | 编号问题、原始选项与补充输入；提交回答 |
+| 工具表单 | 标签/控件双列，类型、必填和约束；提交参数 |
+| 外部授权 | 服务商目标与打开/返回两步流程；打开授权页面后变为继续 |
+| 原生验证 | 独立锁盾面板及跳回入口；不显示伪造的同意验证 |
+
+仍为纯 Demo，不访问真实服务或回传批准；授权和跳回也模拟。依据本机 Codex CLI 0.159.0 生成的接口与 item 上下文字段，不声称这些 Demo 是正在运行的真实请求。卡片布局、字体、纯色文字、连续滚动、无吸附和原有球/量子噪点保持。
+
+6 项必要本地冒烟及 1 项滚动基准通过；滚动/布局 P95 0.57 ms，主线程心跳最大 42.40 ms，有 1 次超过 33.33 ms。离屏基准不代替实际流畅度或视觉验收。源码、构建与交付证据位于开发台 `.build/typed-approval-ui-20260930/`。新界面实际效果待用户验收。以下为上一版及历史记录。
+
+## 2026-09-30 十类待确认 UI Demo
+
+独立 DEBUG 开发台已于本轮继续后重新打包并启动，PID 6453；启动器未发现需关闭的旧实例。运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.lC49jq/Multitask Island Console.app`，包内源码清单与当前源码一致，归档校验与签名验证通过，69 项生产文件哈希未变。交付证据为开发台 `.build/approval-types-20260930/delivery.json`。实际 UI 和操作效果仍待用户验收。
+
+按用户最新要求，本轮只提供界面 Demo，优先实际显示效果，不接入真实审批或回传。开发台新增「待确认类型 / 载入待确认场景」，覆盖命令、终端输入、文件修改、网络访问、权限范围、第三方操作、问题选择、工具表单、外部授权及原生验证。载入后直接展开独立刘海面板；返回保留未提交内容，替换请求释放草稿。既有卡片、原生连续滚动、无吸附与动效保持。
+
+命令等场景保留提供的选项，并用「更多选择」容纳会话允许和规则记忆；权限逐项选择及本轮/会话期限；问答显示原选项、其他输入和秘密字段；表单按字符串、数字、布尔及枚举显示控件，显示名称与枚举值分开，未满足必要条件时不能模拟提交。提交延迟、失败重试、拒绝/取消均模拟；授权页面和跳回 Codex 也模拟，不访问服务。
+
+本轮曾加入的真实连接及回传代码已撤销，69 项生产 Sources/Configs/Support 文件哈希与本轮开始时一致，版本身份仍为 0.5.2 Build 7 / 内部 48。已有 5 项本地 UI/协议冒烟及 1 项滚动基准通过，本次继续不重复检查。布局 P95 0.55 ms，心跳 P95 18.22 ms、最大 49.70 ms、有 1 次超过 33.33 ms；离屏基准不能代替真实流畅度或视觉验收。证据保存在开发台 `.build/approval-types-20260930/`。
+
+完整交接见[专项交接](HANDOFF-NEXT-SESSION-2026-09-27.md)。以下为上一运行版与更早历史，本节覆盖固定两按钮及此前暂停记录。
+
+## 2026-09-30 待确认独立刘海面板、取消吸附；暂停 UI 迭代
+
+待确认已移出任务卡片：选中待确认任务时，展开刘海切换为独立授权面板，顶栏显示橙黄色「待确认」和返回入口，正文显示来源任务、完整问题与影响框；底部「拒绝 / 允许一次」并排等宽、42 pt 高，允许白底黑字，拒绝暗底。返回/收起保留请求，提交中禁用按钮，失败可重试，成功或拒绝后返回列表；确认仍为隔离模拟。
+
+按用户要求彻底删除卡片吸附的停点、阈值、滚轮监听、手势状态机、等待定时与动画，保留原生连续滚动、惯性和独立轨道。`ConsoleTaskListLayout` 只计算可见项；绑定仅观察 clip 边界和 document 尺寸，卸载恢复原通知标志。进展/完成/失败详情仍紧随对应卡片，通过同一外层列表按自然高度浏览。用户随后提出的「卡片固定顶部、详情限定剩余高度并内部滚动」未实施即被取消，无需回退源码。
+
+最终 12 项必要冒烟与 1 项 9 任务/120 次滚动基准通过；同步滚动/布局 P95 0.72 ms，主线程心跳 P95 17.91 ms、最大 29.60 ms，本次采样无超过 33.33 ms。这是离屏主线程采样，不代表输入延迟、GPU 帧率或视觉验收。结束时只更新交接，未追加测试、构建或重启。证据：`Prototypes/MultitaskIslandConsole/.build/notch-approval-20260930/`。
+
+当前独立 DEBUG 开发台 PID 88655，旧实例 [54728] 已关闭；运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.NMo84f/Multitask Island Console.app`。运行包源码清单与公开原文夹具一致，69 项生产 Sources/Configs/Support 文件哈希未变，身份仍为 0.5.2 Build 7 / 内部 48。真实内容订阅和真实审批未接入。
+
+用户表示「目前版本暂时看起来不错，先不做下一步的修改了」：保留当前效果，暂停后续 UI 迭代，等待新的明确要求；不扩大为完整功能验收或迁回生产授权。本节覆盖以下历史记录中的卡片内确认与滚动吸附方案。
+
+## 2026-09-30 淡化未选中卡片层级
+
+按用户截图反馈，未选中卡片底色从 0.065 / 0.095（普通 / 悬停）调整为 0.045 / 0.07，1 pt 边线从 0.085 / 0.14 调整为 0.055 / 0.095；保留常驻底色与边界。选中描边 0.22、量子噪点及布局、文字保持原值。仅修改两个装饰颜色表达式。1 项完整刘海列表/轨道冒烟及构建、归档签名通过；未重复基准或视觉自动化。新版独立开发台 PID 54728，已精确关闭旧实例 [31674]，运行包 `/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.1cCqxB/Multitask Island Console.app`；源码清单一致，69 项生产文件哈希未变，仍为 0.5.2 Build 7。实际层级效果待用户验收。证据：`Prototypes/MultitaskIslandConsole/.build/card-softening-20260930/`。
+
+## 2026-09-30 按 Vibe Island 官网状态重组详情 UI
+
+已观察官网「总览 / 批准 / 询问 / 跳回」四种预览，并保存截图与适配依据。详情从平铺日志改为状态面板：思考/执行默认突出最近公开消息和最近工具，较早记录折叠，运行输出通过「查看原文」披露；待确认突出完整问题与独立影响框，右侧 136×42 pt 白色主按钮和暗色拒绝按钮；完成直接显示可用输出，失败优先展示失败工具及原始错误。未观察到的失败样式按本地状态语义适配，不声称来自官网。
+
+公开消息为 13 pt、命令/输出 11 pt，辅助标签 10–12 pt。表面使用黑灰层级，文字保持不透明 RGB，橙黄色用于待确认、红色用于失败。原文参考夹具不改写、不翻译，历史展开可找回全部保留事件。原生 680 pt 外壳、60 pt 会话行、8 pt 行距、Ripple Glow 与选中量子噪点保持；详情仍紧随对应任务并共用同一个滚动列表。历史展开计入有界高度缓存、轨道与吸附，不引入嵌套滚动、逐帧测量或窗口 resize。
+
+7 项必要冒烟与 1 项 9 任务/120 次原生滚动基准通过，覆盖原文完整披露、按状态呈现、历史展开/收起与缓存、实际列表高度、确认失败重试/拒绝及旧回调取消。默认参考详情由此前 580 pt 收敛至 314 pt；同步滚动/布局 P95 0.67 ms，主线程心跳 P95 20.00 ms、最大 44.47 ms、1 次超过 33.33 ms。此为离屏主线程采样，不是输入延迟、GPU 帧率或视觉验收。证据：`Prototypes/MultitaskIslandConsole/.build/vibe-state-redesign-20260930/`。
+
+新版独立 DEBUG 开发台已启动（PID 31674），旧实例 [11288] 已按 Bundle ID 与精确路径核对关闭。运行包：`/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.at6pKz/Multitask Island Console.app`；包内源码清单及原文资源与当前源码一致，69 项生产 Sources/Configs/Support 文件哈希未变化，版本身份保持 0.5.2 Build 7。实际视觉、交互待用户验收；公开内容仍为历史参考，确认仍是隔离模拟。
+
+[官网预览与适配记录](Prototypes/MultitaskIslandConsole/References/vibe-web-20260930/README.md)。以下为历史实现记录，旧按钮配色与默认平铺八条记录的布局由本节替代。
+
+## 2026-09-30 详情 UI 与 Codex 公开原文参考
+
+用户反馈上一版三条模拟摘要脱离实际，本轮移除固定三步故事及伪造时间点。日常场景改为本会话经 Codex `read_thread` 返回的公开 `agentMessage`、`commandExecution`、`fileChange` 原文参考，保留来源事件 ID、命令、可用输出、文件差异、状态与退出码。界面分组显示进度消息和工具卡片，长输出可展开；只展示来源提供的原文，来源截断明确提示，切换语言不翻译或改写。最多保留八条事件，其他预设只记录实际输入的模拟状态事件，不补写推理故事。公开轨迹仍是历史参考夹具，并非实时订阅；详情标明「Codex 原文参考」，模拟事件单独标注。不得显示或补造内部推理。直接读取 Codex 窗口被工具权限限制，内容依据来自会话读取接口，未声称视觉一致。
+
+待确认采用左侧完整问题与影响、右侧操作栏：按钮 136×42 pt、13 pt Semibold，允许一次使用提亮橙黄色实底与黑字，拒绝使用中性暗底。提交中禁用两个按钮，失败保留问题并允许重试，拒绝仍为取消；按钮仅处理模拟请求。窄宽度时操作栏转至正文右下方，正常 680 pt 岛体保持右侧布局。
+
+详情继续紧随对应卡片，公开消息为 12 pt、命令/输出为 11 pt 等宽文字，全部文字使用不透明纯色。原文展开、换行高度、吸附与轨道共用同一测量结果；按内容/语言/展开项/宽度缓存，缓存最多两项，时长刷新与滚动复用不变内容的高度。固定窗口与额外视口最多 200 pt、独立轨道及 8 pt 间距保持既有契约，没有新增逐帧布局或嵌套滚动容器。
+
+6 项相关冒烟与 1 项 9 任务/120 次原生滚动基准通过；缓存修订后复验受影响的 2 项几何冒烟与该基准。当前参考详情自然高度 580 pt，同步滚动/布局 P95 0.85 ms；主线程心跳 P95 27.40 ms、最大 48.68 ms、4 次超过 33.33 ms。此为离屏主线程采样，不是输入延迟、GPU 帧率或无卡顿保证。证据位于 `Prototypes/MultitaskIslandConsole/.build/detail-codex-ui-20260930/`。实际视觉、交互由用户验收；真实内容订阅和真实审批未接入。
+
+新版独立 DEBUG 开发台已启动（PID 11288），旧实例 [93610] 已按 Bundle ID 与精确路径核对关闭。运行包：`/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.w1uxsv/Multitask Island Console.app`；包内源码清单与原文参考资源均与当前源码一致，69 项生产 Sources/Configs/Support 文件哈希未变化，版本身份保持 0.5.2 Build 7。实际显示与交互等待用户验收。
+
+[原文来源与展示边界](Prototypes/MultitaskIslandConsole/References/codex-public-detail-content-2026-09-30.md)。以下为历史实现记录，固定三条摘要已被本轮替换。
+
+## 2026-09-30 详情改为进展轨迹与模拟确认
+
+按用户确认的方案，详情不再重复标题、状态、模型、时长与 Token，改为最近三条公开进展/执行记录（内部保留五条）；按事件更新，时长和元信息刷新不制造记录。待确认时优先显示完整问题、操作影响与「允许一次 / 拒绝」。仅接隔离开发台的模拟请求，标明「模拟」，不连接真实 Codex 审批或内部推理。点击后保持待确认并禁用按钮，收到模拟响应后才转为运行/取消；失败保留原问题可重试。控制窗口有「模拟下一次确认提交失败」开关，拒绝不记为成功，也不持续提醒。
+
+长正文自然换行，详情按实际宽度测量高度，额外视口最多 200 pt，使用同一外层任务列表完整浏览；吸附、可见性与正文共用实际高度。局部冒烟发现 LazyVStack 的离屏行高估算不适合大详情，已改为明确行槽与有界近邻缓存；仅视口播放，AI 球避免状态未变化时重复重绘。固定 NSPanel、既有卡片、8 pt 轨道间距、文字纯色与动效契约保留。
+
+10 项相关冒烟及 1 项含详情的 9 任务/120 次滚动基准通过，覆盖事件去重、确认失败/重试/拒绝、旧请求/退出取消、长正文、回调接线、实际轨道、筛选与固定窗口。同步滚动/布局 P95 0.74 ms，心跳 P95 22.72 ms、最大 42.09 ms、1 次超过 33.33 ms；这是离屏原生主线程基准，不是输入延迟或 GPU 帧率，不能据此保证无卡顿。证据位于 `Prototypes/MultitaskIslandConsole/.build/task-detail-20260930/`。真实内容接入与实际交互、视觉仍待后续实施/用户验收。
+
+新版独立 DEBUG 开发台已启动（PID 93610），旧实例 [50449] 已按 Bundle ID 与精确路径核对关闭。运行包：`/private/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-multitask-console-run.X1kh2a/Multitask Island Console.app`；包内源码清单与当前源码一致，69 项生产 Sources/Configs/Support 文件哈希未变化，版本身份保持 0.5.2 Build 7。实际显示与交互等待用户验收。
+
+## 2026-09-29 滚动实现审查、清理与等距布局
+
+用户已确认滚动条可见，要求先检查实现质量再调整间距。本轮先删除 AppKit 强制隐藏内置滚动条的重复控制，统一采用 SwiftUI `.never`；将重叠手势标志收敛为单一状态机，补齐原绑定对象恢复、监听去重与卸载取消。清理阶段 6 项冒烟通过后，再将卡片—滑块—岛体边缘统一为 8 pt，轨道上下对齐卡片区域，尺寸由公共指标推导。详情见[审查记录](Prototypes/MultitaskIslandConsole/References/scroll-implementation-audit-2026-09-29.md)。
+
+最终 6 项冒烟、1 项基准通过：9 任务滚动/布局 P95 5.22 ms，心跳 P95 14.10 ms（离屏基准）；生产源码哈希未变化。新版已启动（PID 50449），旧实例精确核对后关闭；证据 `Prototypes/MultitaskIslandConsole/.build/scroll-audit-20260929/`。新间距和真实手感待用户验收。
+
+## 2026-09-29 滚动条避让刘海遮罩，改用独立轨道
+
+用户再次反馈滚动条不可见，前两轮实际显示未通过；局部绘制/组件属性检查不足以证明完整岛体内可见。完整容器冒烟定位到遮罩几何：展开态凹角让主体左右各内缩 16 pt，680 pt 宿主的实际右边界是 x=664；原生滚动条位于 x=667…680，整条在遮罩外。此前将自绘路径作为根因的判断不完整。
+
+现停用滚动容器内置滚动条，改为列表外层的独立原生轨道，通过 Core Animation 图层直接显示深灰轨道和亮灰滑块。轨道 14 pt 命中宽、末端距宿主右边 18 pt，范围 x=648…662，全部在遮罩内；滑块宽 6 pt、轨道宽 4 pt。超过四个任务时卡片右内距只增加 4 pt，为轨道留位；四项及以下不显示。保留原生拖动/辅助功能、惯性结束后吸附及可见项按行边界更新，不发布逐帧 SwiftUI 滚动偏移。
+
+构建、归档签名和最终 4 项滚动冒烟通过，覆盖实际刘海容器启动后 4→11 项、虚拟刘海、祖先可见性、轨道完整落在遮罩内、双向滚动关联、详情尺寸、展开/收起和筛选。修复前该遮罩检查失败，移入后通过。1 项 9 任务/120 次滚动基准通过：滚动/布局 P95 5.63 ms，主线程心跳 P95 15.42 ms（离屏基准，不是 GPU 帧率或真实输入延迟）。新版已启动（PID 41114），旧实例按精确路径关闭；运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-independent-rail-wf7n7129/Multitask Island Console.app`，证据：`Prototypes/MultitaskIslandConsole/.build/independent-rail-20260929/`。最终视觉和交互仍由用户验收。
+
+## 2026-09-29 滚动条绘制与惯性卡顿修正
+
+用户反馈上一版滚动条依旧不可见、滚动卡顿，上一版实际体验未通过。已定位 `NSScroller` 默认 `wantsUpdateLayer=true`，绕过自定义 `draw`；现显式使用自绘路径，保留常驻 6 pt 灰色滑块和 4 pt 轨道。冒烟增加离屏绘制输出检查，不能只凭 `hasVerticalScroller=true` 认定可见。
+
+移除每行 `GeometryReader`/Preference 的逐帧位置测量，改为依据原生 clip 偏移和既有固定行高计算可见项，只在任务进入/离开视口时更新动效可见性。滚轮事件仅旁路读取、不拦截，显式区分手指滚动与惯性阶段；惯性结束并静止 200 ms 后才按原 35% 阈值吸附。新手势会取消旧吸附/惯性记录，详情揭示和筛选不会抢滚动位置。
+
+构建、归档签名、7 项相关冒烟与 1 项滚动基准通过，最终手势取消补充后复验 4 项滚动冒烟。相同 9 任务、120 次原生滚动/布局采样，P95 从 12.11 ms 降到 4.69 ms；主线程心跳 P95 从 22.41 ms 降到 14.06 ms。这是离屏主线程基准，不代表输入延迟、GPU 帧率或视觉验收。新版已启动（PID 29151），旧实例按精确路径核对后关闭；运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-scroll-fix-y982vkgf/Multitask Island Console.app`，证据：`Prototypes/MultitaskIslandConsole/.build/scroll-fix-20260929/`。实际可视度、触控板/滚轮手感待用户验收。
+
+## 2026-09-29 多任务滚动条与底部吸附
+
+超过四个任务时，展开列表改用常驻原生滚动条：6 pt 不透明灰色滑块、4 pt 暗灰轨道，保留拖动和系统辅助功能。滚动条占用独立边栏，并补偿列表右内距，卡片宽度和位置不变；四个及以下不占滚动条空间。
+
+用户滚动结束后，以移动方向的 35% 区间为阈值吸附到相邻卡片下沿，底部保留既有 8 pt 间距；160 ms 原生缓动，减少动态时直接定位。吸附位置计入内联详情，顶部和最后一张卡片均有边界停点。仅响应原生用户滚动事件，程序化揭示详情不触发吸附；新手势、筛选、收起和卸载取消待执行吸附，不使用逐帧 SwiftUI 状态或窗口 resize。
+
+构建、归档签名与 6 项相关冒烟通过，覆盖阈值/详情几何、原生滚动事件与卸载恢复、实际 SwiftUI 列表挂载和筛选。新版已启动（PID 22599），旧实例按精确路径核对后关闭；运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-scroll-snap-y6lejddz/Multitask Island Console.app`，证据：`Prototypes/MultitaskIslandConsole/.build/scroll-snap-20260929/`。滚动手感、可视度和实际交互由用户验收。
+
+## 2026-09-29 纯色文字与无刘海模式间距
+
+按用户要求，所有自定义文字灰度采用不透明 RGB：次要状态 `#B3B3B3`、元信息/统计 `#7D7D7D`、运行详情 `#8C8C8C`，alpha 均为 1；控制窗口辅助文案同步使用纯色灰。运行流光改为不透明灰阶颜色渐变，在文字形状遮罩内移动，活动时隐藏重复的底层文字；不再叠半透明白色提亮。保留文字抗锯齿覆盖、滚动及整岛展开/收起过渡，背景、边框与图标透明度不属于文字灰度。
+
+用户截图指出无物理刘海时滚动内容紧贴会话统计。收起态在左侧文字区与右侧统计区间增加固定 16 pt 空隙，左侧内容独立裁剪，整体仍 340×30 pt。硬件/虚拟刘海继续用中央避让区；启动默认改为真实屏幕几何（虚拟刘海关闭），保留手动开关供比较。
+
+构建、归档签名与 7 项相关冒烟通过，含流光颜色 alpha、滚动/停止生命周期和刘海几何。新版已启动（PID 17872），旧实例按精确路径核对清理；运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-solid-text-gap-wap126m7/Multitask Island Console.app`，证据：`Prototypes/MultitaskIslandConsole/.build/solid-text-gap-20260929/`。实际文字观感和间距由用户验收。
+
+## 2026-09-29 虚拟刘海适配原岛体尺寸
+
+用户认为上一版虚拟刘海过大，现恢复收起态原尺寸 340×30 pt，不再由模拟摄像头撑大岛体。中央模拟遮挡缩为 96×30 pt，含左右各 8 pt 安全距离的避让宽为 112 pt；扣除外距后两侧内容各 94 pt。展开宽仍 680 pt，顶栏左右内容各 246 pt。控制开关改名「虚拟硬件刘海 · 适配当前岛体」；此为展示用缩小模拟，不冒充真实硬件尺寸，真实屏幕几何路径保持原行为。
+
+构建、归档签名及 5 项相关冒烟通过；新版已启动（PID 93209），旧实例已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-fit-notch-4r5iss3k/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/fit-notch-20260929/`。尺寸与实际布局由用户验收。
+
+## 2026-09-29 虚拟硬件刘海预览
+
+按用户要求在隔离开发台默认开启可关闭的「虚拟硬件刘海」：192×38 pt 的模拟中央遮挡（示例尺寸，非当前外接屏真实硬件），以细边线和暗色镜头标记位置。中央预留宽 208 pt，包含两侧各 8 pt 安全距离；收起总宽 472 pt，扣除外侧各 20 pt 后，左右内容各 112 pt。展开宽 680 pt，顶栏左右内容各 198 pt。摄像头模式显式等分两侧并裁剪溢出，文字不进入中央遮挡；球体所在左侧按整条带高度裁剪，保留球体羽化余量。列表卡片仍在顶栏下方使用原布局。
+
+关闭开关恢复当前屏幕真实几何；当前 DELL 外接屏恢复 340×30 pt、无摄像头避让。只影响开发台，不修改系统菜单栏或生产设置。构建、归档签名与 5 项相关冒烟通过，覆盖虚拟/真实切换、左右尺寸及展开收起窗口不 resize；视觉由用户验收。新版已启动（PID 90876），旧实例已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-virtual-notch-nrdog53d/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/virtual-notch-20260929/`。
+
+## 2026-09-29 球体有限超采样修订
+
+用户截图反馈上一版像素级平滑后仍有明显锯齿，上一版视觉未通过。本轮仅对 AI 球画布启用每轴 2× 超采样（相对 backing，像素数 4×），线性缩小呈现；边缘平滑维持约 1.5 个最终显示像素，不随超采样缩窄。关闭宿主与内部容器的边界裁切，以保留圆周羽化。列表、文字与量子噪点不增加采样，隐藏/暂停仍停止渲染。
+
+构建、归档签名、2 项冒烟与 1 项基准通过。2× 屏幕下 18/28 pt 球画布分别为 136×136 / 210×210 像素（含留白）。16 次过渡 resize 为 0；主线程心跳 P95 11.48 ms、最大 19.68 ms、超过 33.33 ms 为 0；这不是 GPU 性能或视觉验收。新版已启动（PID 85554），旧开发台已关闭；运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-orb-ssaa-8gq1er9r/Multitask Island Console.app`，证据：`Prototypes/MultitaskIslandConsole/.build/orb-ssaa-20260929/`。新版效果待用户验收。
+
+## 2026-09-29 Ripple Glow 小尺寸抗锯齿
+
+修正 18/28 pt 球体缩小时固定比例边缘过渡不足一个像素的问题：隔离开发台 shader 的边缘覆盖过渡宽度至少为 1.5 个实际渲染像素，外侧提前返回边界同步调整；去掉 RGB 中重复乘入的边缘覆盖率，由最终 alpha/混合应用一次，避免暗边。`Editable/ConsoleRippleAntialias.metal` 由 `prepare.py` 注入组装副本，原生产 shader 和状态材质保留。球体宿主按实际 backing 倍率显式同步 drawable，尺寸和屏幕倍率变化时更新，不增加超采样或逐帧 SwiftUI 布局。
+
+构建、归档签名、2 项冒烟与 1 项基准通过；冒烟确认原生 Ripple Glow shader 成功加载，2× 屏幕下 18/28 pt 球分别使用 68×68 / 105×105 像素画布（含外侧留白），隐藏/卸载暂停仍有效。16 次过渡 resize 为 0，主线程心跳 P95 11.13 ms、最大 23.03 ms、超过 33.33 ms 为 0（非 GPU 帧率）。新版已启动（PID 82913），旧开发台已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-orb-aa-0nnpos8i/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/orb-aa-20260929/`。边缘观感由用户验收。
+
+## 2026-09-29 AI 球切换为 Ripple Glow
+
+按用户要求更换 AI 球动效，开发台收起态和未选中任务统一使用已有原版 `Ripple Glow`（涟漪辉光），替换 `Particle Orb`。继续通过隔离适配器调用原生 Metal 渲染器与原状态配色；按 Ripple Glow 自身半径契约维持原 18/28 pt 可见尺寸。选中卡片继续只有量子噪点进度，没有 AI 球。保留原降级路径及可见性、非运行状态、减少动态、卸载停止规则；生产源码不变。
+
+构建、归档签名、2 项相关冒烟和 1 项基准通过。冒烟确认实际加载 Ripple Glow，而非静默降级；16 次过渡窗口 resize 为 0，主线程心跳 P95 11.80 ms、最大 21.58 ms、超过 33.33 ms 为 0（不是 GPU 帧率）。新版已启动（PID 79246），旧开发台已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-ripple-orb-28zpkhdc/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/ripple-orb-20260929/`。视觉与实际流畅度由用户验收。
+
+## 2026-09-29 两种状态统一橙黄色待确认提示
+
+按用户最新反馈，待确认提示沿用原感叹号的橙黄色相并提亮至 RGB 1/0.76/0.44，覆盖上一轮偏亮黄的方案。收起态显示「待确认」，展开态右上显示「待确认 + 数量」，共用提示组件；移除展开态未筛选时的 75% 透明度，保持充分亮度。展开提示仍是待处理筛选按钮，筛选状态以字重和辅助功能值表达。错误/不可用保留独立提示及对应数量，避免混合状态误报为待确认。
+
+构建、归档签名及 3 项相关冒烟通过，新版已启动（PID 74222），旧开发台已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-amber-confirmation-3v658u8e/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/amber-confirmation-20260929/`。实际颜色和交互由用户验收。
+
+## 2026-09-29 收起态使用亮黄色待确认文字
+
+按用户截图，收起态右侧等待确认的感叹号改为固定文字「待确认」（English: `Confirm`），12 pt Semibold，亮黄色 RGB 1/0.88/0.20；会话数量仍为灰色。错误/不可用保留独立提示，避免同时存在时被待确认覆盖。此调整限定收起态，等待确认通过辅助功能值同步表达。
+
+构建、归档签名及 3 项相关冒烟通过，新版已启动（PID 72189），旧开发台已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-confirmation-label-58ycycsz/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/confirmation-label-20260929/`。实际效果由用户验收。
+
+## 2026-09-29 任务详情跟随卡片展开
+
+详情改为对应任务卡片下方的列表内内容，与卡片同宽、相隔 8 pt，随列表一起滚动。切换任务时只在新任务下显示详情；再次点击或关闭详情恢复原列表。超过四条任务仍保持有界视口：普通四行 272 pt，展开详情后 380 pt，详情 100 pt；总展开高度与原方案一致，固定 NSPanel 不变。仅选择任务时滚动到卡片和详情可见处，运行时长刷新不触发滚动。卡片与详情独立判断视口可见性，离屏文字动效停止。
+
+构建、归档签名与 7 项相关冒烟通过；新版独立开发台已启动（PID 66405），旧实例已关闭。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-inline-detail-pdkt25vi/Multitask Island Console.app`；证据：`Prototypes/MultitaskIslandConsole/.build/inline-detail-20260929/`。实际布局与交互由用户验收。
+
+## 2026-09-29 收敛文字用色与信息层级
+
+按用户最新反馈，以白灰文字层级承载日常信息，覆盖此前“每种状态使用独立文字色”的方案。思考/工作/压缩用 70% 白色状态文字，完成/待机/未知用次要灰；待确认用柔和橙、失败用柔和红。状态仍由名称明确表达，只有需要处理的状态用强调色。页脚各状态计数统一灰色，不再重复彩色统计。
+
+额度充足时圆环为白灰色，保留原额度风险阈值，在不足/紧张时使用橙/红；额度文字仍白色。模型和时长底色统一减弱至 3.5%，来源图标以 72% 不透明度呈现，元信息退为辅助层。运行详情继续灰色流光，流光峰值从 80% 降至 45%、肩部从 18% 降至 12%。保留原 Particle Orb/量子噪点渲染器及其状态色，当前任务由选中效果和清晰卡片边界突出；没有新增动画或计时器。
+
+构建、归档签名与 5 项相关冒烟通过。当前独立运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-restrained-color-fqxzpxp0/Multitask Island Console.app`（PID 58415）；旧开发台已关闭，证据：`Prototypes/MultitaskIslandConsole/.build/restrained-color-20260929/`。用色层级与实际观感由用户验收；未替换正式安装、未改变版本身份。
+
+## 2026-09-28 加强卡片边界与可读性
+
+按用户截图反馈，未选中卡片不再透明：常驻 6.5% 白色底，悬停 9.5%；卡片加 1 pt 细边线（普通 8.5%、悬停 14%、选中 22% 白色），卡片间距由 2 pt 增至 8 pt，四行视口同步更新为 272 pt。行高 60 pt、字号、两行排版和选中量子噪点不变；选中行继续没有 AI 球和左侧占位。底色和边线均静态，无新计时器或逐帧布局。
+
+构建、归档签名与 7 项相关冒烟通过。当前独立运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-card-separation-mp70vb2h/Multitask Island Console.app`（PID 2142）；旧开发台已关闭，证据：`Prototypes/MultitaskIslandConsole/.build/card-separation-20260928/`。卡片分隔效果由用户验收。
+
+## 2026-09-28 稳定版 Codex 路径热修复已发布
+
+0.5.1 Build 13 / internal 49 已发布 GitHub Latest 和 Stable appcast；用户明确授权
+热更新，README 保持不变。发布源码 `ec99dc184d84fbb011f3e337c95be1f3d82c775c`，
+文档提交 `175e044`（署名修正后；引用同步 `cef1c23`），tag `v0.5.1-build.13`。隔离工作区：
+`/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`。
+基于公开 Build 9，不含本目录的多任务/压缩实验；路径兼容源码与测试已同步本目录。
+当前 0.5.2 配置与实验保留，后续新包内部序号须高于 49。
+
+5 项路径冒烟、系统 PATH 下的真实额度读取、Universal Developer ID 构建、Apple 公证/
+Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）通过。GitHub 公开包
+回下载与最终 ZIP 一致；Pages `36408068235` 成功，线上 Feed 与本地逐字节一致并通过
+旧版应用内置公钥验证。完整资产/hash/提交记录见版本历史；未替换本机正式安装。
+
+
+## 2026-09-28 日常文案、统一状态色与额度圆环
+
+默认预设改为“日常场景”：四条任务混合短标题、较长问题标题和一条较长确认详情，Token、模型等级及运行时长使用正常量级；保留“文字极限”作为手动边界预设。状态/工具名前缀、详情右下状态和页脚各状态计数共用原多任务颜色：思考紫、工作青、压缩白、待确认橙、完成绿、失败红、不可用灰。额度文字纯白，左侧图标改为 16 pt 百分比圆环，复用已有额度风险分段颜色并随剩余值更新；会话行 Codex 来源图标保留。
+
+构建、归档签名与 4 项相关冒烟通过（末次仅调整两条模拟文案并重新构建）。当前独立运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-realistic-status-knqq5v3f/Multitask Island Console.app`（PID 87437）；旧开发台已关闭，证据：`Prototypes/MultitaskIslandConsole/.build/realistic-status-20260928/`。显示、颜色和圆环观感由用户验收。
+
+## 2026-09-28 状态分色、详情流光与超长文案滚动
+
+模型与思考等级按可见 Vibe Island 的短标签显示，例如 `6 Astra · High` / `6 Astra · XHigh`。已识别的模型仅保留版本与家族，思考等级统一短名称；标签按自然宽度完整静态显示，不滚动、不省略，原始全称保留在 Tooltip。标题和操作详情继续单向滚动。
+
+短模型标签修订已构建并启动，1 项元信息冒烟通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-short-metadata-4uzvb9ho/Multitask Island Console.app`（PID 83704），旧开发台已关闭；证据：`Prototypes/MultitaskIslandConsole/.build/short-metadata-20260928/`。显示效果由用户验收。
+
+前一轮选中行去除左侧占位修订：构建、归档签名与 1 项相关冒烟通过，已启动 `/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-no-orb-gap-311pszst/Multitask Island Console.app`（PID 76715），旧开发台已关闭；证据：`Prototypes/MultitaskIslandConsole/.build/no-orb-gap-20260928/`。实际效果由用户验收。
+
+标题下方按“状态 · 详情”呈现，只有状态/工具名保留语义色：`exec` 等具体工具名仍优先显示；运行详情为灰色加流光，完成详情为白色，其他状态详情为静态灰色。状态标签固定，详情独立滚动；标题、收起摘要和展开详情中的超长文字也滚动，不再仅靠省略号。Token 与时长保持静止。
+
+新增独立 `Editable/ConsoleScrollingText.swift`，使用裁剪的原生 CATextLayer、Core Animation 位移与文字遮罩渐变；超长文字以 26 pt/s 向左单向循环，首尾各停顿 1.2 秒，副本相隔 32 pt 从右侧接续，无反向回滚；流光周期 2.6 秒。无逐帧 SwiftUI 更新或新 Timer；每秒时长刷新不重启文字动画。只有溢出文字滚动，收起/离开视口/暂停/卸载时停止对应宿主，Reduce Motion 静态显示，完整文案仍可通过 Tooltip/辅助功能读取。文字极限预设、选中态不显示 AI 球的规则保持。
+
+单向滚动修订已构建并启动，2 项文字冒烟通过（含位移不反向、隐藏与减少动态停止）。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-one-way-u8pmqrux/Multitask Island Console.app`（PID 73844）；旧开发台已关闭，证据见 `Prototypes/MultitaskIslandConsole/.build/one-way-20260928/`。本轮未重复基准，实际观感仍由用户验收。
+
+上一轮 4 项相关冒烟及 1 项文字极限基准通过。16 次过渡、窗口 resize 0 次；主线程心跳 P95 11.50 ms、最大 29.84 ms、超过 33.33 ms 为 0（非 GPU 帧率）。构建、归档签名与启动核验通过；上一轮独立运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-text-motion-xijzl16p/Multitask Island Console.app`（PID 66183），旧开发台已关闭。证据：`Prototypes/MultitaskIslandConsole/.build/text-motion-20260928/`。实际滚动和流光观感由用户验收。
+
+## 2026-09-28 选中任务隐藏 AI 球
+
+展开列表选中行移除 Particle Orb 宿主，仅显示量子噪点进度效果；同时去掉图标列占位及其 12 pt 间距，标题与详情从卡片左侧 10 pt 内距开始。未选中行和收起态沿用原版 Particle Orb。
+
+历史调试曾默认载入“文字极限”预设（现默认“日常场景”），填满四条会话的标题、具体操作、模型/推理强度、Token 和运行时长；包含超长中文、英文无空格串和长路径，可从同名按钮恢复。普通预设继续保留。
+
+本轮构建、归档签名及 2 项渲染生命周期冒烟通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-text-limit-nn31e2_2/Multitask Island Console.app`（PID 61036），已关闭旧版独立开发台；证据见 `Prototypes/MultitaskIslandConsole/.build/text-limit-20260928/`。视觉与文字极限效果待用户验收。
+
+## 2026-09-28 按 Vibe Island 可见界面统一字号与密度
+
+用户明确要求从目前可见的单会话研究并推导多任务，不再以试用限制中断。基准改为真实 Vibe Island 窗口及截图，覆盖较早生成图的宽松卡片方案；依据与测量记录见 `Prototypes/MultitaskIslandConsole/References/vibe-layout-measurements.md`，原生截图保存在 `References/vibe-native-expanded.png`。字体数值为可见栅格比例适配，未取得其私有源码精确值。
+
+- 外接屏收起态 340 × 30 pt，展开宽 680 pt；顶栏 36 pt、列表外距 28 pt。
+- 60 pt 卡片 + 2 pt 行距；标题 13 pt、蓝色具体操作 11 pt、元信息 10 pt。图标槽 34 pt，Particle Orb 28 pt；文字起点约 84 pt，与原生约 85 pt 对齐。
+- 第一行标题 + 模型/推理强度 + Codex 来源图标 + 时长，第二行具体操作 + 会话 Token。收起态按参考聚焦操作与会话数量，Token 在展开会话中显示。
+- 多任务直接复用单行纵向排列，四行以上滚动；保留选中行量子噪点、图钉/筛选/详情与应用级常驻。未仿制许可证购买区。
+
+9 项相关冒烟通过，实际视觉与交互仍由用户验收。本轮只做必要冒烟和构建，不重复全套性能采样或视觉自动化。
+
+构建、归档签名及启动检查通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-vibe-metrics-k_gpqwba/Multitask Island Console.app`（PID 56305）；日志和启动记录：`Prototypes/MultitaskIslandConsole/.build/vibe-metrics-20260928/`。只启动独立 DEBUG 开发台，未替换正式应用。
+
+## 2026-09-28 选中会话使用量子噪点进度特效
+
+展开态中，当前选中/查看的会话卡片使用原单岛 `ActivityStateSmokeMetalView` 的 `.dropField`（量子噪点），直接复用其进度解析、状态 Profile、完成推进/淡出；原黑色底面、完成描边与辉光也从单岛复用。卡片现有 Particle Orb、两行文字、Token/模型信息与 76 pt 几何不变，特效位于内容下层，其他行不创建此进度特效。
+
+原生适配放在开发台 `Editable/ConsoleParticleOrbAdapter.swift`，只追加到组装副本，不改生产。选中卡片滚出视口、刘海收起/隐藏、取消选择或拆卸时停止渲染，Reduce Motion 保留静态进度，Metal 不可用保留黑底与信息。查看已完成会话不重播填充动画。开发台选中任务恢复“量子噪点 · 模拟进度”滑杆，运行最高 95%，完成为 100%。
+
+5 项定向冒烟与 1 项基准通过。16 次过渡、0 次窗口 resize；主线程心跳 P95 10.60 ms、最大 11.07 ms，超过 33.33 ms 为 0。该采样不是 GPU 帧率；实际特效与可读性由用户验收。
+
+构建、归档签名和启动检查通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-selected-quantum-ywen_zld/Multitask Island Console.app`；日志、基准与启动记录：`Prototypes/MultitaskIslandConsole/.build/selected-quantum-20260928/`。
+
+
+## 2026-09-28 以用户选定设计图为准恢复布局
+
+用户明确要求按既有设计图实施，不另行自由改排。会话行恢复：左侧原版 Particle Orb，中间上行任务标题、下行“执行中 · 具体操作”，右上白色半粗 Token，右下灰色“模型 · 推理强度 · 时长”。移除上一轮自行添加的 Codex 图标、模型/时长徽章和行内“累计”前缀；累计口径留在 Tooltip、详情与模拟编辑器中。第一项夹具采用图中 Saidex 更新图标示例。
+
+按所附卡片比例调整为 76 pt 行高、44 pt 球、12 pt 圆角、两行文字间距 6 pt；四项可见、超出滚动，固定窗口画布同步适配。8 项定向冒烟通过；视觉尺寸与手感由用户验收，不做 UI 自动化验收。以上布局取代上一节“元信息右上、Token 右下”的错误排法。
+
+构建、归档签名及启动检查通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-reference-layout-ke4u2hxh/Multitask Island Console.app`；日志与启动记录：`Prototypes/MultitaskIslandConsole/.build/reference-layout-20260928/`。
+
+
+## 2026-09-28 补齐会话元信息与具体操作
+
+右侧第一行显示模型、推理强度、Codex 应用图标和运行时长；第二行左侧直接显示具体操作（例如 `exec · swift test`），运行态为蓝色，右侧保留单会话累计 Token。AI 球、原布局与应用级常驻继续保留。
+
+模型、推理强度及起始时长是明确的 DEBUG 模拟字段，可在开发台逐会话编辑；应用级单个 1 秒时钟只给运行/思考/压缩会话累计时间，待确认、完成、暂停时不累计，退出时销毁时钟。图标来自本机 ChatGPT 应用内的 Codex 原始 PNG，归入独立开发台资源，不改生产资源或声明真实模型识别。
+
+2 项定向冒烟通过，覆盖字段映射、时长累计与停止、关闭控制窗口后继续更新；未运行完整回归或 UI 验收。旧记录中“无字段所以不显示模型和耗时”已由本次显式模拟元信息替代，正式接入仍需可信数据。
+
+构建、归档签名和启动检查通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-session-metadata-joq7ztnl/Multitask Island Console.app`；日志及启动记录：`Prototypes/MultitaskIslandConsole/.build/session-metadata-20260928/`。
+
+
+## 2026-09-28 刘海改为应用级常驻
+
+修复刘海随开发台失焦/遮挡消失：移除与控制窗口 occlusion、关闭及 SwiftUI 拆卸的生命周期绑定。`MultitaskConsoleSession` 由应用代理持有，独立订阅模拟模型变化，控制窗口关闭后仍接收演示和任务更新；最后一个控制窗口关闭不退出应用。刘海不随应用隐藏，只有完全退出（⌘Q）才清理窗口、渲染与观察者。开发台移除“隐藏预览”按钮，改为常驻说明。
+
+1 项定向生命周期冒烟通过：关闭控制窗口后任务更新仍到达刘海，退出清理后停止显示与播放。没有做 UI 自动化验收或重复性能采样；实际失焦、最小化及关闭体验由用户验收。
+
+构建、归档签名和启动检查通过。当前运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-resident-notch-njfkwlhw/Multitask Island Console.app`；日志与启动记录：`Prototypes/MultitaskIslandConsole/.build/resident-notch-20260928/`。
+
+
+## 2026-09-28 Particle Orb 与会话累计 Token
+
+按选定的新方案在独立开发台实施：直接复用原版 Particle Orb 的 Metal 渲染器、着色器和状态动效；`Editable/ConsoleParticleOrbAdapter.swift` 仅追加到组装副本，同文件访问私有类型，生产源码不变。展开行采用左侧球、中间任务标题与状态/操作、右侧累计 Token；收起态显示所选会话的球、操作、Token、会话数及待处理提醒。摄像头区域只做真实安全区避让，不绘制示意图中的镜头。模型、推理强度、耗时没有可信字段，当前不显示。
+
+会话累计是本开发台模拟值口径，不把真实生产“本轮”数据直接改称累计。行内明确标注“会话累计”，详情沿用该口径。原有筛选、固定、收起与详情关闭继续保留。
+
+隐藏的另一套内容、滚出视口的行、完成/待确认等静止状态及 Reduce Motion 均停止连续 Orb 渲染；移出窗口与拆卸也暂停。固定窗口与 Core Animation 外壳过渡不变。11 项定向冒烟通过（含原生 Metal 播放生命周期），1 项基准通过：16 次过渡、0 次窗口 resize，主线程心跳 P95 10.94 ms、最大 13.67 ms、超过 33.33 ms 为 0。这是主线程采样，不是 GPU 帧率或视觉验收。
+
+构建、归档签名及启动检查通过。运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-particle-orb-eiwv2p82/Multitask Island Console.app`；验证日志与基准：`Prototypes/MultitaskIslandConsole/.build/particle-orb-20260928/`。实际效果由用户验收。
+
+
+## 2026-09-28 当前开发台仅保留刘海灵动岛
+
+按用户最新要求，移除任务抽屉、Cover Flow、方案切换入口及三份专用源码；预览仅创建刘海控制器。保留纵向多会话、筛选、详情、图钉、收起及现有 Core Animation 动画。移除不适用的特效与百分比进度控件。10 项定向冒烟通过；源码及旧说明备份于 `Prototypes/MultitaskIslandConsole/.build/retired-concepts-20260928/`，不参与编译。
+
+独立构建、归档签名及启动检查通过；新版运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-notch-only-o5p45w51/Multitask Island Console.app`。日志与启动记录：`Prototypes/MultitaskIslandConsole/.build/notch-only-20260928/`。
+
+以下旧记录中“保留前两项/三个方案”属于历史状态，已被本次要求取代。仍为隔离 DEBUG 开发台，未迁入生产、未改变版本身份。后续只做基准与冒烟，实际效果由用户验收。
+
+## 2026-09-27 点击区域修复
+
+用户反馈右上图钉/收起与详情叉号无法点击。修正 ConsoleNotchSurface.hitTest：先将父视图坐标转换为本视图坐标，再检查外壳并转发给当前内容视图，避免 flipped 坐标混用。三个按钮增加 28 × 28 pt 矩形点击区域。仅构建/签名通过，未重跑测试或 UI 自动化；实际点击效果由用户验收。
+
+运行包：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-notch-hit-fix-cnv6h_d0/Multitask Island Console.app`。后续仅做基准与冒烟测试，实际效果由用户验收。
 
 ## 工作区与版本定位
 
 | 项目 | 当前状态 |
 |---|---|
-| 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，Stable appcast 已发布并验证 |
+| 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，已进入 Stable appcast |
 | 发布源码 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
-| 当前配置身份 | `0.5.1 / display Build 13 / internal 49`；沿用上游配置，PR 源码含未发布的悬停可见度设置 |
-| 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix`；分支 `codex/0.5.1-build.13-codex-path-fix` |
+| 当前配置身份 | `0.5.2 / display Build 7 / internal 48`；主岛字号回归基线，未发布 |
+| 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`；目录名不是产品版本 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
 
@@ -20,48 +456,424 @@
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
 不能将分支名或旧 HEAD 当成当前源码版本。下一可分发迭代使用新的 Build 身份。
 
-## 2026-09-30：悬停可见度 PR（未发布）
+## 当前开发台：Vibe Island 纵向会话与展开性能修复（2026-09-27）
 
-提交分支 `feat/island-hover-visibility`，基于上游 `main` 的 `cef1c23`，保留 Build 13
-的 Codex 路径热修复和发布记录。原 Build 9 开发目录与已有产物保留，未清空或覆盖。
-当前配置仍为 `0.5.1 / Build 13 / internal 49`，本次不修改版本、签名或发布渠道。
+用户要求参考本机 Vibe Island 的设计、排版、多任务布置和展开收起，且反馈旧开发台卡顿。
+本轮实际观察本机收起态、原生展开态及设置中的 0.15 秒悬停延迟；额外会话被许可证遮挡，
+用户明确补充「多会话页面其实就是将单会话的卡片复制排列下来」。据此实现同一会话行的纵向列表。
 
-[ISLAND-HOVER-012](docs/design/quotaview-activity-island-hover-transparency-0.4.5.md)
-扩展为设置中“进度条效果”卡片下的悬停可见度：0–100% 整数、默认20%、即时生效、
-持久保存与单项恢复默认；保持点击穿透、全透明移出恢复及旧偏好实际外观。中英文
-README 和界面说明已同步。状态为 `Accepted / Verifying`，等待代码审查与实机验收。
+- 第三方案改为紧凑工具栏 + 纵向两行会话：左侧状态图标，标题和操作说明，右侧来源、状态与 Token。
+  四行以内随内容定高，更多任务在有限视口中滚动，采用 LazyVStack；取消横向四卡与翻页。
+  没有可用模型/耗时数据时不伪造 Vibe Island 的模型和时间标签。状态图标使用 SF Symbols。
+- 收起态显示当前模拟任务操作和会话数；有摄像头时优先留出安全区。无刘海屏幕高度 30 pt。
+  悬停延迟 0.15 秒，离开预览 0.45 秒收起，点击固定、待处理筛选、岛内详情、Esc 分层关闭继续保留。
+- 外壳改为固定 NSPanel 内的 CAShapeLayer 路径/遮罩动画；展开/收起不再逐帧修改系统窗口尺寸。
+  两份内容视图保留最终布局，只做透明度与轻微位移动画；阴影提供 shadowPath，移除每行 TimelineView。
+  采用本地适配的 0.38 秒展开、0.25 秒收起和缓出曲线，可从当前 presentation layer 打断接续；
+  未取得 Vibe Island 原生源码或精确曲线，不声明逐帧一致。
+- 透明区域按实际动画轮廓命中；收尾有一次指针复核，防止静止鼠标下的透明区域继续挡点击。
+  隐藏、切换与 Reduce Motion 清理动画，稳定态无动画驱动定时器；窗口菜单可定位「任务总览 · DEBUG」。
+- 14 项定向逻辑/几何/生命周期冒烟 + 1 项显式 AppKit 性能采样通过（共 15 项），独立构建、归档签名通过。
+  相同 16 次切换：窗口 resize 通知 418 → 0，主线程心跳 P95 17.26 → 10.91 ms，最大间隔
+  70.82 → 18.91 ms，超过 33.33 ms 的间隔 4 → 0。这不是 GPU 帧率或最终视觉验收。
+  未运行完整生产回归。正式源码/配置逐文件指纹保持一致；前两方案、产品身份和发布状态不变。
 
-上游整合后完整测试255项（253通过、2项显式可选检查跳过、0失败），Universal Release
-无签名构建及App双架构、版本、图标资源检查通过。原开发目录中的日志为
-`.build/pr-hover-tests.log`、`.build/pr-hover-build.log`；新包为
-`.build/pr-hover-universal/Build/Products/Release/QuotaView.app`，未启动或安装。
-早期Build9构建证据保留在规格中，不作为当前上游整合后的测试结论。
-未改 Codex 协议、账户读写、生产模拟入口或永久开发台；无发布或合并授权。
+证据：`Prototypes/MultitaskIslandConsole/.build/vibe-reference-20260927/`，含本机参考截图、
+`performance.json`、`final-smoke.log`、`build.log`、`production-integrity.json` 与运行包路径 `launch.json`。
+`prototype-*.png` 是早期 NSView 缓存绘制实验，未包含完整合成遮罩，不能作为真实窗口画面验收。
+视觉、滚动手感与真实多屏/全屏仍由用户验收；当前只在隔离 DEBUG 开发台实施。
 
-## 0.5.1 Build 13：Codex 程序路径热修复
+## 前轮开发台：第三方案改为刘海式「任务总览」（2026-09-27）
 
-基于公开 Build 9 的生产代码（`927749b`）；`71932fd` 仅补齐其发布文档。
-新增 ChatGPT.app / Codex.app 内 `Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`
-查找路径；保留旧版 `Resources/codex`、独立 CLI、PATH 及 CODEX_EXECUTABLE 优先级。
-读取协议、真实数据及界面保持原实现，未带入后续多任务或压缩实验。
+用户要求自主重设计，并明确作为第三选项、形态仍须是灵动岛。开发台现提供
+「任务抽屉 / Cover Flow / 任务总览」，启动默认第三项，原两项保留。
+第三方案改为屏幕顶边的黑色刘海外壳：真实刘海中间留空，两翼显示状态摘要；
+无刘海屏幕用贴顶标签。默认收起，悬停 0.20 秒预览，移开 0.45 秒收回，点击固定；
+固定后点击外部/收起按钮退出，Esc 分层关闭。根据本机 Vibe Island 收起态和官方展开演示，
+去掉窄颈与横肩，整条上沿贴顶，使用小内凹顶角与大圆底角。内容避让摄像头；
+展开外壳占用中央菜单栏区域，透明小顶角鼠标穿透。
+岛内横向展示四项任务，支持翻页、待处理筛选、
+岛内详情、手动收起和完成回看；收起仍保留运行数、待处理数和额度。
+展开完成态显示总 Token。运行状态环不伪造进度，隐藏/暂停/减少动态时停止。
+独立实现：`Editable/ConsoleConceptBoard.swift`，仍使用隔离 DEBUG 夹具；不接生产。
+12 项定向冒烟、独立构建、归档/签名和启动检查通过，当前 PID 3951，启动器已关闭
+旧实例 PID 98143。产品身份仍为 0.5.2 / Build 7 / internal 48。视觉与交互待用户验收。
 
-Build 10–12 已用于开发，故使用 display Build 13；internal 49 高于现有开发序号 48。
-后续生产/开发包均须继续递增内部序号。5 项路径冒烟通过；移除 CODEX_EXECUTABLE、
-将 PATH 收窄到系统目录后，新建的真实 App Server 读取成功。此证据证明新路径自动发现
-恢复，不代表其他用户所有“无法识别数据”错误已归因或修复。
+## 开发台前两项：任务抽屉与 Cover Flow（2026-09-26）
 
-本地开发阶段已通过 Universal 构建、5 项路径冒烟及系统 PATH 下的真实额度读取。
-2026-09-28 用户明确授权此精确版本推送 GitHub 和 Stable appcast，作为热更新，
-README 不变。授权身份：0.5.1 / Build 13 / internal 49，tag `v0.5.1-build.13`，
-资产 `QuotaView-v0.5.1-build.13.zip`；包含正式签名、公证、回下载及 Feed 部署链路。
-正式 Developer ID 包已公证/Staple；GitHub Latest 及回下载已确认。Pages 已成功部署；线上 Feed 与本地逐字节一致并通过旧版内置公钥验证。视觉由用户验收。
+用户选择在隔离多任务开发台比较两种新方案。`Prototypes/MultitaskIslandConsole/`
+顶部现提供「任务抽屉 / Cover Flow」切换，同一组模拟任务与选择保留。两者主岛
+复用单岛原生圆角矩形、字号、布局及果冻；Cover Flow 侧卡改为 160 × 66 pt、
+12 pt 圆角，侧倾由 60° 调小到 25°，侧卡中心间距 128 pt，避免浅角度卡片互挡。
+后台标题和状态均居中对齐；特效透明度为 50%，移除描边和完成辉光。卡片与文字沿连续轨道
+移动、侧倾、转正进入固定中心位，支持点击、左右按钮、拖动和滚动吸附；角度与
+时长为经典 Cover Flow 结构的本地拟合，并非 Apple 公开原始参数。抽屉支持
+选择后关闭、外部点击和 Escape。
+只有全部完成才缩略，新任务可打断收尾。
 
-本地 ad-hoc 候选已保留于 `dist/local-candidate/`；正式发布包使用同一源码重新签名
-并公证，最终不可变资产信息已写入版本历史。发布证据：
-`dist/verification/0.5.1-build13-release/`。CI 249 项、2 跳过、0 失败；15 秒解压启动通过。未覆盖当前正式安装。
+开发入口为该目录 `Editable/ConsoleConcept{Controller,Layout,Views}.swift`，
+保留原生产多任务视图/动效快照供复用；旧液态效果不再作为开发台可选项。
+7 项定向冒烟、独立 DEBUG 构建、归档/签名与启动检查通过，新实例 PID 66833，
+旧开发台 PID 64493 已退出。产品仍为 0.5.2 / Build 7 / internal 48；本次不改
+生产源码和版本。运行包为开发台 `dist/MultitaskIslandConsole.zip`，视觉与实际
+交互等待用户验收。详见[开发台说明](Prototypes/MultitaskIslandConsole/README.md)。
 
-2026-09-28 按用户要求将本次三笔提交和 Build 13 tag 邮箱改为 `xuchen1995@gmail.com`。
-提交文件树、已发布包及签名 Feed 不变；发布引用同步到新 SHA，原 CI / Pages 证据保留。
+## 0.5.2 Build 7：主岛字号恢复基线（当前生产开发版）
+
+用户指出 Build 6 的主岛字过大。原因是 Build 5 曾调大单岛/主岛共享字号；Build 6
+复用了同一个渲染器，却没有恢复这组字号。本轮从 Build 5 修改前的源码副本核对并恢复
+原字号：标题 12.5 pt、说明与 Token 11.5 pt、状态 15 pt、完成提示 16 pt、
+完成辅助文字 11 pt。原生完成额度值 28 pt 与百分号 14 pt 本来未变。
+
+单岛与多任务主岛仍由同一个 `ActivityIslandContentView` 排版和绘制；子岛维持
+13 pt Semibold，以及状态色描边、标题滚动和绿色完成呼吸辉光。完成汇总仅投影
+任务数、总 Token 和真实额度，不再引入独立字体或版式。岛体尺寸及果冻不变。
+
+3 项针对性冒烟通过，涵盖基线文字绘制、原生完成汇总与果冻同步。
+Universal Release App / Widget / Helper 双架构、资源、版本（0.5.2 / Build 7 / internal 48）
+与独立运行副本 ad-hoc 签名核验通过。已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build7-real.g3je08na/QuotaView.app`，
+PID 79204；启动 21.1 秒后存活，stderr 为空，Hook Socket 监听正常。
+旧 Build 6 开发进程正常退出，多任务偏好保留，安装版 Info.plist 指纹不变；运行
+副本无嵌入 Widget。证据：`dist/verification/0.5.2-build7/`。仅冒烟与构建/启动检查，
+视觉由用户验收；未提交、推送、公证或发布。
+
+## 0.5.2 Build 6：主岛复用与子岛字号（历史基线）
+
+用户进一步要求多任务主岛的字体、字号和排版完全复用单岛模式。本轮删除独立的
+多任务完成汇总视图，不再维护系统字体、完成图标、两组文字或额度标题的另一套布局。
+活动态与完成态均直接使用 `ActivityIslandContentView`；多任务仅将全部完成提示、
+总 Token、任务数和真实额度投影为原生渲染数据，单岛字号与布局本身未进一步改变。
+
+完成展开态沿用单岛左侧两行完成提示/Token、右侧数值与百分号布局；此前多任务
+专有的「额度剩余」上标题与绿色勾图标不再显示。缩略态用同一个原生标题区域显示
+「全部完成 · N 项任务」并保留同心额度环，仅按真实文字宽度补足容器宽度。
+子岛标题与状态短提示按追加要求从 11 pt 提升到 13 pt Semibold，文字视口高 20 pt，
+胶囊仍为 104 × 52 pt。状态描边、绿色完成辉光、标题滚动、全部果冻及同时融合保持。
+
+6 项针对性冒烟通过（主岛 4 项、追加字号相关 2 项）；中英文、4/128 任务、展开/缩略
+逐项对照单岛原生视图的字体、文本位置、对齐和透明度，验证数据缺失占位与同心额度环；
+另验证子岛长标题完整滚动、状态回切与 Reduce Motion，兼顾辉光和果冻。
+Universal Release App / Widget / Helper 双架构、资源与版本（0.5.2 / Build 6 / internal 47）
+及独立运行副本 ad-hoc 签名核验通过。追加子岛字号后已重新构建最终产物。
+已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build6-real.k2mblc70/QuotaView.app`，PID 53307；
+启动 45.3 秒后存活，stderr 为空，Hook Socket 监听正常。旧 Build 5 开发进程
+正常退出，多任务开启偏好保留，安装版 Info.plist 指纹保持；运行副本不带嵌入 Widget。
+证据：`dist/verification/0.5.2-build6/`。仅冒烟与构建/启动检查，无 UI 自动化或额外模型调用。
+视觉由用户验收；工作区、分支及既有未提交工作保留，未提交、推送或发布。
+
+## 0.5.2 Build 5：状态描边与主岛排版（历史基线）
+
+2026-09-25 记录的三项待办已于 2026-09-26 实施：
+
+1. 子岛移除状态圆点/图标，统一用真实状态颜色的 1 pt 描边；完成态保留绿色高光描边与呼吸辉光。短标题居中，长标题继续滚动，释放原图标所占空间。
+2. 主岛与单任务岛复用的展开文字调整为标题 15 pt、说明/Token 13 pt、状态 17 pt、完成提示 18 pt。融合完成态为提示 18 pt、Token/额度标题 13 pt、额度值 26 pt。岛体尺寸与缩略字号保持。
+3. 融合完成态复用原主岛按字形居中绘制的文字组件，按实际文字高度把左右两组内容分别整体垂直居中，完成图标同轴；右侧继续上方「额度剩余」、下方百分比且右对齐。
+
+果冻、分离/同时融合时间线、特效原始亮度、标题滚动与状态短提示保留。
+默认关闭、关闭回退单岛、手动选择主任务及真实数据链路保持。工作区/分支不变，
+此前未提交工作保留。
+
+7 项针对性冒烟通过，覆盖全部真实状态描边、绿色呼吸及清理、Reduce Motion、
+完整标题/状态回切、中英文完成态居中与文字边界、缩略同心额度环、果冻同步及同时融合。
+Universal Release App / Widget / Helper 双架构、资源与版本（0.5.2 / Build 5 / internal 46）
+核验通过；独立运行副本去除嵌入 Widget 并完成 ad-hoc 签名校验。复制的 Finder 元数据
+曾导致首次签名失败，仅清理临时副本的扩展属性后复验通过。
+
+已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build5-real.hdwwgrse/QuotaView.app`，PID 41429；
+启动 73.9 秒后存活，stderr 为空，真实 Hook Socket 监听正常。
+旧 Build 4 开发进程正常退出，多任务开启偏好保留，安装版 Info.plist 指纹保持。
+证据：`dist/verification/0.5.2-build5/`。仅冒烟及构建/启动检查，无截图、UI 自动化
+或额外模型调用；视觉由用户验收。未提交、推送、公证或发布。
+
+## 0.5.2 Build 4：统一标题与子岛滚动（历史基线）
+
+用户要求去掉兜底文案中的 Codex，范围包括主岛、子岛、单任务岛：三者共用
+真实会话名 → 工作区名 → 未命名任务的标题规则；真实标题自带 Codex 时保留。
+子岛长标题新增 22 pt/s 往返滚动，首尾各停 1.2 秒，短标题不滚动。状态短提示
+结束后恢复标题滚动；重复事件不重启，隐藏/禁用停止，Reduce Motion 静态。
+主岛和单任务岛只调整标题兜底规则，既有排版、果冻及完成反馈保留。
+
+5 项相关冒烟通过，涵盖标题兜底/真实 Codex 标题保护、完整滚动距离/停顿/不重启、
+状态回标题、隐藏停止、绿色完成反馈及果冻同步；最终滚动边界另复验 1 项。
+Universal Release App / Widget / Helper 双架构、资源、版本（0.5.2 / Build 4 / internal 45）
+及独立运行副本 ad-hoc 签名核验通过。
+
+已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build4-real.179qfs2w/QuotaView.app`，PID 82841；启动 56.4 秒后存活，stderr 为空，Hook Socket 监听正常。
+旧 Build 3 开发进程正常退出；现有多任务开启偏好保留，安装版 Info.plist 指纹不变，
+运行副本不带嵌入 Widget。证据：`dist/verification/0.5.2-build4/`。只做冒烟和构建/启动，
+无 UI 自动化或额外模型调用，视觉由用户验收；未提交、推送、公证或发布。
+
+## 0.5.2 Build 3：绿色完成描边与呼吸辉光（历史基线）
+
+用户要求真实完成的子岛带绿色高光描边、呼吸辉光，并去掉完成态状态圆点；
+同时取消子岛进度特效的 40% 亮度限制，恢复原始亮度。完成态标题居中，
+状态短提示继续生效，全部融合阶段也不恢复勾图标。描边、外部辉光、黑色表面、
+文字和特效共用果冻变形；离开完成态、隐藏、禁用及时清理，Reduce Motion 静态。
+主岛默认色板/完成时序和原有动效保持，工作区与既有未提交工作保留。
+
+4 项针对性冒烟通过，含完成指示/绿色呼吸清理、原始亮度、状态回标题、
+Reduce Motion、同时融合及共享果冻。Universal Release App / Widget / Helper 双架构、
+资源与版本（0.5.2 / Build 3 / internal 44）及独立副本 ad-hoc 签名核验通过。
+已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build3-real.ftgtnqj7/QuotaView.app`，PID 63592；启动 56.6 秒后存活，stderr 为空、Hook Socket 监听正常。
+旧 Build 2 开发进程正常退出，既有多任务开启偏好保留，安装版 Info.plist 指纹不变。
+证据：`dist/verification/0.5.2-build3/`。本轮仅冒烟和构建/启动检查，视觉由用户验收。
+正式安装与 Widget 保留；未提交、推送、公证或发布。
+
+## 0.5.2 Build 2：子岛内容与完成回执（历史基线）
+
+用户授权在真实多任务上细化并启动新版，仅冒烟、视觉由用户验收。源码加入
+104 × 52 胶囊子岛、40% 亮度的全幅状态特效、标题左侧真实状态指示；任务状态
+变化显示最新状态 2.4 秒并单次流光，再自动回标题。同状态刷新不重放。
+主岛展开尺寸与所有原有单岛/多岛果冻不变。全部完成仍同时融合，展开左侧总 Token，
+右侧「额度剩余」在上、百分比在下且右对齐；缩略直接复用单岛同心额度环，
+仅为任务数补足紧凑宽度。总 Token 只汇总展示组真实轮次数据，缺失显示占位。
+
+工作区与分支不变，既有未提交工作和永久开发台保留。多任务默认关闭，关闭恢复
+单岛；继续使用手动主岛选择，自动焦点能力没有新增。10 项相关冒烟通过，覆盖
+真实状态/Token 汇总、状态提示自动回标题、全幅 Metal/Reduce Motion、双语回执
+同心圆环及原单岛果冻。Universal Release 的 App / Widget / Helper 双架构、
+0.5.2 / 2 / 43 版本、资源、独立运行副本 ad-hoc 签名均通过。
+
+新开发版已启动：`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build2-real.sc4apjot/QuotaView.app`；PID 52434，启动 115.2 秒后存活、stderr 为空，
+真实 localRollout 活动与 Hook Socket 监听正常。旧 Build 1 开发进程已正常退出。
+用户现有多任务偏好为开启，未修改；运行副本无嵌入 Widget，安装稳定版 Info.plist
+指纹保持。证据：`dist/verification/0.5.2-build2/`。只做冒烟及构建/启动核验，
+未执行完整回归、UI 自动化或额外模型调用；视觉和真实多任务长期体验由用户验收。
+公开稳定版仍为 0.5.1 Build 9，未提交、推送、公证或发布。
+
+## 0.5.2 Build 1：真实多任务接入（历史基线）
+
+用户已授权开始 0.5.2、接入多任务并完成后启动开发版。工作区/分支不变，
+既有压缩修正及永久开发台保留，未提交、推送或发布。规格：
+[多任务 002](docs/design/quotaview-island-multitask-next.md)，`Accepted / Verifying`。
+
+设置「灵动岛 → 多任务灵动岛」默认关闭，用户开启后才显示真实多任务。
+每任务独立状态、计划、Token、标题；手动点击子岛切换主任务，右键菜单访问
+全部任务。后台不抢选，主岛居中，新增球紧邻右侧；全部成功完成才同时融合、
+缩略及隐藏，新活动取消收尾。关闭即停止专用渲染/计时/额外查询并回到原单岛。
+原生主岛内容/果冻与已有压缩状态保留，默认不启用任何实时焦点采集器。
+
+**当前能力边界：自动跟随 Codex 正在查看的任务尚未接入。** 之前 Computer Use
+安全限制仍有效，没有以 AX、AppleScript、截图或私有 IPC 绕过。当前只由用户
+在 QuotaView 选择主岛；开发台的新建并进入效果没有虚构成生产焦点能力。
+
+8 项生产相关冒烟、2 项开发台兼容性冒烟通过。Universal Release 的 App /
+Widget / Helper 均为 arm64 + x86_64，版本与资源核验通过；独立运行副本
+去除嵌入 Widget 并完成 ad-hoc 签名校验。已启动：
+`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-052-build1-real.47_l76uh/QuotaView.app`。旧 Build 12 开发进程已退出；新进程 PID 9145，01:32 存活、stderr 为空，
+收到真实 localRollout 活动，Hook Socket 监听正常；多任务偏好缺省为关闭。
+证据目录：`dist/verification/0.5.2-build1/`。正式安装 Info.plist 指纹保持。
+视觉与真实多任务交互由用户验收；没有发送测试消息或额外模型调用，未触发
+自然压缩验证；公开稳定版和安装版 Widget 保留。
+
+## 历史：压缩状态与多任务探索（2026-09-24）
+
+用户启动下一版，先要求压缩状态排查和多任务方案，随后明确授权先修复压缩
+状态、构建并启动；多任务只完善方案，暂不实现或构建。
+[排查与方案](docs/design/quotaview-island-multitask-next.md)为 `Draft / Discovery`：
+真实日志样本只有压缩完成记录，现有本地解析依赖开始记录；共享通知又屏蔽
+item 开始/结束且缺少压缩解码，导致无法补齐正在压缩状态。
+Build 11 在现有采集、状态机和单任务灵动岛内补齐压缩链路：
+原生 item 开始/结束携带真实时间戳和脱敏 item 身份；本地日志提供结束及恢复
+依据。现有 Hook 安装器支持仅启用 PreCompact / PostCompact，并可独立识别
+为有效安装；收到真实压缩事件才建立连接证据，启动检查仍只读。
+缺少轮次的 Hook 绑定当前任务，不重置 Token 或计划。重复、乱序、错轮次、
+错 item、孤立结束以及终态后的迟到事件不会误开压缩；真实后续活动可恢复
+丢失结束事件的压缩状态。原生断连、本地读取失败或移除对应 Hook 时，当前
+压缩转为现有不可用状态，等待真实后续事件，不猜测成功。
+
+完整回归 252 项：默认运行 250 项通过、2 项跳过，随后显式补跑两项均通过，
+合计 252 项通过、0 失败。补跑覆盖实际 20 + 100 秒收起计时、安装版 Codex
+连接隔离的本地 HTTP / SOCKS5 夹具；不使用真实账户或模型推理。
+压缩专项 8 项含未修改 Helper 二进制 → 私有 Socket → ACK → Store 与队列
+去重集成，沙箱禁止测试 Helper 写入生产队列。Universal App / Widget / Helper、
+资源、版本与本地签名验证通过。
+
+已启动独立真实数据包：
+`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-051-build11-real.xe_oexyp/QuotaView.app`。
+55 秒存活、stderr 为空，私有 socket 存在，真实本地任务事件接纳及共享额度
+快照更新已确认。旧 Build 10 主应用已退出；`/Applications/QuotaView.app`
+与安装版 Widget 保留。证据：`dist/verification/0.5.1-build11/`。
+未提交、推送、公证或发布。
+
+**真实自然压缩验证未通过（10:47 用户截图）：**当前共享实时入口拒绝连接，因此已按本轮
+授权用现有安装器给 hooks.json 增加 QuotaView 的两个压缩处理器；Vibe Island
+及其他第三方内容语义保持，config.toml 不变，原配置有 0600 权限备份。
+安装和监听成功不代表 Codex 已加载/信任或实际投递新增 Hook；没有替用户
+进行安全信任或重启 Codex。随后用户截图确认 Codex 正在自动压缩时，灵动岛
+仍显示工作中。对应 rollout 在 10:47:20 写入压缩完成，实际开始时间为
+10:45:17；没有落盘开始事件，QuotaView 在 10:47:21 仅收到 localRollout
+PostCompact，没有收到该次 Hook 开始或结束，不能记录为自然压缩通过。
+只读 hooks/list 返回两个 QuotaView 处理器 enabled / trusted，解析错误为零；
+已安装 Helper 的私有 Socket / ACK 检查两项通过，令牌和实际监听地址一致。
+原生共享 Socket 与 Hook 接收 Socket 是不同端点；前者拒绝连接，后者正常。
+源码两路并行启动，原生连接不会停用 Hook。故障发生时 Codex / App Server 从
+9 月 23 日运行，而 Hook 于 9 月 24 日 10:07 安装；旧会话未重新加载是主要
+待验证假设，尚未直接读到其内存中配置。用户随后已自行重启：10:56:13 主进程
+换为 44487，10:56:15 App Server 换为 44526，当前任务已恢复；启动参数没有
+禁用 Hook 的覆盖项。Hook 接收 Socket 正常，原生共享入口仍拒绝连接。
+重启后尚无自然压缩记录，因而没有新的压缩 Hook 投递可核对，仍不能确认修复；
+等待正常使用中的自然事件，不重复要求重启。QuotaView 保持原 Build 11 进程。
+本轮未改生产源码或重建；证据在 `dist/verification/0.5.1-build11/natural-compaction-followup/`。
+用户明确要求不为测试消耗 Token，禁止堆上下文、额外任务或模型调用以促成
+压缩。Hook 是事件触发通道，没有持续
+连接心跳；缺失结束时仅由后续真实事件恢复，不采用时间猜测。
+多任务仍为 Draft / Discovery，曾在压缩排查期间按用户要求暂停，未实现或构建。
+2026-09-24 继续调研确认：采集层
+已有多任务候选与身份基础，主要缺口是 Store 的每任务完整状态、稳定主任务
+选择、独立回执/提醒和持续观察。方案已补充任务计数、重启恢复、后台完成、
+容量边界和验证场景；默认主卡加列表入口还是直接三行仍待用户偏好确认。
+用户随后允许研究新增焦点信息链路：建议系统/辅助功能通知驱动，稳定任务
+标识优先、唯一标题匹配回退，前台小范围轮询补漏；亚秒级为待测目标。
+窗口变化与具体会话身份需分别验证，不能把焦点变化当作任务开始。
+多任务调研阶段只改文档；随后的压缩 Hook 修正见下。
+
+### Build 12：压缩 Hook 等待提示与连接证据
+
+用户确认重启后兼容 Hook 一直显示「等待第一条消息」。重新核对配置：共
+12 个处理器，其中 Vibe Island 10 个、QuotaView 2 个；QuotaView 仅接收
+PreCompact / PostCompact，普通消息不会触发它的处理器，旧提示不适用。
+Build 12 按 QuotaView 自身安装范围区分中英文提示：仅压缩模式显示「等待
+压缩事件 / 等待自然压缩」，完整模式保持首条消息引导。只读安装检查同步
+识别范围，压缩模式的连接证据独立于旧完整模式，不能用普通消息或自动连接
+的健康状态伪造压缩投递成功。真实 Hook 配置及第三方处理器保持原样。
+
+回归中发现未启动的 Unix Bridge.stop 也会 unlink 相同监听路径，已修正为
+仅启动过的实例清理，并让 Runtime 使用注入安装器的 Socket 地址。测试期间
+受影响的 Build 11 监听已立即重启恢复；此问题不能倒推为 10:47 失败的根因。
+Build 12 已通过 254 项唯一回归：最后默认运行 252 项通过、2 项跳过，两个
+显式开启项在同轮已通过；33 项专项通过。新监听测试初次因夹具路径过长
+失败，缩短后专项及完整复验通过。Universal App / Widget / Helper、版本、
+本地 Developer ID 签名通过；没有模型测试调用或强制压缩。
+
+已启动独立开发包：
+`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-051-build12-real.m_ey4ytw/QuotaView.app`。
+Build 11 已退出，正式安装和 Widget 保留；Codex 未再次重启。证据：
+`dist/verification/0.5.1-build12/`。尚未观察重启后的自然压缩开始与结束，
+不能宣称自然识别已修复；继续正常使用验证，未提交或发布。
+
+### 多任务方案恢复探索：整体完成才缩略
+
+用户随后恢复多任务方案探索，明确「全部任务完成后才缩小成缩略态」。已同步
+草案：任何思考 / 工作 / 压缩 / 等待确认任务存在时保持展开，主任务完成不
+代表整岛完成；最后一项可信完成后显示整体回执，再允许缩略。新任务到来
+取消旧缩略 / 隐藏计时，失败或状态未知不冒充全部完成。此前两张概念图中的
+「3 项进行中」缩略示意作废，后台列表仍待完善。仅更新方案文档，未实现或
+构建多任务，运行包保持 Build 12；异常收尾和手动收起例外尚未确认。
+
+### 多任务隔离开发台（最新授权）
+
+用户看过两张预览后要求做成可操作开发台。已新增
+[多任务开发台](Prototypes/MultitaskIslandConsole/README.md)：右侧任务列 / 底部
+任务条两个入口，台内保留任务状态切换，共用单个浮岛。原
+[单任务开发台](Prototypes/IslandTextConsole/README.md)及其保存包不变。
+提供逐任务编辑、全部完成才缩略、新任务取消缩略、后台选择 / 滚动，以及
+可停止的 20 秒演示。默认 3 秒完成提示仅用于原型，生产时长仍待决定。
+
+复用当前生产 Metal 特效与动效时间线；模拟状态和组合布局只在隔离原型。
+构建身份继承 Build 12 / internal 41，独立 Bundle ID，本机 ad-hoc 包，不运行
+真实数据服务；生产多任务未实现，正式安装和真实 Build 12 进程保留。
+25 项状态检查、3 项原生宿主 / 计时检查、构建签名与两个入口启动通过，
+单实例替换已验证。视觉等待用户实际体验，未提交、推送或发布。
+证据：`dist/verification/multitask-console/`；交付状态改为 Draft / Prototype。
+
+用户随后要求关闭开发台：已退出 `com.quotaview.multitask-island-console`
+的 PID 5607，核对无剩余同 ID 实例；悬浮预览随之关闭，源码与入口保留。
+最新探索改为「主岛与卫星球」：当前会话沿用原单岛，后台任务从右侧黏性
+分离为小球，会话切换交换大小角色，全部完成再融合收拢。已补全视觉草案并
+生成关键帧效果图；此新方向尚未实现、构建或启动，等待视觉反馈。
+用户进一步明确：完成任务合并为小号完成分岛；当前主任务已完成时汇总融入
+主岛并显示完成任务数，切回未完成会话则重新分离，可从完成列表选择会话。
+当前主任务完成不再自动切换到其他任务；所有任务完成才整体缩略的前提保留。
+已更新视觉草案，旧原型不含此逻辑且保持关闭。
+
+**2026-09-24 后续授权与最新状态：**用户暂停完成汇总，明确保持任务逻辑次序，
+选中主岛位于屏幕顶部水平中心；已按最新授权构建并启动「居中液态分岛」。
+入口为 `Prototypes/MultitaskIslandConsole/Open Liquid Islands.command`。
+主岛直接复用生产视图，子岛直径 52 pt；使用 Apple Spring 0.42 秒 / bounce 0.15，
+短距离连接及时断开，参与变化的岛均有轻微果冻反馈。当前任务完成不抢换焦点，
+所有任务完成才缩略；完成汇总不在本次实现范围。前两个布局保留为历史对照。
+25 项状态检查、8 项原生 / 动效 / 计时检查通过，构建签名与启动通过，视觉待用户
+体验。证据：`dist/verification/liquid-island-console/`。仅隔离原型，生产多任务、
+真实活动数据服务、版本身份与正式安装未改动；真实 Build 12 进程仍在运行。
+
+用户再次要求同时启动开发版与开发台：原临时 Build 12 包已被清理，按现有源码
+重新完成 Universal Release 构建，并启动真实数据运行副本
+`/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/quotaview-051-build12-real.on2qvb9m/QuotaView.app`。
+版本仍为 0.5.1 / Build 12 / internal 41，运行副本不嵌入 Widget，ad-hoc 签名验证
+通过。居中液态分岛开发台同时启动。证据在 `dist/verification/0.5.1-build12/relaunch-*`；
+本次未修改功能源码、正式安装或 Codex 配置，自然压缩验收状态不变。
+
+后续液态视觉细化：保持生产任务状态、文字与特效；单任务使用生产圆角矩形，
+新增子岛按鼓起 / 短颈 / 断开分阶段过渡，约 0.36 秒断开后主岛轮廓回弹并变为
+胶囊，宽高中心不变。隔离副本增加可逆圆角适配，生产渲染器源码未改动。
+按用户最新要求仅做构建、签名和 4 项冒烟，全部通过；完整回归未重跑，视觉及
+交互由用户验收。证据：`dist/verification/liquid-island-refinement/`。
+
+用户随后反馈仍缺少果冻抖动：已将单纯圆角回弹补为外壳压扁 / 反向伸展 / 衰减，
+主岛与新子岛均在断开后反馈。布局宽高和中心保持固定，外壳短暂形变后恢复，
+文字反向补偿保持字形。仅改隔离适配；构建签名和 4 项冒烟通过，视觉仍由用户
+验收。最新证据：`dist/verification/liquid-island-jelly/`。
+
+用户要求在不改原全部果冻的前提下做多任务。排查确认新宿主复用视图却遗漏了
+原 `ActivityIslandMotion`，已接回原呼出、展开 / 缩略、隐藏、共享回弹、文字跟随
+和打断时间线；多任务动效只负责队列与融合 / 分离叠加，单任务不套用新增覆盖。
+4 项局部冒烟及构建签名通过，生产渲染 / 动效源码和原单岛开发台无改动。
+最新证据：`dist/verification/liquid-island-preserve-single/`；视觉仍由用户验收。
+
+最新完成收尾按用户选图实现：全部完成后显示「已完成全部任务」，子岛由近到远
+依次从原侧融入居中主岛，双方保留果冻，融合收拢后再缩略为「全部完成｜N 项任务」。
+部分完成仍不汇总；新任务取消旧收尾与计时，任务身份不丢失。单任务原动效不变。
+4 项局部冒烟、构建签名及开发台启动通过，证据 `dist/verification/liquid-island-completion/`；
+仅隔离开发台，视觉由用户验收，生产多任务未接入。
+
+用户反馈逐个融合拖沓，已改为所有子岛同时启动、同时融入，共用约 0.46 秒过程，
+不再按任务数量累加时长。主岛只回应一次果冻，避免多任务叠加强度；原单岛、
+完成门槛和中断恢复保留。4 项局部冒烟与构建签名通过，最新证据：
+`dist/verification/liquid-island-simultaneous/`，视觉由用户验收。
+
+最新修正全部果冻的内容跟随：主岛取消文字 / 完成回执的反向缩放，子岛外壳、
+文字与图标共用缩放容器，覆盖分离、切换和同时融合。逻辑排版与视觉形变分开，
+避免子岛回弹膨胀时误切大岛渲染器。原单岛时间线、动效参数和生产源码不变。
+4 项局部冒烟、隔离构建签名及重启通过；最新证据
+`dist/verification/liquid-island-shared-content/`，视觉由用户验收。
+
+新子岛规则再细化：始终从当前主岛右侧分离并留在紧邻位置，旧右侧子岛同步
+向右让位，左侧与旧任务相互次序不变。替换旧队尾分离源，保留主岛焦点与共同
+果冻；全部完成后新任务恢复主岛的既有规则保留。4 项局部冒烟、构建签名及
+开发台重启通过，最新证据 `dist/verification/liquid-island-main-origin/`。
+仅隔离原型修改，生产源码未变，视觉由用户验收。
+
+用户反馈基础动效基本完成，随后授权模拟前台创建：开发台增加「新建并进入」
+与「后台新增」两个入口。前者一次提交新增与焦点，新任务接管居中渲染器，
+旧任务向左分离、左侧让位，原内容淡出后整组换为新内容；后者保持右侧分离。
+连续创建、切回已有任务及 Reduce Motion 已做局部冒烟；连同原单岛、原生宿主、
+完成融合等共 6 项通过，构建签名及重启通过。最新证据
+`dist/verification/liquid-island-focus-handoff/`。仍为隔离模拟，真实 Codex 焦点
+与事件聚合未接入；新交接视觉待用户验收，生产与原单岛开发台源码未改。
+
+**2026-09-25 接入方案与回退要求：**用户认可多路任务状态、独立焦点识别与统一
+动画调度的方向，并明确生产接入前须增加「多任务灵动岛」设置，默认关闭，
+仅用户主动开启才运行多任务。关闭后无需重启即恢复原单岛选择与完整动效，
+停止多任务专用观察、轮询及调度，隔离迟到回调；共享状态采集和压缩 Hook
+继续按原单岛规则工作。偏好持久化，缺省 / 升级不自动开启。详见
+[最新接入与回退要求](docs/design/quotaview-island-multitask-next.md#2026-09-25接入方向与默认关闭的回退开关已确认要求待实现)。
+本轮仅更新方案与索引，生产开关、真实焦点和多任务接入均待实现；未构建、
+启动或改变版本身份。后续先验证焦点，再接隔离开发台；局部冒烟覆盖运行中
+关闭和重启保持，视觉与实际切换由用户验收，不通过模型调用制造验证事件。
+
+用户随后要求焦点实测；Computer Use 对 `com.openai.codex` 明确返回安全
+访问拒绝，未取得界面树或选中任务，延迟与准确率未测。此为工具访问限制，
+不代表已证明焦点方案不可行；不能通过其他脚本或私有接口绕过。本轮仅
+记录阻塞，未修改生产功能、构建或发送模型消息。继续实测需要允许的读取
+接口或用户提供切换观察结果，详见方案中的焦点实测记录。
+
+继续后完成独立的 `Prototypes/MultitaskIslandConsole/FocusValidation/` 规则原型，
+6 组离线冒烟、30 项断言通过；覆盖身份匹配、不可信证据、窗口与开关过期回调，
+并确认选择不改变现有任务状态 / Token / 次序。仅编译运行夹具命令行程序，
+没有实时采集器、生产或开发台 UI 接入，也未重建 / 启动 App。证据在
+`dist/verification/focus-rules-offline/smoke.log`。真实焦点仍未验证；用户未打开
+Vibe Island，暂无其跟随表现的人工观察，不能将离线结果视为接入验收通过。
 
 ## 0.5.1 Build 9：单周期文字垂直对齐（已发布）
 

@@ -20,10 +20,12 @@ struct CodexActivityConnectionEvidence: Equatable {
 
     mutating func record(
         event: CodexActivityHookEvent,
-        installationID: String
+        installationID: String,
+        compactionOnly: Bool = false
     ) {
+        if compactionOnly, ![.preCompact, .postCompact].contains(event) { return }
         observedInstallationID = installationID
-        if event == .userPromptSubmit {
+        if [.userPromptSubmit, .preCompact, .postCompact].contains(event) {
             connectedInstallationID = installationID
         }
     }
@@ -466,6 +468,18 @@ struct CodexActivityHookInstaller: Sendable {
     private static let eventNames = CodexActivityHookEvent.allCases
         .map(\.rawValue)
 
+    enum Scope: Equatable, Sendable {
+        case all, compaction
+
+        var eventNames: [String] {
+            switch self {
+            case .all: CodexActivityHookInstaller.eventNames
+            case .compaction: [CodexActivityHookEvent.preCompact.rawValue,
+                               CodexActivityHookEvent.postCompact.rawValue]
+            }
+        }
+    }
+
     let socketURL: URL
     let authenticationToken: String
     let hooksURL: URL
@@ -509,23 +523,35 @@ struct CodexActivityHookInstaller: Sendable {
     }
 
     func isInstalled() throws -> Bool {
+        try installedScope() != nil
+    }
+
+    func installedScope() throws -> Scope? {
+        let installed = try installedEventNames()
+        if installed == Set(Scope.all.eventNames) { return .all }
+        if installed == Set(Scope.compaction.eventNames) { return .compaction }
+        return nil
+    }
+
+    private func installedEventNames() throws -> Set<String> {
         guard FileManager.default.fileExists(atPath: hooksURL.path) else {
-            return false
+            return []
         }
         let root = try readRoot()
         let hooks = try readHooks(from: root)
         let expectedCommand = hookCommand()
-        return Self.eventNames.allSatisfy { eventName in
-            guard let groups = hooks[eventName] as? [[String: Any]]
-            else {
-                return false
+        var installed = Set<String>()
+        for (eventName, value) in hooks {
+            let groups = value as? [[String: Any]] ?? []
+            let owned = groups.flatMap { handlers(in: $0) }.filter {
+                command(in: $0).contains(Self.commandMarker)
             }
-            return groups.contains { group in
-                handlers(in: group).contains {
-                    command(in: $0) == expectedCommand
-                }
-            }
+            guard !owned.isEmpty else { continue }
+            // A partial or stale installation still needs explicit repair.
+            guard owned.allSatisfy({ command(in: $0) == expectedCommand }) else { return [] }
+            installed.insert(eventName)
         }
+        return installed
     }
 
     func hasQuotaViewHandlers() throws -> Bool {
@@ -545,7 +571,7 @@ struct CodexActivityHookInstaller: Sendable {
         }
     }
 
-    func install() throws -> InstallationResult {
+    func install(scope: Scope = .all) throws -> InstallationResult {
         guard FileManager.default.isExecutableFile(
             atPath: bundledHelperURL.path
         )
@@ -553,7 +579,7 @@ struct CodexActivityHookInstaller: Sendable {
             throw InstallationError.helperUnavailable
         }
 
-        let hookDefinitionChanged = try !isInstalled()
+        let hookDefinitionChanged = try installedEventNames() != Set(scope.eventNames)
         try installHelper()
 
         var root = try readRoot(allowMissing: true)
@@ -562,7 +588,7 @@ struct CodexActivityHookInstaller: Sendable {
 
         let command = hookCommand()
 
-        for eventName in Self.eventNames {
+        for eventName in scope.eventNames {
             var groups = hooks[eventName] as? [[String: Any]] ?? []
             let timeout = eventName == HookEventName.sessionEnd ? 1 : 2
             groups.append([

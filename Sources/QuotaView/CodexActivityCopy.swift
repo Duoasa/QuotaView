@@ -49,6 +49,13 @@ enum CodexActivityTokenUsageFormatter {
 struct CodexActivityCopy {
     let language: AppPreferences.Language
 
+    func taskTitle(resolvedTitle: String?, workspaceName: String?) -> String {
+        for candidate in [resolvedTitle, workspaceName] {
+            if let title = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty { return title }
+        }
+        return AppCopy(language: language).text("未命名任务", "Untitled task")
+    }
+
     func tokenUsageTitle(totalTokens: Int64) -> String {
         let count = CodexActivityTokenUsageFormatter.string(
             for: totalTokens
@@ -112,7 +119,8 @@ struct CodexActivityCopy {
 
     func disconnectedOperation(
         for status: CodexActivityConnectionStatus,
-        isConfiguring: Bool
+        isConfiguring: Bool,
+        compactionOnly: Bool = false
     ) -> String {
         if isConfiguring {
             return switch language {
@@ -121,6 +129,12 @@ struct CodexActivityCopy {
             case .english:
                 "Preparing the Codex island connection"
             }
+        }
+
+        if status == .awaitingFirstEvent, compactionOnly {
+            return language == .simplifiedChinese
+                ? "等待 Codex 自然压缩上下文"
+                : "Waiting for natural Codex context compaction"
         }
 
         return switch (language, status) {

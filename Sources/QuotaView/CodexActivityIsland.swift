@@ -252,6 +252,15 @@ struct CodexActivityIslandProgressBarGeometry {
         fixedCompactSurfaceWidth
     }
 
+    static func compactCompletionSurfaceWidth(for title: String) -> CGFloat {
+        let font = activityFont("AstaSans-SemiBold",
+            size: CodexActivityIslandPresentation.compactTitleFontSize, fallbackWeight: .semibold)
+        let textWidth = ceil(activitySingleLineWidth(text: title, font: font))
+        let rightEndcap = CodexActivityIslandPresentation.compactSurfaceSize.height / 2
+        return max(fixedCompactSurfaceWidth, compactCompletionInset + textWidth
+                   + compactCompletionGap + compactQuotaRingDiameter / 2 + rightEndcap)
+    }
+
     static func compactQuotaRingFrame(
         in surfaceBounds: NSRect
     ) -> NSRect {
@@ -426,6 +435,9 @@ private extension CodexActivityVisualState {
         }
     }
 
+}
+
+extension CodexActivityVisualState {
     var activityAccentColor: NSColor {
         switch self {
         case .disconnectedCodex:
@@ -489,6 +501,9 @@ private extension CodexActivityVisualState {
         }
     }
 
+}
+
+private extension CodexActivityVisualState {
     var activityShowsOperationSweep: Bool {
         switch self {
         case .thinking, .working, .compactingContext:
@@ -878,7 +893,7 @@ private final class ActivityTextMaskLayer: CALayer {
     }
 }
 
-private final class ActivitySingleLineTextView: NSView {
+final class ActivitySingleLineTextView: NSView {
     private static let shimmerAnimationKey = "operation-highlight-sweep"
     private static let shimmerDuration: CFTimeInterval = 2.6
 
@@ -2138,7 +2153,12 @@ struct CodexActivityQuotaRingContract {
     }
 }
 
-private final class ActivityIslandCompletionGlowView: NSView {
+final class ActivityIslandCompletionGlowView: NSView {
+    var consoleContour: CGPath?
+    // Optional satellite styling; nil preserves the existing main-island palette
+    // and completion sequence.
+    var completionColor: NSColor? { didSet { applyColors() } }
+    var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
         static let reveal = "quotaview.activity.completion-glow.reveal"
         static let breathRadius =
@@ -2210,7 +2230,7 @@ private final class ActivityIslandCompletionGlowView: NSView {
             )
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let glowPath = CGPath(
+        let glowPath = consoleContour ?? CGPath(
             roundedRect: glowSourceRect,
             cornerWidth: glowSourceRadius,
             cornerHeight: glowSourceRadius,
@@ -2291,7 +2311,7 @@ private final class ActivityIslandCompletionGlowView: NSView {
             from: nil
         )
         let revealDelay: CFTimeInterval = edgeEmphasis == .completion
-            ? CodexActivityStateSmokeContract.completionGlowDelay
+            ? (completionRevealDelay ?? CodexActivityStateSmokeContract.completionGlowDelay)
             : 0
         let revealDuration: CFTimeInterval =
             edgeEmphasis == .confirmationReminder
@@ -2347,8 +2367,8 @@ private final class ActivityIslandCompletionGlowView: NSView {
         switch edgeEmphasis {
         case .completion, .none:
             colors = (
-                CodexActivityIslandCompletionPalette.violet,
-                CodexActivityIslandCompletionPalette.cyan
+                completionColor ?? CodexActivityIslandCompletionPalette.violet,
+                completionColor ?? CodexActivityIslandCompletionPalette.cyan
             )
         case .confirmationReminder:
             let warning =
@@ -2381,7 +2401,9 @@ private final class ActivityIslandCompletionGlowView: NSView {
     }
 }
 
-private final class ActivityIslandCompletionOutlineView: NSView {
+final class ActivityIslandCompletionOutlineView: NSView {
+    var completionColor: NSColor? { didSet { applyColors() } }
+    var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
         static let reveal =
             "quotaview.activity.completion-outline.reveal"
@@ -2506,7 +2528,7 @@ private final class ActivityIslandCompletionOutlineView: NSView {
         reveal.toValue = 1
         reveal.beginTime = now + (
             edgeEmphasis == .completion
-                ? CodexActivityStateSmokeContract.completionGlowDelay
+                ? (completionRevealDelay ?? CodexActivityStateSmokeContract.completionGlowDelay)
                 : 0
         )
         reveal.duration = edgeEmphasis == .confirmationReminder
@@ -2525,9 +2547,9 @@ private final class ActivityIslandCompletionOutlineView: NSView {
         switch edgeEmphasis {
         case .completion, .none:
             outlineGradientLayer.colors = [
-                CodexActivityIslandCompletionPalette.violet.cgColor,
-                CodexActivityIslandCompletionPalette.blue.cgColor,
-                CodexActivityIslandCompletionPalette.cyan.cgColor,
+                (completionColor?.withAlphaComponent(0.76) ?? CodexActivityIslandCompletionPalette.violet).cgColor,
+                (completionColor ?? CodexActivityIslandCompletionPalette.blue).cgColor,
+                (completionColor?.withAlphaComponent(0.76) ?? CodexActivityIslandCompletionPalette.cyan).cgColor,
             ]
         case .confirmationReminder:
             let warning =
@@ -2542,7 +2564,7 @@ private final class ActivityIslandCompletionOutlineView: NSView {
     }
 }
 
-private final class ActivityIslandQuotaRingView: NSView {
+final class ActivityIslandQuotaRingView: NSView {
     private let trackLayer = CAShapeLayer()
     private let progressLayer = CAShapeLayer()
     private let valueLabel = ActivitySingleLineTextView()
@@ -2648,7 +2670,60 @@ private final class ActivityIslandQuotaRingView: NSView {
     }
 }
 
-private final class ActivityIslandContentView: NSView {
+final class ActivityIslandContentView: NSView {
+    // Optional multitask contour. The single-island path keeps all defaults unchanged.
+    private var multitaskCapsule: CGFloat = 0
+    private var multitaskContourRecoil: CGFloat = 0
+    private var multitaskJelly: CGFloat = 0
+    private var multitaskDidApplyJelly = false
+    private(set) var multitaskSurfaceCornerRadius: CGFloat = 0
+    var multitaskShellTransform: CGAffineTransform { shadowHost.layer?.affineTransform() ?? .identity }
+    var multitaskTextTransform: CGAffineTransform { textHost.layer?.affineTransform() ?? .identity }
+    var multitaskDisplayedText: [String] { [kickerLabel.stringValue, titleLabel.stringValue, detailLabel.stringValue, tokenUsageLabel.stringValue] }
+
+    func setMultitaskContour(capsule: CGFloat, recoil: CGFloat, jelly: CGFloat = 0) {
+        guard multitaskCapsule != capsule || multitaskContourRecoil != recoil || multitaskJelly != jelly else { return }
+        multitaskCapsule = capsule
+        multitaskContourRecoil = recoil
+        multitaskJelly = jelly
+        needsLayout = true
+    }
+
+    private func multitaskResetJelly() {
+        multitaskDidApplyJelly = false
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        shadowHost.layer?.setAffineTransform(.identity)
+        textHost.layer?.setAffineTransform(.identity)
+        CATransaction.commit()
+    }
+
+    private func multitaskApplyJelly() {
+        guard multitaskJelly != 0 else { return }
+        multitaskDidApplyJelly = true
+        // A short squash / overshoot / settle, about two visible oscillations.
+        // The shared ancestor carries skin, effects, text, icons and completion copy.
+        let x = 1 + multitaskJelly * 0.28
+        let y = 1 - multitaskJelly
+        func centered(_ layer: CALayer?, x: CGFloat, y: CGFloat) {
+            guard let layer else { return }
+            let dx = layer.bounds.width * (0.5 - layer.anchorPoint.x)
+            let dy = layer.bounds.height * (0.5 - layer.anchorPoint.y)
+            layer.setAffineTransform(CGAffineTransform(a: x, b: 0, c: 0, d: y, tx: (1 - x) * dx, ty: (1 - y) * dy))
+        }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        centered(shadowHost.layer, x: x, y: y)
+        CATransaction.commit()
+    }
+
+    private func multitaskCornerRadius(base: CGFloat, height: CGFloat) -> CGFloat {
+        guard multitaskCapsule != 0 || multitaskContourRecoil != 0 else { multitaskSurfaceCornerRadius = base; return base }
+        let capsuleRadius = height / 2
+        let shape = base + (capsuleRadius - base) * min(1, max(0, multitaskCapsule))
+        // Recoil moves the contour inward and back while preserving all four bounds.
+        multitaskSurfaceCornerRadius = max(0, min(capsuleRadius, shape - height * multitaskContourRecoil * 0.5))
+        return multitaskSurfaceCornerRadius
+    }
+
     private let textHost = NSView()
     private var textLayoutFrame: NSRect?
     private var presentationLayoutSize: NSSize?
@@ -2796,6 +2871,8 @@ private final class ActivityIslandContentView: NSView {
     override func layout() {
         super.layout()
 
+        if multitaskDidApplyJelly { multitaskResetJelly() }
+        defer { multitaskApplyJelly() }
         let panelInset = CodexActivityIslandGeometry.panelInset
         shadowHost.frame = bounds.insetBy(
             dx: panelInset,
@@ -2834,11 +2911,11 @@ private final class ActivityIslandContentView: NSView {
             surfaceHeight: textBounds.height,
             expandedSurfaceHeight: expandedSurfaceHeight
         )
-        let surfaceCornerRadius = activityIslandSurfaceCornerRadius(
+        let surfaceCornerRadius = multitaskCornerRadius(base: activityIslandSurfaceCornerRadius(
             style: islandStyle,
             surfaceHeight: surfaceBounds.height,
             expansionProgress: progress
-        )
+        ), height: surfaceBounds.height)
         surface.setCornerRadius(surfaceCornerRadius)
         completionGlowView.setIslandCornerRadius(
             surfaceCornerRadius
@@ -3742,4 +3819,235 @@ private func activityFont(
             ofSize: size,
             weight: fallbackWeight
         )
+}
+
+// Live-island adapter; consumes observed task state without mock injection.
+// Same-file access reuses the original orb, progress and edge-glow renderers.
+@MainActor
+final class IslandActivityOrbHost: NSView {
+    // Only the tiny orb canvas is supersampled, never the island or text.
+    static let renderScale: CGFloat = 2
+    private let orb: ActivitySelectableOrbView
+    private var configuredState: CodexActivityVisualState
+    private var requestedPlayback = false
+    private(set) var playbackActive = false
+    var isRendering: Bool { orb.subviews.compactMap { $0 as? MTKView }.contains { !$0.isPaused } }
+    var usesRippleGlow: Bool { orb.subviews.contains { $0 is ActivityRippleGlowMetalView } }
+    var drawableSize: CGSize { orb.subviews.compactMap { $0 as? MTKView }.first?.drawableSize ?? .zero }
+    var backingPixelSize: CGSize {
+        guard let view = orb.subviews.compactMap({ $0 as? MTKView }).first else { return .zero }
+        let size = view.convertToBacking(view.bounds).size
+        return CGSize(width: ceil(size.width), height: ceil(size.height))
+    }
+    init(state: CodexActivityVisualState) {
+        configuredState = state
+        orb = ActivitySelectableOrbView(frame: .zero, initialState: state, animation: .rippleGlow)
+        super.init(frame: .zero)
+        clipsToBounds = false
+        orb.clipsToBounds = false
+        orb.setPlaybackEnabled(false)
+        addSubview(orb)
+        setAccessibilityElement(false)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func layout() {
+        super.layout()
+        let side = min(bounds.width, bounds.height) / CGFloat(CodexActivityRippleGlowContract.sphereRadius)
+        let next = CGRect(x: bounds.midX - side / 2, y: bounds.midY - side / 2, width: side, height: side)
+        if orb.frame != next { orb.frame = next; orb.redrawIfPaused() }
+        orb.layoutSubtreeIfNeeded()
+        synchronizeResolution()
+    }
+    func configure(state: CodexActivityVisualState, playback: Bool) {
+        if configuredState != state {
+            configuredState = state; orb.setState(state)
+        }
+        requestedPlayback = playback
+        synchronizePlayback()
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        needsLayout = true
+        synchronizePlayback()
+    }
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        needsLayout = true
+        synchronizeResolution()
+    }
+    private func synchronizeResolution() {
+        guard let window else { return }
+        for view in orb.subviews.compactMap({ $0 as? MTKView }) {
+            view.autoResizeDrawable = false
+            view.layer?.contentsScale = window.backingScaleFactor
+            view.layer?.minificationFilter = .linear
+            view.layer?.magnificationFilter = .linear
+            let size = view.convertToBacking(view.bounds).size
+            let pixels = CGSize(width: ceil(size.width) * Self.renderScale,
+                                height: ceil(size.height) * Self.renderScale)
+            if pixels.width > 0, pixels.height > 0, view.drawableSize != pixels {
+                view.drawableSize = pixels
+                orb.redrawIfPaused()
+            }
+        }
+    }
+    private func synchronizePlayback() {
+        let active = requestedPlayback && window != nil
+        guard playbackActive != active else { return }
+        playbackActive = active
+        orb.setPlaybackEnabled(playbackActive)
+    }
+    func stop() { requestedPlayback = false; synchronizePlayback() }
+}
+
+// One compositor clock and envelope for the waiting card and whole-island glow.
+// Newly mounted/resumed layers join the current phase instead of starting over.
+@MainActor
+enum IslandConfirmationPulse {
+    static let key = "console.confirmation-glow.pulse"
+    static let duration: CFTimeInterval = 3
+    private static let epoch = CACurrentMediaTime()
+
+    static func update(_ layer: CALayer?, animated: Bool, includesRadius: Bool = false, minimumOpacity: Double = 0) {
+        guard let layer else { return }
+        guard animated else { layer.removeAnimation(forKey: key); return }
+        guard layer.animation(forKey: key) == nil else { return }
+        let opacity = CAKeyframeAnimation(keyPath: "opacity")
+        opacity.values = [minimumOpacity, minimumOpacity, 1, minimumOpacity, minimumOpacity]
+        var animations = [opacity]
+        if includesRadius {
+            let radius = CAKeyframeAnimation(keyPath: "shadowRadius")
+            let resting = CodexActivityIslandCompletionGlowGeometry.restingShadowRadius
+            radius.values = [resting, resting, CodexActivityIslandCompletionGlowGeometry.peakShadowRadius, resting, resting]
+            animations.append(radius)
+        }
+        for animation in animations {
+            animation.keyTimes = [0, 0.12, 0.52, 0.92, 1]
+            animation.duration = duration
+            animation.timingFunctions = Array(repeating: CAMediaTimingFunction(name: .easeInEaseOut), count: 4)
+        }
+        let pulse = CAAnimationGroup()
+        pulse.animations = animations
+        pulse.duration = duration
+        pulse.repeatCount = .infinity
+        pulse.beginTime = layer.convertTime(epoch, from: nil)
+        layer.add(pulse, forKey: key)
+    }
+}
+
+// Reuses the single-island progress renderer and its completion skin.
+@MainActor
+final class IslandQuantumProgressHost: NSView {
+    private let surface = ActivityIslandSurfaceView()
+    private let effect = ActivityStateSmokeMetalView(frame: .zero)
+    private let glow = ActivityIslandCompletionGlowView(frame: .zero)
+    private let outline = ActivityIslandCompletionOutlineView(frame: .zero)
+    private var renderState: CodexActivityRenderState?
+    private var requestedVisible = false
+    private var reduceMotion = false
+    var glowIsAttachedToCard: Bool { glow.superview === self }
+    var glowFrameInWindow: CGRect { glow.convert(glow.bounds, to: nil) }
+    var isRendering: Bool { effect.isRendererAvailable && !effect.isPaused }
+    var effectAvailable: Bool { effect.isRendererAvailable }
+    var progressPosition: Float? { effect.displayedProgressPosition }
+    var confirmationPulse: CAAnimationGroup? { effect.layer?.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
+    var completionPulse: CAAnimationGroup? { glow.islandPulse }
+    var completionOutlinePulse: CAAnimationGroup? { outline.layer?.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        addSubview(glow); addSubview(surface); addSubview(outline)
+        surface.addSubview(effect)
+        effect.setEffect(.dropField)
+        effect.setPlaybackEnabled(false)
+        setAccessibilityElement(false)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func layout() {
+        super.layout()
+        surface.frame = bounds; surface.setCornerRadius(IslandVibeLayout.rowRadius)
+        effect.frame = surface.bounds
+        glow.frame = bounds.insetBy(dx: -30, dy: -30)
+        glow.setIslandInset(30); glow.setIslandCornerRadius(IslandVibeLayout.rowRadius)
+        outline.frame = bounds; outline.setIslandCornerRadius(IslandVibeLayout.rowRadius)
+        effect.redrawIfPaused()
+    }
+    func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool) {
+        let newlyBound = self.renderState == nil || self.renderState?.taskIdentity != renderState.taskIdentity
+        // Selecting an already completed receipt should not replay its fill.
+        let completedReceipt = self.renderState == nil && renderState.visualState == .completed
+        self.renderState = renderState
+        self.requestedVisible = visible
+        self.reduceMotion = reduceMotion
+        effect.setReduceMotion(reduceMotion || completedReceipt)
+        effect.setState(renderState.visualState, taskIdentity: renderState.taskIdentity)
+        effect.setApproximateProgress(renderState.approximateProgressFraction)
+        if newlyBound { effect.restoreProgressPosition(renderState.approximateProgressFraction) }
+        effect.setReduceMotion(reduceMotion)
+        synchronizePlayback()
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        synchronizePlayback()
+    }
+    private func synchronizePlayback() {
+        let visible = requestedVisible && window != nil
+        effect.setPlaybackEnabled(visible)
+        guard let renderState else { return }
+        IslandConfirmationPulse.update(effect.layer, animated: visible && !reduceMotion
+            && renderState.visualState == .awaitingConfirmation, minimumOpacity: 0.65)
+        let emphasis = CodexActivityIslandConfirmationReminderContract.edgeEmphasis(
+            visualState: renderState.visualState,
+            reminderActive: renderState.isConfirmationReminderActive,
+            completionEffectAvailable: effect.isRendererAvailable)
+        glow.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion, playbackVisible: visible)
+        outline.update(edgeEmphasis: emphasis, reduceMotion: true, playbackVisible: visible)
+        let completionBreathing = visible && !reduceMotion && renderState.visualState == .completed
+        glow.updateIslandConfirmationPulse(animated: completionBreathing)
+        // Keep the completion outline steady; only its outer bloom goes dark.
+        IslandConfirmationPulse.update(outline.layer, animated: false)
+    }
+    func stop() { requestedVisible = false; synchronizePlayback() }
+
+
+}
+
+// Notch-only contour and breathing overrides; production sources stay intact.
+extension ActivityIslandCompletionGlowView {
+    var islandPulse: CAAnimationGroup? { violetGlowLayer.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
+    func updateIslandConfirmationPulse(animated: Bool) {
+        for layer in [violetGlowLayer, cyanGlowLayer] {
+            layer.removeAnimation(forKey: AnimationKey.reveal)
+            layer.removeAnimation(forKey: AnimationKey.breathRadius)
+            IslandConfirmationPulse.update(layer, animated: !isHidden && animated, includesRadius: true)
+        }
+    }
+
+    func setIslandContour(_ path: CGPath, duration: CFTimeInterval?) {
+        let layers = [violetGlowLayer, cyanGlowLayer]
+        let previous = layers.map { $0.presentation()?.path ?? $0.path }
+        consoleContour = path
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+        for (layer, oldPath) in zip(layers, previous) {
+            for key in ["path", "shadowPath"] {
+                layer.removeAnimation(forKey: key)
+                if let duration, let oldPath {
+                    let animation = CABasicAnimation(keyPath: key)
+                    animation.fromValue = oldPath; animation.toValue = path
+                    animation.duration = duration
+                    animation.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+                    layer.add(animation, forKey: key)
+                }
+            }
+        }
+    }
+    func cancelIslandContourAnimations() {
+        for layer in [violetGlowLayer, cyanGlowLayer] {
+            layer.removeAnimation(forKey: "path")
+            layer.removeAnimation(forKey: "shadowPath")
+        }
+    }
 }

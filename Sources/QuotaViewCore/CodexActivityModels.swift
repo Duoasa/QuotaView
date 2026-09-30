@@ -126,6 +126,8 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let turnCompletionStatus: CodexActivityTurnCompletionStatus?
     public let goalStatus: CodexActivityGoalStatus?
     public let waitReason: CodexActivityWaitReason?
+    /// Only the hashed item identity is retained, never the item payload.
+    public let compactionItemHash: String?
     public let occurredAt: Date
 
     public init(
@@ -143,6 +145,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         turnCompletionStatus: CodexActivityTurnCompletionStatus? = nil,
         goalStatus: CodexActivityGoalStatus? = nil,
         waitReason: CodexActivityWaitReason? = nil,
+        compactionItemHash: String? = nil,
         occurredAt: Date = Date()
     ) {
         self.schemaVersion = schemaVersion
@@ -159,6 +162,7 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.turnCompletionStatus = turnCompletionStatus
         self.goalStatus = goalStatus
         self.waitReason = waitReason
+        self.compactionItemHash = compactionItemHash
         self.occurredAt = occurredAt
     }
 }
@@ -170,7 +174,8 @@ public extension CodexActivityEvent {
              sessionStartSource: sessionStartSource, planProgress: planProgress,
              sessionKind: kind, source: source, planSource: planSource,
              turnCompletionStatus: turnCompletionStatus, goalStatus: goalStatus,
-             waitReason: waitReason, occurredAt: occurredAt)
+             waitReason: waitReason, compactionItemHash: compactionItemHash,
+             occurredAt: occurredAt)
     }
 }
 

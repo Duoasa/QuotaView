@@ -633,8 +633,8 @@ struct SettingsView: View {
                         "Show Codex Island"
                     ),
                     subtitle: copy.text(
-                        "手动控制灵动岛浮窗；关闭后仍保留 Codex 本地连接。",
-                        "Manually control the island window while keeping the local Codex connection active."
+                        "关闭灵动岛后停止对应活动观察；额度显示独立运行。",
+                        "Disabling the island stops activity observation; quota display runs independently."
                     )
                 ) {
                     Toggle(
@@ -646,46 +646,17 @@ struct SettingsView: View {
                     .controlSize(.small)
                 }
 
-                NativeSettingsDivider()
+            }
 
-                NativeSettingsRow(
-                    title: copy.text(
-                        "锁定到 Codex 屏幕",
-                        "Lock to Codex Screen"
-                    ),
-                    subtitle: copy.text(
-                        "开启后跟随最大可见 Codex 窗口所在屏幕；关闭时跟随当前热区，无法定位时也会自动回退到热区。",
-                        "When enabled, the island follows the screen containing the largest visible Codex window. When off or unavailable, it follows the current hotspot."
-                    )
-                ) {
-                    Toggle(
-                        copy.text(
-                            "锁定到 Codex 屏幕",
-                            "Lock to Codex Screen"
-                        ),
-                        isOn: Binding(
-                            get: {
-                                preferences
-                                    .codexActivityScreenPlacement
-                                    == .codexScreen
-                            },
-                            set: { isEnabled in
-                                preferences
-                                    .codexActivityScreenPlacement =
-                                    isEnabled
-                                        ? .codexScreen
-                                        : .followHotspot
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .help(copy.text(
-                        "控制灵动岛是否锁定到 Codex 所在屏幕。",
-                        "Control whether the island stays on the Codex screen."
-                    ))
+            NativeSettingsCard {
+                NativeSettingsRow(title: copy.text("隐私显示", "Private display"), subtitle: copy.text(
+                    "隐藏任务标题、正文和请求内容，只显示状态、时长与用量。", "Hide titles, text and request contents; keep status, duration and usage.")) {
+                    Toggle(copy.text("隐私显示", "Private display"), isOn: $preferences.codexIslandPrivacy)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
+                NativeSettingsDivider()
+                NativeSettingsNote(text: copy.text(
+                    "任务由你手动选择；新活动只追加和提醒。灵动岛固定在主屏幕，常驻到退出或关闭此功能。", "Select tasks manually; new activity appends and alerts. The island stays on the primary display until disabled or quit."))
             }
 
             NativeSettingsCard {
@@ -869,201 +840,13 @@ struct SettingsView: View {
             }
 
             NativeSettingsCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(copy.text(
-                            "进度条效果",
-                            "Progress Effect"
-                        ))
-                        .font(.body.weight(.medium))
-
-                        Text(copy.text(
-                            "选择进度条灵动岛内部使用的动态效果。预览固定展示 60% 工作状态。",
-                            "Choose the animated effect inside the Progress Bar island. Previews show a fixed 60% working state."
-                        ))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    }
-
-                    HStack(spacing: 10) {
-                        ForEach(
-                            AppPreferences
-                                .CodexActivityProgressEffect.allCases
-                        ) { effect in
-                            codexActivityProgressEffectOption(effect)
-                        }
-                    }
-                }
-                .padding(18)
-
-                NativeSettingsDivider()
-
-                NativeSettingsRow(
-                    title: copy.text("悬停可见度", "Hover Visibility"),
-                    subtitle: copy.text(
-                        "降低鼠标悬停时的可见度，便于查看下方内容。",
-                        "Lower visibility on hover to see the content underneath."
-                    )
-                ) {
-                    HStack(spacing: 8) {
-                        Slider(
-                            value: Binding(
-                                get: { Double(preferences.codexActivityHoverVisibility) },
-                                set: { preferences.codexActivityHoverVisibility = Int($0.rounded()) }
-                            ),
-                            in: Double(
-                                CodexActivityIslandHoverTransparencyContract.transparencyRange.lowerBound
-                            )...Double(
-                                CodexActivityIslandHoverTransparencyContract.transparencyRange.upperBound
-                            )
-                        )
-                        .controlSize(.small)
-                        .frame(width: 130)
-                        .accessibilityLabel(copy.text("悬停可见度", "Hover Visibility"))
-                        .accessibilityValue("\(preferences.codexActivityHoverVisibility)%")
-                        .help(copy.text(
-                            "数值越大，灵动岛越明显。仅悬停时生效，移出后恢复；鼠标操作始终穿透。",
-                            "Higher values make the island more visible on hover. Moving away restores full visibility; mouse events always pass through."
-                        ))
-
-                        Text("\(preferences.codexActivityHoverVisibility)%")
-                            .font(.callout.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .frame(width: 42, alignment: .trailing)
-                            .accessibilityHidden(true)
-
-                        Button {
-                            preferences.restoreCodexActivityHoverVisibilityDefault()
-                        } label: {
-                            Image(systemName: "arrow.counterclockwise")
-                        }
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                        .help(copy.text(
-                            "恢复默认可见度（\(CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent)%）",
-                            "Restore default visibility (\(CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent)%)"
-                        ))
-                        .accessibilityLabel(copy.text("恢复默认可见度", "Reset Hover Visibility"))
-                        .disabled(
-                            preferences.codexActivityHoverVisibility
-                                == CodexActivityIslandHoverTransparencyContract.defaultVisibilityPercent
-                        )
-                    }
-                }
-            }
-
-            NativeSettingsCard {
-                CodexActivityTimingControl(
-                    title: copy.text(
-                        "完成后缩小",
-                        "Compact After Completion"
-                    ),
-                    subtitle: copy.text(
-                        "任务完成后保持展开状态的时间。",
-                        "How long the island remains expanded after a task completes."
-                    ),
-                    value: $preferences.codexActivityCompactDelay,
-                    range:
-                        AppPreferences.CodexActivityTiming
-                        .compactDelayRange,
-                    step: AppPreferences.CodexActivityTiming.step,
-                    secondsLabel: copy.text("秒", "sec")
-                )
-
-                NativeSettingsDivider()
-
-                CodexActivityTimingControl(
-                    title: copy.text(
-                        "缩小后隐藏",
-                        "Hide After Compacting"
-                    ),
-                    subtitle: copy.text(
-                        "进入紧凑态后继续显示的时间。",
-                        "How long the compact island remains visible."
-                    ),
-                    value:
-                        $preferences
-                        .codexActivityHiddenDelayAfterCompact,
-                    range:
-                        AppPreferences.CodexActivityTiming
-                        .hiddenDelayAfterCompactRange,
-                    step: AppPreferences.CodexActivityTiming.step,
-                    secondsLabel: copy.text("秒", "sec")
-                )
-
-                NativeSettingsDivider()
-
-                NativeSettingsNote(
-                    text: copy.text(
-                        "任何新活动都会立即重新展开。开启“减少动态效果”时，窗口与内部效果使用静态状态反馈。",
-                        "New activity immediately expands the island. With Reduce Motion enabled, the window and internal effect use static state feedback."
-                    )
-                )
+                NativeSettingsNote(text: copy.text(
+                    "选中任务使用量子噪点，其他任务使用 AI 球。待确认辉光与噪点以 3 秒周期同步；减少动态效果时显示静态反馈。当前连接为观察模式，真实批准在 Codex 中处理。", "Selected tasks use quantum noise; other tasks use the orb. Confirmation glow and noise share a 3-second cycle; Reduce Motion uses static feedback. This connection observes activity; handle approvals in Codex."))
             }
         }
         .onAppear {
             activityRuntime.refreshConnectionStatus()
         }
-    }
-
-    private func codexActivityProgressEffectOption(
-        _ effect: AppPreferences.CodexActivityProgressEffect
-    ) -> some View {
-        let isSelected =
-            preferences.codexActivityProgressEffect == effect
-        let title = codexActivityProgressEffectTitle(effect)
-
-        return Button {
-            preferences.codexActivityProgressEffect = effect
-        } label: {
-            VStack(spacing: 8) {
-                CodexActivityProgressEffectPreview(
-                    effect: effect,
-                    reduceMotion: reduceMotion
-                )
-                .frame(width: 88, height: 88)
-                .accessibilityHidden(true)
-
-                Text(title)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(CodexActivityPreviewOptionButtonStyle(
-            isSelected: isSelected,
-            isHovered: hoveredProgressEffect == effect,
-            reduceMotion: reduceMotion
-        ))
-        .onHover { isHovering in
-            hoveredProgressEffect = isHovering ? effect : nil
-        }
-        .help(copy.text(
-            "选择\(title)进度条效果。",
-            "Choose the \(title) progress effect."
-        ))
-        .accessibilityLabel(title)
-        .accessibilityValue(
-            isSelected
-                ? copy.text("已选择", "Selected")
-                : copy.text("未选择", "Not selected")
-        )
-        .accessibilityHint(copy.text(
-            "应用到进度条灵动岛。",
-            "Applies this effect to the Progress Bar island."
-        ))
-    }
-
-    private func codexActivityProgressEffectTitle(
-        _ effect: AppPreferences.CodexActivityProgressEffect
-    ) -> String {
-        let displayName = effect.displayName
-        return copy.text(
-            displayName.simplifiedChinese,
-            displayName.english
-        )
     }
 
     private var languageSettings: some View {
@@ -1472,7 +1255,10 @@ struct SettingsView: View {
                 "Wait for the CLI to finish its first load. Press T only after QuotaView enters /hooks and opens the Hooks page."
             )
         case .awaitingFirstEvent:
-            copy.text(
+            activityRuntime.compatibilityHookScope == .compaction ? copy.text(
+                "已配置压缩开始与结束 Hook，尚未收到压缩事件。",
+                "Compaction start and end Hooks are configured. No compaction event has been received yet."
+            ) : copy.text(
                 "重启已经完成；发送一条新的 Codex 消息完成连接。",
                 "Restart is complete. Send a new Codex message to finish connecting."
             )
@@ -1499,7 +1285,9 @@ struct SettingsView: View {
         case .installedNeedsRestart, .awaitingTrust:
             copy.text("需要安全确认", "Security Review Needed")
         case .awaitingFirstEvent:
-            copy.text("等待第一条消息", "Waiting for First Message")
+            activityRuntime.compatibilityHookScope == .compaction
+                ? copy.text("等待压缩事件", "Waiting for Compaction")
+                : copy.text("等待第一条消息", "Waiting for First Message")
         case .connected:
             copy.text("Hook 已连接", "Hook Connected")
         case .abnormal:
@@ -1570,7 +1358,9 @@ struct SettingsView: View {
                 "Wait for Hooks, Then Press T"
             )
         case .awaitingFirstEvent:
-            copy.text("发送一条新消息", "Send a New Message")
+            activityRuntime.compatibilityHookScope == .compaction
+                ? copy.text("等待自然压缩", "Wait for Natural Compaction")
+                : copy.text("发送一条新消息", "Send a New Message")
         case .notInstalled, .connected, .abnormal:
             ""
         }
@@ -1589,7 +1379,10 @@ struct SettingsView: View {
                 "Wait for the CLI to finish its first load. QuotaView enters /hooks automatically. Press T only after the Hooks page shows “Press t to trust all”; do not press it in the normal prompt."
             )
         case .awaitingFirstEvent:
-            copy.text(
+            activityRuntime.compatibilityHookScope == .compaction ? copy.text(
+                "当前仅接收压缩事件，普通聊天消息不会完成此项验证。正常使用 Codex 即可，无需专门触发压缩；收到真实压缩事件后会更新连接状态。",
+                "This setup receives only compaction events; ordinary chat messages do not verify it. Use Codex normally without forcing compaction. The connection status updates when a real compaction event arrives."
+            ) : copy.text(
                 "不会发送测试数据；收到重启后的第一条真实消息时，灵动岛会自动切换为活动状态。",
                 "No test data is sent. The island switches to its active state after the first real message following restart."
             )

@@ -85,6 +85,25 @@ public enum CodexAppServerActivityNotificationDecoder {
         let sessionHash = CodexActivityPrivacy.hashIdentifier(threadID)
 
         switch method {
+        case "item/started", "item/completed":
+            guard let turnID = params["turnId"] as? String, !turnID.isEmpty,
+                  let item = params["item"] as? [String: Any],
+                  item["type"] as? String == "contextCompaction",
+                  let itemID = item["id"] as? String, !itemID.isEmpty
+            else { return nil }
+            let isStart = method == "item/started"
+            return CodexActivityEvent(
+                event: isStart ? .preCompact : .postCompact,
+                sessionHash: sessionHash,
+                turnHash: CodexActivityPrivacy.hashIdentifier(turnID),
+                source: .appServer,
+                compactionItemHash: CodexActivityPrivacy.hashIdentifier(itemID),
+                occurredAt: eventDate(
+                    from: params[isStart ? "startedAtMs" : "completedAtMs"],
+                    fallback: occurredAt
+                )
+            )
+
         case "turn/started":
             guard let turnID = turnID(from: params) else { return nil }
             return CodexActivityEvent(

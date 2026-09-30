@@ -49,6 +49,11 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let tokenActivity: [DailyTokenActivity]
     let lastUpdatedAt: Date
 
+    var weeklyRemainingPercent: Int? {
+        quotaWindows.first { $0.windowDurationMinutes == 7 * 24 * 60 }?.remainingPercent
+            ?? (windowDurationMinutes == 7 * 24 * 60 ? remainingPercent : nil)
+    }
+
     var canUseResetCredit: Bool {
         availableResetCredits.map { $0 > 0 } ?? false
     }

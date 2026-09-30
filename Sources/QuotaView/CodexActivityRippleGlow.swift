@@ -275,7 +275,9 @@ private enum RippleGlowRendererError: Error {
 private enum RippleGlowShaderResource {
     static func source() throws -> String {
         #if SWIFT_PACKAGE
-        let bundle = Bundle.module
+        let bundle = Bundle.main.resourceURL
+            .flatMap { Bundle(url: $0.appendingPathComponent("QuotaView_QuotaView.bundle")) }
+            ?? Bundle.module
         #else
         let bundle = Bundle.main
         #endif

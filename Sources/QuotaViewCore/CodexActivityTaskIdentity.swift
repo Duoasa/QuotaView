@@ -88,6 +88,9 @@ public struct CodexActivityTaskRegistry {
         var hasTurn = true
         var lastEventAt: [Int: Date] = [:]
         var previousTurns: [String] = []
+        var compactionItemHash: String?
+        var compactionStartedAt: Date?
+        var compactionEndedAt: Date?
     }
     private var tasks: [String: TaskState] = [:]
     private var order: [String] = []
@@ -104,6 +107,8 @@ public struct CodexActivityTaskRegistry {
         let isTerminal = [.stop, .interrupt, .sessionEnd].contains(event.event)
         let positive = isStart || [.preToolUse, .permissionRequest, .preCompact, .subagentStart].contains(event.event)
         var existing = tasks[session]
+        // An end-only event cannot establish a currently active turn.
+        if event.event == .postCompact, existing?.hasTurn != true { return nil }
         if let old = existing {
             if let latest = old.lastEventAt[authority], event.occurredAt < latest { return nil }
             if event.event == .sessionStart, event.sessionStartSource != .compact { return nil }
@@ -151,6 +156,32 @@ public struct CodexActivityTaskRegistry {
                                  previousTurns: Array(previous.suffix(16)))
         }
         guard var task = existing else { return nil }
+        // Native lifecycle and durable rollout can report the same compaction.
+        // In particular, an end-only rollout must not be followed by a delayed
+        // native start that leaves the island stuck in compaction.
+        if event.event == .preCompact {
+            if let latest = task.lastEventAt.values.max(), event.occurredAt < latest { return nil }
+            if let endedAt = task.compactionEndedAt, event.occurredAt <= endedAt { return nil }
+            if let item = event.compactionItemHash, item == task.compactionItemHash { return nil }
+            task.compactionItemHash = event.compactionItemHash
+            task.compactionStartedAt = event.occurredAt
+            task.compactionEndedAt = nil
+        } else if event.event == .postCompact {
+            if let startedAt = task.compactionStartedAt, event.occurredAt < startedAt { return nil }
+            if task.compactionStartedAt != nil, task.compactionEndedAt == nil,
+               let current = task.compactionItemHash, let incoming = event.compactionItemHash,
+               current != incoming { return nil }
+            if let endedAt = task.compactionEndedAt,
+               event.occurredAt <= endedAt || (event.compactionItemHash != nil
+                    && event.compactionItemHash == task.compactionItemHash) { return nil }
+            task.compactionItemHash = event.compactionItemHash
+            task.compactionEndedAt = event.occurredAt
+        } else if [.preToolUse, .postToolUse, .permissionRequest, .subagentStart].contains(event.event),
+                  let startedAt = task.compactionStartedAt, task.compactionEndedAt == nil,
+                  event.occurredAt >= startedAt {
+            // A real continuation can recover from a missing PostCompact.
+            task.compactionEndedAt = event.occurredAt
+        }
         // Bind native identity to a legacy leading event without losing turn state.
         if task.identity.turnHash == nil, let turn = event.turnHash {
             task.identity = .init(sessionHash: session, turnHash: turn, generation: task.identity.generation)

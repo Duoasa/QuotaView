@@ -1382,6 +1382,13 @@ metal::float2 glsContourNormal(
     return metal::normalize(radial - (tangent * ((rad_1 * slope_2) / distance_1)));
 }
 
+// DEBUG console adaptation: preserve the orb's shape, using a 1.5-pixel
+// display-pixel coverage transition; the host renders each axis at 2x backing.
+float consoleRippleEdgeHalfWidth(float contourRadius, constant Uniforms& u) {
+    float pixelWidth = 2.0 / metal::max(metal::min(u.size.x, u.size.y) * contourRadius, 1.0);
+    return metal::max(0.01 + mfEdgeD(u.edgeSoftness), 1.5 * pixelWidth);
+}
+
 metal::float4 orbGlassLiquidAnim(
     metal::float2 uv01_,
     constant Uniforms& u
@@ -1406,7 +1413,8 @@ metal::float4 orbGlassLiquidAnim(
     float contourRad = rad_2 * _e44;
     float _e49 = u.edgeSoftness;
     float _e50 = mfEdgeD(_e49);
-    if (metal::length(uv_3) > (contourRad * (1.01 + _e50))) {
+    float edgeHalfWidth = consoleRippleEdgeHalfWidth(contourRad, u);
+    if (metal::length(uv_3) > (contourRad * (1.0 + edgeHalfWidth))) {
         float _e61 = u.edgeSoftness;
         float _e64 = u.edgeGlow;
         metal::float4 _e67 = u.glowColor;
@@ -1530,10 +1538,10 @@ metal::float4 orbGlassLiquidAnim(
     float _e367 = mfEdgeD(_e366);
     float _e372 = u.edgeSoftness;
     float _e373 = mfEdgeD(_e372);
-    float ballA = 1.0 - metal::smoothstep(0.99 - _e367, 1.01 + _e373, pd);
+    float ballA = 1.0 - metal::smoothstep(1.0 - edgeHalfWidth, 1.0 + edgeHalfWidth, pd);
     metal::float3 _e379 = col_1;
     float _e382 = u.exposure;
-    col_1 = metal::clamp(_e379 * metal::max(_e382, 0.0), metal::float3(0.0), metal::float3(1.0)) * ballA;
+    col_1 = metal::clamp(_e379 * metal::max(_e382, 0.0), metal::float3(0.0), metal::float3(1.0)); // Straight RGB: final alpha applies coverage once.
     metal::float3 _e392 = col_1;
     float _e397 = u.edgeSoftness;
     float _e400 = u.edgeGlow;
@@ -1596,7 +1604,8 @@ fragment fs_mainOutput fs_main(
     float _e55 = mfEdgeD(_e54);
     float _e60 = u.edgeSoftness;
     float _e61 = mfEdgeD(_e60);
-    float ballA_1 = 1.0 - metal::smoothstep(0.99 - _e55, 1.01 + _e61, pd_1);
+    float edgeHalfWidth = consoleRippleEdgeHalfWidth(contourRad_1, u);
+    float ballA_1 = 1.0 - metal::smoothstep(1.0 - edgeHalfWidth, 1.0 + edgeHalfWidth, pd_1);
     float lum_1 = metal::max(_e2.x, metal::max(_e2.y, _e2.z));
     metal::float2 _e76 = u.size;
     metal::float2 _e80 = u.size;

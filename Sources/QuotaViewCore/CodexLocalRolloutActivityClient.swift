@@ -30,7 +30,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     private let sessionHash: String
     private let workspaceName: String?
     private let sessionKind: CodexActivitySessionKind
-    private var activeTurnHash: String?
+    private(set) var activeTurnHash: String?
 
     public init(sessionHash: String, workspaceName: String? = nil, sessionKind: CodexActivitySessionKind = .unknown) {
         self.sessionHash = sessionHash
@@ -128,6 +128,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                     workspaceName: workspaceName,
                     sessionKind: sessionKind,
                     source: .localRollout,
+                    compactionItemHash: Self.hashedIdentifier(item["id"]),
                     occurredAt: occurredAt
                 ))
             )
@@ -412,6 +413,8 @@ public actor CodexLocalRolloutActivityClient {
 
     private var configuration: Configuration
     private let fileManager: FileManager
+    private var publicContentHandler: (@Sendable (CodexLocalPublicContent) async -> Void)?
+    public func setPublicContentHandler(_ handler: (@Sendable (CodexLocalPublicContent) async -> Void)?) { publicContentHandler = handler }
     private var updateHandler: UpdateHandler?
     private var connectionStateHandler: ConnectionStateHandler?
     private var healthHandler: HealthHandler?
@@ -483,6 +486,7 @@ public actor CodexLocalRolloutActivityClient {
         maintenanceTask = nil
         let callback = healthHandler
         updateHandler = nil
+        publicContentHandler = nil
         connectionStateHandler = nil
         healthHandler = nil
         receivedActivity = false
@@ -615,16 +619,19 @@ public actor CodexLocalRolloutActivityClient {
             let data = try handle.read(upToCount: 1_048_576) ?? Data()
             state.offset = try handle.offset()
             state.pending.append(data)
-            var records: [CodexLocalRolloutDecodedRecord] = []
+            var records: [(CodexLocalRolloutDecodedRecord?, CodexLocalPublicContent?)] = []
             consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine) { line in
-                if let record = state.decoder.decode(line: line) { records.append(record) }
+                let record = state.decoder.decode(line: line)
+                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash)
+                if record != nil || content != nil { records.append((record, content)) }
             }
             // Commit the cursor before any reentrant callback can stop/restart us.
             tailStates[candidate.fileURL] = state
-            for record in records {
+            for (record, content) in records {
                 guard isStarted, generation == run, !Task.isCancelled else { return }
-                receivedActivity = true
-                await updateHandler?(record, false)
+                if let record { receivedActivity = true; await updateHandler?(record, false) }
+                guard isStarted, generation == run else { return }
+                if let content { await publicContentHandler?(content) }
             }
         } catch {
             readFailed = true
@@ -667,11 +674,16 @@ public actor CodexLocalRolloutActivityClient {
             )
             var replay = BootstrapReplay()
             var freshStart = false
+            var publicReplay: [CodexLocalPublicContent] = []
+            var publicReplayBytes = 0
             var pending = data
             consumeCompleteLines(from: &pending, discarding: &discarding) { line in
-                guard let record = decoder.decode(line: line) else {
-                    return
+                let decoded = decoder.decode(line: line)
+                if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash) {
+                    publicReplay.append(content); publicReplayBytes += content.data.count
+                    while publicReplay.count > 200 || publicReplayBytes > 2_097_152 { publicReplayBytes -= publicReplay.removeFirst().data.count }
                 }
+                guard let record = decoded else { return }
                 if case .activity(let event) = record.update, event.event == .userPromptSubmit {
                     // Do not use the decoder's missing-timestamp fallback as live evidence.
                     let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any]
@@ -696,6 +708,10 @@ public actor CodexLocalRolloutActivityClient {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
                                               requiresLiveConfirmation: !freshStart), true)
+                }
+                for content in publicReplay {
+                    guard isStarted, generation == run else { return }
+                    await publicContentHandler?(content)
                 }
             }
         } catch {
