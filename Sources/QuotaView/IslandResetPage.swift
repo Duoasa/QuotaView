@@ -13,14 +13,38 @@ struct IslandResetTicketAnchors: PreferenceKey {
 }
 
 struct IslandResetPageData {
+    enum CreditAvailability: Equatable { case unknown, empty, available }
     let snapshot: CurrentCodexPresentation?
+    var creditAvailability: CreditAvailability {
+        guard let credits else { return .unknown }
+        return credits == 0 ? .empty : .available
+    }
     var credits: Int? { snapshot?.availableResetCredits.map { max(0, $0) } }
     var remainingPercent: Int? {
         let window = snapshot?.quotaWindows.first { $0.windowDurationMinutes == 10080 } ?? snapshot?.quotaWindows.first
         return (window?.remainingPercent ?? snapshot?.remainingPercent).map { min(100, max(0, $0)) }
     }
     var creditsAfterOne: Int? { credits.map { max(0, $0 - 1) } }
-    var canPreview: Bool { (credits ?? 0) > 0 && remainingPercent != nil }
+    var canPreview: Bool { creditAvailability == .available && remainingPercent != nil }
+    func actionTitle(previewed: Bool, copy: AppCopy) -> String {
+        switch creditAvailability {
+        case .empty: return copy.text("暂无可用重置卡", "No reset credits available")
+        case .unknown: return copy.text("等待重置卡数据", "Waiting for reset credits")
+        case .available:
+            guard remainingPercent != nil else { return copy.text("等待额度数据", "Waiting for quota data") }
+            return previewed ? copy.text("演示完成", "Preview complete") : copy.text("额度重置", "Quota Reset")
+        }
+    }
+    func caption(previewed: Bool, copy: AppCopy) -> String {
+        switch creditAvailability {
+        case .empty: return copy.text("没有可用重置次数", "No reset credits available")
+        case .unknown: return copy.text("次数不可用", "Credits unavailable")
+        case .available:
+            guard canPreview, let count = creditsAfterOne else { return copy.text("等待额度数据", "Waiting for quota data") }
+            if previewed { return copy.text("未消耗次数或重置额度", "No credit or quota changed") }
+            return copy.text("演示 · 重置后剩余 \(count) 次", "Demo · \(count) left after reset")
+        }
+    }
 }
 
 struct IslandResetPage: View {
@@ -62,23 +86,41 @@ struct IslandResetPage: View {
                 }.font(AstaSans.regular(10))
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(copy.text("⚠️ 重置前请注意", "⚠️ Before Resetting")).foregroundStyle(.white)
-                    warning(copy.text("此操作会消耗 1 次额度重置机会。", "This action consumes one reset credit."))
-                    warning(copy.text("符合条件的 Codex 用量周期将立即重置。", "Your eligible Codex usage cycle resets immediately."))
-                    warning(copy.text("额度重置完成后无法撤销。", "A completed quota reset cannot be undone."))
+                    switch data.creditAvailability {
+                    case .empty:
+                        Text(copy.text("暂无可用重置卡", "No reset credits available"))
+                            .font(AstaSans.semiBold(12)).foregroundStyle(.white)
+                        Text(copy.text("当前没有可用的重置次数。可返回用量页查看额度和恢复时间。", "You have no reset credits available. Return to usage to check your quota and reset time."))
+                            .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                    case .unknown:
+                        Text(copy.text("重置卡数据尚未读取", "Reset credit data is unavailable"))
+                            .font(AstaSans.semiBold(12)).foregroundStyle(.white)
+                        Text(copy.text("刷新后查看可用重置次数。", "Refresh to check available reset credits."))
+                            .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                    case .available:
+                        Text(copy.text("⚠️ 重置前请注意", "⚠️ Before Resetting")).foregroundStyle(.white)
+                        warning(copy.text("此操作会消耗 1 次额度重置机会。", "This action consumes one reset credit."))
+                        warning(copy.text("符合条件的 Codex 用量周期将立即重置。", "Your eligible Codex usage cycle resets immediately."))
+                        warning(copy.text("额度重置完成后无法撤销。", "A completed quota reset cannot be undone."))
+                    }
                 }.font(AstaSans.regular(10)).padding(14.5)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
                     .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
 
-                Button { previewed = true } label: {
-                    Text(previewed ? copy.text("演示完成", "Preview complete") : copy.text("额度重置", "Quota Reset"))
+                Button {
+                    guard data.canPreview else { return }
+                    previewed = true
+                } label: {
+                    Text(data.actionTitle(previewed: previewed, copy: copy))
                         .font(.system(size: 13, weight: .semibold))
                         .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
                 }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true))
                     .frame(maxWidth: .infinity).disabled(!data.canPreview)
-                    .accessibilityLabel(copy.text("额度重置演示", "Quota reset preview"))
-                    .accessibilityHint(copy.text("仅演示，不消耗次数或重置真实额度", "Preview only; no credit is consumed and no real quota is reset"))
+                    .accessibilityLabel(data.canPreview ? copy.text("额度重置演示", "Quota reset preview") : data.actionTitle(previewed: false, copy: copy))
+                    .accessibilityHint(data.canPreview
+                        ? copy.text("仅演示，不消耗次数或重置真实额度", "Preview only; no credit is consumed and no real quota is reset")
+                        : copy.text("可刷新数据，或返回查看用量", "Refresh the data or return to usage"))
             }
 
             HStack(spacing: 8) {
@@ -86,7 +128,7 @@ struct IslandResetPage: View {
                     copy.text("更新于 ", "Updated ") + $0.formatted(date: .omitted, time: .shortened)
                 } ?? copy.text("等待更新", "Waiting for data"))
                 Spacer(minLength: 0)
-                Text(caption).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                Text(data.caption(previewed: previewed, copy: copy)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
                 Button {
@@ -105,12 +147,7 @@ struct IslandResetPage: View {
             .onPreferenceChange(IslandResetPageHeightKey.self, perform: onHeightChange)
             .foregroundStyle(.white)
             .accessibilityElement(children: .contain)
-    }
-    private var caption: String {
-        if previewed { return copy.text("未消耗次数或重置额度", "No credit or quota changed") }
-        guard let count = data.creditsAfterOne else { return copy.text("次数不可用", "Credits unavailable") }
-        if !data.canPreview { return copy.text("没有可用重置次数", "No reset credits available") }
-        return copy.text("演示 · 重置后剩余 \(count) 次", "Demo · \(count) left after reset")
+            .onChange(of: data.credits) { _, _ in previewed = false }
     }
     private func warning(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 5) {
