@@ -233,7 +233,7 @@ final class IslandLiveStore {
         guard tasks[i].requests.isEmpty else { return }
         tasks[i].requests.append(.init(key: "observer-placeholder", value: .init(
             question: .init("Codex 正在等待确认", "Codex is waiting for confirmation"),
-            impact: .init("当前来源只提供等待状态。请在 Codex 查看完整请求并处理。", "This source supplies the waiting status only. Review and handle the request in Codex."))))
+            impact: .init("仅有等待状态，请在 Codex 查看并处理请求。", "Only the waiting status is available; review and handle the request in Codex."))))
     }
     func nextRequest(_ id: Int) {
         guard let i = tasks.firstIndex(where: { $0.id == id }), !tasks[i].requests.isEmpty else { return }
@@ -288,7 +288,8 @@ final class IslandLiveStore {
             let question = !wire.questions.isEmpty ? wire.questions[0].title : wire.params["message"].text.isEmpty ? (wire.params["reason"].text.isEmpty ? "Codex 请求你的处理" : wire.params["reason"].text) : wire.params["message"].text
             let canRespond = respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm)
             tasks[i].requests.append(.init(key: requestKey, value: .init(question: .init(question),
-                impact: .init("当前连接为观察模式，请在 Codex 完成处理。", "This connection is an observer. Handle this request in Codex."), protocolRequest: wire, canRespond: canRespond)))
+                impact: canRespond ? .init("确认后继续任务。", "Approve to resume the task.")
+                    : .init("此连接仅支持查看，请在 Codex 处理。", "This connection is read-only; handle the request in Codex."), protocolRequest: wire, canRespond: canRespond)))
             if wire.kind != .questions { tasks[i].status = .waiting }
             onChange?(); return
         }

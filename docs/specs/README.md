@@ -8,7 +8,7 @@
 >
 > 当前源码：[0.7.3 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)
 >
-> 当前增量：参考原生 Vibe Island 设置，彩色图标、统一菜单/开关/按键与可视化选择；恢复四种特效与九项用量显示偏好，新增底部关于并迁入版本/更新信息。四个展开页上下栏统一 12 pt Medium 与同款胶囊 hover，长统计内容滚动且底栏保持可达。六项相关隔离冒烟和开发构建通过，当前开发包已更新，源码已推送至 [PR #65](https://github.com/Duoasa/QuotaView/pull/65)，用户已授权合并 main；视觉待用户验收。证据见 [开发交付](../design/quotaview-0.7.3-development-delivery-2026-10-01.md#设置设计显示偏好与上下栏统一--2026-10-02)。
+> 当前增量：设置仅保留两个用量图表开关，新增自动弹出开关和 1–10 秒停留时间（默认开启/3 秒），全行退出与确认弹窗、紧凑同心圆角特效预览和简洁中英文文案。10 项相关隔离冒烟与开发构建通过，开发包已更新；源码已推送至 [PR #66](https://github.com/Duoasa/QuotaView/pull/66)，用户已授权合并 main，视觉待用户验收。证据见 [开发交付](../design/quotaview-0.7.3-development-delivery-2026-10-01.md#设置精简与自动弹出--2026-10-02)。
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
@@ -20,7 +20,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。批准仍由 Codex 处理；Figma 重置使用页和双向 3D 卡片过渡已接入；入口使用账户底部渐变高光，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区、六页彩色设置与可视化已接入，九项显示偏好与四项特效实际生效，底部关于管理版本/更新，通用页提供退出；四页上下栏字号、间距与 hover 统一，长内容滚动保留底栏；视觉/交互待用户验收。 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。批准仍由 Codex 处理；Figma 重置使用页和双向 3D 卡片过渡已接入；入口使用账户底部渐变高光，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一，长内容滚动保留底栏；视觉/交互待用户验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |
 | `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
 | `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |

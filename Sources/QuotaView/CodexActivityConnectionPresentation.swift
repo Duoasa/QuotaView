@@ -52,16 +52,16 @@ struct CodexActivityConnectionPresentation {
 
     func automaticSubtitle(_ copy: AppCopy) -> String {
         let localDescription = switch connection.localHealth {
-        case .checking: copy.text("正在只读检查 Codex 本地记录，无需配置或信任 Hook。", "Checking local Codex records without changes; no Hook setup or trust is required.")
-        case .waitingForRecords: copy.text("尚无可读取的任务记录。请在 Codex 中运行一条任务，随后自动连接。", "No readable task records yet. Run a task in Codex to connect automatically.")
-        case .ready: copy.text("本地记录可读取；新任务活动到达后显示灵动岛。", "Local records are readable. New task activity will show the island.")
-        case .receiving: copy.text("已读取到有效任务活动。空闲时灵动岛可以保持隐藏。", "Valid task activity has been received. The island can stay hidden while idle.")
-        case .unreadable: copy.text("请检查目录路径和读取权限，然后重新检查或选择 Codex 数据目录。", "Check the directory path and read permissions, then recheck or choose the Codex data directory.")
-        case .unsupported: copy.text("发现不支持的任务元数据结构。可重新检查或手动使用兼容选项。", "An unsupported task metadata structure was found. Recheck or use the optional compatibility setup.")
-        case .disabled: copy.text("本地记录自动读取已禁用。", "Automatic local record reading is disabled.")
+        case .checking: copy.text("正在检查 Codex 本地任务记录。", "Checking local Codex task records.")
+        case .waitingForRecords: copy.text("尚无任务记录，请在 Codex 中运行任务。", "No task records yet. Run a task in Codex.")
+        case .ready: copy.text("任务记录可读取，等待新活动。", "Task records are readable; waiting for activity.")
+        case .receiving: copy.text("已收到有效任务活动。", "Codex task activity received.")
+        case .unreadable: copy.text("请检查目录与读取权限，或重新选择数据目录。", "Check the directory and read permissions, or choose another data directory.")
+        case .unsupported: copy.text("任务记录格式不兼容，请重新检查或启用 Hook 兼容连接。", "Unsupported task record format. Recheck or enable the Hook compatibility connection.")
+        case .disabled: copy.text("自动读取已关闭。", "Automatic reading is off.")
         }
         if connection.sharedState == .connected, ![.ready, .receiving].contains(connection.localHealth) {
-            let connected = copy.text("Codex 本地服务已连接，可接收任务活动。", "The local Codex service is connected and can receive task activity.")
+            let connected = copy.text("已连接 Codex 本地服务。", "Connected to the local Codex service.")
             return connection.localHealth.hasReadError ? connected + " " + localDescription : connected
         }
         return localDescription

@@ -2159,6 +2159,7 @@ final class ActivityStateSmokeMetalView: MTKView {
 
 final class CodexActivityStateSmokePreviewHostView: NSView {
     private let smokeView = ActivityStateSmokeMetalView(frame: .zero)
+    private var previewCornerRadius: CGFloat = 4
 
     override var isOpaque: Bool { false }
 
@@ -2196,10 +2197,7 @@ final class CodexActivityStateSmokePreviewHostView: NSView {
     override func layout() {
         super.layout()
         smokeView.frame = bounds
-        smokeView.layer?.cornerRadius = min(
-            bounds.width,
-            bounds.height
-        ) * 0.18
+        smokeView.layer?.cornerRadius = previewCornerRadius
         smokeView.layer?.cornerCurve = .continuous
         smokeView.layer?.masksToBounds = true
         smokeView.redrawIfPaused()
@@ -2207,8 +2205,11 @@ final class CodexActivityStateSmokePreviewHostView: NSView {
 
     func update(
         effect: AppPreferences.CodexActivityProgressEffect,
-        reduceMotion: Bool
+        reduceMotion: Bool,
+        cornerRadius: CGFloat = 4
     ) {
+        previewCornerRadius = max(0, cornerRadius)
+        needsLayout = true
         smokeView.setEffect(effect)
         smokeView.setReduceMotion(reduceMotion)
         smokeView.setApproximateProgress(

@@ -79,18 +79,18 @@ struct IslandUsagePresentation: Equatable, Sendable {
         }
         func message(copy: AppCopy) -> String {
             switch self {
-            case .loading: return copy.text("正在读取用量数据", "Loading usage data")
+            case .loading: return copy.text("正在读取用量…", "Loading usage…")
             case .current: return ""
             case .stale(let error), .unavailable(let error):
                 switch error {
                 case .timedOut: return copy.text("读取 Codex 状态超时", "Codex status read timed out")
-                case .processExited: return copy.text("Codex 数据连接已退出", "Codex data connection exited")
+                case .processExited: return copy.text("Codex 数据连接已断开", "Codex data connection disconnected")
                 case .notConfigured: return copy.text("找不到 Codex 程序", "Codex executable not found")
                 case .permissionDenied: return copy.text("Codex 拒绝了读取请求，请检查登录状态", "Codex denied the read request; check sign-in")
-                case .protocolViolation, .unsupportedSchema: return copy.text("Codex 数据格式无法识别", "Codex data format is not recognized")
-                case .cancelled: return copy.text("本次读取已取消", "This read was cancelled")
-                case .transient: return copy.text("Codex 暂时未能返回数据", "Codex could not return data right now")
-                case .unavailable: return copy.text("暂时无法连接 Codex", "Unable to connect to Codex right now")
+                case .protocolViolation, .unsupportedSchema: return copy.text("Codex 数据格式不兼容", "Unsupported Codex data format")
+                case .cancelled: return copy.text("读取已取消", "Read cancelled")
+                case .transient: return copy.text("Codex 暂未返回用量", "Codex usage temporarily unavailable")
+                case .unavailable: return copy.text("暂时无法连接 Codex", "Codex temporarily unreachable")
                 }
             }
         }

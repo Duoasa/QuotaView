@@ -283,7 +283,7 @@ final class IslandBoardState: ObservableObject {
         usageHeight = height
         if showsUsage { onChange?() }
     }
-    func openUsage() { cancelAutomaticPreview(); showsUsage = true; if compact { presentation = .preview }; onChange?() }
+    func openUsage() { claimManualPresentation(); showsUsage = true; if compact { presentation = .preview }; onChange?() }
     func closeUsage() { clearResetPresentation(); showsUsage = false; onChange?() }
     func clearDrafts() { approvalDrafts.removeAll() }
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
@@ -401,20 +401,28 @@ final class IslandBoardState: ObservableObject {
         return [status, content == status ? "" : content].filter { !$0.isEmpty }.joined(separator: " · ")
     }
     func setGeometry(_ value: IslandNotchGeometry) { if geometry != value { geometry = value } }
-    func preview() { guard compact else { return }; presentation = .preview; onChange?() }
+    func preview() { claimManualPresentation(); guard compact else { return }; presentation = .preview; onChange?() }
     private var automaticClose: DispatchWorkItem?
+    private var automaticallyPresented = false
     private(set) var automaticPreviewDeadline: Date?
+    private func claimManualPresentation() {
+        cancelAutomaticPreview(); automaticallyPresented = false
+    }
     private func cancelAutomaticPreview() {
         automaticClose?.cancel(); automaticClose = nil; automaticPreviewDeadline = nil
     }
     private func showAutomaticPreview(at now: Date) {
-        guard presentation != .pinned, !showsUsage else { return }
+        guard display?.automaticPopupEnabled != false, !showsUsage,
+            presentation == .resting || automaticallyPresented else { return }
         cancelAutomaticPreview()
+        automaticallyPresented = true
         presentation = .preview
-        automaticPreviewDeadline = now.addingTimeInterval(3)
+        let duration = TimeInterval(AppPreferences.CodexActivityAutomaticPopupTiming.normalizedDuration(
+            display?.automaticPopupDuration ?? AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration))
+        automaticPreviewDeadline = now.addingTimeInterval(duration)
         let work = DispatchWorkItem { [weak self] in self?.finishAutomaticPreview(at: Date()) }
         automaticClose = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
     }
     func finishAutomaticPreview(at now: Date) {
         guard let deadline = automaticPreviewDeadline, now >= deadline else { return }
@@ -426,10 +434,10 @@ final class IslandBoardState: ObservableObject {
         guard !showsReset, !resetTransitionInFlight, automaticPreviewDeadline == nil, attentionCount == 0 else { return }
         if presentation == .preview { collapse() }
     }
-    func pin() { cancelAutomaticPreview(); presentation = .pinned; onChange?() }
+    func pin() { claimManualPresentation(); presentation = .pinned; onChange?() }
     func collapse() {
         guard attentionCount == 0 else { return }
-        cancelAutomaticPreview()
+        claimManualPresentation()
         clearResetPresentation(); showsUsage = false; presentation = .resting; detailID = nil; onChange?()
     }
     func dismissFromOutside() {
@@ -444,7 +452,7 @@ final class IslandBoardState: ObservableObject {
     }
     var totalTokens: String {
         guard let tokens = display?.totalTokens else { return "Token —" }
-        return text("会话合计 ", "Sessions total ") + CodexActivityTokenUsageFormatter.string(for: tokens) + " tokens"
+        return text("会话累计 ", "Session total ") + CodexActivityTokenUsageFormatter.string(for: tokens) + " tokens"
     }
     var quota: String {
         let percent = display?.remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"
@@ -458,6 +466,12 @@ final class IslandBoardState: ObservableObject {
         let wasCompact = display?.state.compact == true
         let previousApprovalID = approval?.task.id
         display = value
+        // Changing this preference only dismisses content opened by an automatic event.
+        // A manually opened request, usage page or pinned island keeps its presentation.
+        if !value.automaticPopupEnabled && automaticallyPresented {
+            claimManualPresentation()
+            if presentation == .preview && !showsUsage { presentation = .resting; detailID = nil }
+        }
         let requestIDs = value.activeRequestIDs.union(value.taskDetails.values.compactMap { $0.confirmation?.id })
         let drafts = approvalDrafts.filter { requestIDs.contains($0.key) }
         if drafts != approvalDrafts { approvalDrafts = drafts }
@@ -474,10 +488,10 @@ final class IslandBoardState: ObservableObject {
             presentation = .resting; detailID = nil
         }
         if !value.visible {
-            cancelAutomaticPreview(); presentation = .resting; detailID = nil
+            claimManualPresentation(); presentation = .resting; detailID = nil
         } else if attentionCount > 0 {
             cancelAutomaticPreview()
-            if compact { presentation = .preview }
+            if compact && value.automaticPopupEnabled { automaticallyPresented = true; presentation = .preview }
         } else {
             // Compare semantic task/turn transitions, not selection, progress or text.
             // First sync (and wake) is a baseline so historical completions do not replay.
@@ -490,7 +504,7 @@ final class IslandBoardState: ObservableObject {
                 return task.renderState.visualState == .completed
                     && old != nil && old?.renderState.visualState != .completed
             }
-            if event { showAutomaticPreview(at: now) }
+            if event && value.automaticPopupEnabled { showAutomaticPreview(at: now) }
             else if hadAttention && presentation != .pinned && !showsUsage { collapse() }
         }
         if attentionCount == 0 { attentionOnly = false }
@@ -499,6 +513,7 @@ final class IslandBoardState: ObservableObject {
     }
     func select(_ id: Int) {
         guard tasks.contains(where: { $0.id == id }) else { return }
+        claimManualPresentation()
         if compact { presentation = .preview }
         detailID = detailID == id ? nil : id
         showingTraceHistory = false
@@ -509,6 +524,7 @@ final class IslandBoardState: ObservableObject {
     func toggleAttention() {
         showsUsage = false
         guard attentionCount > 0 else { return }
+        claimManualPresentation()
         attentionOnly.toggle(); if compact { presentation = .preview }
         if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
         onChange?()
@@ -928,7 +944,7 @@ struct IslandBoardView: View {
                     }
                 } else if state.approval != nil {
                     Circle().fill(IslandBoardStyle.confirmationHighlight).frame(width: 4, height: 4)
-                    Text(state.text("待确认", "Permission request")).font(IslandChromeMetrics.font)
+                    Text(state.text("待确认", "Pending request")).font(IslandChromeMetrics.font)
                         .foregroundStyle(IslandBoardStyle.confirmationHighlight)
                 } else {
                     Button { state.openUsage() } label: {
@@ -956,7 +972,7 @@ struct IslandBoardView: View {
                             Image(systemName: "chevron.left")
                             Text(state.text("返回列表", "Back to sessions")).font(IslandChromeMetrics.font)
                         }.padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
-                    }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
+                    }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("返回列表，请求保持待确认", "Return to sessions; keep the request pending"))
                 } else {
                     if state.attentionCount > 0 && !state.showsUsage {
                         Button { state.toggleAttention() } label: {
@@ -1529,7 +1545,7 @@ struct IslandUtilityActions: View {
             }
             .disabled(state.isRefreshingUsage || state.onRefreshUsage == nil)
             .accessibilityLabel(state.isRefreshingUsage ? state.text("刷新中", "Refreshing") : state.text("刷新用量", "Refresh usage"))
-            .help(state.text("刷新用量数据", "Refresh usage data"))
+            .help(state.text("刷新用量", "Refresh usage"))
             Button { state.onOpenSettings?() } label: {
                 Image(systemName: "gearshape").frame(width: 28, height: 28).contentShape(Rectangle())
             }
@@ -1640,7 +1656,7 @@ struct IslandUsageBento: View {
                 IslandChromeFooter {
                     if let date = snapshot?.lastUpdatedAt {
                         Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
-                    } else { Text(text("等待数据更新", "Waiting for data")) }
+                    } else { Text(text("等待数据", "Waiting for data")) }
                 } trailing: { utilities }
         }.foregroundStyle(.white)
             .onChange(of: options.cost) { _, visible in if !visible { selectedDay = nil; hoveredCost = nil } }
@@ -1650,13 +1666,13 @@ struct IslandUsageBento: View {
         VStack(spacing: 10) {
                 if privacy || snapshot == nil {
                     card(text("用量数据", "Usage data")) {
-                        Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : usageState.message(copy: copy))
+                        Text(privacy ? text("隐私模式已开启", "Privacy mode is on") : usageState.message(copy: copy))
                             .font(.system(size: 14, weight: .medium))
-                        Text(text("不会把缺失数据显示为零。", "Missing data is not shown as zero.")).font(.system(size: 11)).foregroundStyle(secondary)
+                        Text(privacy ? text("可在设置中关闭隐私模式。", "Turn off privacy mode in Settings.") : text("稍后刷新以重新获取。", "Refresh to try again.")).font(.system(size: 11)).foregroundStyle(secondary)
                     }
                 } else {
                     if usageState.isStale {
-                        Text(copy.text("上次成功数据 · 等待刷新", "Last successful data · awaiting refresh") + " · " + usageState.message(copy: copy))
+                        Text(copy.text("显示上次数据", "Showing previous data") + " · " + usageState.message(copy: copy))
                             .font(.system(size: 10)).foregroundStyle(secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                     }
@@ -1675,7 +1691,7 @@ struct IslandUsageBento: View {
                             if options.hasTokenMetrics {
                                 HStack(spacing: 10) {
                                     if options.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens)) }
-                                    if options.monthlyTokens { metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
+                                    if options.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
                                     if options.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens)) }
                                 }
                             }
@@ -1766,10 +1782,10 @@ struct IslandUsageBento: View {
                     }.contentShape(Rectangle())
                 }.buttonStyle(IslandResetTicketButtonStyle())
                     .onHover { resetHovered = $0 && !hidesTicket }
-                    .accessibilityLabel(copy.text("打开额度重置页面", "Open quota reset page"))
+                    .accessibilityLabel(copy.text("打开额度重置", "Open quota reset"))
                     .accessibilityHint(IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
-                        ? copy.text("暂无可用重置卡，打开查看状态", "No reset credits available; open to view status")
-                        : copy.text("仅展示重置演示", "Preview only"))
+                        ? copy.text("无可用重置卡，点击查看", "No reset credits; open for details")
+                        : copy.text("额度重置演示", "Quota reset preview"))
                 }
             }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
@@ -1796,7 +1812,7 @@ struct IslandUsageBento: View {
                     heading(text("成本估算", "Cost estimate"))
                     Text(money(chart.periodCost)).font(AstaSans.semiBold(21)).tracking(-0.21)
                         .lineLimit(1).minimumScaleFactor(0.8)
-                    Text(text("最近30天", "Last 30 days")).font(.system(size: 10)).foregroundStyle(secondary)
+                    Text(text("最近 30 天", "Last 30 days")).font(.system(size: 10)).foregroundStyle(secondary)
                 }.frame(width: costSummaryWidth, alignment: .leading)
                 Color.clear.frame(width: costPlotWidth).overlay { costChart.padding(.top, 14) }.zIndex(10)
                 VStack(alignment: .trailing, spacing: 10) {
@@ -1964,7 +1980,7 @@ struct IslandUsageBento: View {
         switch mode {
         case .daily: text("每天", "Daily")
         case .weekly: text("每周", "Weekly")
-        case .cumulative: text("累计总量", "Cumulative")
+        case .cumulative: text("累计", "Cumulative")
         }
     }
 }
