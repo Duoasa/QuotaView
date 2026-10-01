@@ -6,7 +6,7 @@
 
 两项必要隔离冒烟通过，覆盖零/未知/可用状态、简中/English 文案、旧反馈覆盖和最后一张卡恢复，以及既有页面高度/返回逻辑。最终 Debug arm64 构建、资源/固定身份、ad-hoc 深度签名与启动核对通过，开发包当前 PID **85142**；身份保持 0.7.3 / 显示 Build 1 / 内部 49。证据 `.build/073-reset-empty-smoke.log`、`.build/073-reset-empty-build.log`。本轮局部空态修订未重复基准或完整本地回归，视觉与真实交互待用户验收，无 UI 自动化。
 
-用户已授权完成后推送 GitHub 并合并 main；本轮空态源码集成状态以 GitHub PR 记录为准。此前 [PR #61](https://github.com/Duoasa/QuotaView/pull/61) 已合并，以下为历史交付与验证记录。本机开发台及旧交接文件继续保留。
+用户已授权完成后推送 GitHub 并合并 main；空态源码提交 `acc4487` 已推送，[PR #62](https://github.com/Duoasa/QuotaView/pull/62) 为本轮 CI 与 main 合并状态的依据。此前 [PR #61](https://github.com/Duoasa/QuotaView/pull/61) 已合并，以下为历史交付与验证记录。本机开发台及旧交接文件继续保留。
 
 ## 本轮源码集成 · 2026-10-01
 
