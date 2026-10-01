@@ -23,30 +23,46 @@ enum SettingsWindowMetrics {
 }
 
 enum IslandSettingsPage: String, CaseIterable, Identifiable {
-    case general, island, codexConnection, proxy
+    case general, island, usage, codexConnection, proxy, about
     var id: String { rawValue }
     var symbol: String {
         switch self {
-        case .general: "gearshape"
-        case .island: "macbook"
+        case .general: "gearshape.fill"
+        case .island: "sparkles.rectangle.stack.fill"
+        case .usage: "chart.bar.xaxis"
         case .codexConnection: "point.3.connected.trianglepath.dotted"
         case .proxy: "network"
+        case .about: "info.circle.fill"
+        }
+    }
+    var color: NSColor {
+        switch self {
+        case .general: .systemBlue
+        case .island: .systemPurple
+        case .usage: .systemPink
+        case .codexConnection: .systemCyan
+        case .proxy: .systemTeal
+        case .about: .systemIndigo
         }
     }
     func title(_ copy: AppCopy) -> String {
         switch self {
         case .general: copy.text("通用", "General")
         case .island: copy.text("灵动岛", "Island")
+        case .usage: copy.text("用量显示", "Usage display")
         case .codexConnection: copy.text("Codex 连接", "Codex connection")
         case .proxy: copy.text("网络代理", "Network proxy")
+        case .about: copy.text("关于", "About")
         }
     }
     func subtitle(_ copy: AppCopy) -> String {
         switch self {
-        case .general: copy.text("语言、设置窗口外观、应用信息与退出。", "Language, settings appearance, app information and quitting.")
-        case .island: copy.text("管理隐私显示，了解当前任务与提醒行为。", "Manage privacy and review the current task and attention behavior.")
+        case .general: copy.text("语言、设置窗口外观与退出。", "Language, settings appearance and quitting.")
+        case .island: copy.text("管理隐私显示与任务卡片特效。", "Manage privacy and task-card effects.")
+        case .usage: copy.text("选择用量页中显示的数据与统计图表。", "Choose the data and charts shown on the usage page.")
         case .codexConnection: copy.text("查看本机 Codex 连接，管理数据目录与兼容 Hook。", "Review local Codex connectivity, data directories and compatibility Hooks.")
         case .proxy: copy.text("为额度和账户用量查询设置代理。", "Set a proxy for quota and account usage requests.")
+        case .about: copy.text("应用版本与软件更新。", "App version and software updates.")
         }
     }
 }
@@ -58,7 +74,9 @@ struct SettingsView: View {
     @ObservedObject var updateController: AppUpdateController
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection: IslandSettingsPage? = .general
+    @FocusState private var focusedPage: IslandSettingsPage?
     @State private var proxyDraft = ProxyConfiguration.default
     @State private var proxySaveFailure: ProxyConnectionFailure?
     @State private var codexActivityDetailsExpanded = false
@@ -83,6 +101,7 @@ struct SettingsView: View {
             }
         }
         .tint(Color(nsColor: .controlAccentColor))
+        .buttonStyle(SettingsActionButtonStyle())
         .frame(
             minWidth: 780,
             idealWidth: 872,
@@ -109,17 +128,29 @@ struct SettingsView: View {
 
     private var settingsSidebar: some View {
         VStack(spacing: 0) {
-            List(selection: $selection) {
-                Section(copy.text("应用", "App")) {
-                    settingsNavigation([.general, .island])
-                }
-                Section(copy.text("服务", "Services")) {
-                    settingsNavigation([.codexConnection, .proxy])
-                }
-            }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
-            .padding(.top, 44)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        sidebarSectionTitle(copy.text("应用", "App"))
+                        settingsNavigation([.general, .island, .usage])
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        sidebarSectionTitle(copy.text("服务", "Services"))
+                        settingsNavigation([.codexConnection, .proxy])
+                    }
+                }.padding(.horizontal, 10).padding(.top, 48)
+            }.scrollIndicators(.never)
+            Button { selection = .about; focusedPage = .about } label: {
+                Label { Text(IslandSettingsPage.about.title(copy)) } icon: {
+                    SettingsSidebarIcon(symbol: IslandSettingsPage.about.symbol, color: Color(nsColor: IslandSettingsPage.about.color))
+                }.font(.body.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).frame(height: 36)
+            }.buttonStyle(SettingsNavigationButtonStyle(selected: selection == .about))
+                .focused($focusedPage, equals: .about)
+                .onKeyPress(.upArrow) { navigateSettings(from: .about, offset: -1) }
+                .onKeyPress(.downArrow) { .handled }
+                .accessibilityValue(selection == .about ? copy.text("已选择", "Selected") : "")
+                .padding(.horizontal, 10).padding(.bottom, 12)
         }
         .nativeSettingsSidebarSurface(
             fallbackCornerRadius:
@@ -131,13 +162,30 @@ struct SettingsView: View {
         }
     }
 
+    private func sidebarSectionTitle(_ title: String) -> some View {
+        Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+    }
     private func settingsNavigation(_ pages: [IslandSettingsPage]) -> some View {
         ForEach(pages) { page in
-            Label { Text(page.title(copy)) } icon: {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: .systemGray))
-            }
-            .font(.body.weight(.medium)).padding(.vertical, 4).tag(page)
+            Button { selection = page; focusedPage = page } label: {
+                Label { Text(page.title(copy)) } icon: {
+                    SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color))
+                }.font(.body.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).frame(height: 36)
+            }.buttonStyle(SettingsNavigationButtonStyle(selected: selection == page))
+                .focused($focusedPage, equals: page)
+                .accessibilityValue(selection == page ? copy.text("已选择", "Selected") : "")
+                .onKeyPress(.downArrow) { navigateSettings(from: page, offset: 1) }
+                .onKeyPress(.upArrow) { navigateSettings(from: page, offset: -1) }
         }
+    }
+    private func navigateSettings(from page: IslandSettingsPage, offset: Int) -> KeyPress.Result {
+        let pages = IslandSettingsPage.allCases
+        guard let index = pages.firstIndex(of: page) else { return .ignored }
+        let next = pages[max(0, min(pages.count - 1, index + offset))]
+        selection = next; focusedPage = next
+        return .handled
     }
 
     private func settingsDetail(
@@ -150,8 +198,10 @@ struct SettingsView: View {
                 switch page {
                 case .general: generalSettings
                 case .island: islandSettings
+                case .usage: usageSettings
                 case .codexConnection: codexConnectionSettings
                 case .proxy: proxySettings
+                case .about: aboutSettings
                 }
             }
             .padding(.horizontal, 24)
@@ -160,15 +210,20 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .id(page)
+        .transition(.opacity)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: selection)
     }
 
     private func settingsHeader(
         for page: IslandSettingsPage
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(page.title(copy))
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.primary)
+            HStack(spacing: 10) {
+                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color))
+                    .scaleEffect(1.25).frame(width: 28, height: 28)
+                Text(page.title(copy)).font(.system(size: 22, weight: .semibold)).foregroundStyle(.primary)
+            }
 
             Text(page.subtitle(copy))
                 .font(.callout)
@@ -190,19 +245,13 @@ struct SettingsView: View {
                     subtitle: copy.text("默认关闭，修改后保存生效。", "Off by default. Save to apply changes.")
                 ) {
                     Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
-                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
                         .help(copy.text("使用指定代理查询额度和账户用量。", "Use this proxy for quota and account usage."))
                 }
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("协议", "Protocol")) {
-                    Picker(copy.text("代理协议", "Proxy protocol"), selection: $proxyDraft.scheme) {
-                        Text("HTTP").tag(ProxyConfiguration.Scheme.http)
-                        Text("SOCKS5").tag(ProxyConfiguration.Scheme.socks5)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize(horizontal: true, vertical: true)
-                    .frame(width: 160, alignment: .trailing)
+                    SettingsValueMenu(title: copy.text("代理协议", "Proxy protocol"), selection: $proxyDraft.scheme,
+                        options: [(.http, "HTTP"), (.socks5, "SOCKS5")])
                     .disabled(!proxyDraft.isEnabled)
                 }
                 NativeSettingsDivider()
@@ -261,7 +310,7 @@ struct SettingsView: View {
                         proxySaveFailure = nil
                     } catch { proxySaveFailure = .classify(error) }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(SettingsActionButtonStyle(prominent: true))
                 .disabled(proxyDraft == preferences.proxyConfiguration || proxyValidationFailure != nil)
             }
             HStack(spacing: 8) {
@@ -285,88 +334,110 @@ struct SettingsView: View {
         }
     }
 
+    private var appearanceSelection: Binding<String> {
+        .init(get: { preferences.followsSystemAppearance ? "system" : preferences.customAppearance.rawValue },
+              set: { value in
+                  preferences.followsSystemAppearance = value == "system"
+                  if let mode = AppPreferences.AppearanceMode(rawValue: value) { preferences.customAppearance = mode }
+              })
+    }
+
     private var appearanceSettings: some View {
-        VStack(spacing: 16) {
-            NativeSettingsCard {
-                NativeSettingsRow(
-                    title: copy.text(
-                        "设置窗口跟随系统外观",
-                        "Follow system appearance"
-                    ),
-                    subtitle: copy.text(
-                        "设置窗口随 macOS 外观切换；灵动岛保持当前黑色界面。",
-                        "Settings follow macOS appearance; the island keeps its black surface."
-                    )
-                ) {
-                    Toggle(
-                        copy.text(
-                            "设置窗口跟随系统外观",
-                            "Follow system appearance"
-                        ),
-                        isOn: $preferences.followsSystemAppearance
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsRow(
-                    title: copy.text(
-                        "自定义显示模式",
-                        "Custom appearance"
-                    )
-                ) {
-                    Picker(
-                        copy.text(
-                            "自定义显示模式",
-                            "Custom appearance"
-                        ),
-                        selection: $preferences.customAppearance
-                    ) {
-                        Label(
-                            copy.text("浅色", "Light"),
-                            systemImage: "sun.max"
-                        )
-                        .tag(AppPreferences.AppearanceMode.light)
-
-                        Label(
-                            copy.text("深色", "Dark"),
-                            systemImage: "moon"
-                        )
-                        .tag(AppPreferences.AppearanceMode.dark)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .controlSize(.small)
-                    .disabled(preferences.followsSystemAppearance)
-                }
-
-                NativeSettingsDivider()
-
-                NativeSettingsNote(text: appearanceSummary)
-            }
-
+        NativeSettingsCard {
+            HStack(spacing: 12) {
+                appearanceOption("system", copy.text("跟随系统", "System"))
+                appearanceOption("light", copy.text("浅色", "Light"))
+                appearanceOption("dark", copy.text("深色", "Dark"))
+            }.padding(18)
+            NativeSettingsDivider()
+            NativeSettingsNote(text: appearanceSummary)
         }
     }
 
+    private func appearanceOption(_ value: String, _ title: String) -> some View {
+        Button { appearanceSelection.wrappedValue = value } label: {
+            VStack(spacing: 9) {
+                SettingsAppearancePreview(mode: value).frame(height: 70)
+                Text(title).font(.system(size: 13, weight: .medium))
+            }.frame(maxWidth: .infinity)
+        }.buttonStyle(SettingsVisualOptionStyle(selected: appearanceSelection.wrappedValue == value))
+            .accessibilityLabel(title)
+            .accessibilityValue(appearanceSelection.wrappedValue == value ? copy.text("已选择", "Selected") : "")
+    }
+
     private var islandSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            NativeSettingsCard {
-                preferenceToggle(copy.text("隐私显示", "Private display"),
-                    subtitle: copy.text("隐藏任务标题、正文和请求内容，统计页隐藏账户数据。", "Hide task titles, text and request contents, and conceal account data on the usage page."),
-                    isOn: $preferences.codexIslandPrivacy)
+        VStack(alignment: .leading, spacing: 24) {
+            settingsSection(copy.text("显示", "Display")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("隐私显示", "Private display"),
+                        subtitle: copy.text("隐藏任务标题、正文和请求内容，统计页隐藏账户数据。", "Hide task titles, text and request contents, and conceal account data on the usage page."),
+                        isOn: $preferences.codexIslandPrivacy)
+                }
             }
-            NativeSettingsCard {
-                NativeSettingsRow(title: copy.text("显示位置", "Display location"),
-                    subtitle: copy.text("常驻主屏幕顶部；无刘海屏幕使用居中的紧凑形态。", "Stays at the top of the primary display; uses a centered compact form on displays without a notch.")) {}
-                NativeSettingsDivider()
-                NativeSettingsRow(title: copy.text("任务与提醒", "Tasks and attention"),
-                    subtitle: copy.text("任务启动与完成时展开 3 秒；待确认保持展开，固定后由你收起。卡片归档只清理灵动岛显示。", "Opens for 3 seconds when tasks start or finish. Pending requests keep it open; pinned pages stay open until collapsed. Archiving only clears the island display.")) {}
-                NativeSettingsDivider()
-                NativeSettingsRow(title: copy.text("动效", "Motion"),
-                    subtitle: copy.text("沿用量子噪点、AI 球与卡片动效；自动遵循 macOS 的减少动态效果。", "Uses the current quantum noise, orb and card effects; respects macOS Reduce Motion.")) {}
+            settingsSection(copy.text("任务卡片特效", "Task-card effects")) {
+                LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
+                    ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
+                        Button { preferences.codexActivityProgressEffect = effect } label: {
+                            VStack(spacing: 10) {
+                                CodexActivityProgressEffectPreview(effect: effect, reduceMotion: reduceMotion)
+                                    .frame(height: 96).clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .allowsHitTesting(false).accessibilityHidden(true)
+                                Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                                    .font(.system(size: 13, weight: .medium))
+                            }.frame(maxWidth: .infinity)
+                        }.buttonStyle(SettingsVisualOptionStyle(selected: preferences.codexActivityProgressEffect == effect))
+                            .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                            .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
+                    }
+                }
+                Text(copy.text("预览使用实际特效渲染器；自动遵循 macOS 的减少动态效果。", "Previews use the actual effect renderer and respect macOS Reduce Motion."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            settingsSection(copy.text("任务与提醒", "Tasks and attention")) {
+                NativeSettingsCard {
+                    NativeSettingsRow(title: copy.text("显示位置", "Display location"),
+                        subtitle: copy.text("常驻主屏幕顶部；无刘海屏幕使用居中的紧凑形态。", "Stays at the top of the primary display; uses a centered compact form on displays without a notch.")) {}
+                    NativeSettingsDivider()
+                    NativeSettingsRow(title: copy.text("展开与归档", "Expansion and archiving"),
+                        subtitle: copy.text("任务启动与完成时展开 3 秒；待确认保持展开，固定后由你收起。卡片归档只清理灵动岛显示。", "Opens for 3 seconds when tasks start or finish. Pending requests keep it open; pinned pages stay open until collapsed. Archiving only clears the island display.")) {}
+                }
+            }
+        }
+    }
+
+    private var usageSettings: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            settingsSection(copy.text("页面预览", "Page preview")) {
+                SettingsUsagePreview(store: store, preferences: preferences)
+                Text(copy.text("预览随选项立即更新，显示当前数据；隐私模式下隐藏统计。", "The preview updates immediately with your choices and current data. Privacy mode conceals statistics."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            settingsSection(copy.text("额度与账户", "Quota and account")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("周期用量概览", "Quota overview"), subtitle: copy.text("显示可用周期的剩余量、已用量和重置时间。", "Show available cycles, remaining quota, used quota and reset times."), isOn: $preferences.showUsageSummary)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("Spark 周额度", "Spark weekly quota"), subtitle: copy.text("有可用数据时显示 Spark 周额度。", "Show Spark weekly quota when data is available."), isOn: $preferences.showSparkQuota)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("Credits 余额", "Credits balance"), subtitle: copy.text("显示账户可用的 Credits 余额。", "Show the account's available Credits balance."), isOn: $preferences.showCreditBalance)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("额度重置入口", "Quota reset entry"), subtitle: copy.text("显示重置卡入口，包括 0 次时的空状态。", "Show the reset-card entry, including its empty state at zero credits."), isOn: $preferences.showResetAction)
+                }
+            }
+            settingsSection(copy.text("Token 统计", "Token statistics")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("最近一天 Token", "Latest day tokens"), subtitle: copy.text("显示最近一个统计日的 Token 用量。", "Show token usage for the latest reporting day."), isOn: $preferences.showDailyTokens)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("30 日 Token", "30-day tokens"), subtitle: copy.text("显示最近 30 天的 Token 总用量。", "Show total token usage for the last 30 days."), isOn: $preferences.showThirtyDayTokens)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("累计 Token", "Total tokens"), subtitle: copy.text("显示当前账户的累计 Token 用量。", "Show lifetime token usage for the current account."), isOn: $preferences.showLifetimeTokens)
+                }
+            }
+            settingsSection(copy.text("统计图表", "Charts")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("成本估算", "Cost estimate"), subtitle: copy.text("显示最近 30 天的估算成本和趋势图；估算值不是账单。", "Show estimated costs and the trend for the last 30 days; estimates are not bills."), isOn: $preferences.showEstimatedCost)
+                    NativeSettingsDivider()
+                    preferenceToggle(copy.text("Token 活动", "Token activity"), subtitle: copy.text("显示活动热力图，支持每天、每周与累计总量。", "Show the activity heatmap with daily, weekly and cumulative modes."), isOn: $preferences.showTokenActivity)
+                }
             }
         }
     }
@@ -563,64 +634,45 @@ struct SettingsView: View {
         }
     }
 
+    private var languageSelection: Binding<String> {
+        .init(get: { preferences.followsSystemLanguage ? "system" : preferences.customLanguage.rawValue },
+              set: { value in
+                  preferences.followsSystemLanguage = value == "system"
+                  if let language = AppPreferences.Language(rawValue: value) { preferences.customLanguage = language }
+              })
+    }
     private var languageSettings: some View {
         NativeSettingsCard {
-            NativeSettingsRow(
-                title: copy.text(
-                    "跟随系统语言",
-                    "Follow system language"
-                ),
-                subtitle: copy.text(
-                    "根据 macOS 首选语言自动切换。",
-                    "Automatically follow the preferred macOS language."
-                )
-            ) {
-                Toggle(
-                    copy.text(
-                        "跟随系统语言",
-                        "Follow system language"
-                    ),
-                    isOn: $preferences.followsSystemLanguage
-                )
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
+            NativeSettingsRow(title: copy.text("App 语言", "App language"), subtitle: languageSummary) {
+                SettingsValueMenu(title: copy.text("App 语言", "App language"), selection: languageSelection,
+                    options: [("system", copy.text("跟随系统", "System")), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
             }
-
-            NativeSettingsDivider()
-
-            NativeSettingsRow(
-                title: copy.text("自定义语言", "Custom language")
-            ) {
-                Picker(
-                    copy.text("自定义语言", "Custom language"),
-                    selection: $preferences.customLanguage
-                ) {
-                    Text("简体中文")
-                        .tag(AppPreferences.Language.simplifiedChinese)
-                    Text("English")
-                        .tag(AppPreferences.Language.english)
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .controlSize(.small)
-                .disabled(preferences.followsSystemLanguage)
-            }
-
-            NativeSettingsDivider()
-
-            NativeSettingsNote(text: languageSummary)
         }
     }
 
     private func settingsSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary).padding(.leading, 10)
             content()
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var generalSettings: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            settingsSection(copy.text("语言", "Language")) { languageSettings }
+            settingsSection(copy.text("设置窗口外观", "Settings appearance")) { appearanceSettings }
+            NativeSettingsCard {
+                NativeSettingsRow(title: copy.text("退出 QuotaView", "Quit QuotaView"),
+                    subtitle: copy.text("关闭灵动岛并停止本地观察，Codex 中的任务继续运行。", "Close the island and stop local observation. Tasks in Codex continue running.")) {
+                    Button(copy.text("退出软件", "Quit App"), role: .destructive) { NSApplication.shared.terminate(nil) }
+                        .buttonStyle(SettingsActionButtonStyle()).controlSize(.small)
+                        .accessibilityLabel(copy.text("退出 QuotaView", "Quit QuotaView"))
+                }
+            }
+        }
+    }
+
+    private var aboutSettings: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 18) {
                 Image(nsImage: NSApplication.shared.applicationIconImage)
@@ -632,8 +684,6 @@ struct SettingsView: View {
                     Text(versionAndBuildLabel).font(.caption).foregroundStyle(.tertiary)
                 }
             }.padding(.vertical, 8)
-            settingsSection(copy.text("语言", "Language")) { languageSettings }
-            settingsSection(copy.text("设置窗口外观", "Settings appearance")) { appearanceSettings }
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
@@ -646,19 +696,11 @@ struct SettingsView: View {
                             Toggle(copy.text("自动检查更新", "Automatically check for updates"), isOn: Binding(
                                 get: { updateController.automaticallyChecksForUpdates },
                                 set: { updateController.setAutomaticallyChecksForUpdates($0) }))
-                                .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                                .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
                         }
                     } else {
                         NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText) {}
                     }
-                }
-            }
-            NativeSettingsCard {
-                NativeSettingsRow(title: copy.text("退出 QuotaView", "Quit QuotaView"),
-                    subtitle: copy.text("关闭灵动岛并停止本地观察，Codex 中的任务继续运行。", "Close the island and stop local observation. Tasks in Codex continue running.")) {
-                    Button(copy.text("退出软件", "Quit App"), role: .destructive) { NSApplication.shared.terminate(nil) }
-                        .buttonStyle(.bordered).controlSize(.small)
-                        .accessibilityLabel(copy.text("退出 QuotaView", "Quit QuotaView"))
                 }
             }
         }
@@ -741,7 +783,7 @@ struct SettingsView: View {
         ) {
             Toggle(title, isOn: isOn)
                 .labelsHidden()
-                .toggleStyle(.switch)
+                .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor))
                 .controlSize(.small)
         }
     }
@@ -1094,14 +1136,10 @@ private extension View {
         )
     }
 
-    @ViewBuilder
     func nativeSettingsActionStyle() -> some View {
-        if #available(macOS 26.0, *) {
-            self.buttonStyle(.glass)
-        } else {
-            self.buttonStyle(.bordered)
-        }
+        self.buttonStyle(SettingsActionButtonStyle())
     }
+
 }
 
 private struct SettingsWindowConfigurator: NSViewRepresentable {
@@ -1323,7 +1361,7 @@ private struct CodexActivityTimingControl: View {
                     Text(title)
                         .font(.body.weight(.medium))
                     Text(subtitle)
-                        .font(.callout)
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1382,7 +1420,7 @@ private struct SettingsSidebarIcon: View {
     @Environment(\.colorSchemeContrast) private var contrast
 
     private enum Metrics {
-        static let size: CGFloat = 20
+        static let size: CGFloat = 22
         static let inset: CGFloat = 3
         static let symbolSize = size - inset * 2
         static let cornerRadius: CGFloat = 5
@@ -1411,6 +1449,136 @@ private struct SettingsSidebarIcon: View {
     }
 }
 
+// Native menus with the reference's plain value and circular chevrons.
+private struct SettingsValueMenu<Selection: Hashable>: View {
+    let title: String
+    @Binding var selection: Selection
+    let options: [(Selection, String)]
+    var body: some View {
+        Menu {
+            ForEach(Array(options.enumerated()), id: \.offset) { item in
+                Button { selection = item.element.0 } label: {
+                    if selection == item.element.0 { Label(item.element.1, systemImage: "checkmark") }
+                    else { Text(item.element.1) }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(options.first { $0.0 == selection }?.1 ?? "—")
+                    .font(.system(size: 14, weight: .medium)).lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
+                    .background(Color.primary.opacity(0.06), in: Circle())
+            }.frame(minHeight: 28)
+        }.menuIndicator(.hidden).buttonStyle(.plain)
+            .fixedSize(horizontal: true, vertical: true)
+            .accessibilityLabel(title).accessibilityValue(options.first { $0.0 == selection }?.1 ?? "—")
+    }
+}
+
+private struct SettingsActionButtonStyle: ButtonStyle {
+    var prominent = false
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        let color = configuration.role == .destructive ? Color(nsColor: .systemRed)
+            : prominent ? Color(nsColor: .controlAccentColor) : Color.primary
+        configuration.label.font(.system(size: 13, weight: .medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(color.opacity(configuration.isPressed ? 0.15 : hovered ? 0.10 : 0.06),
+                        in: RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 8)).opacity(enabled ? 1 : 0.4)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+            .onHover { hovered = enabled && $0 }
+            .onChange(of: enabled) { _, value in if !value { hovered = false } }
+            .onDisappear { hovered = false }
+    }
+}
+
+private struct SettingsNavigationButtonStyle: ButtonStyle {
+    let selected: Bool
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.foregroundStyle(.primary)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.13 : selected ? 0.10 : hovered ? 0.05 : 0),
+                        in: RoundedRectangle(cornerRadius: 10))
+            .contentShape(RoundedRectangle(cornerRadius: 10)).onHover { hovered = $0 }
+            .onDisappear { hovered = false }
+    }
+}
+
+private struct SettingsVisualOptionStyle: ButtonStyle {
+    let selected: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.foregroundStyle(.primary).padding(12)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.06 : 0.025),
+                        in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .separatorColor), lineWidth: selected ? 1.5 : 0.5)
+            }.contentShape(RoundedRectangle(cornerRadius: 12))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+            .onHover { hovered = $0 }.onDisappear { hovered = false }
+    }
+}
+
+// A schematic of the settings window; shapes communicate appearance without sample account data.
+private struct SettingsAppearancePreview: View {
+    let mode: String
+    var body: some View {
+        HStack(spacing: 4) {
+            if mode != "dark" { window(dark: false) }
+            if mode != "light" { window(dark: true) }
+        }.accessibilityHidden(true)
+    }
+    private func window(dark: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 3) {
+                ForEach([NSColor.systemRed, .systemOrange, .systemGreen], id: \.self) { color in
+                    Circle().fill(Color(nsColor: color)).frame(width: 4, height: 4)
+                }
+            }
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 3).fill(Color(nsColor: .systemPurple).opacity(0.25)).frame(width: 20)
+                VStack(spacing: 4) {
+                    ForEach(0..<3) { _ in
+                        RoundedRectangle(cornerRadius: 2).fill((dark ? Color.white : .black).opacity(0.10))
+                    }
+                }
+            }
+        }.padding(7).frame(maxWidth: .infinity)
+            .background(dark ? Color(white: 0.15) : Color(white: 0.94), in: RoundedRectangle(cornerRadius: 6))
+            .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5) }
+    }
+}
+
+// Scale the production usage layout, including real/missing/private states, rather than a second mock layout.
+private struct SettingsUsagePreview: View {
+    @ObservedObject var store: CodexStatusStore
+    @ObservedObject var preferences: AppPreferences
+    @State private var height: CGFloat = 500
+    @State private var board = IslandBoardState()
+    private let scale: CGFloat = 0.62
+    var body: some View {
+        IslandUsageBento(snapshot: store.islandUsage.snapshot, usageState: store.islandUsage.state,
+            english: preferences.resolvedLanguage == .english, contentWidth: 624,
+            options: .init(preferences: preferences), privacy: preferences.codexIslandPrivacy,
+            playbackEnabled: false, hidesTicket: false, onReset: {}, utilities: .init(state: board),
+            onHeightChange: { height = $0 })
+            .frame(width: 680, height: height, alignment: .topLeading)
+            .background(.black, in: RoundedRectangle(cornerRadius: 24))
+            .scaleEffect(scale, anchor: .topLeading)
+            .frame(width: 680 * scale, height: height * scale, alignment: .topLeading)
+            .clipped().allowsHitTesting(false).accessibilityHidden(true)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
 private struct NativeSettingsCard<Content: View>: View {
     let content: Content
 
@@ -1426,13 +1594,13 @@ private struct NativeSettingsCard<Content: View>: View {
         .background(
             Color(nsColor: .controlBackgroundColor),
             in: RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: 14,
                 style: .continuous
             )
         )
         .overlay {
             RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: 14,
                 style: .continuous
             )
             .strokeBorder(
@@ -1442,7 +1610,7 @@ private struct NativeSettingsCard<Content: View>: View {
         }
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: 14,
                 style: .continuous
             )
         )
@@ -1471,12 +1639,12 @@ struct NativeSettingsRow<Control: View>: View {
         HStack(alignment: .center, spacing: 18) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.body.weight(.medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.primary)
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.callout)
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

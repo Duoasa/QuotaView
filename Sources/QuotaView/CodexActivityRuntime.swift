@@ -905,7 +905,8 @@ final class CodexActivityRuntime: ObservableObject {
         liveIsland.update(english: preferences.resolvedLanguage == .english,
             remaining: current?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
             weeklyRemaining: current?.weeklyRemainingPercent,
-            quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state)
+            quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state,
+            usageOptions: .init(preferences: preferences), progressEffect: preferences.codexActivityProgressEffect)
     }
 
     private static func defaultSocketURL() -> URL {
