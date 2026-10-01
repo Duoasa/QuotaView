@@ -306,6 +306,28 @@ final class Island073SmokeTests: XCTestCase {
         let exhausted = IslandResetPageData(snapshot: snapshot(credits: 0))
         XCTAssertFalse(exhausted.canPreview)
         XCTAssertEqual(exhausted.creditsAfterOne, 0)
+        XCTAssertEqual(exhausted.remainingPercent, 38, "Zero reset credits must not erase the actual quota")
+        XCTAssertEqual(exhausted.creditAvailability, .empty)
+        XCTAssertEqual(unknown.creditAvailability, .unknown)
+        XCTAssertEqual(missing.creditAvailability, .unknown)
+        let zh = AppCopy(language: .simplifiedChinese), en = AppCopy(language: .english)
+        XCTAssertEqual(exhausted.actionTitle(previewed: false, copy: zh), "暂无可用重置卡")
+        XCTAssertEqual(exhausted.actionTitle(previewed: true, copy: zh), "暂无可用重置卡", "Old demo feedback must not mask zero credits")
+        XCTAssertEqual(exhausted.actionTitle(previewed: true, copy: en), "No reset credits available")
+        XCTAssertEqual(unknown.actionTitle(previewed: true, copy: zh), "等待重置卡数据")
+        XCTAssertEqual(missing.actionTitle(previewed: false, copy: en), "Waiting for reset credits")
+        XCTAssertEqual(exhausted.caption(previewed: true, copy: zh), "没有可用重置次数")
+        XCTAssertEqual(unknown.caption(previewed: true, copy: en), "Credits unavailable")
+        XCTAssertEqual(available.actionTitle(previewed: true, copy: zh), "演示完成")
+        // A refreshed last credit restores the action even though the demo's
+        // projected after-use balance is zero. The actual snapshot is unchanged.
+        let restored = IslandResetPageData(snapshot: snapshot(credits: 1))
+        XCTAssertEqual(restored.creditAvailability, .available)
+        XCTAssertTrue(restored.canPreview)
+        XCTAssertEqual(restored.creditsAfterOne, 0)
+        XCTAssertEqual(restored.actionTitle(previewed: false, copy: zh), "额度重置")
+        XCTAssertEqual(restored.caption(previewed: false, copy: en), "Demo · 0 left after reset")
+        XCTAssertEqual(restored.snapshot?.availableResetCredits, 1)
     }
 
     @MainActor

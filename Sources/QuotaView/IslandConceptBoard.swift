@@ -1628,12 +1628,16 @@ private struct IslandUsageBento: View {
                         Spacer()
                         VStack(alignment: .trailing, spacing: 7) {
                             Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
-                            Text(snapshot?.availableResetCredits.map { text("\($0)次", "\($0) left") } ?? "—")
+                            Text(IslandResetPageData(snapshot: snapshot).credits.map {
+                                $0 == 0 ? copy.text("0次 · 暂无可用", "0 left · unavailable") : copy.text("\($0)次", "\($0) left")
+                            } ?? "—")
                         }.font(.system(size: 10))
                     }.contentShape(Rectangle())
                 }.buttonStyle(IslandResetTicketButtonStyle(active: !hidesTicket))
                     .accessibilityLabel(copy.text("打开额度重置页面", "Open quota reset page"))
-                    .accessibilityHint(text("仅展示重置演示", "Preview only"))
+                    .accessibilityHint(IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
+                        ? copy.text("暂无可用重置卡，打开查看状态", "No reset credits available; open to view status")
+                        : copy.text("仅展示重置演示", "Preview only"))
             }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
     }
