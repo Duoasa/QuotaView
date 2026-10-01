@@ -8,7 +8,7 @@
 >
 > 当前源码：[0.7.3 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)
 >
-> 当前增量：补齐重置卡 0 次空态，用量入口显示暂无可用并允许查看，使用页以专用说明替换重置预警并禁用操作。未知次数仍显示等待数据；刷新恢复可用次数后恢复正常演示按钮，旧演示反馈不覆盖空态。两项必要隔离冒烟和开发构建通过，视觉待用户验收；源码已推送，CI 与 main 合并状态见 [PR #62](https://github.com/Duoasa/QuotaView/pull/62)。此前用量失败恢复、本地归档及重置动效见 [开发交付](../design/quotaview-0.7.3-development-delivery-2026-10-01.md)。
+> 当前增量：重置入口去掉嵌套背景与额外边距，hover 改为账户背景底部最亮、到中部透明的渐变；返回改为立即旋转缩小、末段缓动落位，进出共用正向时间节奏，保留完整旋转及 2 秒卡面高光。三项必要隔离冒烟与开发构建通过，已进入当前开发包，源码已推送，CI 与 main 合并状态见 [PR #63](https://github.com/Duoasa/QuotaView/pull/63)，视觉待用户验收。此前 0 次空态源码已通过 [PR #62](https://github.com/Duoasa/QuotaView/pull/62) 合并；当前证据见 [开发交付](../design/quotaview-0.7.3-development-delivery-2026-10-01.md#重置入口排版与返回节奏修正--2026-10-02)。
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
@@ -20,7 +20,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。批准仍由 Codex 处理；Figma 重置使用页和双向 3D 卡片过渡已接入，高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；视觉/交互待用户验收。 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。批准仍由 Codex 处理；Figma 重置使用页和双向 3D 卡片过渡已接入；入口使用账户底部渐变高光，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；视觉/交互待用户验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |
 | `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
 | `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |

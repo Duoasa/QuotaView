@@ -1443,31 +1443,13 @@ private struct IslandResetTicketSweep: NSViewRepresentable {
 }
 
 private struct IslandResetTicketButtonStyle: ButtonStyle {
-    let active: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(6)
-            .background(Color.white.opacity(configuration.isPressed ? 0.14 : (hovered ? 0.085 : 0)),
-                in: RoundedRectangle(cornerRadius: 8))
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
             .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.985)
-            .brightness(configuration.isPressed ? -0.06 : (hovered ? 0.04 : 0))
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovered)
+            .brightness(configuration.isPressed ? -0.06 : 0)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
-            .onHover { inside in
-                let next = active && isEnabled && inside
-                hovered = next
-            }
-            .onChange(of: active && isEnabled) { _, enabled in
-                if !enabled { clearHover() }
-            }
-            .onDisappear { clearHover() }
-    }
-    private func clearHover() {
-        hovered = false
     }
 }
 
@@ -1487,6 +1469,8 @@ private struct IslandUsageBento: View {
     let onReset: () -> Void
     let onRefresh: (() async -> Void)?
     let onHeightChange: (CGFloat) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var resetHovered = false
     @State private var refreshing = false
     @State private var selectedDay: Date?
     @State private var hoveredCost: Date?
@@ -1504,9 +1488,26 @@ private struct IslandUsageBento: View {
     }
     private var percent: Int? { quota?.remainingPercent ?? snapshot?.remainingPercent }
     private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
-    private func surface<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private func surface<Content: View>(highlightBottom: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         content().padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14).fill(Color(white: 0.055))
+                    if highlightBottom {
+                        // Highlight the account surface without adding a container or changing row geometry.
+                        LinearGradient(stops: [
+                            .init(color: .white.opacity(0.12), location: 0),
+                            .init(color: .white.opacity(0.06), location: 0.25),
+                            .init(color: .clear, location: 0.5),
+                            .init(color: .clear, location: 1)
+                        ], startPoint: .bottom, endPoint: .top)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .transition(.opacity)
+                    }
+                }
+                .allowsHitTesting(false)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: highlightBottom)
+            }
             .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
     }
     private func heading(_ title: String) -> some View {
@@ -1608,7 +1609,7 @@ private struct IslandUsageBento: View {
         }
     }
     private var accountCard: some View {
-        surface {
+        surface(highlightBottom: resetHovered && !hidesTicket) {
             VStack(alignment: .leading, spacing: 10) {
                 heading(text("账户", "Account"))
                 Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
@@ -1633,13 +1634,16 @@ private struct IslandUsageBento: View {
                             } ?? "—")
                         }.font(.system(size: 10))
                     }.contentShape(Rectangle())
-                }.buttonStyle(IslandResetTicketButtonStyle(active: !hidesTicket))
+                }.buttonStyle(IslandResetTicketButtonStyle())
+                    .onHover { resetHovered = $0 && !hidesTicket }
                     .accessibilityLabel(copy.text("打开额度重置页面", "Open quota reset page"))
                     .accessibilityHint(IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
                         ? copy.text("暂无可用重置卡，打开查看状态", "No reset credits available; open to view status")
                         : copy.text("仅展示重置演示", "Preview only"))
             }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
+        .onChange(of: hidesTicket) { _, hidden in if hidden { resetHovered = false } }
+        .onDisappear { resetHovered = false }
     }
     private func metric(_ title: String, value: String) -> some View {
         surface {

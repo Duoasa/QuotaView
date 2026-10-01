@@ -184,8 +184,8 @@ enum IslandResetTicketFlight {
         return Sample(position: .init(x: source.midX + (destination.midX - source.midX) * progress,
             y: source.midY + (destination.midY - source.midY) * progress - 24 * lift), transform: transform)
     }
-    // Quick lift, gentle overshoot, then settle. The same curve and samples are
-    // traversed backwards on return, including the lift and 3D rotation.
+    // Both directions start moving immediately, then gently overshoot and settle.
+    // Reverse the spatial progress on return, keeping the elapsed-time easing forward.
     static func progress(at time: Double) -> CGFloat {
         let t = min(1, max(0, time))
         if t <= 0.72 {
@@ -253,9 +253,7 @@ final class IslandResetTicketFlightHost: NSView {
         let steps = 60
         let samples = (0...steps).map { index -> IslandResetTicketFlight.Sample in
             let time = Double(index) / Double(steps)
-            // Return visits the exact opening samples in reverse order.
-            let p: CGFloat = toReset ? IslandResetTicketFlight.progress(at: time)
-                : 1 - IslandResetTicketFlight.progress(at: 1 - time)
+            let p = IslandResetTicketFlight.progress(at: time)
             return IslandResetTicketFlight.sample(progress: from + (to - from) * p, source: self.source, destination: self.destination)
         }
         let position = CAKeyframeAnimation(keyPath: "position")
@@ -279,7 +277,7 @@ final class IslandResetTicketFlightHost: NSView {
     }
     private func currentProgress(at now: CFTimeInterval) -> CGFloat {
         let time = min(1, max(0, (now - startedAt) / max(0.001, flightDuration)))
-        let p = movingToReset ? IslandResetTicketFlight.progress(at: time) : 1 - IslandResetTicketFlight.progress(at: 1 - time)
+        let p = IslandResetTicketFlight.progress(at: time)
         return startProgress + (endProgress - startProgress) * p
     }
     private static func valid(_ rect: CGRect) -> Bool {

@@ -220,7 +220,7 @@ final class Island073SmokeTests: XCTestCase {
     }
 
     @MainActor
-    func testResetTicketFlightEndpointsReverseAndLifecycle() throws {
+    func testResetTicketFlightUsesSameEasingBothDirectionsAndLifecycle() throws {
         _ = NSApplication.shared
         let source = CGRect(x: 500, y: 175, width: 53.6774, height: 32)
         let destination = CGRect(x: 239.355, y: 22, width: 201.29, height: 120)
@@ -253,23 +253,33 @@ final class Island073SmokeTests: XCTestCase {
         host.stop()
         host.configure(serial: 2, toReset: false, active: true, source: source, destination: destination, reduceMotion: false)
         let returning = try XCTUnwrap(host.flightAnimation)
-        let forward = try XCTUnwrap(opening.animations?[0] as? CAKeyframeAnimation).values as? [NSValue]
-        let backward = try XCTUnwrap(returning.animations?[0] as? CAKeyframeAnimation).values as? [NSValue]
-        XCTAssertEqual(forward?.count, backward?.count)
-        for (a, b) in zip(try XCTUnwrap(forward), try XCTUnwrap(backward).reversed()) {
-            XCTAssertEqual(a.pointValue.x, b.pointValue.x, accuracy: 0.0001)
-            XCTAssertEqual(a.pointValue.y, b.pointValue.y, accuracy: 0.0001)
+        let forward = try XCTUnwrap(try XCTUnwrap(opening.animations?[0] as? CAKeyframeAnimation).values as? [NSValue])
+        let backward = try XCTUnwrap(try XCTUnwrap(returning.animations?[0] as? CAKeyframeAnimation).values as? [NSValue])
+        XCTAssertEqual(forward.count, backward.count)
+        let distance = destination.midX - source.midX
+        for (a, b) in zip(forward, backward) {
+            let openingTravel = (a.pointValue.x - source.midX) / distance
+            let returnTravel = (destination.midX - b.pointValue.x) / distance
+            XCTAssertEqual(openingTravel, returnTravel, accuracy: 0.0001,
+                "Opening and return must share the same elapsed-time rhythm")
         }
-        let forwardTransforms = try XCTUnwrap(try XCTUnwrap(opening.animations?[1] as? CAKeyframeAnimation).values as? [NSValue])
+        XCTAssertGreaterThan((destination.midX - backward[1].pointValue.x) / distance, 0.05,
+            "Return must move immediately instead of starting with the reversed settling phase")
+        XCTAssertEqual(backward.last?.pointValue.x ?? .nan, source.midX, accuracy: 0.0001)
+        XCTAssertEqual(backward.last?.pointValue.y ?? .nan, source.midY, accuracy: 0.0001)
+        for point in backward.suffix(17) {
+            XCTAssertLessThanOrEqual(abs((point.pointValue.x - source.midX) / distance), 0.025,
+                "The final phase should settle near the usage-card anchor")
+        }
         let returnTransforms = try XCTUnwrap(try XCTUnwrap(returning.animations?[1] as? CAKeyframeAnimation).values as? [NSValue])
-        func components(_ value: NSValue) -> [CGFloat] {
-            let m = value.caTransform3DValue
-            return [m.m11, m.m12, m.m13, m.m14, m.m21, m.m22, m.m23, m.m24,
-                m.m31, m.m32, m.m33, m.m34, m.m41, m.m42, m.m43, m.m44]
-        }
-        for (a, b) in zip(forwardTransforms, returnTransforms.reversed()) {
-            for (x, y) in zip(components(a), components(b)) { XCTAssertEqual(x, y, accuracy: 0.0001) }
-        }
+        XCTAssertTrue(returnTransforms.contains { $0.caTransform3DValue.m11 < 0 },
+            "The return must rotate through the back face while shrinking")
+        XCTAssertTrue(returnTransforms.contains { $0.caTransform3DValue.m13 > 0.1 })
+        XCTAssertTrue(returnTransforms.contains { $0.caTransform3DValue.m13 < -0.1 },
+            "A full turn must pass both edge-on directions")
+        let landing = try XCTUnwrap(returnTransforms.last).caTransform3DValue
+        XCTAssertEqual(landing.m11, initial.transform.m11, accuracy: 0.0001)
+        XCTAssertEqual(landing.m22, initial.transform.m22, accuracy: 0.0001)
         XCTAssertNil(host.hitTest(.init(x: 340, y: 82)))
         host.configure(serial: 3, toReset: true, active: true, source: source, destination: destination, reduceMotion: true)
         XCTAssertNil(host.flightAnimation)
