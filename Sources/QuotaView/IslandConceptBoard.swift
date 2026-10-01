@@ -144,10 +144,55 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var reduceMotion = false
     var onChange: (() -> Void)?
     var onSelect: ((Int) -> Void)?
+    var onArchive: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
     var onRefreshUsage: (() async -> Void)?
     @Published private(set) var showsUsage = false
     @Published private(set) var usageHeight: CGFloat = 500
+    @Published private(set) var showsReset = false
+    @Published private(set) var resetHeight: CGFloat = 434
+    @Published private(set) var resetTransitionInFlight = false
+    @Published private(set) var resetTransitionSerial: UInt64 = 0
+    private var resetTransitionFinish: DispatchWorkItem?
+    var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), expandedWidth) }
+    var expandedCanvasHeight: CGFloat {
+        showsUsage ? headerHeight + max(usageHeight, resetHeight) : expandedHeight
+    }
+    func updateResetHeight(_ value: CGFloat) {
+        guard value.isFinite, value > 0 else { return }
+        let height = ceil(value)
+        guard abs(resetHeight - height) > 0.5 else { return }
+        resetHeight = height
+        if showsReset { onChange?() }
+    }
+    func openReset() {
+        guard showsUsage, !showsReset else { return }
+        cancelAutomaticPreview(); showsReset = true; beginResetTransition()
+    }
+    func closeReset() {
+        guard showsReset else { return }
+        showsReset = false; beginResetTransition()
+    }
+    private func beginResetTransition() {
+        resetTransitionFinish?.cancel(); resetTransitionSerial &+= 1
+        resetTransitionInFlight = !reduceMotion && display?.playbackEnabled != false
+        if resetTransitionInFlight {
+            let serial = resetTransitionSerial
+            let finish = DispatchWorkItem { [weak self] in self?.finishResetTransition(serial: serial) }
+            resetTransitionFinish = finish
+            DispatchQueue.main.asyncAfter(deadline: .now() + IslandResetTicketFlight.duration + 0.04, execute: finish)
+        }
+        onChange?()
+    }
+    func finishResetTransition(serial: UInt64) {
+        guard serial == resetTransitionSerial else { return }
+        resetTransitionFinish?.cancel(); resetTransitionFinish = nil
+        resetTransitionInFlight = false
+    }
+    private func clearResetPresentation() {
+        resetTransitionFinish?.cancel(); resetTransitionFinish = nil
+        resetTransitionSerial &+= 1; resetTransitionInFlight = false; showsReset = false
+    }
     func updateUsageHeight(_ value: CGFloat) {
         guard value.isFinite, value > 0 else { return }
         let height = ceil(value)
@@ -155,8 +200,8 @@ final class IslandBoardState: ObservableObject {
         usageHeight = height
         if showsUsage { onChange?() }
     }
-    func openUsage() { showsUsage = true; if compact { presentation = .preview }; onChange?() }
-    func closeUsage() { showsUsage = false; onChange?() }
+    func openUsage() { cancelAutomaticPreview(); showsUsage = true; if compact { presentation = .preview }; onChange?() }
+    func closeUsage() { clearResetPresentation(); showsUsage = false; onChange?() }
     func clearDrafts() { approvalDrafts.removeAll() }
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
     var english: Bool { display?.english ?? false }
@@ -191,7 +236,7 @@ final class IslandBoardState: ObservableObject {
         max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
     }
     var compactSideWidth: CGFloat { max(0, (min(geometry.compactWidth, expandedWidth) - 40 - geometry.cameraWidth - 16) / 2) }
-    var headerSideWidth: CGFloat { max(0, (expandedWidth - 76 - geometry.cameraWidth - 16) / 2) }
+    var headerSideWidth: CGFloat { max(0, (surfaceWidth - (showsReset ? 56 : 76) - geometry.cameraWidth - 16) / 2) }
     private struct CardGeometryKey: Hashable { let model: String; let effort: String; let width: CGFloat }
     private var cardGeometryCache: [CardGeometryKey: CGFloat] = [:]
     private func measuredCardHeight(_ metadata: IslandSessionMetadata?, width: CGFloat) -> CGFloat {
@@ -252,11 +297,11 @@ final class IslandBoardState: ObservableObject {
     }
     var detailHeight: CGFloat { inlineDetail.map { detailMetrics(for: $0).height } ?? 0 }
     var expandedHeight: CGFloat {
-        if showsUsage { return headerHeight + usageHeight }
+        if showsUsage { return headerHeight + (showsReset ? resetHeight : usageHeight) }
         if let approval { return headerHeight + approvalMetrics(request: approval.request).height }
         return headerHeight + listHeight + IslandVibeLayout.footerHeight
     }
-    var surfaceWidth: CGFloat { compact ? min(geometry.compactWidth, expandedWidth) : expandedWidth }
+    var surfaceWidth: CGFloat { compact ? min(geometry.compactWidth, expandedWidth) : (showsReset ? resetWidth : expandedWidth) }
     var height: CGFloat { compact ? geometry.bandHeight : expandedHeight }
     var focusedTask: CodexMultitaskRenderTask? {
         tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
@@ -280,7 +325,7 @@ final class IslandBoardState: ObservableObject {
         automaticClose?.cancel(); automaticClose = nil; automaticPreviewDeadline = nil
     }
     private func showAutomaticPreview(at now: Date) {
-        guard presentation != .pinned else { return }
+        guard presentation != .pinned, !showsUsage else { return }
         cancelAutomaticPreview()
         presentation = .preview
         automaticPreviewDeadline = now.addingTimeInterval(3)
@@ -295,14 +340,14 @@ final class IslandBoardState: ObservableObject {
         collapse()
     }
     func endPreview() {
-        guard automaticPreviewDeadline == nil, attentionCount == 0 else { return }
+        guard !showsReset, !resetTransitionInFlight, automaticPreviewDeadline == nil, attentionCount == 0 else { return }
         if presentation == .preview { collapse() }
     }
     func pin() { cancelAutomaticPreview(); presentation = .pinned; onChange?() }
     func collapse() {
         guard attentionCount == 0 else { return }
         cancelAutomaticPreview()
-        showsUsage = false; presentation = .resting; detailID = nil; onChange?()
+        clearResetPresentation(); showsUsage = false; presentation = .resting; detailID = nil; onChange?()
     }
     func dismissFromOutside() {
         guard presentation != .pinned else { return }
@@ -340,6 +385,8 @@ final class IslandBoardState: ObservableObject {
         let remaining = expandedTraceEntries.intersection(sourceIDs)
         if remaining != expandedTraceEntries { expandedTraceEntries = remaining }
         if self.reduceMotion != reduceMotion { self.reduceMotion = reduceMotion }
+        if reduceMotion || !value.playbackEnabled { finishResetTransition(serial: resetTransitionSerial) }
+        if !value.visible { clearResetPresentation(); showsUsage = false }
         if !wasCompact && value.state.compact && presentation != .pinned {
             presentation = .resting; detailID = nil
         }
@@ -361,7 +408,7 @@ final class IslandBoardState: ObservableObject {
                     && old != nil && old?.renderState.visualState != .completed
             }
             if event { showAutomaticPreview(at: now) }
-            else if hadAttention && presentation != .pinned { collapse() }
+            else if hadAttention && presentation != .pinned && !showsUsage { collapse() }
         }
         if attentionCount == 0 { attentionOnly = false }
         if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
@@ -397,7 +444,9 @@ final class IslandBoardState: ObservableObject {
         onChange?()
     }
     func escape() {
-        if detailID != nil { dismissDetail() }
+        if showsReset { closeReset() }
+        else if showsUsage { closeUsage() }
+        else if detailID != nil { dismissDetail() }
         else if attentionOnly { attentionOnly = false; onChange?() }
         else if !compact { toggleCompact() }
     }
@@ -521,6 +570,7 @@ struct IslandTaskCard: View {
     let effectVisible: Bool
     let reduceMotion: Bool
     var hovered = false
+    var showsArchiveButton = false
     var cardWidth: CGFloat = 656
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -552,7 +602,8 @@ struct IslandTaskCard: View {
                             .padding(.horizontal, 5).padding(.vertical, 2)
                             .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
                     }
-                }.font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
+                }.padding(.trailing, showsArchiveButton ? 28 : 0)
+                    .font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
                     .foregroundStyle(IslandBoardStyle.muted)
                 HStack(spacing: 8) {
                     IslandOperationLine(renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
@@ -605,14 +656,65 @@ private struct IslandBoardTaskRow: View {
     let effectVisible: Bool
     let reduceMotion: Bool
     var cardWidth: CGFloat = 656
+    let onArchive: () -> Void
     let action: () -> Void
     @State private var hovered = false
     var body: some View {
         Button(action: action) {
             IslandTaskCard(task: task, selected: selected, metadata: metadata, english: english,
-                playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion, hovered: hovered, cardWidth: cardWidth)
+                playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion, hovered: hovered, showsArchiveButton: true, cardWidth: cardWidth)
         }.buttonStyle(.plain).onHover { hovered = $0 }
+            .overlay(alignment: .topTrailing) {
+                // Sibling hit target: archive must never also select/open the card.
+                IslandTaskArchiveButton(english: english, action: onArchive)
+                    .padding(.top, 6).padding(.trailing, 8)
+            }
             .accessibilityValue(selected ? (english ? "Details open" : "详情已展开") : "")
+    }
+}
+
+struct IslandTaskArchiveButton: View {
+    let english: Bool
+    let action: () -> Void
+    @State private var hovered = false
+    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "archivebox")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
+                .frame(width: 24, height: 24).contentShape(RoundedRectangle(cornerRadius: 6))
+        }.buttonStyle(IslandArchiveButtonStyle(hovered: hovered))
+            .onHover { hovered = $0 }
+            .accessibilityLabel(copy.islandArchiveTask)
+            .accessibilityHint(copy.islandArchiveTaskHint)
+    }
+}
+private struct IslandArchiveButtonStyle: ButtonStyle {
+    let hovered: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.background(Color.white.opacity(configuration.isPressed ? 0.16 : (hovered ? 0.10 : 0)),
+            in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+private struct IslandUsageEntryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 8)
+            .background(Color.white.opacity(isEnabled
+                ? (configuration.isPressed ? 0.16 : (hovered ? 0.10 : 0)) : 0), in: Capsule())
+            .contentShape(Capsule())
+            .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.985)
+            .opacity(isEnabled ? 1 : 0.55)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovered)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
+            .onHover { hovered = isEnabled && $0 }
+            .onChange(of: isEnabled) { _, enabled in if !enabled { hovered = false } }
     }
 }
 
@@ -632,11 +734,7 @@ struct IslandBoardView: View {
                 VStack(spacing: 0) {
                     header
                     if state.showsUsage {
-                        IslandUsageBento(snapshot: state.display?.usageSnapshot, english: state.english,
-                            contentWidth: state.expandedWidth - IslandVibeLayout.listInset * 2,
-                            privacy: state.display?.privacyMode == true, onRefresh: state.onRefreshUsage,
-                            onHeightChange: state.updateUsageHeight)
-                            .frame(height: state.usageHeight)
+                        usageFlow
                     } else if let approval = state.approval {
                         IslandApprovalView(task: approval.task, metadata: state.display?.sessionMetadata[approval.task.id],
                             request: approval.request, metrics: state.approvalMetrics(request: approval.request),
@@ -644,7 +742,8 @@ struct IslandBoardView: View {
                             playbackEnabled: state.display?.playbackEnabled == true, reduceMotion: state.reduceMotion,
                             scrollLink: approvalScrollLink,
                             draft: state.approvalDraftBinding(for: approval.request.id),
-                            onDecision: { requestID, decision in state.onConfirmation?(approval.task.id, requestID, decision) })
+                            onDecision: { requestID, decision in state.onConfirmation?(approval.task.id, requestID, decision) },
+                            onArchive: { state.onArchive?(approval.task.id) })
                             .id(approval.request.id)
                     } else {
                         Group {
@@ -713,16 +812,51 @@ struct IslandBoardView: View {
         .transaction { $0.animation = nil }
         .accessibilityHidden(compactContent ? !state.compact : state.compact)
     }
+    private var usageFlow: some View {
+        ZStack(alignment: .top) {
+            IslandUsageBento(snapshot: state.display?.usageSnapshot, usageState: state.display?.usageState ?? .loading, english: state.english,
+                contentWidth: state.expandedWidth - IslandVibeLayout.listInset * 2,
+                privacy: state.display?.privacyMode == true,
+                playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
+                hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
+                onRefresh: state.onRefreshUsage, onHeightChange: state.updateUsageHeight)
+                .frame(width: state.expandedWidth, height: state.usageHeight, alignment: .top)
+                .opacity(state.showsReset ? 0 : 1)
+                .animation(state.reduceMotion ? nil : .easeOut(duration: 0.22), value: state.showsReset)
+                .allowsHitTesting(!state.showsReset && !state.resetTransitionInFlight)
+                .accessibilityHidden(state.showsReset)
+            IslandResetPage(data: .init(snapshot: state.display?.privacyMode == true ? nil : state.display?.usageSnapshot),
+                usageState: state.display?.usageState ?? .loading, english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
+                hidesTicket: state.resetTransitionInFlight, onRefresh: state.onRefreshUsage, onHeightChange: state.updateResetHeight)
+                .frame(width: state.resetWidth, height: state.resetHeight, alignment: .top)
+                .opacity(state.showsReset ? 1 : 0)
+                .animation(state.reduceMotion ? nil : .easeOut(duration: 0.24), value: state.showsReset)
+                .allowsHitTesting(state.showsReset && !state.resetTransitionInFlight)
+                .accessibilityHidden(!state.showsReset)
+        }.frame(width: state.expandedWidth, height: max(state.usageHeight, state.resetHeight), alignment: .top)
+            .overlayPreferenceValue(IslandResetTicketAnchors.self) { anchors in
+                GeometryReader { proxy in
+                    if let source = anchors[.usage], let destination = anchors[.reset] {
+                        IslandResetTicketFlightView(serial: state.resetTransitionSerial, toReset: state.showsReset,
+                            active: state.resetTransitionInFlight && !state.compact && state.display?.visible != false,
+                            source: proxy[source], destination: proxy[destination], reduceMotion: state.reduceMotion)
+                            .allowsHitTesting(false).accessibilityHidden(true)
+                    }
+                }
+            }
+    }
     private var header: some View {
         HStack(spacing: 0) {
             HStack(spacing: 6) {
                 if state.showsUsage {
-                    Button { state.closeUsage() } label: {
-                        Label(state.text("返回任务", "Tasks"), systemImage: "chevron.left")
+                    Button { state.showsReset ? state.closeReset() : state.closeUsage() } label: {
+                        Label(state.showsReset ? state.text("返回", "Back") : state.text("返回任务", "Tasks"), systemImage: "chevron.left")
                             .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
                             .frame(height: 28).contentShape(Rectangle())
                     }.buttonStyle(.plain)
-                    Text(state.text("用量统计", "Usage")).font(.system(size: 11)).foregroundStyle(IslandBoardStyle.muted)
+                    if !state.showsReset {
+                        Text(state.text("用量统计", "Usage")).font(.system(size: 11)).foregroundStyle(IslandBoardStyle.muted)
+                    }
                 } else if state.approval != nil {
                     Circle().fill(IslandBoardStyle.confirmationHighlight).frame(width: 4, height: 4)
                     Text(state.text("待确认", "Permission request")).font(.system(size: 12, weight: .semibold))
@@ -733,7 +867,7 @@ struct IslandBoardView: View {
                             IslandQuotaRing(remainingPercent: state.display?.remainingPercent)
                             Text(state.quota).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
                         }.frame(height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel(state.text("查看用量统计", "View usage"))
+                    }.buttonStyle(IslandUsageEntryButtonStyle()).accessibilityLabel(state.text("查看用量统计", "View usage"))
                 }
                 Spacer(minLength: 0)
             }.frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
@@ -752,7 +886,7 @@ struct IslandBoardView: View {
                         }.frame(height: 28).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityHint(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
                 } else {
-                    if state.attentionCount > 0 {
+                    if state.attentionCount > 0 && !state.showsUsage {
                         Button { state.toggleAttention() } label: {
                             attentionIndicators(showCounts: true)
                                 .font(.system(size: 11, weight: state.attentionOnly ? .bold : .semibold))
@@ -772,7 +906,7 @@ struct IslandBoardView: View {
                 .frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
                 .frame(maxWidth: .infinity)
                 .clipped()
-        }.padding(.horizontal, 38).frame(height: state.headerHeight)
+        }.padding(.horizontal, state.showsReset ? 28 : 38).frame(width: state.surfaceWidth, height: state.headerHeight)
     }
     private var compactOrb: some View {
         IslandActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
@@ -862,7 +996,8 @@ struct IslandBoardView: View {
                         && task.playbackEnabled && (IslandBoardState.isRunning(task) || task.renderState.visualState == .completed),
                     effectVisible: state.display?.visible == true && state.display?.playbackEnabled == true
                         && !state.compact && visibleElements.contains(.task(task.id)) && task.playbackEnabled,
-                    reduceMotion: state.reduceMotion, cardWidth: state.rowWidth) { state.select(task.id) }
+                    reduceMotion: state.reduceMotion, cardWidth: state.rowWidth,
+                    onArchive: { state.onArchive?(task.id) }) { state.select(task.id) }
             } else { Color.clear.frame(height: state.rowHeight(task)) }
             if state.inlineDetail?.id == task.id {
                 if visibleElements.contains(.detail(task.id)) { detailView(task) }
@@ -930,8 +1065,8 @@ final class IslandNotchSurface: NSView {
                                   y: bounds.height - state.geometry.bandHeight,
                                   width: min(state.geometry.compactWidth, state.expandedWidth), height: state.geometry.bandHeight)
         let expandedFrame = CGRect(x: (bounds.width - state.expandedWidth) / 2,
-                                   y: bounds.height - state.expandedHeight,
-                                   width: state.expandedWidth, height: state.expandedHeight)
+                                   y: bounds.height - state.expandedCanvasHeight,
+                                   width: state.expandedWidth, height: state.expandedCanvasHeight)
         // content is unflipped. Its hosted views are laid out once at final size.
         CATransaction.begin(); CATransaction.setDisableActions(true)
         if confirmationGlow.frame != bounds { confirmationGlow.frame = bounds }
@@ -1191,6 +1326,151 @@ final class IslandBoardController {
 }
 
 // Usage stays inside the notch; charts reuse the menu's quota/cost data contracts.
+// The pointer tracks the fixed 53.677 × 32 pt plane, never the transformed
+// face. SwiftUI interpolates only the small visual layers; layout stays fixed.
+struct IslandResetTicket: View {
+    let playbackEnabled: Bool
+    var size = CGSize(width: 53.6774, height: 32)
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var tilt = CGSize.zero
+    @State private var hovered = false
+    private var scale: CGFloat { size.height / 32 }
+    private var motion: CGSize { reduceMotion ? .zero : tilt }
+    var body: some View {
+        ZStack {
+            ZStack {
+                Image("IslandResetTicket").resizable().scaledToFit()
+                RadialGradient(colors: [.white.opacity(hovered ? 0.28 : 0), .clear],
+                    center: UnitPoint(x: 0.5 + motion.width * 0.25, y: 0.5 + motion.height * 0.25),
+                    startRadius: 0, endRadius: 42 * scale)
+                    .clipShape(RoundedRectangle(cornerRadius: 2.3 * scale))
+                Image("IslandResetMark").resizable().scaledToFit().frame(width: 12.0973 * scale, height: 12.0805 * scale)
+                    .offset(x: motion.width * 0.9 * scale, y: motion.height * 0.6 * scale)
+                IslandResetTicketSweep(active: playbackEnabled)
+                    .allowsHitTesting(false).accessibilityHidden(true)
+            }
+            .frame(width: size.width, height: size.height)
+            .rotation3DEffect(.degrees(Double(-motion.height * 7)), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+            .rotation3DEffect(.degrees(Double(motion.width * 10)), axis: (x: 0, y: 1, z: 0), perspective: 0.4)
+            .shadow(color: .black.opacity(hovered ? 0.3 : 0), radius: hovered ? 4 * min(2, scale) : 0,
+                x: -motion.width * 2 * scale, y: hovered ? 3 * min(2, scale) : 0)
+            .allowsHitTesting(false)
+        }
+        .frame(width: size.width, height: size.height).contentShape(Rectangle())
+        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: tilt)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hovered)
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let point):
+                guard point.x.isFinite, point.y.isFinite else { return }
+                hovered = true
+                tilt = CGSize(width: min(1, max(-1, point.x / size.width * 2 - 1)),
+                    height: min(1, max(-1, point.y / size.height * 2 - 1)))
+            case .ended: hovered = false; tilt = .zero
+            }
+        }
+        .onDisappear { hovered = false; tilt = .zero }
+    }
+}
+// One compositor animation on the ticket face. No frame timer, page redraw,
+// data refresh or hover dependency. Hidden/detached/reduced-motion views stop.
+final class IslandResetTicketSweepHost: NSView {
+    private let stripe = CAGradientLayer()
+    private static let animationKey = "island.reset-ticket.sweep"
+    private var enabled = false
+    private var renderedSize = CGSize.zero
+    var sweepAnimation: CAKeyframeAnimation? { stripe.animation(forKey: Self.animationKey) as? CAKeyframeAnimation }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.masksToBounds = true; layer?.cornerRadius = 2.3
+        stripe.colors = [NSColor.white.withAlphaComponent(0).cgColor,
+            NSColor.white.withAlphaComponent(0.18).cgColor, NSColor.white.withAlphaComponent(0.70).cgColor,
+            NSColor.white.withAlphaComponent(0.18).cgColor, NSColor.white.withAlphaComponent(0).cgColor]
+        stripe.locations = [0, 0.3, 0.5, 0.7, 1]
+        stripe.startPoint = CGPoint(x: 0, y: 0.5); stripe.endPoint = CGPoint(x: 1, y: 0.5)
+        stripe.isHidden = true; layer?.addSublayer(stripe)
+    }
+    required init?(coder: NSCoder) { nil }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); updateAnimation() }
+    func configure(active: Bool, reduceMotion: Bool) {
+        let next = active && !reduceMotion
+        guard enabled != next else { return }
+        enabled = next; updateAnimation()
+    }
+    override func layout() {
+        super.layout()
+        if renderedSize != bounds.size {
+            renderedSize = bounds.size
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            layer?.cornerRadius = 2.3 * bounds.height / 32
+            stripe.bounds = CGRect(x: 0, y: 0, width: 20 * bounds.height / 32, height: bounds.height * 3)
+            stripe.position = CGPoint(x: bounds.midX, y: bounds.midY)
+            stripe.setAffineTransform(CGAffineTransform(rotationAngle: -.pi / 7))
+            CATransaction.commit()
+            stripe.removeAnimation(forKey: Self.animationKey)
+        }
+        updateAnimation()
+    }
+    private func updateAnimation() {
+        guard enabled, window != nil, bounds.width > 0, bounds.height > 0 else { stop(); return }
+        CATransaction.begin(); CATransaction.setDisableActions(true); stripe.isHidden = false; CATransaction.commit()
+        guard sweepAnimation == nil else { return }
+        let travel = bounds.width + bounds.height
+        let animation = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        animation.values = [-travel, -travel, travel, travel]
+        animation.keyTimes = [0, 0.10, 0.90, 1]
+        animation.timingFunctions = [.init(name: .linear), .init(name: .easeInEaseOut), .init(name: .linear)]
+        animation.duration = 2; animation.repeatCount = .infinity
+        animation.beginTime = stripe.convertTime(CACurrentMediaTime(), from: nil)
+        stripe.add(animation, forKey: Self.animationKey)
+    }
+    func stop() {
+        stripe.removeAnimation(forKey: Self.animationKey)
+        CATransaction.begin(); CATransaction.setDisableActions(true); stripe.isHidden = true; CATransaction.commit()
+    }
+}
+private struct IslandResetTicketSweep: NSViewRepresentable {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeNSView(context: Context) -> IslandResetTicketSweepHost { .init(frame: .zero) }
+    func updateNSView(_ view: IslandResetTicketSweepHost, context: Context) {
+        view.configure(active: active, reduceMotion: reduceMotion)
+    }
+    static func dismantleNSView(_ view: IslandResetTicketSweepHost, coordinator: ()) { view.stop() }
+}
+
+private struct IslandResetTicketButtonStyle: ButtonStyle {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(6)
+            .background(Color.white.opacity(configuration.isPressed ? 0.14 : (hovered ? 0.085 : 0)),
+                in: RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.985)
+            .brightness(configuration.isPressed ? -0.06 : (hovered ? 0.04 : 0))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovered)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
+            .onHover { inside in
+                let next = active && isEnabled && inside
+                hovered = next
+            }
+            .onChange(of: active && isEnabled) { _, enabled in
+                if !enabled { clearHover() }
+            }
+            .onDisappear { clearHover() }
+    }
+    private func clearHover() {
+        hovered = false
+    }
+}
+
 private struct IslandUsageHeightKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
@@ -1198,9 +1478,13 @@ private struct IslandUsageHeightKey: PreferenceKey {
 
 private struct IslandUsageBento: View {
     let snapshot: CurrentCodexPresentation?
+    let usageState: IslandUsagePresentation.State
     let english: Bool
     let contentWidth: CGFloat
     let privacy: Bool
+    let playbackEnabled: Bool
+    let hidesTicket: Bool
+    let onReset: () -> Void
     let onRefresh: (() async -> Void)?
     let onHeightChange: (CGFloat) -> Void
     @State private var refreshing = false
@@ -1209,11 +1493,11 @@ private struct IslandUsageBento: View {
     @State private var hoveredActivity: Int?
     @State private var selectedActivity: Date?
     @State private var activityMode: IslandActivityHeatmap.Mode = .daily
-    @State private var resetDemo = false
     private let secondary = Color(white: 0.68)
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
+    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private var chart: EstimatedCostChartModel { .init(activity: snapshot?.tokenActivity ?? [], endingAt: Date()) }
     private var quota: CodexQuotaWindowPresentation? {
         snapshot?.quotaWindows.first { $0.windowDurationMinutes == 10080 } ?? snapshot?.quotaWindows.first
@@ -1245,11 +1529,16 @@ private struct IslandUsageBento: View {
             VStack(spacing: 10) {
                 if privacy || snapshot == nil {
                     card(text("用量数据", "Usage data")) {
-                        Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : text("暂时无法获取用量数据", "Usage data is unavailable"))
+                        Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : usageState.message(copy: copy))
                             .font(.system(size: 14, weight: .medium))
                         Text(text("不会把缺失数据显示为零。", "Missing data is not shown as zero.")).font(.system(size: 11)).foregroundStyle(secondary)
                     }
                 } else {
+                    if usageState.isStale {
+                        Text(copy.text("上次成功数据 · 等待刷新", "Last successful data · awaiting refresh") + " · " + usageState.message(copy: copy))
+                            .font(.system(size: 10)).foregroundStyle(secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
+                    }
                     HStack(alignment: .top, spacing: 10) {
                         VStack(spacing: 10) {
                             quotaCard
@@ -1287,11 +1576,6 @@ private struct IslandUsageBento: View {
         .background { GeometryReader { proxy in Color.clear.preference(key: IslandUsageHeightKey.self, value: proxy.size.height) } }
         .onPreferenceChange(IslandUsageHeightKey.self, perform: onHeightChange)
         .foregroundStyle(.white)
-        .alert(text("额度重置演示", "Quota reset preview"), isPresented: $resetDemo) {
-            Button(text("知道了", "OK"), role: .cancel) {}
-        } message: {
-            Text(text("开发版仅展示重置入口，不会消耗次数或重置真实额度。", "This development version previews the entry only. No credit is consumed and no quota is reset."))
-        }
     }
     private var quotaCard: some View {
         surface {
@@ -1336,19 +1620,20 @@ private struct IslandUsageBento: View {
                     Text(snapshot?.creditBalance ?? "—")
                 }.font(.system(size: 10))
                 Rectangle().fill(Color(white: 0.21)).frame(height: 0.5)
-                Button { resetDemo = true } label: {
+                Button(action: onReset) {
                     HStack {
-                        ZStack {
-                            Image("IslandResetTicket").resizable().scaledToFit().frame(width: 53.677, height: 32)
-                            Image("IslandResetMark").resizable().scaledToFit().frame(width: 12.1, height: 12.1)
-                        }.frame(width: 53.677, height: 32).accessibilityHidden(true)
+                        IslandResetTicket(playbackEnabled: playbackEnabled).opacity(hidesTicket ? 0 : 1)
+                            .anchorPreference(key: IslandResetTicketAnchors.self, value: .bounds) { [.usage: $0] }
+                            .accessibilityHidden(true)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 7) {
                             Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
                             Text(snapshot?.availableResetCredits.map { text("\($0)次", "\($0) left") } ?? "—")
                         }.font(.system(size: 10))
                     }.contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityHint(text("仅展示重置演示", "Preview only"))
+                }.buttonStyle(IslandResetTicketButtonStyle(active: !hidesTicket))
+                    .accessibilityLabel(copy.text("打开额度重置页面", "Open quota reset page"))
+                    .accessibilityHint(text("仅展示重置演示", "Preview only"))
             }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
     }

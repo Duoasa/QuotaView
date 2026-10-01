@@ -435,6 +435,28 @@ final class CodexFirstConnectionTests: XCTestCase {
         await store.stop()
     }
 
+    func testAgentCreatedChatDeliversThroughLocalDiscoveryToIsland() async throws {
+        let root = try fixtureRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("sessions/chat.jsonl")
+        let meta: [String: Any] = ["type": "session_meta", "payload": ["id": "chat", "source": "vscode", "thread_source": "agent_created_thread"]]
+        var data = try JSONSerialization.data(withJSONObject: meta); data.append(10); try data.write(to: file)
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(root.appendingPathComponent("state_5.sqlite").path, &db), SQLITE_OK)
+        let path = file.path.replacingOccurrences(of: "'", with: "''")
+        let sql = "CREATE TABLE threads(id TEXT,rollout_path TEXT,cwd TEXT,source TEXT,thread_source TEXT,archived INTEGER,updated_at_ms INTEGER); INSERT INTO threads VALUES('chat','\(path)',NULL,'vscode','agent_created_thread',0,1);"
+        XCTAssertEqual(sqlite3_exec(db, sql, nil, nil, nil), SQLITE_OK); sqlite3_close(db)
+        let store = makeStore(root: root, localEnabled: true); let island = IslandLiveStore()
+        store.admittedActivityDidReceive = { island.receiveLegacy($0) }
+        store.startNativeActivityNotifications()
+        try await waitUntil { store.localHealth == .ready }
+        try append(startRecord("turn", timestamp: timestamp()), to: file)
+        try await waitUntil { !island.tasks.isEmpty }
+        XCTAssertEqual(island.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks.count, 1)
+        XCTAssertEqual(store.lifecycle, .active)
+        await store.stop()
+    }
+
     func testMergedDirectoryDiscoveryDoesNotBypassDatabaseInternalTaskClassification() async throws {
         let root = try fixtureRoot()
         defer { try? FileManager.default.removeItem(at: root) }

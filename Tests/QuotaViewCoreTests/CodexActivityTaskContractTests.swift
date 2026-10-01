@@ -27,6 +27,9 @@ final class CodexActivityTaskContractTests: XCTestCase {
         XCTAssertEqual(CodexActivitySessionKind.classify(source: "{\"subagent\":\"fork\"}"), .internalTask)
         XCTAssertEqual(CodexActivitySessionKind.classify(source: "vscode", threadSource: "user"), .user)
         XCTAssertEqual(CodexActivitySessionKind.classify(source: "future-host"), .unknown)
+        XCTAssertEqual(CodexActivitySessionKind.classify(source: "vscode", threadSource: "agent_created_thread"), .user)
+        XCTAssertEqual(CodexActivitySessionKind.classify(source: ["subagent": ["other": "reviewer"]], threadSource: "agent_created_thread"), .internalTask)
+        XCTAssertEqual(CodexActivitySessionKind.classify(source: "{\"subagent\":\"fork\"}", threadSource: "agent_created_thread"), .internalTask)
     }
 
     func testUnscopedOrWeakerTerminalCannotCloseNativeTurn() {

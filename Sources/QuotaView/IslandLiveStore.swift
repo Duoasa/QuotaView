@@ -41,6 +41,36 @@ final class IslandLiveStore {
         let key: String
         var value: IslandConfirmation
     }
+    // QuotaView-only display suppression. This never archives a Codex thread,
+    // stops a turn, or resolves a request. Persist only existing one-way hashes.
+    private static let archivedTurnsKey = "island.archivedTurns"
+    private static let unknownTurn = "unknown-turn"
+    private let archiveDefaults: UserDefaults?
+    private var archivedTurns: [String: String]
+    init(archiveDefaults: UserDefaults? = nil) {
+        self.archiveDefaults = archiveDefaults
+        archivedTurns = archiveDefaults?.dictionary(forKey: Self.archivedTurnsKey) as? [String: String] ?? [:]
+    }
+    private func isArchived(_ task: TaskRecord) -> Bool {
+        guard let turn = archivedTurns[task.key] else { return false }
+        // A reconnect snapshot may precede the identified turn; keep it hidden
+        // until a different, positively identified turn starts.
+        return task.turnKey == nil || turn == Self.unknownTurn || task.turnKey == turn
+    }
+    private func saveArchives() { archiveDefaults?.set(archivedTurns, forKey: Self.archivedTurnsKey) }
+    func archiveFromIsland(_ id: Int) {
+        let visible = tasks.filter { !isArchived($0) }
+        guard let position = visible.firstIndex(where: { $0.id == id }) else { return }
+        let task = visible[position]
+        archivedTurns[task.key] = task.turnKey ?? Self.unknownTurn
+        saveArchives()
+        if selectedID == id {
+            let remaining = visible.filter { $0.id != id }
+            selectedID = remaining.isEmpty ? 0 : remaining[min(position, remaining.count - 1)].id
+        }
+        if preservedID == id { preservedID = nil }
+        onChange?()
+    }
     private(set) var tasks: [TaskRecord] = []
     private(set) var selectedID = 0
     private(set) var connection = CodexSharedAppServerConnectionState.discovering
@@ -176,6 +206,13 @@ final class IslandLiveStore {
     }
     private func startTurn(_ i: Int, key: String?, at date: Date) {
         if let key, priorTurnKeys[tasks[i].key]?.contains(key) == true { return }
+        if let key, let archived = archivedTurns[tasks[i].key], archived != key {
+            if archived == Self.unknownTurn && tasks[i].turnKey == nil && tasks[i].nativeState {
+                // The existing native snapshot has just acquired its turn ID.
+                archivedTurns[tasks[i].key] = key
+            } else { archivedTurns.removeValue(forKey: tasks[i].key) }
+            saveArchives()
+        }
         if tasks[i].turnKey == key && !tasks[i].terminal {
             if tasks[i].startedAt == nil { tasks[i].startedAt = date }
             return
@@ -461,7 +498,8 @@ final class IslandLiveStore {
         advanceProgress(at: now)
         var details: [Int: IslandTaskDetailData] = [:]; var metas: [Int: IslandSessionMetadata] = [:]
         let copy = CodexActivityCopy(language: english ? .english : .simplifiedChinese)
-        let items = tasks.map { task -> CodexMultitaskRenderTask in
+        let visibleTasks = tasks.filter { !isArchived($0) }
+        let items = visibleTasks.map { task -> CodexMultitaskRenderTask in
             let visual = task.status.visualState
             let duration = task.startedAt.map { max(0, Int((task.endedAt ?? now).timeIntervalSince($0))) }
             metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration)
@@ -486,8 +524,8 @@ final class IslandLiveStore {
                 accessibilityLabel: "\(title), \(status)")
             return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: !task.requests.isEmpty)
         }
-        return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !tasks.isEmpty && tasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
+        return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
             english: english, effect: .dropField, visible: enabled, playbackEnabled: true, totalTokens: nil, remainingPercent: remaining,
-            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected ? (english ? "Connected" : "已连接") : (tasks.isEmpty ? (english ? "Waiting for Codex" : "等待 Codex 任务") : (english ? "Local activity" : "本地活动数据")), privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(tasks.flatMap { $0.requests.map { $0.value.id } }))
+            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected ? (english ? "Connected" : "已连接") : (visibleTasks.isEmpty ? (english ? "Waiting for Codex" : "等待 Codex 任务") : (english ? "Local activity" : "本地活动数据")), privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
     }
 }

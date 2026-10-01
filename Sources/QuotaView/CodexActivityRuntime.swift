@@ -45,7 +45,7 @@ final class CodexActivityRuntime: ObservableObject {
     private var observationsEnabled = false
     private var accessibilityCancellable: AnyCancellable?
     private var quotaStatusCancellable: AnyCancellable?
-    private var currentQuotaPresentation: CurrentCodexPresentation?
+    private var islandUsage: IslandUsagePresentation = .loading
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
     private var securityReviewObservationTask: Task<Void, Never>?
@@ -141,20 +141,13 @@ final class CodexActivityRuntime: ObservableObject {
             liveIsland.board.state.onRefreshUsage = { [weak quotaStatusStore] in
                 await quotaStatusStore?.refresh()
             }
-            currentQuotaPresentation = quotaStatusStore.hasCurrentCodexStatus
-                ? quotaStatusStore.snapshot
-                : nil
-            quotaStatusCancellable = Publishers.CombineLatest(
-                quotaStatusStore.$snapshot,
-                quotaStatusStore.$errorMessage
-            )
-            .receive(on: RunLoop.main)
-            .sink { [weak self] snapshot, errorMessage in
-                self?.currentQuotaPresentation = errorMessage == nil
-                    ? snapshot
-                    : nil
-                self?.render()
-            }
+            islandUsage = quotaStatusStore.islandUsage
+            quotaStatusCancellable = quotaStatusStore.$islandUsage
+                .receive(on: RunLoop.main)
+                .sink { [weak self] usage in
+                    self?.islandUsage = usage
+                    self?.render()
+                }
         }
         preferenceCancellable = preferences.objectWillChange
             .receive(on: RunLoop.main)
@@ -901,10 +894,11 @@ final class CodexActivityRuntime: ObservableObject {
         for entry in store.multitask.entries {
             liveIsland.model.setTitle(store.title(for: entry.snapshot.sessionHash), for: entry.snapshot.sessionHash)
         }
+        let current = islandUsage.state.isCurrent ? islandUsage.snapshot : nil
         liveIsland.update(english: preferences.resolvedLanguage == .english,
-            remaining: currentQuotaPresentation?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
-            weeklyRemaining: currentQuotaPresentation?.weeklyRemainingPercent,
-            quotaResetsAt: currentQuotaPresentation?.resetsAt, usageSnapshot: currentQuotaPresentation)
+            remaining: current?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
+            weeklyRemaining: current?.weeklyRemainingPercent,
+            quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state)
     }
 
     private static func defaultSocketURL() -> URL {

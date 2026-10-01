@@ -6,7 +6,7 @@ public enum CodexActivitySessionKind: String, Codable, Sendable {
     case user, internalTask, unknown
 
     public static func classify(source: Any?, threadSource: String? = nil) -> Self {
-        if let threadSource, !threadSource.isEmpty, threadSource != "user" {
+        if let threadSource, !threadSource.isEmpty, !["user", "agent_created_thread"].contains(threadSource) {
             return .internalTask
         }
         if let object = source as? [String: Any] {
@@ -23,7 +23,7 @@ public enum CodexActivitySessionKind: String, Codable, Sendable {
                 return .user
             }
         }
-        return threadSource == "user" ? .user : .unknown
+        return ["user", "agent_created_thread"].contains(threadSource ?? "") ? .user : .unknown
     }
 
     /// Legacy hooks contain only a hash. Read local metadata without retaining IDs,
