@@ -53,9 +53,8 @@ struct IslandResetPage: View {
     let english: Bool
     let playbackEnabled: Bool
     let hidesTicket: Bool
-    let onRefresh: (() async -> Void)?
+    let utilities: IslandUtilityActions
     let onHeightChange: (CGFloat) -> Void
-    @State private var refreshing = false
     @State private var previewed = false
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private let secondary = Color(white: 0.68)
@@ -131,15 +130,7 @@ struct IslandResetPage: View {
                 Text(data.caption(previewed: previewed, copy: copy)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
-                Button {
-                    guard !refreshing else { return }
-                    refreshing = true
-                    Task { await onRefresh?(); refreshing = false }
-                } label: {
-                    Label(refreshing ? copy.text("刷新中", "Refreshing") : copy.text("刷新", "Refresh"), systemImage: "arrow.clockwise")
-                        .padding(.horizontal, 10).frame(height: 26)
-                        .background(Color(white: 0.10), in: Capsule())
-                }.buttonStyle(.plain).disabled(refreshing || onRefresh == nil)
+                utilities
             }.font(AstaSans.regular(10)).foregroundStyle(secondary)
         }.padding(.horizontal, 28).padding(.top, 10).padding(.bottom, 14)
             .fixedSize(horizontal: false, vertical: true)

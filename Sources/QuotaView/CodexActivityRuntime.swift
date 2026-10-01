@@ -876,9 +876,16 @@ final class CodexActivityRuntime: ObservableObject {
         .processIdentifier
     }
 
+    var onOpenSettings: (() -> Void)? {
+        get { liveIsland.board.state.onOpenSettings }
+        set { liveIsland.board.state.onOpenSettings = newValue }
+    }
+
     private func render() {
         guard isRunning else { return }
-        let enabled = preferences.codexActivityIslandEnabled
+        // The primary interface stays available for the application's lifetime.
+        // Retired menu-bar/standalone-island visibility preferences do not hide it.
+        let enabled = true
         if observationsEnabled != enabled {
             observationsEnabled = enabled
             let previous = observationTask

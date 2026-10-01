@@ -27,7 +27,7 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     let activityRuntime: CodexActivityRuntime
     let updateController: AppUpdateController
 
-    private var menuBarController: MenuBarPanelController?
+    private var settingsWindowController: QuotaViewSettingsWindowController?
     private var isPreparingTermination = false
 
     override init() {
@@ -52,14 +52,21 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     ) {
         AstaSansFontRegistrar.registerBundledFonts()
         // Local development build: updater is intentionally not started.
-        store.start()
-        activityRuntime.start()
-        menuBarController = MenuBarPanelController(
+        let settings = QuotaViewSettingsWindowController(
             store: store,
             preferences: preferences,
             activityRuntime: activityRuntime,
             updateController: updateController
         )
+        settingsWindowController = settings
+        activityRuntime.onOpenSettings = { [weak settings] in settings?.openSettings() }
+        store.start()
+        activityRuntime.start()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        settingsWindowController?.openSettings()
+        return true
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(
