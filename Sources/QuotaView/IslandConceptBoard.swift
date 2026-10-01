@@ -261,11 +261,49 @@ final class IslandBoardState: ObservableObject {
     var focusedTask: CodexMultitaskRenderTask? {
         tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
     }
+    var compactTaskText: String {
+        guard let task = focusedTask else { return summary }
+        let render = task.renderState
+        let copy = IslandOperationText(operation: render.operation,
+            statusTitle: render.statusTitle, completed: render.visualState == .completed)
+        let detail = copy.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = task.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let content = detail.isEmpty ? title : detail
+        let status = render.statusTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return [status, content == status ? "" : content].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
     func setGeometry(_ value: IslandNotchGeometry) { if geometry != value { geometry = value } }
     func preview() { guard compact else { return }; presentation = .preview; onChange?() }
-    func endPreview() { if presentation == .preview { collapse() } }
-    func pin() { presentation = .pinned; onChange?() }
-    func collapse() { showsUsage = false; presentation = .resting; detailID = nil; onChange?() }
+    private var automaticClose: DispatchWorkItem?
+    private(set) var automaticPreviewDeadline: Date?
+    private func cancelAutomaticPreview() {
+        automaticClose?.cancel(); automaticClose = nil; automaticPreviewDeadline = nil
+    }
+    private func showAutomaticPreview(at now: Date) {
+        guard presentation != .pinned else { return }
+        cancelAutomaticPreview()
+        presentation = .preview
+        automaticPreviewDeadline = now.addingTimeInterval(3)
+        let work = DispatchWorkItem { [weak self] in self?.finishAutomaticPreview(at: Date()) }
+        automaticClose = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+    }
+    func finishAutomaticPreview(at now: Date) {
+        guard let deadline = automaticPreviewDeadline, now >= deadline else { return }
+        cancelAutomaticPreview()
+        guard attentionCount == 0, presentation == .preview else { return }
+        collapse()
+    }
+    func endPreview() {
+        guard automaticPreviewDeadline == nil, attentionCount == 0 else { return }
+        if presentation == .preview { collapse() }
+    }
+    func pin() { cancelAutomaticPreview(); presentation = .pinned; onChange?() }
+    func collapse() {
+        guard attentionCount == 0 else { return }
+        cancelAutomaticPreview()
+        showsUsage = false; presentation = .resting; detailID = nil; onChange?()
+    }
     func dismissFromOutside() {
         guard presentation != .pinned else { return }
         collapse()
@@ -286,7 +324,9 @@ final class IslandBoardState: ObservableObject {
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
         return percent + " · " + countdown
     }
-    func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool) {
+    func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
+        let previous = display
+        let hadAttention = attentionCount > 0
         let wasCompact = display?.state.compact == true
         let previousApprovalID = approval?.task.id
         display = value
@@ -303,7 +343,26 @@ final class IslandBoardState: ObservableObject {
         if !wasCompact && value.state.compact && presentation != .pinned {
             presentation = .resting; detailID = nil
         }
-        if !value.visible { presentation = .resting; detailID = nil }
+        if !value.visible {
+            cancelAutomaticPreview(); presentation = .resting; detailID = nil
+        } else if attentionCount > 0 {
+            cancelAutomaticPreview()
+            if compact { presentation = .preview }
+        } else {
+            // Compare semantic task/turn transitions, not selection, progress or text.
+            // First sync (and wake) is a baseline so historical completions do not replay.
+            let event = previous?.visible == true && tasks.contains { task in
+                let old = previous?.state.tasks.first { $0.id == task.id }
+                if Self.isRunning(task) {
+                    return old == nil || old?.renderState.taskIdentity != task.renderState.taskIdentity
+                        || (old.map { !Self.isRunning($0) && !Self.needsAttention($0) } ?? false)
+                }
+                return task.renderState.visualState == .completed
+                    && old != nil && old?.renderState.visualState != .completed
+            }
+            if event { showAutomaticPreview(at: now) }
+            else if hadAttention && presentation != .pinned { collapse() }
+        }
         if attentionCount == 0 { attentionOnly = false }
         if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
         onChange?()
@@ -715,29 +774,53 @@ struct IslandBoardView: View {
                 .clipped()
         }.padding(.horizontal, 38).frame(height: state.headerHeight)
     }
+    private var compactOrb: some View {
+        IslandActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
+            playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.isRunning) == true)
+            .frame(width: 18, height: 18).frame(width: 30).accessibilityHidden(true)
+    }
+    private var compactStatistics: some View {
+        HStack(spacing: 8) {
+            Text(state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions"))
+                .foregroundStyle(IslandBoardStyle.muted)
+            attentionIndicators(showCounts: false)
+        }.font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
+            .frame(minWidth: 30, alignment: .trailing)
+    }
+    private var compactText: some View {
+        IslandScrollingText(text: state.compactTaskText,
+            font: .monospacedSystemFont(ofSize: 12, weight: .semibold),
+            visible: state.playback && state.compact, reduceMotion: state.reduceMotion)
+    }
     private var compact: some View {
         Button { state.preview() } label: {
-            HStack(spacing: 0) {
-                HStack(spacing: 10) {
-                    IslandActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
-                        playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.isRunning) == true)
-                        .frame(width: 18, height: 18).frame(width: 30).accessibilityHidden(true)
-                    IslandScrollingText(text: state.focusedTask?.renderState.operation ?? state.summary,
-                        font: .monospacedSystemFont(ofSize: 12, weight: .semibold),
-                        visible: state.playback && state.compact, reduceMotion: state.reduceMotion)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                }.frame(width: state.geometry.hasCamera ? state.compactSideWidth : nil)
-                    .frame(maxWidth: .infinity).frame(height: state.geometry.bandHeight).clipped()
-                Color.clear.frame(width: state.geometry.hasCamera
-                    ? state.geometry.cameraWidth + 16 : IslandVibeLayout.compactContentGap)
-                HStack(spacing: 8) {
-                    Text(state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions"))
-                        .foregroundStyle(IslandBoardStyle.muted)
-                    attentionIndicators(showCounts: false)
-                }.font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
-                    .frame(width: state.geometry.hasCamera ? state.compactSideWidth : nil, alignment: .trailing)
-                    .frame(maxWidth: state.geometry.hasCamera ? .infinity : nil, alignment: .trailing)
-                    .clipped()
+            Group {
+                if state.geometry.hasCamera {
+                    HStack(spacing: 0) {
+                        HStack(spacing: 10) {
+                            compactOrb
+                            compactText.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                        }.frame(width: state.compactSideWidth)
+                            .frame(maxWidth: .infinity).clipped()
+                        Color.clear.frame(width: state.geometry.cameraWidth + 16)
+                        compactStatistics.frame(width: state.compactSideWidth, alignment: .trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing).clipped()
+                    }
+                } else {
+                    // Equal side regions keep the text centered on the island,
+                    // even when the session count or attention indicators change.
+                    HStack(spacing: IslandVibeLayout.compactContentGap) {
+                        compactStatistics.hidden().accessibilityHidden(true)
+                            .overlay(alignment: .leading) { compactOrb }
+                        GeometryReader { proxy in
+                            compactText.frame(width: min(proxy.size.width,
+                                IslandScrollingTextHost.width(of: state.compactTaskText,
+                                    font: .monospacedSystemFont(ofSize: 12, weight: .semibold))))
+                                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
+                        }.frame(maxWidth: .infinity).clipped()
+                        compactStatistics
+                    }
+                }
             }.padding(.horizontal, 20).frame(height: state.geometry.bandHeight)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
@@ -1137,35 +1220,53 @@ private struct IslandUsageBento: View {
     }
     private var percent: Int? { quota?.remainingPercent ?? snapshot?.remainingPercent }
     private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
-    private func card<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: icon).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
-            content()
-        }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+    private func surface<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content().padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
             .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
+    }
+    private func heading(_ title: String) -> some View {
+        Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+    }
+    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        surface { VStack(alignment: .leading, spacing: 10) { heading(title); content() } }
+    }
+    private var quotaCountdown: String {
+        guard let date = quota?.resetsAt ?? snapshot?.resetsAt else { return "—" }
+        let hours = max(0, Int(ceil(date.timeIntervalSinceNow / 3600)))
+        let days = hours / 24, remainder = hours % 24
+        if days > 0 {
+            return text("\(days)天\(remainder)小时后重置", "Resets in \(days)d \(remainder)h")
+        }
+        return text("\(hours)小时后重置", "Resets in \(hours)h")
     }
     var body: some View {
         Group {
             VStack(spacing: 10) {
                 if privacy || snapshot == nil {
-                    card(text("用量数据", "Usage data"), icon: "chart.bar.xaxis") {
+                    card(text("用量数据", "Usage data")) {
                         Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : text("暂时无法获取用量数据", "Usage data is unavailable"))
                             .font(.system(size: 14, weight: .medium))
                         Text(text("不会把缺失数据显示为零。", "Missing data is not shown as zero.")).font(.system(size: 11)).foregroundStyle(secondary)
                     }
                 } else {
                     HStack(alignment: .top, spacing: 10) {
-                        quotaCard.frame(maxWidth: .infinity)
-                        accountCard.frame(width: 206)
-                    }
-                    HStack(spacing: 10) {
-                        metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens), icon: "sun.max")
-                        metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens), icon: "calendar")
-                        metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens), icon: "sum")
-                    }
-                    costCard
-                    activityCard
+                        VStack(spacing: 10) {
+                            quotaCard
+                            HStack(spacing: 10) {
+                                metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens))
+                                metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens))
+                                metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens))
+                            }
+                        }.frame(maxWidth: .infinity)
+
+                        // Match the left stack naturally without a second height-measurement loop.
+                        Color.clear.frame(width: 204).overlay { accountCard }
+                    }.fixedSize(horizontal: false, vertical: true)
+                    // Elevate at the sibling-card boundary: a chart-local zIndex cannot
+                    // place its tooltip above a different card's surface.
+                    costCard.zIndex(hoveredCost == nil ? 0 : 1)
+                    activityCard.zIndex(hoveredActivity == nil ? 0 : 1)
                 }
                 HStack {
                     if let date = snapshot?.lastUpdatedAt {
@@ -1193,63 +1294,115 @@ private struct IslandUsageBento: View {
         }
     }
     private var quotaCard: some View {
-        card(quota?.windowDurationMinutes == 10080 ? text("周额度剩余", "Weekly remaining") : text("额度剩余", "Quota remaining"), icon: "gauge.with.dots.needle.50percent") {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle().stroke(Color(white: 0.17), lineWidth: 6)
-                    Circle().trim(from: 0, to: CGFloat(min(100, max(0, percent ?? 0))) / 100)
-                        .stroke(Color(nsColor: CodexActivityQuotaRingContract.color(for: percent)), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }.frame(width: 48, height: 48).padding(3).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(percent.map { "\($0)%" } ?? "—").font(.system(size: 30, weight: .semibold)).monospacedDigit()
-                    Text(MenuBarQuotaImage.countdown(until: quota?.resetsAt ?? snapshot?.resetsAt, now: Date(), copy: AppCopy(language: english ? .english : .simplifiedChinese)) + text("后重置", " until reset"))
-                        .font(.system(size: 10)).foregroundStyle(secondary)
+        surface {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    heading(text("额度剩余", "Quota remaining"))
+                    Spacer(minLength: 4)
+                    Text(quotaCountdown).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
                 }
-                Spacer(minLength: 0)
-            }.frame(height: 60)
+                VStack(spacing: 9) {
+                    HStack(alignment: .lastTextBaseline) {
+                        Text(percent.map { "\($0)%" } ?? "—").font(AstaSans.semiBold(21)).tracking(-0.21)
+                        Spacer()
+                        Text(percent.map { text("已使用 \(100 - min(100, max(0, $0)))%", "\(100 - min(100, max(0, $0)))% Used") } ?? "—")
+                            .font(AstaSans.regular(10.5))
+                    }
+                    GeometryReader { proxy in
+                        let fraction = CGFloat(min(100, max(0, percent ?? 0))) / 100
+                        HStack(spacing: fraction > 0 && fraction < 1 ? 1 : 0) {
+                            if fraction > 0 {
+                                RoundedRectangle(cornerRadius: 2).fill(Color(nsColor: CodexActivityQuotaRingContract.color(for: percent)))
+                                    .frame(width: max(0, proxy.size.width * fraction - (fraction < 1 ? 0.5 : 0)))
+                            }
+                            if fraction < 1 { RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.32)) }
+                        }.clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(Color(white: 0.22), lineWidth: 0.5) }
+                    }.frame(height: 8).accessibilityHidden(true)
+                }
+            }
         }
     }
     private var accountCard: some View {
-        card(text("账户", "Account"), icon: "person.crop.circle") {
-            HStack {
-                Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—").font(.system(size: 16, weight: .semibold))
-                Spacer()
-                Text(text("积分 ", "Credits ") + (snapshot?.creditBalance ?? "—")).font(.system(size: 10)).foregroundStyle(secondary)
-            }
-            Button { resetDemo = true } label: {
+        surface {
+            VStack(alignment: .leading, spacing: 10) {
+                heading(text("账户", "Account"))
+                Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer(minLength: 10)
                 HStack {
-                    Image(systemName: "arrow.counterclockwise")
-                    Text(text("重置演示", "Reset preview"))
-                    Spacer(minLength: 0)
-                    Text(snapshot?.availableResetCredits.map { text("\($0)次", "\($0) left") } ?? "—")
-                }.font(.system(size: 10, weight: .medium)).padding(.horizontal, 10).frame(height: 28)
-                    .background(Color(white: 0.13), in: RoundedRectangle(cornerRadius: 7))
-            }.buttonStyle(.plain)
+                    Text(text("积分余额", "Credit balance")).foregroundStyle(secondary)
+                    Spacer()
+                    Text(snapshot?.creditBalance ?? "—")
+                }.font(.system(size: 10))
+                Rectangle().fill(Color(white: 0.21)).frame(height: 0.5)
+                Button { resetDemo = true } label: {
+                    HStack {
+                        ZStack {
+                            Image("IslandResetTicket").resizable().scaledToFit().frame(width: 53.677, height: 32)
+                            Image("IslandResetMark").resizable().scaledToFit().frame(width: 12.1, height: 12.1)
+                        }.frame(width: 53.677, height: 32).accessibilityHidden(true)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 7) {
+                            Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
+                            Text(snapshot?.availableResetCredits.map { text("\($0)次", "\($0) left") } ?? "—")
+                        }.font(.system(size: 10))
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityHint(text("仅展示重置演示", "Preview only"))
+            }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
     }
-    private func metric(_ title: String, value: String, icon: String) -> some View {
-        card(title, icon: icon) {
-            Text(value).font(.system(size: 22, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
-        }
-    }
-    private var costCard: some View {
-        card(text("成本估算 · 30天", "Cost estimate · 30 days"), icon: "chart.bar") {
-            HStack(alignment: .firstTextBaseline) {
-                Text(money(chart.periodCost)).font(.system(size: 24, weight: .semibold)).monospacedDigit()
-                Spacer()
-                Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
-                    .font(.system(size: 10)).foregroundStyle(secondary)
-                Text(money(selectedCost != nil ? selectedCost?.estimatedCost : chart.latestCost)).font(.system(size: 12, weight: .medium)).monospacedDigit()
+    private func metric(_ title: String, value: String) -> some View {
+        surface {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).lineLimit(1).minimumScaleFactor(0.8)
+                Text(value).font(AstaSans.semiBold(21)).tracking(-0.21).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
             }
+        }
+    }
+    private var chartCellWidth: CGFloat { IslandActivityHeatmap.cellSize(width: contentWidth - 28) }
+    private var costPlotWidth: CGFloat {
+        CGFloat(chart.days.count) * chartCellWidth + CGFloat(max(0, chart.days.count - 1)) * IslandActivityHeatmap.gap
+    }
+    private var costSummaryWidth: CGFloat { max(1, (contentWidth - 28 - costPlotWidth - 28) / 2) }
+    private var costCard: some View {
+        surface {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
+                    heading(text("成本估算", "Cost estimate"))
+                    Text(money(chart.periodCost)).font(AstaSans.semiBold(21)).tracking(-0.21)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(text("最近30天", "Last 30 days")).font(.system(size: 10)).foregroundStyle(secondary)
+                }.frame(width: costSummaryWidth, alignment: .leading)
+                Color.clear.frame(width: costPlotWidth).overlay { costChart.padding(.top, 14) }.zIndex(10)
+                VStack(alignment: .trailing, spacing: 10) {
+                    Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
+                        .font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                    Text(money(selectedCost != nil ? selectedCost?.estimatedCost : chart.latestCost))
+                        .font(AstaSans.semiBold(21)).tracking(-0.21).monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(text("估算值 · 非账单", "Estimate · not a bill"))
+                        .font(.system(size: 10)).foregroundStyle(secondary).lineLimit(1).minimumScaleFactor(0.8)
+                }.frame(width: costSummaryWidth, alignment: .trailing)
+            }.fixedSize(horizontal: false, vertical: true)
+        }
+    }
+    private var costChart: some View {
             GeometryReader { proxy in
-            HStack(alignment: .bottom, spacing: 4) {
+            HStack(alignment: .bottom, spacing: IslandActivityHeatmap.gap) {
                 ForEach(chart.days) { day in
                     Button { selectedDay = selectedDay == day.date ? nil : day.date } label: {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(white: selectedDay == day.date || hoveredCost == day.date ? 0.95 : (day.tokens == nil ? 0.16 : 0.47)))
-                            .frame(height: max(3, 52 * (day.estimatedCost ?? 0) / max(0.001, chart.maximumCost)))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom).contentShape(Rectangle())
+                        RoundedRectangle(cornerRadius: min(2, chartCellWidth / 4))
+                            .fill(selectedDay == day.date || hoveredCost == day.date
+                                ? Color.white
+                                : costBarColor(day.estimatedCost))
+                            .overlay {
+                                if selectedDay == day.date || hoveredCost == day.date {
+                                    RoundedRectangle(cornerRadius: min(2, chartCellWidth / 4)).strokeBorder(.white, lineWidth: 1)
+                                }
+                            }
+                            .frame(width: chartCellWidth, height: max(3, proxy.size.height * (day.estimatedCost ?? 0) / max(0.001, chart.maximumCost)))
+                            .frame(height: proxy.size.height, alignment: .bottom).contentShape(Rectangle())
                     }.buttonStyle(.plain).onHover { inside in
                         if inside { hoveredCost = day.date }
                         else if hoveredCost == day.date { hoveredCost = nil }
@@ -1267,22 +1420,18 @@ private struct IslandUsageBento: View {
                         .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
                         .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
                         .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
-                        .offset(x: min(max(0, (CGFloat(index) + 0.5) * proxy.size.width / CGFloat(chart.days.count) - 107), max(0, proxy.size.width - 214)), y: -78)
+                        .offset(x: min(max(0, CGFloat(index) * (chartCellWidth + IslandActivityHeatmap.gap) + chartCellWidth / 2 - 107), max(0, proxy.size.width - 214)), y: -78)
                         .allowsHitTesting(false)
                 }
             }.zIndex(10)
-            }.frame(height: 56)
-            HStack {
-                Text(text("估算值 · 非账单", "Estimate · not a bill"))
-                Spacer()
-                Text(text("悬停查看每日用量与估算", "Hover for daily usage and estimate"))
-            }.font(.system(size: 9)).foregroundStyle(secondary)
-        }
+            }
     }
     private var activityCard: some View {
-        let grid = IslandActivityHeatmap(activity: snapshot?.tokenActivity ?? [], endingAt: Date(), mode: activityMode)
-        return card(text("Token 活动", "Token activity"), icon: "square.grid.3x3") {
+        let grid = IslandActivityHeatmap(activity: snapshot?.tokenActivity ?? [], endingAt: Date(), mode: activityMode, lifetimeTokens: snapshot?.lifetimeTokens)
+        return surface {
+            VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 4) {
+                heading(text("Token 活动", "Token activity"))
                 if let cell = grid.cells.first(where: { $0.date == selectedActivity }) {
                     Text(cell.date.formatted(.dateTime.month().day()) + " · " + tokens(cell.tokens))
                         .font(.system(size: 10)).foregroundStyle(secondary).lineLimit(1)
@@ -1291,8 +1440,7 @@ private struct IslandUsageBento: View {
                 ForEach(IslandActivityHeatmap.Mode.allCases, id: \.self) { mode in
                     Button { activityMode = mode; selectedActivity = nil; hoveredActivity = nil } label: {
                         Text(activityLabel(mode)).font(.system(size: 10, weight: .medium))
-                            .padding(.horizontal, 8).frame(height: 23)
-                            .background(activityMode == mode ? Color(white: 0.16) : .clear, in: Capsule())
+                            .padding(.horizontal, 8)
                             .foregroundStyle(activityMode == mode ? .white : secondary)
                     }.buttonStyle(.plain)
                 }
@@ -1306,15 +1454,15 @@ private struct IslandUsageBento: View {
                         ForEach(0..<53, id: \.self) { column in
                             VStack(spacing: gap) {
                                 ForEach(0..<grid.rows, id: \.self) { row in
-                                    let cell = grid.cells[column * grid.rows + row]
+                                    let index = grid.cellIndex(column: column, row: row)
+                                    let cell = grid.cells[index]
                                     Button { selectedActivity = cell.date } label: {
                                         RoundedRectangle(cornerRadius: min(2, size / 4))
-                                            .fill(heatColor(cell.tokens, maximum: grid.maximum))
-                                            .frame(width: size, height: grid.rows == 1 ? size * 7 + gap * 6 : size)
-                                            .overlay { if cell.date == selectedActivity || hoveredActivity == column * grid.rows + row { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
+                                            .fill(activityMode == .daily ? heatColor(cell.tokens, maximum: grid.maximum) : (grid.isFilled(column: column, row: row) ? (hoveredActivity == index || cell.date == selectedActivity ? Color(red: 0.39, green: 0.71, blue: 1) : Color(red: 0.02, green: 0.53, blue: 0.92)) : Color(white: 0.13)))
+                                            .frame(width: size, height: size)
+                                            .overlay { if activityMode == .daily && (cell.date == selectedActivity || hoveredActivity == index) { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
                                     }.buttonStyle(.plain).disabled(cell.future)
                                         .onHover { inside in
-                                            let index = column * grid.rows + row
                                             if inside && !cell.future { hoveredActivity = index }
                                             else if hoveredActivity == index { hoveredActivity = nil }
                                         }
@@ -1335,8 +1483,8 @@ private struct IslandUsageBento: View {
                 .overlay(alignment: .topLeading) {
                     if let index = hoveredActivity, grid.cells.indices.contains(index) {
                         let cell = grid.cells[index]
-                        let column = index / grid.rows
-                        let row = index % grid.rows
+                        let column = activityMode == .daily ? index / 7 : index
+                        let row = activityMode == .daily ? index % 7 : 0
                         VStack(alignment: .leading, spacing: 3) {
                             Text(activityDate(cell.date))
                             Text(activityTokens(cell.tokens))
@@ -1352,6 +1500,7 @@ private struct IslandUsageBento: View {
                     }
                 }.zIndex(10)
             }.frame(height: IslandActivityHeatmap.chartHeight(width: contentWidth - 28))
+            }
         }
     }
     private func activityDate(_ date: Date) -> String {
@@ -1360,7 +1509,11 @@ private struct IslandUsageBento: View {
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = english ? "MMM d, yyyy" : "yyyy年M月d日"
         let label = formatter.string(from: date)
-        return activityMode == .weekly ? label + text(" 起的一周", " · week starting") : label
+        switch activityMode {
+        case .daily: return label
+        case .weekly: return label + text(" 起的一周", " · week starting")
+        case .cumulative: return text("累计至 ", "Total through ") + label + text(" 起的一周", " · week starting")
+        }
     }
     private func activityTokens(_ value: Int64?) -> String {
         guard let value else { return text("暂无数据", "No data") }
@@ -1368,7 +1521,12 @@ private struct IslandUsageBento: View {
         if !english && value >= 100_000_000 { label = String(format: "%.1f亿", Double(value) / 100_000_000) }
         else if !english && value >= 10_000 { label = String(format: "%.1f万", Double(value) / 10_000) }
         else { label = value.formatted() }
-        return label + text(" 个 Token", " tokens") + (activityMode == .cumulative ? text(" · 期间累计", " · period total") : "")
+        return label + text(" 个 Token", " tokens")
+    }
+    private func costBarColor(_ value: Double?) -> Color {
+        guard let value, value > 0 else { return Color(white: 0.18) }
+        let level = value / max(0.001, chart.maximumCost)
+        return Color(white: level < 0.25 ? 0.35 : level < 0.5 ? 0.48 : level < 0.75 ? 0.62 : 0.76)
     }
     private func heatColor(_ value: Int64?, maximum: Int64) -> Color {
         guard let value, value > 0 else { return Color(white: 0.18) }
@@ -1397,8 +1555,16 @@ struct IslandActivityHeatmap {
     let cells: [Cell]
     let months: [Month]
     let maximum: Int64
-    let rows: Int
-    init(activity: [DailyTokenActivity], endingAt: Date, mode: Mode) {
+    let rows = 7
+    let mode: Mode
+    func cellIndex(column: Int, row: Int) -> Int { mode == .daily ? column * 7 + row : column }
+    func isFilled(column: Int, row: Int) -> Bool {
+        guard let value = cells[cellIndex(column: column, row: row)].tokens, value > 0, maximum > 0 else { return false }
+        let count = max(1, min(7, Int(ceil(Double(value) / Double(maximum) * 7))))
+        return row >= 7 - count
+    }
+    init(activity: [DailyTokenActivity], endingAt: Date, mode: Mode, lifetimeTokens: Int64? = nil) {
+        self.mode = mode
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let today = calendar.startOfDay(for: endingAt)
@@ -1406,28 +1572,35 @@ struct IslandActivityHeatmap {
         let start = calendar.date(byAdding: .day, value: -52 * 7, to: weekStart)!
         var values: [Date: Int64] = [:]
         for item in activity where item.tokens >= 0 { values[calendar.startOfDay(for: item.date)] = item.tokens }
+        func sum(_ values: [Int64]) -> Int64 {
+            values.reduce(0) { result, value in
+                let added = result.addingReportingOverflow(value)
+                return added.overflow ? Int64.max : added.partialValue
+            }
+        }
         var daily: [Cell] = []
-        var running: Int64 = 0
-        var hasData = false
         for index in 0..<371 {
             let date = calendar.date(byAdding: .day, value: index, to: start)!
-            if let value = values[date] {
-                let sum = running.addingReportingOverflow(value)
-                running = sum.overflow ? Int64.max : sum.partialValue; hasData = true
-            }
-            daily.append(.init(date: date, tokens: date > today ? nil : (mode == .cumulative ? (hasData ? running : nil) : values[date]), future: date > today))
+            daily.append(.init(date: date, tokens: date > today ? nil : values[date], future: date > today))
         }
-        rows = mode == .weekly ? 1 : 7
-        if mode == .weekly {
+        if mode == .daily { cells = daily }
+        else {
+            // Carry pre-window usage into the cumulative series; never add daily cumulative values together.
+            let windowTotal = sum(daily.compactMap(\.tokens))
+            let earlier = values.filter { $0.key < start }.map(\.value)
+            var running = lifetimeTokens.map { max(0, $0 - windowTotal) } ?? sum(earlier)
+            var hasData = running > 0 || !earlier.isEmpty
             cells = (0..<53).map { column in
                 let week = Array(daily[(column * 7)..<(column * 7 + 7)])
                 let known = week.compactMap(\.tokens)
-                let total = known.reduce(Int64(0)) { result, value in
-                    let sum = result.addingReportingOverflow(value); return sum.overflow ? Int64.max : sum.partialValue
-                }
-                return .init(date: week[0].date, tokens: known.isEmpty ? nil : total, future: false)
+                let total = sum(known)
+                if !known.isEmpty { hasData = true }
+                running = sum([running, total])
+                return .init(date: week[0].date,
+                    tokens: mode == .weekly ? (known.isEmpty ? nil : total) : (hasData ? running : nil),
+                    future: false)
             }
-        } else { cells = daily }
+        }
         maximum = cells.compactMap(\.tokens).max() ?? 0
         var labels: [Month] = []
         for column in 0..<53 {

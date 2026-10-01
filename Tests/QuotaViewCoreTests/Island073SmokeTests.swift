@@ -6,6 +6,61 @@ import XCTest
 @testable import QuotaViewCore
 
 final class Island073SmokeTests: XCTestCase {
+    @MainActor
+    func testCompactTextAlwaysIncludesStatusAndFallbackTask() {
+        let model = IslandLiveStore(); start(model, "compact", "one", at: Date())
+        let board = IslandBoardState()
+        var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
+        for state in CodexActivityVisualState.allCases {
+            display.state.tasks = [.init(id: 1, renderState: .init(visualState: state,
+                approximateProgressFraction: nil, windowTitle: "测试任务", statusTitle: "状态", operation: "",
+                accessibilityLabel: "测试任务"))]
+            display.state.selectedID = 1
+            board.update(display, reduceMotion: true)
+            XCTAssertEqual(board.compactTaskText, "状态 · 测试任务")
+            display.state.tasks = [.init(id: 1, renderState: .init(visualState: state,
+                approximateProgressFraction: nil, windowTitle: "Test task", statusTitle: "Status", operation: "Status · Public update",
+                accessibilityLabel: "Test task"))]
+            board.update(display, reduceMotion: true)
+            XCTAssertEqual(board.compactTaskText, "Status · Public update")
+        }
+        display.state.tasks = []; board.update(display, reduceMotion: true)
+        XCTAssertFalse(board.compactTaskText.isEmpty)
+    }
+    @MainActor
+    func testAutomaticTaskPreviewAndPendingConfirmationLifetime() {
+        let model = IslandLiveStore(); let board = IslandBoardState(); let date = Date()
+        func update(_ time: Date = date, enabled: Bool = true) {
+            board.update(model.display(english: false, remaining: nil, enabled: enabled, privacy: false), reduceMotion: true, now: time)
+        }
+        update()
+        start(model, "auto", "one", at: date); update()
+        XCTAssertFalse(board.compact)
+        XCTAssertEqual(board.automaticPreviewDeadline, date.addingTimeInterval(3))
+        board.endPreview(); XCTAssertFalse(board.compact)
+        update(date.addingTimeInterval(1))
+        XCTAssertEqual(board.automaticPreviewDeadline, date.addingTimeInterval(3))
+        board.finishAutomaticPreview(at: date.addingTimeInterval(2.9)); XCTAssertFalse(board.compact)
+        board.finishAutomaticPreview(at: date.addingTimeInterval(3)); XCTAssertTrue(board.compact)
+        model.receive(json("item/commandExecution/requestApproval", ["threadId": "auto", "turnId": "one", "command": "swift build"], id: 1))
+        update(); XCTAssertFalse(board.compact); XCTAssertNil(board.automaticPreviewDeadline)
+        board.endPreview(); board.dismissFromOutside(); board.collapse()
+        XCTAssertFalse(board.compact)
+        model.receive(json("serverRequest/resolved", ["threadId": "auto", "requestId": 1]))
+        update(); XCTAssertTrue(board.compact)
+        model.receive(json("turn/completed", ["threadId": "auto", "turn": ["id": "one", "status": "completed"]]))
+        update(); XCTAssertFalse(board.compact)
+        board.finishAutomaticPreview(at: date.addingTimeInterval(3)); XCTAssertTrue(board.compact)
+        update(); XCTAssertTrue(board.compact, "Repeated completion snapshots must not replay")
+        let baseline = IslandBoardState()
+        baseline.update(model.display(english: false, remaining: nil, enabled: true, privacy: false), reduceMotion: true)
+        XCTAssertTrue(baseline.compact)
+        board.pin(); start(model, "auto", "two", at: date.addingTimeInterval(4)); update()
+        XCTAssertEqual(board.presentation, .pinned); XCTAssertNil(board.automaticPreviewDeadline)
+        board.finishAutomaticPreview(at: date.addingTimeInterval(10)); board.dismissFromOutside()
+        XCTAssertEqual(board.presentation, .pinned)
+        update(enabled: false); XCTAssertTrue(board.compact); XCTAssertNil(board.automaticPreviewDeadline)
+    }
     func testActivityHeatmapFitsWidthAndPreservesTotals() {
         let date = Date(timeIntervalSince1970: 1790812800)
         let activity = [DailyTokenActivity(date: date, tokens: 123)]
@@ -18,6 +73,24 @@ final class Island073SmokeTests: XCTestCase {
         for width: CGFloat in [400, 596, 720] {
             XCTAssertEqual(IslandActivityHeatmap.cellSize(width: width) * 53 + IslandActivityHeatmap.gap * 52, width, accuracy: 0.001)
         }
+    }
+    func testWeeklyAndCumulativeUseSevenStackedCells() {
+        let day = Date(timeIntervalSince1970: 1790812800)
+        let previousWeek = day.addingTimeInterval(-7 * 86400)
+        let activity = [DailyTokenActivity(date: previousWeek, tokens: 100), DailyTokenActivity(date: day, tokens: 600)]
+        let weekly = IslandActivityHeatmap(activity: activity, endingAt: day, mode: .weekly)
+        let cumulative = IslandActivityHeatmap(activity: activity, endingAt: day, mode: .cumulative, lifetimeTokens: 900)
+        XCTAssertEqual(weekly.rows, 7)
+        XCTAssertEqual(cumulative.cells.count, 53)
+        XCTAssertEqual(weekly.cells[51].tokens, 100)
+        XCTAssertEqual(weekly.cells[52].tokens, 600)
+        XCTAssertEqual((0..<7).filter { weekly.isFilled(column: 51, row: $0) }.count, 2)
+        XCTAssertFalse(weekly.isFilled(column: 51, row: 0))
+        XCTAssertTrue(weekly.isFilled(column: 51, row: 6))
+        XCTAssertEqual(cumulative.cells[51].tokens, 300)
+        XCTAssertEqual(cumulative.cells[52].tokens, 900)
+        XCTAssertTrue((0..<7).allSatisfy { cumulative.isFilled(column: 52, row: $0) })
+        XCTAssertEqual(weekly.cellIndex(column: 51, row: 0), weekly.cellIndex(column: 51, row: 6))
     }
     @MainActor
     func testUsagePagePreservesPinAndAdaptsToContentHeight() {
