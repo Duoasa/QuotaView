@@ -147,6 +147,14 @@ final class IslandBoardState: ObservableObject {
     var onArchive: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
     var onRefreshUsage: (() async -> Void)?
+    var onOpenSettings: (() -> Void)?
+    @Published private(set) var isRefreshingUsage = false
+    func refreshUsage() async {
+        guard !isRefreshingUsage, let onRefreshUsage else { return }
+        isRefreshingUsage = true
+        defer { isRefreshingUsage = false }
+        await onRefreshUsage()
+    }
     @Published private(set) var showsUsage = false
     @Published private(set) var usageHeight: CGFloat = 500
     @Published private(set) var showsReset = false
@@ -788,6 +796,7 @@ struct IslandBoardView: View {
                             Text(footerStatus).lineLimit(1).truncationMode(.tail)
                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
                                 .accessibilityHint(footerStatus)
+                            IslandUtilityActions(state: state)
                         }.font(.system(size: 10, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
                             .padding(.horizontal, 38).frame(height: IslandVibeLayout.footerHeight)
                     }
@@ -819,7 +828,7 @@ struct IslandBoardView: View {
                 privacy: state.display?.privacyMode == true,
                 playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
-                onRefresh: state.onRefreshUsage, onHeightChange: state.updateUsageHeight)
+                utilities: IslandUtilityActions(state: state), onHeightChange: state.updateUsageHeight)
                 .frame(width: state.expandedWidth, height: state.usageHeight, alignment: .top)
                 .opacity(state.showsReset ? 0 : 1)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.22), value: state.showsReset)
@@ -827,7 +836,7 @@ struct IslandBoardView: View {
                 .accessibilityHidden(state.showsReset)
             IslandResetPage(data: .init(snapshot: state.display?.privacyMode == true ? nil : state.display?.usageSnapshot),
                 usageState: state.display?.usageState ?? .loading, english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
-                hidesTicket: state.resetTransitionInFlight, onRefresh: state.onRefreshUsage, onHeightChange: state.updateResetHeight)
+                hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), onHeightChange: state.updateResetHeight)
                 .frame(width: state.resetWidth, height: state.resetHeight, alignment: .top)
                 .opacity(state.showsReset ? 1 : 0)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.24), value: state.showsReset)
@@ -1442,6 +1451,49 @@ private struct IslandResetTicketSweep: NSViewRepresentable {
     static func dismantleNSView(_ view: IslandResetTicketSweepHost, coordinator: ()) { view.stop() }
 }
 
+// Shared footer actions avoid the camera safe area and retain one order on every page.
+struct IslandUtilityActions: View {
+    @ObservedObject var state: IslandBoardState
+    var body: some View {
+        HStack(spacing: 4) {
+            Button {
+                Task { await state.refreshUsage() }
+            } label: {
+                Group {
+                    if state.isRefreshingUsage { ProgressView().controlSize(.mini).tint(IslandBoardStyle.muted) }
+                    else { Image(systemName: "arrow.clockwise") }
+                }.frame(width: 28, height: 28).contentShape(Rectangle())
+            }
+            .disabled(state.isRefreshingUsage || state.onRefreshUsage == nil)
+            .accessibilityLabel(state.isRefreshingUsage ? state.text("刷新中", "Refreshing") : state.text("刷新用量", "Refresh usage"))
+            .help(state.text("刷新用量数据", "Refresh usage data"))
+            Button { state.onOpenSettings?() } label: {
+                Image(systemName: "gearshape").frame(width: 28, height: 28).contentShape(Rectangle())
+            }
+            .disabled(state.onOpenSettings == nil)
+            .accessibilityLabel(state.text("设置", "Settings"))
+            .help(state.text("打开 QuotaView 设置", "Open QuotaView settings"))
+        }
+        .font(.system(size: 12, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
+        .buttonStyle(IslandUtilityButtonStyle())
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
+private struct IslandUtilityButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(Color.white.opacity(isEnabled ? (configuration.isPressed ? 0.14 : (hovered ? 0.085 : 0)) : 0), in: Capsule())
+            .opacity(isEnabled ? 1 : 0.4)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+            .onHover { hovered = isEnabled && $0 }
+            .onChange(of: isEnabled) { _, enabled in if !enabled { hovered = false } }
+            .onDisappear { hovered = false }
+    }
+}
+
 private struct IslandResetTicketButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
@@ -1467,11 +1519,10 @@ private struct IslandUsageBento: View {
     let playbackEnabled: Bool
     let hidesTicket: Bool
     let onReset: () -> Void
-    let onRefresh: (() async -> Void)?
+    let utilities: IslandUtilityActions
     let onHeightChange: (CGFloat) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var resetHovered = false
-    @State private var refreshing = false
     @State private var selectedDay: Date?
     @State private var hoveredCost: Date?
     @State private var hoveredActivity: Int?
@@ -1563,14 +1614,7 @@ private struct IslandUsageBento: View {
                         Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
                     } else { Text(text("等待数据更新", "Waiting for data")) }
                     Spacer()
-                    Button {
-                        guard !refreshing else { return }; refreshing = true
-                        Task { await onRefresh?(); refreshing = false }
-                    } label: {
-                        Label(refreshing ? text("刷新中", "Refreshing") : text("刷新", "Refresh"), systemImage: "arrow.clockwise")
-                            .padding(.horizontal, 10).frame(height: 26)
-                            .background(Color(white: 0.10), in: Capsule())
-                    }.buttonStyle(.plain).disabled(refreshing || onRefresh == nil)
+                    utilities
                 }.font(.system(size: 10)).foregroundStyle(secondary).padding(.horizontal, 4)
             }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10).padding(.bottom, 14)
         }.fixedSize(horizontal: false, vertical: true)

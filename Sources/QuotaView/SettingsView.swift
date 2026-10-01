@@ -22,6 +22,35 @@ enum SettingsWindowMetrics {
     }
 }
 
+enum IslandSettingsPage: String, CaseIterable, Identifiable {
+    case general, island, codexConnection, proxy
+    var id: String { rawValue }
+    var symbol: String {
+        switch self {
+        case .general: "gearshape"
+        case .island: "macbook"
+        case .codexConnection: "point.3.connected.trianglepath.dotted"
+        case .proxy: "network"
+        }
+    }
+    func title(_ copy: AppCopy) -> String {
+        switch self {
+        case .general: copy.text("通用", "General")
+        case .island: copy.text("灵动岛", "Island")
+        case .codexConnection: copy.text("Codex 连接", "Codex connection")
+        case .proxy: copy.text("网络代理", "Network proxy")
+        }
+    }
+    func subtitle(_ copy: AppCopy) -> String {
+        switch self {
+        case .general: copy.text("语言、设置窗口外观、应用信息与退出。", "Language, settings appearance, app information and quitting.")
+        case .island: copy.text("管理隐私显示，了解当前任务与提醒行为。", "Manage privacy and review the current task and attention behavior.")
+        case .codexConnection: copy.text("查看本机 Codex 连接，管理数据目录与兼容 Hook。", "Review local Codex connectivity, data directories and compatibility Hooks.")
+        case .proxy: copy.text("为额度和账户用量查询设置代理。", "Set a proxy for quota and account usage requests.")
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var store: CodexStatusStore
     @ObservedObject var preferences: AppPreferences
@@ -29,105 +58,13 @@ struct SettingsView: View {
     @ObservedObject var updateController: AppUpdateController
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var selection: SettingsPage? = .menuBar
+    @State private var selection: IslandSettingsPage? = .general
     @State private var proxyDraft = ProxyConfiguration.default
     @State private var proxySaveFailure: ProxyConnectionFailure?
     @State private var codexActivityDetailsExpanded = false
     @State private var codexCompatibilityExpanded = false
-    @State private var hoveredProgressEffect:
-        AppPreferences.CodexActivityProgressEffect?
 
     private var copy: AppCopy { preferences.copy }
-
-    private enum SettingsPage: String, CaseIterable, Identifiable {
-        case menuBar
-        case popover
-        case codexActivity
-        case appearance
-        case language
-        case proxy
-        case general
-
-        var id: String { rawValue }
-
-        var symbol: String {
-            switch self {
-            case .menuBar: "menubar.rectangle"
-            case .popover: "rectangle.on.rectangle"
-            case .codexActivity: "waveform.path.ecg.rectangle"
-            case .appearance: "circle.lefthalf.filled"
-            case .language: "globe"
-            case .proxy: "network"
-            case .general: "gearshape"
-            }
-        }
-
-        var iconColor: Color {
-            switch self {
-            case .menuBar, .general: Color(nsColor: .systemGray)
-            case .popover, .language, .proxy: Color(nsColor: .systemBlue)
-            case .codexActivity: Color(nsColor: .systemPurple)
-            case .appearance: Color(white: 0.16)
-            }
-        }
-
-        func title(_ copy: AppCopy) -> String {
-            switch self {
-            case .menuBar:
-                copy.text("菜单栏", "Menu Bar")
-            case .popover:
-                copy.text("面板内容", "Popover")
-            case .codexActivity:
-                copy.text("Codex 灵动岛", "Codex Island")
-            case .appearance:
-                copy.text("外观", "Appearance")
-            case .language:
-                copy.text("语言", "Language")
-            case .proxy:
-                copy.text("代理设置", "Proxy")
-            case .general:
-                copy.text("通用", "General")
-            }
-        }
-
-        func subtitle(_ copy: AppCopy) -> String {
-            switch self {
-            case .menuBar:
-                copy.text(
-                    "选择菜单栏中持续显示的信息。",
-                    "Choose the information that remains visible in the menu bar."
-                )
-            case .popover:
-                copy.text(
-                    "管理 QuotaView 主面板中的数据和操作。",
-                    "Manage the data and actions shown in the QuotaView popover."
-                )
-            case .codexActivity:
-                copy.text(
-                    "配置 Codex 灵动岛的显示、动画、事件与连接。",
-                    "Configure Codex island visibility, animation, events, and connection."
-                )
-            case .appearance:
-                copy.text(
-                    "设置窗口外观和状态栏面板的玻璃质感。",
-                    "Set the window appearance and the menu panel's glass treatment."
-                )
-            case .language:
-                copy.text(
-                    "选择 QuotaView 界面使用的语言。",
-                    "Choose the language used throughout QuotaView."
-                )
-            case .proxy:
-                copy.text("为额度和账户用量查询设置代理。", "Set a proxy for quota and account usage requests.")
-            case .general:
-                copy.text(
-                    "查看应用信息和软件更新状态。",
-                    "View app information and software update status."
-                )
-            }
-        }
-    }
 
     var body: some View {
         ZStack {
@@ -141,7 +78,7 @@ struct SettingsView: View {
                     .padding(.trailing, SettingsWindowMetrics.sidebarInset)
                     .padding(.vertical, SettingsWindowMetrics.sidebarInset)
 
-                settingsDetail(for: selection ?? .menuBar)
+                settingsDetail(for: selection ?? .general)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -173,17 +110,11 @@ struct SettingsView: View {
     private var settingsSidebar: some View {
         VStack(spacing: 0) {
             List(selection: $selection) {
-                Section {
-                    ForEach(SettingsPage.allCases) { page in
-                        Label {
-                            Text(page.title(copy))
-                        } icon: {
-                            SettingsSidebarIcon(symbol: page.symbol, color: page.iconColor)
-                        }
-                        .font(.body.weight(.medium))
-                        .padding(.vertical, 4)
-                        .tag(page)
-                    }
+                Section(copy.text("应用", "App")) {
+                    settingsNavigation([.general, .island])
+                }
+                Section(copy.text("服务", "Services")) {
+                    settingsNavigation([.codexConnection, .proxy])
                 }
             }
             .listStyle(.sidebar)
@@ -200,28 +131,27 @@ struct SettingsView: View {
         }
     }
 
+    private func settingsNavigation(_ pages: [IslandSettingsPage]) -> some View {
+        ForEach(pages) { page in
+            Label { Text(page.title(copy)) } icon: {
+                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: .systemGray))
+            }
+            .font(.body.weight(.medium)).padding(.vertical, 4).tag(page)
+        }
+    }
+
     private func settingsDetail(
-        for page: SettingsPage
+        for page: IslandSettingsPage
     ) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 settingsHeader(for: page)
 
                 switch page {
-                case .menuBar:
-                    menuBarSettings
-                case .popover:
-                    popoverSettings
-                case .codexActivity:
-                    codexActivitySettings
-                case .appearance:
-                    appearanceSettings
-                case .language:
-                    languageSettings
-                case .proxy:
-                    proxySettings
-                case .general:
-                    generalSettings
+                case .general: generalSettings
+                case .island: islandSettings
+                case .codexConnection: codexConnectionSettings
+                case .proxy: proxySettings
                 }
             }
             .padding(.horizontal, 24)
@@ -233,7 +163,7 @@ struct SettingsView: View {
     }
 
     private func settingsHeader(
-        for page: SettingsPage
+        for page: IslandSettingsPage
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(page.title(copy))
@@ -355,199 +285,22 @@ struct SettingsView: View {
         }
     }
 
-    private var menuBarSettings: some View {
-        NativeSettingsCard {
-            NativeSettingsRow(
-                title: copy.text("菜单栏预览", "Menu bar preview"),
-                subtitle: copy.text(
-                    "预览会随下方选项即时更新。",
-                    "The preview updates immediately with the options below."
-                )
-            ) {
-                menuBarPreview
-            }
-
-            NativeSettingsDivider()
-
-            menuBarToggle(
-                component: .statusIcon,
-                title: copy.text("状态图标", "Status icon"),
-                subtitle: copy.text(
-                    "在菜单栏中显示 QuotaView 图标。",
-                    "Show the QuotaView icon in the menu bar."
-                )
-            )
-
-            NativeSettingsDivider()
-
-            menuBarToggle(
-                component: .remainingQuota,
-                title: copy.text(
-                    "用量快捷显示",
-                    "Quota at a glance"
-                ),
-                subtitle: copy.text(
-                    "双窗口显示双行横向条；单窗口使用紧凑的纯文字百分比。",
-                    "Show horizontal bars for two windows, or compact percentage text for one window."
-                )
-            )
-
-            NativeSettingsDivider()
-
-            menuBarToggle(
-                component: .resetCountdown,
-                title: copy.text(
-                    "下次重置倒计时",
-                    "Next reset countdown"
-                ),
-                subtitle: copy.text(
-                    "在各周期对应行显示距重置时间；悬停始终可查看。",
-                    "Show reset countdowns on their corresponding rows; always available on hover."
-                )
-            )
-
-            NativeSettingsDivider()
-
-            NativeSettingsNote(
-                text: copy.text(
-                    "至少保留一项，避免菜单栏入口不可见。",
-                    "At least one item stays visible so the menu bar entry cannot disappear."
-                )
-            )
-        }
-    }
-
-    private var popoverSettings: some View {
-        NativeSettingsCard {
-            preferenceToggle(
-                copy.text("周期用量概览", "Quota overview"),
-                subtitle: copy.text(
-                    "显示所有可用周期的已用量、剩余量和重置时间。",
-                    "Show usage, remaining quota, and reset time for all "
-                        + "available cycles."
-                ),
-                isOn: $preferences.showUsageSummary
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("Spark 周额度", "Spark weekly quota"),
-                subtitle: copy.text(
-                    "有可用数据时，在周期用量概览下方显示 Spark 周额度。",
-                    "When available, show the Spark weekly quota below the "
-                        + "quota overview."
-                ),
-                isOn: $preferences.showSparkQuota
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("成本估算图表", "Cost estimate chart"),
-                subtitle: copy.text(
-                    "按最近 30 天 Token 总量和 GPT-5.6 Sol 缓存输入价估算。",
-                    "Estimate the last 30 days from token totals and the "
-                        + "GPT-5.6 Sol cached-input rate."
-                ),
-                isOn: $preferences.showEstimatedCost
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("Credits 余额", "Credits balance"),
-                subtitle: copy.text(
-                    "显示账户可用的 Credits 余额。",
-                    "Show the available Credits balance for the account."
-                ),
-                isOn: $preferences.showCreditBalance
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("最近一天 Token", "Recent daily tokens"),
-                subtitle: copy.text(
-                    "显示最近一个统计日的 Token 用量。",
-                    "Show token usage for the most recent reporting day."
-                ),
-                isOn: $preferences.showDailyTokens
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("30 日 Token", "30-day tokens"),
-                subtitle: copy.text(
-                    "显示最近 30 个统计日的 Token 总用量。",
-                    "Show total token usage for the last 30 reporting days."
-                ),
-                isOn: $preferences.showThirtyDayTokens
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("累计 Token", "Lifetime tokens"),
-                subtitle: copy.text(
-                    "显示当前账户的累计 Token 用量。",
-                    "Show lifetime token usage for the current account."
-                ),
-                isOn: $preferences.showLifetimeTokens
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("Token 活动图表", "Token activity chart"),
-                subtitle: copy.text(
-                    "按日期显示 Token 活动，可切换周、月、三个月和半年。",
-                    "Show token activity by date for the week, month, "
-                        + "three months, or six months."
-                ),
-                isOn: $preferences.showTokenActivity
-            )
-
-            NativeSettingsDivider()
-
-            preferenceToggle(
-                copy.text("额度重置入口", "Quota reset entry"),
-                subtitle: copy.text(
-                    "当存在可用的重置时，在主面板中显示额度重置页面入口。",
-                    "When a reset credit is available, show the quota-reset "
-                        + "entry in the main panel."
-                ),
-                isOn: $preferences.showResetAction
-            )
-
-            NativeSettingsDivider()
-
-            NativeSettingsNote(
-                text: copy.text(
-                    "修改会立即反映在 QuotaView 状态栏面板中。",
-                    "Changes appear in the QuotaView menu bar panel immediately."
-                )
-            )
-        }
-    }
-
     private var appearanceSettings: some View {
         VStack(spacing: 16) {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text(
-                        "跟随系统外观",
+                        "设置窗口跟随系统外观",
                         "Follow system appearance"
                     ),
                     subtitle: copy.text(
-                        "自动使用 macOS 当前的浅色或深色外观。",
-                        "Automatically use the current macOS light or dark appearance."
+                        "设置窗口随 macOS 外观切换；灵动岛保持当前黑色界面。",
+                        "Settings follow macOS appearance; the island keeps its black surface."
                     )
                 ) {
                     Toggle(
                         copy.text(
-                            "跟随系统外观",
+                            "设置窗口跟随系统外观",
                             "Follow system appearance"
                         ),
                         isOn: $preferences.followsSystemAppearance
@@ -595,70 +348,31 @@ struct SettingsView: View {
                 NativeSettingsNote(text: appearanceSummary)
             }
 
+        }
+    }
+
+    private var islandSettings: some View {
+        VStack(alignment: .leading, spacing: 16) {
             NativeSettingsCard {
-                NativeSettingsRow(
-                    title: copy.text("玻璃质感", "Glass appearance"),
-                    subtitle: copy.text(
-                        "只影响菜单栏弹出面板。",
-                        "Applies only to the menu bar panel."
-                    )
-                ) {
-                    Picker(
-                        copy.text("玻璃质感", "Glass appearance"),
-                        selection: $preferences.glassMode
-                    ) {
-                        Text(copy.text("磨砂", "Frosted"))
-                            .tag(QuotaViewGlassMode.frosted)
-                        Text(copy.text("清透", "Clear"))
-                            .tag(QuotaViewGlassMode.clear)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .controlSize(.small)
-                }
-
+                preferenceToggle(copy.text("隐私显示", "Private display"),
+                    subtitle: copy.text("隐藏任务标题、正文和请求内容，统计页隐藏账户数据。", "Hide task titles, text and request contents, and conceal account data on the usage page."),
+                    isOn: $preferences.codexIslandPrivacy)
+            }
+            NativeSettingsCard {
+                NativeSettingsRow(title: copy.text("显示位置", "Display location"),
+                    subtitle: copy.text("常驻主屏幕顶部；无刘海屏幕使用居中的紧凑形态。", "Stays at the top of the primary display; uses a centered compact form on displays without a notch.")) {}
                 NativeSettingsDivider()
-
-                NativeSettingsNote(text: glassModeSummary)
+                NativeSettingsRow(title: copy.text("任务与提醒", "Tasks and attention"),
+                    subtitle: copy.text("任务启动与完成时展开 3 秒；待确认保持展开，固定后由你收起。卡片归档只清理灵动岛显示。", "Opens for 3 seconds when tasks start or finish. Pending requests keep it open; pinned pages stay open until collapsed. Archiving only clears the island display.")) {}
+                NativeSettingsDivider()
+                NativeSettingsRow(title: copy.text("动效", "Motion"),
+                    subtitle: copy.text("沿用量子噪点、AI 球与卡片动效；自动遵循 macOS 的减少动态效果。", "Uses the current quantum noise, orb and card effects; respects macOS Reduce Motion.")) {}
             }
         }
     }
 
-    private var codexActivitySettings: some View {
+    private var codexConnectionSettings: some View {
         VStack(spacing: 16) {
-            NativeSettingsCard {
-                NativeSettingsRow(
-                    title: copy.text(
-                        "显示灵动岛",
-                        "Show Codex Island"
-                    ),
-                    subtitle: copy.text(
-                        "关闭灵动岛后停止对应活动观察；额度显示独立运行。",
-                        "Disabling the island stops activity observation; quota display runs independently."
-                    )
-                ) {
-                    Toggle(
-                        copy.text("显示灵动岛", "Show Codex Island"),
-                        isOn: $preferences.codexActivityIslandEnabled
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                }
-
-            }
-
-            NativeSettingsCard {
-                NativeSettingsRow(title: copy.text("隐私显示", "Private display"), subtitle: copy.text(
-                    "隐藏任务标题、正文和请求内容，只显示状态、时长与用量。", "Hide titles, text and request contents; keep status, duration and usage.")) {
-                    Toggle(copy.text("隐私显示", "Private display"), isOn: $preferences.codexIslandPrivacy)
-                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
-                }
-                NativeSettingsDivider()
-                NativeSettingsNote(text: copy.text(
-                    "任务由你手动选择；新活动只追加和提醒。灵动岛固定在主屏幕，常驻到退出或关闭此功能。", "Select tasks manually; new activity appends and alerts. The island stays on the primary display until disabled or quit."))
-            }
-
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text("Codex 自动连接", "Automatic Codex Connection"),
@@ -899,93 +613,55 @@ struct SettingsView: View {
         }
     }
 
+    private func settingsSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            content()
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var generalSettings: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 42)
-
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .shadow(
-                    color: Color.black.opacity(0.18),
-                    radius: 10,
-                    x: 0,
-                    y: 5
-                )
-                .accessibilityLabel(
-                    copy.text("QuotaView 应用图标", "QuotaView app icon")
-                )
-
-            Text("QuotaView")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.primary)
-                .padding(.top, 18)
-
-            Text(
-                copy.text(
-                    "本地 Codex 用量监视器",
-                    "Local Codex quota monitor"
-                )
-            )
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .padding(.top, 4)
-
-            Text(versionAndBuildLabel)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 10)
-
-            Button {
-                updateController.checkForUpdates()
-            } label: {
-                Text(copy.text("检查更新…", "Check for Updates…"))
-                    .frame(minWidth: 112)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 18) {
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable().interpolation(.high).scaledToFit().frame(width: 96, height: 96)
+                    .accessibilityLabel(copy.text("QuotaView 应用图标", "QuotaView app icon"))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("QuotaView").font(.system(size: 24, weight: .semibold))
+                    Text(copy.text("Codex 任务与用量灵动岛", "Codex task and usage island")).font(.callout).foregroundStyle(.secondary)
+                    Text(versionAndBuildLabel).font(.caption).foregroundStyle(.tertiary)
+                }
+            }.padding(.vertical, 8)
+            settingsSection(copy.text("语言", "Language")) { languageSettings }
+            settingsSection(copy.text("设置窗口外观", "Settings appearance")) { appearanceSettings }
+            settingsSection(copy.text("软件更新", "Software updates")) {
+                NativeSettingsCard {
+                    if updateController.availability == .available {
+                        NativeSettingsRow(title: copy.text("检查更新", "Check for updates"), subtitle: updateStatusText) {
+                            Button(copy.text("检查更新…", "Check for Updates…")) { updateController.checkForUpdates() }
+                                .nativeSettingsActionStyle().disabled(!updateController.canCheckForUpdates).help(updateCheckHelpText)
+                        }
+                        NativeSettingsDivider()
+                        NativeSettingsRow(title: copy.text("自动检查更新", "Automatically check for updates")) {
+                            Toggle(copy.text("自动检查更新", "Automatically check for updates"), isOn: Binding(
+                                get: { updateController.automaticallyChecksForUpdates },
+                                set: { updateController.setAutomaticallyChecksForUpdates($0) }))
+                                .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                        }
+                    } else {
+                        NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText) {}
+                    }
+                }
             }
-            .nativeSettingsActionStyle()
-            .controlSize(.small)
-            .padding(.top, 22)
-            .disabled(!updateController.canCheckForUpdates)
-            .help(updateCheckHelpText)
-
-            Spacer(minLength: 32)
-
             NativeSettingsCard {
-                NativeSettingsRow(
-                    title: copy.text(
-                        "自动检查更新",
-                        "Automatically check for updates"
-                    ),
-                    subtitle: updateStatusText
-                ) {
-                    Toggle(
-                        copy.text(
-                            "自动检查更新",
-                            "Automatically check for updates"
-                        ),
-                        isOn: Binding(
-                            get: {
-                                updateController
-                                    .automaticallyChecksForUpdates
-                            },
-                            set: {
-                                updateController
-                                    .setAutomaticallyChecksForUpdates($0)
-                            }
-                        )
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .disabled(
-                        updateController.availability != .available
-                    )
+                NativeSettingsRow(title: copy.text("退出 QuotaView", "Quit QuotaView"),
+                    subtitle: copy.text("关闭灵动岛并停止本地观察，Codex 中的任务继续运行。", "Close the island and stop local observation. Tasks in Codex continue running.")) {
+                    Button(copy.text("退出软件", "Quit App"), role: .destructive) { NSApplication.shared.terminate(nil) }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .accessibilityLabel(copy.text("退出 QuotaView", "Quit QuotaView"))
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 430)
     }
 
     private var updateCheckHelpText: String {
@@ -1054,50 +730,6 @@ struct SettingsView: View {
         )
     }
 
-    private var menuBarPreview: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            MenuBarStatusLabel(store: store, preferences: preferences, now: context.date)
-        }
-        .font(.system(size: 14, weight: .regular))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(
-            Color(nsColor: .quaternaryLabelColor)
-                .opacity(colorScheme == .dark ? 0.28 : 0.14),
-            in: Capsule()
-        )
-        .overlay {
-            Capsule()
-                .strokeBorder(
-                    Color(nsColor: .separatorColor),
-                    lineWidth: 0.5
-                )
-        }
-    }
-
-    private func menuBarToggle(
-        component: AppPreferences.MenuBarComponent,
-        title: String,
-        subtitle: String
-    ) -> some View {
-        NativeSettingsRow(
-            title: title,
-            subtitle: subtitle
-        ) {
-            Toggle(
-                title,
-                isOn: preferences.binding(for: component)
-            )
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .disabled(
-                preferences.isVisible(component)
-                && !preferences.canHide(component)
-            )
-        }
-    }
-
     private func preferenceToggle(
         _ title: String,
         subtitle: String,
@@ -1129,8 +761,8 @@ struct SettingsView: View {
             ? copy.text("深色", "dark")
             : copy.text("浅色", "light")
         return copy.text(
-            "QuotaView 将固定使用\(selected)模式。",
-            "QuotaView will always use the \(selected) appearance."
+            "设置窗口将固定使用\(selected)模式。",
+            "Settings will always use the \(selected) appearance."
         )
     }
 
@@ -1152,34 +784,6 @@ struct SettingsView: View {
             "QuotaView 将固定使用\(language)。",
             "QuotaView will always use \(language)."
         )
-    }
-
-    private var glassModeSummary: String {
-        switch preferences.glassMode {
-        case .frosted:
-            if colorScheme == .dark {
-                return copy.text(
-                    "深色模式使用烟灰磨砂，优先保证内容可读性。",
-                    "Dark mode uses a smoky frosted surface for stronger legibility."
-                )
-            }
-            return copy.text(
-                "浅色模式使用乳白磨砂，优先保证内容可读性。",
-                "Light mode uses a milky frosted surface for stronger legibility."
-            )
-
-        case .clear:
-            if colorScheme == .dark {
-                return copy.text(
-                    "深色模式使用中性暗色压光，降低背景干扰并保留清透质感。",
-                    "Dark mode applies neutral dimming to reduce background interference while preserving clear glass."
-                )
-            }
-            return copy.text(
-                "浅色模式使用中性亮色提光，降低背景干扰并保留清透质感。",
-                "Light mode applies neutral brightening to reduce background interference while preserving clear glass."
-            )
-        }
     }
 
     private var codexActivityActionTitle: String {
@@ -1432,8 +1036,8 @@ struct SettingsView: View {
 
     private var codexActivityPrivacyNote: String {
         copy.text(
-            "QuotaView 只读解析本地任务记录中的状态、计划计数和 Token 数值，不保存提示词、回复、推理、命令或工具输出。",
-            "QuotaView reads task state, plan counts, and token values from local task records without storing prompts, responses, reasoning, commands, or tool output."
+            "只读连接本机 Codex，展示任务状态、公开内容、计划与用量；批准和其他任务操作仍由 Codex 处理。",
+            "Observe local Codex task state, public content, plans and usage. Codex continues to handle approvals and other task actions."
         )
     }
 }

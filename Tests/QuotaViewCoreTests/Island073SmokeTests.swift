@@ -7,6 +7,58 @@ import XCTest
 
 final class Island073SmokeTests: XCTestCase {
     @MainActor
+    func testPrimaryIslandSettingsRoutesAndLocalization() {
+        let pages = IslandSettingsPage.allCases
+        XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "codexConnection", "proxy"]),
+            "Only settings for the current primary interface should be reachable")
+        for language in [AppPreferences.Language.simplifiedChinese, .english] {
+            let copy = AppCopy(language: language)
+            XCTAssertEqual(Set(pages.map { $0.title(copy) }).count, pages.count)
+            for page in pages {
+                XCTAssertFalse(page.title(copy).isEmpty)
+                XCTAssertFalse(page.subtitle(copy).isEmpty)
+                XCTAssertNotNil(NSImage(systemSymbolName: page.symbol, accessibilityDescription: nil))
+            }
+        }
+    }
+
+    @MainActor
+    func testPrimaryIslandRefreshCoalescesAcrossPagesAndPreservesNavigation() async {
+        let board = IslandBoardState()
+        board.pin(); board.openUsage()
+        var opens = 0
+        board.onOpenSettings = { opens += 1 }
+        board.onOpenSettings?()
+        XCTAssertEqual(opens, 1)
+        XCTAssertTrue(board.showsUsage)
+        XCTAssertEqual(board.presentation, .pinned)
+        let started = expectation(description: "Refresh started")
+        var finish: CheckedContinuation<Void, Never>?
+        var refreshes = 0
+        board.onRefreshUsage = {
+            refreshes += 1
+            await withCheckedContinuation { continuation in
+                finish = continuation
+                started.fulfill()
+            }
+        }
+        let first = Task { await board.refreshUsage() }
+        await fulfillment(of: [started], timeout: 1)
+        XCTAssertTrue(board.isRefreshingUsage)
+        board.openReset()
+        await board.refreshUsage()
+        XCTAssertEqual(refreshes, 1, "Changing pages cannot start a second concurrent usage request")
+        finish?.resume()
+        await first.value
+        XCTAssertFalse(board.isRefreshingUsage)
+        XCTAssertTrue(board.showsReset)
+        XCTAssertEqual(board.presentation, .pinned)
+        board.onRefreshUsage = nil
+        await board.refreshUsage()
+        XCTAssertFalse(board.isRefreshingUsage)
+    }
+
+    @MainActor
     func testCompactTextAlwaysIncludesStatusAndFallbackTask() {
         let model = IslandLiveStore(); start(model, "compact", "one", at: Date())
         let board = IslandBoardState()
