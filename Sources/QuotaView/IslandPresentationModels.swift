@@ -3,6 +3,28 @@ import SwiftUI
 import Combine
 import QuotaViewCore
 
+// Existing persisted panel choices also control the primary island usage page.
+struct IslandUsageOptions: Equatable {
+    var quota = true
+    var spark = true
+    var credits = true
+    var dailyTokens = true
+    var monthlyTokens = true
+    var lifetimeTokens = true
+    var cost = true
+    var activity = true
+    var reset = true
+    var hasTokenMetrics: Bool { dailyTokens || monthlyTokens || lifetimeTokens }
+    init() {}
+    @MainActor init(preferences: AppPreferences) {
+        quota = preferences.showUsageSummary; spark = preferences.showSparkQuota
+        credits = preferences.showCreditBalance; dailyTokens = preferences.showDailyTokens
+        monthlyTokens = preferences.showThirtyDayTokens; lifetimeTokens = preferences.showLifetimeTokens
+        cost = preferences.showEstimatedCost; activity = preferences.showTokenActivity
+        reset = preferences.showResetAction
+    }
+}
+
 // Real metadata; nil duration and absent model remain unknown.
 struct IslandSessionMetadata: Equatable {
     var modelName: String

@@ -67,8 +67,8 @@ struct IslandApprovalMetrics {
     static let inset: CGFloat = 12
     static let buttonHeight: CGFloat = 42
     static let inputHeight: CGFloat = 36
-    static let footerHeight: CGFloat = 20
-    static var fixedHeight: CGFloat { gap + 1 + gap + buttonHeight + 8 + footerHeight + 16 }
+    static let footerHeight: CGFloat = IslandChromeMetrics.footerHeight
+    static var fixedHeight: CGFloat { gap + 1 + gap + buttonHeight + 8 + footerHeight }
     let maximumViewportHeight: CGFloat
     let questionHeight: CGFloat
     let impactHeight: CGFloat
@@ -159,6 +159,8 @@ struct IslandApprovalView: View {
     @Binding var draft: IslandApprovalDraft
     let onDecision: (UUID, IslandConfirmationDecision) -> Void
     var onArchive: (() -> Void)? = nil
+    var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
+    var utilities: IslandUtilityActions? = nil
     @State private var codexJumpMessage = ""
     @State private var headerVisible = false
     private var muted: Color { IslandApprovalAppearance.muted }
@@ -223,15 +225,14 @@ struct IslandApprovalView: View {
             Rectangle().fill(IslandApprovalAppearance.border).frame(height: 1)
                 .padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             actionBar.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
-            HStack(spacing: 6) {
-                Text("Codex").font(.system(size: 8, weight: .semibold)).padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 4))
-                Text(request.canRespond ? text("可应答", "Interactive") : text("观察模式", "Observer"))
-                Spacer()
-                Text(footerStatus)
-            }.font(.system(size: 10)).foregroundStyle(muted).frame(height: IslandApprovalMetrics.footerHeight)
-                .padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 8)
-        }.padding(.bottom, 16).frame(height: metrics.height, alignment: .top)
+            IslandChromeFooter {
+                Text("Codex · " + (request.canRespond ? text("可应答", "Interactive") : text("观察模式", "Observer")))
+                    .lineLimit(1)
+            } trailing: {
+                Text(footerStatus).lineLimit(1).truncationMode(.tail)
+                if let utilities { utilities }
+            }.padding(.top, 8)
+        }.frame(height: metrics.height, alignment: .top)
             .preferredColorScheme(.dark)
     }
 
@@ -256,7 +257,7 @@ struct IslandApprovalView: View {
 
     var requestContent: some View {
         VStack(alignment: .leading, spacing: IslandApprovalMetrics.gap) {
-            IslandTaskCard(task: task, selected: true, metadata: metadata, english: english,
+            IslandTaskCard(progressEffect: progressEffect, task: task, selected: true, metadata: metadata, english: english,
                 playback: false, effectVisible: visible && headerVisible && playbackEnabled && task.playbackEnabled,
                 reduceMotion: reduceMotion, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
                 .overlay(alignment: .topTrailing) {

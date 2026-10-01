@@ -3974,7 +3974,8 @@ final class IslandQuantumProgressHost: NSView {
         outline.frame = bounds; outline.setIslandCornerRadius(IslandVibeLayout.rowRadius)
         effect.redrawIfPaused()
     }
-    func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool) {
+    func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool, progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField) {
+        effect.setEffect(progressEffect)
         let newlyBound = self.renderState == nil || self.renderState?.taskIdentity != renderState.taskIdentity
         // Selecting an already completed receipt should not replay its fill.
         let completedReceipt = self.renderState == nil && renderState.visualState == .completed

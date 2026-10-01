@@ -17,6 +17,8 @@ final class IslandSession {
     private var quotaResetsAt: Date?
     private var usageSnapshot: CurrentCodexPresentation?
     private var usageState: IslandUsagePresentation.State = .loading
+    private var usageOptions = IslandUsageOptions()
+    private var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     private var locked = false
     private var observations: [NSObjectProtocol] = []
     private var lockObservations: [NSObjectProtocol] = []
@@ -50,7 +52,9 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField) {
+        self.usageOptions = usageOptions
+        self.progressEffect = progressEffect
         self.usageSnapshot = usageSnapshot
         self.usageState = usageState
         self.quotaResetsAt = quotaResetsAt
@@ -80,6 +84,8 @@ final class IslandSession {
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot
         display.usageState = usageState
+        display.usageOptions = usageOptions
+        display.effect = progressEffect
         board.update(model: display,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }

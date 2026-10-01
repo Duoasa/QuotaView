@@ -12,7 +12,7 @@ enum IslandVibeLayout {
     static let compactWidth: CGFloat = 340
     static let compactContentGap: CGFloat = 16
     static let headerHeight: CGFloat = 36
-    static let footerHeight: CGFloat = 28
+    static let footerHeight: CGFloat = IslandChromeMetrics.footerHeight
     static let outerEffectInset = CodexActivityIslandProgressBarGeometry.effectInset
     static let screenBottomClearance = outerEffectInset
     static let rowHeight: CGFloat = 60
@@ -37,6 +37,80 @@ enum IslandVibeLayout {
     static let titleFont: CGFloat = 13
     static let operationFont: CGFloat = 11
     static let metadataFont: CGFloat = 10
+}
+
+// One optical alignment and hit region for every expanded-page toolbar.
+enum IslandChromeMetrics {
+    static let horizontalInset: CGFloat = 28
+    static let labelInset: CGFloat = 8
+    static let buttonSize: CGFloat = 28
+    static let fontSize: CGFloat = 12
+    static let bottomInset: CGFloat = 12
+    static let footerHeight = buttonSize + bottomInset
+    static let font = Font.system(size: fontSize, weight: .medium)
+}
+
+struct IslandChromeFooter<Leading: View, Trailing: View>: View {
+    let leading: Leading
+    let trailing: Trailing
+    init(@ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing) {
+        self.leading = leading(); self.trailing = trailing()
+    }
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            leading.padding(.leading, IslandChromeMetrics.labelInset)
+            Spacer(minLength: 8)
+            trailing
+        }.font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
+            .frame(height: IslandChromeMetrics.buttonSize)
+            .padding(.horizontal, IslandChromeMetrics.horizontalInset)
+            .padding(.bottom, IslandChromeMetrics.bottomInset)
+    }
+}
+
+// Keep the toolbar reachable when restored cards exceed the display height.
+struct IslandPageLayout<Content: View, Footer: View>: View {
+    let maximumHeight: CGFloat?
+    let onHeightChange: (CGFloat) -> Void
+    let content: Content
+    let footer: Footer
+    @State private var contentHeight: CGFloat = 400
+    init(maximumHeight: CGFloat?, onHeightChange: @escaping (CGFloat) -> Void,
+         @ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer) {
+        self.maximumHeight = maximumHeight; self.onHeightChange = onHeightChange
+        self.content = content(); self.footer = footer()
+    }
+    private var measuredContent: some View {
+        content.fixedSize(horizontal: false, vertical: true)
+            .background { GeometryReader { proxy in
+                Color.clear.preference(key: IslandPageContentHeightKey.self, value: proxy.size.height)
+            } }
+            .onPreferenceChange(IslandPageContentHeightKey.self) {
+                if $0.isFinite && $0 > 0 { contentHeight = ceil($0) }
+            }
+    }
+    var body: some View {
+        VStack(spacing: 10) {
+            if let maximumHeight {
+                ScrollView(.vertical) { measuredContent }
+                    .scrollIndicators(.automatic)
+                    .frame(height: min(contentHeight, max(0, maximumHeight - IslandChromeMetrics.footerHeight - 10)))
+            } else { measuredContent }
+            footer
+        }.fixedSize(horizontal: false, vertical: true)
+            .background { GeometryReader { proxy in
+                Color.clear.preference(key: IslandPageHeightKey.self, value: proxy.size.height)
+            } }
+            .onPreferenceChange(IslandPageHeightKey.self, perform: onHeightChange)
+    }
+}
+private struct IslandPageContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+private struct IslandPageHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 @MainActor
@@ -163,8 +237,9 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var resetTransitionSerial: UInt64 = 0
     private var resetTransitionFinish: DispatchWorkItem?
     var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), expandedWidth) }
+    var maximumPageHeight: CGFloat { max(IslandChromeMetrics.footerHeight + 10, geometry.maximumExpandedHeight - headerHeight) }
     var expandedCanvasHeight: CGFloat {
-        showsUsage ? headerHeight + max(usageHeight, resetHeight) : expandedHeight
+        showsUsage ? headerHeight + min(max(usageHeight, resetHeight), maximumPageHeight) : expandedHeight
     }
     func updateResetHeight(_ value: CGFloat) {
         guard value.isFinite, value > 0 else { return }
@@ -244,7 +319,7 @@ final class IslandBoardState: ObservableObject {
         max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
     }
     var compactSideWidth: CGFloat { max(0, (min(geometry.compactWidth, expandedWidth) - 40 - geometry.cameraWidth - 16) / 2) }
-    var headerSideWidth: CGFloat { max(0, (surfaceWidth - (showsReset ? 56 : 76) - geometry.cameraWidth - 16) / 2) }
+    var headerSideWidth: CGFloat { max(0, (surfaceWidth - IslandChromeMetrics.horizontalInset * 2 - geometry.cameraWidth - 16) / 2) }
     private struct CardGeometryKey: Hashable { let model: String; let effort: String; let width: CGFloat }
     private var cardGeometryCache: [CardGeometryKey: CGFloat] = [:]
     private func measuredCardHeight(_ metadata: IslandSessionMetadata?, width: CGFloat) -> CGFloat {
@@ -305,7 +380,7 @@ final class IslandBoardState: ObservableObject {
     }
     var detailHeight: CGFloat { inlineDetail.map { detailMetrics(for: $0).height } ?? 0 }
     var expandedHeight: CGFloat {
-        if showsUsage { return headerHeight + (showsReset ? resetHeight : usageHeight) }
+        if showsUsage { return headerHeight + min(showsReset ? resetHeight : usageHeight, maximumPageHeight) }
         if let approval { return headerHeight + approvalMetrics(request: approval.request).height }
         return headerHeight + listHeight + IslandVibeLayout.footerHeight
     }
@@ -528,12 +603,13 @@ private struct IslandActivityOrb: NSViewRepresentable {
 }
 
 private struct IslandQuantumProgress: NSViewRepresentable {
+    let effect: AppPreferences.CodexActivityProgressEffect
     let renderState: CodexActivityRenderState
     let visible: Bool
     let reduceMotion: Bool
     func makeNSView(context: Context) -> IslandQuantumProgressHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandQuantumProgressHost, context: Context) {
-        view.configure(renderState: renderState, visible: visible, reduceMotion: reduceMotion)
+        view.configure(renderState: renderState, visible: visible, reduceMotion: reduceMotion, progressEffect: effect)
     }
     static func dismantleNSView(_ view: IslandQuantumProgressHost, coordinator: ()) { view.stop() }
 }
@@ -570,6 +646,7 @@ private struct IslandOperationLine: View {
 
 // Shared presentation: list rows add selection, approval headers are read-only.
 struct IslandTaskCard: View {
+    var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     let task: CodexMultitaskRenderTask
     let selected: Bool
     let metadata: IslandSessionMetadata?
@@ -631,7 +708,7 @@ struct IslandTaskCard: View {
         }.padding(.leading, 10).padding(.trailing, 8).frame(height: metadata?.cardHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
             .background {
                 if selected {
-                    IslandQuantumProgress(renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
+                    IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
                         .allowsHitTesting(false).accessibilityHidden(true)
                 } else {
                     RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
@@ -656,6 +733,7 @@ struct IslandTaskCard: View {
 }
 
 private struct IslandBoardTaskRow: View {
+    let progressEffect: AppPreferences.CodexActivityProgressEffect
     let task: CodexMultitaskRenderTask
     let selected: Bool
     let metadata: IslandSessionMetadata?
@@ -669,7 +747,7 @@ private struct IslandBoardTaskRow: View {
     @State private var hovered = false
     var body: some View {
         Button(action: action) {
-            IslandTaskCard(task: task, selected: selected, metadata: metadata, english: english,
+            IslandTaskCard(progressEffect: progressEffect, task: task, selected: selected, metadata: metadata, english: english,
                 playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion, hovered: hovered, showsArchiveButton: true, cardWidth: cardWidth)
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .overlay(alignment: .topTrailing) {
@@ -706,26 +784,6 @@ private struct IslandArchiveButtonStyle: ButtonStyle {
     }
 }
 
-private struct IslandUsageEntryButtonStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var hovered = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding(.horizontal, 8)
-            .background(Color.white.opacity(isEnabled
-                ? (configuration.isPressed ? 0.16 : (hovered ? 0.10 : 0)) : 0), in: Capsule())
-            .contentShape(Capsule())
-            .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.985)
-            .opacity(isEnabled ? 1 : 0.55)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: hovered)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
-            .onHover { hovered = isEnabled && $0 }
-            .onChange(of: isEnabled) { _, enabled in if !enabled { hovered = false } }
-    }
-}
-
 // Both hosts keep their final layout throughout a transition. The AppKit surface
 // animates only the shell path, mask, opacity and a small content translation.
 struct IslandBoardView: View {
@@ -751,7 +809,8 @@ struct IslandBoardView: View {
                             scrollLink: approvalScrollLink,
                             draft: state.approvalDraftBinding(for: approval.request.id),
                             onDecision: { requestID, decision in state.onConfirmation?(approval.task.id, requestID, decision) },
-                            onArchive: { state.onArchive?(approval.task.id) })
+                            onArchive: { state.onArchive?(approval.task.id) },
+                            progressEffect: state.display?.effect ?? .dropField, utilities: IslandUtilityActions(state: state))
                             .id(approval.request.id)
                     } else {
                         Group {
@@ -788,17 +847,17 @@ struct IslandBoardView: View {
                             // Keep native scroll position when details change. Scrolling
                             // the whole card/detail group would consume the top inset.
                         }
-                        HStack(spacing: 8) {
+                        IslandChromeFooter {
                             HStack(spacing: 5) {
                                 Text(state.text("\(state.visibleTasks.count) 个会话", "\(state.visibleTasks.count) sessions"))
                                 if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
-                            }.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                            }.lineLimit(1)
+                        } trailing: {
                             Text(footerStatus).lineLimit(1).truncationMode(.tail)
                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
                                 .accessibilityHint(footerStatus)
                             IslandUtilityActions(state: state)
-                        }.font(.system(size: 10, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
-                            .padding(.horizontal, 38).frame(height: IslandVibeLayout.footerHeight)
+                        }
                     }
                 }
             }
@@ -825,24 +884,25 @@ struct IslandBoardView: View {
         ZStack(alignment: .top) {
             IslandUsageBento(snapshot: state.display?.usageSnapshot, usageState: state.display?.usageState ?? .loading, english: state.english,
                 contentWidth: state.expandedWidth - IslandVibeLayout.listInset * 2,
+                options: state.display?.usageOptions ?? .init(),
                 privacy: state.display?.privacyMode == true,
                 playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
-                utilities: IslandUtilityActions(state: state), onHeightChange: state.updateUsageHeight)
-                .frame(width: state.expandedWidth, height: state.usageHeight, alignment: .top)
+                utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight)
+                .frame(width: state.expandedWidth, height: min(state.usageHeight, state.maximumPageHeight), alignment: .top)
                 .opacity(state.showsReset ? 0 : 1)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.22), value: state.showsReset)
                 .allowsHitTesting(!state.showsReset && !state.resetTransitionInFlight)
                 .accessibilityHidden(state.showsReset)
             IslandResetPage(data: .init(snapshot: state.display?.privacyMode == true ? nil : state.display?.usageSnapshot),
                 usageState: state.display?.usageState ?? .loading, english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
-                hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), onHeightChange: state.updateResetHeight)
-                .frame(width: state.resetWidth, height: state.resetHeight, alignment: .top)
+                hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight)
+                .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
                 .opacity(state.showsReset ? 1 : 0)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.24), value: state.showsReset)
                 .allowsHitTesting(state.showsReset && !state.resetTransitionInFlight)
                 .accessibilityHidden(!state.showsReset)
-        }.frame(width: state.expandedWidth, height: max(state.usageHeight, state.resetHeight), alignment: .top)
+        }.frame(width: state.expandedWidth, height: min(max(state.usageHeight, state.resetHeight), state.maximumPageHeight), alignment: .top)
             .overlayPreferenceValue(IslandResetTicketAnchors.self) { anchors in
                 GeometryReader { proxy in
                     if let source = anchors[.usage], let destination = anchors[.reset] {
@@ -860,23 +920,23 @@ struct IslandBoardView: View {
                 if state.showsUsage {
                     Button { state.showsReset ? state.closeReset() : state.closeUsage() } label: {
                         Label(state.showsReset ? state.text("返回", "Back") : state.text("返回任务", "Tasks"), systemImage: "chevron.left")
-                            .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
-                            .frame(height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain)
+                            .font(IslandChromeMetrics.font).foregroundStyle(.white)
+                            .padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
+                    }.buttonStyle(IslandUtilityButtonStyle())
                     if !state.showsReset {
-                        Text(state.text("用量统计", "Usage")).font(.system(size: 11)).foregroundStyle(IslandBoardStyle.muted)
+                        Text(state.text("用量统计", "Usage")).font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
                     }
                 } else if state.approval != nil {
                     Circle().fill(IslandBoardStyle.confirmationHighlight).frame(width: 4, height: 4)
-                    Text(state.text("待确认", "Permission request")).font(.system(size: 12, weight: .semibold))
+                    Text(state.text("待确认", "Permission request")).font(IslandChromeMetrics.font)
                         .foregroundStyle(IslandBoardStyle.confirmationHighlight)
                 } else {
                     Button { state.openUsage() } label: {
                         HStack(spacing: 6) {
                             IslandQuotaRing(remainingPercent: state.display?.remainingPercent)
-                            Text(state.quota).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
-                        }.frame(height: 28).contentShape(Rectangle())
-                    }.buttonStyle(IslandUsageEntryButtonStyle()).accessibilityLabel(state.text("查看用量统计", "View usage"))
+                            Text(state.quota).font(IslandChromeMetrics.font).monospacedDigit().foregroundStyle(.white)
+                        }.padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
+                    }.buttonStyle(IslandUtilityButtonStyle()).accessibilityLabel(state.text("查看用量统计", "View usage"))
                 }
                 Spacer(minLength: 0)
             }.frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
@@ -886,36 +946,39 @@ struct IslandBoardView: View {
                 Spacer(minLength: 0)
                 if let approval = state.approval {
                     if approval.request.queueCount > 1 {
-                        Button("\(approval.request.queueIndex)/\(approval.request.queueCount) →") { state.onNextRequest?(approval.task.id) }.buttonStyle(.plain).accessibilityHint(state.text("下一项待处理请求", "Next pending request"))
+                        Button { state.onNextRequest?(approval.task.id) } label: {
+                            Text("\(approval.request.queueIndex)/\(approval.request.queueCount) →")
+                                .padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize)
+                        }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("下一项待处理请求", "Next pending request"))
                     }
                     Button { state.dismissDetail() } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
-                            Text(state.text("返回列表", "Back to sessions")).font(.system(size: 11))
-                        }.frame(height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityHint(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
+                            Text(state.text("返回列表", "Back to sessions")).font(IslandChromeMetrics.font)
+                        }.padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
+                    }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
                 } else {
                     if state.attentionCount > 0 && !state.showsUsage {
                         Button { state.toggleAttention() } label: {
                             attentionIndicators(showCounts: true)
-                                .font(.system(size: 11, weight: state.attentionOnly ? .bold : .semibold))
-                                .frame(height: 28).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityHint(state.text("筛选待处理会话", "Filter sessions needing attention"))
+                                .font(IslandChromeMetrics.font)
+                                .padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
+                        }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("筛选待处理会话", "Filter sessions needing attention"))
                             .accessibilityValue(state.attentionOnly ? state.text("已筛选", "Filtered") : state.text("全部会话", "All sessions"))
                     }
                     Button { state.presentation == .pinned ? state.collapse() : state.pin() } label: {
                         Image(systemName: state.presentation == .pinned ? "pin.fill" : "pin")
                             .frame(width: 28, height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityHint(state.text("固定展开；再次点击收起", "Pin open; click again to collapse"))
+                    }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("固定展开；再次点击收起", "Pin open; click again to collapse"))
                 }
                 Button { state.collapse() } label: {
                     Image(systemName: "chevron.up").frame(width: 28, height: 28).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityHint(state.text("收起灵动岛", "Collapse island"))
-            }.font(.system(size: 12, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
+                }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("收起灵动岛", "Collapse island"))
+            }.font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
                 .frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
                 .frame(maxWidth: .infinity)
                 .clipped()
-        }.padding(.horizontal, state.showsReset ? 28 : 38).frame(width: state.surfaceWidth, height: state.headerHeight)
+        }.padding(.horizontal, IslandChromeMetrics.horizontalInset).font(IslandChromeMetrics.font).frame(width: state.surfaceWidth, height: state.headerHeight)
     }
     private var compactOrb: some View {
         IslandActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
@@ -999,7 +1062,7 @@ struct IslandBoardView: View {
     private func taskGroup(_ task: CodexMultitaskRenderTask) -> some View {
         VStack(spacing: IslandVibeLayout.rowSpacing) {
             if visibility.residentTaskIDs.contains(task.id) {
-                IslandBoardTaskRow(task: task, selected: (state.detailID ?? state.focusedTask?.id) == task.id,
+                IslandBoardTaskRow(progressEffect: state.display?.effect ?? .dropField, task: task, selected: (state.detailID ?? state.focusedTask?.id) == task.id,
                     metadata: state.display?.sessionMetadata[task.id], english: state.english,
                     playback: state.playback && !state.compact && visibleElements.contains(.task(task.id))
                         && task.playbackEnabled && (IslandBoardState.isRunning(task) || task.renderState.visualState == .completed),
@@ -1455,7 +1518,7 @@ private struct IslandResetTicketSweep: NSViewRepresentable {
 struct IslandUtilityActions: View {
     @ObservedObject var state: IslandBoardState
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 8) {
             Button {
                 Task { await state.refreshUsage() }
             } label: {
@@ -1474,7 +1537,7 @@ struct IslandUtilityActions: View {
             .accessibilityLabel(state.text("设置", "Settings"))
             .help(state.text("打开 QuotaView 设置", "Open QuotaView settings"))
         }
-        .font(.system(size: 12, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
+        .font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
         .buttonStyle(IslandUtilityButtonStyle())
         .fixedSize(horizontal: true, vertical: false)
     }
@@ -1485,6 +1548,7 @@ private struct IslandUtilityButtonStyle: ButtonStyle {
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .contentShape(Capsule())
             .background(Color.white.opacity(isEnabled ? (configuration.isPressed ? 0.14 : (hovered ? 0.085 : 0)) : 0), in: Capsule())
             .opacity(isEnabled ? 1 : 0.4)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
@@ -1505,21 +1569,18 @@ private struct IslandResetTicketButtonStyle: ButtonStyle {
     }
 }
 
-private struct IslandUsageHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
-}
-
-private struct IslandUsageBento: View {
+struct IslandUsageBento: View {
     let snapshot: CurrentCodexPresentation?
     let usageState: IslandUsagePresentation.State
     let english: Bool
     let contentWidth: CGFloat
+    let options: IslandUsageOptions
     let privacy: Bool
     let playbackEnabled: Bool
     let hidesTicket: Bool
     let onReset: () -> Void
     let utilities: IslandUtilityActions
+    var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var resetHovered = false
@@ -1534,10 +1595,6 @@ private struct IslandUsageBento: View {
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private var chart: EstimatedCostChartModel { .init(activity: snapshot?.tokenActivity ?? [], endingAt: Date()) }
-    private var quota: CodexQuotaWindowPresentation? {
-        snapshot?.quotaWindows.first { $0.windowDurationMinutes == 10080 } ?? snapshot?.quotaWindows.first
-    }
-    private var percent: Int? { quota?.remainingPercent ?? snapshot?.remainingPercent }
     private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
     private func surface<Content: View>(highlightBottom: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         content().padding(14).frame(maxWidth: .infinity, alignment: .leading)
@@ -1567,8 +1624,8 @@ private struct IslandUsageBento: View {
     private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         surface { VStack(alignment: .leading, spacing: 10) { heading(title); content() } }
     }
-    private var quotaCountdown: String {
-        guard let date = quota?.resetsAt ?? snapshot?.resetsAt else { return "—" }
+    private func quotaCountdown(_ date: Date?) -> String {
+        guard let date else { return "—" }
         let hours = max(0, Int(ceil(date.timeIntervalSinceNow / 3600)))
         let days = hours / 24, remainder = hours % 24
         if days > 0 {
@@ -1577,8 +1634,20 @@ private struct IslandUsageBento: View {
         return text("\(hours)小时后重置", "Resets in \(hours)h")
     }
     var body: some View {
-        Group {
-            VStack(spacing: 10) {
+        IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
+            pageContent
+        } footer: {
+                IslandChromeFooter {
+                    if let date = snapshot?.lastUpdatedAt {
+                        Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
+                    } else { Text(text("等待数据更新", "Waiting for data")) }
+                } trailing: { utilities }
+        }.foregroundStyle(.white)
+            .onChange(of: options.cost) { _, visible in if !visible { selectedDay = nil; hoveredCost = nil } }
+            .onChange(of: options.activity) { _, visible in if !visible { selectedActivity = nil; hoveredActivity = nil } }
+    }
+    private var pageContent: some View {
+        VStack(spacing: 10) {
                 if privacy || snapshot == nil {
                     card(text("用量数据", "Usage data")) {
                         Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : usageState.message(copy: copy))
@@ -1593,42 +1662,56 @@ private struct IslandUsageBento: View {
                     }
                     HStack(alignment: .top, spacing: 10) {
                         VStack(spacing: 10) {
-                            quotaCard
-                            HStack(spacing: 10) {
-                                metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens))
-                                metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens))
-                                metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens))
+                            if options.quota {
+                                if let windows = snapshot?.quotaWindows, !windows.isEmpty {
+                                    ForEach(windows) { window in quotaCard(window) }
+                                } else { quotaCard(nil) }
+                            }
+                            if options.spark, let spark = snapshot?.sparkQuota {
+                                card(text("Spark 周额度", "Spark weekly quota")) {
+                                    Text("\(spark.remainingPercent)%").font(AstaSans.semiBold(21)).monospacedDigit()
+                                }
+                            }
+                            if options.hasTokenMetrics {
+                                HStack(spacing: 10) {
+                                    if options.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens)) }
+                                    if options.monthlyTokens { metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
+                                    if options.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens)) }
+                                }
+                            }
+                            if !options.quota && !options.hasTokenMetrics && !(options.spark && snapshot?.sparkQuota != nil) {
+                                // The account surface retains its natural size when every left card is hidden.
+                                accountCard
                             }
                         }.frame(maxWidth: .infinity)
 
                         // Match the left stack naturally without a second height-measurement loop.
-                        Color.clear.frame(width: 204).overlay { accountCard }
+                        if options.quota || options.hasTokenMetrics || (options.spark && snapshot?.sparkQuota != nil) {
+                            Color.clear.frame(width: 204).overlay { accountCard }
+                        }
                     }.fixedSize(horizontal: false, vertical: true)
                     // Elevate at the sibling-card boundary: a chart-local zIndex cannot
                     // place its tooltip above a different card's surface.
-                    costCard.zIndex(hoveredCost == nil ? 0 : 1)
-                    activityCard.zIndex(hoveredActivity == nil ? 0 : 1)
+                    if options.cost { costCard.zIndex(hoveredCost == nil ? 0 : 1) }
+                    if options.activity { activityCard.zIndex(hoveredActivity == nil ? 0 : 1) }
                 }
-                HStack {
-                    if let date = snapshot?.lastUpdatedAt {
-                        Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
-                    } else { Text(text("等待数据更新", "Waiting for data")) }
-                    Spacer()
-                    utilities
-                }.font(.system(size: 10)).foregroundStyle(secondary).padding(.horizontal, 4)
-            }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10).padding(.bottom, 14)
-        }.fixedSize(horizontal: false, vertical: true)
-        .background { GeometryReader { proxy in Color.clear.preference(key: IslandUsageHeightKey.self, value: proxy.size.height) } }
-        .onPreferenceChange(IslandUsageHeightKey.self, perform: onHeightChange)
-        .foregroundStyle(.white)
+        }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
     }
-    private var quotaCard: some View {
-        surface {
+    private func quotaCard(_ window: CodexQuotaWindowPresentation?) -> some View {
+        let percent = window?.remainingPercent ?? snapshot?.remainingPercent
+        let title: String
+        switch window?.windowDurationMinutes {
+        case 300: title = text("5 小时额度", "5-hour quota")
+        case 10080: title = text("每周额度", "Weekly quota")
+        case .some(let minutes): title = text("\(minutes)分钟额度", "\(minutes)-minute quota")
+        case .none: title = text("额度剩余", "Quota remaining")
+        }
+        return surface {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    heading(text("额度剩余", "Quota remaining"))
+                    heading(title)
                     Spacer(minLength: 4)
-                    Text(quotaCountdown).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                    Text(quotaCountdown(window?.resetsAt ?? snapshot?.resetsAt)).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
                 }
                 VStack(spacing: 9) {
                     HStack(alignment: .lastTextBaseline) {
@@ -1659,11 +1742,14 @@ private struct IslandUsageBento: View {
                 Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
                     .font(.system(size: 16, weight: .semibold))
                 Spacer(minLength: 10)
+                if options.credits {
                 HStack {
                     Text(text("积分余额", "Credit balance")).foregroundStyle(secondary)
                     Spacer()
                     Text(snapshot?.creditBalance ?? "—")
                 }.font(.system(size: 10))
+                }
+                if options.reset {
                 Rectangle().fill(Color(white: 0.21)).frame(height: 0.5)
                 Button(action: onReset) {
                     HStack {
@@ -1684,6 +1770,7 @@ private struct IslandUsageBento: View {
                     .accessibilityHint(IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
                         ? copy.text("暂无可用重置卡，打开查看状态", "No reset credits available; open to view status")
                         : copy.text("仅展示重置演示", "Preview only"))
+                }
             }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
         .onChange(of: hidesTicket) { _, hidden in if hidden { resetHovered = false } }

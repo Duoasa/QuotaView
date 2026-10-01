@@ -9,7 +9,7 @@ final class Island073SmokeTests: XCTestCase {
     @MainActor
     func testPrimaryIslandSettingsRoutesAndLocalization() {
         let pages = IslandSettingsPage.allCases
-        XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "codexConnection", "proxy"]),
+        XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "usage", "codexConnection", "proxy", "about"]),
             "Only settings for the current primary interface should be reachable")
         for language in [AppPreferences.Language.simplifiedChinese, .english] {
             let copy = AppCopy(language: language)
@@ -20,6 +20,62 @@ final class Island073SmokeTests: XCTestCase {
                 XCTAssertNotNil(NSImage(systemSymbolName: page.symbol, accessibilityDescription: nil))
             }
         }
+    }
+
+    @MainActor
+    func testPersistedUsageAndEffectChoicesReachPrimaryDisplay() throws {
+        let suite = "QuotaView.SettingsSmoke.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.showUsageSummary = false; preferences.showSparkQuota = false
+        preferences.showCreditBalance = false; preferences.showDailyTokens = false
+        preferences.showThirtyDayTokens = false; preferences.showLifetimeTokens = false
+        preferences.showEstimatedCost = false; preferences.showTokenActivity = false
+        preferences.showResetAction = false
+        preferences.codexActivityProgressEffect = .sloshFlow
+        let restored = AppPreferences(defaults: defaults)
+        let hidden = IslandUsageOptions(preferences: restored)
+        XCTAssertFalse(hidden.hasTokenMetrics)
+        XCTAssertFalse(hidden.quota || hidden.spark || hidden.credits || hidden.cost || hidden.activity || hidden.reset)
+        XCTAssertEqual(restored.codexActivityProgressEffect, .sloshFlow)
+        restored.showEstimatedCost = true; restored.showLifetimeTokens = true
+        let changed = IslandUsageOptions(preferences: restored)
+        XCTAssertTrue(changed.cost && changed.lifetimeTokens && changed.hasTokenMetrics)
+        XCTAssertFalse(changed.activity || changed.dailyTokens || changed.monthlyTokens)
+        let board = IslandBoardState()
+        let model = IslandLiveStore()
+        var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
+        display.usageOptions = hidden; display.effect = restored.codexActivityProgressEffect
+        board.update(display, reduceMotion: true); board.pin(); board.openUsage()
+        display.usageOptions = changed
+        board.update(display, reduceMotion: true)
+        XCTAssertEqual(board.display?.usageOptions, changed)
+        XCTAssertEqual(board.display?.effect, .sloshFlow)
+        XCTAssertTrue(board.showsUsage)
+        XCTAssertEqual(board.presentation, .pinned, "Preference changes must preserve the user's current page and pin")
+    }
+
+    @MainActor
+    func testChromeFitsPhysicalNotchOnUsageResetAndRequests() {
+        let frame = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        let board = IslandBoardState()
+        board.setGeometry(.init(frame: frame, safeTop: 32,
+            left: CGRect(x: 0, y: 950, width: 666, height: 32),
+            right: CGRect(x: 846, y: 950, width: 666, height: 32)))
+        board.pin(); board.openUsage()
+        let utilityPair = IslandChromeMetrics.buttonSize * 2 + 8
+        XCTAssertGreaterThanOrEqual(board.headerSideWidth, utilityPair)
+        board.openReset()
+        XCTAssertGreaterThanOrEqual(board.headerSideWidth, utilityPair,
+            "The reset page must fit pin/collapse beside the physical camera")
+        XCTAssertGreaterThanOrEqual(board.headerHeight, IslandChromeMetrics.buttonSize)
+        XCTAssertEqual(IslandVibeLayout.footerHeight, IslandChromeMetrics.footerHeight)
+        XCTAssertEqual(IslandApprovalMetrics.footerHeight, IslandChromeMetrics.footerHeight)
+        board.updateResetHeight(430); board.updateUsageHeight(640)
+        XCTAssertEqual(board.expandedHeight, board.headerHeight + board.resetHeight)
+        board.closeReset()
+        XCTAssertEqual(board.expandedHeight, board.headerHeight + board.usageHeight)
     }
 
     @MainActor
@@ -402,7 +458,7 @@ final class Island073SmokeTests: XCTestCase {
         board.updateUsageHeight(420)
         XCTAssertEqual(board.expandedHeight, board.headerHeight + 420)
         board.updateUsageHeight(580)
-        XCTAssertEqual(board.expandedHeight, board.headerHeight + 580)
+        XCTAssertEqual(board.expandedHeight, board.geometry.maximumExpandedHeight, "Long usage content scrolls while the footer stays inside the available display height")
         board.updateUsageHeight(.nan)
         XCTAssertEqual(board.usageHeight, 580)
         board.closeUsage()

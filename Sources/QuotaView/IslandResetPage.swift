@@ -54,13 +54,15 @@ struct IslandResetPage: View {
     let playbackEnabled: Bool
     let hidesTicket: Bool
     let utilities: IslandUtilityActions
+    var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
     @State private var previewed = false
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private let secondary = Color(white: 0.68)
 
     var body: some View {
-        VStack(spacing: 10) {
+        IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
+            VStack(spacing: 10) {
             VStack(spacing: 16) {
                 VStack(spacing: 12) {
                     IslandResetTicket(playbackEnabled: playbackEnabled, size: IslandResetTicketFlight.cardSize)
@@ -122,21 +124,17 @@ struct IslandResetPage: View {
                         : copy.text("可刷新数据，或返回查看用量", "Refresh the data or return to usage"))
             }
 
-            HStack(spacing: 8) {
+            Text(data.caption(previewed: previewed, copy: copy))
+                .font(IslandChromeMetrics.font).foregroundStyle(secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
+        } footer: {
+            IslandChromeFooter {
                 Text((data.snapshot?.lastUpdatedAt).map {
                     copy.text("更新于 ", "Updated ") + $0.formatted(date: .omitted, time: .shortened)
-                } ?? copy.text("等待更新", "Waiting for data"))
-                Spacer(minLength: 0)
-                Text(data.caption(previewed: previewed, copy: copy)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity)
-                Spacer(minLength: 0)
-                utilities
-            }.font(AstaSans.regular(10)).foregroundStyle(secondary)
-        }.padding(.horizontal, 28).padding(.top, 10).padding(.bottom, 14)
-            .fixedSize(horizontal: false, vertical: true)
-            .background { GeometryReader { proxy in Color.clear.preference(key: IslandResetPageHeightKey.self, value: proxy.size.height) } }
-            .onPreferenceChange(IslandResetPageHeightKey.self, perform: onHeightChange)
-            .foregroundStyle(.white)
+                } ?? copy.text("等待更新", "Waiting for data")).lineLimit(1)
+            } trailing: { utilities }
+        }.foregroundStyle(.white)
             .accessibilityElement(children: .contain)
             .onChange(of: data.credits) { _, _ in previewed = false }
     }
@@ -146,10 +144,6 @@ struct IslandResetPage: View {
             Text(text).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
         }.foregroundStyle(secondary)
     }
-}
-private struct IslandResetPageHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 // A reversible, sampled 3D flight. Only the card's compositor layers animate;
 // both pages retain their final layout throughout the transition.

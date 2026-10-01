@@ -389,6 +389,7 @@ struct CodexMultitaskDisplay {
     var quotaResetsAt: Date? = nil
     var usageSnapshot: CurrentCodexPresentation? = nil
     var usageState: IslandUsagePresentation.State = .loading
+    var usageOptions = IslandUsageOptions()
     var sessionMetadata: [Int: IslandSessionMetadata] = [:]
     var taskDetails: [Int: IslandTaskDetailData] = [:]
     var connectionTitle: String = ""
