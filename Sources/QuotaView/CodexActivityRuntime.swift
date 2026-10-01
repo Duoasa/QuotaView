@@ -906,7 +906,9 @@ final class CodexActivityRuntime: ObservableObject {
             remaining: current?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
             weeklyRemaining: current?.weeklyRemainingPercent,
             quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state,
-            usageOptions: .init(preferences: preferences), progressEffect: preferences.codexActivityProgressEffect)
+            usageOptions: .init(preferences: preferences), progressEffect: preferences.codexActivityProgressEffect,
+            automaticPopupEnabled: preferences.codexActivityAutomaticPopupEnabled,
+            automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration)
     }
 
     private static func defaultSocketURL() -> URL {

@@ -76,12 +76,12 @@ struct IslandResetPage: View {
                 }.padding(.vertical, 12).frame(maxWidth: .infinity)
 
                 if usageState.isStale {
-                    Text(copy.text("上次成功数据 · 等待刷新", "Last successful data · awaiting refresh"))
+                    Text(copy.text("显示上次数据", "Showing previous data"))
                         .font(AstaSans.regular(10)).foregroundStyle(secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack {
-                    Text(usageState.isStale ? copy.text("上次读取额度", "Last read quota") : copy.text("当前可用额度", "Current Quota Available")).foregroundStyle(secondary)
+                    Text(usageState.isStale ? copy.text("上次额度", "Previous quota") : copy.text("可用额度", "Available quota")).foregroundStyle(secondary)
                     Spacer(minLength: 8)
                     Text(data.remainingPercent.map { "\($0)%" } ?? "—").monospacedDigit()
                 }.font(AstaSans.regular(10))
@@ -91,18 +91,18 @@ struct IslandResetPage: View {
                     case .empty:
                         Text(copy.text("暂无可用重置卡", "No reset credits available"))
                             .font(AstaSans.semiBold(12)).foregroundStyle(.white)
-                        Text(copy.text("当前没有可用的重置次数。可返回用量页查看额度和恢复时间。", "You have no reset credits available. Return to usage to check your quota and reset time."))
+                        Text(copy.text("返回用量页查看额度与恢复时间。", "Return to usage to check your quota and reset time."))
                             .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                     case .unknown:
-                        Text(copy.text("重置卡数据尚未读取", "Reset credit data is unavailable"))
+                        Text(copy.text("重置卡数据暂不可用", "Reset credits unavailable"))
                             .font(AstaSans.semiBold(12)).foregroundStyle(.white)
-                        Text(copy.text("刷新后查看可用重置次数。", "Refresh to check available reset credits."))
+                        Text(copy.text("刷新以获取重置次数。", "Refresh to check reset credits."))
                             .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                     case .available:
-                        Text(copy.text("⚠️ 重置前请注意", "⚠️ Before Resetting")).foregroundStyle(.white)
-                        warning(copy.text("此操作会消耗 1 次额度重置机会。", "This action consumes one reset credit."))
-                        warning(copy.text("符合条件的 Codex 用量周期将立即重置。", "Your eligible Codex usage cycle resets immediately."))
-                        warning(copy.text("额度重置完成后无法撤销。", "A completed quota reset cannot be undone."))
+                        Text(copy.text("⚠️ 重置须知", "⚠️ Before resetting")).foregroundStyle(.white)
+                        warning(copy.text("重置会消耗 1 次机会。", "Resetting uses one reset credit."))
+                        warning(copy.text("立即重置符合条件的 Codex 用量周期。", "Eligible Codex usage cycles reset immediately."))
+                        warning(copy.text("重置后无法撤销。", "A reset cannot be undone."))
                     }
                 }.font(AstaSans.regular(10)).padding(14.5)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,8 +120,8 @@ struct IslandResetPage: View {
                     .frame(maxWidth: .infinity).disabled(!data.canPreview)
                     .accessibilityLabel(data.canPreview ? copy.text("额度重置演示", "Quota reset preview") : data.actionTitle(previewed: false, copy: copy))
                     .accessibilityHint(data.canPreview
-                        ? copy.text("仅演示，不消耗次数或重置真实额度", "Preview only; no credit is consumed and no real quota is reset")
-                        : copy.text("可刷新数据，或返回查看用量", "Refresh the data or return to usage"))
+                        ? copy.text("仅演示，次数与真实额度不变", "Preview only; real credits and quota stay unchanged")
+                        : copy.text("刷新数据或返回用量", "Refresh or return to usage"))
             }
 
             Text(data.caption(previewed: previewed, copy: copy))

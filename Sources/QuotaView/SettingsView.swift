@@ -57,12 +57,12 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
     }
     func subtitle(_ copy: AppCopy) -> String {
         switch self {
-        case .general: copy.text("语言、设置窗口外观与退出。", "Language, settings appearance and quitting.")
-        case .island: copy.text("管理隐私显示与任务卡片特效。", "Manage privacy and task-card effects.")
-        case .usage: copy.text("选择用量页中显示的数据与统计图表。", "Choose the data and charts shown on the usage page.")
-        case .codexConnection: copy.text("查看本机 Codex 连接，管理数据目录与兼容 Hook。", "Review local Codex connectivity, data directories and compatibility Hooks.")
-        case .proxy: copy.text("为额度和账户用量查询设置代理。", "Set a proxy for quota and account usage requests.")
-        case .about: copy.text("应用版本与软件更新。", "App version and software updates.")
+        case .general: copy.text("语言与外观。", "Language and appearance.")
+        case .island: copy.text("弹出方式、隐私和特效。", "Popups, privacy and effects.")
+        case .usage: copy.text("选择要显示的图表。", "Choose which charts to show.")
+        case .codexConnection: copy.text("连接状态与数据目录。", "Connection status and data directory.")
+        case .proxy: copy.text("额度与用量查询的代理。", "Proxy for quota and usage requests.")
+        case .about: copy.text("版本与更新。", "Version and updates.")
         }
     }
 }
@@ -81,6 +81,7 @@ struct SettingsView: View {
     @State private var proxySaveFailure: ProxyConnectionFailure?
     @State private var codexActivityDetailsExpanded = false
     @State private var codexCompatibilityExpanded = false
+    @State private var showsQuitConfirmation = false
 
     private var copy: AppCopy { preferences.copy }
 
@@ -121,6 +122,14 @@ struct SettingsView: View {
             )
         )
         .ignoresSafeArea(.container, edges: .top)
+        .alert(copy.text("退出 QuotaView？", "Quit QuotaView?"), isPresented: $showsQuitConfirmation) {
+            Button(copy.text("取消", "Cancel"), role: .cancel) {}
+            Button(copy.text("退出", "Quit"), role: .destructive) {
+                NSApplication.shared.terminate(nil)
+            }
+        } message: {
+            Text(copy.text("Codex 任务会继续运行。", "Codex tasks will keep running."))
+        }
         .background {
             SettingsWindowConfigurator()
         }
@@ -242,11 +251,11 @@ struct SettingsView: View {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text("自定义代理", "Custom proxy"),
-                    subtitle: copy.text("默认关闭，修改后保存生效。", "Off by default. Save to apply changes.")
+                    subtitle: copy.text("保存后生效。", "Save to apply changes.")
                 ) {
                     Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
                         .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
-                        .help(copy.text("使用指定代理查询额度和账户用量。", "Use this proxy for quota and account usage."))
+                        .help(copy.text("使用此代理查询额度与用量。", "Use this proxy for quota and usage."))
                 }
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("协议", "Protocol")) {
@@ -257,7 +266,7 @@ struct SettingsView: View {
                 NativeSettingsDivider()
                 NativeSettingsRow(
                     title: copy.text("服务器地址", "Server address"),
-                    subtitle: copy.text("填写 IP 或主机名，无需协议前缀。", "Enter an IP or hostname without a protocol prefix.")
+                    subtitle: copy.text("IP 或主机名，不含协议。", "IP or hostname, without a protocol prefix.")
                 ) {
                     TextField("127.0.0.1", text: $proxyDraft.host)
                         .textFieldStyle(.roundedBorder).frame(width: 190)
@@ -273,8 +282,8 @@ struct SettingsView: View {
                 }
             }
             Text(copy.text(
-                "支持无需账号密码的 HTTP / SOCKS5 代理。仅影响 QuotaView 的额度和账户用量查询。",
-                "Supports HTTP / SOCKS5 proxies without authentication. Applies only to QuotaView quota and account usage requests."
+                "支持无需认证的 HTTP / SOCKS5 代理。",
+                "Supports HTTP / SOCKS5 proxies without authentication."
             ))
             .font(.callout).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -292,7 +301,7 @@ struct SettingsView: View {
                     proxyDraft = preferences.proxyConfiguration
                     proxySaveFailure = nil
                 }
-                .help(copy.text("关闭自定义代理并恢复默认设置。", "Turn off the custom proxy and restore default settings."))
+                .help(copy.text("关闭代理并恢复默认值。", "Turn off the proxy and restore defaults."))
                 Spacer(minLength: 0)
                 if store.proxyTestState == .testing {
                     Button(copy.text("取消测试", "Cancel Test")) { store.cancelProxyTest() }
@@ -301,7 +310,7 @@ struct SettingsView: View {
                         store.testProxyConnection(proxyDraft)
                     }
                     .disabled(!proxyDraft.isEnabled || proxyValidationFailure != nil)
-                    .help(copy.text("使用当前填写的代理实际查询额度，不保存设置。", "Query quota using this draft proxy without saving it."))
+                    .help(copy.text("测试当前代理，不保存设置。", "Test this proxy without saving changes."))
                 }
                 Button(copy.text("保存", "Save")) {
                     do {
@@ -322,8 +331,8 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Text(proxyDraft == preferences.proxyConfiguration
-                 ? copy.text("当前设置已保存。", "Current settings are saved.")
-                 : copy.text("有未保存的更改。", "You have unsaved changes."))
+                 ? copy.text("已保存", "Saved")
+                 : copy.text("有未保存的更改", "Unsaved changes"))
                 .font(.footnote).foregroundStyle(.secondary)
         }
         .onAppear { proxyDraft = preferences.proxyConfiguration }
@@ -369,76 +378,51 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             settingsSection(copy.text("显示", "Display")) {
                 NativeSettingsCard {
-                    preferenceToggle(copy.text("隐私显示", "Private display"),
-                        subtitle: copy.text("隐藏任务标题、正文和请求内容，统计页隐藏账户数据。", "Hide task titles, text and request contents, and conceal account data on the usage page."),
+                    preferenceToggle(copy.text("隐私模式", "Privacy mode"),
+                        subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
                         isOn: $preferences.codexIslandPrivacy)
                 }
             }
-            settingsSection(copy.text("任务卡片特效", "Task-card effects")) {
-                LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
+            settingsSection(copy.text("自动展开", "Automatic opening")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("自动弹出", "Automatic popups"),
+                        subtitle: copy.text("新任务、完成或待确认时弹出。", "Open for new tasks, completions and requests."),
+                        isOn: $preferences.codexActivityAutomaticPopupEnabled)
+                    NativeSettingsDivider()
+                    NativeSettingsRow(title: copy.text("停留时间", "Stay open for"),
+                        subtitle: copy.text("待确认或固定时保持展开。", "Stay open for pending requests or when pinned.")) {
+                        SettingsValueMenu(title: copy.text("停留时间", "Popup duration"),
+                            selection: $preferences.codexActivityAutomaticPopupDuration,
+                            options: AppPreferences.CodexActivityAutomaticPopupTiming.durationRange.map {
+                                ($0, copy.text("\($0) 秒", "\($0) s"))
+                            })
+                            .disabled(!preferences.codexActivityAutomaticPopupEnabled)
+                    }
+                }
+            }
+            settingsSection(copy.text("任务特效", "Task effects")) {
+                LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 4), spacing: 8) {
                     ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
                         Button { preferences.codexActivityProgressEffect = effect } label: {
-                            VStack(spacing: 10) {
-                                CodexActivityProgressEffectPreview(effect: effect, reduceMotion: reduceMotion)
-                                    .frame(height: 96).clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .allowsHitTesting(false).accessibilityHidden(true)
-                                Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                                    .font(.system(size: 13, weight: .medium))
-                            }.frame(maxWidth: .infinity)
-                        }.buttonStyle(SettingsVisualOptionStyle(selected: preferences.codexActivityProgressEffect == effect))
+                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                        }.buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: preferences.codexActivityProgressEffect == effect))
                             .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
                             .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
                     }
-                }
-                Text(copy.text("预览使用实际特效渲染器；自动遵循 macOS 的减少动态效果。", "Previews use the actual effect renderer and respect macOS Reduce Motion."))
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            settingsSection(copy.text("任务与提醒", "Tasks and attention")) {
-                NativeSettingsCard {
-                    NativeSettingsRow(title: copy.text("显示位置", "Display location"),
-                        subtitle: copy.text("常驻主屏幕顶部；无刘海屏幕使用居中的紧凑形态。", "Stays at the top of the primary display; uses a centered compact form on displays without a notch.")) {}
-                    NativeSettingsDivider()
-                    NativeSettingsRow(title: copy.text("展开与归档", "Expansion and archiving"),
-                        subtitle: copy.text("任务启动与完成时展开 3 秒；待确认保持展开，固定后由你收起。卡片归档只清理灵动岛显示。", "Opens for 3 seconds when tasks start or finish. Pending requests keep it open; pinned pages stay open until collapsed. Archiving only clears the island display.")) {}
                 }
             }
         }
     }
 
     private var usageSettings: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            settingsSection(copy.text("页面预览", "Page preview")) {
-                SettingsUsagePreview(store: store, preferences: preferences)
-                Text(copy.text("预览随选项立即更新，显示当前数据；隐私模式下隐藏统计。", "The preview updates immediately with your choices and current data. Privacy mode conceals statistics."))
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            settingsSection(copy.text("额度与账户", "Quota and account")) {
-                NativeSettingsCard {
-                    preferenceToggle(copy.text("周期用量概览", "Quota overview"), subtitle: copy.text("显示可用周期的剩余量、已用量和重置时间。", "Show available cycles, remaining quota, used quota and reset times."), isOn: $preferences.showUsageSummary)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("Spark 周额度", "Spark weekly quota"), subtitle: copy.text("有可用数据时显示 Spark 周额度。", "Show Spark weekly quota when data is available."), isOn: $preferences.showSparkQuota)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("Credits 余额", "Credits balance"), subtitle: copy.text("显示账户可用的 Credits 余额。", "Show the account's available Credits balance."), isOn: $preferences.showCreditBalance)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("额度重置入口", "Quota reset entry"), subtitle: copy.text("显示重置卡入口，包括 0 次时的空状态。", "Show the reset-card entry, including its empty state at zero credits."), isOn: $preferences.showResetAction)
-                }
-            }
-            settingsSection(copy.text("Token 统计", "Token statistics")) {
-                NativeSettingsCard {
-                    preferenceToggle(copy.text("最近一天 Token", "Latest day tokens"), subtitle: copy.text("显示最近一个统计日的 Token 用量。", "Show token usage for the latest reporting day."), isOn: $preferences.showDailyTokens)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("30 日 Token", "30-day tokens"), subtitle: copy.text("显示最近 30 天的 Token 总用量。", "Show total token usage for the last 30 days."), isOn: $preferences.showThirtyDayTokens)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("累计 Token", "Total tokens"), subtitle: copy.text("显示当前账户的累计 Token 用量。", "Show lifetime token usage for the current account."), isOn: $preferences.showLifetimeTokens)
-                }
-            }
-            settingsSection(copy.text("统计图表", "Charts")) {
-                NativeSettingsCard {
-                    preferenceToggle(copy.text("成本估算", "Cost estimate"), subtitle: copy.text("显示最近 30 天的估算成本和趋势图；估算值不是账单。", "Show estimated costs and the trend for the last 30 days; estimates are not bills."), isOn: $preferences.showEstimatedCost)
-                    NativeSettingsDivider()
-                    preferenceToggle(copy.text("Token 活动", "Token activity"), subtitle: copy.text("显示活动热力图，支持每天、每周与累计总量。", "Show the activity heatmap with daily, weekly and cumulative modes."), isOn: $preferences.showTokenActivity)
-                }
-            }
+        NativeSettingsCard {
+            preferenceToggle(copy.text("成本估算", "Cost estimate"),
+                subtitle: copy.text("最近 30 天的估算成本。", "Estimated costs for the last 30 days."),
+                isOn: $preferences.showEstimatedCost)
+            NativeSettingsDivider()
+            preferenceToggle(copy.text("Token 活动", "Token activity"),
+                subtitle: copy.text("每日、每周和累计用量。", "Daily, weekly and cumulative usage."),
+                isOn: $preferences.showTokenActivity)
         }
     }
 
@@ -467,7 +451,7 @@ struct SettingsView: View {
 
                 NativeSettingsDivider()
                 NativeSettingsRow(
-                    title: copy.text("自动连接数据目录", "Automatic Connection Directory"),
+                    title: copy.text("数据目录", "Data directory"),
                     subtitle: activityRuntime.dataDirectoryURL.path
                 ) {
                     HStack(spacing: 8) {
@@ -484,8 +468,8 @@ struct SettingsView: View {
                 }
                 if activityRuntime.directorySelectionFailed {
                     NativeSettingsNote(text: copy.text(
-                        "所选目录必须包含可读取的 sessions 文件夹。原目录保持不变。",
-                        "Choose a directory containing a readable sessions folder. The original directory is still selected."
+                        "所选目录缺少可读取的 sessions 文件夹。",
+                        "The selected directory needs a readable sessions folder."
                     ))
                 }
 
@@ -496,8 +480,8 @@ struct SettingsView: View {
                 DisclosureGroup(isExpanded: $codexCompatibilityExpanded) {
                     VStack(alignment: .leading, spacing: 0) {
                         NativeSettingsNote(text: copy.text(
-                            "仅在自动连接无法满足使用需要时手动配置。Hook 的安装和信任状态独立于自动连接；自动连接的数据目录选择不会移动已有 Hook。",
-                            "Configure manually only if automatic connection does not meet your needs. Hook installation and trust are independent; changing the automatic connection directory does not move existing Hooks."
+                            "自动连接正常时无需配置 Hook。更改数据目录不会移动已有 Hook。",
+                            "No Hook setup is needed when automatic connection works. Changing the data directory does not move existing Hooks."
                         ), horizontalPadding: 0)
                         NativeSettingsRow(
                             title: copy.text(
@@ -617,16 +601,11 @@ struct SettingsView: View {
                     }
                     .padding(.top, 10)
                 } label: {
-                    Text(copy.text("兼容选项：Hook", "Compatibility Options: Hook"))
+                    Text(copy.text("兼容 Hook", "Compatibility Hook"))
                         .font(.body.weight(.medium))
                 }
                 .padding(.horizontal, 18)
                 .padding(.vertical, 11)
-            }
-
-            NativeSettingsCard {
-                NativeSettingsNote(text: copy.text(
-                    "选中任务使用量子噪点，其他任务使用 AI 球。待确认辉光与噪点以 3 秒周期同步；减少动态效果时显示静态反馈。当前连接为观察模式，真实批准在 Codex 中处理。", "Selected tasks use quantum noise; other tasks use the orb. Confirmation glow and noise share a 3-second cycle; Reduce Motion uses static feedback. This connection observes activity; handle approvals in Codex."))
             }
         }
         .onAppear {
@@ -643,8 +622,8 @@ struct SettingsView: View {
     }
     private var languageSettings: some View {
         NativeSettingsCard {
-            NativeSettingsRow(title: copy.text("App 语言", "App language"), subtitle: languageSummary) {
-                SettingsValueMenu(title: copy.text("App 语言", "App language"), selection: languageSelection,
+            NativeSettingsRow(title: copy.text("语言", "Language"), subtitle: languageSummary) {
+                SettingsValueMenu(title: copy.text("语言", "Language"), selection: languageSelection,
                     options: [("system", copy.text("跟随系统", "System")), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
             }
         }
@@ -661,14 +640,13 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 22) {
             settingsSection(copy.text("语言", "Language")) { languageSettings }
             settingsSection(copy.text("设置窗口外观", "Settings appearance")) { appearanceSettings }
-            NativeSettingsCard {
-                NativeSettingsRow(title: copy.text("退出 QuotaView", "Quit QuotaView"),
-                    subtitle: copy.text("关闭灵动岛并停止本地观察，Codex 中的任务继续运行。", "Close the island and stop local observation. Tasks in Codex continue running.")) {
-                    Button(copy.text("退出软件", "Quit App"), role: .destructive) { NSApplication.shared.terminate(nil) }
-                        .buttonStyle(SettingsActionButtonStyle()).controlSize(.small)
-                        .accessibilityLabel(copy.text("退出 QuotaView", "Quit QuotaView"))
-                }
+            Button(role: .destructive) { showsQuitConfirmation = true } label: {
+                Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18).frame(height: 52)
             }
+            .buttonStyle(SettingsQuitRowStyle())
         }
     }
 
@@ -709,8 +687,8 @@ struct SettingsView: View {
     private var updateCheckHelpText: String {
         if updateController.availability == .available {
             return copy.text(
-                "立即通过签名更新源检查新版本。",
-                "Check the signed update feed for a new version now."
+                "检查是否有新版本。",
+                "Check for a new version."
             )
         }
         return copy.text(
@@ -723,13 +701,13 @@ struct SettingsView: View {
         switch updateController.availability {
         case .available:
             return copy.text(
-                "开启后每 24 小时自动检查；下载与安装始终需要你的确认。",
-                "When enabled, QuotaView checks every 24 hours; downloads and installation always require your confirmation."
+                "每 24 小时检查一次，安装前会询问。",
+                "Check every 24 hours and ask before installing."
             )
         case .debugBuild:
             return copy.text(
-                "调试构建不会连接在线更新服务。",
-                "Debug builds do not connect to the online update service."
+                "调试版不支持在线更新。",
+                "Online updates are unavailable in debug builds."
             )
         case .notApplicationBundle:
             return copy.text(
@@ -739,13 +717,13 @@ struct SettingsView: View {
         case .unexpectedBundleIdentifier,
              .untrustedSignature:
             return copy.text(
-                "只有经 QuotaView 正式签名的应用支持在线更新。",
-                "Online updates are available only in an officially signed QuotaView app."
+                "请使用正式签名版本以获取更新。",
+                "Use an officially signed release to receive updates."
             )
         case .invalidConfiguration:
             return copy.text(
-                "更新服务配置不可用，请重新安装正式版本。",
-                "The update service is unavailable. Reinstall the official release."
+                "更新配置无效，请重新安装正式版。",
+                "Update configuration is invalid. Reinstall the official release."
             )
         }
     }
@@ -794,8 +772,8 @@ struct SettingsView: View {
                 ? copy.text("深色", "Dark")
                 : copy.text("浅色", "Light")
             return copy.text(
-                "当前随系统显示为\(current)模式。",
-                "Currently using the system \(current.lowercased()) appearance."
+                "跟随系统：\(current)",
+                "System appearance: \(current.lowercased())"
             )
         }
 
@@ -803,8 +781,8 @@ struct SettingsView: View {
             ? copy.text("深色", "dark")
             : copy.text("浅色", "light")
         return copy.text(
-            "设置窗口将固定使用\(selected)模式。",
-            "Settings will always use the \(selected) appearance."
+            "设置窗口使用\(selected)模式。",
+            "Settings use the \(selected) appearance."
         )
     }
 
@@ -814,8 +792,8 @@ struct SettingsView: View {
                 ? "简体中文"
                 : "English"
             return copy.text(
-                "当前系统语言适配为\(language)。",
-                "The current system language resolves to \(language)."
+                "跟随系统：\(language)",
+                "System language: \(language)"
             )
         }
 
@@ -823,8 +801,8 @@ struct SettingsView: View {
             ? "简体中文"
             : "English"
         return copy.text(
-            "QuotaView 将固定使用\(language)。",
-            "QuotaView will always use \(language)."
+            "使用\(language)",
+            "Use \(language)"
         )
     }
 
@@ -853,8 +831,8 @@ struct SettingsView: View {
         return switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart:
             copy.text(
-                "安全确认已完成；重新启动 Codex 以激活连接。",
-                "The security review is complete. Restart Codex to activate the connection."
+                "重启 Codex 以启用 Hook。",
+                "Restart Codex to activate the Hook."
             )
         case .awaitingTrust:
             copy.text(
@@ -863,8 +841,8 @@ struct SettingsView: View {
             )
         case .awaitingFirstEvent, .connected:
             copy.text(
-                "仅停用兼容 Hook，保留自动任务流。",
-                "Disable only the compatibility Hook; keep automatic task streams running."
+                "停用 Hook，自动连接仍可用。",
+                "Disable the Hook; automatic connection stays available."
             )
         case .notInstalled, .abnormal:
             copy.text(
@@ -879,21 +857,21 @@ struct SettingsView: View {
             || activityRuntime.isOpeningSecurityReview
         {
             return copy.text(
-                "正在准备兼容 Hook，自动任务流仍会独立连接。",
-                "Preparing the compatibility Hook; automatic task streams connect independently."
+                "正在配置 Hook…",
+                "Setting up the Hook…"
             )
         }
 
         return switch activityRuntime.hookConnectionStatus {
         case .notInstalled:
             copy.text(
-                "按需安装兼容 Hook；自动连接无需此步骤。",
-                "Install the compatibility Hook if needed; automatic connection does not require this step."
+                "按需启用，自动连接无需 Hook。",
+                "Optional. Automatic connection does not need a Hook."
             )
         case .installedNeedsRestart:
             copy.text(
-                "安全确认已经完成；点击一次即可安全退出并重新打开 Codex。",
-                "The security review is complete. Restart Codex here with one click."
+                "已信任，重启 Codex 后生效。",
+                "Trusted. Restart Codex to activate."
             )
         case .awaitingTrust:
             copy.text(
@@ -902,16 +880,16 @@ struct SettingsView: View {
             )
         case .awaitingFirstEvent:
             activityRuntime.compatibilityHookScope == .compaction ? copy.text(
-                "已配置压缩开始与结束 Hook，尚未收到压缩事件。",
-                "Compaction start and end Hooks are configured. No compaction event has been received yet."
+                "已配置，等待压缩事件。",
+                "Configured. Waiting for a compaction event."
             ) : copy.text(
-                "重启已经完成；发送一条新的 Codex 消息完成连接。",
-                "Restart is complete. Send a new Codex message to finish connecting."
+                "发送一条 Codex 消息以完成连接。",
+                "Send a Codex message to finish connecting."
             )
         case .connected:
             copy.text(
-                "已收到兼容 Hook 事件。停用 Hook 不会关闭自动任务流。",
-                "Compatibility Hook events have been received. Disabling the Hook keeps automatic task streams running."
+                "已收到 Hook 事件。",
+                "Hook events received."
             )
         case .abnormal(let message):
             message
@@ -964,8 +942,8 @@ struct SettingsView: View {
 
     private var codexEnvironmentSubtitle: String {
         activityRuntime.codexVersion ?? copy.text(
-            "正在检测 Codex 版本…",
-            "Detecting the Codex version…"
+            "检测版本中…",
+            "Checking version…"
         )
     }
 
@@ -1016,21 +994,21 @@ struct SettingsView: View {
         switch activityRuntime.hookConnectionStatus {
         case .installedNeedsRestart:
             copy.text(
-                "QuotaView 会安全退出并重新打开 Codex；重新启动后无需再次配置。",
-                "QuotaView safely quits and reopens Codex. No further setup is needed after restart."
+                "重启后即可使用，无需重新配置。",
+                "Ready after restart. No further setup needed."
             )
         case .awaitingTrust:
             copy.text(
-                "请先等待 CLI 完成首次加载。QuotaView 会自动输入 /hooks；只有看到 Hooks 页面和“Press t to trust all”提示后再按 T，不要在普通输入框中提前按键。",
-                "Wait for the CLI to finish its first load. QuotaView enters /hooks automatically. Press T only after the Hooks page shows “Press t to trust all”; do not press it in the normal prompt."
+                "QuotaView 会自动打开 /hooks。看到“Press t to trust all”后按 T。",
+                "QuotaView opens /hooks automatically. Press T when “Press t to trust all” appears."
             )
         case .awaitingFirstEvent:
             activityRuntime.compatibilityHookScope == .compaction ? copy.text(
-                "当前仅接收压缩事件，普通聊天消息不会完成此项验证。正常使用 Codex 即可，无需专门触发压缩；收到真实压缩事件后会更新连接状态。",
-                "This setup receives only compaction events; ordinary chat messages do not verify it. Use Codex normally without forcing compaction. The connection status updates when a real compaction event arrives."
+                "正常使用 Codex，收到压缩事件后会更新状态。",
+                "Use Codex normally. Status updates when a compaction event arrives."
             ) : copy.text(
-                "不会发送测试数据；收到重启后的第一条真实消息时，灵动岛会自动切换为活动状态。",
-                "No test data is sent. The island switches to its active state after the first real message following restart."
+                "发送新消息后更新状态。",
+                "Status updates after a new message."
             )
         case .notInstalled, .connected, .abnormal:
             ""
@@ -1041,8 +1019,8 @@ struct SettingsView: View {
         return switch activityRuntime.bridgeStatus {
         case .listening:
             copy.text(
-                "通过当前用户的本地 Unix Socket 接收脱敏事件；受限时自动回退到权限隔离的本地队列。",
-                "Receives sanitized events through a current-user Unix socket and automatically falls back to a permission-isolated local queue when restricted."
+                "通过本地连接接收任务事件。",
+                "Receives task events through a local connection."
             )
         case .stopped:
             copy.text(
@@ -1078,8 +1056,8 @@ struct SettingsView: View {
 
     private var codexActivityPrivacyNote: String {
         copy.text(
-            "只读连接本机 Codex，展示任务状态、公开内容、计划与用量；批准和其他任务操作仍由 Codex 处理。",
-            "Observe local Codex task state, public content, plans and usage. Codex continues to handle approvals and other task actions."
+            "任务与用量来自本机 Codex。",
+            "Tasks and usage come from local Codex."
         )
     }
 }
@@ -1266,7 +1244,7 @@ private struct CodexActivityProgressEffectPreview: NSViewRepresentable {
         context: Context
     ) -> CodexActivityStateSmokePreviewHostView {
         let view = CodexActivityStateSmokePreviewHostView(effect: effect)
-        view.update(effect: effect, reduceMotion: reduceMotion)
+        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
         return view
     }
 
@@ -1274,7 +1252,7 @@ private struct CodexActivityProgressEffectPreview: NSViewRepresentable {
         _ view: CodexActivityStateSmokePreviewHostView,
         context: Context
     ) {
-        view.update(effect: effect, reduceMotion: reduceMotion)
+        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
     }
 }
 
@@ -1510,6 +1488,59 @@ private struct SettingsNavigationButtonStyle: ButtonStyle {
     }
 }
 
+enum SettingsEffectPreviewMetrics {
+    static let outerCornerRadius: CGFloat = 12
+    static let inset: CGFloat = 8
+    static let previewCornerRadius = outerCornerRadius - inset
+    static let height: CGFloat = 32
+}
+
+private struct SettingsQuitRowStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.foregroundStyle(Color(nsColor: .systemRed))
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovered ? 0.06 : 0))
+                    }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+            .onHover { hovered = $0 }.onDisappear { hovered = false }
+    }
+}
+
+private struct SettingsEffectOptionStyle: ButtonStyle {
+    let effect: AppPreferences.CodexActivityProgressEffect
+    let selected: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(spacing: 8) {
+            CodexActivityProgressEffectPreview(effect: effect, reduceMotion: reduceMotion)
+                .frame(height: SettingsEffectPreviewMetrics.height)
+                .clipShape(RoundedRectangle(cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius, style: .continuous))
+                .padding(SettingsEffectPreviewMetrics.inset)
+                .background(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.06 : 0.025),
+                            in: RoundedRectangle(cornerRadius: SettingsEffectPreviewMetrics.outerCornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: SettingsEffectPreviewMetrics.outerCornerRadius, style: .continuous)
+                        .strokeBorder(selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .separatorColor), lineWidth: selected ? 1.5 : 0.5)
+                }
+                .allowsHitTesting(false).accessibilityHidden(true)
+            configuration.label.font(.system(size: 12, weight: .medium)).foregroundStyle(.primary)
+                .lineLimit(1).minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity).contentShape(Rectangle())
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+        .onHover { hovered = $0 }.onDisappear { hovered = false }
+    }
+}
+
 private struct SettingsVisualOptionStyle: ButtonStyle {
     let selected: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1517,11 +1548,11 @@ private struct SettingsVisualOptionStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.foregroundStyle(.primary).padding(12)
             .background(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.06 : 0.025),
-                        in: RoundedRectangle(cornerRadius: 12))
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .separatorColor), lineWidth: selected ? 1.5 : 0.5)
-            }.contentShape(RoundedRectangle(cornerRadius: 12))
+            }.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }.onDisappear { hovered = false }
     }
@@ -1554,28 +1585,6 @@ private struct SettingsAppearancePreview: View {
         }.padding(7).frame(maxWidth: .infinity)
             .background(dark ? Color(white: 0.15) : Color(white: 0.94), in: RoundedRectangle(cornerRadius: 6))
             .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5) }
-    }
-}
-
-// Scale the production usage layout, including real/missing/private states, rather than a second mock layout.
-private struct SettingsUsagePreview: View {
-    @ObservedObject var store: CodexStatusStore
-    @ObservedObject var preferences: AppPreferences
-    @State private var height: CGFloat = 500
-    @State private var board = IslandBoardState()
-    private let scale: CGFloat = 0.62
-    var body: some View {
-        IslandUsageBento(snapshot: store.islandUsage.snapshot, usageState: store.islandUsage.state,
-            english: preferences.resolvedLanguage == .english, contentWidth: 624,
-            options: .init(preferences: preferences), privacy: preferences.codexIslandPrivacy,
-            playbackEnabled: false, hidesTicket: false, onReset: {}, utilities: .init(state: board),
-            onHeightChange: { height = $0 })
-            .frame(width: 680, height: height, alignment: .topLeading)
-            .background(.black, in: RoundedRectangle(cornerRadius: 24))
-            .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: 680 * scale, height: height * scale, alignment: .topLeading)
-            .clipped().allowsHitTesting(false).accessibilityHidden(true)
-            .frame(maxWidth: .infinity, alignment: .center)
     }
 }
 

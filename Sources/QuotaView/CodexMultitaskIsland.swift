@@ -390,6 +390,8 @@ struct CodexMultitaskDisplay {
     var usageSnapshot: CurrentCodexPresentation? = nil
     var usageState: IslandUsagePresentation.State = .loading
     var usageOptions = IslandUsageOptions()
+    var automaticPopupEnabled = true
+    var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
     var sessionMetadata: [Int: IslandSessionMetadata] = [:]
     var taskDetails: [Int: IslandTaskDetailData] = [:]
     var connectionTitle: String = ""

@@ -26,8 +26,8 @@ enum IslandApprovalDecisionChoices {
         request.actions.compactMap { action in
             let decision = action.result["decision"]
             switch decision.text {
-            case "accept": return .init(action: action, title: .init("仅这一次", "This request"), detail: .init("后续请求仍需确认", "Ask again for future requests"))
-            case "acceptForSession": return .init(action: action, title: .init("本会话", "This session"), detail: .init("按本会话批准范围处理", "Apply the session approval scope"))
+            case "accept": return .init(action: action, title: .init("仅一次", "Once"), detail: .init("下次仍需确认", "Ask again next time"))
+            case "acceptForSession": return .init(action: action, title: .init("本会话", "This session"), detail: .init("本次批准在会话内有效", "This approval lasts for the session"))
             default:
                 if let rule = decision["acceptWithExecpolicyAmendment"].object {
                     let prefix = rule["execpolicy_amendment"]?.array.map(\.text).joined(separator: " ") ?? ""
@@ -181,7 +181,7 @@ struct IslandApprovalView: View {
             return .init(id: "submit", label: wire.kind == .questions || wire.kind == .mcpForm
                 ? (IslandApprovalLayout(wire) == .connector ? .init("提交选择", "Submit choice")
                     : wire.kind == .mcpForm ? .init("提交参数", "Submit form") : .init("提交回答", "Submit answers"))
-                : (wire.kind == .mcpURL ? .init("已完成，继续", "Finished, continue") : .init("授予所选权限", "Grant selected")),
+                : (wire.kind == .mcpURL ? .init("完成授权，继续", "Authorization complete, continue") : .init("授予所选权限", "Grant selected")),
                 result: draft.result(for: wire) ?? .null, affirmative: true)
         }
         guard var action = wire.flatMap({ IslandApprovalDecisionChoices.selected($0, id: draft.decisionID)?.action })
@@ -226,7 +226,7 @@ struct IslandApprovalView: View {
                 .padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             actionBar.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             IslandChromeFooter {
-                Text("Codex · " + (request.canRespond ? text("可应答", "Interactive") : text("观察模式", "Observer")))
+                Text("Codex · " + (request.canRespond ? text("可处理", "Interactive") : text("仅查看", "Read-only")))
                     .lineLimit(1)
             } trailing: {
                 Text(footerStatus).lineLimit(1).truncationMode(.tail)
@@ -332,7 +332,7 @@ struct IslandApprovalView: View {
                             }
                         } else { ForEach(Array(q.options.enumerated()), id: \.offset) { _, option in optionButton(q, option: option) } }
                         if q.other || q.options.isEmpty {
-                            IslandApprovalInput(placeholder: text(q.options.isEmpty ? "输入你的回答" : "其他答案，请补充…",
+                            IslandApprovalInput(placeholder: text(q.options.isEmpty ? "输入你的回答" : "其他回答…",
                                 q.options.isEmpty ? "Your answer" : "Or enter another answer…"), secret: q.secret, value: answerBinding(q.id))
                         }
                     }
@@ -494,14 +494,14 @@ struct IslandApprovalView: View {
     private var footerStatus: String {
         if !codexJumpMessage.isEmpty { return codexJumpMessage }
         switch request.phase {
-        case .submitting: return text("正在提交…", "Submitting…")
+        case .submitting: return text("提交中…", "Submitting…")
         case .sent: return text("已发送，等待 Codex 确认", "Sent, awaiting Codex confirmation")
-        case .resultUnknown: return text("处理结果尚未确认，请在 Codex 核对", "Result unknown; check in Codex")
+        case .resultUnknown: return text("结果未确认，请在 Codex 核对", "Result unconfirmed; check in Codex")
         case .resolved: return text("请求已处理", "Request resolved")
         default: break
         }
-        if !request.canRespond { return text("仅观察，请在 Codex 查看并处理", "Observer only; handle in Codex") }
-        guard let wire else { return text("等待你的选择", "Awaiting your choice") }
+        if !request.canRespond { return text("请在 Codex 处理", "Handle this request in Codex") }
+        guard let wire else { return text("等待选择", "Awaiting a choice") }
         switch wire.kind {
         case .questions:
             return text("已回答 \(wire.questions.filter { answered($0) }.count) / \(wire.questions.count) 个问题",
@@ -509,10 +509,10 @@ struct IslandApprovalView: View {
         case .permissions:
             return text("已选 \((draft.selections["permissions"] ?? []).count) 项 · \(draft.sessionScope ? "本会话" : "仅本轮")",
                 "\((draft.selections["permissions"] ?? []).count) selected · \(draft.sessionScope ? "This session" : "This turn")")
-        case .mcpForm: return draft.result(for: wire) == nil ? text("请完成必填项并检查格式", "Complete required fields and check the format") : text("参数已就绪", "Ready to submit")
-        case .mcpURL: return draft.openedURL ? text("完成授权后继续", "Continue when authorization is complete") : text("等待打开授权页面", "Ready to open authorization")
-        case .nativeOnly: return text("需在 Codex 中完成", "Continue in Codex")
-        default: return text("确认后继续当前任务", "This task resumes after approval")
+        case .mcpForm: return draft.result(for: wire) == nil ? text("请填写必填项并检查格式", "Complete required fields in the requested format") : text("参数已就绪", "Ready to submit")
+        case .mcpURL: return draft.openedURL ? text("完成授权后继续", "Continue when authorization is complete") : text("请打开授权页面", "Open the authorization page")
+        case .nativeOnly: return text("请在 Codex 处理", "Continue in Codex")
+        default: return text("确认后继续", "Resumes after approval")
         }
     }
     private func decisionChoices(_ request: IslandCodexApprovalRequest) -> some View {
@@ -570,7 +570,7 @@ struct IslandApprovalView: View {
         return Button { send(action) } label: {
             HStack(spacing: 8) {
                 if submitting && primary { ProgressView().controlSize(.small).tint(secondary) }
-                Text(submitting && primary ? text("正在提交…", "Submitting…") : action.label.value(english))
+                Text(submitting && primary ? text("提交中…", "Submitting…") : action.label.value(english))
                 if primary && !submitting { Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)) }
             }.font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
         }.buttonStyle(IslandApprovalActionStyle(primary: primary, destructive: destructive)).disabled(!enabled)
@@ -595,7 +595,7 @@ struct IslandApprovalView: View {
         }
         NSWorkspace.shared.openApplication(at: url, configuration: .init()) { _, error in
             DispatchQueue.main.async {
-                codexJumpMessage = error == nil ? text("已打开 Codex，请选择此任务处理", "Codex opened; select this task to continue")
+                codexJumpMessage = error == nil ? text("已打开 Codex，请选择对应任务", "Codex opened; select this task")
                     : text("未能打开 Codex，请手动打开对应任务", "Could not open Codex; open the task manually")
             }
         }

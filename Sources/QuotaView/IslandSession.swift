@@ -18,6 +18,8 @@ final class IslandSession {
     private var usageSnapshot: CurrentCodexPresentation?
     private var usageState: IslandUsagePresentation.State = .loading
     private var usageOptions = IslandUsageOptions()
+    private var automaticPopupEnabled = true
+    private var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
     private var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     private var locked = false
     private var observations: [NSObjectProtocol] = []
@@ -52,8 +54,10 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration) {
         self.usageOptions = usageOptions
+        self.automaticPopupEnabled = automaticPopupEnabled
+        self.automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.normalizedDuration(automaticPopupDuration)
         self.progressEffect = progressEffect
         self.usageSnapshot = usageSnapshot
         self.usageState = usageState
@@ -85,6 +89,8 @@ final class IslandSession {
         display.usageSnapshot = privacy ? nil : usageSnapshot
         display.usageState = usageState
         display.usageOptions = usageOptions
+        display.automaticPopupEnabled = automaticPopupEnabled
+        display.automaticPopupDuration = automaticPopupDuration
         display.effect = progressEffect
         board.update(model: display,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)

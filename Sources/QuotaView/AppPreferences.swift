@@ -109,6 +109,15 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum CodexActivityAutomaticPopupTiming {
+        static let durationRange = 1...10
+        static let defaultDuration = 3
+
+        static func normalizedDuration(_ value: Int) -> Int {
+            min(max(value, durationRange.lowerBound), durationRange.upperBound)
+        }
+    }
+
     enum CodexActivityTiming {
         static let compactDelayRange = 5...60
         static let hiddenDelayAfterCompactRange = 5...120
@@ -139,6 +148,8 @@ final class AppPreferences: ObservableObject {
         static let codexActivityIslandEnabled =
             "preferences.codexActivity.islandEnabled"
         static let codexActivityMultitaskEnabled = "preferences.codexActivity.multitaskEnabled"
+        static let codexActivityAutomaticPopupEnabled = "preferences.codexActivity.automaticPopupEnabled"
+        static let codexActivityAutomaticPopupDuration = "preferences.codexActivity.automaticPopupDuration"
         static let codexActivityProgressEffect =
             "preferences.codexActivity.progressEffect"
         static let codexActivityScreenPlacement =
@@ -249,6 +260,22 @@ final class AppPreferences: ObservableObject {
 
     @Published var codexActivityMultitaskEnabled: Bool {
         didSet { defaults.set(codexActivityMultitaskEnabled, forKey: Key.codexActivityMultitaskEnabled) }
+    }
+
+    @Published var codexActivityAutomaticPopupEnabled: Bool {
+        didSet {
+            defaults.set(codexActivityAutomaticPopupEnabled, forKey: Key.codexActivityAutomaticPopupEnabled)
+        }
+    }
+
+    @Published var codexActivityAutomaticPopupDuration: Int {
+        didSet {
+            let normalized = CodexActivityAutomaticPopupTiming.normalizedDuration(codexActivityAutomaticPopupDuration)
+            if normalized != codexActivityAutomaticPopupDuration {
+                codexActivityAutomaticPopupDuration = normalized
+            }
+            defaults.set(normalized, forKey: Key.codexActivityAutomaticPopupDuration)
+        }
     }
 
     @Published var codexActivityProgressEffect:
@@ -464,6 +491,13 @@ final class AppPreferences: ObservableObject {
         codexActivityMultitaskEnabled = defaults.storedBool(
             forKey: Key.codexActivityMultitaskEnabled, defaultValue: false
         )
+        codexActivityAutomaticPopupEnabled = defaults.storedBool(
+            forKey: Key.codexActivityAutomaticPopupEnabled, defaultValue: true
+        )
+        codexActivityAutomaticPopupDuration = CodexActivityAutomaticPopupTiming.normalizedDuration(
+            defaults.storedInt(forKey: Key.codexActivityAutomaticPopupDuration,
+                defaultValue: CodexActivityAutomaticPopupTiming.defaultDuration)
+        )
         codexActivityProgressEffect = CodexActivityProgressEffect(
             rawValue: defaults.string(
                 forKey: Key.codexActivityProgressEffect
@@ -513,6 +547,8 @@ final class AppPreferences: ObservableObject {
             rawValue: defaults.string(forKey: Key.customLanguage) ?? ""
         ) ?? .simplifiedChinese
         defaults.set(glassMode.rawValue, forKey: Key.glassMode)
+        defaults.set(codexActivityAutomaticPopupEnabled, forKey: Key.codexActivityAutomaticPopupEnabled)
+        defaults.set(codexActivityAutomaticPopupDuration, forKey: Key.codexActivityAutomaticPopupDuration)
         defaults.set(
             codexActivityProgressEffect.rawValue,
             forKey: Key.codexActivityProgressEffect
@@ -637,8 +673,8 @@ final class AppPreferences: ObservableObject {
 
 struct AppCopy {
     let language: AppPreferences.Language
-    var islandArchiveTask: String { text("从灵动岛归档", "Archive from Island") }
-    var islandArchiveTaskHint: String { text("仅清理灵动岛显示，不影响 Codex 任务或聊天", "Only clears the Island display; does not change the Codex task or chat") }
+    var islandArchiveTask: String { text("归档卡片", "Archive card") }
+    var islandArchiveTaskHint: String { text("从灵动岛移除，Codex 任务与聊天保留", "Remove from the Island; keep the Codex task and chat") }
 
     func text(_ simplifiedChinese: String, _ english: String) -> String {
         switch language {

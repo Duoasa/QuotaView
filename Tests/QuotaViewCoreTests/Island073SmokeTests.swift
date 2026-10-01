@@ -36,13 +36,17 @@ final class Island073SmokeTests: XCTestCase {
         preferences.codexActivityProgressEffect = .sloshFlow
         let restored = AppPreferences(defaults: defaults)
         let hidden = IslandUsageOptions(preferences: restored)
-        XCTAssertFalse(hidden.hasTokenMetrics)
-        XCTAssertFalse(hidden.quota || hidden.spark || hidden.credits || hidden.cost || hidden.activity || hidden.reset)
+        XCTAssertTrue(hidden.quota && hidden.spark && hidden.credits && hidden.reset)
+        XCTAssertTrue(hidden.dailyTokens && hidden.monthlyTokens && hidden.lifetimeTokens && hidden.hasTokenMetrics)
+        XCTAssertFalse(hidden.cost || hidden.activity)
+        XCTAssertFalse(restored.showUsageSummary || restored.showResetAction,
+            "Legacy settings stay stored without hiding required primary-island data")
         XCTAssertEqual(restored.codexActivityProgressEffect, .sloshFlow)
         restored.showEstimatedCost = true; restored.showLifetimeTokens = true
         let changed = IslandUsageOptions(preferences: restored)
         XCTAssertTrue(changed.cost && changed.lifetimeTokens && changed.hasTokenMetrics)
-        XCTAssertFalse(changed.activity || changed.dailyTokens || changed.monthlyTokens)
+        XCTAssertFalse(changed.activity)
+        XCTAssertTrue(changed.dailyTokens && changed.monthlyTokens)
         let board = IslandBoardState()
         let model = IslandLiveStore()
         var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
@@ -169,6 +173,98 @@ final class Island073SmokeTests: XCTestCase {
         XCTAssertEqual(board.presentation, .pinned)
         update(enabled: false); XCTAssertTrue(board.compact); XCTAssertNil(board.automaticPreviewDeadline)
     }
+    @MainActor
+    func testAutomaticPopupPreferencesPersistAndClampDuration() throws {
+        let suite = "QuotaView.PopupSmoke.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults)
+        XCTAssertTrue(preferences.codexActivityAutomaticPopupEnabled)
+        XCTAssertEqual(preferences.codexActivityAutomaticPopupDuration, 3)
+        preferences.codexActivityAutomaticPopupEnabled = false
+        preferences.codexActivityAutomaticPopupDuration = 7
+        let restored = AppPreferences(defaults: defaults)
+        XCTAssertFalse(restored.codexActivityAutomaticPopupEnabled)
+        XCTAssertEqual(restored.codexActivityAutomaticPopupDuration, 7)
+        restored.codexActivityAutomaticPopupDuration = 0
+        XCTAssertEqual(restored.codexActivityAutomaticPopupDuration, 1)
+        restored.codexActivityAutomaticPopupDuration = 99
+        XCTAssertEqual(restored.codexActivityAutomaticPopupDuration, 10)
+        XCTAssertEqual(AppPreferences(defaults: defaults).codexActivityAutomaticPopupDuration, 10)
+        defaults.set(-20, forKey: "preferences.codexActivity.automaticPopupDuration")
+        XCTAssertEqual(AppPreferences(defaults: defaults).codexActivityAutomaticPopupDuration, 1)
+    }
+
+    @MainActor
+    func testDisabledAutomaticPopupsKeepTaskAndRequestEventsManual() {
+        let model = IslandLiveStore(); let board = IslandBoardState(); let date = Date()
+        func update() {
+            var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
+            display.automaticPopupEnabled = false
+            board.update(display, reduceMotion: true, now: date)
+        }
+        update()
+        start(model, "manual", "one", at: date); update()
+        XCTAssertTrue(board.compact)
+        model.receive(json("turn/completed", ["threadId": "manual", "turn": ["id": "one", "status": "completed"]])); update()
+        XCTAssertTrue(board.compact)
+        start(model, "manual", "two", at: date)
+        model.receive(json("item/commandExecution/requestApproval", ["threadId": "manual", "turnId": "two", "command": "swift build"], id: 1)); update()
+        XCTAssertTrue(board.compact)
+        XCTAssertEqual(board.attentionCount, 1)
+        XCTAssertNil(board.automaticPreviewDeadline)
+        board.preview(); board.endPreview(); board.dismissFromOutside(); update()
+        XCTAssertFalse(board.compact, "A request the user opened stays visible while pending")
+        XCTAssertEqual(board.attentionCount, 1)
+        model.receive(json("serverRequest/resolved", ["threadId": "manual", "requestId": 1])); update()
+        XCTAssertTrue(board.compact)
+    }
+
+    @MainActor
+    func testPopupDurationAndPreferenceChangesPreserveManualPages() {
+        let model = IslandLiveStore(); let board = IslandBoardState(); let date = Date()
+        func update(_ now: Date = date, enabled: Bool = true) {
+            var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
+            display.automaticPopupEnabled = enabled; display.automaticPopupDuration = 7
+            board.update(display, reduceMotion: true, now: now)
+        }
+        update(); start(model, "duration", "one", at: date); update()
+        XCTAssertEqual(board.automaticPreviewDeadline, date.addingTimeInterval(7))
+        update(date.addingTimeInterval(2))
+        XCTAssertEqual(board.automaticPreviewDeadline, date.addingTimeInterval(7))
+        board.finishAutomaticPreview(at: date.addingTimeInterval(6.9)); XCTAssertFalse(board.compact)
+        board.finishAutomaticPreview(at: date.addingTimeInterval(7)); XCTAssertTrue(board.compact)
+        start(model, "duration", "two", at: date); update()
+        update(enabled: false)
+        XCTAssertTrue(board.compact); XCTAssertNil(board.automaticPreviewDeadline)
+        board.preview(); update(enabled: false)
+        XCTAssertFalse(board.compact)
+        board.openUsage(); update(enabled: false)
+        XCTAssertTrue(board.showsUsage); XCTAssertFalse(board.compact)
+        board.pin(); start(model, "duration", "three", at: date); update()
+        XCTAssertEqual(board.presentation, .pinned)
+        XCTAssertNil(board.automaticPreviewDeadline)
+        update(enabled: false)
+        XCTAssertEqual(board.presentation, .pinned)
+        XCTAssertTrue(board.showsUsage)
+    }
+
+    @MainActor
+    func testCompactEffectPreviewUsesConcentricCorners() {
+        let outer = SettingsEffectPreviewMetrics.outerCornerRadius
+        let inset = SettingsEffectPreviewMetrics.inset
+        let inner = SettingsEffectPreviewMetrics.previewCornerRadius
+        XCTAssertEqual(outer, inner + inset)
+        XCTAssertLessThanOrEqual(SettingsEffectPreviewMetrics.height, 32)
+        let host = CodexActivityStateSmokePreviewHostView(effect: .stateSmoke)
+        host.frame = .init(x: 0, y: 0, width: 112, height: SettingsEffectPreviewMetrics.height)
+        host.update(effect: .stateSmoke, reduceMotion: true, cornerRadius: inner)
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(host.subviews.first?.layer?.cornerRadius, inner)
+        XCTAssertTrue(host.subviews.first?.layer?.masksToBounds == true)
+        XCTAssertNotNil(NSImage(systemSymbolName: "rectangle.portrait.and.arrow.right", accessibilityDescription: nil))
+    }
+
     func testActivityHeatmapFitsWidthAndPreservesTotals() {
         let date = Date(timeIntervalSince1970: 1790812800)
         let activity = [DailyTokenActivity(date: date, tokens: 123)]

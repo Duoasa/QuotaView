@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 import QuotaViewCore
 
-// Existing persisted panel choices also control the primary island usage page.
+// Core usage data stays visible; only the two optional charts follow panel preferences.
 struct IslandUsageOptions: Equatable {
     var quota = true
     var spark = true
@@ -17,11 +17,7 @@ struct IslandUsageOptions: Equatable {
     var hasTokenMetrics: Bool { dailyTokens || monthlyTokens || lifetimeTokens }
     init() {}
     @MainActor init(preferences: AppPreferences) {
-        quota = preferences.showUsageSummary; spark = preferences.showSparkQuota
-        credits = preferences.showCreditBalance; dailyTokens = preferences.showDailyTokens
-        monthlyTokens = preferences.showThirtyDayTokens; lifetimeTokens = preferences.showLifetimeTokens
         cost = preferences.showEstimatedCost; activity = preferences.showTokenActivity
-        reset = preferences.showResetAction
     }
 }
 
