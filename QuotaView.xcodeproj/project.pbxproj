@@ -75,6 +75,7 @@
 		B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000002 /* IslandApprovalProtocol.swift */; };
 		B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000003 /* IslandApprovalTypedContent.swift */; };
 		B07300000000000000000004 /* IslandConceptBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000004 /* IslandConceptBoard.swift */; };
+		B07300000000000000000090 /* IslandResetPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000090 /* IslandResetPage.swift */; };
 		B07300000000000000000005 /* IslandLiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000005 /* IslandLiveStore.swift */; };
 		B07300000000000000000006 /* IslandPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000006 /* IslandPresentationModels.swift */; };
 		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
@@ -226,6 +227,7 @@
 		F07300000000000000000002 /* IslandApprovalProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalProtocol.swift; sourceTree = "<group>"; };
 		F07300000000000000000003 /* IslandApprovalTypedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalTypedContent.swift; sourceTree = "<group>"; };
 		F07300000000000000000004 /* IslandConceptBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandConceptBoard.swift; sourceTree = "<group>"; };
+		F07300000000000000000090 /* IslandResetPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandResetPage.swift; sourceTree = "<group>"; };
 		F07300000000000000000005 /* IslandLiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandLiveStore.swift; sourceTree = "<group>"; };
 		F07300000000000000000006 /* IslandPresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPresentationModels.swift; sourceTree = "<group>"; };
 		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 				F07300000000000000000006 /* IslandPresentationModels.swift */,
 				F07300000000000000000005 /* IslandLiveStore.swift */,
 				F07300000000000000000004 /* IslandConceptBoard.swift */,
+				F07300000000000000000090 /* IslandResetPage.swift */,
 				F07300000000000000000003 /* IslandApprovalTypedContent.swift */,
 				F07300000000000000000002 /* IslandApprovalProtocol.swift */,
 				F07300000000000000000001 /* IslandApproval.swift */,
@@ -685,6 +688,7 @@
 				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,
 				B07300000000000000000005 /* IslandLiveStore.swift in Sources */,
 				B07300000000000000000004 /* IslandConceptBoard.swift in Sources */,
+				B07300000000000000000090 /* IslandResetPage.swift in Sources */,
 				B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */,
 				B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */,
 				B07300000000000000000001 /* IslandApproval.swift in Sources */,

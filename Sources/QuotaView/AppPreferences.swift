@@ -637,6 +637,8 @@ final class AppPreferences: ObservableObject {
 
 struct AppCopy {
     let language: AppPreferences.Language
+    var islandArchiveTask: String { text("从灵动岛归档", "Archive from Island") }
+    var islandArchiveTaskHint: String { text("仅清理灵动岛显示，不影响 Codex 任务或聊天", "Only clears the Island display; does not change the Codex task or chat") }
 
     func text(_ simplifiedChinese: String, _ english: String) -> String {
         switch language {

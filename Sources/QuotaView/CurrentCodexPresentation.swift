@@ -63,6 +63,70 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     }
 }
 
+// Island content may retain the last successful read, while current-status
+// indicators and account operations continue to require a successful latest read.
+struct IslandUsagePresentation: Equatable, Sendable {
+    enum State: Equatable, Sendable {
+        case loading
+        case current
+        case stale(ProviderError)
+        case unavailable(ProviderError)
+
+        var isCurrent: Bool { self == .current }
+        var isStale: Bool {
+            if case .stale = self { return true }
+            return false
+        }
+        func message(copy: AppCopy) -> String {
+            switch self {
+            case .loading: return copy.text("正在读取用量数据", "Loading usage data")
+            case .current: return ""
+            case .stale(let error), .unavailable(let error):
+                switch error {
+                case .timedOut: return copy.text("读取 Codex 状态超时", "Codex status read timed out")
+                case .processExited: return copy.text("Codex 数据连接已退出", "Codex data connection exited")
+                case .notConfigured: return copy.text("找不到 Codex 程序", "Codex executable not found")
+                case .permissionDenied: return copy.text("Codex 拒绝了读取请求，请检查登录状态", "Codex denied the read request; check sign-in")
+                case .protocolViolation, .unsupportedSchema: return copy.text("Codex 数据格式无法识别", "Codex data format is not recognized")
+                case .cancelled: return copy.text("本次读取已取消", "This read was cancelled")
+                case .transient: return copy.text("Codex 暂时未能返回数据", "Codex could not return data right now")
+                case .unavailable: return copy.text("暂时无法连接 Codex", "Unable to connect to Codex right now")
+                }
+            }
+        }
+    }
+    let snapshot: CurrentCodexPresentation?
+    let state: State
+    static let loading = Self(snapshot: nil, state: .loading)
+
+    func failed(_ error: ProviderError) -> Self {
+        switch error {
+        case .unavailable, .timedOut, .processExited, .transient, .cancelled:
+            if let snapshot { return Self(snapshot: snapshot, state: .stale(error)) }
+        case .notConfigured, .permissionDenied, .protocolViolation, .unsupportedSchema:
+            break
+        }
+        return Self(snapshot: nil, state: .unavailable(error))
+    }
+}
+
+extension ProviderError {
+    // Persist only this category across successful reads, never a response body.
+    var islandDiagnosticCategory: String {
+        switch self {
+        case .unavailable: "unavailable"
+        case .notConfigured: "notConfigured"
+        case .timedOut: "timedOut"
+        case .processExited: "processExited"
+        case .protocolViolation: "protocolViolation"
+        case .unsupportedSchema: "unsupportedSchema"
+        case .permissionDenied: "permissionDenied"
+        case .cancelled: "cancelled"
+        case .transient: "transient"
+        }
+    }
+}
+
 struct CurrentCodexPresentationProjector {
     func makePresentation(
         from result: ProviderFetchResult

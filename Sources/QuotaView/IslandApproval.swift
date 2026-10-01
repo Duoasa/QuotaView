@@ -158,6 +158,7 @@ struct IslandApprovalView: View {
     let scrollLink: IslandTaskScrollLink
     @Binding var draft: IslandApprovalDraft
     let onDecision: (UUID, IslandConfirmationDecision) -> Void
+    var onArchive: (() -> Void)? = nil
     @State private var codexJumpMessage = ""
     @State private var headerVisible = false
     private var muted: Color { IslandApprovalAppearance.muted }
@@ -257,7 +258,13 @@ struct IslandApprovalView: View {
         VStack(alignment: .leading, spacing: IslandApprovalMetrics.gap) {
             IslandTaskCard(task: task, selected: true, metadata: metadata, english: english,
                 playback: false, effectVisible: visible && headerVisible && playbackEnabled && task.playbackEnabled,
-                reduceMotion: reduceMotion, cardWidth: metrics.contentWidth)
+                reduceMotion: reduceMotion, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
+                .overlay(alignment: .topTrailing) {
+                    if let onArchive {
+                        IslandTaskArchiveButton(english: english, action: onArchive)
+                            .padding(.top, 6).padding(.trailing, 8)
+                    }
+                }
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
                     openedURL: draft.openedURL, handoffMessage: codexJumpMessage,

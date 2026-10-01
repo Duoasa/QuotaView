@@ -6,7 +6,7 @@ import QuotaViewCore
 @MainActor
 final class IslandSession {
     var onWake: (() -> Void)?
-    let model = IslandLiveStore()
+    let model = IslandLiveStore(archiveDefaults: .standard)
     let board = IslandBoardController()
     private var clock: Timer?
     private var contentRefresh: DispatchWorkItem?
@@ -16,12 +16,14 @@ final class IslandSession {
     private var weeklyRemaining: Int?
     private var quotaResetsAt: Date?
     private var usageSnapshot: CurrentCodexPresentation?
+    private var usageState: IslandUsagePresentation.State = .loading
     private var locked = false
     private var observations: [NSObjectProtocol] = []
     private var lockObservations: [NSObjectProtocol] = []
     private var privacy = false
     init() {
         board.onSelect = { [weak self] in self?.model.select($0) }
+        board.state.onArchive = { [weak self] in self?.model.archiveFromIsland($0) }
         board.onConfirmation = { [weak self] id, rid, decision in self?.model.submit(id, requestID: rid, decision: decision) }
         board.state.onNextRequest = { [weak self] in self?.model.nextRequest($0) }
         model.onChange = { [weak self] in self?.refresh() }
@@ -48,8 +50,9 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading) {
         self.usageSnapshot = usageSnapshot
+        self.usageState = usageState
         self.quotaResetsAt = quotaResetsAt
         self.weeklyRemaining = weeklyRemaining
         if self.privacy != privacy { self.privacy = privacy; board.state.clearDrafts() }
@@ -76,6 +79,7 @@ final class IslandSession {
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot
+        display.usageState = usageState
         board.update(model: display,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }

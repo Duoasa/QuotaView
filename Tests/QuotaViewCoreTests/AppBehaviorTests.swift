@@ -4582,18 +4582,104 @@ final class AppBehaviorTests: XCTestCase {
             widgetSnapshotWriter: Self.disabledWidgetWriter()
         )
 
+        XCTAssertEqual(store.islandUsage, .loading)
         await store.refresh()
-        XCTAssertNotNil(store.snapshot)
+        let lastSuccessful = store.snapshot
+        XCTAssertNotNil(lastSuccessful)
         XCTAssertTrue(store.hasCurrentCodexStatus)
+        XCTAssertEqual(store.islandUsage.state, .current)
 
         await store.refresh()
         XCTAssertNil(store.snapshot)
         XCTAssertFalse(store.hasCurrentCodexStatus)
         XCTAssertNotNil(store.errorMessage)
+        XCTAssertEqual(store.islandUsage.snapshot, lastSuccessful)
+        XCTAssertEqual(store.islandUsage.state, .stale(.unavailable))
+        XCTAssertFalse(store.hasAvailableResetCredit)
         guard case .unavailable = store.providerState else {
             await store.stop()
             return XCTFail("Latest provider failure must be unavailable")
         }
+        await store.stop()
+    }
+
+    @MainActor
+    func testIslandUsageRefreshFailureRecoversAndKeepsFailureCategory() async {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let sequence = IslandUsageFetchSequence()
+        let provider = AppStubProvider { _ in
+            if await sequence.next() == 1 { throw ProviderError.timedOut(stage: .fetch) }
+            return Self.makeFetchResult(resetCredits: 2)
+        }
+        let store = CodexStatusStore(provider: provider, diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter())
+        await store.refresh()
+        let lastSuccessful = store.snapshot
+        await store.refresh()
+        XCTAssertEqual(store.islandUsage.snapshot, lastSuccessful)
+        XCTAssertEqual(store.islandUsage.state, .stale(.timedOut(stage: .fetch)))
+        XCTAssertFalse(store.hasCurrentCodexStatus)
+        XCTAssertEqual(defaults.string(forKey: "diagnostics.lastFailureCategory"), "timedOut")
+        let failureAt = defaults.double(forKey: "diagnostics.lastFailureAt")
+        XCTAssertGreaterThan(failureAt, 0)
+        await store.refresh()
+        XCTAssertEqual(store.islandUsage.snapshot, store.snapshot)
+        XCTAssertEqual(store.islandUsage.state, .current)
+        XCTAssertTrue(store.hasCurrentCodexStatus)
+        XCTAssertNil(store.errorMessage)
+        XCTAssertEqual(defaults.string(forKey: "diagnostics.lastFailureCategory"), "timedOut")
+        XCTAssertEqual(defaults.double(forKey: "diagnostics.lastFailureAt"), failureAt)
+        await store.stop()
+        XCTAssertNil(store.islandUsage.snapshot)
+    }
+
+    @MainActor
+    func testIslandUsageInvalidReadClearsCachedData() async {
+        for error in [ProviderError.permissionDenied, .protocolViolation, .unsupportedSchema, .notConfigured] {
+            let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suiteName)!
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let sequence = IslandUsageFetchSequence()
+            let provider = AppStubProvider { _ in
+                switch await sequence.next() {
+                case 0: return Self.makeFetchResult(resetCredits: 1)
+                case 1: throw error
+                default: throw ProviderError.unavailable
+                }
+            }
+            let store = CodexStatusStore(provider: provider, diagnostics: defaults,
+                widgetSnapshotWriter: Self.disabledWidgetWriter())
+            await store.refresh()
+            XCTAssertNotNil(store.islandUsage.snapshot)
+            await store.refresh()
+            XCTAssertNil(store.islandUsage.snapshot)
+            XCTAssertEqual(store.islandUsage.state, .unavailable(error))
+            // The provider's previous raw snapshot must not resurrect invalidated data.
+            await store.refresh()
+            XCTAssertNil(store.islandUsage.snapshot)
+            XCTAssertEqual(store.islandUsage.state, .unavailable(.unavailable))
+            await store.stop()
+        }
+    }
+
+    @MainActor
+    func testIslandUsageFirstReadFailureDoesNotInventData() async {
+        let suiteName = "QuotaViewTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let provider = AppStubProvider { _ in throw ProviderError.timedOut(stage: .fetch) }
+        let store = CodexStatusStore(provider: provider, diagnostics: defaults,
+            widgetSnapshotWriter: Self.disabledWidgetWriter())
+        XCTAssertEqual(store.islandUsage, .loading)
+        await store.refresh()
+        XCTAssertNil(store.islandUsage.snapshot)
+        XCTAssertEqual(store.islandUsage.state, .unavailable(.timedOut(stage: .fetch)))
+        let zh = AppCopy(language: .simplifiedChinese)
+        let en = AppCopy(language: .english)
+        XCTAssertEqual(store.islandUsage.state.message(copy: zh), "读取 Codex 状态超时")
+        XCTAssertEqual(store.islandUsage.state.message(copy: en), "Codex status read timed out")
         await store.stop()
     }
 
@@ -4755,5 +4841,13 @@ private actor AppOutcomeSequence {
     func shouldFail() -> Bool {
         defer { callCount += 1 }
         return callCount > 0
+    }
+}
+
+private actor IslandUsageFetchSequence {
+    private var index = 0
+    func next() -> Int {
+        defer { index += 1 }
+        return index
     }
 }

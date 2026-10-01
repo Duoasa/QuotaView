@@ -93,6 +93,222 @@ final class Island073SmokeTests: XCTestCase {
         XCTAssertEqual(weekly.cellIndex(column: 51, row: 0), weekly.cellIndex(column: 51, row: 6))
     }
     @MainActor
+    func testIslandArchiveOnlyHidesDisplayAndPreservesRequests() throws {
+        let model = IslandLiveStore(); let date = Date()
+        start(model, "first", "one", at: date); start(model, "second", "one", at: date)
+        let id = model.tasks[0].id; let next = model.tasks[1].id
+        model.receive(json("item/commandExecution/requestApproval", ["threadId": "first", "turnId": "one", "command": "swift build"], id: 7))
+        let request = try XCTUnwrap(model.tasks[0].requests.first?.value)
+        model.select(id)
+        let board = IslandBoardState(); board.pin()
+        func refresh() { board.update(model.display(english: false, remaining: nil, enabled: true, privacy: false), reduceMotion: true) }
+        model.onChange = { refresh() }; refresh(); board.select(id)
+        XCTAssertEqual(board.detailID, id)
+        model.archiveFromIsland(id)
+        XCTAssertEqual(model.tasks.count, 2)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        XCTAssertEqual(model.tasks[0].requests.first?.value, request)
+        XCTAssertEqual(model.selectedID, next)
+        XCTAssertEqual(board.tasks.map(\.id), [next])
+        XCTAssertNil(board.detailID)
+        XCTAssertEqual(board.attentionCount, 0)
+        XCTAssertEqual(board.presentation, .pinned)
+        model.receive(json("thread/status/changed", ["threadId": "first", "status": ["type": "active", "activeFlags": ["waitingOnApproval"]]]))
+        XCTAssertEqual(board.tasks.map(\.id), [next])
+        model.receive(json("serverRequest/resolved", ["threadId": "first", "requestId": 7]))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+        XCTAssertEqual(board.tasks.map(\.id), [next])
+        model.archiveFromIsland(next)
+        XCTAssertTrue(board.tasks.isEmpty)
+        XCTAssertEqual(model.selectedID, 0)
+        XCTAssertFalse(board.display!.state.allCompleted)
+        XCTAssertTrue(board.display!.activeRequestIDs.isEmpty)
+    }
+
+    @MainActor
+    func testIslandArchivePersistsAcrossRestartUntilDifferentTurnStarts() throws {
+        let suite = "QuotaViewArchiveSmoke-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let date = Date(); let model = IslandLiveStore(archiveDefaults: defaults)
+        start(model, "chat", "old", at: date)
+        model.receive(json("turn/completed", ["threadId": "chat", "turn": ["id": "old", "status": "completed"]]))
+        model.archiveFromIsland(model.tasks[0].id)
+        XCTAssertEqual(model.tasks[0].status, .completed)
+        let restored = IslandLiveStore(archiveDefaults: defaults)
+        func displayed() -> [CodexMultitaskRenderTask] { restored.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks }
+        restored.receive(json("thread/snapshot", ["thread": ["id": "chat", "source": "vscode", "status": ["type": "active"]]]))
+        XCTAssertTrue(displayed().isEmpty)
+        start(restored, "chat", "old", at: date)
+        XCTAssertTrue(displayed().isEmpty)
+        restored.receive(json("turn/completed", ["threadId": "chat", "turn": ["id": "old", "status": "completed"]]))
+        XCTAssertTrue(displayed().isEmpty)
+        start(restored, "chat", "new", at: date.addingTimeInterval(1))
+        XCTAssertEqual(displayed().count, 1)
+        restored.receive(json("turn/completed", ["threadId": "chat", "turn": ["id": "old", "status": "completed"]]))
+        XCTAssertEqual(displayed().first?.renderState.visualState, .thinking)
+        XCTAssertTrue((defaults.dictionary(forKey: "island.archivedTurns") ?? [:]).isEmpty)
+    }
+
+    @MainActor
+    func testTicketSweepStopsWhenHiddenReducedOrDetachedWithoutRestartingOnRefresh() throws {
+        _ = NSApplication.shared
+        let host = IslandResetTicketSweepHost(frame: NSRect(x: 0, y: 0, width: 53.677, height: 32))
+        host.configure(active: true, reduceMotion: false)
+        XCTAssertNil(host.sweepAnimation)
+        let window = NSWindow(contentRect: host.bounds, styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host; host.needsLayout = true; host.layoutSubtreeIfNeeded()
+        let animation = try XCTUnwrap(host.sweepAnimation)
+        XCTAssertEqual(animation.duration, 2)
+        XCTAssertEqual(animation.keyTimes, [0, 0.10, 0.90, 1])
+        XCTAssertTrue(animation.repeatCount.isInfinite)
+        XCTAssertNil(host.hitTest(.init(x: 20, y: 15)))
+        for _ in 0..<10 { host.configure(active: true, reduceMotion: false); host.layout() }
+        XCTAssertEqual(host.sweepAnimation?.beginTime, animation.beginTime)
+        host.configure(active: false, reduceMotion: false)
+        XCTAssertNil(host.sweepAnimation)
+        host.configure(active: true, reduceMotion: true)
+        XCTAssertNil(host.sweepAnimation)
+        host.configure(active: true, reduceMotion: false)
+        XCTAssertNotNil(host.sweepAnimation)
+        host.removeFromSuperview()
+        XCTAssertNil(host.sweepAnimation)
+    }
+
+    @MainActor
+    func testResetPageReturnInterruptionAndMotionCancellation() {
+        let board = IslandBoardState()
+        board.setGeometry(.init(frame: CGRect(x: 0, y: 0, width: 1280, height: 800)))
+        board.pin(); board.openUsage(); board.updateUsageHeight(560)
+        let canvas = board.expandedCanvasHeight
+        board.openReset()
+        let opening = board.resetTransitionSerial
+        XCTAssertTrue(board.showsReset)
+        XCTAssertTrue(board.resetTransitionInFlight)
+        XCTAssertEqual(board.surfaceWidth, 378)
+        XCTAssertEqual(board.expandedCanvasHeight, canvas)
+        board.updateResetHeight(434)
+        XCTAssertEqual(board.expandedHeight, board.headerHeight + 434)
+        board.escape()
+        let returning = board.resetTransitionSerial
+        XCTAssertFalse(board.showsReset)
+        XCTAssertTrue(board.resetTransitionInFlight)
+        XCTAssertEqual(board.surfaceWidth, 680)
+        board.finishResetTransition(serial: opening)
+        XCTAssertTrue(board.resetTransitionInFlight, "Stale opening completion must not end return")
+        board.finishResetTransition(serial: returning)
+        XCTAssertFalse(board.resetTransitionInFlight)
+        XCTAssertEqual(board.presentation, .pinned)
+        var display = IslandLiveStore().display(english: false, remaining: nil, enabled: true, privacy: false)
+        board.update(display, reduceMotion: true)
+        board.openReset()
+        XCTAssertTrue(board.showsReset)
+        XCTAssertFalse(board.resetTransitionInFlight)
+        board.escape(); board.escape()
+        XCTAssertFalse(board.showsUsage)
+        board.openUsage(); board.openReset()
+        let live = IslandLiveStore()
+        board.update(live.display(english: false, remaining: nil, enabled: true, privacy: false), reduceMotion: false)
+        start(live, "reset-flow", "one", at: Date())
+        board.update(live.display(english: false, remaining: nil, enabled: true, privacy: false), reduceMotion: false)
+        XCTAssertTrue(board.showsReset)
+        XCTAssertNil(board.automaticPreviewDeadline)
+        display.visible = false; board.update(display, reduceMotion: false)
+        XCTAssertFalse(board.showsReset)
+        XCTAssertFalse(board.showsUsage)
+        XCTAssertFalse(board.resetTransitionInFlight)
+    }
+
+    @MainActor
+    func testResetTicketFlightEndpointsReverseAndLifecycle() throws {
+        _ = NSApplication.shared
+        let source = CGRect(x: 500, y: 175, width: 53.6774, height: 32)
+        let destination = CGRect(x: 239.355, y: 22, width: 201.29, height: 120)
+        let initial = IslandResetTicketFlight.sample(progress: 0, source: source, destination: destination)
+        let final = IslandResetTicketFlight.sample(progress: 1, source: source, destination: destination)
+        XCTAssertEqual(initial.position, CGPoint(x: source.midX, y: source.midY))
+        XCTAssertEqual(final.position.x, destination.midX, accuracy: 0.0001)
+        XCTAssertEqual(final.position.y, destination.midY, accuracy: 0.0001)
+        XCTAssertEqual(initial.transform.m11, source.width / 201.29, accuracy: 0.0001)
+        XCTAssertEqual(final.transform.m11, 1, accuracy: 0.0001)
+        let quarter = IslandResetTicketFlight.sample(progress: 0.25, source: source, destination: destination)
+        let middle = IslandResetTicketFlight.sample(progress: 0.5, source: source, destination: destination)
+        let threeQuarters = IslandResetTicketFlight.sample(progress: 0.75, source: source, destination: destination)
+        XCTAssertLessThan(middle.transform.m11, 0, "Halfway through the full turn the back faces forward")
+        XCTAssertLessThan(quarter.transform.m13 * threeQuarters.transform.m13, 0,
+            "The two edge-on quarters must face opposite directions")
+        let host = IslandResetTicketFlightHost(frame: CGRect(x: 0, y: 0, width: 680, height: 560))
+        host.configure(serial: 1, toReset: true, active: true, source: source, destination: destination, reduceMotion: false)
+        XCTAssertNil(host.flightAnimation)
+        let window = NSWindow(contentRect: host.bounds, styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        host.configure(serial: 1, toReset: true, active: true, source: source, destination: destination, reduceMotion: false)
+        let opening = try XCTUnwrap(host.flightAnimation)
+        XCTAssertEqual(opening.duration, IslandResetTicketFlight.duration)
+        XCTAssertEqual(host.cardPosition.x, destination.midX, accuracy: 0.0001)
+        for _ in 0..<10 {
+            host.configure(serial: 1, toReset: true, active: true, source: source.offsetBy(dx: 4, dy: 4), destination: destination, reduceMotion: false)
+        }
+        XCTAssertEqual(host.flightAnimation?.beginTime, opening.beginTime)
+        host.stop()
+        host.configure(serial: 2, toReset: false, active: true, source: source, destination: destination, reduceMotion: false)
+        let returning = try XCTUnwrap(host.flightAnimation)
+        let forward = try XCTUnwrap(opening.animations?[0] as? CAKeyframeAnimation).values as? [NSValue]
+        let backward = try XCTUnwrap(returning.animations?[0] as? CAKeyframeAnimation).values as? [NSValue]
+        XCTAssertEqual(forward?.count, backward?.count)
+        for (a, b) in zip(try XCTUnwrap(forward), try XCTUnwrap(backward).reversed()) {
+            XCTAssertEqual(a.pointValue.x, b.pointValue.x, accuracy: 0.0001)
+            XCTAssertEqual(a.pointValue.y, b.pointValue.y, accuracy: 0.0001)
+        }
+        let forwardTransforms = try XCTUnwrap(try XCTUnwrap(opening.animations?[1] as? CAKeyframeAnimation).values as? [NSValue])
+        let returnTransforms = try XCTUnwrap(try XCTUnwrap(returning.animations?[1] as? CAKeyframeAnimation).values as? [NSValue])
+        func components(_ value: NSValue) -> [CGFloat] {
+            let m = value.caTransform3DValue
+            return [m.m11, m.m12, m.m13, m.m14, m.m21, m.m22, m.m23, m.m24,
+                m.m31, m.m32, m.m33, m.m34, m.m41, m.m42, m.m43, m.m44]
+        }
+        for (a, b) in zip(forwardTransforms, returnTransforms.reversed()) {
+            for (x, y) in zip(components(a), components(b)) { XCTAssertEqual(x, y, accuracy: 0.0001) }
+        }
+        XCTAssertNil(host.hitTest(.init(x: 340, y: 82)))
+        host.configure(serial: 3, toReset: true, active: true, source: source, destination: destination, reduceMotion: true)
+        XCTAssertNil(host.flightAnimation)
+        host.configure(serial: 4, toReset: true, active: true, source: source, destination: destination, reduceMotion: false)
+        XCTAssertNotNil(host.flightAnimation)
+        host.removeFromSuperview()
+        XCTAssertNil(host.flightAnimation)
+    }
+
+    @MainActor
+    func testResetPageReadsWeeklyQuotaAndPreservesUnknownCredits() {
+        func snapshot(credits: Int?) -> CurrentCodexPresentation {
+            .init(availability: .ready, planType: "pro", usedPercent: 10, remainingPercent: 90,
+                windowDurationMinutes: 300, resetsAt: nil, quotaWindows: [
+                    .init(id: CodexDomainCatalog.secondaryRateWindowID, usedPercent: 62, remainingPercent: 38,
+                        windowDurationMinutes: 10080, resetsAt: nil)
+                ], sparkQuota: nil, creditBalance: nil, hasCredits: false, unlimitedCredits: false,
+                availableResetCredits: credits, lifetimeTokens: nil, recentDailyTokens: nil,
+                recentDailyDate: nil, tokenActivity: [], lastUpdatedAt: Date(timeIntervalSince1970: 100))
+        }
+        let missing = IslandResetPageData(snapshot: nil)
+        XCTAssertNil(missing.credits)
+        XCTAssertNil(missing.remainingPercent)
+        XCTAssertNil(missing.creditsAfterOne)
+        XCTAssertFalse(missing.canPreview)
+        let unknown = IslandResetPageData(snapshot: snapshot(credits: nil))
+        XCTAssertNil(unknown.credits)
+        XCTAssertFalse(unknown.canPreview)
+        let available = IslandResetPageData(snapshot: snapshot(credits: 2))
+        XCTAssertEqual(available.remainingPercent, 38)
+        XCTAssertEqual(available.credits, 2)
+        XCTAssertEqual(available.creditsAfterOne, 1)
+        XCTAssertTrue(available.canPreview)
+        let exhausted = IslandResetPageData(snapshot: snapshot(credits: 0))
+        XCTAssertFalse(exhausted.canPreview)
+        XCTAssertEqual(exhausted.creditsAfterOne, 0)
+    }
+
+    @MainActor
     func testUsagePagePreservesPinAndAdaptsToContentHeight() {
         let board = IslandBoardState()
         board.setGeometry(.init(frame: CGRect(x: 0, y: 0, width: 1280, height: 600)))

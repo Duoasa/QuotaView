@@ -5,6 +5,7 @@ import SwiftUI
 
 @MainActor
 final class CodexStatusStore: ObservableObject {
+    @Published private(set) var islandUsage: IslandUsagePresentation = .loading
     @Published private(set) var snapshot: CurrentCodexPresentation?
     @Published private(set) var providerState: ProviderLoadState
     @Published private(set) var isRefreshing = false
@@ -177,6 +178,7 @@ final class CodexStatusStore: ObservableObject {
         let coordinator = self.coordinator
         let previous = providerState.latestSnapshot
         providerState = .refreshing(previous: previous)
+        if islandUsage.snapshot == nil { islandUsage = .loading }
         isRefreshing = true
 
         let outcome = await coordinator.requestRefresh(
@@ -200,6 +202,7 @@ final class CodexStatusStore: ObservableObject {
             providerState = .available(result.snapshot)
             snapshot = presentation
             errorMessage = nil
+            islandUsage = .init(snapshot: presentation, state: .current)
             recordSuccess(presentation)
             publishWidgetSnapshot()
 
@@ -213,6 +216,7 @@ final class CodexStatusStore: ObservableObject {
             )
 
         case .stopped:
+            islandUsage = .init(snapshot: nil, state: .unavailable(.unavailable))
             snapshot = nil
             errorMessage = nil
             providerState = .idle(lastSnapshot: previous)
@@ -233,6 +237,8 @@ final class CodexStatusStore: ObservableObject {
     private func replaceProxyConfiguration(_ configuration: ProxyConfiguration) {
         configurationRevision &+= 1
         let revision = configurationRevision
+        // A changed connection cannot borrow a snapshot from the old provider.
+        islandUsage = .loading
         cancelProxyTest()
         let oldCoordinator = coordinator
         let provider = CodexProviderAdapter(client: proxyClientFactory(configuration))
@@ -314,6 +320,7 @@ final class CodexStatusStore: ObservableObject {
         pollingTask?.cancel()
         pollingTask = nil
         await coordinator.stop()
+        islandUsage = .init(snapshot: nil, state: .unavailable(.unavailable))
         isRefreshing = false
     }
 
@@ -325,6 +332,7 @@ final class CodexStatusStore: ObservableObject {
             previous: previous,
             error: error
         )
+        islandUsage = islandUsage.failed(error)
         snapshot = nil
         errorMessage = error.localizedDescription
         recordFailure(error)
@@ -354,7 +362,9 @@ final class CodexStatusStore: ObservableObject {
         )
     }
 
-    private func recordFailure(_ error: Error) {
+    private func recordFailure(_ error: ProviderError) {
+        diagnostics.set(error.islandDiagnosticCategory, forKey: "diagnostics.lastFailureCategory")
+        diagnostics.set(Date().timeIntervalSince1970, forKey: "diagnostics.lastFailureAt")
         diagnostics.set(
             error.localizedDescription,
             forKey: "diagnostics.lastError"
