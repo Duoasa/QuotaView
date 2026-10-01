@@ -162,7 +162,7 @@ struct IslandTaskDetailView: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(secondary).frame(width: 28, height: 28).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(text("关闭详情", "Close details"))
+                }.buttonStyle(.plain).accessibilityHint(text("关闭详情", "Close details"))
                     .accessibilityLabel(text("关闭详情", "Close details"))
             }.foregroundStyle(accent).frame(height: IslandTaskDetailMetrics.headerHeight)
             progress
@@ -274,7 +274,7 @@ struct IslandTaskDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(item.code ? Color(red: 0.075, green: 0.075, blue: 0.075) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(item.code ? Color.white.opacity(0.08) : Color.clear, lineWidth: 1))
-            .help(item.entry.publicItem.map { "Codex · \($0.sourceID)" } ?? text("Codex 状态", "Codex status"))
+            .accessibilityHint(item.entry.publicItem.map { "Codex · \($0.sourceID)" } ?? text("Codex 状态", "Codex status"))
     }
 
 }

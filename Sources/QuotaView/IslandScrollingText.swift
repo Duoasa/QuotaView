@@ -6,7 +6,7 @@ import SwiftUI
 enum IslandTextPalette {
     static let secondary = NSColor(srgbRed: 179 / 255, green: 179 / 255, blue: 179 / 255, alpha: 1)
     static let muted = NSColor(srgbRed: 125 / 255, green: 125 / 255, blue: 125 / 255, alpha: 1)
-    static let detail = NSColor(srgbRed: 140 / 255, green: 140 / 255, blue: 140 / 255, alpha: 1)
+    static let detail = NSColor(srgbRed: 195 / 255, green: 195 / 255, blue: 195 / 255, alpha: 1)
 }
 
 // Native presentation: text movement stays in Core Animation, outside SwiftUI layout.
@@ -113,9 +113,10 @@ final class IslandScrollingTextHost: NSView {
         shimmerLayer.frame = bounds
         shimmerLayer.isHidden = !key.shimmer
         // Opaque RGB equivalents of the dark Codex reference; no text opacity.
-        shimmerLayer.colors = [CGFloat(0.45), 0.75, 0.75, 0.45].map {
-            NSColor(srgbRed: $0, green: $0, blue: $0, alpha: 1).cgColor
-        }
+        // Preserve each text role's opaque base color instead of replacing it
+        // with a dim shared gray while shimmering.
+        shimmerLayer.colors = [color.withAlphaComponent(1).cgColor, NSColor.white.cgColor,
+                               NSColor.white.cgColor, color.withAlphaComponent(1).cgColor]
         shimmerMaskTrack.frame = bounds
         shimmerMask.frame = textFrame
         shimmerMask.string = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.white])

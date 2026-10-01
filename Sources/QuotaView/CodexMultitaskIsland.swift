@@ -387,6 +387,7 @@ struct CodexMultitaskDisplay {
     var remainingPercent: Int?
     var weeklyRemainingPercent: Int? = nil
     var quotaResetsAt: Date? = nil
+    var usageSnapshot: CurrentCodexPresentation? = nil
     var sessionMetadata: [Int: IslandSessionMetadata] = [:]
     var taskDetails: [Int: IslandTaskDetailData] = [:]
     var connectionTitle: String = ""

@@ -1,6 +1,9 @@
 import AppKit
 import SwiftUI
 import QuotaViewCore
+#if canImport(QuotaViewWidgetContract)
+import QuotaViewWidgetContract
+#endif
 
 // Measured from the visible native Vibe Island reference, in logical points.
 // Shared metrics keep row layout, hit regions and the fixed canvas consistent.
@@ -9,7 +12,6 @@ enum IslandVibeLayout {
     static let compactWidth: CGFloat = 340
     static let compactContentGap: CGFloat = 16
     static let headerHeight: CGFloat = 36
-    static let quotaFooterHeight: CGFloat = 24
     static let footerHeight: CGFloat = 28
     static let outerEffectInset = CodexActivityIslandProgressBarGeometry.effectInset
     static let screenBottomClearance = outerEffectInset
@@ -143,6 +145,18 @@ final class IslandBoardState: ObservableObject {
     var onChange: (() -> Void)?
     var onSelect: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
+    var onRefreshUsage: (() async -> Void)?
+    @Published private(set) var showsUsage = false
+    @Published private(set) var usageHeight: CGFloat = 500
+    func updateUsageHeight(_ value: CGFloat) {
+        guard value.isFinite, value > 0 else { return }
+        let height = ceil(value)
+        guard abs(usageHeight - height) > 0.5 else { return }
+        usageHeight = height
+        if showsUsage { onChange?() }
+    }
+    func openUsage() { showsUsage = true; if compact { presentation = .preview }; onChange?() }
+    func closeUsage() { showsUsage = false; onChange?() }
     func clearDrafts() { approvalDrafts.removeAll() }
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
     var english: Bool { display?.english ?? false }
@@ -164,7 +178,7 @@ final class IslandBoardState: ObservableObject {
     var visibleTasks: [CodexMultitaskRenderTask] { attentionOnly ? tasks.filter(Self.needsAttention) : tasks }
     var detail: CodexMultitaskRenderTask? { guard let detailID else { return nil }; return visibleTasks.first { $0.id == detailID } }
     var approval: (task: CodexMultitaskRenderTask, request: IslandConfirmation)? {
-        guard let detail, let request = detailData(for: detail).confirmation else { return nil }
+        guard !showsUsage, let detail, let request = detailData(for: detail).confirmation else { return nil }
         return (detail, request)
     }
     var inlineDetail: CodexMultitaskRenderTask? { approval == nil ? detail : nil }
@@ -174,7 +188,7 @@ final class IslandBoardState: ObservableObject {
     var expandedWidth: CGFloat { min(max(IslandVibeLayout.expandedWidth, geometry.compactWidth + 64), geometry.screenFrame.width - 48) }
     var headerHeight: CGFloat { max(IslandVibeLayout.headerHeight, geometry.bandHeight) }
     var maximumApprovalViewportHeight: CGFloat {
-        max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight - IslandVibeLayout.quotaFooterHeight)
+        max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
     }
     var compactSideWidth: CGFloat { max(0, (min(geometry.compactWidth, expandedWidth) - 40 - geometry.cameraWidth - 16) / 2) }
     var headerSideWidth: CGFloat { max(0, (expandedWidth - 76 - geometry.cameraWidth - 16) / 2) }
@@ -238,7 +252,8 @@ final class IslandBoardState: ObservableObject {
     }
     var detailHeight: CGFloat { inlineDetail.map { detailMetrics(for: $0).height } ?? 0 }
     var expandedHeight: CGFloat {
-        if let approval { return headerHeight + approvalMetrics(request: approval.request).height + IslandVibeLayout.quotaFooterHeight }
+        if showsUsage { return headerHeight + usageHeight }
+        if let approval { return headerHeight + approvalMetrics(request: approval.request).height }
         return headerHeight + listHeight + IslandVibeLayout.footerHeight
     }
     var surfaceWidth: CGFloat { compact ? min(geometry.compactWidth, expandedWidth) : expandedWidth }
@@ -250,7 +265,7 @@ final class IslandBoardState: ObservableObject {
     func preview() { guard compact else { return }; presentation = .preview; onChange?() }
     func endPreview() { if presentation == .preview { collapse() } }
     func pin() { presentation = .pinned; onChange?() }
-    func collapse() { presentation = .resting; detailID = nil; onChange?() }
+    func collapse() { showsUsage = false; presentation = .resting; detailID = nil; onChange?() }
     func dismissFromOutside() {
         guard presentation != .pinned else { return }
         collapse()
@@ -269,7 +284,7 @@ final class IslandBoardState: ObservableObject {
         let percent = display?.remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"
         let countdown = MenuBarQuotaImage.countdown(until: display?.quotaResetsAt, now: Date(),
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
-        return percent + " · " + text("\(countdown)重置", "Reset \(countdown)")
+        return percent + " · " + countdown
     }
     func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool) {
         let wasCompact = display?.state.compact == true
@@ -303,6 +318,7 @@ final class IslandBoardState: ObservableObject {
         if let onSelect { onSelect(id) } else { onChange?() }
     }
     func toggleAttention() {
+        showsUsage = false
         guard attentionCount > 0 else { return }
         attentionOnly.toggle(); if compact { presentation = .preview }
         if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
@@ -342,7 +358,7 @@ private enum IslandBoardStyle {
         case .error: failure
         case .completed: Color(red: 0.36, green: 0.80, blue: 0.55)
         case .unavailable, .disconnectedCodex, .standby: muted
-        case .thinking, .working, .compactingContext: secondary
+        case .thinking, .working, .compactingContext: Color(white: 0.92)
         }
     }
     static func attentionColor(for tasks: [CodexMultitaskRenderTask]) -> Color {
@@ -381,37 +397,6 @@ private struct IslandQuotaRing: View {
                 .stroke(color, style: StrokeStyle(lineWidth: 2.8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
         }.padding(1.4).frame(width: 14, height: 14).accessibilityHidden(true)
-    }
-}
-
-enum IslandQuotaSegments {
-    static func fractions(remaining: Int?) -> [CGFloat] {
-        let units = CGFloat(min(100, max(0, remaining ?? 0))) * 3 / 100
-        return (0..<3).map { min(1, max(0, units - CGFloat($0))) }
-    }
-}
-
-private struct IslandWeeklyQuota: View {
-    let remaining: Int?
-    let english: Bool
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(english ? "Weekly quota remaining" : "周额度剩余")
-                .foregroundStyle(Color(nsColor: IslandTextPalette.secondary))
-            HStack(spacing: 3) {
-                ForEach(Array(IslandQuotaSegments.fractions(remaining: remaining).enumerated()), id: \.offset) { _, fraction in
-                    Capsule().fill(Color(white: 0.16))
-                        .overlay(alignment: .leading) {
-                            Rectangle().fill(Color(nsColor: CodexActivityQuotaRingContract.color(for: remaining)))
-                                .frame(width: 46.8 * fraction)
-                        }.clipShape(Capsule()).frame(width: 46.8, height: 3)
-                }
-            }.accessibilityHidden(true)
-            Text(remaining.map { "\(min(100, max(0, $0)))%" } ?? "—")
-                .foregroundStyle(.white).monospacedDigit()
-        }.font(.system(size: 10, weight: .medium))
-            .fixedSize(horizontal: true, vertical: false).frame(height: IslandVibeLayout.quotaFooterHeight)
-            .accessibilityElement(children: .combine)
     }
 }
 
@@ -461,7 +446,7 @@ private struct IslandOperationLine: View {
                     visible: visible, reduceMotion: reduceMotion, shimmer: running)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
-        }.help("\(copy.status) · \(copy.detail)")
+        }.accessibilityHint("\(copy.status) · \(copy.detail)")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(copy.status), \(copy.detail)")
     }
@@ -491,17 +476,17 @@ struct IslandTaskCard: View {
                     IslandScrollingText(text: task.title,
                         font: .systemFont(ofSize: IslandVibeLayout.titleFont, weight: .semibold),
                         color: .white, visible: effectVisible, reduceMotion: reduceMotion)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading).help(task.title)
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading).accessibilityHint(task.title)
                     if let metadata, !metadata.modelTitle.isEmpty, !metadata.usesExtraLine {
                         Text(metadata.modelTitle).lineLimit(1).fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, 5).padding(.vertical, 2)
                             .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
-                            .help(metadata.fullModelTitle)
+                            .accessibilityHint(metadata.fullModelTitle)
                     }
                     if let icon = IslandProviderIcon.image {
                         Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
                             .opacity(0.72)
-                            .accessibilityLabel("Codex").help("Codex")
+                            .accessibilityLabel("Codex").accessibilityHint("Codex")
                     } else { Text("Codex").foregroundStyle(IslandBoardStyle.muted) }
                     if let metadata {
                         Text(metadata.durationTitle).monospacedDigit()
@@ -516,14 +501,14 @@ struct IslandTaskCard: View {
                     Text(task.renderState.tokenUsageTitle ?? "— tokens")
                         .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
                         .foregroundStyle(IslandBoardStyle.muted).fixedSize()
-                        .help(english ? "Session total" : "会话累计")
+                        .accessibilityHint(english ? "Session total" : "会话累计")
                 }
             }
         }.frame(height: IslandVibeLayout.rowHeight - 8)
         if let metadata, metadata.usesExtraLine {
             Text(metadata.modelTitle).font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(IslandBoardStyle.muted).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).help(metadata.fullModelTitle)
+                .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(metadata.fullModelTitle)
         }
         }.padding(.leading, 10).padding(.trailing, 8).frame(height: metadata?.cardHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
             .background {
@@ -546,7 +531,7 @@ struct IslandTaskCard: View {
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
-            .help("\(task.title) · \(task.renderState.statusTitle)")
+            .accessibilityHint("\(task.title) · \(task.renderState.statusTitle)")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—")")
     }
@@ -587,7 +572,13 @@ struct IslandBoardView: View {
             else {
                 VStack(spacing: 0) {
                     header
-                    if let approval = state.approval {
+                    if state.showsUsage {
+                        IslandUsageBento(snapshot: state.display?.usageSnapshot, english: state.english,
+                            contentWidth: state.expandedWidth - IslandVibeLayout.listInset * 2,
+                            privacy: state.display?.privacyMode == true, onRefresh: state.onRefreshUsage,
+                            onHeightChange: state.updateUsageHeight)
+                            .frame(height: state.usageHeight)
+                    } else if let approval = state.approval {
                         IslandApprovalView(task: approval.task, metadata: state.display?.sessionMetadata[approval.task.id],
                             request: approval.request, metrics: state.approvalMetrics(request: approval.request),
                             english: state.english, visible: !state.compact && state.display?.visible == true,
@@ -636,16 +627,11 @@ struct IslandBoardView: View {
                                 Text(state.text("\(state.visibleTasks.count) 个会话", "\(state.visibleTasks.count) sessions"))
                                 if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
                             }.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                            IslandWeeklyQuota(remaining: state.display?.weeklyRemainingPercent, english: state.english)
-                                .layoutPriority(1)
                             Text(footerStatus).lineLimit(1).truncationMode(.tail)
                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
-                                .help(footerStatus)
+                                .accessibilityHint(footerStatus)
                         }.font(.system(size: 10, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
                             .padding(.horizontal, 38).frame(height: IslandVibeLayout.footerHeight)
-                    }
-                    if state.approval != nil {
-                        IslandWeeklyQuota(remaining: state.display?.weeklyRemainingPercent, english: state.english)
                     }
                 }
             }
@@ -671,13 +657,24 @@ struct IslandBoardView: View {
     private var header: some View {
         HStack(spacing: 0) {
             HStack(spacing: 6) {
-                if state.approval != nil {
+                if state.showsUsage {
+                    Button { state.closeUsage() } label: {
+                        Label(state.text("返回任务", "Tasks"), systemImage: "chevron.left")
+                            .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
+                            .frame(height: 28).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                    Text(state.text("用量统计", "Usage")).font(.system(size: 11)).foregroundStyle(IslandBoardStyle.muted)
+                } else if state.approval != nil {
                     Circle().fill(IslandBoardStyle.confirmationHighlight).frame(width: 4, height: 4)
                     Text(state.text("待确认", "Permission request")).font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(IslandBoardStyle.confirmationHighlight)
                 } else {
-                    IslandQuotaRing(remainingPercent: state.display?.remainingPercent)
-                    Text(state.quota).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
+                    Button { state.openUsage() } label: {
+                        HStack(spacing: 6) {
+                            IslandQuotaRing(remainingPercent: state.display?.remainingPercent)
+                            Text(state.quota).font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
+                        }.frame(height: 28).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel(state.text("查看用量统计", "View usage"))
                 }
                 Spacer(minLength: 0)
             }.frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
@@ -687,31 +684,31 @@ struct IslandBoardView: View {
                 Spacer(minLength: 0)
                 if let approval = state.approval {
                     if approval.request.queueCount > 1 {
-                        Button("\(approval.request.queueIndex)/\(approval.request.queueCount) →") { state.onNextRequest?(approval.task.id) }.buttonStyle(.plain).help(state.text("下一项待处理请求", "Next pending request"))
+                        Button("\(approval.request.queueIndex)/\(approval.request.queueCount) →") { state.onNextRequest?(approval.task.id) }.buttonStyle(.plain).accessibilityHint(state.text("下一项待处理请求", "Next pending request"))
                     }
                     Button { state.dismissDetail() } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                             Text(state.text("返回列表", "Back to sessions")).font(.system(size: 11))
                         }.frame(height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
+                    }.buttonStyle(.plain).accessibilityHint(state.text("返回任务列表，保留待确认请求", "Return to sessions without rejecting the request"))
                 } else {
                     if state.attentionCount > 0 {
                         Button { state.toggleAttention() } label: {
                             attentionIndicators(showCounts: true)
                                 .font(.system(size: 11, weight: state.attentionOnly ? .bold : .semibold))
                                 .frame(height: 28).contentShape(Rectangle())
-                        }.buttonStyle(.plain).help(state.text("筛选待处理会话", "Filter sessions needing attention"))
+                        }.buttonStyle(.plain).accessibilityHint(state.text("筛选待处理会话", "Filter sessions needing attention"))
                             .accessibilityValue(state.attentionOnly ? state.text("已筛选", "Filtered") : state.text("全部会话", "All sessions"))
                     }
                     Button { state.presentation == .pinned ? state.collapse() : state.pin() } label: {
                         Image(systemName: state.presentation == .pinned ? "pin.fill" : "pin")
                             .frame(width: 28, height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(state.text("固定展开；再次点击收起", "Pin open; click again to collapse"))
+                    }.buttonStyle(.plain).accessibilityHint(state.text("固定展开；再次点击收起", "Pin open; click again to collapse"))
                 }
                 Button { state.collapse() } label: {
                     Image(systemName: "chevron.up").frame(width: 28, height: 28).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(state.text("收起灵动岛", "Collapse island"))
+                }.buttonStyle(.plain).accessibilityHint(state.text("收起灵动岛", "Collapse island"))
             }.font(.system(size: 12, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
                 .frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
                 .frame(maxWidth: .infinity)
@@ -744,7 +741,7 @@ struct IslandBoardView: View {
             }.padding(.horizontal, 20).frame(height: state.geometry.bandHeight)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
-            .help(state.text("悬停预览会话与 Token，点击固定", "Hover for sessions and tokens, click to pin"))
+            .accessibilityHint(state.text("悬停或点击展开会话详情", "Hover or click to expand session details"))
             .accessibilityLabel("\(state.summary), \(state.quota)")
             .accessibilityValue(state.tasks.contains(where: { $0.renderState.visualState == .awaitingConfirmation })
                 ? state.text("待确认", "Awaiting confirmation") : "")
@@ -1107,5 +1104,339 @@ final class IslandBoardController {
         if var display = state.display { display.visible = false; state.update(display, reduceMotion: state.reduceMotion) }
         panel.orderOut(nil)
         NSApp.removeWindowsItem(panel)
+    }
+}
+
+// Usage stays inside the notch; charts reuse the menu's quota/cost data contracts.
+private struct IslandUsageHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct IslandUsageBento: View {
+    let snapshot: CurrentCodexPresentation?
+    let english: Bool
+    let contentWidth: CGFloat
+    let privacy: Bool
+    let onRefresh: (() async -> Void)?
+    let onHeightChange: (CGFloat) -> Void
+    @State private var refreshing = false
+    @State private var selectedDay: Date?
+    @State private var hoveredCost: Date?
+    @State private var hoveredActivity: Int?
+    @State private var selectedActivity: Date?
+    @State private var activityMode: IslandActivityHeatmap.Mode = .daily
+    @State private var resetDemo = false
+    private let secondary = Color(white: 0.68)
+    private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
+    private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
+    private var chart: EstimatedCostChartModel { .init(activity: snapshot?.tokenActivity ?? [], endingAt: Date()) }
+    private var quota: CodexQuotaWindowPresentation? {
+        snapshot?.quotaWindows.first { $0.windowDurationMinutes == 10080 } ?? snapshot?.quotaWindows.first
+    }
+    private var percent: Int? { quota?.remainingPercent ?? snapshot?.remainingPercent }
+    private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
+    private func card<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+            content()
+        }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
+    }
+    var body: some View {
+        Group {
+            VStack(spacing: 10) {
+                if privacy || snapshot == nil {
+                    card(text("用量数据", "Usage data"), icon: "chart.bar.xaxis") {
+                        Text(privacy ? text("隐私模式已隐藏统计", "Statistics hidden in privacy mode") : text("暂时无法获取用量数据", "Usage data is unavailable"))
+                            .font(.system(size: 14, weight: .medium))
+                        Text(text("不会把缺失数据显示为零。", "Missing data is not shown as zero.")).font(.system(size: 11)).foregroundStyle(secondary)
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 10) {
+                        quotaCard.frame(maxWidth: .infinity)
+                        accountCard.frame(width: 206)
+                    }
+                    HStack(spacing: 10) {
+                        metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens), icon: "sun.max")
+                        metric(text("30日 Tokens", "30-day tokens"), value: tokens(chart.periodTokens), icon: "calendar")
+                        metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens), icon: "sum")
+                    }
+                    costCard
+                    activityCard
+                }
+                HStack {
+                    if let date = snapshot?.lastUpdatedAt {
+                        Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
+                    } else { Text(text("等待数据更新", "Waiting for data")) }
+                    Spacer()
+                    Button {
+                        guard !refreshing else { return }; refreshing = true
+                        Task { await onRefresh?(); refreshing = false }
+                    } label: {
+                        Label(refreshing ? text("刷新中", "Refreshing") : text("刷新", "Refresh"), systemImage: "arrow.clockwise")
+                            .padding(.horizontal, 10).frame(height: 26)
+                            .background(Color(white: 0.10), in: Capsule())
+                    }.buttonStyle(.plain).disabled(refreshing || onRefresh == nil)
+                }.font(.system(size: 10)).foregroundStyle(secondary).padding(.horizontal, 4)
+            }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10).padding(.bottom, 14)
+        }.fixedSize(horizontal: false, vertical: true)
+        .background { GeometryReader { proxy in Color.clear.preference(key: IslandUsageHeightKey.self, value: proxy.size.height) } }
+        .onPreferenceChange(IslandUsageHeightKey.self, perform: onHeightChange)
+        .foregroundStyle(.white)
+        .alert(text("额度重置演示", "Quota reset preview"), isPresented: $resetDemo) {
+            Button(text("知道了", "OK"), role: .cancel) {}
+        } message: {
+            Text(text("开发版仅展示重置入口，不会消耗次数或重置真实额度。", "This development version previews the entry only. No credit is consumed and no quota is reset."))
+        }
+    }
+    private var quotaCard: some View {
+        card(quota?.windowDurationMinutes == 10080 ? text("周额度剩余", "Weekly remaining") : text("额度剩余", "Quota remaining"), icon: "gauge.with.dots.needle.50percent") {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle().stroke(Color(white: 0.17), lineWidth: 6)
+                    Circle().trim(from: 0, to: CGFloat(min(100, max(0, percent ?? 0))) / 100)
+                        .stroke(Color(nsColor: CodexActivityQuotaRingContract.color(for: percent)), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }.frame(width: 48, height: 48).padding(3).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(percent.map { "\($0)%" } ?? "—").font(.system(size: 30, weight: .semibold)).monospacedDigit()
+                    Text(MenuBarQuotaImage.countdown(until: quota?.resetsAt ?? snapshot?.resetsAt, now: Date(), copy: AppCopy(language: english ? .english : .simplifiedChinese)) + text("后重置", " until reset"))
+                        .font(.system(size: 10)).foregroundStyle(secondary)
+                }
+                Spacer(minLength: 0)
+            }.frame(height: 60)
+        }
+    }
+    private var accountCard: some View {
+        card(text("账户", "Account"), icon: "person.crop.circle") {
+            HStack {
+                Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—").font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Text(text("积分 ", "Credits ") + (snapshot?.creditBalance ?? "—")).font(.system(size: 10)).foregroundStyle(secondary)
+            }
+            Button { resetDemo = true } label: {
+                HStack {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text(text("重置演示", "Reset preview"))
+                    Spacer(minLength: 0)
+                    Text(snapshot?.availableResetCredits.map { text("\($0)次", "\($0) left") } ?? "—")
+                }.font(.system(size: 10, weight: .medium)).padding(.horizontal, 10).frame(height: 28)
+                    .background(Color(white: 0.13), in: RoundedRectangle(cornerRadius: 7))
+            }.buttonStyle(.plain)
+        }
+    }
+    private func metric(_ title: String, value: String, icon: String) -> some View {
+        card(title, icon: icon) {
+            Text(value).font(.system(size: 22, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+        }
+    }
+    private var costCard: some View {
+        card(text("成本估算 · 30天", "Cost estimate · 30 days"), icon: "chart.bar") {
+            HStack(alignment: .firstTextBaseline) {
+                Text(money(chart.periodCost)).font(.system(size: 24, weight: .semibold)).monospacedDigit()
+                Spacer()
+                Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
+                    .font(.system(size: 10)).foregroundStyle(secondary)
+                Text(money(selectedCost != nil ? selectedCost?.estimatedCost : chart.latestCost)).font(.system(size: 12, weight: .medium)).monospacedDigit()
+            }
+            GeometryReader { proxy in
+            HStack(alignment: .bottom, spacing: 4) {
+                ForEach(chart.days) { day in
+                    Button { selectedDay = selectedDay == day.date ? nil : day.date } label: {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(white: selectedDay == day.date || hoveredCost == day.date ? 0.95 : (day.tokens == nil ? 0.16 : 0.47)))
+                            .frame(height: max(3, 52 * (day.estimatedCost ?? 0) / max(0.001, chart.maximumCost)))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom).contentShape(Rectangle())
+                    }.buttonStyle(.plain).onHover { inside in
+                        if inside { hoveredCost = day.date }
+                        else if hoveredCost == day.date { hoveredCost = nil }
+                    }.accessibilityLabel(day.date.formatted(date: .abbreviated, time: .omitted) + ": " + money(day.estimatedCost))
+                }
+            }.overlay(alignment: .topLeading) {
+                if let index = chart.days.firstIndex(where: { $0.date == hoveredCost }) {
+                    let day = chart.days[index]
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(day.date.formatted(.dateTime.year().month().day()))
+                        Text(money(day.estimatedCost) + text(" · 估算值", " · estimated"))
+                        Text(tokens(day.tokens) + " Tokens")
+                    }.font(.system(size: 11)).foregroundStyle(.white)
+                        .padding(.horizontal, 11).padding(.vertical, 8).frame(width: 214, alignment: .leading)
+                        .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
+                        .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
+                        .offset(x: min(max(0, (CGFloat(index) + 0.5) * proxy.size.width / CGFloat(chart.days.count) - 107), max(0, proxy.size.width - 214)), y: -78)
+                        .allowsHitTesting(false)
+                }
+            }.zIndex(10)
+            }.frame(height: 56)
+            HStack {
+                Text(text("估算值 · 非账单", "Estimate · not a bill"))
+                Spacer()
+                Text(text("悬停查看每日用量与估算", "Hover for daily usage and estimate"))
+            }.font(.system(size: 9)).foregroundStyle(secondary)
+        }
+    }
+    private var activityCard: some View {
+        let grid = IslandActivityHeatmap(activity: snapshot?.tokenActivity ?? [], endingAt: Date(), mode: activityMode)
+        return card(text("Token 活动", "Token activity"), icon: "square.grid.3x3") {
+            HStack(spacing: 4) {
+                if let cell = grid.cells.first(where: { $0.date == selectedActivity }) {
+                    Text(cell.date.formatted(.dateTime.month().day()) + " · " + tokens(cell.tokens))
+                        .font(.system(size: 10)).foregroundStyle(secondary).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                ForEach(IslandActivityHeatmap.Mode.allCases, id: \.self) { mode in
+                    Button { activityMode = mode; selectedActivity = nil; hoveredActivity = nil } label: {
+                        Text(activityLabel(mode)).font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 8).frame(height: 23)
+                            .background(activityMode == mode ? Color(white: 0.16) : .clear, in: Capsule())
+                            .foregroundStyle(activityMode == mode ? .white : secondary)
+                    }.buttonStyle(.plain)
+                }
+            }
+            GeometryReader { proxy in
+                let size = IslandActivityHeatmap.cellSize(width: proxy.size.width)
+                let gap = IslandActivityHeatmap.gap
+                let pitch = size + gap
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: gap) {
+                        ForEach(0..<53, id: \.self) { column in
+                            VStack(spacing: gap) {
+                                ForEach(0..<grid.rows, id: \.self) { row in
+                                    let cell = grid.cells[column * grid.rows + row]
+                                    Button { selectedActivity = cell.date } label: {
+                                        RoundedRectangle(cornerRadius: min(2, size / 4))
+                                            .fill(heatColor(cell.tokens, maximum: grid.maximum))
+                                            .frame(width: size, height: grid.rows == 1 ? size * 7 + gap * 6 : size)
+                                            .overlay { if cell.date == selectedActivity || hoveredActivity == column * grid.rows + row { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
+                                    }.buttonStyle(.plain).disabled(cell.future)
+                                        .onHover { inside in
+                                            let index = column * grid.rows + row
+                                            if inside && !cell.future { hoveredActivity = index }
+                                            else if hoveredActivity == index { hoveredActivity = nil }
+                                        }
+                                        .opacity(cell.future ? 0 : 1)
+                                        .accessibilityLabel(cell.date.formatted(date: .abbreviated, time: .omitted) + ": " + tokens(cell.tokens))
+                                }
+                            }
+                        }
+                    }
+                    ZStack(alignment: .topLeading) {
+                        ForEach(grid.months, id: \.column) { month in
+                            Text(month.date.formatted(english ? .dateTime.month(.abbreviated) : .dateTime.month()))
+                                .font(.system(size: 9)).foregroundStyle(secondary)
+                                .fixedSize().offset(x: min(CGFloat(month.column) * pitch, max(0, proxy.size.width - 25)))
+                        }
+                    }.frame(height: 13)
+                }
+                .overlay(alignment: .topLeading) {
+                    if let index = hoveredActivity, grid.cells.indices.contains(index) {
+                        let cell = grid.cells[index]
+                        let column = index / grid.rows
+                        let row = index % grid.rows
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(activityDate(cell.date))
+                            Text(activityTokens(cell.tokens))
+                        }.font(.system(size: 11)).foregroundStyle(.white)
+                            .padding(.horizontal, 11).padding(.vertical, 8)
+                            .frame(width: 214, alignment: .leading)
+                            .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
+                            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
+                            .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
+                            .offset(x: min(max(0, CGFloat(column) * pitch + size / 2 - 107), max(0, proxy.size.width - 214)),
+                                    y: CGFloat(row) * pitch - 58)
+                            .allowsHitTesting(false)
+                    }
+                }.zIndex(10)
+            }.frame(height: IslandActivityHeatmap.chartHeight(width: contentWidth - 28))
+        }
+    }
+    private func activityDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: english ? "en_US" : "zh_CN")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = english ? "MMM d, yyyy" : "yyyy年M月d日"
+        let label = formatter.string(from: date)
+        return activityMode == .weekly ? label + text(" 起的一周", " · week starting") : label
+    }
+    private func activityTokens(_ value: Int64?) -> String {
+        guard let value else { return text("暂无数据", "No data") }
+        let label: String
+        if !english && value >= 100_000_000 { label = String(format: "%.1f亿", Double(value) / 100_000_000) }
+        else if !english && value >= 10_000 { label = String(format: "%.1f万", Double(value) / 10_000) }
+        else { label = value.formatted() }
+        return label + text(" 个 Token", " tokens") + (activityMode == .cumulative ? text(" · 期间累计", " · period total") : "")
+    }
+    private func heatColor(_ value: Int64?, maximum: Int64) -> Color {
+        guard let value, value > 0 else { return Color(white: 0.18) }
+        let level = Double(value) / Double(max(1, maximum))
+        if level < 0.25 { return Color(red: 0.02, green: 0.23, blue: 0.40) }
+        if level < 0.5 { return Color(red: 0.02, green: 0.35, blue: 0.61) }
+        if level < 0.75 { return Color(red: 0.02, green: 0.53, blue: 0.92) }
+        return Color(red: 0.39, green: 0.71, blue: 1)
+    }
+    private func activityLabel(_ mode: IslandActivityHeatmap.Mode) -> String {
+        switch mode {
+        case .daily: text("每天", "Daily")
+        case .weekly: text("每周", "Weekly")
+        case .cumulative: text("累计总量", "Cumulative")
+        }
+    }
+}
+
+struct IslandActivityHeatmap {
+    enum Mode: CaseIterable { case daily, weekly, cumulative }
+    struct Cell { let date: Date; let tokens: Int64?; let future: Bool }
+    struct Month { let column: Int; let date: Date }
+    static let gap: CGFloat = 3
+    static func cellSize(width: CGFloat) -> CGFloat { max(1, (width - gap * 52) / 53) }
+    static func chartHeight(width: CGFloat) -> CGFloat { cellSize(width: width) * 7 + gap * 6 + 21 }
+    let cells: [Cell]
+    let months: [Month]
+    let maximum: Int64
+    let rows: Int
+    init(activity: [DailyTokenActivity], endingAt: Date, mode: Mode) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let today = calendar.startOfDay(for: endingAt)
+        let weekStart = calendar.date(byAdding: .day, value: -(calendar.component(.weekday, from: today) - 1), to: today)!
+        let start = calendar.date(byAdding: .day, value: -52 * 7, to: weekStart)!
+        var values: [Date: Int64] = [:]
+        for item in activity where item.tokens >= 0 { values[calendar.startOfDay(for: item.date)] = item.tokens }
+        var daily: [Cell] = []
+        var running: Int64 = 0
+        var hasData = false
+        for index in 0..<371 {
+            let date = calendar.date(byAdding: .day, value: index, to: start)!
+            if let value = values[date] {
+                let sum = running.addingReportingOverflow(value)
+                running = sum.overflow ? Int64.max : sum.partialValue; hasData = true
+            }
+            daily.append(.init(date: date, tokens: date > today ? nil : (mode == .cumulative ? (hasData ? running : nil) : values[date]), future: date > today))
+        }
+        rows = mode == .weekly ? 1 : 7
+        if mode == .weekly {
+            cells = (0..<53).map { column in
+                let week = Array(daily[(column * 7)..<(column * 7 + 7)])
+                let known = week.compactMap(\.tokens)
+                let total = known.reduce(Int64(0)) { result, value in
+                    let sum = result.addingReportingOverflow(value); return sum.overflow ? Int64.max : sum.partialValue
+                }
+                return .init(date: week[0].date, tokens: known.isEmpty ? nil : total, future: false)
+            }
+        } else { cells = daily }
+        maximum = cells.compactMap(\.tokens).max() ?? 0
+        var labels: [Month] = []
+        for column in 0..<53 {
+            let date = daily[column * 7].date
+            if column == 0 || calendar.component(.month, from: date) != calendar.component(.month, from: daily[(column - 1) * 7].date) {
+                if let last = labels.last, column - last.column < 3 { labels.removeLast() }
+                labels.append(.init(column: column, date: date))
+            }
+        }
+        months = labels
     }
 }

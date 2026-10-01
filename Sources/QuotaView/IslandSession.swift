@@ -15,6 +15,7 @@ final class IslandSession {
     private var remaining: Int?
     private var weeklyRemaining: Int?
     private var quotaResetsAt: Date?
+    private var usageSnapshot: CurrentCodexPresentation?
     private var locked = false
     private var observations: [NSObjectProtocol] = []
     private var lockObservations: [NSObjectProtocol] = []
@@ -47,7 +48,8 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil) {
+        self.usageSnapshot = usageSnapshot
         self.quotaResetsAt = quotaResetsAt
         self.weeklyRemaining = weeklyRemaining
         if self.privacy != privacy { self.privacy = privacy; board.state.clearDrafts() }
@@ -73,6 +75,7 @@ final class IslandSession {
         var display = model.display(english: english, remaining: remaining, enabled: enabled && !locked, privacy: privacy)
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
+        display.usageSnapshot = privacy ? nil : usageSnapshot
         board.update(model: display,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }

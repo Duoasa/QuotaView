@@ -474,10 +474,14 @@ final class IslandLiveStore {
             else if task.status == .queued { status = english ? "Queued" : "排队中" }
             else if task.status == .waiting && request?.protocolRequest?.kind == .questions { status = english ? "Awaiting answer" : "等待回答" }
             else { status = copy.statusTitle(for: visual) }
+            let operation: String
+            if task.operation == "exec" || task.operation.hasPrefix("exec · ") {
+                operation = (english ? "Executing" : "执行中") + task.operation.dropFirst(4)
+            } else { operation = task.operation }
             let render = CodexActivityRenderState(taskIdentity: .init(sessionHash: task.key, turnHash: task.turnKey),
                 visualState: visual, approximateProgressFraction: task.displayedProgress,
                 windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (task.status == .waiting
-                    ? status + " · " + (request?.question.value(english) ?? "") : task.operation),
+                    ? status + " · " + (request?.question.value(english) ?? "") : operation),
                 tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tokens" },
                 accessibilityLabel: "\(title), \(status)")
             return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: !task.requests.isEmpty)

@@ -138,6 +138,9 @@ final class CodexActivityRuntime: ObservableObject {
             self?.handleAutomaticConnection(state)
         }
         if let quotaStatusStore {
+            liveIsland.board.state.onRefreshUsage = { [weak quotaStatusStore] in
+                await quotaStatusStore?.refresh()
+            }
             currentQuotaPresentation = quotaStatusStore.hasCurrentCodexStatus
                 ? quotaStatusStore.snapshot
                 : nil
@@ -901,7 +904,7 @@ final class CodexActivityRuntime: ObservableObject {
         liveIsland.update(english: preferences.resolvedLanguage == .english,
             remaining: currentQuotaPresentation?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
             weeklyRemaining: currentQuotaPresentation?.weeklyRemainingPercent,
-            quotaResetsAt: currentQuotaPresentation?.resetsAt)
+            quotaResetsAt: currentQuotaPresentation?.resetsAt, usageSnapshot: currentQuotaPresentation)
     }
 
     private static func defaultSocketURL() -> URL {
