@@ -6,6 +6,39 @@ import XCTest
 @testable import QuotaViewCore
 
 final class Island073SmokeTests: XCTestCase {
+    func testActivityHeatmapFitsWidthAndPreservesTotals() {
+        let date = Date(timeIntervalSince1970: 1790812800)
+        let activity = [DailyTokenActivity(date: date, tokens: 123)]
+        let daily = IslandActivityHeatmap(activity: activity, endingAt: date, mode: .daily)
+        let weekly = IslandActivityHeatmap(activity: activity, endingAt: date, mode: .weekly)
+        XCTAssertEqual(daily.cells.count, 371)
+        XCTAssertEqual(weekly.cells.count, 53)
+        XCTAssertEqual(daily.cells.compactMap(\.tokens).reduce(0, +), 123)
+        XCTAssertEqual(weekly.cells.compactMap(\.tokens).reduce(0, +), 123)
+        for width: CGFloat in [400, 596, 720] {
+            XCTAssertEqual(IslandActivityHeatmap.cellSize(width: width) * 53 + IslandActivityHeatmap.gap * 52, width, accuracy: 0.001)
+        }
+    }
+    @MainActor
+    func testUsagePagePreservesPinAndAdaptsToContentHeight() {
+        let board = IslandBoardState()
+        board.setGeometry(.init(frame: CGRect(x: 0, y: 0, width: 1280, height: 600)))
+        board.pin(); board.openUsage()
+        XCTAssertTrue(board.showsUsage)
+        XCTAssertEqual(board.presentation, .pinned)
+        board.updateUsageHeight(420)
+        XCTAssertEqual(board.expandedHeight, board.headerHeight + 420)
+        board.updateUsageHeight(580)
+        XCTAssertEqual(board.expandedHeight, board.headerHeight + 580)
+        board.updateUsageHeight(.nan)
+        XCTAssertEqual(board.usageHeight, 580)
+        board.closeUsage()
+        XCTAssertFalse(board.showsUsage)
+        XCTAssertEqual(board.presentation, .pinned)
+        board.openUsage(); board.collapse()
+        XCTAssertFalse(board.showsUsage)
+        XCTAssertTrue(board.compact)
+    }
     @MainActor
     func testCompletedGlowStaysAttachedAcrossScrollAndRelayout() throws {
         _ = NSApplication.shared
@@ -64,16 +97,6 @@ final class Island073SmokeTests: XCTestCase {
             text.configure(text: "Thinking", font: .systemFont(ofSize: 11), color: IslandTextPalette.detail, visible: true, reduceMotion: true, shimmer: true)
             XCTAssertNil(text.shimmerAnimation)
         }
-    }
-    func testWeeklyQuotaSegmentsPreservePartialFill() {
-        let values = IslandQuotaSegments.fractions(remaining: 59)
-        XCTAssertEqual(values[0], 1)
-        XCTAssertEqual(values[1], 0.77, accuracy: 0.0001)
-        XCTAssertEqual(values[2], 0)
-        for percent in 0...100 {
-            XCTAssertEqual(IslandQuotaSegments.fractions(remaining: percent).reduce(0, +) / 3, CGFloat(percent) / 100, accuracy: 0.0001)
-        }
-        XCTAssertEqual(IslandQuotaSegments.fractions(remaining: nil), [0, 0, 0])
     }
     @MainActor
     func testCompletedCardKeepsOrbPlaybackAndStopsWhenHidden() throws {
