@@ -2759,6 +2759,10 @@ final class AppBehaviorTests: XCTestCase {
             "1M"
         )
 
+        XCTAssertEqual(CodexActivityTokenUsageFormatter.string(for: 999_000_000), "999M")
+        XCTAssertEqual(CodexActivityTokenUsageFormatter.string(for: 1_000_000_000), "1B")
+        XCTAssertEqual(CodexActivityTokenUsageFormatter.string(for: 7_700_000_000), "7.7B")
+
         let chinese = CodexActivityCopy(language: .simplifiedChinese)
         XCTAssertEqual(
             chinese.tokenUsageTitle(totalTokens: 12_800),

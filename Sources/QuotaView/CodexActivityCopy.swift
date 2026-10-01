@@ -17,6 +17,9 @@ enum CodexActivityTurnTokenUsagePresentationContract {
 enum CodexActivityTokenUsageFormatter {
     static func string(for totalTokens: Int64) -> String {
         let tokens = max(totalTokens, 0)
+        if tokens >= 1_000_000_000 {
+            return compact(Double(tokens) / 1_000_000_000, suffix: "B")
+        }
         if tokens >= 1_000_000 {
             return compact(
                 Double(tokens) / 1_000_000,
