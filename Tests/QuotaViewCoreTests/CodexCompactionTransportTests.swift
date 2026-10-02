@@ -27,34 +27,58 @@ final class CodexCompactionTransportTests: XCTestCase {
             directTurnTotalTokens: 300, occurredAt: Date()))
         let identity = store.snapshot?.taskIdentity
         let sink = CompactionDeliverySink()
-        let received = expectation(description: "Actual helper events acknowledged after store admission")
+        let received = expectation(description: "Two distinct helper events reach the domain through either transport")
         received.expectedFulfillmentCount = 2
-        try bridge.start { delivery, accepted in
+        let preApplied = expectation(description: "This helper PreCompact reaches its domain state")
+        let postApplied = expectation(description: "This helper PostCompact reaches its domain state")
+        let replayed = expectation(description: "Private queue duplicate acknowledged")
+        var replayTargetID: String?
+        let handler: CodexActivityDeliveryHandler = { delivery, accepted in
             Task { @MainActor in
                 await store.receiveClassified(delivery)
-                await sink.append(delivery)
+                let first = await sink.appendUnique(delivery)
+                // ACK every authenticated delivery. A lost socket ACK can cause
+                // the same event ID to arrive again through the durable queue.
                 accepted(true)
-                received.fulfill()
+                if first {
+                    received.fulfill()
+                    switch delivery.activity.event {
+                    case .preCompact: preApplied.fulfill()
+                    case .postCompact: postApplied.fulfill()
+                    default: XCTFail("Unexpected helper event in compaction fixture")
+                    }
+                } else if delivery.source == .liveQueue, delivery.eventID == replayTargetID {
+                    replayTargetID = nil
+                    replayed.fulfill()
+                }
             }
         }
-        for (event, state) in [("PreCompact", CodexActivityVisualState.compactingContext),
-                               ("PostCompact", .thinking)] {
+        // Both reliable paths are ready before launching any helper. Busy CI
+        // may exceed the production ACK budget and legitimately use fallback.
+        try fileBridge.start(handler: handler)
+        try bridge.start(handler: handler)
+        for (event, state, applied) in [("PreCompact", CodexActivityVisualState.compactingContext, preApplied),
+                                      ("PostCompact", .thinking, postApplied)] {
             let payload = try JSONSerialization.data(withJSONObject: [
                 "hook_event_name": event, "session_id": "fixture-session",
                 "trigger": "auto", "cwd": "/private/PRIVATE-PATH/project",
                 "transcript_path": "/private/PRIVATE-TRANSCRIPT", "prompt": "PRIVATE-CONTENT"
             ])
-            let status = try await Self.runHelper(payload: payload, socket: socket)
+            let status = try await Self.runHelper(payload: payload, socket: socket, queue: queue)
             XCTAssertEqual(status, 0)
+            // Helper exit is fail-open and is not a domain-application barrier.
+            // Wait for this exact event, not a retry or an unrelated next event.
+            await fulfillment(of: [applied], timeout: 8)
             XCTAssertEqual(store.snapshot?.state, state)
             XCTAssertEqual(store.snapshot?.taskIdentity, identity)
             XCTAssertEqual(store.currentTurnTokenUsage, 300)
         }
-        await fulfillment(of: [received], timeout: 5)
+        await fulfillment(of: [received], timeout: 1)
         let deliveries = await sink.deliveries
         XCTAssertEqual(deliveries.count, 2)
         for delivery in deliveries {
-            XCTAssertEqual(delivery.source, .liveSocket)
+            XCTAssertTrue([.liveSocket, .liveQueue].contains(delivery.source))
+            XCTAssertNotNil(delivery.eventID)
             XCTAssertEqual(delivery.activity.source, .hook)
             XCTAssertNil(delivery.activity.turnHash)
             XCTAssertEqual(delivery.activity.workspaceName, "project")
@@ -63,28 +87,39 @@ final class CodexCompactionTransportTests: XCTestCase {
                 XCTAssertFalse(encoded.contains(privateValue))
             }
         }
-        // Re-delivery after an ACK was lost uses the original event ID. Both
-        // the real socket and the private file receiver must share deduplication.
-        let replayed = expectation(description: "Private queue duplicate acknowledged")
-        try fileBridge.start { delivery, accepted in
-            Task { @MainActor in
-                await store.receiveClassified(delivery)
-                accepted(true)
-                replayed.fulfill()
-            }
-        }
-        let start = try XCTUnwrap(deliveries.first)
+        // Finish any real helper fallback/duplicate cleanup before introducing
+        // a deliberate replay. Both helpers have already exited, so no helper
+        // can later create another fallback file for this phase.
+        try await waitForQueueToDrain(queue)
+        let start = try XCTUnwrap(deliveries.first { $0.activity.event == .preCompact })
+        replayTargetID = try XCTUnwrap(start.eventID)
         let envelope = CodexActivityBridgeEnvelope(authenticationToken: "fixture-token",
             installationIdentifier: "fixture-install", eventID: start.eventID, activity: start.activity)
         try JSONEncoder().encode(envelope).write(to: queue.appendingPathComponent("event-replay.json"), options: .atomic)
-        await fulfillment(of: [replayed], timeout: 5)
+        await fulfillment(of: [replayed], timeout: 8)
+        try await waitForQueueToDrain(queue)
         XCTAssertEqual(store.snapshot?.state, .thinking)
+        XCTAssertEqual(store.snapshot?.taskIdentity, identity)
         XCTAssertEqual(store.lifecycle, .active)
         XCTAssertEqual(store.currentTurnTokenUsage, 300)
+        let finalDeliveries = await sink.deliveries
+        XCTAssertEqual(finalDeliveries.count, 2, "Duplicate replay is acknowledged without becoming another domain event")
         await store.stop()
     }
 
-    private static func runHelper(payload: Data, socket: URL) async throws -> Int32 {
+    @MainActor
+    private func waitForQueueToDrain(_ queue: URL) async throws {
+        let deadline = Date().addingTimeInterval(8)
+        while Date() < deadline {
+            let events = try FileManager.default.contentsOfDirectory(at: queue, includingPropertiesForKeys: nil)
+                .filter { $0.lastPathComponent.hasPrefix("event-") && $0.pathExtension == "json" }
+            if events.isEmpty { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Accepted private queue events were not cleaned up within the bounded delivery phase")
+    }
+
+    private static func runHelper(payload: Data, socket: URL, queue: URL) async throws -> Int32 {
         let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
         let helper = repo.appendingPathComponent(".build/debug/QuotaViewActivityHook")
@@ -93,13 +128,13 @@ final class CodexCompactionTransportTests: XCTestCase {
         }
         return try await Task.detached {
             let process = Process()
-            // Run the unmodified helper binary, while preventing its fixed
-            // fallback/log directory from touching the user's live bridge.
+            // Run the unmodified helper. Its explicit fallback/log path belongs
+            // to this fixture; the user's real global queue remains forbidden.
             process.executableURL = URL(fileURLWithPath: "/usr/bin/sandbox-exec")
             let liveQueue = "/tmp/com.quotaview.codex-activity-\(getuid())"
             let profile = "(version 1)(allow default)(deny file-write* (subpath \"\(liveQueue)\") (subpath \"/private\(liveQueue)\"))"
             process.arguments = ["-p", profile, helper.path, "--socket", socket.path,
-                "--token", "fixture-token", "--installation-id", "fixture-install"]
+                "--token", "fixture-token", "--installation-id", "fixture-install", "--queue", queue.path]
             let input = Pipe()
             process.standardInput = input
             process.standardOutput = FileHandle.nullDevice
@@ -115,5 +150,10 @@ final class CodexCompactionTransportTests: XCTestCase {
 
 private actor CompactionDeliverySink {
     var deliveries: [CodexActivityDelivery] = []
-    func append(_ delivery: CodexActivityDelivery) { deliveries.append(delivery) }
+    private var eventIDs: Set<String> = []
+    func appendUnique(_ delivery: CodexActivityDelivery) -> Bool {
+        guard let id = delivery.eventID, !id.isEmpty, eventIDs.insert(id).inserted else { return false }
+        deliveries.append(delivery)
+        return true
+    }
 }
