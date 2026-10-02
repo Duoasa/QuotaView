@@ -12,7 +12,7 @@
 
 打包 Core 真实只读多 follow 核对：超大会话 scope 被隔离，同一连接仍收到命名测试任务的权威快照、owner 输入能力；probe 仅在显式 stop 后断开，真实答案发送数为 0。实际开发进程同样保持 connected 并记录会话级 resource_limit。测试任务当时已完成，不能据此声称真实待确认点击验收通过；该行为由隔离真实 Unix socket + 生产 View 草稿入口 smoke 验证，实际交互仍待用户验收。证据 `.build/073-question-capability-stock-readonly.json`、`.build/073-question-capability-stock-multifollow-readonly.json`。181 项中间包只读单任务核对没有覆盖多 follow 资源问题，不能作为最终交付；187 项后又补旧 epoch 回调边界并以 188 项完成复验，历史证据保留。
 
-用户已明确授权本轮源码推送 GitHub 并合并 main；本次修复基准 HEAD `800d1ce53814459fe8d2d36750d0941d4345a260`。当前进行源码提交与 CI 门禁，新的 PR/实际合并结果单独记录，历史 PR #68 不包含本轮新修订。仅更新既有开发包；稳定安装、版本身份、公开 Release/appcast 和用户数据保持。没有 UI 自动化或真实任务回答。下列交付数字和 PID 均为历史记录，当前结果以上述最新节为准。
+本轮修复提交 `3317b3c92d27b518b9d275214c28170af0dc8a9e` 已推送至 [PR #69](https://github.com/Duoasa/QuotaView/pull/69)，指向 main。用户明确授权检查 GitHub CI 后合并；GitHub 完整 Swift CI 与实际合并状态以该 PR 为准。本轮 188 项本地验证与已运行开发包输入独立记录；历史 PR #68 不包含本轮新修订。仅更新既有开发包；稳定安装、版本身份、公开 Release/appcast 和用户数据保持。没有 UI 自动化或真实任务回答。下列交付数字和 PID 均为历史记录，当前结果以上述最新节为准。
 
 ## 历史交付：问题交互、手动收起与等待纠正 · 2026-10-02
 

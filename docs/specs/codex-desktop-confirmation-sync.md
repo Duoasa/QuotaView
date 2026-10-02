@@ -59,7 +59,7 @@ Owner 尚未就绪或首次 discovery 超时，follow 意图在连接内以 250 
 
 ## 验证与交付
 
-2026-10-02 本轮最新：188 项限定隔离冒烟通过，覆盖生产 View/Board 草稿入口与真实 Unix socket 短帧、超大 burst 后健康原生问题提交、foreign/audience/重复路由/帧超时、旧 epoch 异步回调重入、canonical/live 当前轮次与来源准入。P95 展示基准 4.332 ms。最终 Debug arm64 构建与 deep strict ad-hoc 签名通过，固定身份开发包 PID 94157，178 项输入指纹一致；真实只读打包 Core 多 follow 证明超大会话隔离后正常会话仍权威/有 owner 输入能力。实际 app 保持 connected。命名测试任务当时已完成，没有处理真实 pending、发送真实答案或 UI 自动化，真实点击仍待用户验收。证据 `.build/073-question-capability-smoke.log`、`.build/073-question-capability-build.log`、`.build/073-question-capability-delivery.json`、`.build/073-question-capability-stock-readonly.json`、`.build/073-question-capability-stock-multifollow-readonly.json`。用户已明确授权本轮源码推送并合并 main；修复基准 `800d1ce53814459fe8d2d36750d0941d4345a260`。新的 PR/CI/实际合并结果单独记录，历史 PR #68 不能视为包含这些新修改。
+2026-10-02 本轮最新：188 项限定隔离冒烟通过，覆盖生产 View/Board 草稿入口与真实 Unix socket 短帧、超大 burst 后健康原生问题提交、foreign/audience/重复路由/帧超时、旧 epoch 异步回调重入、canonical/live 当前轮次与来源准入。P95 展示基准 4.332 ms。最终 Debug arm64 构建与 deep strict ad-hoc 签名通过，固定身份开发包 PID 94157，178 项输入指纹一致；真实只读打包 Core 多 follow 证明超大会话隔离后正常会话仍权威/有 owner 输入能力。实际 app 保持 connected。命名测试任务当时已完成，没有处理真实 pending、发送真实答案或 UI 自动化，真实点击仍待用户验收。证据 `.build/073-question-capability-smoke.log`、`.build/073-question-capability-build.log`、`.build/073-question-capability-delivery.json`、`.build/073-question-capability-stock-readonly.json`、`.build/073-question-capability-stock-multifollow-readonly.json`。本轮修复提交 `3317b3c92d27b518b9d275214c28170af0dc8a9e` 已推送至 [PR #69](https://github.com/Duoasa/QuotaView/pull/69)，指向 main。用户明确授权检查 GitHub CI 后合并；GitHub 完整 Swift CI 与实际合并状态以该 PR 为准。本轮 188 项本地验证与已运行开发包输入独立记录；历史 PR #68 不包含本轮新修订。
 
 以下为历史验证：
 
