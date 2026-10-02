@@ -49,3 +49,5 @@ Owner 尚未就绪或首次 discovery 超时，follow 意图在连接内以 250 
 98 项必要隔离冒烟通过：Core IPC 21、公开投影 15、Island 生命周期 13、Store 准入 10、导航 4、既有准入 11、既有请求恢复 21、自动弹出偏好 3。证据 `.build/073-desktop-confirmation-smoke.log`。全新 Derived Data 的 Debug arm64 开发 Target 构建通过，证据 `.build/073-desktop-confirmation-build.log`；固定身份、资源与 deep strict ad-hoc 签名核对通过，开发包已启动 PID 90147，证据 `.build/073-desktop-confirmation-delivery.json`。真实只读 initialize 握手记录 `.build/073-desktop-confirmation-handshake.json`。测试使用临时 fixture，不替用户批准或回答真实待确认。视觉和真实交互由用户验收，不采用 UI 自动化。
 
 开发身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。本轮源码、已运行开发包和公开 main/Release/appcast 分别记录，不把历史 PR #67 合并误作本功能已推送。
+
+源码提交 `5461059bedb918dc74f344feac2fe7b852020153` 已推送 [PR #68](https://github.com/Duoasa/QuotaView/pull/68)，用户已授权 CI 通过后合并 main。GitHub 完整 Swift CI 与最终合并状态以该 PR 为准；本地不重复完整回归。

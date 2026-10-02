@@ -6,7 +6,7 @@
 
 能力由实际 owner、当前轮次、精确 typed ID 和连续状态证明，不能从 Local/Shared/Hook 的观察详情推断。ACK 仅为已发送，权威请求移除或精确接受的答案才解除；外部 Codex 操作同步清理，对应 Core 等待和提醒随之更新，并行请求保留。首次 owner 尚未就绪可有界恢复；切目录先撤销旧代次，分类重入和晚 ACK 不回写新状态。资源按会话撤销能力而不假装已回答，内存、帧和队列有界，原始会话状态不落盘。协议属于当前 Codex 私有接口，未知版本/类型、外部授权和复杂表单仍在 Codex 处理。
 
-98 项必要隔离冒烟、真实只读 initialize 握手、新 Derived Data Debug arm64 构建、固定身份/资源和 deep strict ad-hoc 签名通过；证据 `.build/073-desktop-confirmation-smoke.log`、`.build/073-desktop-confirmation-handshake.json`、`.build/073-desktop-confirmation-build.log`、`.build/073-desktop-confirmation-delivery.json`。仅更新既有开发包，当前 PID **90147**，身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。未替用户处理真实确认；视觉和真实点击待用户验收，本地无完整回归或 UI 自动化。用户已授权本轮源码推送 GitHub 并合并 main，当前准备提交 Desktop 确认同步；基准 HEAD `181efbd` 的 [PR #67](https://github.com/Duoasa/QuotaView/pull/67) 已合并，当前功能的 CI/合并将以本轮 PR 为准。manifest 保留已运行包的实际输入指纹。以下保留历史交付，稳定安装与公开 Release/appcast 保持。
+98 项必要隔离冒烟、真实只读 initialize 握手、新 Derived Data Debug arm64 构建、固定身份/资源和 deep strict ad-hoc 签名通过；证据 `.build/073-desktop-confirmation-smoke.log`、`.build/073-desktop-confirmation-handshake.json`、`.build/073-desktop-confirmation-build.log`、`.build/073-desktop-confirmation-delivery.json`。仅更新既有开发包，当前 PID **90147**，身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。未替用户处理真实确认；视觉和真实点击待用户验收，本地无完整回归或 UI 自动化。用户已授权本轮源码推送 GitHub 并合并 main；源码提交 `5461059bedb918dc74f344feac2fe7b852020153` 已推送至 [PR #68](https://github.com/Duoasa/QuotaView/pull/68)，完整 Swift CI 和合并状态以该 PR 为准。基准 PR #67 已合并；manifest 保留已运行包的实际输入指纹和本轮集成状态。以下保留历史交付，稳定安装与公开 Release/appcast 保持。
 
 ## Hook 原生配置与待确认关联修复 · 2026-10-02
 
