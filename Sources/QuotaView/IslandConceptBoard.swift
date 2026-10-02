@@ -50,6 +50,35 @@ enum IslandChromeMetrics {
     static let font = Font.system(size: fontSize, weight: .medium)
 }
 
+// Center fitting titles on the island, but let overflowing titles use the
+// actual space between the Orb and statistics instead of a hidden side copy.
+struct IslandCompactContentLayout: Layout {
+    var gap: CGFloat = IslandVibeLayout.compactContentGap
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        return CGSize(width: max(0, proposal.width ?? sizes.reduce(0) { $0 + $1.width } + gap * 2),
+            height: max(0, proposal.height ?? sizes.map(\.height).max() ?? 0))
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 3 else { return }
+        let orb = subviews[0].sizeThatFits(.unspecified)
+        let title = subviews[1].sizeThatFits(.unspecified)
+        let statistics = subviews[2].sizeThatFits(.unspecified)
+        let leading = bounds.minX + orb.width + gap
+        let trailing = bounds.maxX - statistics.width - gap
+        let titleWidth = min(title.width, max(0, trailing - leading))
+        let center = titleWidth > 0
+            ? min(max(bounds.midX, leading + titleWidth / 2), trailing - titleWidth / 2)
+            : min(leading, bounds.maxX)
+        subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+            proposal: .init(width: orb.width, height: orb.height))
+        subviews[1].place(at: CGPoint(x: center, y: bounds.midY), anchor: .center,
+            proposal: .init(width: titleWidth, height: bounds.height))
+        subviews[2].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+            proposal: .init(width: statistics.width, height: statistics.height))
+    }
+}
+
 struct IslandChromeFooter<Leading: View, Trailing: View>: View {
     let leading: Leading
     let trailing: Trailing
@@ -1061,17 +1090,9 @@ struct IslandBoardView: View {
                             .frame(maxWidth: .infinity, alignment: .trailing).clipped()
                     }
                 } else {
-                    // Equal side regions keep the text centered on the island,
-                    // even when the session count or attention indicators change.
-                    HStack(spacing: IslandVibeLayout.compactContentGap) {
-                        compactStatistics.hidden().accessibilityHidden(true)
-                            .overlay(alignment: .leading) { compactOrb }
-                        GeometryReader { proxy in
-                            compactText.frame(width: min(proxy.size.width,
-                                IslandScrollingTextHost.width(of: state.compactTaskText,
-                                    font: .monospacedSystemFont(ofSize: 12, weight: .semibold))))
-                                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
-                        }.frame(maxWidth: .infinity).clipped()
+                    IslandCompactContentLayout {
+                        compactOrb
+                        compactText
                         compactStatistics
                     }
                 }
@@ -1080,7 +1101,7 @@ struct IslandBoardView: View {
         }.buttonStyle(.plain)
             .accessibilityHint(state.text("悬停或点击展开会话详情", "Hover or click to expand session details"))
             .accessibilityLabel("\(state.summary), \(state.quota)")
-            .accessibilityValue(state.tasks.contains(where: { $0.renderState.visualState == .awaitingConfirmation })
+            .accessibilityValue(state.attentionCount > 0
                 ? state.text("待确认", "Awaiting confirmation") : "")
     }
     private func attentionIndicators(showCounts: Bool) -> some View {

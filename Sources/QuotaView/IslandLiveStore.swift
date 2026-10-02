@@ -56,6 +56,8 @@ final class IslandLiveStore {
             impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
         var resolvedCallHashes: [String] = []
         var resolvedRequestKeys: [String] = []
+        private var acceptedAsyncReplyProofs: [String: String] = [:]
+        private var acceptedAsyncReplyOrder: [String] = []
         private var callModes: [String: CodexUserInputMode] = [:]
         private var callModeOrder: [String] = []
 
@@ -106,6 +108,7 @@ final class IslandLiveStore {
                 && left.method == right.method && left.key == right.key
         }
         mutating func observe(_ pending: Pending) {
+            if Self.asyncQuestionsAreAnswered(pending, proofs: acceptedAsyncReplyProofs) { return }
             if case .asynchronousQuestion(let id)? = pending.desktopIdentity,
                skippedAsyncQuestionIDs.contains(id) { return }
             if desktopAsyncQuestionsAuthoritative, pending.mode == .asynchronous,
@@ -144,6 +147,53 @@ final class IslandLiveStore {
             requests.removeAll(where: replaces)
             requests.append(replacement)
             bindUnidentifiedSourceWait(to: replacement); clampSelection()
+        }
+        private static func asyncQuestionProofs(_ pending: Pending) -> [(String, String)] {
+            guard pending.mode == .asynchronous, let wire = pending.value.protocolRequest,
+                  wire.kind == .questions else { return [] }
+            if case .asynchronousQuestion(let identity)? = pending.desktopIdentity, wire.questions.count == 1 {
+                return [(CodexActivityPrivacy.hashIdentifier(identity),
+                    CodexActivityPrivacy.hashIdentifier(wire.questions[0].title))]
+            }
+            guard let local = wire.localObservation, local.mode == .asynchronous else { return [] }
+            // This is an equality check on an explicit call ID and question index;
+            // it never maps a differing native agent-message ID by matching text.
+            return wire.questions.enumerated().compactMap { index, question in
+                CodexLocalAsyncReplyContent.identityHash(source: local.callID, index: index).map {
+                    ($0, CodexActivityPrivacy.hashIdentifier(question.title))
+                }
+            }
+        }
+        private static func asyncQuestionsAreAnswered(_ pending: Pending, proofs: [String: String]) -> Bool {
+            let identities = asyncQuestionProofs(pending)
+            return !identities.isEmpty && identities.allSatisfy { proofs[$0.0] == $0.1 }
+        }
+        @discardableResult mutating func receiveAcceptedAsyncReplies(_ proofs: [(String, String)]) -> Bool {
+            let observed = Set(requests.flatMap(Self.asyncQuestionProofs).map { $0.0 + ":" + $0.1 })
+            // A reply preceding the original request, another question's text,
+            // or an unobserved call cannot create a future-answer tombstone.
+            for (identity, question) in proofs where observed.contains(identity + ":" + question) {
+                acceptedAsyncReplyProofs[identity] = question
+                acceptedAsyncReplyOrder.removeAll { $0 == identity }; acceptedAsyncReplyOrder.append(identity)
+            }
+            let settled = requests.filter { Self.asyncQuestionsAreAnswered($0, proofs: acceptedAsyncReplyProofs) }
+            let keys = Set(settled.map(\.key))
+            requests.removeAll { keys.contains($0.key) }
+            for call in settled.compactMap(\.callHash) { rememberCall(call) }
+            // Retain proofs still needed by a partially answered group and a
+            // bounded replay window. A full window must never reject a new
+            // answer for a question we are currently showing.
+            let active = Set(requests.flatMap(Self.asyncQuestionProofs).map(\.0))
+            var retired = acceptedAsyncReplyOrder.filter { !active.contains($0) }
+            while retired.count > 256 {
+                let oldest = retired.removeFirst()
+                acceptedAsyncReplyProofs.removeValue(forKey: oldest)
+                acceptedAsyncReplyOrder.removeAll { $0 == oldest }
+            }
+            // Async replies settle their questions only, never unrelated native
+            // blocking RPCs, anonymous source waits, or runtime compaction.
+            clampSelection()
+            return !settled.isEmpty
         }
         @discardableResult mutating func skipAsyncQuestion(_ requestID: UUID) -> Bool {
             guard let pending = requests.first(where: { $0.value.id == requestID }),
@@ -630,6 +680,17 @@ final class IslandLiveStore {
         }
         guard tasks[i].turnKey == content.turnHash else { return }
         let type = p["type"] as? String
+        if type == "questionReply", let raw = p["replies"] as? [[String: String]], (1...32).contains(raw.count) {
+            let proofs = raw.compactMap { item -> (String, String)? in
+                guard let identity = item["questionItemHash"], let question = item["questionHash"],
+                      identity.count == CodexActivityPrivacy.hashIdentifier("").count,
+                      question.count == CodexActivityPrivacy.hashIdentifier("").count else { return nil }
+                return (identity, question)
+            }
+            guard proofs.count == raw.count else { return }
+            if tasks[i].requestLifecycle.receiveAcceptedAsyncReplies(proofs) { onChange?() }
+            return
+        }
         if type == "questionRequest", let id = p["id"] as? String,
            let questions = p["questions"] as? [[String: Any]] {
             let mode = (p["userInputMode"] as? String).flatMap(CodexUserInputMode.init(rawValue:))

@@ -74,19 +74,15 @@ struct IslandApprovalInput: View {
     @Environment(\.isEnabled) private var enabled
     var body: some View {
         HStack(spacing: 8) {
-            if secret || selected != nil { Image(systemName: secret ? "lock" : "pencil").foregroundStyle(IslandApprovalAppearance.muted) }
+            if secret { Image(systemName: "lock").foregroundStyle(IslandApprovalAppearance.muted) }
             Group {
                 if secret { SecureField(placeholder, text: $value, prompt: Text(placeholder).foregroundStyle(IslandApprovalAppearance.muted)) }
                 else { TextField(placeholder, text: $value, prompt: Text(placeholder).foregroundStyle(IslandApprovalAppearance.muted)) }
             }.textFieldStyle(.plain).focused($focused).accessibilityLabel(placeholder)
-            if let selected {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 15)).foregroundStyle(selected ? Color.white : IslandApprovalAppearance.muted)
-                    .frame(width: 20, height: 20)
-            }
         }.font(.system(size: 12)).foregroundStyle(.white).padding(.horizontal, 12)
             .frame(height: IslandApprovalMetrics.inputHeight)
-            .background(selected == true ? Color(white: 0.12) : IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 8))
+            .background(selected == nil ? IslandApprovalAppearance.surface : IslandApprovalAppearance.raised,
+                in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(focused || selected == true ? Color(white: 0.5) : IslandApprovalAppearance.border, lineWidth: 1))
             .contentShape(RoundedRectangle(cornerRadius: 8))

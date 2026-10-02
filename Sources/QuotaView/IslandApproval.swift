@@ -85,9 +85,19 @@ struct IslandApprovalMetrics {
         IslandTaskTextMetrics.height(label, size: 12, semibold: true, width: width - 54)
             + (description.isEmpty ? 0 : IslandTaskTextMetrics.height(description, width: width - 54) + 4) + 20
     }
+    static let questionNumberSize: CGFloat = 24
+    static let questionHeadingGap: CGFloat = 10
+    static func questionTextWidth(_ width: CGFloat) -> CGFloat { max(40, width - questionNumberSize - questionHeadingGap) }
+    static func questionTitleRowHeight(_ question: IslandApprovalQuestion, width: CGFloat) -> CGFloat {
+        max(questionNumberSize, IslandTaskTextMetrics.height(question.title, size: 13, semibold: true,
+            width: questionTextWidth(width)))
+    }
+    static func questionHeaderLabelHeight(_ question: IslandApprovalQuestion, width: CGFloat) -> CGFloat {
+        question.header.isEmpty ? 0 : IslandTaskTextMetrics.height(question.header, size: 10, width: questionTextWidth(width))
+    }
     static func questionHeader(_ question: IslandApprovalQuestion, width: CGFloat) -> CGFloat {
-        max(24, IslandTaskTextMetrics.height(question.title, size: 13, semibold: true, width: width - 60)
-            + (question.header.isEmpty ? 0 : 4 + IslandTaskTextMetrics.height(question.header, size: 10, width: width - 60)))
+        questionTitleRowHeight(question, width: width)
+            + (question.header.isEmpty ? 0 : 4 + questionHeaderLabelHeight(question, width: width))
     }
     static func permissionHeight(_ permission: IslandApprovalPermission, width: CGFloat) -> CGFloat {
         max(60, IslandTaskTextMetrics.height(permission.title, size: 11, code: true, width: width - 100) + 44)
@@ -144,6 +154,33 @@ struct IslandApprovalMetrics {
         contentHeight = cardHeight + Self.gap + bodyHeight
             + (decisionsHeight > 0 ? Self.gap + decisionsHeight : 0)
             + (failureHeight > 0 ? Self.gap + failureHeight : 0) + IslandVibeLayout.rowSpacing
+    }
+}
+
+struct IslandApprovalQuestionHeading: View {
+    let question: IslandApprovalQuestion
+    let number: Int
+    let width: CGFloat
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !question.header.isEmpty {
+                Text(question.header).font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(IslandApprovalAppearance.muted).lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: IslandApprovalMetrics.questionTextWidth(width),
+                        height: IslandApprovalMetrics.questionHeaderLabelHeight(question, width: width), alignment: .topLeading)
+                    .padding(.leading, IslandApprovalMetrics.questionNumberSize + IslandApprovalMetrics.questionHeadingGap)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: IslandApprovalMetrics.questionHeadingGap) {
+                Text(String(format: "%02d", number)).font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(IslandApprovalAppearance.secondary)
+                    .frame(width: IslandApprovalMetrics.questionNumberSize, height: IslandApprovalMetrics.questionNumberSize)
+                    .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 6))
+                Text(question.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: IslandApprovalMetrics.questionTextWidth(width), alignment: .leading)
+            }.frame(height: IslandApprovalMetrics.questionTitleRowHeight(question, width: width), alignment: .topLeading)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -406,22 +443,7 @@ struct IslandApprovalView: View {
             VStack(alignment: .leading, spacing: 20) {
                 ForEach(Array(request.questions.enumerated()), id: \.offset) { index, q in
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .top, spacing: 10) {
-                            Text(String(format: "%02d", index + 1)).font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundStyle(secondary).frame(width: 24, height: 24)
-                                .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 6))
-                            VStack(alignment: .leading, spacing: 4) {
-                                if !q.header.isEmpty {
-                                    Text(q.header).font(.system(size: 10, weight: .medium)).foregroundStyle(muted)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                Text(q.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: answered(q) ? "checkmark.circle.fill" : "circle.dotted")
-                                .font(.system(size: 12)).foregroundStyle(answered(q) ? secondary : muted).frame(width: 16, height: 24)
-                                .accessibilityLabel(answered(q) ? text("已填写，等待确认", "Ready to confirm") : text("未填写", "No answer selected"))
-                        }.frame(height: IslandApprovalMetrics.questionHeader(q, width: metrics.contentWidth), alignment: .top)
+                        IslandApprovalQuestionHeading(question: q, number: index + 1, width: metrics.contentWidth)
                         if IslandApprovalLayout(request) == .connector {
                             HStack(spacing: 8) {
                                 let optionWidth = (metrics.contentWidth - CGFloat(max(0, q.options.count - 1)) * 8) / CGFloat(max(1, q.options.count))

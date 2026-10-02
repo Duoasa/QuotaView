@@ -1,6 +1,8 @@
 import Foundation
+import CoreFoundation
 
-/// Public rollout material only. User prompts and private reasoning never cross this boundary.
+/// Public rollout material only. Ordinary user prompts and private reasoning never cross this boundary.
+/// Accepted native question replies carry only identity and question hashes for settlement.
 public struct CodexLocalPublicContent: Sendable {
     public let sessionHash: String
     public let turnHash: String
@@ -21,6 +23,11 @@ public struct CodexLocalPublicContent: Sendable {
         } else if type == "response_item" {
             switch payload["type"] as? String {
             case "message":
+                if payload["role"] as? String == "user" {
+                    guard let replies = CodexLocalAsyncReplyContent.proofs(payload) else { return nil }
+                    clean = ["type": "questionReply", "replies": replies]
+                    break
+                }
                 guard payload["role"] as? String == "assistant",
                       ["commentary", "final"].contains(payload["channel"] as? String ?? "final") else { return nil }
                 let content = (payload["content"] as? [[String: Any]] ?? []).compactMap { part -> String? in
@@ -114,6 +121,47 @@ enum CodexLocalQuestionContent {
             // title/string-choice schema does not carry a synchronous isOther flag.
             if asynchronous { clean["isOther"] = true }
             result.append(clean)
+        }
+        return result
+    }
+}
+
+/// Only a complete native reply envelope can settle an already observed async
+/// question. Neither its answer nor the surrounding user message is published.
+public enum CodexLocalAsyncReplyContent {
+    public static func identityHash(source: String, index: Int) -> String? {
+        guard !source.isEmpty, source.utf8.count <= 1024, (0..<32).contains(index),
+              let data = try? JSONSerialization.data(withJSONObject: ["request_user_input_async", source, index],
+                  options: [.fragmentsAllowed, .withoutEscapingSlashes]),
+              let identity = String(data: data, encoding: .utf8) else { return nil }
+        return CodexActivityPrivacy.hashIdentifier(identity)
+    }
+    static func proofs(_ payload: [String: Any]) -> [[String: String]]? {
+        guard let content = payload["content"] as? [[String: Any]], content.count == 1,
+              ["input_text", "text"].contains(content[0]["type"] as? String ?? ""),
+              let text = content[0]["text"] as? String, text.utf8.count <= 131_072 else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let opening = CodexDesktopRequestProjector.asyncReplyOpeningTag
+        let closing = CodexDesktopRequestProjector.asyncReplyClosingTag
+        guard trimmed.hasPrefix(opening), trimmed.hasSuffix(closing),
+              let decoded = try? JSONSerialization.jsonObject(with: Data(trimmed.dropFirst(opening.count).dropLast(closing.count).utf8)) else { return nil }
+        let values: [[String: Any]]
+        if let array = decoded as? [[String: Any]] { values = array }
+        else if let object = decoded as? [String: Any] { values = [object] }
+        else { return nil }
+        guard (1...32).contains(values.count) else { return nil }
+        var seen = Set<String>(), result: [[String: String]] = []
+        for value in values {
+            guard let identity = value["questionItemId"] as? String, identity.utf8.count <= 2048,
+                  let tuple = try? JSONSerialization.jsonObject(with: Data(identity.utf8)) as? [Any], tuple.count == 3,
+                  tuple[0] as? String == "request_user_input_async", let source = tuple[1] as? String,
+                  let index = tuple[2] as? NSNumber, CFGetTypeID(index) != CFBooleanGetTypeID(),
+                  index.doubleValue == Double(index.intValue), let id = identityHash(source: source, index: index.intValue),
+                  CodexActivityPrivacy.hashIdentifier(identity) == id,
+                  seen.insert(id).inserted, let question = value["question"] as? String,
+                  !question.isEmpty, question.utf8.count <= 16_384, let answer = value["answer"] as? String,
+                  !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, answer.utf8.count <= 65_536 else { return nil }
+            result.append(["questionItemHash": id, "questionHash": CodexActivityPrivacy.hashIdentifier(question)])
         }
         return result
     }
