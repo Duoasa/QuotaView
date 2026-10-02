@@ -1,5 +1,18 @@
 # 刘海灵动岛 · 生产接入交互与显示规则（审核稿）
 
+## Hook 原生配置与待确认关联修复 · 2026-10-02
+
+本轮用户要求采用 Vibe Island 类似的自动配置，让 App Server 与 Hook 同时工作，并修复真实提问漏报、确认类型/内容不一致及回答后卡住的问题。已核对实际安装的 Vibe Island 1.0.51：自动维护稳定 Hook 命令，通过 Codex 原生配置 API 授权，仍保留一次确认；不是自动打开 CLI 后模拟按 T。
+
+Hook 配置改为启动时幂等安装/修复，设置中的原生授权只处理所选 CODEX_HOME 的 QuotaView 命令及当前定义哈希；使用 `hooks/list` 核对状态和 `config/batchWrite` 热重载。首次需一次授权，已受信的同一定义不重复要求确认；显式禁用 Hooks 与停用偏好保留，失败不阻塞 App Server/本地活动读取，不退出或重新启动 Codex。移除 Terminal/expect 流程和桌面 PID 门槛。稳定命令指向私有 0600 路由文件，令牌/Socket/重试队列更新不改变命令；Helper 按渠道和数据目录隔离，只迁移能验证当前 Socket/令牌归属的旧条目，保留其它 Hook。Socket 和文件回退使用同一显式队列，修复开发版重试路径误指稳定版；更换目录同时更新 Hook、分类和传输身份。
+
+确认页依据真实类型与公开内容：本地 `request_user_input` 和 `request_user_input_async` 通过会话/轮次/调用 ID 关联真实问题、标题和选项。同步请求的对应输出解除等待；异步提问的发送回执不是用户回答，等待清理由对应解决事件、原生等待状态明确解除、新轮次或终态驱动。Hook/native 的异步启动回执先于问题到达时也不会留下错误的解决标记。Hook 泛化等待只显示详情暂不可用，不猜测命令审批；完整请求替换占位，继续执行清除旧泛化等待，已解决旧事件不能重新激活。仅观察到本地请求时保持只读并提示在 Codex 回答，不声称获得桌面请求的应答权；私有推理不进入显示。
+
+核验依据：[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[App Server](https://learn.chatgpt.com/docs/app-server) 与当前 0.159.2 CLI 生成的本地 schema。隔离原生探针已验证 `hooks.state."<key>".trusted_hash` + `reloadUserConfig`；测试只使用临时 CODEX_HOME、惰性 Hook，不访问账户或改写真实 Codex 配置。Vibe Island 的一次授权依据见[官方更新记录](https://vibeisland.app/changelog/)。
+
+48 项必要隔离冒烟与 Debug arm64 构建通过，包含原生授权边界、渠道/目录隔离、Helper 回退和真实问答生命周期；本轮未执行完整回归或 UI 自动化。开发包已更新并启动 PID 88611，固定身份 0.7.3 / 显示 Build 1 / 内部 49 与 deep strict ad-hoc 签名核对通过。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`；忽略的开发 manifest 已记录源码和包指纹。启动后已核对 12 组旧开发 Hook 按当前 Socket/令牌身份迁入独立配置，6 组其它 Hook 的规范化内容哈希保持不变；73 个源码指纹与开发包 manifest 一致。首次原生 Hook 授权待用户操作，实际连接需自然 Hook 事件；视觉及真实交互待用户验收。源码未提交推送，本轮未发布 Release/appcast。
+
+
 ## 2026-10-02 设置精简与自动弹出
 
 用量设置仅保留成本估算与 Token 活动，基础统计固定显示，移除用量预览和显示位置。自动弹出默认开启，新任务/完成使用 1–10 秒停留时间（默认 3 秒），待确认持续展开；关闭后手动打开，保留任务观察、页面和固定状态。通用采用整行红色退出入口与确认弹窗。四项实际特效使用单排 32 pt 预览，外框 12 pt 圆角、内边距 8 pt、预览 4 pt 圆角，名称在框外；中英文文案简化并按实际应答能力说明请求操作。

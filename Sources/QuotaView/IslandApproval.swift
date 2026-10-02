@@ -86,7 +86,8 @@ struct IslandApprovalMetrics {
             + (description.isEmpty ? 0 : IslandTaskTextMetrics.height(description, width: width - 54) + 4) + 20
     }
     static func questionHeader(_ question: IslandApprovalQuestion, width: CGFloat) -> CGFloat {
-        max(24, IslandTaskTextMetrics.height(question.title, size: 13, semibold: true, width: width - 60))
+        max(24, IslandTaskTextMetrics.height(question.title, size: 13, semibold: true, width: width - 60)
+            + (question.header.isEmpty ? 0 : 4 + IslandTaskTextMetrics.height(question.header, size: 10, width: width - 60)))
     }
     static func permissionHeight(_ permission: IslandApprovalPermission, width: CGFloat) -> CGFloat {
         max(60, IslandTaskTextMetrics.height(permission.title, size: 11, code: true, width: width - 100) + 44)
@@ -168,10 +169,7 @@ struct IslandApprovalView: View {
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private var wire: IslandCodexApprovalRequest? { request.protocolRequest }
     private var actions: [IslandApprovalAction] {
-        wire?.actions ?? [
-            .init(id: "decline", label: .init("拒绝", "Decline"), result: .object(["decision": .string("decline")]), affirmative: false),
-            .init(id: "accept", label: .init("允许一次", "Allow once"), result: .object(["decision": .string("accept")]), affirmative: true)
-        ]
+        wire?.actions ?? []
     }
     private var firstNegative: IslandApprovalAction? {
         actions.first { $0.result["decision"].text == "decline" || $0.result["action"].text == "decline" || $0.id == "deny" }
@@ -269,7 +267,7 @@ struct IslandApprovalView: View {
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
                     openedURL: draft.openedURL, handoffMessage: codexJumpMessage,
-                    controls: controls(wire).disabled(!request.phase.canSubmit))
+                    controls: controls(wire).disabled(!request.canRespond || !request.phase.canSubmit))
             } else {
             Text(request.question.value(english)).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
                 .foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
@@ -277,7 +275,7 @@ struct IslandApprovalView: View {
                 .textSelection(.enabled)
             if !request.impact.value(english).isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(wire == nil ? text("操作影响", "Impact") : text("请求内容与范围", "Request and scope"))
+                    Text(wire == nil ? text("请求状态", "Request status") : text("请求内容与范围", "Request and scope"))
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(muted).frame(height: 16)
                     Text(request.impact.value(english)).font(.system(size: 12)).lineSpacing(2)
                         .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
@@ -315,8 +313,14 @@ struct IslandApprovalView: View {
                             Text(String(format: "%02d", index + 1)).font(.system(size: 10, weight: .medium, design: .monospaced))
                                 .foregroundStyle(secondary).frame(width: 24, height: 24)
                                 .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 6))
-                            Text(q.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
-                                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 4) {
+                                if !q.header.isEmpty {
+                                    Text(q.header).font(.system(size: 10, weight: .medium)).foregroundStyle(muted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Text(q.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
                             Image(systemName: answered(q) ? "checkmark.circle.fill" : "circle.dotted")
                                 .font(.system(size: 12)).foregroundStyle(answered(q) ? secondary : muted).frame(width: 16, height: 24)
                                 .accessibilityLabel(answered(q) ? text("已回答", "Answered") : text("未回答", "Unanswered"))

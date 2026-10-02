@@ -126,6 +126,10 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let turnCompletionStatus: CodexActivityTurnCompletionStatus?
     public let goalStatus: CodexActivityGoalStatus?
     public let waitReason: CodexActivityWaitReason?
+    /// Correlates a tool request with its result without retaining the raw call ID.
+    public let toolCallHash: String?
+    /// Public tool name only; distinguishes asynchronous question launch acknowledgements.
+    public let toolName: String?
     /// Only the hashed item identity is retained, never the item payload.
     public let compactionItemHash: String?
     public let occurredAt: Date
@@ -145,6 +149,8 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         turnCompletionStatus: CodexActivityTurnCompletionStatus? = nil,
         goalStatus: CodexActivityGoalStatus? = nil,
         waitReason: CodexActivityWaitReason? = nil,
+        toolCallHash: String? = nil,
+        toolName: String? = nil,
         compactionItemHash: String? = nil,
         occurredAt: Date = Date()
     ) {
@@ -162,6 +168,8 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.turnCompletionStatus = turnCompletionStatus
         self.goalStatus = goalStatus
         self.waitReason = waitReason
+        self.toolCallHash = toolCallHash
+        self.toolName = toolName
         self.compactionItemHash = compactionItemHash
         self.occurredAt = occurredAt
     }
@@ -174,7 +182,7 @@ public extension CodexActivityEvent {
              sessionStartSource: sessionStartSource, planProgress: planProgress,
              sessionKind: kind, source: source, planSource: planSource,
              turnCompletionStatus: turnCompletionStatus, goalStatus: goalStatus,
-             waitReason: waitReason, compactionItemHash: compactionItemHash,
+             waitReason: waitReason, toolCallHash: toolCallHash, toolName: toolName, compactionItemHash: compactionItemHash,
              occurredAt: occurredAt)
     }
 }

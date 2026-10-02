@@ -130,7 +130,7 @@ final class CodexActivityStore: ObservableObject {
     private var activeTurnHashBySession: [String: String] = [:]
     private var turnTokenUsageBySession: [String: StoredTurnTokenUsage] = [:]
     private var sessionClassifier = CodexActivitySessionClassifier()
-    private let hookSessionClassifier = CodexActivitySessionClassifier(codexHome: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex"))
+    private var hookSessionClassifier = CodexActivitySessionClassifier()
     private var localRecovery = CodexLocalActivityRecovery()
     private var selectedActivityAt: Date?
     private var selectedCompactionSource: CodexActivityEventSource?
@@ -185,6 +185,7 @@ final class CodexActivityStore: ObservableObject {
         self.sharedActivityClient = sharedActivityClient
         self.localRolloutActivityClient = localRolloutActivityClient
         sessionClassifier = CodexActivitySessionClassifier(codexHome: sessionDirectory)
+        hookSessionClassifier = CodexActivitySessionClassifier(codexHome: sessionDirectory)
         compactDelayNanoseconds = UInt64(
             max(compactDelay, 0) * 1_000_000_000
         )
@@ -284,6 +285,7 @@ final class CodexActivityStore: ObservableObject {
         guard await localRolloutActivityClient.setDataDirectory(root),
               nativeGeneration == run, !Task.isCancelled else { return false }
         sessionClassifier = CodexActivitySessionClassifier(codexHome: root)
+        hookSessionClassifier = CodexActivitySessionClassifier(codexHome: root)
         startNativeActivityNotifications()
         return true
     }

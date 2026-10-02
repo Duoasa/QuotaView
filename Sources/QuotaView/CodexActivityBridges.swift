@@ -520,7 +520,7 @@ enum CodexActivityDiagnostics {
     static var logURL: URL {
         URL(
             fileURLWithPath:
-                "/tmp/com.quotaview.codex-activity-\(getuid())",
+                "/tmp/\(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "com.quotaview.development073" : "com.quotaview").codex-activity-\(getuid())",
             isDirectory: true
         )
         .appendingPathComponent("diagnostics.log")

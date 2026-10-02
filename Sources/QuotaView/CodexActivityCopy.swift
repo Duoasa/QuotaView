@@ -144,9 +144,9 @@ struct CodexActivityCopy {
         case (.simplifiedChinese, .notInstalled):
             "在 QuotaView 设置中连接 Codex 灵动岛"
         case (.simplifiedChinese, .installedNeedsRestart):
-            "完成安全确认后重新启动 Codex"
+            "请在设置中重新检查 Hook 授权"
         case (.simplifiedChinese, .awaitingTrust):
-            "请在打开的 Codex 窗口完成安全确认"
+            "请在 QuotaView 设置中授权 Hook 连接"
         case (.simplifiedChinese, .awaitingFirstEvent):
             "向 Codex 发送一条新消息以完成连接"
         case (.simplifiedChinese, .connected):
@@ -156,9 +156,9 @@ struct CodexActivityCopy {
         case (.english, .notInstalled):
             "Connect the Codex island in QuotaView Settings"
         case (.english, .installedNeedsRestart):
-            "Restart Codex after completing the security review"
+            "Recheck Hook authorization in Settings"
         case (.english, .awaitingTrust):
-            "Complete the security review in the opened Codex window"
+            "Authorize the Hook connection in QuotaView Settings"
         case (.english, .awaitingFirstEvent):
             "Send a new Codex message to finish connecting"
         case (.english, .connected):

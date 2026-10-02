@@ -68,8 +68,8 @@ struct CodexActivityConnectionPresentation {
     }
 }
 
-/// All automatic readers use the same directory environment. Account/quota clients
-/// and existing Hook installations are outside this automatic-reader configuration.
+/// Activity readers and Hook configuration share the selected Codex data directory.
+/// Account/quota clients keep their independent account configuration.
 enum CodexActivityDirectoryEnvironment {
     static func make(root: URL) -> [String: String] {
         var environment = ProcessInfo.processInfo.environment

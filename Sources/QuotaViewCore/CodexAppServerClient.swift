@@ -1,5 +1,68 @@
 import Foundation
 
+/// Codex's own discovery result. Hook commands and trust hashes stay local.
+public struct CodexHookMetadata: Decodable, Equatable, Sendable {
+    public let key: String
+    public let eventName: String
+    public let handlerType: String
+    public let command: String?
+    public let sourcePath: String
+    public let source: String
+    public let pluginId: String?
+    public let enabled: Bool
+    public let isManaged: Bool
+    public let currentHash: String
+    public let trustStatus: String
+}
+
+public struct CodexOwnedHookState: Equatable, Sendable {
+    public let hooks: [CodexHookMetadata]
+    public let expectedEvents: Set<String>
+    public let issues: [String]
+
+    public var isComplete: Bool {
+        !expectedEvents.isEmpty && issues.isEmpty
+            && hooks.count == expectedEvents.count
+            && Set(hooks.map(\.eventName)) == expectedEvents
+    }
+
+    public var isEnabled: Bool {
+        !hooks.isEmpty && hooks.allSatisfy(\.enabled)
+    }
+
+    public var isTrusted: Bool {
+        isComplete && isEnabled
+            && hooks.allSatisfy { $0.trustStatus == "trusted" }
+    }
+
+    public var untrustedCount: Int {
+        hooks.filter { $0.trustStatus != "trusted" }.count
+    }
+
+    public var trustedHashes: [String: String] {
+        Dictionary(hooks.filter { $0.trustStatus == "trusted" }.map {
+            ($0.key, $0.currentHash)
+        }, uniquingKeysWith: { first, _ in first })
+    }
+}
+
+public enum CodexHookConfigurationError: LocalizedError, Equatable, Sendable {
+    case incomplete
+    case disabled
+    case authorizationNotConfirmed
+
+    public var errorDescription: String? {
+        switch self {
+        case .incomplete:
+            "QuotaView Hook 配置不完整，未修改 Codex 的授权。"
+        case .disabled:
+            "QuotaView Hook 已被禁用，未修改 Codex 的授权。"
+        case .authorizationNotConfirmed:
+            "Codex 未确认当前 Hook 定义的授权，请重试。"
+        }
+    }
+}
+
 public actor CodexAppServerClient {
     public enum ClientError: LocalizedError, Equatable {
         case executableNotFound
@@ -177,6 +240,149 @@ public actor CodexAppServerClient {
         return response.data.first {
             $0.matches(sessionHash: sessionHash)
         }?.privacySafeDisplayName
+    }
+
+    /// Discovery and authorization deliberately use the same native metadata.
+    /// Matching a product name inside a command is never sufficient ownership.
+    public func inspectOwnedHooks(
+        sourceURL: URL,
+        command: String,
+        expectedEvents: Set<String>,
+        cwds: [URL] = []
+    ) async throws -> CodexOwnedHookState {
+        try await connectIfNeeded()
+        let response: HooksListResponse = try await request(
+            method: "hooks/list",
+            params: ["cwds": cwds.map { $0.standardizedFileURL.path }],
+            includeNullParams: false
+        )
+        let canonicalSource = sourceURL.standardizedFileURL
+            .resolvingSymlinksInPath().path
+        let normalizedEvents = Set(expectedEvents.map(Self.nativeHookEventName))
+        var owned: [String: CodexHookMetadata] = [:]
+        var issues: [String] = []
+        for entry in response.data {
+            for error in entry.errors {
+                if error.path.map({ Self.canonicalPath($0) == canonicalSource }) ?? true {
+                    issues.append(error.message)
+                }
+            }
+            for hook in entry.hooks where hook.handlerType == "command"
+                && hook.command == command && hook.source == "user"
+                && !hook.isManaged && hook.pluginId == nil
+                && Self.canonicalPath(hook.sourcePath) == canonicalSource {
+                if let prior = owned[hook.key], prior != hook {
+                    issues.append("Conflicting native Hook definitions")
+                }
+                owned[hook.key] = hook
+                if hook.key.isEmpty || hook.key.utf8.count > 4_096
+                    || !Self.isNativeHookHash(hook.currentHash) {
+                    issues.append("Invalid native Hook identity")
+                }
+                if !["trusted", "untrusted", "modified"].contains(hook.trustStatus) {
+                    issues.append("Unsupported native Hook trust state")
+                }
+            }
+        }
+        if command.isEmpty || command.utf8.count > 16_384 {
+            issues.append("Invalid owned Hook command")
+        }
+        return CodexOwnedHookState(
+            hooks: owned.values.sorted { $0.key < $1.key },
+            expectedEvents: normalizedEvents,
+            issues: issues
+        )
+    }
+
+    /// Called only after the user authorizes QuotaView's installed observers.
+    /// Writes only the discovered hashes for this exact command and source.
+    public func authorizeOwnedHooks(
+        sourceURL: URL,
+        command: String,
+        expectedEvents: Set<String>,
+        cwds: [URL] = []
+    ) async throws -> CodexOwnedHookState {
+        let configuredHome = inheritedEnvironment["CODEX_HOME"].flatMap {
+            $0.isEmpty ? nil : URL(fileURLWithPath: $0)
+        } ?? URL(fileURLWithPath: inheritedEnvironment["HOME"]
+            ?? FileManager.default.homeDirectoryForCurrentUser.path)
+            .appendingPathComponent(".codex", isDirectory: true)
+        // A user hooks.json may legitimately be a symlink into a dotfiles
+        // directory. Match the client's actual user source, not its parent.
+        guard sourceURL.standardizedFileURL.resolvingSymlinksInPath().path
+            == configuredHome.appendingPathComponent("hooks.json")
+                .standardizedFileURL.resolvingSymlinksInPath().path else {
+            throw CodexHookConfigurationError.incomplete
+        }
+        let before = try await inspectOwnedHooks(
+            sourceURL: sourceURL, command: command,
+            expectedEvents: expectedEvents, cwds: cwds
+        )
+        try Task.checkCancellation()
+        guard before.isComplete else { throw CodexHookConfigurationError.incomplete }
+        guard before.isEnabled else { throw CodexHookConfigurationError.disabled }
+        if before.isTrusted { return before }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        let edits: [[String: Any]] = try before.hooks.filter {
+            $0.trustStatus != "trusted"
+        }.map { hook in
+            let quotedKey = String(decoding: try encoder.encode(hook.key), as: UTF8.self)
+            return [
+                "keyPath": "hooks.state.\(quotedKey).trusted_hash",
+                "value": hook.currentHash,
+                "mergeStrategy": "replace"
+            ]
+        }
+        try Task.checkCancellation()
+        let _: EmptyResult = try await request(
+            method: "config/batchWrite",
+            params: [
+                "edits": edits,
+                "reloadUserConfig": true
+            ],
+            includeNullParams: false
+        )
+        let after = try await inspectOwnedHooks(
+            sourceURL: sourceURL, command: command,
+            expectedEvents: expectedEvents, cwds: cwds
+        )
+        // If definitions changed during the request, the old hashes cannot
+        // authorize them and the UI must continue to show pending authorization.
+        let originalHashes = Dictionary(uniqueKeysWithValues: before.hooks.map {
+            ($0.key, $0.currentHash)
+        })
+        guard after.isTrusted, after.trustedHashes == originalHashes else {
+            throw CodexHookConfigurationError.authorizationNotConfirmed
+        }
+        return after
+    }
+
+    private struct HooksListResponse: Decodable {
+        struct Entry: Decodable {
+            struct Issue: Decodable {
+                let message: String
+                let path: String?
+            }
+            let hooks: [CodexHookMetadata]
+            let errors: [Issue]
+        }
+        let data: [Entry]
+    }
+
+    private nonisolated static func canonicalPath(_ path: String) -> String {
+        URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    private nonisolated static func nativeHookEventName(_ name: String) -> String {
+        guard let first = name.first else { return name }
+        return first.lowercased() + name.dropFirst()
+    }
+
+    private nonisolated static func isNativeHookHash(_ value: String) -> Bool {
+        guard value.hasPrefix("sha256:"), value.utf8.count == 71 else { return false }
+        return value.dropFirst(7).allSatisfy { "0123456789abcdef".contains($0) }
     }
 
     public func setActivityNotificationHandler(

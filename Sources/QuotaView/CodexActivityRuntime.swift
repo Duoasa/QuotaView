@@ -34,11 +34,15 @@ final class CodexActivityRuntime: ObservableObject {
 
     private let preferences: AppPreferences
     private let defaults: UserDefaults
-    private let bridge: CodexActivityUnixBridge
-    private let fileBridge: CodexActivityFileBridge
-    private let installer: CodexActivityHookInstaller
-    private let environmentInspector: CodexActivityEnvironmentInspector
-    private let securityReviewLauncher: CodexSecurityReviewLauncher
+    private var bridge: CodexActivityUnixBridge
+    private var fileBridge: CodexActivityFileBridge
+    private var installer: CodexActivityHookInstaller
+    private var environmentInspector: CodexActivityEnvironmentInspector
+    private let authenticationToken: String
+    private let automaticHookSetupEnabled: Bool
+    private let usesInjectedEnvironmentInspector: Bool
+    private var nativeHookTrusted = false
+    private var configurationClient: CodexAppServerClient?
     let liveIsland = IslandSession()
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
@@ -48,13 +52,15 @@ final class CodexActivityRuntime: ObservableObject {
     private var islandUsage: IslandUsagePresentation = .loading
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
-    private var securityReviewObservationTask: Task<Void, Never>?
     private var setupIslandRequested = false
-    private var isInspectingCompatibilityHook: Bool { hookOperation == .inspecting }
     private var isRunning = false
 
     private enum DefaultsKey {
         static let setupEnabled = "codexActivity.setup.enabled"
+        static let automaticHook = "codexActivity.setup.automaticHook"
+        static let consentVersion = "codexActivity.setup.nativeConsentVersion"
+        static let consentedInstallation = "codexActivity.setup.consentedInstallation"
+        static let consentedEvents = "codexActivity.setup.consentedEvents"
         static let observedInstallation =
             "codexActivity.setup.observedInstallation"
         static let connectedInstallation =
@@ -72,10 +78,13 @@ final class CodexActivityRuntime: ObservableObject {
         hookInstaller: CodexActivityHookInstaller? = nil,
         hookEnvironmentInspector: CodexActivityEnvironmentInspector? = nil,
         defaultDataDirectory: URL = CodexLocalRolloutActivityClient.Configuration.live().codexHomeURL,
-        activityStore: CodexActivityStore? = nil
+        activityStore: CodexActivityStore? = nil,
+        automaticHookSetupEnabled: Bool = true
     ) {
         self.preferences = preferences
         self.defaults = defaults
+        self.automaticHookSetupEnabled = automaticHookSetupEnabled
+        usesInjectedEnvironmentInspector = hookEnvironmentInspector != nil
         self.defaultDataDirectory = defaultDataDirectory
         let root = defaults.string(forKey: Self.dataDirectoryKey).map { URL(fileURLWithPath: $0) }
             ?? defaultDataDirectory
@@ -95,7 +104,9 @@ final class CodexActivityRuntime: ObservableObject {
 
         let tokenKey = "codexActivity.bridge.authenticationToken"
         let token: String
-        if let existing = defaults.string(forKey: tokenKey),
+        if let injected = hookInstaller?.authenticationToken {
+            token = injected
+        } else if let existing = defaults.string(forKey: tokenKey),
            !existing.isEmpty
         {
             token = existing
@@ -104,11 +115,14 @@ final class CodexActivityRuntime: ObservableObject {
             defaults.set(token, forKey: tokenKey)
         }
 
+        authenticationToken = token
         let socketURL = hookInstaller?.socketURL ?? Self.defaultSocketURL()
-        let queueURL = Self.defaultQueueURL()
+        let queueURL = hookInstaller?.queueURL ?? Self.defaultQueueURL()
         let installer = hookInstaller ?? CodexActivityHookInstaller(
             socketURL: socketURL,
-            authenticationToken: token
+            authenticationToken: token,
+            queueURL: queueURL,
+            dataDirectoryURL: root
         )
         self.installer = installer
         bridge = CodexActivityUnixBridge(
@@ -121,10 +135,7 @@ final class CodexActivityRuntime: ObservableObject {
             authenticationToken: token,
             installationIdentifier: installer.installationIdentifier
         )
-        environmentInspector = hookEnvironmentInspector ?? CodexActivityEnvironmentInspector()
-        securityReviewLauncher = CodexSecurityReviewLauncher(
-            codexExecutablePath: environmentInspector.executablePath
-        )
+        environmentInspector = hookEnvironmentInspector ?? CodexActivityEnvironmentInspector(dataDirectoryURL: root)
 
         liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
         store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
@@ -241,71 +252,19 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func enableCompatibilityHook() {
-        setupIslandRequested = true
-        render()
-        configure()
+        defaults.set(true, forKey: DefaultsKey.automaticHook)
+        reconcileHook(install: true)
     }
 
+    /// Consent is scoped to QuotaView's exact user Hook definitions, never trust-all.
     func openCodexSecurityReview() {
-        guard !isConfiguring, !isOpeningSecurityReview else { return }
-        securityReviewObservationTask?.cancel()
-        let operation = beginHookOperation(.reviewing)
-        setupIslandRequested = true
-        render()
-
-        let launcher = securityReviewLauncher
-        let baselineProcessIdentifier =
-            Self.runningCodexProcessIdentifier().map(Int.init) ?? 0
-        setupTask = Task { [weak self] in
-            let result = await Task.detached(priority: .utility) {
-                Result { try launcher.prepareLauncher() }
-            }.value
-            guard let self, !Task.isCancelled, hookOperationRevision == operation else { return }
-
-            switch result {
-            case .success(let launcherURL):
-                guard NSWorkspace.shared.open(launcherURL) else {
-                    hookOperation = .idle
-                    hookConnectionStatus = .abnormal(
-                        CodexSecurityReviewLauncher.LaunchError
-                            .couldNotOpenTerminal.localizedDescription
-                    )
-                    render()
-                    return
-                }
-
-                defaults.set(
-                    baselineProcessIdentifier,
-                    forKey: DefaultsKey.restartProcessIdentifier
-                )
-                defaults.removeObject(
-                    forKey: DefaultsKey.observedInstallation
-                )
-                defaults.removeObject(
-                    forKey: DefaultsKey.connectedInstallation
-                )
-                defaults.removeObject(
-                    forKey: DefaultsKey.reviewConfirmedInstallation
-                )
-                hookConnectionStatus = .awaitingTrust
-                hookOperation = .idle
-                observeSecurityReviewCompletion()
-                render()
-            case .failure(let error):
-                hookOperation = .idle
-                hookConnectionStatus = .abnormal(
-                    error.localizedDescription
-                )
-                render()
-            }
-        }
+        reconcileHook(install: true, authorize: true)
     }
 
     func disableCompatibilityHook() {
         guard !isConfiguring, !isOpeningSecurityReview else { return }
         let operation = beginHookOperation(.removing)
         hookEventGeneration &+= 1
-        securityReviewObservationTask?.cancel()
         let installer = installer
         setupTask = Task { [weak self] in
             let result = await Task.detached(priority: .utility) {
@@ -316,6 +275,11 @@ final class CodexActivityRuntime: ObservableObject {
             switch result {
             case .success:
                 defaults.set(false, forKey: DefaultsKey.setupEnabled)
+                defaults.set(false, forKey: DefaultsKey.automaticHook)
+                defaults.removeObject(forKey: DefaultsKey.consentVersion)
+                defaults.removeObject(forKey: DefaultsKey.consentedInstallation)
+                defaults.removeObject(forKey: DefaultsKey.consentedEvents)
+                nativeHookTrusted = false
                 defaults.removeObject(
                     forKey: DefaultsKey.observedInstallation
                 )
@@ -340,82 +304,6 @@ final class CodexActivityRuntime: ObservableObject {
                     error.localizedDescription
                 )
                 render()
-            }
-        }
-    }
-
-    func restartCodex() {
-        guard !isConfiguring, !isOpeningSecurityReview else { return }
-        let workspace = NSWorkspace.shared
-        let runningApplication = NSRunningApplication
-            .runningApplications(
-                withBundleIdentifier: "com.openai.codex"
-            )
-            .first
-        guard let applicationURL = runningApplication?.bundleURL
-            ?? workspace.urlForApplication(
-                withBundleIdentifier: "com.openai.codex"
-            )
-        else {
-            hookConnectionStatus = .abnormal(
-                localizedSetupMessage(
-                    chinese: "找不到可以重新启动的 Codex 应用。",
-                    english:
-                        "QuotaView could not find the Codex application."
-                )
-            )
-            render()
-            return
-        }
-
-        let operation = beginHookOperation(.restarting)
-        setupIslandRequested = true
-        render()
-
-        setupTask = Task { [weak self] in
-            guard let self, !Task.isCancelled, hookOperationRevision == operation else { return }
-            if let runningApplication,
-               !runningApplication.isTerminated
-            {
-                guard runningApplication.terminate() else {
-                    self.finishCodexRestart(
-                        errorMessage: self.localizedSetupMessage(
-                            chinese: "Codex 拒绝了重新启动请求。",
-                            english:
-                                "Codex declined the restart request."
-                        )
-                    )
-                    return
-                }
-                for _ in 0..<40 where !runningApplication.isTerminated && !Task.isCancelled {
-                    try? await Task.sleep(
-                        nanoseconds: 250_000_000
-                    )
-                }
-                guard !Task.isCancelled, hookOperationRevision == operation else { return }
-                guard runningApplication.isTerminated else {
-                    self.finishCodexRestart(
-                        errorMessage: self.localizedSetupMessage(
-                            chinese:
-                                "Codex 尚未退出，请保存当前任务后重试。",
-                            english:
-                                "Codex is still running. Save the current task and try again."
-                        )
-                    )
-                    return
-                }
-            }
-
-            workspace.openApplication(
-                at: applicationURL,
-                configuration: NSWorkspace.OpenConfiguration()
-            ) { [weak self] _, error in
-                Task { @MainActor in
-                    guard let self, self.hookOperationRevision == operation else { return }
-                    self.finishCodexRestart(
-                        errorMessage: error?.localizedDescription
-                    )
-                }
             }
         }
     }
@@ -446,7 +334,7 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func selectDataDirectory(_ root: URL?) {
-        guard !isChangingDataDirectory else { return }
+        guard !isChangingDataDirectory, hookOperation == .idle else { return }
         let target = root?.standardizedFileURL ?? defaultDataDirectory
         if root != nil {
             let sessions = target.appendingPathComponent("sessions")
@@ -468,15 +356,32 @@ final class CodexActivityRuntime: ObservableObject {
             }
             liveIsland.model.reset()
             dataDirectoryURL = target
+            hookEventGeneration &+= 1
+            bridge.stop()
+            fileBridge.stop()
+            installer = CodexActivityHookInstaller(socketURL: Self.defaultSocketURL(),
+                authenticationToken: authenticationToken, queueURL: Self.defaultQueueURL(), dataDirectoryURL: target)
+            environmentInspector = CodexActivityEnvironmentInspector(
+                executablePath: environmentInspector.executablePath, dataDirectoryURL: target)
+            bridge = CodexActivityUnixBridge(socketURL: installer.socketURL,
+                authenticationToken: authenticationToken, installationIdentifier: installer.installationIdentifier)
+            fileBridge = CodexActivityFileBridge(queueURL: Self.defaultQueueURL(),
+                authenticationToken: authenticationToken, installationIdentifier: installer.installationIdentifier)
+            nativeHookTrusted = false
+            hasCompatibilityHook = false
+            compatibilityHookScope = nil
+            defaults.removeObject(forKey: DefaultsKey.observedInstallation)
+            defaults.removeObject(forKey: DefaultsKey.connectedInstallation)
             if root == nil { defaults.removeObject(forKey: Self.dataDirectoryKey) }
             else { defaults.set(target.path, forKey: Self.dataDirectoryKey) }
             isChangingDataDirectory = false
+            if isRunning { isRunning = false; start() }
         }
     }
 
     func refreshConnectionStatus() {
         guard !isConfiguring, !isOpeningSecurityReview else { return }
-        inspectEnvironmentAndInstallation()
+        reconcileHook(install: automaticHookEnabled)
     }
 
     var connectionPresentation: CodexActivityConnectionPresentation {
@@ -496,10 +401,11 @@ final class CodexActivityRuntime: ObservableObject {
         directoryTask = nil
         isChangingDataDirectory = false
         setupTask?.cancel()
-        securityReviewObservationTask?.cancel()
         bridge.stop()
         fileBridge.stop()
         bridgeStatus = .stopped
+        await configurationClient?.stop()
+        configurationClient = nil
         await store.stop()
         observationTask?.cancel(); observationTask = nil; observationsEnabled = false
         liveIsland.stop()
@@ -522,126 +428,142 @@ final class CodexActivityRuntime: ObservableObject {
     @discardableResult
     private func beginHookOperation(_ operation: CodexHookOperation) -> UInt64 {
         setupTask?.cancel()
+        if let client = configurationClient { Task { await client.stop() } }
+        configurationClient = nil
         hookOperationRevision &+= 1
         hookOperation = operation
         return hookOperationRevision
     }
 
-    private func reconcileOnLaunch() {
-        // Existing installations are inspected, never repaired implicitly.
-        inspectEnvironmentAndInstallation()
+    private var automaticHookEnabled: Bool {
+        automaticHookSetupEnabled && (defaults.object(forKey: DefaultsKey.automaticHook) as? Bool ?? true)
     }
 
-    private func configure() {
-        guard !isConfiguring, !isOpeningSecurityReview else { return }
-        let operation = beginHookOperation(.installing)
-        hooksFeatureStatus = .checking
+    private func reconcileOnLaunch() {
+        // Start the independent readers immediately while Hook maintenance runs.
+        render()
+        reconcileHook(install: automaticHookEnabled)
+    }
 
+    private func reconcileHook(install: Bool, authorize: Bool = false) {
+        guard hookOperation == .idle, !isChangingDataDirectory else { return }
+        if !usesInjectedEnvironmentInspector {
+            environmentInspector = CodexActivityEnvironmentInspector(dataDirectoryURL: dataDirectoryURL)
+        }
+        let operation = beginHookOperation(authorize ? .reviewing : install ? .installing : .inspecting)
         let inspector = environmentInspector
         let installer = installer
+        let root = dataDirectoryURL
+        let client = CodexAppServerClient(executablePath: inspector.executablePath,
+            environment: CodexActivityDirectoryEnvironment.make(root: root),
+            startupTimeoutSeconds: 8, requestTimeoutSeconds: 8)
+        configurationClient = client
+        hooksFeatureStatus = .checking
         setupTask = Task { [weak self] in
-            let result = await Task.detached(priority: .utility) {
-                Result {
-                    let environment =
-                        try inspector.inspectAndEnableHooksIfNeeded()
-                    let installation = try installer.install()
-                    return CodexActivitySetupResult.installed(
-                        environment: environment,
-                        hookDefinitionChanged:
-                            installation.hookDefinitionChanged
-                    )
+            guard let self else { await client.stop(); return }
+            do {
+                if !install {
+                    hasCompatibilityHook = try installer.hasQuotaViewHandlers()
+                    if !hasCompatibilityHook {
+                        compatibilityHookScope = nil
+                        hooksFeatureStatus = .unavailable
+                        hookConnectionStatus = .notInstalled
+                        hookOperation = .idle
+                        await client.stop()
+                        render()
+                        return
+                    }
                 }
-            }.value
-
-            guard let self, !Task.isCancelled, hookOperationRevision == operation else { return }
-            hookOperation = .idle
-            switch result {
-            case .success(.installed(
-                let environment,
-                let hookDefinitionChanged
-            )):
+                let environment = try await Task.detached(priority: .utility) { try install ? inspector.inspectAndEnableHooksIfNeeded() : inspector.inspect() }.value
+                guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
                 codexVersion = environment.version
-                hooksFeatureStatus = .enabled
-                defaults.set(true, forKey: DefaultsKey.setupEnabled)
-
-                if hookDefinitionChanged
-                    || environment.didEnableHooks
-                {
-                    defaults.removeObject(
-                        forKey: DefaultsKey.observedInstallation
-                    )
-                    defaults.removeObject(
-                        forKey: DefaultsKey.connectedInstallation
-                    )
-                    defaults.removeObject(
-                        forKey: DefaultsKey.restartProcessIdentifier
-                    )
-                    defaults.removeObject(
-                        forKey: DefaultsKey.reviewConfirmedInstallation
-                    )
+                hooksFeatureStatus = environment.hooksEnabled ? .enabled : .disabled
+                guard environment.hooksEnabled else {
+                    hasCompatibilityHook = (try? installer.hasQuotaViewHandlers()) ?? false
+                    throw HookSetupError.disabled(preferences.resolvedLanguage)
                 }
-                hasCompatibilityHook = true
-                compatibilityHookScope = .all
+                var definitionChanged = false
+                if install {
+                    let result = try await Task.detached(priority: .utility) { try installer.install() }.value
+                    guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
+                    definitionChanged = result.hookDefinitionChanged
+                    if result.hookDefinitionChanged {
+                        defaults.removeObject(forKey: DefaultsKey.observedInstallation)
+                        defaults.removeObject(forKey: DefaultsKey.connectedInstallation)
+                        nativeHookTrusted = false
+                    }
+                    defaults.set(true, forKey: DefaultsKey.setupEnabled)
+                }
+                hasCompatibilityHook = try installer.hasQuotaViewHandlers()
+                compatibilityHookScope = try installer.installedScope()
+                guard hasCompatibilityHook, let scope = compatibilityHookScope else {
+                    hookConnectionStatus = .notInstalled
+                    hookOperation = .idle
+                    await client.stop()
+                    render()
+                    return
+                }
+                let events = Set(scope.eventNames)
+                var state = try await client.inspectOwnedHooks(sourceURL: installer.hooksURL,
+                    command: installer.hookCommand, expectedEvents: events, cwds: [root])
+                guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
+                guard state.isComplete, state.isEnabled else { throw HookSetupError.incomplete(preferences.resolvedLanguage) }
+                if !state.isTrusted && (authorize || (definitionChanged
+                    && defaults.integer(forKey: DefaultsKey.consentVersion) == 1
+                    && defaults.string(forKey: DefaultsKey.consentedInstallation) == installer.installationIdentifier
+                    && defaults.string(forKey: DefaultsKey.consentedEvents) == events.sorted().joined(separator: ","))) {
+                    // Recheck generation immediately before the only native configuration write.
+                    guard !Task.isCancelled, hookOperationRevision == operation,
+                          dataDirectoryURL == root else { await client.stop(); return }
+                    state = try await client.authorizeOwnedHooks(sourceURL: installer.hooksURL,
+                        command: installer.hookCommand, expectedEvents: events, cwds: [root])
+                }
+                guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
+                nativeHookTrusted = state.isTrusted
+                if authorize, state.isTrusted {
+                    defaults.set(1, forKey: DefaultsKey.consentVersion)
+                    defaults.set(installer.installationIdentifier, forKey: DefaultsKey.consentedInstallation)
+                    defaults.set(events.sorted().joined(separator: ","), forKey: DefaultsKey.consentedEvents)
+                }
+                // Retire the old process-ID gate; real authenticated events never wait for an app restart.
+                defaults.removeObject(forKey: DefaultsKey.restartProcessIdentifier)
+                hookOperation = .idle
                 updateConnectionStatusFromInstalledState()
-                if hookConnectionStatus != .connected
-                {
-                    openCodexSecurityReview()
-                }
-            case .failure(let error):
+            } catch {
+                guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
                 hasCompatibilityHook = (try? installer.hasQuotaViewHandlers()) ?? hasCompatibilityHook
-                hooksFeatureStatus = .unavailable
-                hookConnectionStatus = .abnormal(
-                    error.localizedDescription
-                )
+                compatibilityHookScope = try? installer.installedScope()
+                if case CodexActivityEnvironmentInspector.InspectionError.hooksFeatureDisabled = error {
+                    hooksFeatureStatus = .disabled
+                } else if hooksFeatureStatus == .checking { hooksFeatureStatus = .unavailable }
+                hookConnectionStatus = .abnormal(hookFailureDescription(error))
+                hookOperation = .idle
                 render()
             }
+            await client.stop()
+            if hookOperationRevision == operation { configurationClient = nil }
         }
     }
 
-    private func inspectEnvironmentAndInstallation() {
-        let operation = beginHookOperation(.inspecting)
-        let inspector = environmentInspector
-        let installer = installer
-        setupTask = Task { [weak self] in
-            let inspection = await Task.detached(priority: .utility) {
-                let handlers = Result { try installer.hasQuotaViewHandlers() }
-                let scope = try? installer.installedScope()
-                // A first install has no reason to invoke Hook feature commands.
-                let environment = (try? handlers.get()) == true
-                    ? Result { try inspector.inspect() } : nil
-                return (handlers, scope, environment)
-            }.value
-            guard let self, !Task.isCancelled, hookOperationRevision == operation else { return }
-            hookOperation = .idle
-            let (handlers, scope, environment) = inspection
-            compatibilityHookScope = scope
-            switch handlers {
-            case .success(let exists):
-                hasCompatibilityHook = exists
-                if !exists {
-                    store.compactionSourceUnavailable(.hook)
-                    hooksFeatureStatus = .unavailable
-                    hookConnectionStatus = .notInstalled
-                    setupIslandRequested = false
-                } else if let environment {
-                    switch environment {
-                    case .success(let value):
-                        codexVersion = value.version
-                        hooksFeatureStatus = value.hooksEnabled ? .enabled : .disabled
-                        if scope != nil, value.hooksEnabled { updateConnectionStatusFromInstalledState() }
-                        else { hookConnectionStatus = .abnormal(preferences.copy.text("兼容 Hook 需要手动修复。", "Compatibility Hook needs manual repair.")) }
-                    case .failure(let error):
-                        hooksFeatureStatus = .unavailable
-                        hookConnectionStatus = .abnormal(error.localizedDescription)
-                    }
-                }
-            case .failure(let error):
-                hooksFeatureStatus = .unavailable
-                // Keep removal available for a known installation even if inspection fails.
-                hasCompatibilityHook = defaults.bool(forKey: DefaultsKey.setupEnabled)
-                hookConnectionStatus = .abnormal(error.localizedDescription)
+    private func hookFailureDescription(_ error: Error) -> String {
+        let copy = preferences.copy
+        if let error = error as? CodexHookConfigurationError {
+            return switch error {
+            case .incomplete: copy.text("Hook 配置未完整加载，请在 Codex 的 Hooks 设置中检查 QuotaView。", "Hooks have not fully loaded. Check QuotaView in Codex Hooks settings.")
+            case .disabled: copy.text("QuotaView Hook 已在 Codex 中停用。", "QuotaView Hooks are disabled in Codex.")
+            case .authorizationNotConfirmed: copy.text("Codex 尚未确认授权，请在 Hooks 设置中检查 QuotaView 后重试。", "Authorization was not confirmed. Check QuotaView in Codex Hooks settings and retry.")
             }
-            render()
+        }
+        return error.localizedDescription
+    }
+
+    private enum HookSetupError: LocalizedError {
+        case disabled(AppPreferences.Language), incomplete(AppPreferences.Language)
+        var errorDescription: String? {
+            switch self {
+            case .disabled(let language): AppCopy(language: language).text("Codex 已禁用 Hooks。请在 Codex 设置中启用后重新检查。", "Hooks are disabled in Codex. Enable them in Codex Settings and recheck.")
+            case .incomplete(let language): AppCopy(language: language).text("Codex 未完整加载 QuotaView Hook。请检查 Codex 的 Hooks 设置后重试。", "Codex has not fully loaded QuotaView Hooks. Check Codex Hooks settings and retry.")
+            }
         }
     }
 
@@ -654,18 +576,9 @@ final class CodexActivityRuntime: ObservableObject {
     func receiveCompatibilityActivity(_ delivery: CodexActivityDelivery) async -> Bool {
         // Retry while launch inspection is pending; acknowledge and discard after
         // removal so cached Codex handlers cannot reactivate the optional channel.
-        guard hasCompatibilityHook else { return !isInspectingCompatibilityHook }
+        guard hasCompatibilityHook else { return ![.inspecting, .installing].contains(hookOperation) }
         let eventGeneration = hookEventGeneration
         let activity = delivery.activity
-        guard canAcceptActivityAfterRequiredRestart() else {
-            render()
-            CodexActivityDiagnostics.record(
-                delivery: delivery,
-                outcome: "rejected_restart_required"
-            )
-            return false
-        }
-
         let installationID = hookEvidenceIdentifier
         var evidence = CodexActivityConnectionEvidence(
             observedInstallationID: defaults.string(
@@ -692,6 +605,7 @@ final class CodexActivityRuntime: ObservableObject {
                 forKey: DefaultsKey.connectedInstallation
             )
         }
+        nativeHookTrusted = true
         updateConnectionStatusFromInstalledState()
         if hookConnectionStatus == .connected {
             setupIslandRequested = false
@@ -716,164 +630,17 @@ final class CodexActivityRuntime: ObservableObject {
         return true
     }
 
-    private func canAcceptActivityAfterRequiredRestart() -> Bool {
-        guard let baselineProcessIdentifier = defaults.object(
-            forKey: DefaultsKey.restartProcessIdentifier
-        ) as? Int
-        else {
-            return true
-        }
-
-        guard let currentProcessIdentifier =
-            Self.runningCodexProcessIdentifier(),
-            CodexActivityRestartRequirement(
-                baselineProcessIdentifier: baselineProcessIdentifier
-            ).isSatisfied(
-                currentProcessIdentifier: currentProcessIdentifier
-            )
-        else {
-            return false
-        }
-
-        defaults.removeObject(
-            forKey: DefaultsKey.restartProcessIdentifier
-        )
-        return true
-    }
-
     private func updateConnectionStatusFromInstalledState() {
         if case .failed(let message) = bridgeStatus {
             hookConnectionStatus = .abnormal(message)
-            render()
-            return
-        }
-
-        let installationID = installer.installationIdentifier
-        let reviewConfirmed = defaults.string(
-            forKey: DefaultsKey.reviewConfirmedInstallation
-        ) == installationID
-
-        if let restartProcessIdentifier = defaults.object(
-            forKey: DefaultsKey.restartProcessIdentifier
-        ) as? Int {
-            if restartProcessIdentifier == 0, reviewConfirmed {
-                defaults.removeObject(
-                    forKey: DefaultsKey.restartProcessIdentifier
-                )
-            } else {
-                let currentProcessIdentifier =
-                    Self.runningCodexProcessIdentifier()
-                let requirement = CodexActivityRestartRequirement(
-                    baselineProcessIdentifier: restartProcessIdentifier
-                )
-                if !requirement.isSatisfied(
-                    currentProcessIdentifier: currentProcessIdentifier
-                ) {
-                    hookConnectionStatus =
-                        CodexActivitySetupStatusResolver.resolve(
-                            evidenceStatus: .awaitingTrust,
-                            reviewConfirmed: reviewConfirmed,
-                            requiresRestart: true
-                        )
-                    render()
-                    return
-                }
-                defaults.removeObject(
-                    forKey: DefaultsKey.restartProcessIdentifier
-                )
-            }
-        }
-
-        let evidence = CodexActivityConnectionEvidence(
-            observedInstallationID: defaults.string(
-                forKey: DefaultsKey.observedInstallation
-            ),
-            connectedInstallationID: defaults.string(
-                forKey: DefaultsKey.connectedInstallation
-            )
-        )
-        let evidenceStatus = evidence.status(for: hookEvidenceIdentifier)
-        hookConnectionStatus = CodexActivitySetupStatusResolver.resolve(
-            evidenceStatus: evidenceStatus,
-            reviewConfirmed: reviewConfirmed,
-            requiresRestart: false
-        )
-        if hookConnectionStatus == .connected {
-            setupIslandRequested = false
+        } else if !nativeHookTrusted {
+            hookConnectionStatus = .awaitingTrust
+        } else if defaults.string(forKey: DefaultsKey.connectedInstallation) == hookEvidenceIdentifier {
+            hookConnectionStatus = .connected
+        } else {
+            hookConnectionStatus = .awaitingFirstEvent
         }
         render()
-    }
-
-    private func observeSecurityReviewCompletion() {
-        securityReviewObservationTask?.cancel()
-        let completionURL = securityReviewLauncher.reviewCompletionURL
-        let installationID = installer.installationIdentifier
-        securityReviewObservationTask = Task { [weak self] in
-            for _ in 0..<1_200 {
-                guard let self, !Task.isCancelled else { return }
-                if FileManager.default.fileExists(
-                    atPath: completionURL.path
-                ) {
-                    let result = try? String(
-                        contentsOf: completionURL,
-                        encoding: .utf8
-                    ).trimmingCharacters(
-                        in: .whitespacesAndNewlines
-                    )
-                    try? FileManager.default.removeItem(
-                        at: completionURL
-                    )
-                    if result == "confirmed" {
-                        self.defaults.set(
-                            installationID,
-                            forKey:
-                                DefaultsKey.reviewConfirmedInstallation
-                        )
-                        self.updateConnectionStatusFromInstalledState()
-                    } else {
-                        self.hookConnectionStatus = .abnormal(
-                            self.localizedSetupMessage(
-                                chinese:
-                                    "Codex 安全确认未完成，请重试。",
-                                english:
-                                    "The Codex security review did not complete. Try again."
-                            )
-                        )
-                        self.render()
-                    }
-                    return
-                }
-                try? await Task.sleep(nanoseconds: 500_000_000)
-            }
-        }
-    }
-
-    private func finishCodexRestart(errorMessage: String?) {
-        hookOperation = .idle
-        if let errorMessage {
-            hookConnectionStatus = .abnormal(errorMessage)
-            render()
-        } else {
-            updateConnectionStatusFromInstalledState()
-        }
-    }
-
-    private func localizedSetupMessage(
-        chinese: String,
-        english: String
-    ) -> String {
-        switch preferences.resolvedLanguage {
-        case .simplifiedChinese: chinese
-        case .english: english
-        }
-    }
-
-    private static func runningCodexProcessIdentifier() -> pid_t? {
-        NSRunningApplication.runningApplications(
-            withBundleIdentifier: "com.openai.codex"
-        )
-        .first(where: { !$0.isTerminated })?
-        .processIdentifier
     }
 
     var onOpenSettings: (() -> Void)? {

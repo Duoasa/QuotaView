@@ -31,6 +31,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     private let workspaceName: String?
     private let sessionKind: CodexActivitySessionKind
     private(set) var activeTurnHash: String?
+    private var pendingQuestionCalls: [String] = []
+    private var pendingAsyncQuestionCalls: [String] = []
+    var asynchronousQuestionCallIDs: Set<String> { Set(pendingAsyncQuestionCalls) }
 
     public init(sessionHash: String, workspaceName: String? = nil, sessionKind: CodexActivitySessionKind = .unknown) {
         self.sessionHash = sessionHash
@@ -140,6 +143,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                 return nil
             }
             activeTurnHash = turnHash
+            pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
                 update: .activity(
@@ -192,6 +196,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                 return nil
             }
             activeTurnHash = nil
+            pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
                 update: .activity(
@@ -213,6 +218,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             if let reportedTurn = Self.hashedIdentifier(payload["turn_id"]),
                reportedTurn != turnHash { return nil }
             activeTurnHash = nil
+            pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
                 update: .activity(
@@ -234,21 +240,40 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         }
     }
 
-    private func decodeToolCall(
+    private mutating func decodeToolCall(
         _ payload: [String: Any],
         eventID: String?,
         occurredAt: Date
     ) -> CodexLocalRolloutDecodedRecord? {
-        guard let turnHash = activeTurnHash,
-              let itemType = payload["type"] as? String,
-              itemType == "function_call"
-                || itemType == "custom_tool_call",
+        guard let turnHash = activeTurnHash, let itemType = payload["type"] as? String else { return nil }
+        if ["function_call_output", "custom_tool_call_output"].contains(itemType),
+           let callID = payload["call_id"] as? String,
+           let index = pendingQuestionCalls.firstIndex(of: callID) {
+            pendingQuestionCalls.remove(at: index)
+            return .init(eventID: eventID, update: .activity(.init(
+                event: .postToolUse, sessionHash: sessionHash, turnHash: turnHash,
+                workspaceName: workspaceName, toolCategory: .localTool,
+                sessionKind: sessionKind, source: .localRollout, waitReason: .userInput,
+                toolCallHash: Self.hashedIdentifier(callID), toolName: "request_user_input", occurredAt: occurredAt)))
+        }
+        guard itemType == "function_call" || itemType == "custom_tool_call",
               let name = payload["name"] as? String,
               !name.isEmpty
         else {
             return nil
         }
 
+        let asksQuestion = CodexLocalQuestionContent.isQuestionTool(name)
+        let callHash = Self.hashedIdentifier(payload["call_id"])
+        if asksQuestion, let callID = payload["call_id"] as? String, !callID.isEmpty, callID.utf8.count <= 1024 {
+            if CodexLocalQuestionContent.isAsynchronous(name) {
+                pendingAsyncQuestionCalls.removeAll { $0 == callID }; pendingAsyncQuestionCalls.append(callID)
+                if pendingAsyncQuestionCalls.count > 128 { pendingAsyncQuestionCalls.removeFirst() }
+            } else {
+                pendingQuestionCalls.removeAll { $0 == callID }; pendingQuestionCalls.append(callID)
+                if pendingQuestionCalls.count > 128 { pendingQuestionCalls.removeFirst() }
+            }
+        }
         let planProgress = CodexLocalRolloutPlanParser.parse(
             toolName: name,
             arguments: payload["arguments"],
@@ -258,7 +283,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             eventID: eventID,
             update: .activity(
                 CodexActivityEvent(
-                    event: .preToolUse,
+                    event: asksQuestion ? .permissionRequest : .preToolUse,
                     sessionHash: sessionHash,
                     turnHash: turnHash,
                     workspaceName: workspaceName,
@@ -271,6 +296,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                     planSource: planProgress == nil
                         ? nil
                         : .localRollout,
+                    waitReason: asksQuestion ? .userInput : nil,
+                    toolCallHash: callHash,
+                    toolName: String(name.prefix(256)),
                     occurredAt: occurredAt
                 )
             )
@@ -622,7 +650,7 @@ public actor CodexLocalRolloutActivityClient {
             var records: [(CodexLocalRolloutDecodedRecord?, CodexLocalPublicContent?)] = []
             consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine) { line in
                 let record = state.decoder.decode(line: line)
-                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash)
+                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash, asynchronousQuestionCallIDs: state.decoder.asynchronousQuestionCallIDs)
                 if record != nil || content != nil { records.append((record, content)) }
             }
             // Commit the cursor before any reentrant callback can stop/restart us.
@@ -679,7 +707,7 @@ public actor CodexLocalRolloutActivityClient {
             var pending = data
             consumeCompleteLines(from: &pending, discarding: &discarding) { line in
                 let decoded = decoder.decode(line: line)
-                if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash) {
+                if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash, asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs) {
                     publicReplay.append(content); publicReplayBytes += content.data.count
                     while publicReplay.count > 200 || publicReplayBytes > 2_097_152 { publicReplayBytes -= publicReplay.removeFirst().data.count }
                 }
