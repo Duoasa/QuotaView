@@ -809,7 +809,7 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertTrue(view.isRendererAvailable)
     }
 
-    func testCodexActivityConnectionRequiresRealPromptOrCompaction() {
+    func testCodexActivityConnectionRequiresAnAuthenticatedRealEvent() {
         var evidence = CodexActivityConnectionEvidence(
             observedInstallationID: nil,
             connectedInstallationID: nil
@@ -823,17 +823,14 @@ final class AppBehaviorTests: XCTestCase {
             evidence.observedInstallationID,
             "installation"
         )
-        XCTAssertNil(evidence.connectedInstallationID)
-        XCTAssertEqual(
-            evidence.status(for: "installation"),
-            .awaitingFirstEvent
-        )
+        XCTAssertEqual(evidence.connectedInstallationID, "installation")
+        XCTAssertEqual(evidence.status(for: "installation"), .connected)
 
         evidence.record(
             event: .preToolUse,
             installationID: "installation"
         )
-        XCTAssertNil(evidence.connectedInstallationID)
+        XCTAssertEqual(evidence.connectedInstallationID, "installation")
 
         evidence.record(
             event: .userPromptSubmit,
@@ -850,202 +847,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertEqual(
             evidence.status(for: "different-installation"),
             .awaitingTrust
-        )
-    }
-
-    func testCodexActivityRestartRequirementRejectsSetupCLIEvents()
-    {
-        let requirement = CodexActivityRestartRequirement(
-            baselineProcessIdentifier: 140
-        )
-
-        XCTAssertFalse(
-            requirement.isSatisfied(currentProcessIdentifier: nil)
-        )
-        XCTAssertFalse(
-            requirement.isSatisfied(currentProcessIdentifier: 140)
-        )
-        XCTAssertTrue(
-            requirement.isSatisfied(currentProcessIdentifier: 141)
-        )
-
-        let noRunningCodexRequirement =
-            CodexActivityRestartRequirement(
-                baselineProcessIdentifier: 0
-            )
-        XCTAssertTrue(
-            noRunningCodexRequirement.isSatisfied(
-                currentProcessIdentifier: 141
-            )
-        )
-    }
-
-    func testCodexActivitySetupSeparatesTrustRestartAndFirstEvent()
-    {
-        XCTAssertEqual(
-            CodexActivitySetupStatusResolver.resolve(
-                evidenceStatus: .awaitingTrust,
-                reviewConfirmed: false,
-                requiresRestart: true
-            ),
-            .awaitingTrust
-        )
-        XCTAssertEqual(
-            CodexActivitySetupStatusResolver.resolve(
-                evidenceStatus: .awaitingTrust,
-                reviewConfirmed: true,
-                requiresRestart: true
-            ),
-            .installedNeedsRestart
-        )
-        XCTAssertEqual(
-            CodexActivitySetupStatusResolver.resolve(
-                evidenceStatus: .awaitingTrust,
-                reviewConfirmed: true,
-                requiresRestart: false
-            ),
-            .awaitingFirstEvent
-        )
-        XCTAssertEqual(
-            CodexActivitySetupStatusResolver.resolve(
-                evidenceStatus: .connected,
-                reviewConfirmed: true,
-                requiresRestart: false
-            ),
-            .connected
-        )
-    }
-
-    func testCodexSecurityReviewLauncherPreparesPrivateCommand()
-        throws
-    {
-        let fileManager = FileManager.default
-        let rootURL = fileManager.temporaryDirectory
-            .appendingPathComponent(
-                "QuotaViewSecurityReviewTests-\(UUID().uuidString)",
-                isDirectory: true
-            )
-        defer { try? fileManager.removeItem(at: rootURL) }
-        try fileManager.createDirectory(
-            at: rootURL,
-            withIntermediateDirectories: true
-        )
-
-        let codexURL = rootURL.appendingPathComponent(
-            "Codex CLI With Spaces"
-        )
-        try Data(
-            """
-            #!/bin/bash
-            sleep 2.5
-            if IFS= read -r -t 0 early_command; then
-                exit 17
-            fi
-            printf '› '
-            for step in 1 2 3 4 5; do
-                printf 'Checking startup list %s\\n' "$step"
-                sleep 0.2
-            done
-            if IFS= read -r -t 0 early_command; then
-                exit 18
-            fi
-            IFS= read -r command
-            test "$command" = "/hooks"
-            printf '11 hooks need review before they can run.\\n'
-            printf 'Press t to trust all; enter to review hooks; esc to close\\n'
-            IFS= read -r -n 1 trust_key
-            test "$trust_key" = "t" -o "$trust_key" = "T"
-            printf 'Press enter to view hooks; esc to close\\n'
-            sleep 2
-            """.utf8
-        ).write(to: codexURL)
-        try fileManager.setAttributes(
-            [.posixPermissions: 0o700],
-            ofItemAtPath: codexURL.path
-        )
-
-        let launcher = CodexSecurityReviewLauncher(
-            codexExecutablePath: codexURL.path,
-            launcherDirectoryURL: rootURL.appendingPathComponent(
-                "Launchers",
-                isDirectory: true
-            )
-        )
-        let launcherURL = try launcher.prepareLauncher()
-        let expectURL = launcherURL.deletingLastPathComponent()
-            .appendingPathComponent("QuotaViewHookReview.exp")
-        let launcherContents = try String(
-            contentsOf: launcherURL,
-            encoding: .utf8
-        )
-        let expectContents = try String(
-            contentsOf: expectURL,
-            encoding: .utf8
-        )
-        let launcherPermissions = try XCTUnwrap(
-            try fileManager.attributesOfItem(
-                atPath: launcherURL.path
-            )[.posixPermissions] as? NSNumber
-        )
-        let expectPermissions = try XCTUnwrap(
-            try fileManager.attributesOfItem(
-                atPath: expectURL.path
-            )[.posixPermissions] as? NSNumber
-        )
-
-        XCTAssertTrue(launcherContents.contains("/usr/bin/expect"))
-        XCTAssertTrue(launcherContents.contains(codexURL.path))
-        XCTAssertTrue(expectContents.contains(#"send -- "/hooks\r""#))
-        XCTAssertTrue(expectContents.contains(#"-re {›}"#))
-        XCTAssertTrue(
-            expectContents.contains(
-                #"set quiet_deadline [expr {[clock milliseconds] + 3000}]"#
-            )
-        )
-        XCTAssertTrue(
-            expectContents.contains(
-                #"-re {Press t to trust all}"#
-            )
-        )
-        XCTAssertFalse(expectContents.contains("after 1800"))
-        XCTAssertEqual(launcherPermissions.intValue & 0o777, 0o700)
-        XCTAssertEqual(expectPermissions.intValue & 0o777, 0o700)
-
-        let process = Process()
-        let standardInput = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/expect")
-        process.arguments = [
-            expectURL.path,
-            codexURL.path,
-            launcher.reviewCompletionURL.path
-        ]
-        process.standardInput = standardInput
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-        try process.run()
-        standardInput.fileHandleForWriting.write(Data("t".utf8))
-        try standardInput.fileHandleForWriting.close()
-        process.waitUntilExit()
-        XCTAssertEqual(
-            process.terminationStatus,
-            0,
-            "The launcher must enter /hooks through Codex's own PTY."
-        )
-        XCTAssertEqual(
-            try String(
-                contentsOf: launcher.reviewCompletionURL,
-                encoding: .utf8
-            ).trimmingCharacters(in: .whitespacesAndNewlines),
-            "confirmed"
-        )
-        let completionPermissions = try XCTUnwrap(
-            try fileManager.attributesOfItem(
-                atPath: launcher.reviewCompletionURL.path
-            )[.posixPermissions] as? NSNumber
-        )
-        XCTAssertEqual(
-            completionPermissions.intValue & 0o777,
-            0o600
         )
     }
 
@@ -1621,7 +1422,7 @@ final class AppBehaviorTests: XCTestCase {
                 commands.contains {
                     $0.contains(installedHelperURL.path)
                         && !$0.contains(helperURL.path)
-                        && $0.contains("--installation-id")
+                        && $0.contains("--configuration")
                 }
             )
         }
@@ -1727,9 +1528,10 @@ final class AppBehaviorTests: XCTestCase {
 
         let inspector = CodexActivityEnvironmentInspector(
             executablePath: executableURL.path,
-            timeout: 2
+            timeout: 2,
+            dataDirectoryURL: rootURL
         )
-        let result = try inspector.inspectAndEnableHooksIfNeeded()
+        let result = try inspector.inspectAndEnableHooksIfNeeded(preference: .absent)
         XCTAssertEqual(result.version, "codex-cli 0.test")
         XCTAssertTrue(result.hooksEnabled)
         XCTAssertTrue(result.didEnableHooks)
@@ -3409,7 +3211,8 @@ final class AppBehaviorTests: XCTestCase {
             CodexActivityEvent(
                 event: .userPromptSubmit,
                 sessionHash: "session",
-                turnHash: "turn-2"
+                turnHash: "turn-2",
+                source: .appServer
             )
         )
         store.receive(

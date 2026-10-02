@@ -1,4 +1,5 @@
 import Foundation
+import QuotaViewCore
 
 // Typed protocol adapter. Unknown decisions never produce an approval action.
 indirect enum IslandApprovalJSON: Codable, Equatable, Sendable {
@@ -52,6 +53,7 @@ struct IslandApprovalQuestion: Identifiable, Equatable {
     var options: [IslandApprovalJSON]
     var other: Bool
     var secret: Bool
+    var header: String = ""
 }
 struct IslandApprovalField: Identifiable, Equatable {
     var id: String
@@ -111,6 +113,15 @@ struct IslandCodexApprovalRequest: Equatable {
     }
     let raw: Data
     let envelope: IslandApprovalJSON
+    /// A public rollout projection has no RPC owner and can never send a reply.
+    private(set) var localObservation: LocalObservation?
+    struct LocalObservation: Equatable {
+        let sessionHash: String; let turnHash: String; let callID: String
+        let mode: CodexUserInputMode
+        var asynchronous: Bool { mode == .asynchronous }
+    }
+    var userInputMode: CodexUserInputMode? { localObservation?.mode }
+    var observationOnly: Bool { localObservation != nil }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -131,7 +142,7 @@ struct IslandCodexApprovalRequest: Equatable {
             return params["kind"].text == "writeStdin" ? .terminalInput : .command
         case "item/fileChange/requestApproval": return .fileChange
         case "item/permissions/requestApproval": return .permissions
-        case "item/tool/requestUserInput": return .questions
+        case "item/tool/requestUserInput", "local/tool/requestUserInput", "local/tool/requestUserInputAsync": return .questions
         case "mcpServer/elicitation/request":
             if params["mode"].text == "url" { return .mcpURL }
             return ["form", "openai/form", "openaiForm"].contains(params["mode"].text) ? .mcpForm : .nativeOnly
@@ -144,6 +155,18 @@ struct IslandCodexApprovalRequest: Equatable {
         guard v.object != nil, v["params"].object != nil, !v["params"]["threadId"].text.isEmpty,
               v["id"].text.count > 0 || v["id"].number != nil else { throw CocoaError(.fileReadCorruptFile) }
         raw = data; envelope = v
+        localObservation = ["local/tool/requestUserInput", "local/tool/requestUserInputAsync"].contains(v["method"].text)
+            ? .init(sessionHash: v["params"]["threadId"].text, turnHash: v["params"]["turnId"].text,
+                callID: v["id"].text, mode: v["method"].text == "local/tool/requestUserInputAsync" ? .asynchronous : .synchronous)
+            : nil
+    }
+    init(localQuestions: [[String: Any]], callID: String, sessionHash: String, turnHash: String, asynchronous: Bool = false) throws {
+        let data = try JSONSerialization.data(withJSONObject: [
+            "method": asynchronous ? "local/tool/requestUserInputAsync" : "local/tool/requestUserInput", "id": callID,
+            "params": ["threadId": sessionHash, "turnId": turnHash, "itemId": callID, "questions": localQuestions]
+        ], options: [.sortedKeys])
+        self = try Self(data: data)
+        localObservation = .init(sessionHash: sessionHash, turnHash: turnHash, callID: callID, mode: asynchronous ? .asynchronous : .synchronous)
     }
     var detail: String {
         switch kind {
@@ -172,7 +195,7 @@ struct IslandCodexApprovalRequest: Equatable {
     var questions: [IslandApprovalQuestion] {
         params["questions"].array.map {
             .init(id: $0["id"].text, title: $0["question"].text, options: $0["options"].array,
-                  other: $0["isOther"].boolean, secret: $0["isSecret"].boolean)
+                  other: $0["isOther"].boolean, secret: $0["isSecret"].boolean, header: $0["header"].text)
         }
     }
     var fields: [IslandApprovalField] {
@@ -245,6 +268,7 @@ struct IslandCodexApprovalRequest: Equatable {
     }
 
     func permits(_ result: IslandApprovalJSON) -> Bool {
+        guard !observationOnly else { return false }
         if actions.contains(where: { $0.result == result }) { return true }
         var draft = IslandApprovalDraft()
         switch kind {

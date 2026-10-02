@@ -1,4 +1,5 @@
 import CryptoKit
+import CoreFoundation
 import Darwin
 import Foundation
 
@@ -192,6 +193,20 @@ public actor CodexSharedAppServerActivityClient {
         (@Sendable (CodexActivityTokenUsageUpdate) async -> Void)?
     private var publicMessageHandler: (@Sendable (Data) async -> Void)?
     public func setPublicMessageHandler(_ handler: (@Sendable (Data) async -> Void)?) { publicMessageHandler = handler }
+    private var scopedPublicMessageHandler: (@Sendable (Data, UInt64) async -> Void)?
+    public func setScopedPublicMessageHandler(_ handler: (@Sendable (Data, UInt64) async -> Void)?) {
+        scopedPublicMessageHandler = handler
+    }
+    private struct ObservedServerRequest: Equatable {
+        let threadID: String
+        let turnID: String?
+        let itemID: String?
+    }
+    private var ambiguousServerRequests: Set<String> = []
+    private var observedServerRequests: [String: ObservedServerRequest] = [:]
+    private var observedServerRequestOrder: [String] = []
+    private var snapshotRefreshTasks: [String: Task<Void, Never>] = [:]
+    private var hasPublicMessageHandler: Bool { publicMessageHandler != nil || scopedPublicMessageHandler != nil }
 
     private var connectionStateHandler:
         (@Sendable (CodexSharedAppServerConnectionState) async -> Void)?
@@ -246,6 +261,7 @@ public actor CodexSharedAppServerActivityClient {
         maintenanceTask = nil
         activityNotificationHandler = nil
         publicMessageHandler = nil
+        scopedPublicMessageHandler = nil
         tokenUsageNotificationHandler = nil
         closeConnection(error: ClientError.connectionClosed)
 
@@ -351,7 +367,7 @@ public actor CodexSharedAppServerActivityClient {
                     "version": configuration.clientVersion
                 ],
                 "capabilities": [
-                    "optOutNotificationMethods": publicMessageHandler == nil ? Self.contentNotificationOptOutMethods : Self.contentNotificationOptOutMethods.filter { $0.contains("reasoning") || $0.contains("hook/") }
+                    "optOutNotificationMethods": !hasPublicMessageHandler ? Self.contentNotificationOptOutMethods : Self.contentNotificationOptOutMethods.filter { $0.contains("reasoning") || $0.contains("hook/") }
                 ]
             ]
         )
@@ -414,12 +430,120 @@ public actor CodexSharedAppServerActivityClient {
         if let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let thread = result["thread"] as? [String: Any] {
             rememberThread(thread, hash: hash)
-            if threadKinds[hash] != .internalTask, let publicMessageHandler,
-               let envelope = try? JSONSerialization.data(withJSONObject: ["method": "thread/snapshot", "params": ["thread": thread]]) {
-                await publicMessageHandler(envelope)
+            if threadKinds[hash] == .user, hasPublicMessageHandler {
+                await publishThreadSnapshot(thread, threadID: threadID, generation: generation)
             }
         } else { threadKinds[hash] = .unknown }
         subscribedThreadHashes.insert(hash)
+    }
+
+    private func publishThreadSnapshot(_ thread: [String: Any], threadID: String, generation: UInt64) async {
+        var params: [String: Any] = ["thread": Self.publicThreadMetadata(thread)]
+        if (thread["status"] as? [String: Any])?["type"] as? String == "active",
+           let current = try? await currentTurn(threadID: threadID), generation == connectionGeneration {
+            params["currentTurn"] = current
+        }
+        guard generation == connectionGeneration else { return }
+        if let envelope = try? JSONSerialization.data(withJSONObject: ["method": "thread/snapshot", "params": params]) {
+            await publishPublicMessage(envelope, generation: generation)
+        }
+    }
+
+    private func scheduleCurrentThreadSnapshot(threadID: String) {
+        let hash = CodexActivityPrivacy.hashIdentifier(threadID)
+        guard isStarted, hasPublicMessageHandler, threadKinds[hash] == .user,
+              snapshotRefreshTasks[hash] == nil, snapshotRefreshTasks.count < 8 else { return }
+        let generation = connectionGeneration
+        snapshotRefreshTasks[hash] = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshCurrentThreadSnapshot(threadID: threadID, generation: generation)
+        }
+    }
+
+    private func refreshCurrentThreadSnapshot(threadID: String, generation: UInt64) async {
+        defer { if generation == connectionGeneration { snapshotRefreshTasks.removeValue(forKey: CodexActivityPrivacy.hashIdentifier(threadID)) } }
+        guard generation == connectionGeneration, !Task.isCancelled,
+              let data = try? await requestData(method: "thread/read", params: ["threadId": threadID, "includeTurns": false]),
+              generation == connectionGeneration, !Task.isCancelled,
+              let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let thread = result["thread"] as? [String: Any], thread["id"] as? String == threadID else { return }
+        rememberThread(thread, hash: CodexActivityPrivacy.hashIdentifier(threadID))
+        guard threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)] == .user else { return }
+        await publishThreadSnapshot(thread, threadID: threadID, generation: generation)
+    }
+
+    private func currentTurn(threadID: String) async throws -> [String: Any]? {
+        let data = try await requestData(method: "thread/turns/list", params: [
+            "threadId": threadID, "limit": 1, "sortDirection": "desc", "itemsView": "notLoaded"
+        ])
+        guard let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let turns = response["data"] as? [[String: Any]], turns.count == 1,
+              let turn = turns.first, turn["status"] as? String == "inProgress",
+              let id = turn["id"] as? String, !id.isEmpty else { return nil }
+        var clean: [String: Any] = ["id": id, "status": "inProgress"]
+        if let value = turn["startedAt"] as? NSNumber, value.doubleValue.isFinite, value.doubleValue >= 0 {
+            clean["startedAtMs"] = value.doubleValue * 1_000
+        } else if let value = turn["startedAtMs"] as? NSNumber, value.doubleValue.isFinite, value.doubleValue >= 0 {
+            clean["startedAtMs"] = value
+        }
+        return clean
+    }
+
+    private static func publicThreadMetadata(_ thread: [String: Any]) -> [String: Any] {
+        var clean: [String: Any] = [:]
+        for key in ["id", "name", "title", "model", "reasoningEffort", "effort", "source", "threadSource", "status"] {
+            if let value = thread[key] { clean[key] = value }
+        }
+        return clean
+    }
+
+    private func publishPublicMessage(_ data: Data, generation: UInt64) async {
+        guard generation == connectionGeneration else { return }
+        if let scopedPublicMessageHandler { await scopedPublicMessageHandler(data, generation) }
+        guard generation == connectionGeneration else { return }
+        if let publicMessageHandler { await publicMessageHandler(data) }
+    }
+
+    private static func rpcKey(_ raw: Any?) -> String? {
+        guard let raw else { return nil }
+        if let text = raw as? String { return "s:" + text }
+        guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+              number.doubleValue.isFinite,
+              let data = try? JSONSerialization.data(withJSONObject: number, options: [.fragmentsAllowed]) else { return nil }
+        return "n:" + String(decoding: data, as: UTF8.self)
+    }
+
+    private func publicProjection(_ message: [String: Any]) -> [String: Any]? {
+        guard let method = message["method"] as? String, !method.contains("reasoning"), !method.contains("hook/"),
+              var params = message["params"] as? [String: Any],
+              (params["item"] as? [String: Any])?["type"] as? String != "reasoning" else { return nil }
+        if method == "serverRequest/resolved" {
+            guard let key = Self.rpcKey(params["requestId"]), !ambiguousServerRequests.contains(key),
+                  let observed = observedServerRequests[key] else { return nil }
+            if let thread = params["threadId"] as? String, thread != observed.threadID { return nil }
+            if let turn = params["turnId"] as? String, let expected = observed.turnID, turn != expected { return nil }
+            params["threadId"] = observed.threadID
+            if params["turnId"] == nil, let turn = observed.turnID { params["turnId"] = turn }
+            observedServerRequests.removeValue(forKey: key)
+            observedServerRequestOrder.removeAll { $0 == key }
+        }
+        guard let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
+              threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)] == .user else { return nil }
+        if let rpc = Self.rpcKey(message["id"]), ["item/commandExecution/requestApproval", "item/fileChange/requestApproval",
+            "item/permissions/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request"].contains(method) {
+            let request = ObservedServerRequest(threadID: threadID, turnID: params["turnId"] as? String,
+                itemID: params["itemId"] as? String)
+            if let previous = observedServerRequests[rpc], previous != request { ambiguousServerRequests.insert(rpc) }
+            else { observedServerRequests[rpc] = request }
+            observedServerRequestOrder.removeAll { $0 == rpc }; observedServerRequestOrder.append(rpc)
+            while observedServerRequestOrder.count > 256 {
+                let oldest = observedServerRequestOrder.removeFirst()
+                observedServerRequests.removeValue(forKey: oldest); ambiguousServerRequests.remove(oldest)
+            }
+        }
+        if let thread = params["thread"] as? [String: Any] { params["thread"] = Self.publicThreadMetadata(thread) }
+        var clean = message; clean["params"] = params
+        return clean
     }
 
     private func rememberThread(_ thread: [String: Any], hash: String) {
@@ -589,26 +713,31 @@ public actor CodexSharedAppServerActivityClient {
             rememberThread(thread, hash: CodexActivityPrivacy.hashIdentifier(id))
         }
 
-        if let method = message["method"] as? String, !method.contains("reasoning"), !method.contains("hook/"),
-           let params = message["params"] as? [String: Any],
-           let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
-           threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)] == .user,
-           (params["item"] as? [String: Any])?["type"] as? String != "reasoning", let publicMessageHandler {
-            await publicMessageHandler(data)
+        let generation = connectionGeneration
+        if let method = message["method"] as? String,
+           (method == "turn/started" || message["id"] != nil),
+           let params = message["params"] as? [String: Any], let threadID = params["threadId"] as? String {
+            scheduleCurrentThreadSnapshot(threadID: threadID)
         }
-
-        if let event = CodexAppServerActivityNotificationDecoder.decode(
+        if scopedPublicMessageHandler == nil, let event = CodexAppServerActivityNotificationDecoder.decode(
             data: data
         ), let kind = threadKinds[event.sessionHash], kind != .internalTask,
            let activityNotificationHandler {
             await activityNotificationHandler(event.classified(as: kind))
         }
-        if let tokenUsage = CodexAppServerActivityNotificationDecoder
+        if scopedPublicMessageHandler == nil, let tokenUsage = CodexAppServerActivityNotificationDecoder
             .decodeTokenUsage(data: data),
            let kind = threadKinds[tokenUsage.sessionHash], kind != .internalTask,
            let tokenUsageNotificationHandler
         {
             await tokenUsageNotificationHandler(tokenUsage)
+        }
+
+        guard generation == connectionGeneration else { return }
+        // Lifecycle admission completes before public projections can mutate UI.
+        if hasPublicMessageHandler, let clean = publicProjection(message),
+           let publicData = try? JSONSerialization.data(withJSONObject: clean, options: [.sortedKeys]) {
+            await publishPublicMessage(publicData, generation: generation)
         }
 
         guard message["method"] as? String == "thread/started",
@@ -673,6 +802,8 @@ public actor CodexSharedAppServerActivityClient {
         initialized = false
         subscribedThreadHashes.removeAll(keepingCapacity: true)
         threadKinds.removeAll(keepingCapacity: true)
+        observedServerRequests.removeAll(); observedServerRequestOrder.removeAll(); ambiguousServerRequests.removeAll()
+        snapshotRefreshTasks.values.forEach { $0.cancel() }; snapshotRefreshTasks.removeAll()
         readTask?.cancel()
         readTask = nil
         socketHandle?.closeFile()

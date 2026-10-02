@@ -108,6 +108,19 @@ public struct CodexActivityPlanProgress: Codable, Equatable, Sendable {
     }
 }
 
+/// A question's delivery mode is independent of task execution and RPC ownership.
+public enum CodexUserInputMode: String, Codable, Equatable, Sendable {
+    case synchronous, asynchronous
+
+    public static func forToolName(_ name: String?) -> Self? {
+        switch name?.split(separator: ".").last {
+        case "request_user_input": return .synchronous
+        case "request_user_input_async": return .asynchronous
+        default: return nil
+        }
+    }
+}
+
 public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public static let minimumSupportedSchemaVersion = 1
     public static let currentSchemaVersion = 3
@@ -126,6 +139,10 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
     public let turnCompletionStatus: CodexActivityTurnCompletionStatus?
     public let goalStatus: CodexActivityGoalStatus?
     public let waitReason: CodexActivityWaitReason?
+    /// Correlates a tool request with its result without retaining the raw call ID.
+    public let toolCallHash: String?
+    /// Public tool name only; distinguishes asynchronous question launch acknowledgements.
+    public let toolName: String?
     /// Only the hashed item identity is retained, never the item payload.
     public let compactionItemHash: String?
     public let occurredAt: Date
@@ -145,6 +162,8 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         turnCompletionStatus: CodexActivityTurnCompletionStatus? = nil,
         goalStatus: CodexActivityGoalStatus? = nil,
         waitReason: CodexActivityWaitReason? = nil,
+        toolCallHash: String? = nil,
+        toolName: String? = nil,
         compactionItemHash: String? = nil,
         occurredAt: Date = Date()
     ) {
@@ -162,19 +181,24 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
         self.turnCompletionStatus = turnCompletionStatus
         self.goalStatus = goalStatus
         self.waitReason = waitReason
+        self.toolCallHash = toolCallHash
+        self.toolName = toolName
         self.compactionItemHash = compactionItemHash
         self.occurredAt = occurredAt
     }
 }
 
 public extension CodexActivityEvent {
+    var userInputMode: CodexUserInputMode? { CodexUserInputMode.forToolName(toolName) }
+    var effectiveWaitReason: CodexActivityWaitReason? { userInputMode == nil ? waitReason : .userInput }
+
     func classified(as kind: CodexActivitySessionKind) -> Self {
         Self(schemaVersion: schemaVersion, event: event, sessionHash: sessionHash,
              turnHash: turnHash, workspaceName: workspaceName, toolCategory: toolCategory,
              sessionStartSource: sessionStartSource, planProgress: planProgress,
              sessionKind: kind, source: source, planSource: planSource,
              turnCompletionStatus: turnCompletionStatus, goalStatus: goalStatus,
-             waitReason: waitReason, compactionItemHash: compactionItemHash,
+             waitReason: waitReason, toolCallHash: toolCallHash, toolName: toolName, compactionItemHash: compactionItemHash,
              occurredAt: occurredAt)
     }
 }
@@ -374,10 +398,17 @@ public enum CodexActivityReducer {
                 ? .executingPlan
                 : operationForTool(event.toolCategory)
         case .permissionRequest:
-            state = .awaitingConfirmation
-            operation = event.waitReason == .userInput
-                ? .awaitingUserInput
-                : .awaitingApproval
+            if event.userInputMode == .asynchronous {
+                // A Hook may report the async launcher as PermissionRequest.
+                // Its public tool identity does not establish a blocking wait.
+                state = .working
+                operation = operationForTool(event.toolCategory)
+            } else {
+                state = .awaitingConfirmation
+                operation = event.effectiveWaitReason == .userInput
+                    ? .awaitingUserInput
+                    : .awaitingApproval
+            }
         case .postToolUse:
             switch event.goalStatus {
             case .active:
@@ -626,4 +657,21 @@ enum CodexActivityNumeric {
         return number.int64Value
     }
 
+}
+
+/// A request owner emits this only after an exact, previously observed native
+/// request was resolved. It carries execution state, never response ownership.
+public struct CodexActivityRequestSettlement: Equatable, Sendable {
+    public let sessionHash: String
+    public let turnHash: String
+    public let connectionEpoch: UInt64
+    public let stillWaiting: Bool
+
+    public init(sessionHash: String, turnHash: String,
+                connectionEpoch: UInt64, stillWaiting: Bool) {
+        self.sessionHash = sessionHash
+        self.turnHash = turnHash
+        self.connectionEpoch = connectionEpoch
+        self.stillWaiting = stillWaiting
+    }
 }

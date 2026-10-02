@@ -61,6 +61,8 @@ private struct SanitizedActivity: Codable {
     let event: HookEvent
     let sessionHash: String
     let turnHash: String?
+    let toolCallHash: String?
+    let toolName: String?
     let workspaceName: String?
     let toolCategory: ToolCategory?
     let sessionStartSource: SessionStartSource?
@@ -82,35 +84,61 @@ private struct DeliveryAcknowledgement: Codable {
     let accepted: Bool
 }
 
+private struct RouteConfiguration: Decodable {
+    let version: Int
+    let socketPath: String
+    let queuePath: String
+    let authenticationToken: String
+    let installationIdentifier: String
+
+    static func read(from path: String) -> RouteConfiguration? {
+        let descriptor = Darwin.open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { return nil }
+        defer { Darwin.close(descriptor) }
+        var metadata = stat()
+        guard fstat(descriptor, &metadata) == 0,
+              metadata.st_uid == getuid(),
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_mode & (S_IRWXG | S_IRWXO) == 0,
+              metadata.st_size > 0, metadata.st_size <= 16_384 else { return nil }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: false)
+        guard let data = try? handle.read(upToCount: 16_385), data.count <= 16_384,
+              let route = try? JSONDecoder().decode(RouteConfiguration.self, from: data),
+              route.version == 1,
+              route.socketPath.hasPrefix("/"), route.queuePath.hasPrefix("/"),
+              !route.authenticationToken.isEmpty, !route.installationIdentifier.isEmpty else { return nil }
+        return route
+    }
+}
+
 private struct Arguments {
     let socketPath: String
+    let queuePath: String
     let authenticationToken: String
     let installationIdentifier: String
 
     init?(_ arguments: [String]) {
-        guard let socketIndex = arguments.firstIndex(of: "--socket"),
-              arguments.indices.contains(socketIndex + 1),
-              let tokenIndex = arguments.firstIndex(of: "--token"),
-              arguments.indices.contains(tokenIndex + 1),
-              let installationIndex = arguments.firstIndex(
-                of: "--installation-id"
-              ),
-              arguments.indices.contains(installationIndex + 1)
-        else {
-            return nil
+        if arguments.first == "--configuration" {
+            guard arguments.count == 2,
+                  let route = RouteConfiguration.read(from: arguments[1]) else { return nil }
+            self.socketPath = route.socketPath
+            self.queuePath = route.queuePath
+            self.authenticationToken = route.authenticationToken
+            self.installationIdentifier = route.installationIdentifier
+            return
         }
-
-        let socketPath = arguments[socketIndex + 1]
-        let authenticationToken = arguments[tokenIndex + 1]
-        let installationIdentifier =
-            arguments[installationIndex + 1]
-        guard !socketPath.isEmpty,
-              !authenticationToken.isEmpty,
-              !installationIdentifier.isEmpty
-        else {
-            return nil
+        func value(for name: String) -> String? {
+            guard let index = arguments.firstIndex(of: name),
+                  arguments.indices.contains(index + 1) else { return nil }
+            let value = arguments[index + 1]
+            return value.isEmpty ? nil : value
         }
+        // Existing approved definitions can continue delivering during migration.
+        guard let socketPath = value(for: "--socket"),
+              let authenticationToken = value(for: "--token"),
+              let installationIdentifier = value(for: "--installation-id") else { return nil }
         self.socketPath = socketPath
+        self.queuePath = value(for: "--queue") ?? defaultQueuePath()
         self.authenticationToken = authenticationToken
         self.installationIdentifier = installationIdentifier
     }
@@ -202,6 +230,13 @@ private func sanitize(_ data: Data) -> SanitizedActivity? {
         event: event,
         sessionHash: hashIdentifier(sessionID),
         turnHash: turnID.map(hashIdentifier),
+        toolCallHash: ["tool_use_id", "tool_call_id", "call_id", "item_id"]
+            .compactMap { input[$0] as? String }.first(where: { !$0.isEmpty })
+            .map(hashIdentifier),
+        toolName: toolName.flatMap { name in
+            let canonicalName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return canonicalName.isEmpty ? nil : String(canonicalName.prefix(256))
+        },
         workspaceName: sanitizedWorkspaceName(input["cwd"] as? String),
         toolCategory: toolCategory(toolName),
         sessionStartSource: (input["source"] as? String)
@@ -259,6 +294,20 @@ private func send(
         return .failed("socket_creation_failed")
     }
     defer { Darwin.close(descriptor) }
+    guard fcntl(descriptor, F_SETFL, O_NONBLOCK) == 0 else {
+        return .failed("socket_nonblocking_setup_failed")
+    }
+    let deadline = Date().addingTimeInterval(0.75)
+    func ready(for events: Int16) -> Bool {
+        var descriptorState = pollfd(fd: descriptor, events: events, revents: 0)
+        while Date() < deadline {
+            let remaining = max(1, Int32(ceil(deadline.timeIntervalSinceNow * 1_000)))
+            let result = Darwin.poll(&descriptorState, 1, remaining)
+            if result > 0 { return descriptorState.revents & events != 0 }
+            if result == 0 || errno != EINTR { return false }
+        }
+        return false
+    }
 
     var noSigPipe: Int32 = 1
     setsockopt(
@@ -290,8 +339,14 @@ private func send(
             )
         }
     }
-    guard didConnect == 0 else {
-        return .failed("socket_connection_failed")
+    if didConnect != 0 {
+        guard errno == EINPROGRESS, ready(for: Int16(POLLOUT)) else {
+            return .failed("socket_connection_failed")
+        }
+        var connectionError: Int32 = 0
+        var length = socklen_t(MemoryLayout<Int32>.size)
+        guard getsockopt(descriptor, SOL_SOCKET, SO_ERROR, &connectionError, &length) == 0,
+              connectionError == 0 else { return .failed("socket_connection_failed") }
     }
 
     let didWrite = data.withUnsafeBytes { rawBuffer in
@@ -300,8 +355,13 @@ private func send(
         }
         var remaining = rawBuffer.count
         while remaining > 0 {
+            guard Date() < deadline else { return false }
             let sent = Darwin.send(descriptor, pointer, remaining, 0)
-            guard sent > 0 else { return false }
+            if sent <= 0 {
+                if errno == EINTR { continue }
+                if (errno == EAGAIN || errno == EWOULDBLOCK), ready(for: Int16(POLLOUT)) { continue }
+                return false
+            }
             pointer = pointer.advanced(by: sent)
             remaining -= sent
         }
@@ -309,24 +369,20 @@ private func send(
     }
     guard didWrite else { return .failed("socket_write_failed") }
 
-    var timeout = timeval(tv_sec: 1, tv_usec: 0)
-    setsockopt(
-        descriptor,
-        SOL_SOCKET,
-        SO_RCVTIMEO,
-        &timeout,
-        socklen_t(MemoryLayout<timeval>.size)
-    )
     var acknowledgementData = Data()
     var acknowledgementBuffer = [UInt8](repeating: 0, count: 1_024)
     while acknowledgementData.count <= 4_096 {
+        guard ready(for: Int16(POLLIN)) else { break }
         let count = Darwin.recv(
             descriptor,
             &acknowledgementBuffer,
             acknowledgementBuffer.count,
             0
         )
-        guard count > 0 else { break }
+        if count <= 0 {
+            if count < 0, errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK { continue }
+            break
+        }
         acknowledgementData.append(
             acknowledgementBuffer,
             count: count
@@ -499,10 +555,10 @@ case .delivered:
         code: "socket_acknowledged",
         event: activity.event,
         outcome: "accepted",
-        queuePath: defaultQueuePath()
+        queuePath: arguments.queuePath
     )
 case .failed(let code):
-    let queuePath = defaultQueuePath()
+    let queuePath = arguments.queuePath
     let fallbackSucceeded = writeFallback(
         payload,
         eventID: eventID,

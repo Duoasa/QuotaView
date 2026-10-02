@@ -8,7 +8,7 @@
 >
 > 当前源码：[0.7.3 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)
 >
-> 当前增量：设置仅保留两个用量图表开关，新增自动弹出开关和 1–10 秒停留时间（默认开启/3 秒），全行退出与确认弹窗、紧凑同心圆角特效预览和简洁中英文文案。10 项相关隔离冒烟与开发构建通过，开发包已更新；源码已推送至 [PR #66](https://github.com/Duoasa/QuotaView/pull/66)，用户已授权合并 main，视觉待用户验收。证据见 [开发交付](../design/quotaview-0.7.3-development-delivery-2026-10-01.md#设置精简与自动弹出--2026-10-02)。
+> 当前增量：Hook 配置与请求状态模块全面梳理，统一消息准入、逐请求生命周期与精确解除闭环；76 项必要隔离冒烟、Debug arm64 构建和开发包核对通过。源码集成/CI 见 [PR #67](https://github.com/Duoasa/QuotaView/pull/67)，实际交互待用户验收；职责与反例见 [模块梳理](../design/quotaview-hook-request-module-review-2026-10-02.md)。
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，

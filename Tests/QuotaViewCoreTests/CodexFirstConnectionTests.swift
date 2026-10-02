@@ -275,11 +275,11 @@ final class CodexFirstConnectionTests: XCTestCase {
         let hooks = root.appendingPathComponent("hooks.json")
         let helper = root.appendingPathComponent("QuotaViewActivityHook")
         let other = ["type": "command", "command": "/usr/bin/true"]
-        let own = ["type": "command", "command": helper.path + " old-installation"]
-        try JSONSerialization.data(withJSONObject: ["hooks": ["UserPromptSubmit": [["hooks": [other, own]]]]]).write(to: hooks)
         let installer = CodexActivityHookInstaller(socketURL: root.appendingPathComponent("test.sock"),
             authenticationToken: "isolated-test", hooksURL: hooks, helperURL: helper,
             installedHelperURL: helper)
+        let own = ["type": "command", "command": installer.hookCommand]
+        try JSONSerialization.data(withJSONObject: ["hooks": ["UserPromptSubmit": [["hooks": [other, own]]]]]).write(to: hooks)
         let domain = "QuotaViewFirstConnection-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
         defer { defaults.removePersistentDomain(forName: domain) }
@@ -287,7 +287,7 @@ final class CodexFirstConnectionTests: XCTestCase {
         let store = makeStore(root: root, localEnabled: false, sessionKindResolver: { _ in await gate.wait() })
         let runtime = CodexActivityRuntime(preferences: AppPreferences(defaults: defaults),
             defaults: defaults, hookInstaller: installer,
-            hookEnvironmentInspector: .init(executablePath: nil), activityStore: store)
+            hookEnvironmentInspector: .init(executablePath: nil), activityStore: store, automaticHookSetupEnabled: false)
         let original = try Data(contentsOf: hooks)
         runtime.refreshConnectionStatus()
         try await waitUntil { runtime.hasCompatibilityHook && runtime.hooksFeatureStatus == .unavailable }
@@ -335,7 +335,7 @@ final class CodexFirstConnectionTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: socket.path))
     }
 
-    func testCompactionOnlyInspectionDoesNotReuseFullHookConnectionEvidence() async throws {
+    func testCompactionScopeRequiresNativeTrustAndRealCompactionEvidence() async throws {
         let root = try fixtureRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let helper = root.appendingPathComponent("QuotaViewActivityHook")
@@ -359,26 +359,29 @@ final class CodexFirstConnectionTests: XCTestCase {
         preferences.codexActivityIslandEnabled = false
         let store = makeStore(root: root, localEnabled: false, sessionKindResolver: { _ in .user })
         let runtime = CodexActivityRuntime(preferences: preferences, defaults: defaults,
-            hookInstaller: installer, hookEnvironmentInspector: .init(executablePath: codex.path), activityStore: store)
+            hookInstaller: installer, hookEnvironmentInspector: .init(executablePath: codex.path), activityStore: store,
+            automaticHookSetupEnabled: false)
         runtime.refreshConnectionStatus()
-        try await waitUntil { runtime.hooksFeatureStatus == .enabled }
+        try await waitUntil { runtime.hooksFeatureStatus == .enabled && runtime.hookOperation == .idle }
         XCTAssertEqual(runtime.compatibilityHookScope, .compaction)
-        XCTAssertEqual(runtime.hookConnectionStatus, .awaitingFirstEvent,
-                       "An old full-Hook connection cannot prove compression delivery")
+        if case .abnormal = runtime.hookConnectionStatus {}
+        else { XCTFail("A fake CLI without native Hooks discovery must not manufacture trust") }
         XCTAssertEqual(try Data(contentsOf: hooks), original, "Inspection must remain read-only")
         let ordinary = await runtime.receiveCompatibilityActivity(.init(source: .liveSocket,
             activity: .init(event: .userPromptSubmit, sessionHash: "fixture-session", source: .hook)))
         XCTAssertTrue(ordinary)
-        XCTAssertEqual(runtime.hookConnectionStatus, .awaitingFirstEvent,
-                       "A cached ordinary-message handler cannot verify compression-only setup")
+        XCTAssertNotEqual(runtime.hookConnectionStatus, .connected,
+                          "An ordinary handler cannot verify compression delivery")
         let compact = await runtime.receiveCompatibilityActivity(.init(source: .liveSocket,
             activity: .init(event: .preCompact, sessionHash: "fixture-session", source: .hook)))
         XCTAssertTrue(compact)
-        XCTAssertEqual(runtime.hookConnectionStatus, .connected)
+        if case .abnormal = runtime.hookConnectionStatus {}
+        else { XCTFail("Authenticated activity cannot replace failed native trust inspection") }
         XCTAssertEqual(store.snapshot?.state, .compactingContext)
         runtime.refreshConnectionStatus()
-        try await waitUntil { runtime.hooksFeatureStatus == .enabled && !runtime.isConfiguring }
-        XCTAssertEqual(runtime.hookConnectionStatus, .connected, "Verified compaction evidence survives reinspection")
+        try await waitUntil { runtime.hooksFeatureStatus == .enabled && runtime.hookOperation == .idle }
+        if case .abnormal = runtime.hookConnectionStatus {}
+        else { XCTFail("Native inspection failure must remain visible") }
         await runtime.stop()
     }
 

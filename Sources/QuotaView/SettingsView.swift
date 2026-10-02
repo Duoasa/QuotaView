@@ -464,7 +464,7 @@ struct SettingsView: View {
                         } label: { Text(copy.text("目录", "Directory")) }
                     }
                     .controlSize(.small)
-                    .disabled(activityRuntime.isChangingDataDirectory)
+                    .disabled(activityRuntime.isChangingDataDirectory || activityRuntime.hookOperation != .idle)
                 }
                 if activityRuntime.directorySelectionFailed {
                     NativeSettingsNote(text: copy.text(
@@ -480,13 +480,13 @@ struct SettingsView: View {
                 DisclosureGroup(isExpanded: $codexCompatibilityExpanded) {
                     VStack(alignment: .leading, spacing: 0) {
                         NativeSettingsNote(text: copy.text(
-                            "自动连接正常时无需配置 Hook。更改数据目录不会移动已有 Hook。",
-                            "No Hook setup is needed when automatic connection works. Changing the data directory does not move existing Hooks."
+                            "App Server 与 Hook 同时连接。Hook 会自动配置和维护，首次使用仅需授权一次。",
+                            "App Server and Hooks work together. Hooks are configured and maintained automatically; authorize once on first use."
                         ), horizontalPadding: 0)
                         NativeSettingsRow(
                             title: copy.text(
-                                "兼容 Hook",
-                                "Compatibility Hook"
+                                "Hook 连接",
+                                "Hook Connection"
                             ),
                             subtitle: codexActivityConnectionSubtitle,
                             horizontalPadding: 0
@@ -506,10 +506,12 @@ struct SettingsView: View {
 
                                 Button {
                                     switch activityRuntime.hookConnectionStatus {
-                                    case .notInstalled, .abnormal:
+                                    case .notInstalled:
                                         activityRuntime.enableCompatibilityHook()
+                                    case .abnormal:
+                                        activityRuntime.refreshConnectionStatus()
                                     case .installedNeedsRestart:
-                                        activityRuntime.restartCodex()
+                                        activityRuntime.openCodexSecurityReview()
                                     case .awaitingTrust:
                                         activityRuntime.openCodexSecurityReview()
                                     case .awaitingFirstEvent, .connected:
@@ -542,25 +544,15 @@ struct SettingsView: View {
                            activityRuntime.hookConnectionStatus != .connected,
                            activityRuntime.hookConnectionStatus != .awaitingFirstEvent {
                             NativeSettingsRow(
-                                title: copy.text("移除兼容 Hook", "Remove Compatibility Hook"),
+                                title: copy.text("停用 Hook", "Disable Hook"),
                                 subtitle: copy.text("仅移除 QuotaView 的 Hook，自动连接继续工作。", "Remove only QuotaView Hooks; automatic connection keeps working."),
                                 horizontalPadding: 0
                             ) {
-                                Button(copy.text("移除", "Remove")) { activityRuntime.disableCompatibilityHook() }
+                                Button(copy.text("停用", "Disable")) { activityRuntime.disableCompatibilityHook() }
                                     .nativeSettingsActionStyle()
                                     .controlSize(.small)
                                     .disabled(activityRuntime.isConfiguring || activityRuntime.isOpeningSecurityReview)
                             }
-                        }
-
-                        if codexActivityShowsNextStep {
-                            Divider()
-
-                            NativeSettingsRow(
-                                title: codexActivityNextStepTitle,
-                                subtitle: codexActivityNextStepSubtitle,
-                                horizontalPadding: 0
-                            ) {}
                         }
 
                         DisclosureGroup(
@@ -601,7 +593,7 @@ struct SettingsView: View {
                     }
                     .padding(.top, 10)
                 } label: {
-                    Text(copy.text("兼容 Hook", "Compatibility Hook"))
+                    Text(copy.text("Hook 连接", "Hook Connection"))
                         .font(.body.weight(.medium))
                 }
                 .padding(.horizontal, 18)
@@ -807,136 +799,59 @@ struct SettingsView: View {
     }
 
     private var codexActivityActionTitle: String {
-        if activityRuntime.isConfiguring {
-            return copy.text("正在准备", "Preparing")
-        }
-        if activityRuntime.isOpeningSecurityReview {
-            return copy.text("正在打开", "Opening")
-        }
+        if activityRuntime.isConfiguring { return copy.text("正在配置", "Configuring") }
+        if activityRuntime.isOpeningSecurityReview { return copy.text("正在授权", "Authorizing") }
         return switch activityRuntime.hookConnectionStatus {
-        case .notInstalled:
-            copy.text("配置 Hook", "Configure Hook")
-        case .abnormal:
-            copy.text("重试配置", "Retry Setup")
-        case .installedNeedsRestart:
-            copy.text("重新启动 Codex", "Restart Codex")
-        case .awaitingTrust:
-            copy.text("打开安全确认", "Open Security Review")
-        case .awaitingFirstEvent, .connected:
-            copy.text("停用 Hook", "Disable Hook")
+        case .notInstalled: copy.text("启用 Hook", "Enable Hooks")
+        case .abnormal: copy.text("重新检查", "Recheck")
+        case .installedNeedsRestart, .awaitingTrust: copy.text("授权连接", "Authorize")
+        case .awaitingFirstEvent, .connected: copy.text("停用 Hook", "Disable Hooks")
         }
     }
 
     private var codexActivityActionHelp: String {
-        return switch activityRuntime.hookConnectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "重启 Codex 以启用 Hook。",
-                "Restart Codex to activate the Hook."
-            )
-        case .awaitingTrust:
-            copy.text(
-                "等待 CLI 首次加载完成并自动进入 Hooks 页面后，再按 T。",
-                "Wait for the CLI to finish loading and enter the Hooks page before pressing T."
-            )
+        switch activityRuntime.hookConnectionStatus {
+        case .installedNeedsRestart, .awaitingTrust:
+            copy.text("通过 Codex 授权 QuotaView 的任务事件 Hook。", "Authorize QuotaView task event Hooks through Codex.")
         case .awaitingFirstEvent, .connected:
-            copy.text(
-                "停用 Hook，自动连接仍可用。",
-                "Disable the Hook; automatic connection stays available."
-            )
+            copy.text("停用 Hook，App Server 连接继续工作。", "Disable Hooks; the App Server connection keeps working.")
         case .notInstalled, .abnormal:
-            copy.text(
-                "安装兼容 Hook，并进入 Codex 安全确认流程。",
-                "Install the compatibility Hook and open the Codex security review."
-            )
+            copy.text("检查并维护 QuotaView Hook，不更改其他 Hook。", "Check and maintain QuotaView Hooks while preserving other Hooks.")
         }
     }
 
     private var codexActivityConnectionSubtitle: String {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
-            return copy.text(
-                "正在配置 Hook…",
-                "Setting up the Hook…"
-            )
-        }
-
+        if activityRuntime.isConfiguring { return copy.text("正在检查并自动配置…", "Checking and configuring automatically…") }
+        if activityRuntime.isOpeningSecurityReview { return copy.text("正在通过 Codex 验证授权…", "Verifying authorization through Codex…") }
         return switch activityRuntime.hookConnectionStatus {
-        case .notInstalled:
-            copy.text(
-                "按需启用，自动连接无需 Hook。",
-                "Optional. Automatic connection does not need a Hook."
-            )
-        case .installedNeedsRestart:
-            copy.text(
-                "已信任，重启 Codex 后生效。",
-                "Trusted. Restart Codex to activate."
-            )
-        case .awaitingTrust:
-            copy.text(
-                "等待 CLI 完成首次加载；QuotaView 自动输入 /hooks 并进入 Hooks 页面后，再按 T。",
-                "Wait for the CLI to finish its first load. Press T only after QuotaView enters /hooks and opens the Hooks page."
-            )
-        case .awaitingFirstEvent:
-            activityRuntime.compatibilityHookScope == .compaction ? copy.text(
-                "已配置，等待压缩事件。",
-                "Configured. Waiting for a compaction event."
-            ) : copy.text(
-                "发送一条 Codex 消息以完成连接。",
-                "Send a Codex message to finish connecting."
-            )
-        case .connected:
-            copy.text(
-                "已收到 Hook 事件。",
-                "Hook events received."
-            )
-        case .abnormal(let message):
-            message
+        case .notInstalled: copy.text("Hook 已停用，可随时重新启用。", "Hooks are off. Enable them at any time.")
+        case .installedNeedsRestart, .awaitingTrust:
+            copy.text("已自动配置。授权后即可接收任务事件，无需终端配置。", "Configured automatically. Authorize to receive task events without terminal setup.")
+        case .awaitingFirstEvent: copy.text("Codex 已确认授权，等待新的任务事件。", "Authorization verified by Codex; waiting for task activity.")
+        case .connected: copy.text("已收到真实 Hook 事件，与 App Server 同时工作。", "Live Hook events received alongside App Server.")
+        case .abnormal(let message): message
         }
     }
 
     private var codexActivityConnectionStatusTitle: String {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
-            return copy.text("正在准备", "Preparing")
-        }
-
+        if activityRuntime.isConfiguring { return copy.text("正在配置", "Configuring") }
+        if activityRuntime.isOpeningSecurityReview { return copy.text("正在授权", "Authorizing") }
         return switch activityRuntime.hookConnectionStatus {
-        case .notInstalled:
-            copy.text("未启用", "Not Enabled")
-        case .installedNeedsRestart, .awaitingTrust:
-            copy.text("需要安全确认", "Security Review Needed")
-        case .awaitingFirstEvent:
-            activityRuntime.compatibilityHookScope == .compaction
-                ? copy.text("等待压缩事件", "Waiting for Compaction")
-                : copy.text("等待第一条消息", "Waiting for First Message")
-        case .connected:
-            copy.text("Hook 已连接", "Hook Connected")
-        case .abnormal:
-            copy.text("需要处理", "Needs Attention")
+        case .notInstalled: copy.text("已停用", "Disabled")
+        case .installedNeedsRestart, .awaitingTrust: copy.text("待授权", "Authorization Needed")
+        case .awaitingFirstEvent: copy.text("已授权", "Authorized")
+        case .connected: copy.text("已连接", "Connected")
+        case .abnormal: copy.text("需要处理", "Needs Attention")
         }
     }
 
     private var codexActivityConnectionColor: Color {
-        if activityRuntime.isConfiguring
-            || activityRuntime.isOpeningSecurityReview
-        {
-            return Color(nsColor: .systemBlue)
-        }
-
+        if activityRuntime.isConfiguring || activityRuntime.isOpeningSecurityReview { return Color(nsColor: .systemBlue) }
         return switch activityRuntime.hookConnectionStatus {
-        case .connected:
-            Color(nsColor: .systemGreen)
-        case .installedNeedsRestart,
-             .awaitingTrust,
-             .awaitingFirstEvent:
-            Color(nsColor: .systemOrange)
-        case .abnormal:
-            Color(nsColor: .systemRed)
-        case .notInstalled:
-            Color(nsColor: .tertiaryLabelColor)
+        case .connected: Color(nsColor: .systemGreen)
+        case .installedNeedsRestart, .awaitingTrust, .awaitingFirstEvent: Color(nsColor: .systemOrange)
+        case .abnormal: Color(nsColor: .systemRed)
+        case .notInstalled: Color(nsColor: .tertiaryLabelColor)
         }
     }
 
@@ -957,61 +872,6 @@ struct SettingsView: View {
             copy.text("Hooks 未启用", "Hooks Disabled")
         case .unavailable:
             copy.text("Hooks 不可用", "Hooks Unavailable")
-        }
-    }
-
-    private var codexActivityShowsNextStep: Bool {
-        switch activityRuntime.hookConnectionStatus {
-        case .installedNeedsRestart, .awaitingTrust, .awaitingFirstEvent:
-            true
-        case .notInstalled, .connected, .abnormal:
-            false
-        }
-    }
-
-    private var codexActivityNextStepTitle: String {
-        switch activityRuntime.hookConnectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "重新启动 Codex",
-                "Restart Codex"
-            )
-        case .awaitingTrust:
-            copy.text(
-                "等待 Hooks 页面，再按 T",
-                "Wait for Hooks, Then Press T"
-            )
-        case .awaitingFirstEvent:
-            activityRuntime.compatibilityHookScope == .compaction
-                ? copy.text("等待自然压缩", "Wait for Natural Compaction")
-                : copy.text("发送一条新消息", "Send a New Message")
-        case .notInstalled, .connected, .abnormal:
-            ""
-        }
-    }
-
-    private var codexActivityNextStepSubtitle: String {
-        switch activityRuntime.hookConnectionStatus {
-        case .installedNeedsRestart:
-            copy.text(
-                "重启后即可使用，无需重新配置。",
-                "Ready after restart. No further setup needed."
-            )
-        case .awaitingTrust:
-            copy.text(
-                "QuotaView 会自动打开 /hooks。看到“Press t to trust all”后按 T。",
-                "QuotaView opens /hooks automatically. Press T when “Press t to trust all” appears."
-            )
-        case .awaitingFirstEvent:
-            activityRuntime.compatibilityHookScope == .compaction ? copy.text(
-                "正常使用 Codex，收到压缩事件后会更新状态。",
-                "Use Codex normally. Status updates when a compaction event arrives."
-            ) : copy.text(
-                "发送新消息后更新状态。",
-                "Status updates after a new message."
-            )
-        case .notInstalled, .connected, .abnormal:
-            ""
         }
     }
 

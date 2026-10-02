@@ -6,6 +6,183 @@ import QuotaViewCore
 /// Shared Desktop connections are observers until response ownership is established.
 @MainActor
 final class IslandLiveStore {
+    struct Pending: Equatable {
+        let key: String
+        var value: IslandConfirmation
+        var callHash: String? = nil
+        var rpcEpoch: UInt64? = nil
+        var mode: CodexUserInputMode? = nil
+        var isGeneric = false
+        var blocksExecution: Bool {
+            if isGeneric { return mode != .asynchronous }
+            return value.protocolRequest?.kind != .questions || mode == .synchronous
+        }
+    }
+
+    /// Pure, task-scoped request state. Activity and thread wait are separate
+    /// evidence; neither an unrelated tool nor a thread flag answers a request.
+    struct RequestLifecycle {
+        struct WaitEvidence {
+            var reason: CodexActivityWaitReason?
+            var epoch: UInt64?
+            // nil means the source reported waiting before a request identity
+            // was available. A bound set is scoped to this task, turn and epoch.
+            var requestIdentities: Set<String>? = nil
+        }
+        var requests: [Pending] = []
+        var requestIndex = 0
+        var sourceWait: WaitEvidence?
+        var unidentifiedWait: WaitEvidence?
+        private var sourcePlaceholder = Pending(key: "observer-placeholder", value: .init(
+            question: .init("请求详情暂不可用", "Request details unavailable"),
+            impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
+        var resolvedCallHashes: [String] = []
+        var resolvedRequestKeys: [String] = []
+        private var callModes: [String: CodexUserInputMode] = [:]
+        private var callModeOrder: [String] = []
+
+        var waitingOnSource: Bool { sourceWait != nil || unidentifiedWait != nil }
+        var hasBlockingRequest: Bool { requests.contains(where: \.blocksExecution) }
+        var visibleRequests: [Pending] { requests.isEmpty && waitingOnSource ? [sourcePlaceholder] : requests }
+        var waitReason: CodexActivityWaitReason? {
+            if let sourceWait { return sourceWait.reason }
+            if let unidentifiedWait { return unidentifiedWait.reason }
+            guard let blocker = requests.first(where: \.blocksExecution) else { return nil }
+            return blocker.mode == .synchronous ? .userInput : .approval
+        }
+        var asynchronousCallHashes: Set<String> { Set(callModes.filter { $0.value == .asynchronous }.map(\.key)) }
+        func mode(for call: String) -> CodexUserInputMode? { callModes[call] }
+        static func rpcKey(_ id: IslandApprovalJSON, epoch: UInt64) -> String { "\(epoch):\(String(decoding: id.data, as: UTF8.self))" }
+        mutating func observeMode(_ mode: CodexUserInputMode?, callHash: String?) {
+            guard let mode, let callHash else { return }
+            callModes[callHash] = mode; callModeOrder.removeAll { $0 == callHash }; callModeOrder.append(callHash)
+            while callModeOrder.count > 256 { callModes.removeValue(forKey: callModeOrder.removeFirst()) }
+            for i in requests.indices where requests[i].callHash == callHash
+                && (requests[i].isGeneric || requests[i].value.protocolRequest?.kind == .questions) {
+                requests[i].mode = mode
+            }
+        }
+        mutating func observeWait(callHash: String?, mode: CodexUserInputMode?, reason: CodexActivityWaitReason?, epoch: UInt64? = nil) {
+            observeMode(mode, callHash: callHash)
+            guard mode != .asynchronous else { return }
+            guard let callHash else { unidentifiedWait = .init(reason: reason, epoch: epoch); return }
+            guard !resolvedCallHashes.contains(callHash), !requests.contains(where: { $0.callHash == callHash }), requests.count < 32 else { return }
+            requests.append(.init(key: "observer-call:\(callHash)", value: .init(
+                question: .init("请求详情暂不可用", "Request details unavailable"),
+                impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")),
+                callHash: callHash, mode: mode, isGeneric: true))
+        }
+        mutating func observe(_ pending: Pending) {
+            if let call = pending.callHash, resolvedCallHashes.contains(call) { return }
+            if let wire = pending.value.protocolRequest, let epoch = pending.rpcEpoch,
+               resolvedRequestKeys.contains(Self.rpcKey(wire.rpcID, epoch: epoch)) { return }
+            observeMode(pending.mode, callHash: pending.callHash)
+            var replacement = pending
+            if replacement.mode == nil, let call = replacement.callHash { replacement.mode = mode(for: call) }
+            bindUnidentifiedSourceWait(to: replacement)
+            if requests.contains(where: { $0.key == replacement.key && $0.value.protocolRequest?.raw == replacement.value.protocolRequest?.raw }) { return }
+            if let old = requests.first(where: { $0.key == pending.key }) { replacement.value.id = old.value.id }
+            requests.removeAll { existing in
+                existing.key == pending.key || (pending.callHash != nil && existing.callHash == pending.callHash
+                    && (existing.isGeneric || (pending.rpcEpoch != nil && existing.value.protocolRequest?.observationOnly == true)))
+            }
+            guard requests.count < 32 else { return }
+            requests.append(replacement); clampSelection()
+        }
+        mutating func continueCall(_ callHash: String?) {
+            guard let callHash, requests.contains(where: { $0.isGeneric && $0.callHash == callHash }), mode(for: callHash) != .asynchronous else { return }
+            let identifiedQuestion = mode(for: callHash) == .synchronous
+            let matching = requests.filter { $0.isGeneric && $0.callHash == callHash }
+            requests.removeAll { $0.isGeneric && $0.callHash == callHash }
+            settleSourceWait(for: matching)
+            if identifiedQuestion { rememberCall(callHash) }
+            clampSelection()
+        }
+        @discardableResult mutating func resolveCall(_ callHash: String, proofMode: CodexUserInputMode? = nil, epoch: UInt64? = nil) -> Bool {
+            guard proofMode != .asynchronous, mode(for: callHash) != .asynchronous else { return false }
+            let matches: (Pending) -> Bool = { request in
+                request.callHash == callHash && (epoch == nil || request.rpcEpoch == nil || request.rpcEpoch == epoch)
+            }
+            let matching = requests.filter(matches)
+            guard !matching.contains(where: { $0.mode == .asynchronous }) else { return false }
+            // A correlated result may clear missing-detail wait evidence. Only
+            // a known request can leave an answered-call tombstone for replay.
+            guard !matching.isEmpty || mode(for: callHash) == .synchronous else { return false }
+            if mode(for: callHash) == .synchronous || matching.contains(where: { !$0.isGeneric }) { rememberCall(callHash) }
+            requests.removeAll(where: matches)
+            settleSourceWait(for: matching)
+            clampSelection(); return true
+        }
+        @discardableResult mutating func resolveRPC(_ id: IslandApprovalJSON, epoch: UInt64) -> Bool {
+            let key = Self.rpcKey(id, epoch: epoch)
+            resolvedRequestKeys.removeAll { $0 == key }; resolvedRequestKeys.append(key)
+            if resolvedRequestKeys.count > 256 { resolvedRequestKeys.removeFirst() }
+            let matching = requests.filter { $0.rpcEpoch == epoch && $0.value.protocolRequest?.rpcID == id }
+            for request in matching { if let call = request.callHash { rememberCall(call) } }
+            requests.removeAll { $0.rpcEpoch == epoch && $0.value.protocolRequest?.rpcID == id }
+            settleSourceWait(for: matching)
+            clampSelection()
+            return !matching.isEmpty
+        }
+        mutating func setSourceWait(_ reason: CodexActivityWaitReason?, waiting: Bool, epoch: UInt64) {
+            if waiting {
+                let identities = Set(requests.filter { belongsToSourceWait($0, reason: reason, epoch: epoch) }.compactMap(requestIdentity))
+                sourceWait = .init(reason: reason, epoch: epoch, requestIdentities: identities.isEmpty ? nil : identities)
+            } else { sourceWait = nil }
+            // Missing-ID Hook notices are wait evidence, never answerable requests.
+            // Explicit active flags can clear that evidence without resolving calls.
+            if !waiting { unidentifiedWait = nil }
+        }
+        private func requestIdentity(_ request: Pending) -> String? {
+            if let call = request.callHash { return "call:" + call }
+            if let epoch = request.rpcEpoch, let wire = request.value.protocolRequest {
+                return "rpc:" + Self.rpcKey(wire.rpcID, epoch: epoch)
+            }
+            return nil
+        }
+        private func belongsToSourceWait(_ request: Pending, reason: CodexActivityWaitReason?, epoch: UInt64) -> Bool {
+            if let requestEpoch = request.rpcEpoch, requestEpoch != epoch { return false }
+            let question = request.mode != nil || request.value.protocolRequest?.kind == .questions
+            switch reason {
+            case .userInput: return question
+            case .approval: return !question
+            default: return false
+            }
+        }
+        private mutating func bindUnidentifiedSourceWait(to request: Pending) {
+            // A later local question cannot identify an earlier thread wait.
+            // A native request on the waiting connection supplies that identity.
+            guard var wait = sourceWait,
+                  let epoch = wait.epoch, request.rpcEpoch == epoch,
+                  belongsToSourceWait(request, reason: wait.reason, epoch: epoch),
+                  let identity = requestIdentity(request) else { return }
+            var identities = wait.requestIdentities ?? []
+            identities.insert(identity); wait.requestIdentities = identities; sourceWait = wait
+        }
+        private mutating func settleSourceWait(for resolved: [Pending]) {
+            guard var wait = sourceWait, var identities = wait.requestIdentities else { return }
+            for request in resolved {
+                guard request.rpcEpoch == nil || request.rpcEpoch == wait.epoch,
+                      let identity = requestIdentity(request) else { continue }
+                identities.remove(identity)
+            }
+            if identities.isEmpty { sourceWait = nil }
+            else { wait.requestIdentities = identities; sourceWait = wait }
+        }
+        mutating func invalidateResponses(except epoch: UInt64? = nil) {
+            for i in requests.indices where epoch == nil || requests[i].rpcEpoch != epoch {
+                requests[i].value.canRespond = false
+                if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
+            }
+        }
+        mutating func finishTurn() { requests.removeAll(); sourceWait = nil; unidentifiedWait = nil; requestIndex = 0 }
+        private mutating func rememberCall(_ hash: String) {
+            resolvedCallHashes.removeAll { $0 == hash }; resolvedCallHashes.append(hash)
+            if resolvedCallHashes.count > 256 { resolvedCallHashes.removeFirst() }
+        }
+        private mutating func clampSelection() { requestIndex = min(requestIndex, max(0, visibleRequests.count - 1)) }
+    }
+
     struct TaskRecord {
         let id: Int
         let key: String
@@ -14,32 +191,35 @@ final class IslandLiveStore {
         var title = ""
         var model = ""
         var effort = ""
-        var status: IslandTaskStatus = .thinking
+        var activityStatus: IslandTaskStatus = .thinking
+        var requestLifecycle = RequestLifecycle()
+        var status: IslandTaskStatus {
+            if terminal { return activityStatus }
+            return requestLifecycle.waitingOnSource || requestLifecycle.hasBlockingRequest ? .waiting : activityStatus
+        }
+        var requests: [Pending] { requestLifecycle.visibleRequests }
+        var requestIndex: Int { get { requestLifecycle.requestIndex } set { requestLifecycle.requestIndex = newValue } }
+        var waitingOnSource: Bool { requestLifecycle.waitingOnSource }
+        var sourceWaitReason: CodexActivityWaitReason? { requestLifecycle.waitReason }
+        var genericWaitCallHash: String? { requestLifecycle.requests.first(where: \.isGeneric)?.callHash }
+        var resolvedCallHashes: [String] { requestLifecycle.resolvedCallHashes }
+        var resolvedRequestKeys: [String] { requestLifecycle.resolvedRequestKeys }
+        var asynchronousQuestionCallHashes: Set<String> { requestLifecycle.asynchronousCallHashes }
         var operation = ""
         var tokens: Int64?
         var startedAt: Date?
         var endedAt: Date?
         var updatedAt = Date.distantPast
-        // nil means no structured plan: let the shared single-island resolver
-        // perform its 4-second discovery and bounded unplanned estimate.
         var progress: Double?
         var progressResolver = CodexActivityStateSmokeProgressResolver()
         var progressUpdatedAt: Date?
         var displayedProgress: Double = 0.01
-        var legacyEventDates: [String: Date] = [:]
         var nativeContentAvailable = false
         var nativeState = false
-        var waitingOnSource = false
         var entries: [IslandTraceEntry] = []
-        var requests: [Pending] = []
-        var requestIndex = 0
         var removedEntryCount = 0
         var activeItems: [String: String] = [:]
-        var terminal: Bool { [.completed, .failed, .cancelled].contains(status) }
-    }
-    struct Pending: Equatable {
-        let key: String
-        var value: IslandConfirmation
+        var terminal: Bool { [.completed, .failed, .cancelled].contains(activityStatus) }
     }
     // QuotaView-only display suppression. This never archives a Codex thread,
     // stops a turn, or resolves a request. Persist only existing one-way hashes.
@@ -77,26 +257,23 @@ final class IslandLiveStore {
     private(set) var connectionEpoch = 0
     var preservedID: Int?
     private var nextID = 1
+    private var nativeConnectionEpoch: UInt64?
     private var priorTurnKeys: [String: Set<String>] = [:]
     private var metadata: [String: [String: Any]] = [:]
     var onChange: (() -> Void)?
     var onPublicChange: (() -> Void)?
+    var nativeRequestSettlementDidReceive: ((CodexActivityRequestSettlement) -> Void)?
     private var pendingLocalContent: [CodexLocalPublicContent] = []
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { tasks.removeAll(); metadata.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; connectionEpoch += 1; onChange?() }
+    func reset() { tasks.removeAll(); metadata.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
         if state != .connected {
             connectionEpoch += 1
-            for i in tasks.indices {
-                for j in tasks[i].requests.indices {
-                    tasks[i].requests[j].value.canRespond = false
-                    if !tasks[i].requests[j].value.phase.canSubmit { tasks[i].requests[j].value.phase = .resultUnknown }
-                }
-            }
+            for i in tasks.indices { tasks[i].requestLifecycle.invalidateResponses() }
         }
         connection = state; onChange?()
     }
@@ -120,32 +297,48 @@ final class IslandLiveStore {
         if let key, tasks[i].turnKey != key, active {
             startTurn(i, key: key, at: event.occurredAt)
         }
-        // Socket content uses receipt time; rollout lifecycle uses persisted event
-        // time. Comparing those clocks drops a delayed, authoritative completion.
-        let source = event.source?.rawValue ?? "legacy"
-        guard event.occurredAt >= (tasks[i].legacyEventDates[source] ?? .distantPast) else { return }
         if let key, tasks[i].turnKey != nil, tasks[i].turnKey != key { return }
         if tasks[i].terminal && !active { return }
-        tasks[i].legacyEventDates[source] = event.occurredAt
+        if let call = event.toolCallHash, tasks[i].resolvedCallHashes.contains(call), event.event == .permissionRequest { return }
+        if [.preToolUse, .permissionRequest].contains(event.event) {
+            tasks[i].requestLifecycle.observeMode(event.userInputMode, callHash: event.toolCallHash)
+        }
         tasks[i].updatedAt = max(tasks[i].updatedAt, event.occurredAt)
         if tasks[i].title.isEmpty { tasks[i].title = event.workspaceName ?? "" }
         switch event.event {
-        case .userPromptSubmit: tasks[i].status = .thinking; tasks[i].operation = ""
-        case .preToolUse: tasks[i].status = .working; tasks[i].operation = ""
-        case .permissionRequest: tasks[i].status = .waiting; ensureReadOnlyRequest(i)
-        case .preCompact: tasks[i].status = .compacting
-        case .postCompact: if tasks[i].status == .compacting { tasks[i].status = .thinking }
+        case .userPromptSubmit: tasks[i].activityStatus = .thinking; tasks[i].operation = ""
+        case .preToolUse:
+            tasks[i].requestLifecycle.continueCall(event.toolCallHash)
+            tasks[i].activityStatus = .working; tasks[i].operation = ""
+        case .postToolUse:
+            if let call = event.toolCallHash {
+                tasks[i].requestLifecycle.resolveCall(call, proofMode: event.userInputMode)
+            }
+            if event.userInputMode != .asynchronous && event.toolCallHash.flatMap({ tasks[i].requestLifecycle.mode(for: $0) }) != .asynchronous {
+                tasks[i].activityStatus = tasks[i].activeItems.isEmpty ? .thinking : .working
+            }
+        case .permissionRequest:
+            if event.source == .appServer, event.toolCallHash == nil, event.userInputMode != .asynchronous {
+                tasks[i].requestLifecycle.setSourceWait(event.effectiveWaitReason, waiting: true,
+                    epoch: nativeConnectionEpoch ?? UInt64(connectionEpoch))
+            } else {
+                tasks[i].requestLifecycle.observeWait(callHash: event.toolCallHash, mode: event.userInputMode, reason: event.effectiveWaitReason)
+            }
+            if event.userInputMode == .asynchronous { tasks[i].activityStatus = .working }
+        case .preCompact: tasks[i].activityStatus = .compacting
+        case .postCompact: if tasks[i].activityStatus == .compacting { tasks[i].activityStatus = .thinking }
         case .stop:
             switch event.turnCompletionStatus {
-            case .failed: tasks[i].status = .failed
-            case .interrupted: tasks[i].status = .cancelled
-            default: tasks[i].status = .completed; tasks[i].progress = 1
+            case .failed: tasks[i].activityStatus = .failed
+            case .interrupted: tasks[i].activityStatus = .cancelled
+            default: tasks[i].activityStatus = .completed; tasks[i].progress = 1
             }
-            tasks[i].endedAt = event.occurredAt; tasks[i].requests.removeAll(); tasks[i].activeItems.removeAll()
-        case .interrupt: tasks[i].status = .cancelled; tasks[i].endedAt = event.occurredAt; tasks[i].requests.removeAll(); tasks[i].activeItems.removeAll()
+            tasks[i].endedAt = event.occurredAt; tasks[i].requestLifecycle.finishTurn(); tasks[i].activeItems.removeAll()
+        case .interrupt:
+            tasks[i].activityStatus = .cancelled; tasks[i].endedAt = event.occurredAt
+            tasks[i].requestLifecycle.finishTurn(); tasks[i].activeItems.removeAll()
         default: break
         }
-        if !tasks[i].terminal && (tasks[i].waitingOnSource || tasks[i].requests.contains(where: { $0.value.protocolRequest?.kind != .questions })) { tasks[i].status = .waiting }
         if !tasks[i].terminal, let progress = event.planProgress?.approximateFraction { tasks[i].progress = progress }
         let pending = pendingLocalContent.filter { $0.sessionHash == event.sessionHash && $0.turnHash == tasks[i].turnKey }
         pendingLocalContent.removeAll { $0.sessionHash == event.sessionHash }
@@ -167,11 +360,26 @@ final class IslandLiveStore {
         }
         guard tasks[i].turnKey == content.turnHash else { return }
         let type = p["type"] as? String
+        if type == "questionRequest", let id = p["id"] as? String,
+           let questions = p["questions"] as? [[String: Any]] {
+            let mode = (p["userInputMode"] as? String).flatMap(CodexUserInputMode.init(rawValue:))
+                ?? (p["asynchronous"] as? Bool == true ? .asynchronous : .synchronous)
+            receiveLocalQuestions(questions, callID: id, content: content, mode: mode, at: i)
+            return
+        }
+        if type == "output", let id = p["id"] as? String {
+            let mode = (p["userInputMode"] as? String).flatMap(CodexUserInputMode.init(rawValue:))
+                ?? (p["asynchronous"] as? Bool == true ? .asynchronous : nil)
+            if tasks[i].requestLifecycle.resolveCall(CodexActivityPrivacy.hashIdentifier(id), proofMode: mode) { onChange?() }
+        }
         if type == "metadata" {
             if let model = p["model"] as? String, !model.isEmpty { tasks[i].model = model }
             if let effort = p["effort"] as? String, !effort.isEmpty { tasks[i].effort = effort }
         } else {
-            guard !(tasks[i].nativeContentAvailable && connection == .connected), let id = p["id"] as? String else { return }
+            guard !(tasks[i].nativeContentAvailable && connection == .connected), let id = p["id"] as? String else {
+                if type == "output" { onChange?() }
+                return
+            }
             if type == "output" {
                 if let j = tasks[i].entries.firstIndex(where: { $0.publicItem?.sourceID == id }) {
                     let output = p["text"] as? String ?? ""
@@ -180,7 +388,7 @@ final class IslandLiveStore {
                     tasks[i].entries[j].publicItem?.status = "completed"
                 }
                 tasks[i].activeItems.removeValue(forKey: id)
-                if tasks[i].activeItems.isEmpty && tasks[i].status == .working { tasks[i].status = .thinking; tasks[i].operation = "" }
+                if tasks[i].activeItems.isEmpty && tasks[i].activityStatus == .working { tasks[i].activityStatus = .thinking; tasks[i].operation = "" }
             } else {
                 let message = type == "message"
                 let name = p["name"] as? String ?? ""
@@ -189,12 +397,12 @@ final class IslandLiveStore {
                 upsert(.init(text: .init(String(text.prefix(65536))), publicItem: .init(category: message ? .message : .command,
                     sourceID: id, turnID: content.turnHash, status: message ? "completed" : "inProgress", sourceTruncated: text.count > 65536)), at: i)
                 if message && tasks[i].status == .thinking { tasks[i].operation = String(body.prefix(240)) }
-                else if !message && !tasks[i].terminal && tasks[i].status != .waiting {
+                else if !message && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
                     let label = name.split(separator: ".").last.map(String.init) ?? name
                     let description = label + " · " + String(detail.replacingOccurrences(of: "\n", with: " ").prefix(240))
-                    tasks[i].activeItems[id] = description; tasks[i].status = .working; tasks[i].operation = description
+                    tasks[i].activeItems[id] = description; tasks[i].activityStatus = .working; tasks[i].operation = description
                 }
             }
         }
@@ -223,17 +431,32 @@ final class IslandLiveStore {
         }
         if let old = tasks[i].turnKey { priorTurnKeys[tasks[i].key, default: []].insert(old) }
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
-        tasks[i].status = .thinking; tasks[i].waitingOnSource = false; tasks[i].progress = nil; tasks[i].operation = ""
+        tasks[i].activityStatus = .thinking; tasks[i].requestLifecycle = RequestLifecycle(); tasks[i].progress = nil; tasks[i].operation = ""
         tasks[i].progressResolver.reset(); tasks[i].progressUpdatedAt = date; tasks[i].displayedProgress = 0.01
-        tasks[i].legacyEventDates.removeAll()
-        tasks[i].activeItems.removeAll(); tasks[i].requests.removeAll(); tasks[i].requestIndex = 0; tasks[i].nativeContentAvailable = false
+        tasks[i].activeItems.removeAll(); tasks[i].nativeContentAvailable = false
         tasks[i].entries.removeAll(); tasks[i].removedEntryCount = 0; tasks[i].updatedAt = date
     }
-    private func ensureReadOnlyRequest(_ i: Int) {
-        guard tasks[i].requests.isEmpty else { return }
-        tasks[i].requests.append(.init(key: "observer-placeholder", value: .init(
-            question: .init("Codex 正在等待确认", "Codex is waiting for confirmation"),
-            impact: .init("仅有等待状态，请在 Codex 查看并处理请求。", "Only the waiting status is available; review and handle the request in Codex."))))
+    private func receiveLocalQuestions(_ questions: [[String: Any]], callID: String, content: CodexLocalPublicContent, mode: CodexUserInputMode, at i: Int) {
+        guard !tasks[i].terminal, !callID.isEmpty,
+              let wire = try? IslandCodexApprovalRequest(localQuestions: questions, callID: callID,
+                  sessionHash: content.sessionHash, turnHash: content.turnHash, asynchronous: mode == .asynchronous), !wire.questions.isEmpty else { return }
+        let call = CodexActivityPrivacy.hashIdentifier(callID)
+        tasks[i].requestLifecycle.observeMode(mode, callHash: call)
+        if tasks[i].requests.contains(where: { $0.rpcEpoch != nil && $0.callHash == call }) { onChange?(); return }
+        tasks[i].requestLifecycle.observe(.init(key: "local:\(content.turnHash):\(callID)", value: .init(
+            question: .init(wire.questions[0].title), impact: .init("请在 Codex 回答。", "Answer in Codex."),
+            protocolRequest: wire, canRespond: false), callHash: call, mode: mode))
+        onChange?()
+    }
+    @discardableResult
+    private func resolveRequest(_ i: Int, id: IslandApprovalJSON, epoch: UInt64) -> Bool {
+        guard tasks[i].requestLifecycle.resolveRPC(id, epoch: epoch) else { return false }
+        if let turn = tasks[i].turnKey {
+            nativeRequestSettlementDidReceive?(.init(sessionHash: tasks[i].key,
+                turnHash: turn, connectionEpoch: epoch,
+                stillWaiting: tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest))
+        }
+        return true
     }
     func nextRequest(_ id: Int) {
         guard let i = tasks.firstIndex(where: { $0.id == id }), !tasks[i].requests.isEmpty else { return }
@@ -243,6 +466,14 @@ final class IslandLiveStore {
         guard data.count <= 1_048_576, let m = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let method = m["method"] as? String, !method.contains("reasoning"),
               let p = m["params"] as? [String: Any] else { return }
+        let scope = (m["_quotaViewConnectionEpoch"] as? NSNumber)?.uint64Value ?? UInt64(connectionEpoch)
+        if m["_quotaViewConnectionEpoch"] != nil {
+            if let latest = nativeConnectionEpoch, scope < latest { return }
+            if nativeConnectionEpoch != scope {
+                nativeConnectionEpoch = scope
+                for i in tasks.indices { tasks[i].requestLifecycle.invalidateResponses(except: scope) }
+            }
+        }
         if method == "thread/started" || method == "thread/snapshot" {
             guard let thread = p["thread"] as? [String: Any], let tid = thread["id"] as? String else { return }
             let key = CodexActivityPrivacy.hashIdentifier(tid)
@@ -254,8 +485,18 @@ final class IslandLiveStore {
             let active = status?["type"] as? String == "active"
             guard let i = index(key, admit: active) else { return }
             applyMetadata(thread, at: i); tasks[i].threadID = tid
-            if active { tasks[i].nativeState = true; applyFlags(status, at: i) }
+            if active { tasks[i].nativeState = true; applyFlags(status, at: i, epoch: scope) }
             onChange?(); return
+        }
+        if method == "serverRequest/resolved", p["threadId"] == nil,
+           let raw = p["requestId"], let id = try? IslandApprovalJSON(any: raw) {
+            let matches = tasks.indices.filter { i in
+                tasks[i].requests.contains { $0.rpcEpoch == scope && $0.value.protocolRequest?.rpcID == id }
+            }
+            // Some protocol versions omit threadId. Resolve only an unambiguous
+            // pending request, never an unrelated session with a reused ID.
+            if matches.count == 1 { resolveRequest(matches[0], id: id, epoch: scope); onChange?() }
+            return
         }
         guard let tid = p["threadId"] as? String else { return }
         let key = CodexActivityPrivacy.hashIdentifier(tid)
@@ -278,19 +519,18 @@ final class IslandLiveStore {
                 _ = entry
             }
             if tasks[i].turnKey == nil { tasks[i].turnKey = turnKey }
-            let requestKey = "\(connectionEpoch):\(wire.key)"
-            if let j = tasks[i].requests.firstIndex(where: { $0.key == requestKey }) {
-                if tasks[i].requests[j].value.protocolRequest?.raw == data { return }
-                tasks[i].requests.remove(at: j)
-            }
+            let requestKey = RequestLifecycle.rpcKey(wire.rpcID, epoch: scope)
+            guard !tasks[i].resolvedRequestKeys.contains(requestKey) else { return }
+            let itemID = wire.params["itemId"].text
+            if wire.kind == .questions, !itemID.isEmpty,
+               tasks[i].resolvedCallHashes.contains(CodexActivityPrivacy.hashIdentifier(itemID)) { return }
             guard !tasks[i].terminal else { return }
-            tasks[i].requests.removeAll { $0.key == "observer-placeholder" }
             let question = !wire.questions.isEmpty ? wire.questions[0].title : wire.params["message"].text.isEmpty ? (wire.params["reason"].text.isEmpty ? "Codex 请求你的处理" : wire.params["reason"].text) : wire.params["message"].text
-            let canRespond = respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm)
-            tasks[i].requests.append(.init(key: requestKey, value: .init(question: .init(question),
+            let canRespond = !wire.observationOnly && respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm)
+            tasks[i].requestLifecycle.observe(.init(key: requestKey, value: .init(question: .init(question),
                 impact: canRespond ? .init("确认后继续任务。", "Approve to resume the task.")
-                    : .init("此连接仅支持查看，请在 Codex 处理。", "This connection is read-only; handle the request in Codex."), protocolRequest: wire, canRespond: canRespond)))
-            if wire.kind != .questions { tasks[i].status = .waiting }
+                    : .init("此连接仅支持查看，请在 Codex 处理。", "This connection is read-only; handle the request in Codex."), protocolRequest: wire, canRespond: canRespond),
+                callHash: itemID.isEmpty ? nil : CodexActivityPrivacy.hashIdentifier(itemID), rpcEpoch: scope))
             onChange?(); return
         }
         switch method {
@@ -304,14 +544,14 @@ final class IslandLiveStore {
             guard !tasks[i].terminal else { return }
             let status = turn?["status"] as? String
             guard ["completed", "interrupted", "failed"].contains(status) else { return }
-            tasks[i].status = status == "completed" ? .completed : status == "interrupted" ? .cancelled : .failed
+            tasks[i].activityStatus = status == "completed" ? .completed : status == "interrupted" ? .cancelled : .failed
             tasks[i].progress = status == "completed" ? 1 : tasks[i].progress
             tasks[i].endedAt = eventDate(turn?["completedAtMs"], fallback: now)
-            tasks[i].requests.removeAll(); tasks[i].activeItems.removeAll()
+            tasks[i].requestLifecycle.finishTurn(); tasks[i].activeItems.removeAll()
             if let error = turn?["error"] as? [String: Any], let message = error["message"] as? String {
                 upsert(.init(text: .init(message), kind: .failure), at: i)
             }
-        case "thread/status/changed": applyFlags(p["status"] as? [String: Any], at: i)
+        case "thread/status/changed": applyFlags(p["status"] as? [String: Any], at: i, epoch: scope)
         case "thread/tokenUsage/updated":
             if let usage = CodexAppServerActivityNotificationDecoder.decodeTokenUsage(data: data, now: now) { receiveToken(usage) }
         case "turn/plan/updated":
@@ -320,29 +560,30 @@ final class IslandLiveStore {
             }
         case "serverRequest/resolved":
             if let raw = p["requestId"], let id = try? IslandApprovalJSON(any: raw) {
-                tasks[i].requests.removeAll { $0.value.protocolRequest?.rpcID == id }
-                if tasks[i].requests.isEmpty && tasks[i].status == .waiting { tasks[i].waitingOnSource = false; tasks[i].status = tasks[i].activeItems.isEmpty ? .thinking : .working }
-                tasks[i].requestIndex = min(tasks[i].requestIndex, max(0, tasks[i].requests.count - 1))
+                resolveRequest(i, id: id, epoch: scope)
             }
         case "item/started", "item/completed":
             guard !tasks[i].terminal, let item = p["item"] as? [String: Any], let type = item["type"] as? String,
                   type != "reasoning", let itemID = item["id"] as? String else { break }
             if let context = try? IslandApprovalJSON(any: item) { itemContexts[key + ":" + itemID] = context }
-            if type == "contextCompaction" { tasks[i].status = method == "item/started" ? .compacting : .thinking; break }
+            if type == "contextCompaction" { tasks[i].activityStatus = method == "item/started" ? .compacting : .thinking; break }
+            let mode = CodexUserInputMode.forToolName(item["tool"] as? String ?? item["name"] as? String ?? item["toolName"] as? String)
+            if method == "item/started" { tasks[i].requestLifecycle.observeMode(mode, callHash: CodexActivityPrivacy.hashIdentifier(itemID)) }
             if method == "item/started" && type != "agentMessage" {
+                tasks[i].requestLifecycle.continueCall(CodexActivityPrivacy.hashIdentifier(itemID))
                 let description = operationDescription(type, item: item)
                 tasks[i].activeItems[itemID] = description
-                if !tasks[i].waitingOnSource && !tasks[i].requests.contains(where: { $0.value.protocolRequest?.kind != .questions }) { tasks[i].status = .working }
+                tasks[i].activityStatus = .working
                 tasks[i].operation = description
             }
             if method == "item/completed" {
+                tasks[i].requestLifecycle.resolveCall(CodexActivityPrivacy.hashIdentifier(itemID), proofMode: mode, epoch: scope)
                 tasks[i].activeItems.removeValue(forKey: itemID)
-                if tasks[i].waitingOnSource || tasks[i].requests.contains(where: { $0.value.protocolRequest?.kind != .questions }) { tasks[i].status = .waiting }
-                else if tasks[i].activeItems.isEmpty {
-                    tasks[i].status = .thinking
+                if tasks[i].activeItems.isEmpty {
+                    tasks[i].activityStatus = .thinking
                     tasks[i].operation = String((tasks[i].entries.last(where: { $0.publicItem?.category == .message })?.text.chinese ?? "").prefix(240))
                 }
-                else { tasks[i].operation = tasks[i].activeItems.sorted { $0.key < $1.key }.last!.value }
+                else { tasks[i].activityStatus = .working; tasks[i].operation = tasks[i].activeItems.sorted { $0.key < $1.key }.last!.value }
             }
             appendItem(item, turnID: turnID ?? "", at: i)
         case "item/agentMessage/delta", "item/commandExecution/outputDelta":
@@ -363,14 +604,16 @@ final class IslandLiveStore {
         if let model = data["model"] as? String { tasks[i].model = model }
         if let effort = data["reasoningEffort"] as? String ?? data["effort"] as? String { tasks[i].effort = effort }
     }
-    private func applyFlags(_ status: [String: Any]?, at i: Int) {
-        guard !tasks[i].terminal, let status else { return }
+    private func applyFlags(_ status: [String: Any]?, at i: Int, epoch: UInt64) {
+        guard !tasks[i].terminal, let status, status["type"] as? String == "active" else { return }
         let flags = status["activeFlags"] as? [String] ?? []
-        tasks[i].waitingOnSource = flags.contains("waitingOnApproval") || flags.contains("waitingOnUserInput")
-        if tasks[i].waitingOnSource { tasks[i].status = .waiting; ensureReadOnlyRequest(i) }
-        else if status["type"] as? String == "active", tasks[i].status == .waiting {
-            tasks[i].status = tasks[i].activeItems.isEmpty ? .thinking : .working
-            tasks[i].requests.removeAll { $0.key == "observer-placeholder" }
+        let reason: CodexActivityWaitReason? = flags.contains("waitingOnUserInput") ? .userInput
+            : flags.contains("waitingOnApproval") ? .approval : nil
+        tasks[i].requestLifecycle.setSourceWait(reason, waiting: reason != nil, epoch: epoch)
+        // Thread continuation says execution resumed. It never says which
+        // independent async question was answered, so request identities survive.
+        if tasks[i].activityStatus != .compacting {
+            tasks[i].activityStatus = tasks[i].activeItems.isEmpty ? .thinking : .working
         }
     }
     private func toolName(_ type: String, item: [String: Any]) -> String {
@@ -460,18 +703,18 @@ final class IslandLiveStore {
               let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }),
               tasks[i].requests[j].value.canRespond, tasks[i].requests[j].value.phase.canSubmit,
               let wire = tasks[i].requests[j].value.protocolRequest, case .reply(let result) = decision,
-              wire.permits(result), let respond else { return }
-        tasks[i].requests[j].value.phase = .submitting(decision); onChange?()
+              !wire.observationOnly, wire.permits(result), let respond else { return }
+        tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         let epoch = connectionEpoch
         Task { [weak self] in
             do {
                 try await respond(wire, result)
                 guard let self, epoch == connectionEpoch, let i = tasks.firstIndex(where: { $0.id == id }),
                       let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }) else { return }
-                tasks[i].requests[j].value.phase = .sent; onChange?()
+                tasks[i].requestLifecycle.requests[j].value.phase = .sent; onChange?()
             } catch {
                 guard let self, let i = tasks.firstIndex(where: { $0.id == id }), let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }) else { return }
-                tasks[i].requests[j].value.phase = .resultUnknown; tasks[i].requests[j].value.canRespond = false; onChange?()
+                tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown; tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?()
             }
         }
     }
@@ -511,7 +754,7 @@ final class IslandLiveStore {
             let status: String
             if task.status == .cancelled { status = english ? "Interrupted" : "已中断" }
             else if task.status == .queued { status = english ? "Queued" : "排队中" }
-            else if task.status == .waiting && request?.protocolRequest?.kind == .questions { status = english ? "Awaiting answer" : "等待回答" }
+            else if task.status == .waiting && task.sourceWaitReason == .userInput { status = english ? "Awaiting answer" : "等待回答" }
             else { status = copy.statusTitle(for: visual) }
             let operation: String
             if task.operation == "exec" || task.operation.hasPrefix("exec · ") {
