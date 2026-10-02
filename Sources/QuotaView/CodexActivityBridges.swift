@@ -543,6 +543,27 @@ enum CodexActivityDiagnostics {
         delivery: CodexActivityDelivery,
         outcome: String
     ) {
+        let activity = delivery.activity
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let session = String(activity.sessionHash.prefix(12))
+        let turn = activity.turnHash.map { String($0.prefix(12)) } ?? "none"
+        let eventID = delivery.eventID.map {
+            String($0.prefix(12))
+        } ?? "legacy"
+        let activitySource = activity.source?.rawValue ?? "unknown"
+        let planSource = activity.planSource?.rawValue ?? "none"
+        let line = "\(timestamp) event=\(activity.event.rawValue) source=\(delivery.source.rawValue) activity_source=\(activitySource) plan_source=\(planSource) outcome=\(outcome) session=\(session) turn=\(turn) id=\(eventID)\n"
+        recordLine(line)
+    }
+
+    /// Metadata only: never include native request text, payloads or raw IDs.
+    static func recordDesktop(outcome: String, conversationID: String? = nil, details: String = "") {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let session = conversationID.map { String(CodexActivityPrivacy.hashIdentifier($0).prefix(12)) } ?? "none"
+        recordLine("\(timestamp) source=desktop outcome=\(outcome) session=\(session) \(details)\n")
+    }
+
+    private static func recordLine(_ line: String) {
         let path = logURL.path
         let descriptor = Darwin.open(
             path,
@@ -568,16 +589,6 @@ enum CodexActivityDiagnostics {
             guard ftruncate(descriptor, 0) == 0 else { return }
         }
 
-        let activity = delivery.activity
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let session = String(activity.sessionHash.prefix(12))
-        let turn = activity.turnHash.map { String($0.prefix(12)) } ?? "none"
-        let eventID = delivery.eventID.map {
-            String($0.prefix(12))
-        } ?? "legacy"
-        let activitySource = activity.source?.rawValue ?? "unknown"
-        let planSource = activity.planSource?.rawValue ?? "none"
-        let line = "\(timestamp) event=\(activity.event.rawValue) source=\(delivery.source.rawValue) activity_source=\(activitySource) plan_source=\(planSource) outcome=\(outcome) session=\(session) turn=\(turn) id=\(eventID)\n"
         _ = line.withCString { pointer in
             Darwin.write(descriptor, pointer, strlen(pointer))
         }

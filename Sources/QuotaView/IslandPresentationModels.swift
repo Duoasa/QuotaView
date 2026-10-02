@@ -107,7 +107,7 @@ struct CodexPublicTraceItem: Equatable {
     var category: Category; var sourceID: String; var turnID: String
     var status: String?; var output: String?; var sourceTruncated = false; var exitCode: Int?
 }
-enum IslandConfirmationDecision: Equatable { case allowOnce, reject, reply(IslandApprovalJSON) }
+enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }
 struct IslandConfirmation: Identifiable, Equatable {
     enum Phase: Equatable {
         case ready, submitting(IslandConfirmationDecision), sent, resultUnknown, resolved

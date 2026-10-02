@@ -94,6 +94,14 @@ final class CodexActivityStore: ObservableObject {
     }
 
     var localPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
+    /// Local-only tasks can request read-only Desktop owner discovery without
+    /// waiting for a Shared App Server envelope carrying the raw thread ID.
+    var localThreadActivityDidReceive: ((CodexLocalRolloutThreadIdentity, Bool) -> Void)?
+    private var localDesktopFollows: [String: (identity: CodexLocalRolloutThreadIdentity, turn: String)] = [:]
+    private var localDesktopFollowOrder: [String] = []
+    var localDesktopFollowIdentities: [CodexLocalRolloutThreadIdentity] {
+        localDesktopFollowOrder.compactMap { localDesktopFollows[$0]?.identity }
+    }
     var publicMessageDidReceive: ((Data) -> Void)?
     var desktopProjectionDidReceive: ((CodexDesktopInteractionProjection, CodexDesktopConversationSnapshot) -> Void)?
     var admittedActivityDidReceive: ((CodexActivityEvent) -> Void)?
@@ -465,7 +473,22 @@ final class CodexActivityStore: ObservableObject {
               desktopPublicEpoch.map({ epoch >= $0 }) ?? true,
               let turnID = projection.currentTurnID, !turnID.isEmpty else { return false }
         let session = CodexActivityPrivacy.hashIdentifier(desktop.conversationID)
-        let kind = projection.sourceKind == .unknown ? (sessionKinds[session] ?? .unknown) : projection.sourceKind
+        let kind: CodexActivitySessionKind
+        if projection.sourceKind != .unknown {
+            kind = projection.sourceKind
+        } else if let known = sessionKinds[session], known != .unknown {
+            kind = known
+        } else if let local = localDesktopFollows[session]?.identity,
+                  local.threadID == desktop.conversationID, local.sessionHash == session,
+                  local.sessionKind == .user {
+            // Discovery verified this directory's session metadata before
+            // requesting a follow. A paused rollout need not already be an
+            // admitted task; only the owner supplies current-turn authority.
+            // stop/directory reset and LRU withdrawal revoke this identity.
+            kind = .user
+        } else {
+            kind = .unknown
+        }
         guard kind == .user else { return false }
         let turnHash = CodexActivityPrivacy.hashIdentifier(turnID)
         if let prior = desktopReceiptReservations[session]?.admission, prior.epoch == epoch,
@@ -510,16 +533,20 @@ final class CodexActivityStore: ObservableObject {
             guard isCurrentReceipt(), taskRegistry.currentIdentity(for: session) == identity else { return false }
             flushLocalPublicContent(for: session)
             let blockers = projection.requests.filter { $0.turnID == turnID && $0.userInputMode != .asynchronous }
-            if let blocker = blockers.first {
-                let question = blocker.method == "item/tool/requestUserInput"
+            let waitReason: CodexActivityWaitReason?
+            if case .waiting(let reason) = projection.threadWaitStatus {
+                waitReason = reason
+            } else if let blocker = blockers.first {
+                waitReason = blocker.method == "item/tool/requestUserInput" ? .userInput : .approval
+            } else { waitReason = nil }
+            if let waitReason {
+                let question = waitReason == .userInput
                 let waiting = CodexActivityEvent(event: .permissionRequest, sessionHash: session,
                     turnHash: turnHash, sessionKind: kind, source: .appServer,
-                    waitReason: question ? .userInput : .approval,
-                    toolName: question ? "request_user_input" : nil, occurredAt: now)
+                    waitReason: waitReason, toolName: question ? "request_user_input" : nil, occurredAt: now)
                 await receiveClassified(.init(source: .liveSocket, activity: waiting), generation: run, admissionAllowed: isCurrentReceipt)
                 guard isCurrentReceipt() else { return false }
-                desktopWaitEvidence[session] = .init(identity: identity, epoch: epoch,
-                                                     reason: question ? .userInput : .approval)
+                desktopWaitEvidence[session] = .init(identity: identity, epoch: epoch, reason: waitReason)
             }
         } else {
             let event: CodexActivityHookEvent = projection.status == "interrupted" ? .interrupt : .stop
@@ -542,6 +569,12 @@ final class CodexActivityStore: ObservableObject {
         guard !connected else { return }
         if let epoch = desktopPublicEpoch { closedDesktopPublicEpoch = max(closedDesktopPublicEpoch ?? epoch, epoch) }
         desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+    }
+
+    /// Unfollow cancels a receipt even before its first capability reaches the
+    /// Island. An in-flight source classifier cannot reattach a detached scope.
+    func cancelDesktopAttachment(conversationID: String) {
+        desktopReceiptReservations.removeValue(forKey: CodexActivityPrivacy.hashIdentifier(conversationID))
     }
 
     /// Resource revocation cancels in-flight attachment; it is not settlement.
@@ -622,9 +655,14 @@ final class CodexActivityStore: ObservableObject {
         return true
     }
 
-    private func receiveLocalRecord(_ record: CodexLocalRolloutDecodedRecord, replay: Bool,
-                                    generation run: UInt64) async {
+    func receiveLocalRecord(_ record: CodexLocalRolloutDecodedRecord, replay: Bool,
+                            generation expected: UInt64? = nil) async {
+        let run = expected ?? nativeGeneration
         guard nativeGeneration == run else { return }
+        let terminal: Bool
+        if case .activity(let event) = record.update { terminal = [.stop, .interrupt, .sessionEnd].contains(event.event) }
+        else { terminal = false }
+        if !terminal { publishLocalDesktopFollow(record, active: true, generation: run) }
         guard let projection = localRecovery.project(record) else {
             if let session = Self.localRecordSession(record), let identity = confirmedNativeTurns[session],
                taskRegistry.currentIdentity(for: session)?.turnHash == identity.turnHash {
@@ -642,6 +680,7 @@ final class CodexActivityStore: ObservableObject {
         }
         guard nativeGeneration == run else { return }
         await applyLocalRecord(projection.record, replay: replay, generation: run)
+        if terminal { publishLocalDesktopFollow(record, active: false, generation: run) }
         // A native snapshot may precede discovery of the paused rollout. Its
         // identified current turn also confirms context arriving in that order.
         if let session = Self.localRecordSession(record), let identity = confirmedNativeTurns[session],
@@ -651,6 +690,45 @@ final class CodexActivityStore: ObservableObject {
             }
             flushLocalPublicContent(for: session)
         }
+    }
+
+    private func publishLocalDesktopFollow(_ record: CodexLocalRolloutDecodedRecord, active: Bool, generation run: UInt64) {
+        guard nativeGeneration == run, let identity = record.threadIdentity,
+              identity.sessionKind == .user, !identity.threadID.isEmpty, identity.threadID.utf8.count <= 1024,
+              identity.sessionHash == CodexActivityPrivacy.hashIdentifier(identity.threadID) else { return }
+        let session: String; let turn: String?
+        switch record.update {
+        case .activity(let event):
+            guard event.source == .localRollout, event.sessionKind != .internalTask else { return }
+            session = event.sessionHash; turn = event.turnHash
+        case .tokenUsage(let usage): session = usage.sessionHash; turn = usage.turnHash
+        case .tokenUsageReplay(let updates):
+            guard let first = updates.first, updates.allSatisfy({ $0.sessionHash == first.sessionHash && $0.turnHash == first.turnHash }) else { return }
+            session = first.sessionHash; turn = first.turnHash
+        }
+        guard session == identity.sessionHash, let turn,
+              !taskRegistry.isPriorTurn(session: session, turn: turn) else { return }
+        if active {
+            guard terminalTurnsBySession[session]?.turnHash != turn else { return }
+            localDesktopFollows[session] = (identity, turn)
+            localDesktopFollowOrder.removeAll { $0 == session }; localDesktopFollowOrder.append(session)
+            while localDesktopFollowOrder.count > 100 {
+                let evicted = localDesktopFollowOrder.removeFirst()
+                if let previous = localDesktopFollows.removeValue(forKey: evicted) {
+                    // Withdrawing a bounded read-only observation is independent
+                    // of answering or completing the user's underlying task.
+                    localThreadActivityDidReceive?(previous.identity, false)
+                }
+            }
+        } else {
+            // Only an admitted terminal for the current turn can withdraw this
+            // intent; an older completion cannot detach a newer conversation.
+            guard taskRegistry.currentIdentity(for: session)?.turnHash == turn,
+                  terminalTurnsBySession[session]?.turnHash == turn else { return }
+            localDesktopFollows.removeValue(forKey: session)
+            localDesktopFollowOrder.removeAll { $0 == session }
+        }
+        localThreadActivityDidReceive?(identity, active)
     }
 
     private static func localRecordSession(_ record: CodexLocalRolloutDecodedRecord) -> String? {
@@ -1053,6 +1131,7 @@ final class CodexActivityStore: ObservableObject {
         acceptedEventIDOrder.removeAll()
         snapshot = nil
         localRecovery = CodexLocalActivityRecovery()
+        localDesktopFollows.removeAll(); localDesktopFollowOrder.removeAll()
         pendingLocalPublicContent.removeAll(); nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll()
         pendingNativePublicMessages.removeAll()
         nativePublicEpoch = nil; closedNativePublicEpoch = nil

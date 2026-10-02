@@ -1,5 +1,31 @@
 # QuotaView Handoff
 
+## Desktop 问题交互与真实连接修复 · 2026-10-02 本轮最新
+
+本轮先核对原版 Vibe Island 1.0.51、本机 Codex Desktop 26.928.40906（bundle `com.openai.codex`，CLI 0.159.2 单独记录）和实际运行包，梳理传输、当前轮次、来源准入、响应能力与 View 草稿入口。反复“仅查看”并非只缺按钮：原 socket 读取短回复会等待填满缓冲；canonical 历史/live suffix 的当前轮次合成与原生语义不一致；未知 Desktop 来源未借用仍验证有效的 Local 用户身份。另在真实多会话跟随中发现本会话完整快照约 **14.55 MiB**，超限触发旧全局 resource pause，使正常会话也丢失能力。
+
+现使用非阻塞 socket 短帧读取与单块消费背压；超过 **9 MiB 完整帧物化预算** 的快照有界流式排空，只保留最多 64 KiB 信封元数据。完整声明帧到齐后核验当前 owner、目标、conversation/host/epoch 与版本，精确隔离对应 follow；单会话 8 MiB、总保留 32 MiB 预算保持。无法唯一归属、超出原生 256 MiB wire 边界或排空超时才暂停整条连接；不会把超限当成已回答。旧 deadline/异步失效回调在 stop/start 后不能关闭新 epoch。超大会话本身仍交由 Codex 处理，不通过提高内存上限或压缩用户任务制造可操作能力。
+
+当前轮次按原生 canonical/live 合成规则处理；canonical 引用缺失时保持非权威，不能清除旧等待。未知 source 仅借用当前目录代次内仍验证且保留的用户身份，internal、无效、已撤销、旧目录身份拒绝；来源准入不代替 owner 输入能力证明。问题 View 和冒烟共用 `IslandQuestionInteractionEntry` 及真实 Board UUID 草稿 Binding：选项/自行输入只更新草稿和选中状态，切换保留文字，点击“确认”才单次回传。可覆盖的问题使用“跳过 / 确认”，无法覆盖才在 Codex 处理。同步跳过原生空 answers；异步原生界面跳过没有 follower RPC，Island 仅隐藏提示，不能声称关闭 Codex 提问。
+
+最终 **188 项必要隔离冒烟**、Debug arm64 构建、固定身份/资源和 deep strict ad-hoc 签名通过，开发包 PID **94157**，替换旧开发实例 [63703]；身份保持 **0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`**。178 项构建输入指纹核对一致。证据 `.build/073-question-capability-smoke.log`、`.build/073-question-capability-build.log`、`.build/073-question-capability-delivery.json`。
+
+打包 Core 真实只读多 follow 核对：超大会话 scope 被隔离，同一连接仍收到命名测试任务的权威快照、owner 输入能力；probe 仅在显式 stop 后断开，真实答案发送数为 0。实际开发进程同样保持 connected 并记录会话级 resource_limit。测试任务当时已完成，不能据此声称真实待确认点击验收通过；该行为由隔离真实 Unix socket + 生产 View 草稿入口 smoke 验证，实际交互仍待用户验收。证据 `.build/073-question-capability-stock-readonly.json`、`.build/073-question-capability-stock-multifollow-readonly.json`。181 项中间包只读单任务核对没有覆盖多 follow 资源问题，不能作为最终交付；187 项后又补旧 epoch 回调边界并以 188 项完成复验，历史证据保留。
+
+本轮修复提交 `3317b3c92d27b518b9d275214c28170af0dc8a9e` 已推送至 [PR #69](https://github.com/Duoasa/QuotaView/pull/69)，指向 main。用户明确授权检查 GitHub CI 后合并；GitHub 完整 Swift CI 与实际合并状态以该 PR 为准。本轮 188 项本地验证与已运行开发包输入独立记录；历史 PR #68 不包含本轮新修订。仅更新既有开发包；稳定安装、版本身份、公开 Release/appcast 和用户数据保持。没有 UI 自动化或真实任务回答。下列交付数字和 PID 均为历史记录，当前结果以上述最新节为准。
+
+## 历史交付：问题交互、手动收起与等待纠正 · 2026-10-02
+
+问题页补齐原生允许的“自行输入”，选项和输入只改草稿，切换选择保留文字；有明确选中反馈，全部必填内容就绪后点击“确认”才按原请求身份发送一次。同步提问的“跳过”发送原生空 answers；异步提问的原生跳过仅属于界面本地状态，灵动岛只隐藏本轮提示，不发送空答案或伪造 steering，也不能保证关闭 Codex 原生窗口提示。未支持的结构、多选或未证明 Desktop 能力继续在 Codex 处理。原始 Desktop owner/epoch/turn 与 ACK/解决边界保持。
+
+待确认可以手动收起；同请求的普通刷新不会重新展开，草稿保留，新请求/新待确认会话仍按自动弹出偏好呼出。补齐 local-only 用户任务的只读 Desktop follow，临时原始线程身份只来自验证过的当前目录/轮次元数据，不落盘或提升观察通路权限；停用、换目录、LRU 撤销和分类期间迟到回调同步失效。
+
+卡在“请求详情暂不可用”的根因是 Desktop runtime flags 被投影丢弃，且 Core/Island 只在移除 typed 请求时同步解除等待。现同时读取当前 owner 的完整 pending 集合与 runtime flags，明确运行且无待确认时清理同轮次匿名等待，即使没有 typed 删除也同步 Core 状态。未知/部分数据、未来 RPC、真实 typed/async 和并行等待保留；已绑定 owner/epoch 的证据只在对应作用域解除，重新观测到同 blocking 请求可迁移等待证据与真实 handle，避免重连留下旧 aggregate wait。已核实的 time/token/attestation 自动服务 RPC 不作为确认阻塞。
+
+最终 **134 项必要隔离冒烟、Debug arm64 构建、固定身份/资源、deep strict ad-hoc 签名及准确路径启动核对通过**，当前开发包 PID **240**，替换旧开发实例 [90147]；身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。证据 `.build/073-question-interaction-final-smoke.log`、`.build/073-question-interaction-final-build.log`、`.build/073-question-interaction-delivery.json`。新增夹具首次混用模拟和 live 时间，已统一时钟，14 项专项复验及最终 134 项复验通过；首次失败与修正证据保留在 `.build/073-question-interaction-fixture-clock-*.log/json`。176 项输入指纹与已运行包核对一致；生产源码在最终构建后未改变，只修正测试夹具。
+
+本轮修订尚未提交推送，基准 HEAD `800d1ce53814459fe8d2d36750d0941d4345a260`；上轮 [PR #68](https://github.com/Duoasa/QuotaView/pull/68) 已合并 main `870c89dc2f648f2b3256960c62758c9a8853d7dd`，不能视为包含本轮新修订。稳定安装、冻结开发台、版本身份和公开 Release/appcast 保持。未操作真实待确认、未做 UI 自动化或完整本地回归；视觉和实际点击由用户验收。以下为历史交付，旧 PID/验证数字属于当时记录。
+
 ## Desktop 直接确认与双向同步 · 2026-10-02
 
 按用户要求参考原版 Vibe Island 1.0.51 和本机 Codex 0.159.2 的实际 Desktop owner/follower IPC，实现原任务确认详情与回传；模块职责、协议和失败语义见 [Desktop 确认同步规格](docs/specs/codex-desktop-confirmation-sync.md)。普通审批、同步提问和受支持工具表单使用原始 RPC；异步问题使用原生 questionItemId 和回答 steering 消息，不伪装成审批。新真实请求自动进入详情，刷新不抢焦点，既有手动页面、其他请求草稿和自动弹出偏好保持。此前纯观察模式只适用于没有已证明 Desktop 能力的来源。

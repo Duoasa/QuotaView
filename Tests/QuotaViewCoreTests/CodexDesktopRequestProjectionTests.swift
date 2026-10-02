@@ -200,6 +200,106 @@ final class CodexDesktopRequestProjectionTests: XCTestCase {
         XCTAssertTrue(cleared.authoritativePendingIdentities.isEmpty)
     }
 
+    func testRuntimeFlagsAreExplicitContinuationEvidenceRatherThanInProgressOrEmptyRequests() throws {
+        var state = base(requests: [], turns: [turn("turn")])
+        XCTAssertEqual(try project(state).threadWaitStatus, .unavailable)
+        XCTAssertFalse(try project(state).provesNoPendingConfirmation)
+        let unsupportedRuntimeStates: [[String: Any]] = [
+            ["type": "active"], ["type": "active", "activeFlags": ["futureWaitingFlag"]],
+            ["type": "active", "activeFlags": "invalid"], ["type": "idle"]]
+        for runtime in unsupportedRuntimeStates {
+            state["threadRuntimeStatus"] = runtime
+            XCTAssertEqual(try project(state).threadWaitStatus, .unavailable)
+            XCTAssertFalse(try project(state).provesNoPendingConfirmation)
+        }
+        state["threadRuntimeStatus"] = ["type": "active", "activeFlags": ["waitingOnApproval"]]
+        XCTAssertEqual(try project(state).threadWaitStatus, .waiting(.approval))
+        XCTAssertFalse(try project(state).provesNoPendingConfirmation)
+        state["threadRuntimeStatus"] = ["type": "active", "activeFlags": []]
+        XCTAssertEqual(try project(state).threadWaitStatus, .running)
+        XCTAssertTrue(try project(state).provesNoPendingConfirmation)
+        state["requests"] = [rpc(id: "future", method: "future/approval/request")]
+        XCTAssertFalse(try project(state).provesNoPendingConfirmation,
+            "An unrepresented pending RPC is not an empty confirmation set")
+    }
+
+    func testAutomaticServiceRPCsNeedNoThreadParamsAndDoNotBlockConfirmationContinuation() throws {
+        let services: [[String: Any]] = [
+            ["id": "time", "method": "currentTime/read", "params": [:]],
+            ["id": "token", "method": "account/chatgptAuthTokens/refresh", "params": ["reason": "fixture"]],
+            ["id": "attestation", "method": "attestation/generate", "params": ["challenge": "fixture"]]]
+        var state = base(requests: services, turns: [turn("turn")])
+        state["threadRuntimeStatus"] = ["type": "active", "activeFlags": []]
+        let full = try project(state)
+        XCTAssertTrue(full.requests.isEmpty)
+        XCTAssertTrue(full.authoritativePendingIdentities.isEmpty)
+        XCTAssertTrue(full.provesNoPendingConfirmation)
+        state["requests"] = services + [rpc(id: "future", method: "future/approval/request")]
+        XCTAssertFalse(try project(state).provesNoPendingConfirmation,
+            "A known automatic RPC exclusion cannot suppress unknown user interactions")
+        state["requests"] = [["method": "currentTime/read", "params": [:]]]
+        XCTAssertThrowsError(try project(state), "Even an automatic RPC retains envelope identity validation")
+    }
+
+    func testNativeLiveSuffixWithoutCanonicalAnchorOrStartTimeOwnsCurrentQuestion() throws {
+        var old = turn("old", status: "completed"); old.removeValue(forKey: "turnStartedAtMs")
+        var fresh = turn("fresh", items: [["id": "message", "type": "agentMessage", "questions": [["title": "Fixture question", "options": ["A", "B"]]]]])
+        fresh.removeValue(forKey: "turnStartedAtMs")
+        var state = base(requests: [rpc(id: "old", turn: "old"), rpc(id: "fresh", turn: "fresh")], turns: [fresh])
+        state["turnHistory"] = ["kind": "canonical", "history": ["islands": [["newerBoundary": ["status": "exhausted"], "entries": [["value": "old-key"]]]], "entitiesByKey": ["old-key": old]]]
+        let projection = try project(state)
+        XCTAssertEqual(projection.currentTurnID, "fresh")
+        XCTAssertEqual(projection.status, "inProgress")
+        XCTAssertTrue(projection.pendingRequestsAreAuthoritative)
+        XCTAssertEqual(projection.requests.map(\.requestID), [.string("fresh")])
+        XCTAssertEqual(projection.authoritativeAsyncQuestionIDs.count, 1)
+    }
+
+    func testNativeSameTurnLiveStatusRestoresActiveQuestionWithoutPaginationOverlay() throws {
+        var state = base(requests: [rpc(id: "pending")], turns: [turn("turn", items: [[
+            "id": "message", "type": "agentMessage", "questions": [["title": "Fixture question", "options": ["A"]]]]])])
+        state["turnHistory"] = ["kind": "canonical", "history": ["islands": [["newerBoundary": ["status": "exhausted"], "entries": [["value": "key"]]]], "entitiesByKey": ["key": turn("turn", status: "completed")]]]
+        let projection = try project(state)
+        XCTAssertEqual(projection.status, "inProgress")
+        XCTAssertEqual(projection.requests.count, 1)
+        XCTAssertEqual(projection.authoritativeAsyncQuestionIDs.count, 1)
+        XCTAssertTrue(projection.pendingRequestsAreAuthoritative)
+    }
+
+    func testNativePaginationOverlayKeepsExistingTerminalState() throws {
+        var canonical = turn("turn", status: "completed")
+        canonical["itemsPagination"] = ["hasLoadedOldest": false]
+        var state = base(requests: [rpc(id: "pending")], turns: [turn("turn")])
+        state["turnHistory"] = ["kind": "canonical", "history": ["islands": [["newerBoundary": ["status": "exhausted"], "entries": [["value": "key"]]]], "entitiesByKey": ["key": canonical]]]
+        let projection = try project(state)
+        XCTAssertEqual(projection.status, "completed")
+        XCTAssertTrue(projection.authoritativePendingIdentities.isEmpty)
+    }
+
+    func testNativeLivePrefixBeforeCanonicalAnchorIsNotAppendedAsCurrentTurn() throws {
+        var prefix = turn("prefix"); prefix.removeValue(forKey: "turnStartedAtMs")
+        var state = base(requests: [], turns: [prefix, turn("old", status: "completed")])
+        state["turnHistory"] = ["kind": "canonical", "history": ["islands": [["newerBoundary": ["status": "exhausted"], "entries": [["value": "old-key"], ["value": "current-key"]]]], "entitiesByKey": ["old-key": turn("old", status: "completed"), "current-key": turn("current")]]]
+        XCTAssertEqual(try project(state).currentTurnID, "current")
+    }
+
+    func testMissingCanonicalTailCannotPromoteOlderTurnToSettlementOrCompletionProof() throws {
+        for oldStatus in ["completed", "inProgress"] {
+            var state = base(requests: [rpc(id: "old-pending", turn: "old")], turns: [])
+            state["threadRuntimeStatus"] = ["type": "active", "activeFlags": []]
+            state["turnHistory"] = ["kind": "canonical", "history": ["islands": [[
+                "newerBoundary": ["status": "exhausted"], "entries": [["value": "old-key"], ["value": "missing-current-key"]]]],
+                "entitiesByKey": ["old-key": turn("old", status: oldStatus)]]]
+            let projection = try project(state)
+            XCTAssertNil(projection.currentTurnID)
+            XCTAssertEqual(projection.status, "unknown",
+                "An older completed turn cannot tell Runtime to stop following the current task")
+            XCTAssertFalse(projection.pendingRequestsAreAuthoritative)
+            XCTAssertFalse(projection.provesNoPendingConfirmation,
+                "An unresolved current reference cannot erase the previously observed waiting request")
+        }
+    }
+
     private func project(_ data: Data) throws -> CodexDesktopInteractionProjection {
         try CodexDesktopRequestProjector.project(conversationID: "thread", conversationStateData: data)
     }

@@ -5,9 +5,11 @@ import SQLite3
 final class CodexLocalRolloutDiscovery {
     struct Candidate: Sendable, Equatable {
         let fileURL: URL
+        let threadID: String
         let sessionHash: String
         let workspaceName: String?
         let sessionKind: CodexActivitySessionKind
+        let metadataKind: CodexActivitySessionKind
     }
 
     private let codexHomeURL: URL
@@ -137,9 +139,11 @@ final class CodexLocalRolloutDiscovery {
             result.append(
                 Candidate(
                     fileURL: fileURL,
+                    threadID: metadata.threadID,
                     sessionHash: sessionHash,
                     workspaceName: workspaceName,
-                    sessionKind: kind
+                    sessionKind: kind,
+                    metadataKind: metadata.kind
                 )
             )
         }
@@ -232,8 +236,8 @@ final class CodexLocalRolloutDiscovery {
                 continue
             }
             guard metadata.kind != .internalTask else { continue }
-            result.append(Candidate(fileURL: file, sessionHash: metadata.sessionHash,
-                                    workspaceName: metadata.workspaceName, sessionKind: metadata.kind))
+            result.append(Candidate(fileURL: file, threadID: metadata.threadID, sessionHash: metadata.sessionHash,
+                                    workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind))
             if result.count == maximumCandidateCount { break }
         }
         return result
@@ -241,18 +245,19 @@ final class CodexLocalRolloutDiscovery {
 
     static func readSessionMetadata(
         from fileURL: URL
-    ) -> (sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind)? {
+    ) -> (threadID: String, sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind)? {
         guard let line = readMetadataLine(from: fileURL),
               let object = try? JSONSerialization.jsonObject(with: line),
               let envelope = object as? [String: Any],
               envelope["type"] as? String == "session_meta",
               let payload = envelope["payload"] as? [String: Any],
               let id = payload["id"] as? String,
-              !id.isEmpty
+              !id.isEmpty, id.utf8.count <= 1024
         else {
             return nil
         }
         return (
+            id,
             CodexActivityPrivacy.hashIdentifier(id),
             CodexActivityPrivacy.workspaceName(
                 from: payload["cwd"] as? String

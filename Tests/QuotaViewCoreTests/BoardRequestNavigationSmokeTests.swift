@@ -109,4 +109,101 @@ final class BoardRequestNavigationSmokeTests: XCTestCase {
         board.dismissDetail(); update(board, model)
         XCTAssertNil(board.detailID)
     }
+
+    @MainActor
+    func testExplicitCollapsePreservesPendingDraftAndDoesNotReopenOnRefresh() throws {
+        let model = IslandLiveStore(); let board = IslandBoardState()
+        start(model, "pending"); update(board, model)
+        question(model, "pending", id: 1); update(board, model)
+        let task = try XCTUnwrap(board.approval?.task.id)
+        let request = try XCTUnwrap(board.approval?.request.id)
+        var draft = IslandApprovalDraft(); draft.values["scope"] = "继续保留输入"
+        board.approvalDraftBinding(for: request).wrappedValue = draft
+        board.toggleCompact()
+        XCTAssertTrue(board.compact); XCTAssertNil(board.detailID)
+        XCTAssertEqual(board.attentionCount, 1)
+        for _ in 0..<3 { update(board, model) }
+        XCTAssertTrue(board.compact, "An ordinary refresh must respect the explicit collapse")
+        XCTAssertNil(board.automaticPreviewDeadline)
+        XCTAssertEqual(board.approvalDraftBinding(for: request).wrappedValue, draft)
+        board.select(task)
+        XCTAssertEqual(board.approval?.request.id, request)
+        XCTAssertEqual(board.approvalDraftBinding(for: request).wrappedValue, draft)
+    }
+
+    @MainActor
+    func testNewQueuedRequestAndAnotherSessionCanReopenAfterExplicitCollapse() throws {
+        let model = IslandLiveStore(); let board = IslandBoardState()
+        start(model, "A"); start(model, "B"); update(board, model)
+        question(model, "A", id: 1); update(board, model)
+        let firstTask = try XCTUnwrap(board.approval?.task.id)
+        let firstRequest = try XCTUnwrap(board.approval?.request.id)
+        board.collapse(); update(board, model)
+        XCTAssertTrue(board.compact)
+        question(model, "A", id: 2); update(board, model)
+        XCTAssertFalse(board.compact)
+        XCTAssertEqual(board.approval?.task.id, firstTask)
+        XCTAssertEqual(board.approval?.request.id, firstRequest, "Reopening does not discard the first queued request")
+        XCTAssertEqual(board.approval?.request.queueCount, 2)
+        board.collapse(); update(board, model)
+        XCTAssertTrue(board.compact)
+        question(model, "B", id: 3); update(board, model)
+        XCTAssertFalse(board.compact)
+        XCTAssertNotEqual(board.approval?.task.id, firstTask)
+        XCTAssertEqual(board.approval?.request.protocolRequest?.threadID, "B")
+        board.collapse(); update(board, model, automatic: false)
+        question(model, "B", id: 4); update(board, model, automatic: false)
+        XCTAssertTrue(board.compact, "New identities still obey the automatic popup preference")
+    }
+
+    @MainActor
+    func testOutsideDismissalAndExplicitUnpinCanCollapsePendingPresentation() {
+        let model = IslandLiveStore(); let board = IslandBoardState()
+        start(model, "pending"); update(board, model)
+        question(model, "pending", id: 1); update(board, model)
+        board.endPreview()
+        XCTAssertFalse(board.compact, "A passive hover exit does not dismiss a pending request")
+        board.dismissFromOutside(); update(board, model)
+        XCTAssertTrue(board.compact)
+        board.select(model.tasks[0].id); board.pin(); board.dismissFromOutside()
+        XCTAssertEqual(board.presentation, .pinned, "Outside clicks retain an explicitly pinned presentation")
+        board.collapse(); update(board, model)
+        XCTAssertTrue(board.compact, "The explicit collapse command overrides pinning")
+        XCTAssertEqual(board.attentionCount, 1)
+    }
+
+
+    @MainActor
+    func testNewGenericRequestReopensListWithoutInventingDetailOrOverridingManualPages() {
+        let model = IslandLiveStore(); let board = IslandBoardState()
+        start(model, "generic"); update(board, model)
+        func wait(_ call: String) {
+            model.receiveLegacy(.init(event: .permissionRequest,
+                sessionHash: CodexActivityPrivacy.hashIdentifier("generic"), turnHash: CodexActivityPrivacy.hashIdentifier("turn"),
+                sessionKind: .user, source: .hook, toolCallHash: CodexActivityPrivacy.hashIdentifier(call), occurredAt: date))
+        }
+        wait("first"); update(board, model)
+        XCTAssertFalse(board.compact); XCTAssertNil(board.detailID); XCTAssertNil(board.approval)
+        board.collapse(); update(board, model)
+        wait("first"); update(board, model)
+        XCTAssertTrue(board.compact, "Repeated wait evidence has no new request identity")
+        wait("second"); update(board, model)
+        XCTAssertFalse(board.compact, "A new generic request can announce itself while another remains pending")
+        XCTAssertNil(board.detailID); XCTAssertNil(board.approval, "A state-only request must not invent a confirmation form")
+        board.collapse(); update(board, model)
+        XCTAssertTrue(board.compact)
+        wait("disabled"); update(board, model, automatic: false)
+        XCTAssertTrue(board.compact)
+        board.openUsage(); wait("usage"); update(board, model)
+        XCTAssertTrue(board.showsUsage); XCTAssertNil(board.approval)
+        board.openReset(); wait("reset"); update(board, model)
+        XCTAssertTrue(board.showsReset); XCTAssertTrue(board.showsUsage)
+        board.collapse(); board.pin(); wait("pinned"); update(board, model)
+        XCTAssertEqual(board.presentation, .pinned); XCTAssertNil(board.detailID)
+        board.collapse(); wait("after-pin"); update(board, model)
+        XCTAssertFalse(board.compact); XCTAssertNil(board.detailID)
+        board.collapse(); update(board, model)
+        XCTAssertTrue(board.compact, "The newly announced request also remains dismissed on ordinary refresh")
+    }
+
 }

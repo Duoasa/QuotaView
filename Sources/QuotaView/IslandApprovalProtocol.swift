@@ -53,6 +53,8 @@ struct IslandApprovalQuestion: Identifiable, Equatable {
     var options: [IslandApprovalJSON]
     var other: Bool
     var secret: Bool
+    var multiple: Bool = false
+    var allowsCustomAnswer: Bool { other || options.isEmpty }
     var header: String = ""
 }
 struct IslandApprovalField: Identifiable, Equatable {
@@ -217,8 +219,23 @@ struct IslandCodexApprovalRequest: Equatable {
     var questions: [IslandApprovalQuestion] {
         params["questions"].array.map {
             .init(id: $0["id"].text, title: $0["question"].text, options: $0["options"].array,
-                  other: $0["isOther"].boolean, secret: $0["isSecret"].boolean, header: $0["header"].text)
+                  other: $0["isOther"].boolean, secret: $0["isSecret"].boolean, multiple: $0["multiSelect"].boolean, header: $0["header"].text)
         }
+    }
+    var supportedQuestions: Bool {
+        !questions.isEmpty && questions.count <= 32
+            && Set(questions.map(\.id)).count == questions.count
+            && questions.allSatisfy { q in
+                !q.id.isEmpty && !q.title.isEmpty && !q.multiple
+                    && q.options.allSatisfy { !$0["label"].text.isEmpty }
+                    && Set(q.options.map { $0["label"].text }).count == q.options.count
+            }
+    }
+    /// Native synchronous Skip responds with an empty answer collection.
+    /// Async Skip is only a local dismissal and must never send an empty answer.
+    var questionSkipResult: IslandApprovalJSON? {
+        guard kind == .questions, method == "item/tool/requestUserInput", supportedQuestions else { return nil }
+        return .object(["answers": .object([:])])
     }
     var fields: [IslandApprovalField] {
         let schema = params["requestedSchema"]
@@ -318,10 +335,11 @@ struct IslandCodexApprovalRequest: Equatable {
     func permits(_ result: IslandApprovalJSON) -> Bool {
         guard !observationOnly else { return false }
         if actions.contains(where: { $0.result == result }) { return true }
+        if let skip = questionSkipResult, result == skip { return true }
         var draft = IslandApprovalDraft()
         switch kind {
         case .questions:
-            guard let answers = result["answers"].object, Set(answers.keys) == Set(questions.map(\.id)) else { return false }
+            guard supportedQuestions, let answers = result["answers"].object, Set(answers.keys) == Set(questions.map(\.id)) else { return false }
             for q in questions {
                 guard let list = answers[q.id]?["answers"].array, list.count == 1, !list[0].text.isEmpty else { return false }
                 if q.options.contains(where: { $0["label"].text == list[0].text }) { draft.selections[q.id] = [list[0].text] }
@@ -357,22 +375,45 @@ struct IslandApprovalDraft: Equatable {
     var sessionScope = false
     var openedURL = false
     var decisionID: String? = nil
+    var customAnswers: Set<String> = []
+
+    mutating func selectAnswer(_ label: String, for question: IslandApprovalQuestion) {
+        guard question.options.contains(where: { $0["label"].text == label }) else { return }
+        selections[question.id] = [label]
+        customAnswers.remove(question.id)
+    }
+    mutating func selectCustomAnswer(for question: IslandApprovalQuestion) {
+        guard question.allowsCustomAnswer else { return }
+        selections[question.id] = []
+        customAnswers.insert(question.id)
+    }
+    mutating func setAnswer(_ text: String, for question: IslandApprovalQuestion) {
+        guard question.allowsCustomAnswer else { return }
+        selectCustomAnswer(for: question)
+        values[question.id] = text
+    }
+    func usesCustomAnswer(for question: IslandApprovalQuestion) -> Bool {
+        customAnswers.contains(question.id)
+            || ((selections[question.id] ?? []).isEmpty && !(values[question.id] ?? "").isEmpty)
+    }
+    func answer(for question: IslandApprovalQuestion) -> String? {
+        let selected = selections[question.id] ?? []
+        let allowed = Set(question.options.map { $0["label"].text })
+        guard selected.count <= 1, selected.isSubset(of: allowed) else { return nil }
+        if let answer = selected.first, !answer.isEmpty { return answer }
+        let text = values[question.id] ?? ""
+        guard question.allowsCustomAnswer, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return text
+    }
 
     func result(for request: IslandCodexApprovalRequest) -> IslandApprovalJSON? {
         switch request.kind {
         case .questions:
-            guard !request.questions.isEmpty, Set(request.questions.map(\.id)).count == request.questions.count else { return nil }
+            guard request.supportedQuestions else { return nil }
             var answers: [String: IslandApprovalJSON] = [:]
             for q in request.questions {
-                let selected = selections[q.id] ?? []
-                let allowed = Set(q.options.map { $0["label"].text })
-                let text = values[q.id] ?? ""
-                let answer = selected.sorted().filter { allowed.contains($0) }
-                guard answer.count <= 1 else { return nil }
-                if !answer.isEmpty { answers[q.id] = .object(["answers": .array(answer.map { .string($0) })]) }
-                else if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (q.other || q.options.isEmpty) {
-                    answers[q.id] = .object(["answers": .array([.string(text)])])
-                } else { return nil }
+                guard let answer = answer(for: q) else { return nil }
+                answers[q.id] = .object(["answers": .array([.string(answer)])])
             }
             return .object(["answers": .object(answers)])
         case .permissions:
