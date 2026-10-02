@@ -42,4 +42,4 @@
 
 证据：`.build/073-question-presentation-smoke.log`、`.build/073-question-presentation-build.log`、`.build/073-question-presentation-inputs.json`、`.build/073-question-presentation-delivery.json`。首轮新增夹具缺显式 self 的编译失败及修正记录保留；最终源码通过后冻结。命名本会话的只读 rollout 核对记录 `.build/073-question-presentation-rollout-evidence.json`，确认旧同身份答案已记录，不保存答案；不作为原生提示消失证明。
 
-本地不扩大完整回归、不替用户处理真实确认，视觉和真实交互待用户验收。源码集成的提交、PR、对应 CI 与 main 合并结果随后单独记录；先前 PR #69 不包含本轮修复。没有发布 Release/appcast、使用重置卡或购买额度。
+本地不扩大完整回归、不替用户处理真实确认，视觉和真实交互待用户验收。本轮安全修复源码提交 `f828264e8af7dfab06fcc1da5cf953174541348f` 已推送至 [PR #70](https://github.com/Duoasa/QuotaView/pull/70)。用户已授权对应提交 CI 通过后合并 main；CI 与最终 main 集成状态以该 PR 为准。203 项本地验证与已运行开发包单独记录，原生异步提问框关闭仍未完成。 先前 PR #69 不包含本轮修复。没有发布 Release/appcast、使用重置卡或购买额度。

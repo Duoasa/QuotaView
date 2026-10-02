@@ -17,7 +17,7 @@ Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 
 
 送达 ACK、精确问题结算、Codex 原生框消失必须分开验证。当前异步 follower steering 没有执行 renderer 本地 selectedQuestion 清理；本轮前两个阶段已覆盖，原生框关闭仍未实现或验证。同步 resolved 事件不可用于异步问题，原生 Skip/第二次发送也不能作为关闭兜底。Vibe 官方社区 Issue #241 与静态脚本/AX 证据仍未证明同类异步场景；不自动申请系统权限或操作真实用户确认。
 
-203 项相关隔离冒烟（0 失败）、P95 4.598 ms、Debug arm64 构建、资源/固定身份与 deep strict ad-hoc 签名通过；181 项输入核对一致，开发交付时 PID 75451。证据 `.build/073-question-presentation-*`；视觉和实际点击待用户验收。本轮源码集成与旧 PR #69 分开记录。
+203 项相关隔离冒烟（0 失败）、P95 4.598 ms、Debug arm64 构建、资源/固定身份与 deep strict ad-hoc 签名通过；181 项输入核对一致，开发交付时 PID 75451。证据 `.build/073-question-presentation-*`；视觉和实际点击待用户验收。本轮源码集成与旧 PR #69 分开记录。 本轮安全修复源码提交 `f828264e8af7dfab06fcc1da5cf953174541348f` 已推送至 [PR #70](https://github.com/Duoasa/QuotaView/pull/70)。用户已授权对应提交 CI 通过后合并 main；CI 与最终 main 集成状态以该 PR 为准。203 项本地验证与已运行开发包单独记录，原生异步提问框关闭仍未完成。
 
 ## 问题交互与手动收起 · 2026-10-02 追加
 
