@@ -10,7 +10,7 @@ Hook 配置改为启动时幂等安装/修复，设置中的原生授权只处�
 
 核验依据：[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[App Server](https://learn.chatgpt.com/docs/app-server) 与当前 0.159.2 CLI 生成的本地 schema。隔离原生探针已验证 `hooks.state."<key>".trusted_hash` + `reloadUserConfig`；测试只使用临时 CODEX_HOME、惰性 Hook，不访问账户或改写真实 Codex 配置。Vibe Island 的一次授权依据见[官方更新记录](https://vibeisland.app/changelog/)。
 
-48 项必要隔离冒烟与 Debug arm64 构建通过，包含原生授权边界、渠道/目录隔离、Helper 回退和真实问答生命周期；本轮未执行完整回归或 UI 自动化。开发包已更新并启动 PID 88611，固定身份 0.7.3 / 显示 Build 1 / 内部 49 与 deep strict ad-hoc 签名核对通过。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`；忽略的开发 manifest 已记录源码和包指纹。启动后已核对 12 组旧开发 Hook 按当前 Socket/令牌身份迁入独立配置，6 组其它 Hook 的规范化内容哈希保持不变；73 个源码指纹与开发包 manifest 一致。首次原生 Hook 授权待用户操作，实际连接需自然 Hook 事件；视觉及真实交互待用户验收。源码未提交推送，本轮未发布 Release/appcast。
+48 项必要隔离冒烟与 Debug arm64 构建通过，包含原生授权边界、渠道/目录隔离、Helper 回退和真实问答生命周期；本轮未执行完整回归或 UI 自动化。开发包已更新并启动 PID 88611，固定身份 0.7.3 / 显示 Build 1 / 内部 49 与 deep strict ad-hoc 签名核对通过。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`；忽略的开发 manifest 已记录源码和包指纹。启动后已核对 12 组旧开发 Hook 按当前 Socket/令牌身份迁入独立配置，6 组其它 Hook 的规范化内容哈希保持不变；73 个源码指纹与开发包 manifest 一致。首次原生 Hook 授权待用户操作，实际连接需自然 Hook 事件；视觉及真实交互待用户验收。源码提交 `1b962b6d7a20929146068c27f0fb9b1c5b12fa09` 已推送至 [PR #67](https://github.com/Duoasa/QuotaView/pull/67)，用户已授权合并 main；CI 与合并状态以该 PR 为准。本轮未发布 Release/appcast。
 
 
 ## 设置精简与自动弹出 · 2026-10-02
