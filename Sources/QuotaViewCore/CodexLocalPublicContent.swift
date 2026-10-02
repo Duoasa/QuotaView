@@ -110,6 +110,9 @@ enum CodexLocalQuestionContent {
             for flag in ["isOther", "isSecret"] {
                 if let enabled = value[flag] as? Bool { clean[flag] = enabled }
             }
+            // The native async panel always accepts a custom response. Its
+            // title/string-choice schema does not carry a synchronous isOther flag.
+            if asynchronous { clean["isOther"] = true }
             result.append(clean)
         }
         return result

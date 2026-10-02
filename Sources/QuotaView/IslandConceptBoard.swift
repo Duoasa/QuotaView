@@ -436,7 +436,8 @@ final class IslandBoardState: ObservableObject {
     }
     func pin() { claimManualPresentation(); presentation = .pinned; onChange?() }
     func collapse() {
-        guard attentionCount == 0 else { return }
+        // Explicit dismissal changes presentation only. Active requests and
+        // their drafts remain available when the user opens the island again.
         claimManualPresentation()
         clearResetPresentation(); showsUsage = false; presentation = .resting; detailID = nil; onChange?()
     }
@@ -476,6 +477,12 @@ final class IslandBoardState: ObservableObject {
             if presentation == .preview && !showsUsage { presentation = .resting; detailID = nil }
         }
         let requestIDs = value.activeRequestIDs.union(value.taskDetails.values.compactMap { $0.confirmation?.id })
+        let newRequestIDs = requestIDs.subtracting(previousRequestIDs)
+        let newAttention = tasks.contains { task in
+            guard Self.needsAttention(task) else { return false }
+            guard let old = previous?.state.tasks.first(where: { $0.id == task.id }) else { return true }
+            return !Self.needsAttention(old) || old.renderState.taskIdentity != task.renderState.taskIdentity
+        }
         let drafts = approvalDrafts.filter { requestIDs.contains($0.key) }
         if drafts != approvalDrafts { approvalDrafts = drafts }
         if let previousApprovalID, value.taskDetails[previousApprovalID]?.confirmation == nil {
@@ -498,7 +505,8 @@ final class IslandBoardState: ObservableObject {
            let task = tasks.first(where: { task in
                guard let request = value.taskDetails[task.id]?.confirmation,
                      request.protocolRequest != nil else { return false }
-               return !previousRequestIDs.contains(request.id)
+               return newRequestIDs.contains(request.id)
+                   || (!newRequestIDs.isEmpty && request.queueCount > (previous?.taskDetails[task.id]?.confirmation?.queueCount ?? 0))
            }) {
             cancelAutomaticPreview(); automaticallyPresented = true; presentation = .preview
             detailID = task.id; showingTraceHistory = false
@@ -508,7 +516,11 @@ final class IslandBoardState: ObservableObject {
             claimManualPresentation(); presentation = .resting; detailID = nil
         } else if attentionCount > 0 {
             cancelAutomaticPreview()
-            if compact && value.automaticPopupEnabled { automaticallyPresented = true; presentation = .preview }
+            // A pending state keeps an automatic presentation open, but cannot
+            // undo an explicit collapse on each ordinary activity refresh.
+            if compact && value.automaticPopupEnabled && (newAttention || !newRequestIDs.isEmpty) {
+                automaticallyPresented = true; presentation = .preview
+            }
         } else {
             // Compare semantic task/turn transitions, not selection, progress or text.
             // First sync (and wake) is a baseline so historical completions do not replay.

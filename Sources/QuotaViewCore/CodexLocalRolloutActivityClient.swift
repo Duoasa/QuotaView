@@ -7,20 +7,34 @@ public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case tokenUsageReplay([CodexActivityTokenUsageUpdate])
 }
 
+/// Transient read-only discovery identity from validated session metadata.
+/// It is never an RPC capability, never persisted, and contains no user content.
+public struct CodexLocalRolloutThreadIdentity: Equatable, Sendable {
+    public let threadID: String
+    public let sessionHash: String
+    public let sessionKind: CodexActivitySessionKind
+    public init(threadID: String, sessionHash: String, sessionKind: CodexActivitySessionKind) {
+        self.threadID = threadID; self.sessionHash = sessionHash; self.sessionKind = sessionKind
+    }
+}
+
 public struct CodexLocalRolloutDecodedRecord: Equatable, Sendable {
     public let eventID: String?
     public let update: CodexLocalRolloutDecodedUpdate
     /// Context recovered from disk is not proof that a task is currently running.
     public let requiresLiveConfirmation: Bool
+    public let threadIdentity: CodexLocalRolloutThreadIdentity?
 
     public init(
         eventID: String?,
         update: CodexLocalRolloutDecodedUpdate,
-        requiresLiveConfirmation: Bool = false
+        requiresLiveConfirmation: Bool = false,
+        threadIdentity: CodexLocalRolloutThreadIdentity? = nil
     ) {
         self.eventID = eventID
         self.update = update
         self.requiresLiveConfirmation = requiresLiveConfirmation
+        self.threadIdentity = threadIdentity
     }
 }
 
@@ -635,6 +649,12 @@ public actor CodexLocalRolloutActivityClient {
             return
         }
         guard size > state.offset else { return }
+        guard let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+              metadata.threadID == candidate.threadID, metadata.sessionHash == candidate.sessionHash,
+              metadata.kind == candidate.metadataKind else {
+            tailStates.removeValue(forKey: candidate.fileURL); lastCandidateRefresh = .distantPast
+            return
+        }
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
             readFailed = true
@@ -661,7 +681,12 @@ public actor CodexLocalRolloutActivityClient {
             tailStates[candidate.fileURL] = state
             for (record, content) in records {
                 guard isStarted, generation == run, !Task.isCancelled else { return }
-                if let record { receivedActivity = true; await updateHandler?(record, false) }
+                if let record {
+                    receivedActivity = true
+                    await updateHandler?(.init(eventID: record.eventID, update: record.update,
+                        requiresLiveConfirmation: record.requiresLiveConfirmation,
+                        threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind)), false)
+                }
                 guard isStarted, generation == run else { return }
                 if let content { await publicContentHandler?(content) }
             }
@@ -681,7 +706,9 @@ public actor CodexLocalRolloutActivityClient {
 
         do {
             guard let fileIdentity = FileIdentity(handle: handle),
-                  CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL)?.sessionHash == candidate.sessionHash else {
+                  let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+                  metadata.sessionHash == candidate.sessionHash, metadata.threadID == candidate.threadID,
+                  metadata.kind == candidate.metadataKind else {
                 lastCandidateRefresh = .distantPast
                 return
             }
@@ -739,7 +766,8 @@ public actor CodexLocalRolloutActivityClient {
                 for record in replay.records {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
-                                              requiresLiveConfirmation: !freshStart), true)
+                                              requiresLiveConfirmation: !freshStart,
+                                              threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind)), true)
                 }
                 for content in publicReplay {
                     guard isStarted, generation == run else { return }

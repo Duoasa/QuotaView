@@ -119,14 +119,17 @@ public actor CodexDesktopIPCClient {
         public let requestTimeoutSeconds: TimeInterval
         public let maximumFrameBytes: Int
         public let maximumRetainedStateBytes: Int
+        public let frameDrainTimeoutSeconds: TimeInterval
         public init(isEnabled: Bool = true, socketURL: URL,
                     requestTimeoutSeconds: TimeInterval = 5,
                     maximumFrameBytes: Int = 9_437_184,
-                    maximumRetainedStateBytes: Int = 33_554_432) {
+                    maximumRetainedStateBytes: Int = 33_554_432,
+                    frameDrainTimeoutSeconds: TimeInterval = 5) {
             self.isEnabled = isEnabled; self.socketURL = socketURL
             self.requestTimeoutSeconds = max(0.05, requestTimeoutSeconds)
             self.maximumFrameBytes = max(1024, min(maximumFrameBytes, 9_437_184))
             self.maximumRetainedStateBytes = max(self.maximumFrameBytes, min(maximumRetainedStateBytes, 33_554_432))
+            self.frameDrainTimeoutSeconds = max(0.05, min(frameDrainTimeoutSeconds, 30))
         }
         public static func live(environment: [String: String] = ProcessInfo.processInfo.environment) -> Self {
             let root = environment["CODEX_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
@@ -185,7 +188,9 @@ public actor CodexDesktopIPCClient {
     private var resourceBlockedFollows: Set<FollowKey> = []
     private var epoch: UInt64 = 0
     private var clientID = ""
-    private var decoder: CodexDesktopIPCFrameDecoder
+    private var decoder: DesktopIPCInboundDecoder
+    private var frameDeadline: Task<Void, Never>?
+    private var deadlineFrame: UInt64?
     private var pending: [String: Pending] = [:]
     private var follows: Set<FollowKey> = []
     private var followingInFlight: Set<FollowKey> = []
@@ -378,7 +383,10 @@ public actor CodexDesktopIPCClient {
         reader = Task { [weak self] in
             for await chunk in opened.chunks {
                 guard !Task.isCancelled else { break }
-                do { try await self?.consume(chunk, epoch: run) }
+                do {
+                    defer { opened.acknowledgeRead() }
+                    try await self?.consume(chunk, epoch: run)
+                }
                 catch let error as CodexDesktopIPCError where error == .resourceLimit {
                     await self?.suspendForResourceLimit(epoch: run); break
                 } catch { await self?.protocolFailed(epoch: run); break }
@@ -486,10 +494,59 @@ public actor CodexDesktopIPCClient {
     }
     private func consume(_ chunk: Data, epoch run: UInt64) async throws {
         guard run == epoch, started else { return }
-        for data in try decoder.append(chunk) {
+        let events = try decoder.append(chunk)
+        updateFrameDeadline(epoch: run)
+        for event in events {
             guard run == epoch, started else { return }
-            try await handle(data, epoch: run)
+            switch event {
+            case .message(let data):
+                do { try await handle(data, epoch: run) }
+                catch CodexDesktopIPCError.resourceLimit {
+                    try await handleResourceEnvelope(DesktopIPCEnvelopeReducer.reduce(data), epoch: run)
+                }
+            case .oversized(let reduced):
+                try await handleResourceEnvelope(reduced, epoch: run)
+            }
         }
+    }
+    private func updateFrameDeadline(epoch run: UInt64) {
+        guard decoder.pendingFrame != deadlineFrame else { return }
+        frameDeadline?.cancel(); frameDeadline = nil
+        deadlineFrame = decoder.pendingFrame
+        guard let frame = deadlineFrame else { return }
+        let seconds = configuration.frameDrainTimeoutSeconds
+        frameDeadline = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) } catch { return }
+            await self?.expireFrame(frame, epoch: run)
+        }
+    }
+    private func expireFrame(_ frame: UInt64, epoch run: UInt64) async {
+        guard run == epoch, decoder.pendingFrame == frame else { return }
+        await suspendForResourceLimit(epoch: run)
+    }
+    /// The whole declared frame has been consumed. Only a unique envelope from
+    /// an already discovered owner can quarantine one follow; body contents are
+    /// never materialized. Audience/foreign/unfollowed traffic is simply ignored.
+    private func handleResourceEnvelope(_ reduced: Data?, epoch run: UInt64) async throws {
+        guard let reduced else { throw CodexDesktopIPCError.resourceLimit }
+        let message = try DesktopIPCJSON.decode(reduced, limit: DesktopIPCEnvelopeReducer.maximumMetadataBytes)
+        guard initialized, message["type"]?.string == "broadcast",
+              message["method"]?.string == "thread-stream-state-changed",
+              let source = message["sourceClientId"]?.string, !source.isEmpty,
+              let params = message["params"], let conversation = params["conversationId"]?.string, !conversation.isEmpty,
+              let host = params["hostId"]?.string, !host.isEmpty else { throw CodexDesktopIPCError.resourceLimit }
+        if let audience = message["targetClientIds"] {
+            guard let targets = audience.array, targets.allSatisfy({ $0.string != nil }) else { throw CodexDesktopIPCError.resourceLimit }
+            guard targets.contains(.string(clientID)) else { return }
+        }
+        let key = FollowKey(conversationID: conversation, hostID: host)
+        guard follows.contains(key), !resourceBlockedFollows.contains(key) else { return }
+        guard let owner = owners[key] else { throw CodexDesktopIPCError.resourceLimit }
+        guard source == owner.clientID else { return }
+        guard message["version"]?.integer == 11 else {
+            incompatible = true; await closeConnection(); return
+        }
+        await invalidateResourceLimit(key, epoch: run)
     }
     private func handle(_ data: Data, epoch run: UInt64) async throws {
         let message = try DesktopIPCJSON.decode(data, limit: configuration.maximumFrameBytes)
@@ -536,13 +593,13 @@ public actor CodexDesktopIPCClient {
             scheduleFollowRecovery(key, candidateOwner: source); return
         }
         guard method == "thread-stream-state-changed" else { return }
-        guard message["version"]?.integer == 11 else {
-            incompatible = true; await closeConnection(); return
-        }
         guard let source = message["sourceClientId"]?.string, let owner = owners[key] else { return }
         guard source == owner.clientID else {
             removeLedger(key)
             scheduleFollowRecovery(key, candidateOwner: source); return
+        }
+        guard message["version"]?.integer == 11 else {
+            incompatible = true; await closeConnection(); return
         }
         guard let change = params["change"], let revision = change["revision"]?.integer, revision >= 0 else {
             throw CodexDesktopIPCError.invalidMessage
@@ -666,12 +723,13 @@ public actor CodexDesktopIPCClient {
     }
     private func suspendForResourceLimit(epoch run: UInt64) async {
         guard run == epoch else { return }
-        // A frame header has no trustworthy conversation scope. Stop automatic
-        // observation until an explicit start; never classify size as a version
-        // mismatch or repeatedly reconnect into the same oversized snapshot.
+        // Incomplete/unroutable drain has no trustworthy conversation scope.
+        // Stop automatic observation until explicit start; never reconnect in
+        // a loop into the same resource pressure or call it a version mismatch.
         resourceSuspended = true
         await invalidationHandler?(.init(conversationID: nil, hostID: nil,
             connectionEpoch: run, reason: .resourceLimit))
+        guard run == epoch else { return }
         await closeConnection()
     }
     private func protocolFailed(epoch run: UInt64) async {
@@ -684,6 +742,7 @@ public actor CodexDesktopIPCClient {
     }
     private func closeConnection() async {
         epoch &+= 1; initialized = false; clientID = ""
+        frameDeadline?.cancel(); frameDeadline = nil; deadlineFrame = nil
         reader?.cancel(); reader = nil; transport?.close(); transport = nil
         followRecoveries.values.forEach { $0.task.cancel() }; followRecoveries.removeAll()
         owners.removeAll(); ledger.removeAll(); attempted.removeAll(); followingInFlight.removeAll()
@@ -721,10 +780,224 @@ struct CodexDesktopIPCFrameDecoder {
     }
 }
 
+/// Framing and drain use the native 256MiB wire bound, independently from the
+/// 9MiB materialization limit. Retained state limits are never raised.
+private struct DesktopIPCInboundDecoder {
+    enum Event { case message(Data), oversized(Data?) }
+    static let maximumWireBytes = 256 * 1_048_576
+    let maximumFrameBytes: Int
+    private var header: [UInt8] = []
+    private var remaining = 0
+    private var payload = Data()
+    private var reducer: DesktopIPCEnvelopeReducer?
+    private var generation: UInt64 = 0
+    private(set) var pendingFrame: UInt64?
+    init(maximumFrameBytes: Int) { self.maximumFrameBytes = maximumFrameBytes }
+
+    mutating func append(_ chunk: Data) throws -> [Event] {
+        guard chunk.count <= Self.maximumWireBytes + 4 else { throw CodexDesktopIPCError.resourceLimit }
+        var result: [Event] = [], offset = chunk.startIndex
+        while offset < chunk.endIndex {
+            if remaining == 0 {
+                if header.isEmpty { generation &+= 1; pendingFrame = generation }
+                while header.count < 4, offset < chunk.endIndex { header.append(chunk[offset]); offset += 1 }
+                guard header.count == 4 else { break }
+                let count = Int(UInt32(header[0]) | UInt32(header[1]) << 8 | UInt32(header[2]) << 16 | UInt32(header[3]) << 24)
+                header.removeAll(keepingCapacity: true)
+                guard count > 0 else { throw CodexDesktopIPCError.invalidMessage }
+                guard count <= Self.maximumWireBytes else { throw CodexDesktopIPCError.resourceLimit }
+                remaining = count
+                if count > maximumFrameBytes { reducer = .init() }
+            }
+            let count = min(remaining, chunk.endIndex - offset)
+            let bytes = chunk[offset..<(offset + count)]
+            if reducer != nil { reducer!.append(bytes) }
+            else { payload.append(contentsOf: bytes) }
+            offset += count; remaining -= count
+            if remaining == 0 {
+                if let reducer { result.append(.oversized(reducer.finish())) }
+                else { result.append(.message(payload)) }
+                payload = Data(); reducer = nil; pendingFrame = nil
+            }
+        }
+        return result
+    }
+}
+
+/// Incremental JSON grammar, with no retained body strings/keys. Only the
+/// params.change value is replaced by null; all other envelope fields survive
+/// in order. Routing is decoded only after the entire frame, including trailing
+/// version, has arrived. Duplicate decoded envelope keys fail closed.
+private struct DesktopIPCEnvelopeReducer {
+    static let maximumMetadataBytes = 65_536
+    private enum Phase: Equatable { case keyOrEnd, key, colon, value, commaOrEnd, arrayValueOrEnd, arrayValue, arrayCommaOrEnd }
+    private struct Container {
+        let object: Bool
+        let retained: Bool
+        let root: Bool
+        let params: Bool
+        var phase: Phase
+        var key: String?
+        var keys: Set<String> = []
+    }
+    private enum Token { case none, string(key: Bool, retained: Bool), scalar(retained: Bool) }
+    private var stack: [Container] = []
+    private var token: Token = .none
+    private var tokenBytes = Data()
+    private var escape = 0 // 0 ordinary, -1 after backslash, 1...4 unicode hex
+    private var output = Data()
+    private var rootComplete = false
+    private var reducedChange = false
+    private var failed = false
+
+    static func reduce(_ data: Data) -> Data? {
+        var reducer = Self()
+        // Existing bounded payloads still use the same streaming grammar.
+        for offset in stride(from: 0, to: data.count, by: 65_536) {
+            reducer.append(data[offset..<min(data.count, offset + 65_536)])
+        }
+        return reducer.finish()
+    }
+    mutating func append<S: Sequence>(_ bytes: S) where S.Element == UInt8 {
+        for byte in bytes {
+            guard !failed else { return }
+            consume(byte)
+        }
+    }
+    func finish() -> Data? {
+        var candidate = self
+        if case .scalar = candidate.token { candidate.endScalar() }
+        guard !candidate.failed, candidate.rootComplete, candidate.stack.isEmpty,
+              case .none = candidate.token, candidate.reducedChange,
+              (try? DesktopIPCJSON.decode(candidate.output, limit: Self.maximumMetadataBytes)) != nil else { return nil }
+        return candidate.output
+    }
+    private mutating func emit(_ byte: UInt8, retained: Bool) {
+        guard retained else { return }
+        guard output.count < Self.maximumMetadataBytes else { failed = true; return }
+        output.append(byte)
+    }
+    private mutating func consume(_ byte: UInt8) {
+        switch token {
+        case .string(let key, let retained):
+            emit(byte, retained: retained)
+            if key { tokenBytes.append(byte) }
+            if escape > 0 {
+                guard Self.hex(byte) else { failed = true; return }
+                escape -= 1; return
+            }
+            if escape == -1 {
+                if byte == 117 { escape = 4 }
+                else if [34, 47, 92, 98, 102, 110, 114, 116].contains(byte) { escape = 0 }
+                else { failed = true }
+                return
+            }
+            if byte == 92 { escape = -1; return }
+            if byte == 34 {
+                token = .none
+                if key {
+                    guard let name = try? JSONDecoder().decode(String.self, from: tokenBytes), !stack.isEmpty else { failed = true; return }
+                    let index = stack.count - 1
+                    guard stack[index].keys.insert(name).inserted else { failed = true; return }
+                    stack[index].key = name; stack[index].phase = .colon
+                    tokenBytes = Data()
+                } else { completeValue() }
+            } else if byte < 32 { failed = true }
+        case .scalar(let retained):
+            if Self.whitespace(byte) || byte == 44 || byte == 93 || byte == 125 {
+                endScalar()
+                if !failed { consume(byte) }
+            } else {
+                guard tokenBytes.count < 128 else { failed = true; return }
+                tokenBytes.append(byte); emit(byte, retained: retained)
+            }
+        case .none:
+            let retained = stack.last?.retained ?? true
+            if Self.whitespace(byte) { emit(byte, retained: retained); return }
+            if stack.isEmpty {
+                guard !rootComplete else { failed = true; return }
+                startValue(byte, retained: true); return
+            }
+            let index = stack.count - 1
+            switch stack[index].phase {
+            case .keyOrEnd, .key:
+                if byte == 125, stack[index].phase == .keyOrEnd { endContainer(byte, object: true); return }
+                guard byte == 34 else { failed = true; return }
+                // Discarded body keys are parsed as strings, but never retained
+                // or entered into a per-object set.
+                let keepKey = retained
+                token = .string(key: keepKey, retained: retained)
+                tokenBytes = keepKey ? Data([34]) : Data()
+                escape = 0; emit(byte, retained: retained)
+                if !keepKey { stack[index].phase = .colon }
+            case .colon:
+                guard byte == 58 else { failed = true; return }
+                emit(byte, retained: retained); stack[index].phase = .value
+            case .value, .arrayValue, .arrayValueOrEnd:
+                if byte == 93, stack[index].phase == .arrayValueOrEnd { endContainer(byte, object: false); return }
+                let drop = retained && stack[index].params && stack[index].key == "change"
+                if drop {
+                    guard !reducedChange else { failed = true; return }
+                    reducedChange = true
+                    for byte in "null".utf8 { emit(byte, retained: true) }
+                }
+                startValue(byte, retained: retained && !drop)
+            case .commaOrEnd:
+                if byte == 125 { endContainer(byte, object: true) }
+                else if byte == 44 { emit(byte, retained: retained); stack[index].phase = .key; stack[index].key = nil }
+                else { failed = true }
+            case .arrayCommaOrEnd:
+                if byte == 93 { endContainer(byte, object: false) }
+                else if byte == 44 { emit(byte, retained: retained); stack[index].phase = .arrayValue }
+                else { failed = true }
+            }
+        }
+    }
+    private mutating func startValue(_ byte: UInt8, retained: Bool) {
+        if byte == 123 || byte == 91 {
+            guard stack.count < 256 else { failed = true; return }
+            let isRoot = stack.isEmpty
+            let isParams = byte == 123 && stack.last?.root == true && stack.last?.key == "params"
+            emit(byte, retained: retained)
+            stack.append(.init(object: byte == 123, retained: retained, root: isRoot, params: isParams,
+                phase: byte == 123 ? .keyOrEnd : .arrayValueOrEnd))
+        } else if byte == 34 {
+            token = .string(key: false, retained: retained); tokenBytes = Data(); escape = 0
+            emit(byte, retained: retained)
+        } else if byte == 45 || (48...57).contains(byte) || [102, 110, 116].contains(byte) {
+            token = .scalar(retained: retained); tokenBytes = Data([byte]); emit(byte, retained: retained)
+        } else { failed = true }
+    }
+    private mutating func endScalar() {
+        guard (try? DesktopIPCJSON.decode(tokenBytes, limit: 128)) != nil else { failed = true; return }
+        token = .none; tokenBytes = Data(); completeValue()
+    }
+    private mutating func endContainer(_ byte: UInt8, object: Bool) {
+        guard let container = stack.last, container.object == object else { failed = true; return }
+        emit(byte, retained: container.retained); stack.removeLast(); completeValue()
+    }
+    private mutating func completeValue() {
+        guard !stack.isEmpty else { rootComplete = true; return }
+        let index = stack.count - 1
+        if stack[index].object {
+            // A discarded key ends in .colon, not in value-complete state.
+            if stack[index].phase == .colon { return }
+            guard stack[index].phase == .value else { failed = true; return }
+            stack[index].phase = .commaOrEnd
+        } else {
+            guard [.arrayValue, .arrayValueOrEnd].contains(stack[index].phase) else { failed = true; return }
+            stack[index].phase = .arrayCommaOrEnd
+        }
+    }
+    private static func whitespace(_ byte: UInt8) -> Bool { byte == 9 || byte == 10 || byte == 13 || byte == 32 }
+    private static func hex(_ byte: UInt8) -> Bool { (48...57).contains(byte) || (65...70).contains(byte) || (97...102).contains(byte) }
+}
+
 struct CodexDesktopIPCTransport: Sendable {
     let chunks: AsyncStream<Data>
     let write: @Sendable (Data) throws -> Void
     let close: @Sendable () -> Void
+    var acknowledgeRead: @Sendable () -> Void = {}
     static func open(_ url: URL) async throws -> Self {
         try await Task.detached(priority: .utility) {
             try verifyPeer(url)
@@ -746,7 +1019,8 @@ struct CodexDesktopIPCTransport: Sendable {
             var noSignal: Int32 = 1
             setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size))
             let socket = DesktopIPCSocket(fd: fd)
-            return .init(chunks: socket.chunks, write: { try socket.write($0) }, close: { socket.close() })
+            return .init(chunks: socket.chunks, write: { try socket.write($0) }, close: { socket.close() },
+                         acknowledgeRead: { socket.acknowledgeRead() })
         }.value
     }
     static func verifyPeer(_ url: URL, expectedUID: uid_t = getuid()) throws {
@@ -763,22 +1037,50 @@ private final class DesktopIPCSocket: @unchecked Sendable {
     private let handle: FileHandle
     private let continuation: AsyncStream<Data>.Continuation
     private let writeLock = NSLock()
+    private let readPermit = DispatchSemaphore(value: 1)
     private var closed = false
     init(fd: Int32) {
-        let pair = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingOldest(128))
+        let pair = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingOldest(1))
         chunks = pair.stream; continuation = pair.continuation
         handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         handle.readabilityHandler = { [weak self] handle in
             guard let self else { return }
-            do {
-                let data = try handle.read(upToCount: 65_536) ?? Data()
-                guard !data.isEmpty else { self.close(); return }
+            // One in-flight chunk supplies backpressure during large-frame drain.
+            // Never wait while holding the fd lock; close wakes this permit.
+            self.readPermit.wait()
+            // FileHandle.read(upToCount:) can wait to fill its requested
+            // length on a socket. Native initialize replies are short frames
+            // on a connection that stays open; consume only available bytes.
+            switch self.readAvailable() {
+            case .data(let data):
                 switch self.continuation.yield(data) {
                 case .enqueued: break
                 case .dropped, .terminated: self.close()
                 @unknown default: self.close()
                 }
-            } catch { self.close() }
+            case .retry: self.readPermit.signal()
+            case .closed: self.close()
+            }
+        }
+    }
+    func acknowledgeRead() { readPermit.signal() }
+    private enum ReadResult { case data(Data), retry, closed }
+    private func readAvailable() -> ReadResult {
+        // Nonblocking recv makes it safe to share this lock with close: no
+        // callback can read a descriptor after close/reuse, and shutdown never
+        // waits for a reader that is trying to fill an entire buffer.
+        writeLock.lock(); defer { writeLock.unlock() }
+        guard !closed else { return .closed }
+        var bytes = [UInt8](repeating: 0, count: 65_536)
+        while true {
+            let count = bytes.withUnsafeMutableBytes {
+                Darwin.recv(handle.fileDescriptor, $0.baseAddress, $0.count, MSG_DONTWAIT)
+            }
+            if count > 0 { return .data(Data(bytes.prefix(count))) }
+            if count == 0 { return .closed }
+            if errno == EINTR { continue }
+            if errno == EAGAIN || errno == EWOULDBLOCK { return .retry }
+            return .closed
         }
     }
     func write(_ data: Data) throws {
@@ -787,8 +1089,12 @@ private final class DesktopIPCSocket: @unchecked Sendable {
         try handle.write(contentsOf: data)
     }
     func close() {
-        writeLock.lock(); defer { writeLock.unlock() }
-        guard !closed else { return }; closed = true
+        writeLock.lock()
+        guard !closed else { writeLock.unlock(); return }
+        closed = true; writeLock.unlock()
+        // Wake a waiting callback before removing its handler. Closed readers
+        // cannot touch the fd, so teardown needs neither its lock nor permit.
+        readPermit.signal()
         handle.readabilityHandler = nil; try? handle.close(); continuation.finish()
     }
 }

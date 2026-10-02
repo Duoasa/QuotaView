@@ -8,12 +8,20 @@ Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 
 
 - 自动弹出开启时，新真实确认直接进入该任务详情，显示原问题、选项、命令、文件变更、权限或受支持工具表单。重复快照不反复抢焦点，已有另一请求草稿、手动用量/重置页和固定页面保持。关闭自动弹出后仍可手动进入。
 - 普通审批使用原始数字/字符串 RPC ID 和所属 owner 回传；同步问题返回原始问题 ID/答案集合。异步问题保留原生 `questionItemId`，通过 Codex 原生回答消息回传，不把异步提问伪装成审批或阻塞执行。
-- 点击后单次发送，ACK 仅为“已发送”。只有原任务的后续权威状态移除对应请求，或出现被原生接受的精确问题回答，才解除该请求。用户在 Codex 处理后同样同步；并行请求各自保留。
+- 选择选项或自行输入只修改该请求的草稿，显示选中反馈；完整有效的答案在点击“确认”后单次发送，ACK 仅为“已发送”。只有原任务的后续权威状态移除对应请求，或出现被原生接受的精确问题回答，才解除该请求。用户在 Codex 处理后同样同步；并行请求各自保留。
 - 未知协议、未证明的来源、远程任务、外部授权和不支持的表单继续在 Codex 处理；缺失详情不编造可操作内容。
+
+## 问题交互与手动收起 · 2026-10-02 追加
+
+- 可覆盖的提问页显示“跳过”和“确认”。自行输入沿用原生问题能力：异步问题始终支持，同步问题仅 `isOther=true` 或没有选项时支持；选项、自填互斥，切回自行输入保留已填草稿。空白或不完整答案禁用确认，未知或多选模式保持原生处理。
+- 同步跳过按原生 `thread-follower-submit-user-input` 回传 `{answers:{}}`，仍等待 owner 权威移除。异步跳过只略过 Island 的本轮问题提示，同身份刷新不重新显示，不发空答案、不标记回答或清理独立等待。当前 follower 协议没有 Codex renderer 的异步跳过 RPC，因此不承诺同时关闭 Codex 窗口中的该提示。
+- 待确认默认保持展开，手动收起可用，草稿保留；同请求普通刷新不会重新展开。新的请求身份或新的待确认会话仍按自动弹出偏好呼出；手动用量、重置、固定页与其他草稿遵循原焦点规则。
+- 匿名待确认与具体请求分开：同轮次完整 owner 的 `threadRuntimeStatus.activeFlags=[]` 和空原始 pending 集合才证明旧匿名等待已结束，并同步 Core 状态与 Island。未知方法仍属于 pending，部分状态、未知 flags、旧 owner/epoch 不用于清理；异步未回答问题和并行具体请求各自保留。迟到匿名等待先保留，再由后续完整 owner 状态校正，不按跨通路时间戳猜测。
+- Local-only 活动也可发起只读 Desktop owner discovery。经所选目录、用户来源和元数据一致性校验的 raw thread identity 仅留在内存，并与实际当前 owner/turn 证明分开；本地观察不直接获得提交能力。目录切换重放当前代次意图，停用清理，终态准入后撤销跟随。
 
 ## 通信证据与边界
 
-参考本机原版 `/Applications/Vibe Island.app` 1.0.51 的私有 IPC/owner/follower 通路，以及本机 Codex 0.159.2 实际安装包的协议和原生 owner handler。不是第三方同名开源克隆，也不是独立新启动 app-server 的审批 owner。Vibe 的 [更新记录](https://vibeisland.app/changelog/)可用于产品能力背景；官方 [App Server 文档](https://learn.chatgpt.com/docs/app-server)说明标准 JSON-RPC，不能代替本轮 Desktop 私有协议。
+参考本机原版 `/Applications/Vibe Island.app` 1.0.51 与 Codex Desktop 26.928.40906（build 12694，bundle `com.openai.codex`）的实际协议和原生 owner handler；CLI 0.159.2 是独立版本身份。Vibe 静态证据包含私有 IPC 批准/提问、页面探测和背景/AX 辅路，尚不能证明其每个异步分支选路、帧预算或 socket 隔离方式。QuotaView 使用已核验的原任务 owner/follower 通路。不是第三方同名开源克隆，也不是独立新启动 app-server 的审批 owner。Vibe 的 [更新记录](https://vibeisland.app/changelog/)可用于产品能力背景；官方 [App Server 文档](https://learn.chatgpt.com/docs/app-server)说明标准 JSON-RPC，不能代替本轮 Desktop 私有协议。
 
 当前本地端点为所选 Codex 数据目录的 `ipc/ipc.sock`。帧是 UInt32 小端长度与 UTF-8 JSON；initialize version 0，owner discovery / following / follower actions version 1，本地 state-changed version 11。真实只读 initialize 握手成功，未向用户任务提交动作。协议是版本相关的非公开接口，不能宣称未来 Codex 更新无需适配。
 
@@ -29,10 +37,11 @@ Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 
 | `CodexDesktopRequestProjector` | 从完整状态提取公开请求和原生问题，保留精确 typed ID、当前 turn 和部分历史权威边界；私有推理不投影 |
 | `CodexActivityStore / TaskRegistry` | 所选目录、用户来源、当前 turn 和连接代次准入；分类 await 恢复前再次校验；公共内容不能绕过 |
 | `IslandLiveStore.RequestLifecycle` | 来源详情升级、请求队列、草稿身份、等待证据、独立同步/异步解除；Shared 与 Desktop 的连接撤销互不误伤 |
-| `IslandBoardState` | 真实新请求的自动详情导航；用户选择和草稿保持 |
+| `IslandBoardState` | 真实新请求的自动详情导航；用户选择和 UUID 草稿 Binding 保持 |
+| `IslandQuestionInteractionEntry / IslandApprovalView` | View 与入口冒烟共用选择、自填、确认、跳过路径；只有显式确认将完整有效草稿交给响应路由 |
 | `CodexActivityRuntime` | 连接/目录生命周期，准入任务的 follow 意图，响应路由与 scope 撤销；切目录先撤销旧回调和按钮能力 |
 
-能力只能由当前 owner 的权威状态生成，不能从 JSON、Local rollout、独立 app-server、Hook 或 UI 模拟生成。未知 source 必须经过 Store 已有用户来源证据；辅助任务不进入可操作 UI。同 item 的多个 RPC 仍由真实 ID/方法区分，数字与字符串 ID 不混淆，重连后旧句柄、旧 await/ACK/catch 不能覆盖新状态。
+能力只能由当前 owner 的权威状态生成，不能从 JSON、Local rollout、独立 app-server、Hook 或 UI 模拟生成。未知 source 必须经过 Store 已有用户来源证据，或借用当前目录代次内仍验证有效且保留的 Local 用户身份；明确 internal、无效、已撤销、旧目录身份不能借用。身份仅决定来源准入，不生成响应能力；辅助任务不进入可操作 UI。同 item 的多个 RPC 仍由真实 ID/方法区分，数字与字符串 ID 不混淆，重连后旧句柄、旧 await/ACK/catch 不能覆盖新状态。
 
 Shared 与 Desktop 等待证据分别保留，精确同步完成才能解除 Core 快照和提醒；来源替代、资源撤销、ACK 和不相关工具结束都不算回答。完整 Desktop question 集合替代同轮只读 Local async 观察，部分状态不清；不按文本猜配，不制造已回答 tombstone。
 
@@ -40,11 +49,23 @@ Shared 与 Desktop 等待证据分别保留，精确同步完成才能解除 Cor
 
 Owner 尚未就绪或首次 discovery 超时，follow 意图在连接内以 250 ms 至 5 s 的有界退避恢复；read loop 不阻塞等待自身 RPC。stop、换目录、unfollow、旧 epoch 取消恢复任务；提交动作从不自动重试。
 
-单帧 9 MiB、单会话投影 8 MiB、总保留状态 32 MiB；请求/问题数量、树深度、节点数和传输 chunk 队列有界。原始会话状态只在内存短暂保留，不写日志或磁盘。能确定会话的资源超限只撤销该 scope 的交互能力，不解除等待，其他会话继续；无法确定会话的超限帧撤销连接能力并暂停观察，显式重新检查/唤醒可以重建。超限不是协议版本错误，也不承诺无限历史支持。
+完整帧物化预算 9 MiB、单会话投影 8 MiB、总保留状态 32 MiB；请求/问题数量、树深度、节点数有界。原生 follow 发送完整会话，本次实测一个快照约 14.55 MiB，旧实现在读 header 时全局暂停，连带正常任务退回只读。当前没有已证实的 compact、paging 或 request-only follow 选项；`compact-thread` 会实际改变用户任务，不能作为传输优化。
+
+超过物化预算但不超过原生 256 MiB wire 上限的帧采用流式 drain，不保存正文，最多保留 64 KiB 元数据；只允许一个 64 KiB 读取块在途，由消费者 ACK 提供背压。解析遵循 JSON 结构/转义，重复解码路由键拒绝；完整声明帧到齐后才使用位于正文之后的版本/目标等字段。只有已发现 owner、目标、conversation/host/当前 epoch 均明确时隔离对应 scope，取消恢复并撤销句柄而不解除等待；foreign、其他 audience 或未跟随的数据不能撤销健康能力。正常帧的 JSON 树超限同样通过完整信封确定 scope。单会话 8 MiB 与总状态 32 MiB 预算保持。
+
+不完整 header/body 有 5 秒帧 deadline，绑定 frame generation 和 epoch；超出 wire 上限、无法唯一归属或超时才全局暂停，显式重新检查/唤醒可以重建。异步失效回调返回后再次校验 epoch，旧回调不能关闭 stop/start 后的新连接。原始状态仅内存短暂保留，不写日志/磁盘；诊断只记录固定结果、数量和哈希身份。超限不是协议版本错误，也不代表已回答；超大会话本身仍在 Codex 处理，不承诺无限历史支持。
 
 连接断开或 patch base revision 不连续时，旧句柄失效，等待新的权威快照。已写入后的 timeout/断连保留结果未知；提交身份账本跨临时状态缺口保留直到真实解除或轮次变化，防止再次发送。
 
 ## 验证与交付
+
+2026-10-02 本轮最新：188 项限定隔离冒烟通过，覆盖生产 View/Board 草稿入口与真实 Unix socket 短帧、超大 burst 后健康原生问题提交、foreign/audience/重复路由/帧超时、旧 epoch 异步回调重入、canonical/live 当前轮次与来源准入。P95 展示基准 4.332 ms。最终 Debug arm64 构建与 deep strict ad-hoc 签名通过，固定身份开发包 PID 94157，178 项输入指纹一致；真实只读打包 Core 多 follow 证明超大会话隔离后正常会话仍权威/有 owner 输入能力。实际 app 保持 connected。命名测试任务当时已完成，没有处理真实 pending、发送真实答案或 UI 自动化，真实点击仍待用户验收。证据 `.build/073-question-capability-smoke.log`、`.build/073-question-capability-build.log`、`.build/073-question-capability-delivery.json`、`.build/073-question-capability-stock-readonly.json`、`.build/073-question-capability-stock-multifollow-readonly.json`。用户已明确授权本轮源码推送并合并 main；修复基准 `800d1ce53814459fe8d2d36750d0941d4345a260`。新的 PR/CI/实际合并结果单独记录，历史 PR #68 不能视为包含这些新修改。
+
+以下为历史验证：
+
+2026-10-02 问题交互与等待纠正追加：134 项相关隔离冒烟、最终 Debug arm64 构建、固定身份/资源、deep strict ad-hoc 签名及启动核对通过，开发包 PID 240。证据 `.build/073-question-interaction-final-smoke.log`、`.build/073-question-interaction-final-build.log`、`.build/073-question-interaction-delivery.json`。覆盖选择不发送、自行输入/文字保持、确认单次发送、同步跳过和异步本地跳过、手动收起/新请求呼出、local-only Desktop 跟随与撤销、无 typed 删除的 Core/Island 匿名等待清理，以及未知/部分/并行/owner/epoch/旧轮次边界。新增整链夹具统一模拟时钟后 14 项专项及最终全部复验通过，首次失败保留；生产代码在成功构建后未变。尚未提交推送，本轮真实交互仍待用户验收，不操作真实确认或 UI 自动化。
+
+首次 Desktop 交付历史：
 
 98 项必要隔离冒烟通过：Core IPC 21、公开投影 15、Island 生命周期 13、Store 准入 10、导航 4、既有准入 11、既有请求恢复 21、自动弹出偏好 3。证据 `.build/073-desktop-confirmation-smoke.log`。全新 Derived Data 的 Debug arm64 开发 Target 构建通过，证据 `.build/073-desktop-confirmation-build.log`；固定身份、资源与 deep strict ad-hoc 签名核对通过，开发包已启动 PID 90147，证据 `.build/073-desktop-confirmation-delivery.json`。真实只读 initialize 握手记录 `.build/073-desktop-confirmation-handshake.json`。测试使用临时 fixture，不替用户批准或回答真实待确认。视觉和真实交互由用户验收，不采用 UI 自动化。
 

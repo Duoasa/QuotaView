@@ -151,7 +151,7 @@ final class CodexDesktopIPCClientTests: XCTestCase {
 
     func testOversizedFrameHeaderSuspendsWithoutProtocolMismatchOrAutomaticReconnect() async throws {
         let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "approval")]))
-        let client = fixture.client(), recorder = CodexDesktopIPCSnapshotRecorder()
+        let client = fixture.client(frameDrainTimeoutSeconds: 0.05), recorder = CodexDesktopIPCSnapshotRecorder()
         await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
             invalidationHandler: { await recorder.recordInvalidation($0) })
         try await client.follow(conversationID: "conversation")
@@ -206,9 +206,10 @@ final class CodexDesktopIPCClientTests: XCTestCase {
             }
             fixture.setState(huge, revision: 8)
             let invalidation = try await recorder.waitForInvalidation(after: 0)
-            XCTAssertNil(invalidation.conversationID, "Tree decode cannot safely attribute a budget failure")
+            XCTAssertEqual(invalidation.conversationID, "conversation", "A complete unique native envelope attributes tree pressure safely")
             XCTAssertEqual(invalidation.reason, .resourceLimit)
-            try await recorder.waitForDisconnect()
+            let connected = await recorder.isConnected
+            XCTAssertTrue(connected)
             fixture.setState(first, revision: 9, emit: false)
             await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
                 invalidationHandler: { await recorder.recordInvalidation($0) })
@@ -217,6 +218,145 @@ final class CodexDesktopIPCClientTests: XCTestCase {
             XCTAssertTrue(fixture.submissions.isEmpty)
             await client.stop()
         }
+    }
+
+    func testOversizedWireFrameDrainsWholeEnvelopeThenOnlyQuarantinesItsFollow() async throws {
+        let first = Self.state(requests: [Self.request(id: "first")])
+        let fixture = CodexDesktopIPCFixture(state: first), client = fixture.client(maximumFrameBytes: 1024)
+        let recorder = CodexDesktopIPCSnapshotRecorder()
+        await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+            invalidationHandler: { await recorder.recordInvalidation($0) })
+        try await client.follow(conversationID: "conversation")
+        let original = try await recorder.wait(after: 0)
+        let payload = Self.data(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner",
+            "targetClientIds": ["fixture-client"], "version": 11,
+            "params": ["conversationId": "conversation", "hostId": "local", "change": ["type": "snapshot", "revision": 8,
+                "conversationState": ["text": String(repeating: "\\\"}\n{quoted}", count: 1000)]]]])
+        fixture.emitRawPayload(payload, chunkBytes: 17)
+        let invalidation = try await recorder.waitForInvalidation(after: 0)
+        XCTAssertEqual(invalidation.conversationID, "conversation")
+        XCTAssertEqual(invalidation.connectionEpoch, original.connectionEpoch)
+        let connected = await recorder.isConnected
+        XCTAssertTrue(connected)
+        var otherRequest = Self.request(id: "question"), params = otherRequest["params"] as! [String: Any]
+        params["threadId"] = "other"; otherRequest["params"] = params
+        var other = Self.state(requests: [otherRequest]); other["id"] = "other"
+        fixture.setAdditionalState(other, conversationID: "other", revision: 7, emit: false)
+        try await client.follow(conversationID: "other")
+        let healthy = try await recorder.wait(after: 1)
+        _ = try await client.submit(handle: XCTUnwrap(healthy.requests.first), result: Self.data(["decision": "accept"]))
+        XCTAssertEqual(fixture.submissions.count, 1)
+        XCTAssertEqual(fixture.initializeCount, 1)
+        await client.stop()
+    }
+
+    func testOversizedForeignAudienceAndUnfollowedEnvelopesCannotRevokeHealthyCapability() async throws {
+        for excluded in ["foreign", "audience", "unfollowed"] {
+            let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "first")]))
+            let client = fixture.client(maximumFrameBytes: 1024), recorder = CodexDesktopIPCSnapshotRecorder()
+            await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+                invalidationHandler: { await recorder.recordInvalidation($0) })
+            try await client.follow(conversationID: "conversation")
+            let original = try await recorder.wait(after: 0)
+            let envelope: [String: Any] = ["type": "broadcast", "method": "thread-stream-state-changed",
+                "sourceClientId": excluded == "foreign" ? "foreign-owner" : "fixture-owner", "version": 99,
+                "targetClientIds": [excluded == "audience" ? "different-client" : "fixture-client"],
+                "params": ["conversationId": excluded == "unfollowed" ? "unfollowed" : "conversation", "hostId": "local",
+                    "change": ["conversationState": ["text": String(repeating: "x", count: 4096)]]]]
+            fixture.emitRawPayload(Self.data(envelope), chunkBytes: 71)
+            fixture.setState(Self.state(requests: [Self.request(id: "first")]), revision: 8)
+            _ = try await recorder.wait(after: 1)
+            _ = try await client.submit(handle: XCTUnwrap(original.requests.first), result: Self.data(["decision": "decline"]))
+            XCTAssertEqual(fixture.submissions.count, 1, excluded)
+            let connected = await recorder.isConnected
+            XCTAssertTrue(connected, excluded)
+            await client.stop()
+        }
+    }
+
+    func testDuplicateDecodedRoutingOrUnknownScopeCannotChooseAConversation() async throws {
+        let body = String(repeating: "x", count: 4096)
+        let badParams = [
+            "\"conversationId\":\"conversation\",\"conversation\\u0049d\":\"other\",\"hostId\":\"local\"",
+            "\"conversationId\":\"conversation\"",
+            "\"conversationId\":false,\"hostId\":\"local\""
+        ]
+        for routing in badParams {
+            let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "first")]))
+            let client = fixture.client(maximumFrameBytes: 1024), recorder = CodexDesktopIPCSnapshotRecorder()
+            await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+                invalidationHandler: { await recorder.recordInvalidation($0) })
+            try await client.follow(conversationID: "conversation")
+            _ = try await recorder.wait(after: 0)
+            let text = "{\"type\":\"broadcast\",\"method\":\"thread-stream-state-changed\",\"sourceClientId\":\"fixture-owner\",\"params\":{\(routing),\"change\":{\"body\":\"\(body)\"}},\"version\":11}"
+            fixture.emitRawPayload(Data(text.utf8), chunkBytes: 19)
+            let invalidation = try await recorder.waitForInvalidation(after: 0)
+            XCTAssertNil(invalidation.conversationID)
+            try await recorder.waitForDisconnect()
+            XCTAssertEqual(fixture.initializeCount, 1)
+            await client.stop()
+        }
+    }
+
+    func testPartialHeaderAndOversizedBodyDeadlinesSuspendWithoutMoreBytes() async throws {
+        for bytes in [Data([1]), Data([1, 0]), Data([1, 0, 0]), Data([0, 16, 0, 0]) + Data("{\"type\":".utf8)] {
+            let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "first")]))
+            let client = fixture.client(maximumFrameBytes: 1024, frameDrainTimeoutSeconds: 0.05)
+            let recorder = CodexDesktopIPCSnapshotRecorder()
+            await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+                invalidationHandler: { await recorder.recordInvalidation($0) })
+            try await client.follow(conversationID: "conversation")
+            _ = try await recorder.wait(after: 0)
+            fixture.emitRawBytes(bytes)
+            let invalidation = try await recorder.waitForInvalidation(after: 0)
+            XCTAssertNil(invalidation.conversationID)
+            try await recorder.waitForDisconnect()
+            await client.stop()
+        }
+    }
+
+    func testNativeWireHardcapSuspendsAtHeaderWithoutAllocatingItsBody() async throws {
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "first")]))
+        let client = fixture.client(), recorder = CodexDesktopIPCSnapshotRecorder()
+        await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+            invalidationHandler: { await recorder.recordInvalidation($0) })
+        try await client.follow(conversationID: "conversation")
+        _ = try await recorder.wait(after: 0)
+        fixture.emitFrameHeader(length: 268_435_457)
+        let invalidation = try await recorder.waitForInvalidation(after: 0)
+        XCTAssertNil(invalidation.conversationID)
+        try await recorder.waitForDisconnect()
+        await client.stop()
+    }
+
+    func testOldUnscopedInvalidationCallbackCannotCloseRestartedConnection() async throws {
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "question")]))
+        let client = fixture.client(frameDrainTimeoutSeconds: 0.05), recorder = CodexDesktopIPCSnapshotRecorder()
+        let gate = CodexDesktopResourceCallbackGate()
+        await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+            invalidationHandler: { value in
+                await recorder.recordInvalidation(value)
+                await gate.pause()
+            })
+        try await client.follow(conversationID: "conversation")
+        let old = try await recorder.wait(after: 0)
+        fixture.emitFrameHeader(length: 9_437_185)
+        try await gate.waitForEntry()
+        await client.stop()
+        await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) },
+            invalidationHandler: { await recorder.recordInvalidation($0) })
+        try await client.follow(conversationID: "conversation")
+        let fresh = try await recorder.wait(after: 1)
+        XCTAssertGreaterThan(fresh.connectionEpoch, old.connectionEpoch)
+        await gate.release()
+        try await gate.waitForExit()
+        await Task.yield()
+        fixture.setState(Self.state(requests: [Self.request(id: "question")]), revision: 8)
+        let continued = try await recorder.wait(after: 2)
+        XCTAssertEqual(continued.connectionEpoch, fresh.connectionEpoch)
+        _ = try await client.submit(handle: XCTUnwrap(continued.requests.first), result: Self.data(["decision": "accept"]))
+        XCTAssertEqual(fixture.submissions.count, 1)
+        await client.stop()
     }
 
     func testTypedIDsRetainStringIntegerAndRejectBoolean() throws {
@@ -414,6 +554,62 @@ final class CodexDesktopIPCClientTests: XCTestCase {
         await client.stop()
     }
 
+    func testSynchronousQuestionSkipReturnsNativeEmptyAnswersAndWaitsForOwnerSettlement() async throws {
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [Self.request(id: "question-rpc", method: "item/tool/requestUserInput")]))
+        let (client, recorder, snapshot) = try await fixture.connectedClient()
+        let handle = try XCTUnwrap(snapshot.requests.first)
+        let outcome = try await client.submit(handle: handle, result: Self.data(["answers": [:]]))
+        XCTAssertEqual(outcome, .acceptedForDispatch)
+        let sent = try XCTUnwrap(fixture.submissions.first)
+        XCTAssertEqual(sent["method"] as? String, "thread-follower-submit-user-input")
+        let params = try XCTUnwrap(sent["params"] as? [String: Any])
+        XCTAssertEqual(params["requestId"] as? String, "question-rpc")
+        let response = try XCTUnwrap(params["response"] as? [String: Any])
+        XCTAssertTrue(try XCTUnwrap(response["answers"] as? [String: Any]).isEmpty)
+        let latest = await recorder.latest
+        XCTAssertEqual(latest?.requests.first?.requestID, handle.requestID)
+        fixture.setState(Self.state(requests: []), revision: 8)
+        let settled = try await recorder.wait(after: 1)
+        XCTAssertTrue(settled.requests.isEmpty)
+        await client.stop()
+    }
+
+    func testAsyncCustomAnswerPreservesNativeIdentityAndExactUserText() async throws {
+        let question: [String: Any] = ["type": "agentMessage", "id": "question-source", "questions": [["title": "Which?", "options": ["A", "B"]]]]
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [], items: [question]))
+        let (client, _, snapshot) = try await fixture.connectedClient()
+        let handle = try XCTUnwrap(snapshot.requests.first)
+        guard case .string(let id) = handle.requestID else { return XCTFail("Expected native question identity") }
+        let answer = "自定义选择\n包含 \"引号\" 与 <tag>"
+        let result = Self.data(["answers": [id: ["answers": [answer]]]])
+        _ = try await client.submit(handle: handle, result: result)
+        let sent = try XCTUnwrap(fixture.submissions.first)
+        let params = try XCTUnwrap(sent["params"] as? [String: Any])
+        let input = try XCTUnwrap(params["input"] as? [[String: Any]])
+        let text = try XCTUnwrap(input.first?["text"] as? String)
+        let body = text.dropFirst(CodexDesktopRequestProjector.asyncReplyOpeningTag.count)
+            .dropLast(CodexDesktopRequestProjector.asyncReplyClosingTag.count)
+        let replies = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(body.utf8)) as? [[String: Any]])
+        XCTAssertEqual(replies.count, 1)
+        XCTAssertEqual(replies[0]["questionItemId"] as? String, id)
+        XCTAssertEqual(replies[0]["question"] as? String, "Which?")
+        XCTAssertEqual(replies[0]["answer"] as? String, answer)
+        await client.stop()
+    }
+
+    func testAsyncSkipCannotBeEncodedAsAnEmptyAnswerOrFabricatedNativeReply() async throws {
+        let question: [String: Any] = ["type": "agentMessage", "id": "question-source", "questions": [["title": "Which?", "options": ["A", "B"]]]]
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [], items: [question]))
+        let (client, _, snapshot) = try await fixture.connectedClient()
+        let handle = try XCTUnwrap(snapshot.requests.first)
+        guard case .string(let id) = handle.requestID else { return XCTFail("Expected native question identity") }
+        for result in [Self.data(["answers": [:]]), Self.data(["answers": [id: ["answers": [""]]]])] {
+            await assertSubmissionError(.invalidResponse, client: client, handle: handle, response: result)
+        }
+        XCTAssertTrue(fixture.submissions.isEmpty)
+        await client.stop()
+    }
+
     func testAsyncFreshSnapshotRejectsChangedQuestionAndResultOnDifferentTurnIsUnknown() async throws {
         let item: [String: Any] = ["type": "agentMessage", "id": "source", "questions": [["title": "Original?", "options": ["A"]]]]
         let fixture = CodexDesktopIPCFixture(state: Self.state(requests: [], items: [item]))
@@ -494,15 +690,27 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     func emitFrameHeader(length: UInt32) {
         lock.withLock { continuation?.yield(Data([UInt8(length & 255), UInt8((length >> 8) & 255), UInt8((length >> 16) & 255), UInt8((length >> 24) & 255)])) }
     }
+    func emitRawBytes(_ bytes: Data) { lock.withLock { continuation?.yield(bytes) } }
+    func emitRawPayload(_ payload: Data, chunkBytes: Int) {
+        let size = UInt32(payload.count)
+        let framed = Data([UInt8(truncatingIfNeeded: size), UInt8(truncatingIfNeeded: size >> 8),
+            UInt8(truncatingIfNeeded: size >> 16), UInt8(truncatingIfNeeded: size >> 24)]) + payload
+        lock.withLock {
+            for offset in stride(from: 0, to: framed.count, by: chunkBytes) {
+                continuation?.yield(Data(framed[offset..<min(framed.count, offset + chunkBytes)]))
+            }
+        }
+    }
     func emitState(version: Int = 11) { lock.withLock { emitStateLocked(version: version) } }
     func patch(_ patches: [[String: Any]], baseRevision: Int64, revision: Int64) {
         lock.withLock { emitLocked(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner", "version": 11,
             "params": ["conversationId": conversationID, "hostId": host, "change": ["type": "patches", "baseRevision": baseRevision, "revision": revision, "patches": patches]]]) }
     }
     func client(timeout: TimeInterval = 0.2, maximumFrameBytes: Int = 9_437_184,
-                maximumRetainedStateBytes: Int = 33_554_432) -> CodexDesktopIPCClient {
+                maximumRetainedStateBytes: Int = 33_554_432, frameDrainTimeoutSeconds: TimeInterval = 5) -> CodexDesktopIPCClient {
         .init(configuration: .init(socketURL: URL(fileURLWithPath: "/fixture/ipc.sock"), requestTimeoutSeconds: timeout,
-            maximumFrameBytes: maximumFrameBytes, maximumRetainedStateBytes: maximumRetainedStateBytes), connector: { [self] _ in makeTransport() })
+            maximumFrameBytes: maximumFrameBytes, maximumRetainedStateBytes: maximumRetainedStateBytes,
+            frameDrainTimeoutSeconds: frameDrainTimeoutSeconds), connector: { [self] _ in makeTransport() })
     }
     func connectedClient(timeout: TimeInterval = 0.2) async throws -> (CodexDesktopIPCClient, CodexDesktopIPCSnapshotRecorder, CodexDesktopConversationSnapshot) {
         let client = client(timeout: timeout), recorder = CodexDesktopIPCSnapshotRecorder()
@@ -584,6 +792,27 @@ actor CodexDesktopIPCSnapshotRecorder {
     }
     func waitForDisconnect() async throws {
         for _ in 0..<500 { if states.contains(.disconnected) { return }; try await Task.sleep(nanoseconds: 10_000_000) }
+        throw CodexDesktopIPCError.unavailable
+    }
+}
+
+/// Controls only the old callback's reentrant boundary, never real desktop IPC.
+private actor CodexDesktopResourceCallbackGate {
+    private var entered = false
+    private var exited = false
+    private var continuation: CheckedContinuation<Void, Never>?
+    func pause() async {
+        entered = true
+        await withCheckedContinuation { continuation = $0 }
+        exited = true
+    }
+    func release() { continuation?.resume(); continuation = nil }
+    func waitForEntry() async throws {
+        for _ in 0..<500 { if entered { return }; try await Task.sleep(nanoseconds: 10_000_000) }
+        throw CodexDesktopIPCError.unavailable
+    }
+    func waitForExit() async throws {
+        for _ in 0..<500 { if exited { return }; try await Task.sleep(nanoseconds: 10_000_000) }
         throw CodexDesktopIPCError.unavailable
     }
 }

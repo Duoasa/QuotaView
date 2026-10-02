@@ -47,6 +47,14 @@ public struct CodexDesktopProjectedAsyncQuestion: Equatable, Sendable {
     }
 }
 
+/// Runtime wait evidence is distinct from a turn's inProgress status.
+/// Missing or future flags never prove that an earlier wait has ended.
+public enum CodexDesktopThreadWaitStatus: Equatable, Sendable {
+    case unavailable
+    case running
+    case waiting(CodexActivityWaitReason)
+}
+
 public struct CodexDesktopInteractionProjection: Sendable {
     public let currentTurnID: String?
     public let status: String
@@ -58,6 +66,28 @@ public struct CodexDesktopInteractionProjection: Sendable {
     public let pendingRequestsAreAuthoritative: Bool
     public let asyncQuestions: [CodexDesktopProjectedAsyncQuestion]
     public let authoritativeAsyncQuestionIDs: Set<String>
+    public let threadWaitStatus: CodexDesktopThreadWaitStatus
+
+    public var provesNoPendingConfirmation: Bool {
+        status == "inProgress" && pendingRequestsAreAuthoritative
+            && threadWaitStatus == .running && authoritativePendingIdentities.isEmpty
+    }
+
+    public init(currentTurnID: String?, status: String, title: String,
+                sourceKind: CodexActivitySessionKind, startedAt: Date?,
+                requests: [CodexDesktopProjectedRequest],
+                authoritativePendingIdentities: Set<CodexDesktopPendingRequestIdentity>,
+                pendingRequestsAreAuthoritative: Bool,
+                asyncQuestions: [CodexDesktopProjectedAsyncQuestion],
+                authoritativeAsyncQuestionIDs: Set<String>,
+                threadWaitStatus: CodexDesktopThreadWaitStatus = .unavailable) {
+        self.currentTurnID = currentTurnID; self.status = status; self.title = title
+        self.sourceKind = sourceKind; self.startedAt = startedAt; self.requests = requests
+        self.authoritativePendingIdentities = authoritativePendingIdentities
+        self.pendingRequestsAreAuthoritative = pendingRequestsAreAuthoritative
+        self.asyncQuestions = asyncQuestions; self.authoritativeAsyncQuestionIDs = authoritativeAsyncQuestionIDs
+        self.threadWaitStatus = threadWaitStatus
+    }
 }
 
 public enum CodexDesktopRequestProjectionError: Error, Equatable {
@@ -97,7 +127,13 @@ public enum CodexDesktopRequestProjector {
             for raw in allRequests {
                 if case .bool(true)? = raw.object?["completed"] { continue }
                 guard let object = raw.object, let method = object["method"]?.nonemptyString,
-                      let requestID = object["id"]?.requestID, let params = object["params"]?.object,
+                      let requestID = object["id"]?.requestID else {
+                    throw CodexDesktopRequestProjectionError.malformedRequests
+                }
+                // Native Desktop answers these service RPCs without presenting
+                // user confirmation. Their parameters are not thread-scoped.
+                if automaticServiceMethods.contains(method) { continue }
+                guard let params = object["params"]?.object,
                       params["threadId"]?.string == conversationID else {
                     throw CodexDesktopRequestProjectionError.malformedRequests
                 }
@@ -130,9 +166,24 @@ public enum CodexDesktopRequestProjector {
         return .init(currentTurnID: currentID, status: status, title: state["title"]?.string ?? "", sourceKind: kind,
             startedAt: startedAt, requests: requests, authoritativePendingIdentities: identities,
             pendingRequestsAreAuthoritative: current.authoritative && currentID != nil && status != "unknown",
-            asyncQuestions: questions, authoritativeAsyncQuestionIDs: pendingAsync)
+            asyncQuestions: questions, authoritativeAsyncQuestionIDs: pendingAsync,
+            threadWaitStatus: threadWaitStatus(state))
     }
 
+    private static func threadWaitStatus(_ state: [String: PublicJSON]) -> CodexDesktopThreadWaitStatus {
+        guard let runtime = state["threadRuntimeStatus"]?.object,
+              runtime["type"]?.string == "active", let rawFlags = runtime["activeFlags"]?.array,
+              rawFlags.allSatisfy({ $0.string != nil }) else { return .unavailable }
+        let flags = Set(rawFlags.compactMap(\.string))
+        guard flags.isSubset(of: ["waitingOnApproval", "waitingOnUserInput"]) else { return .unavailable }
+        if flags.contains("waitingOnUserInput") { return .waiting(.userInput) }
+        if flags.contains("waitingOnApproval") { return .waiting(.approval) }
+        return .running
+    }
+
+    private static let automaticServiceMethods: Set<String> = [
+        "account/chatgptAuthTokens/refresh", "attestation/generate", "currentTime/read"
+    ]
     private static let commonParams: Set<String> = ["threadId", "turnId", "itemId", "reason"]
     private static let allowedParams: [String: Set<String>] = [
         "item/commandExecution/requestApproval": commonParams.union(["command", "cwd", "kind", "commandActions", "availableDecisions", "proposedExecpolicyAmendment", "proposedNetworkPolicyAmendment", "proposedNetworkPolicyAmendments", "networkApprovalContext", "additionalPermissions"]),
@@ -174,30 +225,55 @@ public enum CodexDesktopRequestProjector {
             guard let history = historyWrapper["history"]?.object, let lastIsland = history["islands"]?.array?.last?.object,
                   lastIsland["newerBoundary"]?.object?["status"]?.string == "exhausted",
                   let entries = lastIsland["entries"]?.array, let entities = history["entitiesByKey"]?.object else { return (nil, false) }
-            let canonicalTurns = entries.compactMap { entry -> [String: PublicJSON]? in
-                guard let key = entry.object?["value"]?.string, let turn = entities[key]?.object,
-                      turn["turnId"]?.nonemptyString != nil else { return nil }
-                return turn
+            var canonicalTurns: [[String: PublicJSON]] = []
+            for entry in entries {
+                // Native canonical entries are turn references, not optional
+                // display rows. A missing tail entity cannot make an older turn
+                // authoritative for settlement or completion/unfollow.
+                guard let key = entry.object?["value"]?.nonemptyString, let turn = entities[key]?.object,
+                      turn["turnId"]?.nonemptyString != nil else { return (nil, false) }
+                canonicalTurns.append(turn)
             }
             guard let canonical = canonicalTurns.last, let id = canonical["turnId"]?.nonemptyString else {
                 return (live.last(where: { $0["turnId"]?.nonemptyString != nil }), true)
             }
-            let canonicalIDs = Set(canonicalTurns.compactMap { $0["turnId"]?.nonemptyString })
-            if let lastLive = live.last(where: { $0["turnId"]?.nonemptyString != nil }),
-               let liveID = lastLive["turnId"]?.nonemptyString, !canonicalIDs.contains(liveID) {
-                // Desktop merges the live suffix after its canonical history. Require an
-                // ordering anchor or a real start timestamp before admitting a different turn.
-                let anchor = live.lastIndex(where: { canonicalIDs.contains($0["turnId"]?.string ?? "") })
-                let liveIndex = live.lastIndex(where: { $0["turnId"]?.string == liveID }) ?? -1
-                let laterTime = (lastLive["turnStartedAtMs"]?.finiteNumber).flatMap { start in
-                    canonical["turnStartedAtMs"]?.finiteNumber.map { start >= $0 }
-                } ?? false
-                if anchor.map({ liveIndex > $0 }) == true || laterTime { return (lastLive, true) }
+            // Native zR/Jm inserts unmatched live prefixes before their next
+            // canonical anchor and appends the remaining suffix after history.
+            // Ordering comes from this owner state, not optional start times.
+            let allCanonicalIDs = Set(history["islands"]?.array?.flatMap { island in
+                island.object?["entries"]?.array?.compactMap { entry in
+                    entry.object?["value"]?.string.flatMap { entities[$0]?.object?["turnId"]?.nonemptyString }
+                } ?? []
+            } ?? [])
+            var suffix: [[String: PublicJSON]] = []
+            for turn in live {
+                if let liveID = turn["turnId"]?.nonemptyString, allCanonicalIDs.contains(liveID) {
+                    suffix.removeAll()
+                } else {
+                    let errorIsEmpty: Bool
+                    switch turn["error"] { case nil, .null?: errorIsEmpty = true; default: errorIsEmpty = false }
+                    // Native Km drops only the empty completed placeholder.
+                    if turn["turnId"]?.nonemptyString == nil && turn["turnStartedAtMs"]?.finiteNumber == nil
+                        && turn["status"]?.string == "completed" && errorIsEmpty
+                        && (turn["items"]?.array ?? []).isEmpty { continue }
+                    suffix.append(turn)
+                }
+            }
+            if let lastLive = suffix.last {
+                guard lastLive["turnId"]?.nonemptyString != nil else { return (nil, false) }
+                return (lastLive, true)
             }
             guard let overlay = live.last(where: { $0["turnId"]?.string == id }) else { return (canonical, true) }
             var merged = canonical.merging(overlay) { _, incoming in incoming }
-            if canonical["status"]?.string != "inProgress", overlay["status"]?.string == "inProgress" {
+            // Native Gue's normal live merge accepts the incoming status.
+            // Its pagination/reconnect overlay retains an existing terminal
+            // state; an unpaginated live turn can legitimately become active.
+            if canonical["status"]?.string != "inProgress", overlay["status"]?.string == "inProgress",
+               canonical["itemsPagination"]?.object != nil || overlay["itemsPagination"]?.object != nil {
                 merged["status"] = canonical["status"]
+            }
+            if canonical["turnStartedAtMs"]?.finiteNumber != nil {
+                merged["turnStartedAtMs"] = canonical["turnStartedAtMs"]
             }
             let existingItems = canonical["items"]?.array ?? []
             let incomingItems = overlay["items"]?.array ?? []

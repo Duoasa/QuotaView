@@ -124,7 +124,7 @@ struct IslandApprovalMetrics {
                             group += q.options.reduce(0) { $0 + Self.optionHeight($1["label"].text, description: $1["description"].text, width: width) + 8 }
                         }
                     }
-                    if q.other || q.options.isEmpty { group += 8 + Self.inputHeight }
+                    if q.allowsCustomAnswer { group += 8 + Self.inputHeight }
                     h += group
                 }
                 h += CGFloat(max(0, wire.questions.count - 1)) * 20
@@ -144,6 +144,90 @@ struct IslandApprovalMetrics {
         contentHeight = cardHeight + Self.gap + bodyHeight
             + (decisionsHeight > 0 ? Self.gap + decisionsHeight : 0)
             + (failureHeight > 0 ? Self.gap + failureHeight : 0) + IslandVibeLayout.rowSpacing
+    }
+}
+
+// The View and interaction smokes share this entry, including the actual
+// request-specific Board binding. Choosing or editing only changes its draft;
+// response capability and phase are checked again at the explicit send action.
+@MainActor
+struct IslandQuestionInteractionEntry {
+    let request: IslandConfirmation
+    let draft: Binding<IslandApprovalDraft>
+    let onDecision: (UUID, IslandConfirmationDecision) -> Void
+
+    private var wire: IslandCodexApprovalRequest? {
+        guard let wire = request.protocolRequest, wire.kind == .questions,
+              wire.supportedQuestions, !wire.observationOnly else { return nil }
+        return wire
+    }
+    var canEdit: Bool { request.canRespond && request.phase.canSubmit && wire != nil }
+    var canConfirm: Bool { confirmationResult != nil }
+    var canSkip: Bool {
+        guard canEdit, let wire else { return false }
+        return wire.questionSkipResult != nil
+            || (wire.userInputMode == .asynchronous && wire.desktopHandle?.kind == .asynchronousQuestion)
+    }
+    private var confirmationResult: IslandApprovalJSON? {
+        guard canEdit, let wire, let result = draft.wrappedValue.result(for: wire),
+              wire.permits(result) else { return nil }
+        return result
+    }
+    private func question(_ id: String) -> IslandApprovalQuestion? {
+        request.protocolRequest?.questions.first { $0.id == id }
+    }
+    func isSelected(_ label: String, questionID: String) -> Bool {
+        guard let question = question(questionID), question.options.contains(where: { $0["label"].text == label }) else { return false }
+        return draft.wrappedValue.selections[questionID]?.contains(label) == true
+    }
+    func isCustomSelected(questionID: String) -> Bool {
+        guard let question = question(questionID) else { return false }
+        return question.allowsCustomAnswer && draft.wrappedValue.usesCustomAnswer(for: question)
+    }
+    func isAnswered(questionID: String) -> Bool {
+        guard let question = question(questionID) else { return false }
+        return draft.wrappedValue.answer(for: question) != nil
+    }
+    @discardableResult
+    func choose(_ label: String, questionID: String) -> Bool {
+        guard canEdit, let question = question(questionID),
+              question.options.contains(where: { $0["label"].text == label }) else { return false }
+        var value = draft.wrappedValue
+        value.selectAnswer(label, for: question)
+        draft.wrappedValue = value
+        return true
+    }
+    @discardableResult
+    func chooseCustom(questionID: String) -> Bool {
+        guard canEdit, let question = question(questionID), question.allowsCustomAnswer else { return false }
+        var value = draft.wrappedValue
+        value.selectCustomAnswer(for: question)
+        draft.wrappedValue = value
+        return true
+    }
+    @discardableResult
+    func edit(_ text: String, questionID: String) -> Bool {
+        guard canEdit, let question = question(questionID), question.allowsCustomAnswer else { return false }
+        var value = draft.wrappedValue
+        value.setAnswer(text, for: question)
+        draft.wrappedValue = value
+        return true
+    }
+    func answerBinding(questionID: String) -> Binding<String> {
+        .init(get: { draft.wrappedValue.values[questionID] ?? "" },
+              set: { _ = edit($0, questionID: questionID) })
+    }
+    @discardableResult
+    func confirm() -> Bool {
+        guard let result = confirmationResult else { return false }
+        onDecision(request.id, .reply(result))
+        return true
+    }
+    @discardableResult
+    func skip() -> Bool {
+        guard canSkip else { return false }
+        onDecision(request.id, .skipQuestion)
+        return true
     }
 }
 
@@ -168,6 +252,9 @@ struct IslandApprovalView: View {
     private var secondary: Color { IslandApprovalAppearance.secondary }
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private var wire: IslandCodexApprovalRequest? { request.protocolRequest }
+    var questionInteraction: IslandQuestionInteractionEntry {
+        .init(request: request, draft: $draft, onDecision: onDecision)
+    }
     private var actions: [IslandApprovalAction] {
         wire?.actions ?? []
     }
@@ -177,8 +264,8 @@ struct IslandApprovalView: View {
     private var primaryAction: IslandApprovalAction? {
         if let wire, [.questions, .permissions, .mcpForm, .mcpURL].contains(wire.kind) {
             return .init(id: "submit", label: wire.kind == .questions || wire.kind == .mcpForm
-                ? (IslandApprovalLayout(wire) == .connector ? .init("提交选择", "Submit choice")
-                    : wire.kind == .mcpForm ? .init("提交参数", "Submit form") : .init("提交回答", "Submit answers"))
+                ? (IslandApprovalLayout(wire) == .connector ? .init("确认", "Confirm")
+                    : wire.kind == .mcpForm ? .init("提交参数", "Submit form") : .init("确认", "Confirm"))
                 : (wire.kind == .mcpURL ? .init("完成授权，继续", "Authorization complete, continue") : .init("授予所选权限", "Grant selected")),
                 result: draft.result(for: wire) ?? .null, affirmative: true)
         }
@@ -236,8 +323,17 @@ struct IslandApprovalView: View {
 
     private var actionBar: some View {
         IslandApprovalActionLayout {
-            if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || wire?.kind == .mcpURL {
+            if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
                 specialButton(text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+            } else if wire?.kind == .questions {
+                Button { questionInteraction.skip() } label: {
+                    Text(text("跳过", "Skip")).font(.system(size: 13, weight: .semibold))
+                        .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
+                }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!questionInteraction.canSkip)
+                    .help(wire?.userInputMode == .asynchronous
+                        ? text("暂时跳过此提示，问题保持未回答", "Dismiss this prompt; the question remains unanswered")
+                        : text("跳过这些问题并通知 Codex", "Skip these questions and notify Codex"))
+                if let action = primaryAction { actionButton(action, primary: true) }
             } else {
             if let action = cancelAction { actionButton(action) }
             if let action = firstNegative { actionButton(action, destructive: true) }
@@ -267,7 +363,8 @@ struct IslandApprovalView: View {
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
                     openedURL: draft.openedURL, handoffMessage: codexJumpMessage,
-                    controls: controls(wire).disabled(!request.canRespond || !request.phase.canSubmit))
+                    controls: controls(wire).disabled(wire.kind == .questions
+                        ? !questionInteraction.canEdit : !request.canRespond || !request.phase.canSubmit))
             } else {
             Text(request.question.value(english)).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
                 .foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
@@ -307,7 +404,7 @@ struct IslandApprovalView: View {
         switch request.kind {
         case .questions:
             VStack(alignment: .leading, spacing: 20) {
-                ForEach(Array(request.questions.enumerated()), id: \.element.id) { index, q in
+                ForEach(Array(request.questions.enumerated()), id: \.offset) { index, q in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .top, spacing: 10) {
                             Text(String(format: "%02d", index + 1)).font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -323,7 +420,7 @@ struct IslandApprovalView: View {
                             }.frame(maxWidth: .infinity, alignment: .leading)
                             Image(systemName: answered(q) ? "checkmark.circle.fill" : "circle.dotted")
                                 .font(.system(size: 12)).foregroundStyle(answered(q) ? secondary : muted).frame(width: 16, height: 24)
-                                .accessibilityLabel(answered(q) ? text("已回答", "Answered") : text("未回答", "Unanswered"))
+                                .accessibilityLabel(answered(q) ? text("已填写，等待确认", "Ready to confirm") : text("未填写", "No answer selected"))
                         }.frame(height: IslandApprovalMetrics.questionHeader(q, width: metrics.contentWidth), alignment: .top)
                         if IslandApprovalLayout(request) == .connector {
                             HStack(spacing: 8) {
@@ -335,9 +432,12 @@ struct IslandApprovalView: View {
                                 }
                             }
                         } else { ForEach(Array(q.options.enumerated()), id: \.offset) { _, option in optionButton(q, option: option) } }
-                        if q.other || q.options.isEmpty {
-                            IslandApprovalInput(placeholder: text(q.options.isEmpty ? "输入你的回答" : "其他回答…",
-                                q.options.isEmpty ? "Your answer" : "Or enter another answer…"), secret: q.secret, value: answerBinding(q.id))
+                        if q.allowsCustomAnswer {
+                            IslandApprovalInput(placeholder: text(q.options.isEmpty ? "输入你的回答" : "自行输入…",
+                                q.options.isEmpty ? "Your answer" : "Enter your own answer…"), secret: q.secret,
+                                value: questionInteraction.answerBinding(questionID: q.id),
+                                selected: questionInteraction.isCustomSelected(questionID: q.id),
+                                onSelect: { questionInteraction.chooseCustom(questionID: q.id) })
                         }
                     }
                 }
@@ -466,9 +566,9 @@ struct IslandApprovalView: View {
     private func optionButton(_ q: IslandApprovalQuestion, option: IslandApprovalJSON, width: CGFloat? = nil, height: CGFloat? = nil) -> some View {
         let label = option["label"].text
         let availableWidth = width ?? metrics.contentWidth
-        let selected = draft.selections[q.id]?.contains(label) == true
+        let selected = questionInteraction.isSelected(label, questionID: q.id)
         return Button {
-            draft.selections[q.id] = [label]; draft.values[q.id] = ""
+            questionInteraction.choose(label, questionID: q.id)
         } label: {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -492,8 +592,7 @@ struct IslandApprovalView: View {
             .font(.system(size: 15, weight: .regular)).foregroundStyle(selected ? Color.white : muted).frame(width: 20, height: 20)
     }
     private func answered(_ question: IslandApprovalQuestion) -> Bool {
-        !(draft.selections[question.id] ?? []).isEmpty
-            || !(draft.values[question.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        questionInteraction.isAnswered(questionID: question.id)
     }
     private var footerStatus: String {
         if !codexJumpMessage.isEmpty { return codexJumpMessage }
@@ -508,8 +607,8 @@ struct IslandApprovalView: View {
         guard let wire else { return text("等待选择", "Awaiting a choice") }
         switch wire.kind {
         case .questions:
-            return text("已回答 \(wire.questions.filter { answered($0) }.count) / \(wire.questions.count) 个问题",
-                "\(wire.questions.filter { answered($0) }.count) of \(wire.questions.count) answered")
+            return text("已填写 \(wire.questions.filter { answered($0) }.count) / \(wire.questions.count) · 确认后发送",
+                "\(wire.questions.filter { answered($0) }.count) of \(wire.questions.count) ready · Confirm to send")
         case .permissions:
             return text("已选 \((draft.selections["permissions"] ?? []).count) 项 · \(draft.sessionScope ? "本会话" : "仅本轮")",
                 "\((draft.selections["permissions"] ?? []).count) selected · \(draft.sessionScope ? "This session" : "This turn")")
@@ -559,9 +658,6 @@ struct IslandApprovalView: View {
     private func valueBinding(_ key: String) -> Binding<String> {
         .init(get: { draft.values[key] ?? "" }, set: { draft.values[key] = $0 })
     }
-    private func answerBinding(_ key: String) -> Binding<String> {
-        .init(get: { draft.values[key] ?? "" }, set: { draft.values[key] = $0; draft.selections[key] = [] })
-    }
     private func selectionBinding(_ key: String, value: String) -> Binding<Bool> {
         .init(get: { draft.selections[key]?.contains(value) == true }, set: { enabled in
             var values = draft.selections[key] ?? []
@@ -570,7 +666,8 @@ struct IslandApprovalView: View {
         })
     }
     private func actionButton(_ action: IslandApprovalAction, primary: Bool = false, destructive: Bool = false) -> some View {
-        let enabled = request.phase.canSubmit && action.result != .null
+        let enabled = wire?.kind == .questions ? questionInteraction.canConfirm
+            : request.canRespond && request.phase.canSubmit && action.result != .null
         return Button { send(action) } label: {
             HStack(spacing: 8) {
                 if submitting && primary { ProgressView().controlSize(.small).tint(secondary) }
@@ -589,6 +686,7 @@ struct IslandApprovalView: View {
         }.buttonStyle(IslandApprovalActionStyle(primary: true)).disabled(!enabled)
     }
     private func send(_ action: IslandApprovalAction) {
+        if wire?.kind == .questions { questionInteraction.confirm(); return }
         guard request.canRespond, request.phase.canSubmit, action.result != .null else { return }
         if wire == nil { onDecision(request.id, action.affirmative ? .allowOnce : .reject) }
         else { onDecision(request.id, .reply(action.result)) }

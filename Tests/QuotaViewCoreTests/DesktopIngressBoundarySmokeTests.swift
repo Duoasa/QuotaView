@@ -221,6 +221,26 @@ final class DesktopIngressBoundarySmokeTests: XCTestCase {
         await store.stop()
     }
 
+    func testUnfollowDuringClassificationCancelsOnlyItsLateAttachment() async throws {
+        let gate = DesktopIngressClassifierGate()
+        let store = makeStore { event in
+            if event.event == .userPromptSubmit && event.sessionHash == CodexActivityPrivacy.hashIdentifier("detached") { await gate.block() }
+            return event.sessionKind ?? .user
+        }
+        var callbacks: [String] = []
+        store.desktopProjectionDidReceive = { _, snapshot in callbacks.append(snapshot.conversationID) }
+        let first = try pair(conversation: "detached")
+        let admission = Task { await self.admit(first, store: store) }
+        await gate.waitUntilEntered()
+        store.cancelDesktopAttachment(conversationID: "detached")
+        await assertAdmission(true, try pair(conversation: "other", turn: "other-turn"), store: store)
+        await gate.release()
+        let accepted = await admission.value
+        XCTAssertFalse(accepted)
+        XCTAssertEqual(callbacks, ["other"])
+        await store.stop()
+    }
+
     func testDisconnectDuringClassificationCannotCreateLateCoreTask() async throws {
         let gate = DesktopIngressClassifierGate()
         let store = makeStore { event in

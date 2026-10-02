@@ -32,6 +32,9 @@ final class IslandLiveStore {
         struct WaitEvidence {
             var reason: CodexActivityWaitReason?
             var epoch: UInt64?
+            // Only owner-proven runtime wait evidence carries this owner. A
+            // new connection's empty set cannot settle an old owner's wait.
+            var desktopOwner: String? = nil
             // nil means the source reported waiting before a request identity
             // was available. A bound set is scoped to this task, turn and epoch.
             var requestIdentities: Set<String>? = nil
@@ -39,8 +42,15 @@ final class IslandLiveStore {
         var requests: [Pending] = []
         var requestIndex = 0
         private(set) var desktopAsyncQuestionsAuthoritative = false
+        // Native async Skip dismisses a prompt without answering the task. Keep
+        // this per-turn presentation preference separate from settlement proof.
+        private(set) var skippedAsyncQuestionIDs: Set<String> = []
         var sourceWait: WaitEvidence?
         var unidentifiedWait: WaitEvidence?
+        // The current Desktop runtime may still be waiting after a typed RPC
+        // disappears, or have an unsupported concurrent request. Keep its
+        // evidence independent of observer request bindings and settlements.
+        private var desktopRuntimeWait: WaitEvidence?
         private var sourcePlaceholder = Pending(key: "observer-placeholder", value: .init(
             question: .init("请求详情暂不可用", "Request details unavailable"),
             impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
@@ -49,10 +59,11 @@ final class IslandLiveStore {
         private var callModes: [String: CodexUserInputMode] = [:]
         private var callModeOrder: [String] = []
 
-        var waitingOnSource: Bool { sourceWait != nil || unidentifiedWait != nil }
+        var waitingOnSource: Bool { sourceWait != nil || unidentifiedWait != nil || desktopRuntimeWait != nil }
         var hasBlockingRequest: Bool { requests.contains(where: \.blocksExecution) }
         var visibleRequests: [Pending] { requests.isEmpty && waitingOnSource ? [sourcePlaceholder] : requests }
         var waitReason: CodexActivityWaitReason? {
+            if let desktopRuntimeWait { return desktopRuntimeWait.reason }
             if let sourceWait { return sourceWait.reason }
             if let unidentifiedWait { return unidentifiedWait.reason }
             guard let blocker = requests.first(where: \.blocksExecution) else { return nil }
@@ -95,6 +106,8 @@ final class IslandLiveStore {
                 && left.method == right.method && left.key == right.key
         }
         mutating func observe(_ pending: Pending) {
+            if case .asynchronousQuestion(let id)? = pending.desktopIdentity,
+               skippedAsyncQuestionIDs.contains(id) { return }
             if desktopAsyncQuestionsAuthoritative, pending.mode == .asynchronous,
                pending.value.protocolRequest?.observationOnly == true { return }
             // The current owner ledger is authoritative for real Desktop
@@ -131,6 +144,16 @@ final class IslandLiveStore {
             requests.removeAll(where: replaces)
             requests.append(replacement)
             bindUnidentifiedSourceWait(to: replacement); clampSelection()
+        }
+        @discardableResult mutating func skipAsyncQuestion(_ requestID: UUID) -> Bool {
+            guard let pending = requests.first(where: { $0.value.id == requestID }),
+                  pending.mode == .asynchronous,
+                  case .asynchronousQuestion(let id)? = pending.desktopIdentity,
+                  skippedAsyncQuestionIDs.count < 256 else { return false }
+            skippedAsyncQuestionIDs.insert(id)
+            requests.removeAll { $0.value.id == requestID }
+            clampSelection()
+            return true
         }
         mutating func continueCall(_ callHash: String?) {
             guard let callHash, requests.contains(where: { $0.isGeneric && $0.callHash == callHash }), mode(for: callHash) != .asynchronous else { return }
@@ -185,12 +208,63 @@ final class IslandLiveStore {
             }
             clampSelection()
         }
+        mutating func observeDesktopRuntimeWait(_ projection: CodexDesktopInteractionProjection, owner: String, epoch: UInt64) {
+            guard projection.pendingRequestsAreAuthoritative else { return }
+            let represented = Set(projection.requests.map(\.identity))
+            let unknownPending = projection.authoritativePendingIdentities.subtracting(represented)
+            let blocker = projection.requests.first { $0.turnID == projection.currentTurnID
+                && $0.userInputMode != .asynchronous }
+            // A real blocking RPC is positive waiting evidence even if runtime
+            // flags have not caught up. Reobserving it migrates aggregate wait
+            // scope along with the typed request, allowing later settlement.
+            if desktopRuntimeWait != nil, projection.threadWaitStatus != .waiting(.approval),
+               projection.threadWaitStatus != .waiting(.userInput), let blocker {
+                desktopRuntimeWait = .init(reason: blocker.method == "item/tool/requestUserInput" ? .userInput : .approval,
+                    epoch: epoch, desktopOwner: owner)
+                return
+            }
+            let currentScope = desktopRuntimeWait == nil || (desktopRuntimeWait?.desktopOwner == owner
+                && desktopRuntimeWait?.epoch == epoch)
+            switch projection.threadWaitStatus {
+            case .waiting(let reason):
+                // Positively observing waiting again can migrate the aggregate
+                // runtime evidence. A negative snapshot cannot do that.
+                desktopRuntimeWait = .init(reason: reason, epoch: epoch, desktopOwner: owner)
+            case .running:
+                // An unknown RPC does not invent a new user-facing wait. It
+                // does prevent discarding a wait already observed on this turn.
+                if !unknownPending.isEmpty, waitingOnSource || hasBlockingRequest {
+                    if currentScope {
+                        desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch, desktopOwner: owner)
+                    }
+                } else if currentScope { desktopRuntimeWait = nil }
+            case .unavailable:
+                if currentScope, !unknownPending.isEmpty, waitingOnSource || hasBlockingRequest {
+                    desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch, desktopOwner: owner)
+                }
+            }
+        }
+        mutating func reconcileDesktopContinuation(_ projection: CodexDesktopInteractionProjection) {
+            guard projection.provesNoPendingConfirmation else { return }
+            // Explicit running flags plus the full owner's empty pending set
+            // retire stale, unanswerable observer evidence. This does not mark
+            // an async question or a typed request as answered.
+            let generic = requests.filter { $0.isGeneric && $0.desktopIdentity == nil }
+            let keys = Set(generic.map(\.key))
+            requests.removeAll { keys.contains($0.key) }
+            settleSourceWait(for: generic)
+            if sourceWait?.requestIdentities == nil { sourceWait = nil }
+            unidentifiedWait = nil
+            // Runtime evidence was reconciled separately in its exact owner
+            // scope. Preserve an older scope until it is positively reobserved.
+            clampSelection()
+        }
         @discardableResult
         mutating func resolveDesktopRequests(owner: String, epoch: UInt64,
             pending: Set<CodexDesktopPendingRequestIdentity>, asyncQuestions: Set<String>) -> Bool {
             let matching = requests.filter { request in
-                guard let requestEpoch = request.desktopEpoch, requestEpoch <= epoch,
-                      request.desktopOwner != nil, let identity = request.desktopIdentity else { return false }
+                guard request.desktopEpoch == epoch, request.desktopOwner == owner,
+                      let identity = request.desktopIdentity else { return false }
                 switch identity {
                 case .server(let identity): return !pending.contains(identity)
                 case .asynchronousQuestion(let id): return !asyncQuestions.contains(id)
@@ -269,7 +343,7 @@ final class IslandLiveStore {
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
         }
-        mutating func finishTurn() { requests.removeAll(); sourceWait = nil; unidentifiedWait = nil; requestIndex = 0 }
+        mutating func finishTurn() { requests.removeAll(); sourceWait = nil; unidentifiedWait = nil; desktopRuntimeWait = nil; requestIndex = 0 }
         private mutating func rememberCall(_ hash: String) {
             resolvedCallHashes.removeAll { $0 == hash }; resolvedCallHashes.append(hash)
             if resolvedCallHashes.count > 256 { resolvedCallHashes.removeFirst() }
@@ -430,6 +504,7 @@ final class IslandLiveStore {
             let availableControls: Bool
             switch wire.kind {
             case .command, .terminalInput, .network, .fileChange: availableControls = !wire.actions.isEmpty
+            case .questions: availableControls = wire.supportedQuestions
             default: availableControls = true
             }
             let canRespond = availableControls && snapshot.supportsUntrustedAppInput && wire.desktopHandle != nil
@@ -445,6 +520,7 @@ final class IslandLiveStore {
         }
         if projection.pendingRequestsAreAuthoritative {
             tasks[i].requestLifecycle.admitAuthoritativeDesktopQuestions()
+            tasks[i].requestLifecycle.observeDesktopRuntimeWait(projection, owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch)
         }
         for request in projection.requests where request.turnID == turn {
             guard var wire = try? IslandCodexApprovalRequest(data: request.envelopeData) else { continue }
@@ -460,11 +536,14 @@ final class IslandLiveStore {
             tasks[i].requestLifecycle.observe(pending(wire, identity: .asynchronousQuestion(question.questionItemID),
                 call: CodexActivityPrivacy.hashIdentifier(question.questionItemID), mode: .asynchronous))
         }
-        if projection.pendingRequestsAreAuthoritative,
-           tasks[i].requestLifecycle.resolveDesktopRequests(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch,
-                pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs) {
-            desktopRequestSettlementDidReceive?(key, CodexActivityPrivacy.hashIdentifier(turn), snapshot.connectionEpoch,
-                tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest)
+        if projection.pendingRequestsAreAuthoritative {
+            let settled = tasks[i].requestLifecycle.resolveDesktopRequests(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch,
+                pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs)
+            tasks[i].requestLifecycle.reconcileDesktopContinuation(projection)
+            if settled || projection.provesNoPendingConfirmation {
+                desktopRequestSettlementDidReceive?(key, CodexActivityPrivacy.hashIdentifier(turn), snapshot.connectionEpoch,
+                    tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest)
+            }
         }
         onChange?()
     }
@@ -717,7 +796,7 @@ final class IslandLiveStore {
                tasks[i].resolvedCallHashes.contains(CodexActivityPrivacy.hashIdentifier(itemID)) { return }
             guard !tasks[i].terminal else { return }
             let question = !wire.questions.isEmpty ? wire.questions[0].title : wire.params["message"].text.isEmpty ? (wire.params["reason"].text.isEmpty ? "Codex 请求你的处理" : wire.params["reason"].text) : wire.params["message"].text
-            let canRespond = !wire.observationOnly && respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm)
+            let canRespond = !wire.observationOnly && respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm) && (wire.kind != .questions || wire.supportedQuestions)
             tasks[i].requestLifecycle.observe(.init(key: requestKey, value: .init(question: .init(question),
                 impact: canRespond ? .init("确认后继续任务。", "Approve to resume the task.")
                     : .init("此连接仅支持查看，请在 Codex 处理。", "This connection is read-only; handle the request in Codex."), protocolRequest: wire, canRespond: canRespond),
@@ -893,8 +972,8 @@ final class IslandLiveStore {
         guard let i = tasks.firstIndex(where: { $0.id == id }),
               let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.id == requestID }),
               tasks[i].requestLifecycle.requests[j].value.canRespond, tasks[i].requestLifecycle.requests[j].value.phase.canSubmit,
-              let wire = tasks[i].requestLifecycle.requests[j].value.protocolRequest, case .reply(let result) = decision,
-              !wire.observationOnly, wire.permits(result), responseCapability?(wire) == true, let respond else { return }
+              let wire = tasks[i].requestLifecycle.requests[j].value.protocolRequest,
+              !wire.observationOnly, responseCapability?(wire) == true else { return }
         let turn = tasks[i].turnKey
         let epoch = connectionEpoch
         let handle = wire.desktopHandle
@@ -903,6 +982,18 @@ final class IslandLiveStore {
                   turn == CodexActivityPrivacy.hashIdentifier(handle.turnID),
                   desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return }
         }
+        if decision == .skipQuestion {
+            guard wire.kind == .questions, wire.supportedQuestions else { return }
+            if let skip = wire.questionSkipResult {
+                submit(id, requestID: requestID, decision: .reply(skip))
+            } else if wire.userInputMode == .asynchronous, handle?.kind == .asynchronousQuestion,
+                      tasks[i].requestLifecycle.skipAsyncQuestion(requestID) {
+                // No RPC, answer tombstone, or source-wait settlement is emitted.
+                onChange?()
+            }
+            return
+        }
+        guard case .reply(let result) = decision, wire.permits(result), let respond else { return }
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
             guard let self else { return }
