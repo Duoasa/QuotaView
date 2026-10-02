@@ -73,9 +73,12 @@ final class CodexActivityCompactHideAuditTests: XCTestCase {
     }
 
     func testNewTurnCancelsOldHideAndNextCompletionStillHides() async throws {
-        let store = makeStore(hidden: 0.05)
+        let store = makeStore(hidden: 30)
         finish(store)
         try await waitFor(.compact, in: store)
+        // Observe compact reliably before arming the short hide window. These
+        // two synchronous operations cannot yield to the old hide task.
+        store.updateInactivityDelays(compactDelay: 0.02, hiddenDelayAfterCompact: 0.05)
         store.receive(event(.userPromptSubmit, turn: "next"))
         try await Task.sleep(nanoseconds: 150_000_000)
         XCTAssertEqual(store.presentation, .expanded)

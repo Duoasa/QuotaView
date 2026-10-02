@@ -12,7 +12,7 @@ Hook 启动时幂等维护稳定命令，通过 Codex 原生 `hooks/list` 核验
 
 请求生命周期集中管理调用、RPC、详情升级与解决，任务状态从执行事实和阻塞证据派生。同步和异步提问使用同一模式定义，展示真实标题、问题及选项；异步发送回执不视为回答。工具 B 不清除 A，线程恢复不回答独立异步问题，未知输出不建立未来请求的解决标记。精确解除通过同轮次、同连接证据同步 Core 快照和提醒；仍有并行阻塞时继续等待。无身份 Hook 等待只由权威线程解除或轮次结束清除。本地观察保持只读，实际应答权不从独立 App Server 推断；私有推理不进入显示。
 
-76 项必要隔离冒烟通过，包括 Shared → Store → Island 的端到端乱序、重连、暂停恢复及并行请求场景、原生配置和 Helper/队列边界。Debug arm64 构建、固定身份和 deep strict ad-hoc 签名核对通过，当前开发包 PID 41104。身份保持 0.7.3 / 显示 Build 1 / 内部 49；源码/包指纹记录在忽略的开发 manifest。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`。完整 CI 暴露的终态夹具遗漏第二轮原生来源，已明确其 App Server 来源，并与旧轮次拒绝场景一起专项复验 2 项通过（`.build/073-native-hook-ci-terminal-smoke.log`）；生产准入约束不变。此前启动核验的 12 组开发 Hook 迁移与 6 组其它 Hook 内容保留证据继续保留。首次原生授权及视觉、真实交互待用户操作和验收。本地未扩展完整回归或 UI 自动化；GitHub 完整 Swift CI 和 main 合并状态以 [PR #67](https://github.com/Duoasa/QuotaView/pull/67) 为准，本轮未发布 Release/appcast。
+76 项必要隔离冒烟通过，包括 Shared → Store → Island 的端到端乱序、重连、暂停恢复及并行请求场景、原生配置和 Helper/队列边界。Debug arm64 构建、固定身份和 deep strict ad-hoc 签名核对通过，当前开发包 PID 41104。身份保持 0.7.3 / 显示 Build 1 / 内部 49；源码/包指纹记录在忽略的开发 manifest。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`。完整 CI 暴露的终态夹具遗漏第二轮原生来源，已明确其 App Server 来源，并与旧轮次拒绝场景一起专项复验 2 项通过（`.build/073-native-hook-ci-terminal-smoke.log`）；生产准入约束不变。CI 暴露的短 compact 观察窗口改为先观察再同步武装隐藏计时，假服务 RPC 预算与 Runtime 的 8 秒上限对齐；配置夹具、3 项真实原生探针与计时共 9 项专项复验通过，证据 `.build/native-hook-fixture-rpc-budget-smoke.log`、`.build/073-native-hook-ci-fixture-smoke.log`。计时、授权哈希断言与生产实现保持。此前启动核验的 12 组开发 Hook 迁移与 6 组其它 Hook 内容保留证据继续保留。首次原生授权及视觉、真实交互待用户操作和验收。本地未扩展完整回归或 UI 自动化；GitHub 完整 Swift CI 和 main 合并状态以 [PR #67](https://github.com/Duoasa/QuotaView/pull/67) 为准，本轮未发布 Release/appcast。
 
 
 ## 2026-10-02 设置精简与自动弹出

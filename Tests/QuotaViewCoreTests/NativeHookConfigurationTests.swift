@@ -81,7 +81,8 @@ final class NativeHookConfigurationTests: XCTestCase {
             )
             XCTFail("Changed definition must not report authorized")
         } catch {
-            XCTAssertEqual(error as? CodexHookConfigurationError, .authorizationNotConfirmed)
+            XCTAssertEqual(error as? CodexHookConfigurationError, .authorizationNotConfirmed,
+                "Unexpected native fixture error: \(String(reflecting: error)) [\(type(of: error))]")
         }
         await client.stop()
     }
@@ -224,7 +225,10 @@ final class NativeHookConfigurationTests: XCTestCase {
             CodexAppServerClient(
                 executablePath: executable.path,
                 environment: ["PATH": "/usr/bin:/bin", "HOME": root.path, "CODEX_HOME": root.path],
-                startupTimeoutSeconds: 3, requestTimeoutSeconds: 3
+                // A queued CI worker may delay Python launch/stdio without
+                // changing this deterministic probe's hash-race semantics.
+                // Match Runtime's bounded RPC budget; production is unchanged.
+                startupTimeoutSeconds: 8, requestTimeoutSeconds: 8
             )
         }
         func writes() throws -> [[String: Any]] {
