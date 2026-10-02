@@ -29,3 +29,6 @@ jobs:
 
       - name: Run tests
         run: swift test
+
+      - name: Run native question closure contract fixtures
+        run: PYTHONDONTWRITEBYTECODE=1 python3 Prototypes/NativeQuestionBridgeContract/smoke.py

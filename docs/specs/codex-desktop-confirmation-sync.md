@@ -11,6 +11,14 @@ Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 
 - 选择选项或自行输入只修改该请求的草稿，显示选中反馈；完整有效的答案在点击“确认”后单次发送，ACK 仅为“已发送”。只有原任务的后续权威状态移除对应请求，或出现被原生接受的精确问题回答，才解除该请求。用户在 Codex 处理后同样同步；并行请求各自保留。
 - 未知协议、未证明的来源、远程任务、外部授权和不支持的表单继续在 Codex 处理；缺失详情不编造可操作内容。
 
+## 原生关闭最小合同与停止边界 · 2026-10-03
+
+本轮继续调查，仍没有经过身份绑定的 async 提交并关闭接口。生产 API/AX 路由保持；[接口证据与最小合同](../design/codex-native-question-closure-contract-2026-10-03.md)明确 renderer 选择是完整有序问题组，可能跨 source，pure Dismiss 不能按单题接受触发。Skip 的同名 dismiss data 属性不能证明无发送。
+
+AX 设计仅在明确 opt-in/已授权、同进程/构建/owner/epoch/host/会话/轮次/entity、完整组/草稿/元素证明和事务性保护齐备时允许一次 pureDismiss 意图。当前 AX 映射和 lease/CAS 均未建立，缺条件拒绝并交由人处理；双次读取不能消除 TOCTOU。隔离夹具仅验证合同，不调用 AX、启用权限或发送真实回答。后续依赖真实权限与人工验收的操作前停止；不能把代码、CI或缺少 Vibe 源码推导为已关闭或永久不能开发。
+
+PR #70 main 合并提交 `9e67f2bde7a8a31d981e5e21e6a1cf1bfdb4ad8c` 的 postmerge push CI run 37073125800 同 SHA 成功：508 项，6 项跳过、0 失败。
+
 ## 提问提示结算与原生关闭边界 · 2026-10-03
 
 本轮补齐已观察异步问题的当前轮次原生回答证明：Local rollout 仅输出 questionItemId 与原问题哈希，精确结算只读问题，多个问题全部回答后再移除对应组；不发布答案、不提升响应能力、不解除同步 RPC 或匿名等待。活动组证明与最近 256 项已结束证明有界保留，普通用户内容、早于请求的回答、旧轮次和相似文字不能建立未来解决标记。详见 [模块梳理](../design/quotaview-question-lifecycle-review-2026-10-03.md)。
