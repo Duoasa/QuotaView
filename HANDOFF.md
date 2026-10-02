@@ -1,6 +1,14 @@
 # QuotaView Handoff
 
-## Desktop 问题交互与真实连接修复 · 2026-10-02 本轮最新
+## 提问提示清理与排版修正 · 2026-10-03 本轮最新
+
+已补齐当前轮次、已观察异步问题的原生回答哈希结算，回答后仍保留的只读提示可精确清理；并行请求和匿名等待保持。问题标题/编号对齐、输入框区分、无物理刘海的收起标题可用空间已修正。模块根因、证据和未完成边界见 [提问生命周期梳理](docs/design/quotaview-question-lifecycle-review-2026-10-03.md)。
+
+203 项必要冒烟、Debug arm64 构建和 deep strict ad-hoc 签名通过；181 项输入与运行包核对一致。开发包交付时 PID 75451，身份保持 0.7.3 / 显示 Build 1 / 内部 49。证据 `.build/073-question-presentation-smoke.log`、`.build/073-question-presentation-build.log`、`.build/073-question-presentation-delivery.json`。视觉与真实点击待用户验收。
+
+**原生异步提问框关闭仍未实现或验证。** 答案回传 ACK、精确回答结算和原生界面关闭是三个阶段；当前 follower 只覆盖前两个。已自主核查 Vibe 官方材料与本地静态实现，仍无同类异步框关闭的确证；不新增系统权限，不自动回答、重复提交或用同步结束事件冒充异步关闭。仅本轮已验证修复进入源码集成；交付时源码含未提交修复，基准 HEAD `baffcbd1fe82695bc590270ab9cdef9d1c0e59cf`。上一轮 PR #69 已合并 main `f17ac8eba2143f49a1ab2f55593d16583c2f9652`，不包含本轮修复。稳定安装、版本身份、Release/appcast 与用户数据保持。
+
+## 历史交付：Desktop 问题交互与真实连接修复 · 2026-10-02
 
 本轮先核对原版 Vibe Island 1.0.51、本机 Codex Desktop 26.928.40906（bundle `com.openai.codex`，CLI 0.159.2 单独记录）和实际运行包，梳理传输、当前轮次、来源准入、响应能力与 View 草稿入口。反复“仅查看”并非只缺按钮：原 socket 读取短回复会等待填满缓冲；canonical 历史/live suffix 的当前轮次合成与原生语义不一致；未知 Desktop 来源未借用仍验证有效的 Local 用户身份。另在真实多会话跟随中发现本会话完整快照约 **14.55 MiB**，超限触发旧全局 resource pause，使正常会话也丢失能力。
 
