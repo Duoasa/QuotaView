@@ -1,5 +1,13 @@
 # QuotaView 0.7.3 开发交接 · 2026-10-01
 
+## Desktop 直接确认与双向同步 · 2026-10-02
+
+按用户要求参考原版 Vibe Island 1.0.51 和本机 Codex 0.159.2 的实际 Desktop owner/follower IPC，实现原任务确认详情与回传；模块职责、协议和失败语义见 [Desktop 确认同步规格](docs/specs/codex-desktop-confirmation-sync.md)。普通审批、同步提问和受支持工具表单使用原始 RPC；异步问题使用原生 questionItemId 和回答 steering 消息，不伪装成审批。新真实请求自动进入详情，刷新不抢焦点，既有手动页面、其他请求草稿和自动弹出偏好保持。此前纯观察模式只适用于没有已证明 Desktop 能力的来源。
+
+能力由实际 owner、当前轮次、精确 typed ID 和连续状态证明，不能从 Local/Shared/Hook 的观察详情推断。ACK 仅为已发送，权威请求移除或精确接受的答案才解除；外部 Codex 操作同步清理，对应 Core 等待和提醒随之更新，并行请求保留。首次 owner 尚未就绪可有界恢复；切目录先撤销旧代次，分类重入和晚 ACK 不回写新状态。资源按会话撤销能力而不假装已回答，内存、帧和队列有界，原始会话状态不落盘。协议属于当前 Codex 私有接口，未知版本/类型、外部授权和复杂表单仍在 Codex 处理。
+
+98 项必要隔离冒烟、真实只读 initialize 握手、新 Derived Data Debug arm64 构建、固定身份/资源和 deep strict ad-hoc 签名通过；证据 `.build/073-desktop-confirmation-smoke.log`、`.build/073-desktop-confirmation-handshake.json`、`.build/073-desktop-confirmation-build.log`、`.build/073-desktop-confirmation-delivery.json`。仅更新既有开发包，当前 PID **90147**，身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。未替用户处理真实确认；视觉和真实点击待用户验收，本地无完整回归或 UI 自动化。用户已授权本轮源码推送 GitHub 并合并 main；源码提交 `5461059bedb918dc74f344feac2fe7b852020153` 已推送至 [PR #68](https://github.com/Duoasa/QuotaView/pull/68)，完整 Swift CI 和合并状态以该 PR 为准。基准 PR #67 已合并；manifest 保留已运行包的实际输入指纹和本轮集成状态。以下保留历史交付，稳定安装与公开 Release/appcast 保持。
+
 ## Hook 原生配置与待确认关联修复 · 2026-10-02
 
 本轮按用户要求全面梳理 Hook 配置、传输重播、任务准入、请求生命周期和状态投影，修复 Codex 更新后的配置失效、真实提问漏报、确认内容错配与回答后卡住。职责、反例和边界见 [Hook 与请求状态模块梳理](docs/design/quotaview-hook-request-module-review-2026-10-02.md)。

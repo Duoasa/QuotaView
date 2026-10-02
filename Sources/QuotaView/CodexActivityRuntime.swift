@@ -51,6 +51,10 @@ final class CodexActivityRuntime: ObservableObject {
     let liveIsland = IslandSession()
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
+    private var desktopIPCClient: CodexDesktopIPCClient
+    private var desktopObservationTask: Task<Void, Never>?
+    private var desktopRunGeneration: UInt64 = 0
+    private var desktopFollowedThreads: Set<String> = []
     private var observationsEnabled = false
     private var accessibilityCancellable: AnyCancellable?
     private var quotaStatusCancellable: AnyCancellable?
@@ -84,6 +88,7 @@ final class CodexActivityRuntime: ObservableObject {
         hookEnvironmentInspector: CodexActivityEnvironmentInspector? = nil,
         defaultDataDirectory: URL = CodexLocalRolloutActivityClient.Configuration.live().codexHomeURL,
         activityStore: CodexActivityStore? = nil,
+        desktopIPCClient: CodexDesktopIPCClient? = nil,
         automaticHookSetupEnabled: Bool = true
     ) {
         self.preferences = preferences
@@ -94,6 +99,8 @@ final class CodexActivityRuntime: ObservableObject {
         let root = defaults.string(forKey: Self.dataDirectoryKey).map { URL(fileURLWithPath: $0) }
             ?? defaultDataDirectory
         dataDirectoryURL = root
+        self.desktopIPCClient = desktopIPCClient ?? CodexDesktopIPCClient(configuration: .init(
+            socketURL: root.appendingPathComponent("ipc/ipc.sock")))
         let environment = CodexActivityDirectoryEnvironment.make(root: root)
         store = activityStore ?? CodexActivityStore(
             titleClient: CodexAppServerClient(environment: environment),
@@ -144,7 +151,27 @@ final class CodexActivityRuntime: ObservableObject {
 
         liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
         store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
-        store.publicMessageDidReceive = { [weak self] data in self?.liveIsland.model.receive(data) }
+        store.publicMessageDidReceive = { [weak self] data in
+            self?.liveIsland.model.receive(data)
+            self?.followDesktopThread(in: data)
+        }
+        store.desktopProjectionDidReceive = { [weak self] projection, snapshot in
+            self?.liveIsland.model.receiveDesktopProjection(projection, snapshot: snapshot)
+        }
+        liveIsland.model.responseCapability = { [weak self] wire in
+            guard let self, isRunning, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
+            return handle.conversationID == wire.threadID && handle.turnID == wire.turnID
+        }
+        liveIsland.model.respond = { [weak self] wire, result in
+            guard let self, isRunning, !isChangingDataDirectory, let handle = wire.desktopHandle else {
+                throw CodexDesktopIPCError.staleRequest
+            }
+            _ = try await self.desktopIPCClient.submit(handle: handle, result: result.data)
+        }
+        liveIsland.model.desktopRequestSettlementDidReceive = { [weak self] session, turn, epoch, stillWaiting in
+            self?.store.receiveDesktopRequestSettlement(sessionHash: session, turnHash: turn,
+                                                       epoch: epoch, stillWaiting: stillWaiting)
+        }
         liveIsland.model.nativeRequestSettlementDidReceive = { [weak self] settlement in
             self?.store.receiveRequestSettlement(settlement)
         }
@@ -226,6 +253,7 @@ final class CodexActivityRuntime: ObservableObject {
     func start() {
         guard !isRunning else { return }
         isRunning = true
+        startDesktopObservation()
         nativeHookTrusted = false
         currentRunDeliveredInstallation = nil
         bridgeRunStartedAt = Date()
@@ -268,6 +296,74 @@ final class CodexActivityRuntime: ObservableObject {
             ? .listening
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
+    }
+
+    private func startDesktopObservation() {
+        desktopRunGeneration &+= 1
+        let run = desktopRunGeneration
+        let client = desktopIPCClient
+        desktopObservationTask?.cancel()
+        desktopObservationTask = Task { [weak self] in
+            guard let self, isRunning, desktopRunGeneration == run else { return }
+            await client.start(snapshotHandler: { [weak self] snapshot in
+                guard let self else { return }
+                await self.receiveDesktopSnapshot(snapshot, run: run)
+            }, stateHandler: { [weak self] state in
+                guard let self else { return }
+                await self.receiveDesktopConnection(state, run: run)
+            }, invalidationHandler: { [weak self] invalidation in
+                guard let self else { return }
+                await self.receiveDesktopInvalidation(invalidation, run: run)
+            })
+        }
+    }
+
+    private func receiveDesktopSnapshot(_ snapshot: CodexDesktopConversationSnapshot, run: UInt64) async {
+        guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run,
+              let projection = try? CodexDesktopRequestProjector.project(
+                conversationID: snapshot.conversationID, conversationStateData: snapshot.conversationState) else { return }
+        let admitted = await store.receiveDesktopProjection(projection, snapshot: snapshot)
+        guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run else { return }
+        if admitted, ["completed", "interrupted", "failed"].contains(projection.status) {
+            stopFollowingDesktopThread(snapshot.conversationID)
+        }
+        render()
+    }
+
+    private func receiveDesktopConnection(_ state: CodexDesktopIPCConnectionState, run: UInt64) {
+        guard isRunning, desktopRunGeneration == run else { return }
+        let connected = state == .connected
+        store.setDesktopConnection(connected: connected)
+        liveIsland.model.setDesktopConnection(connected: connected, epoch: nil)
+        render()
+    }
+
+    private func receiveDesktopInvalidation(_ invalidation: CodexDesktopIPCInvalidation, run: UInt64) {
+        guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run else { return }
+        store.invalidateDesktopProjection(conversationID: invalidation.conversationID, epoch: invalidation.connectionEpoch)
+        liveIsland.model.invalidateDesktopResponses(conversationID: invalidation.conversationID, epoch: invalidation.connectionEpoch)
+        render()
+    }
+
+    private func followDesktopThread(in data: Data) {
+        guard isRunning, !isChangingDataDirectory, let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let params = envelope["params"] as? [String: Any],
+              let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
+              !threadID.isEmpty else { return }
+        let method = envelope["method"] as? String ?? ""
+        if ["turn/completed", "thread/archived", "thread/closed"].contains(method) {
+            stopFollowingDesktopThread(threadID)
+            return
+        }
+        guard !desktopFollowedThreads.contains(threadID), desktopFollowedThreads.count < 100 else { return }
+        desktopFollowedThreads.insert(threadID)
+        let client = desktopIPCClient
+        let run = desktopRunGeneration
+        Task { [weak self] in
+            guard let self, isRunning, !isChangingDataDirectory, desktopRunGeneration == run,
+                  desktopFollowedThreads.contains(threadID) else { return }
+            try? await client.follow(conversationID: threadID, hostID: "local")
+        }
     }
 
     func enableCompatibilityHook() {
@@ -335,6 +431,7 @@ final class CodexActivityRuntime: ObservableObject {
     func recheckAutomaticConnection() {
         guard !isChangingDataDirectory else { return }
         directorySelectionFailed = false
+        if isRunning { startDesktopObservation() }
         Task { await store.recheckLocalDiscovery() }
     }
 
@@ -357,6 +454,17 @@ final class CodexActivityRuntime: ObservableObject {
         }
     }
 
+    private func stopFollowingDesktopThread(_ threadID: String) {
+        guard desktopFollowedThreads.remove(threadID) != nil else { return }
+        let client = desktopIPCClient
+        let run = desktopRunGeneration
+        Task { [weak self] in
+            guard let self, isRunning, desktopRunGeneration == run,
+                  !desktopFollowedThreads.contains(threadID) else { return }
+            await client.unfollow(conversationID: threadID, hostID: "local")
+        }
+    }
+
     func selectDataDirectory(_ root: URL?) {
         guard !isChangingDataDirectory, hookOperation == .idle else { return }
         let target = root?.standardizedFileURL ?? defaultDataDirectory
@@ -375,13 +483,27 @@ final class CodexActivityRuntime: ObservableObject {
         fileBridge.setDeliveryReady(false)
         directoryTask = Task { [weak self] in
             guard let self else { return }
+            // Revoke callbacks and actions before Store resets its admission scope.
+            desktopRunGeneration &+= 1
+            desktopObservationTask?.cancel(); desktopObservationTask = nil
+            desktopFollowedThreads.removeAll()
+            store.setDesktopConnection(connected: false)
+            liveIsland.model.setDesktopConnection(connected: false, epoch: nil)
+            await desktopIPCClient.stop()
+            guard !Task.isCancelled else { return }
             guard await store.changeDataDirectory(target), !Task.isCancelled else {
                 if !Task.isCancelled {
+                    _ = await store.changeDataDirectory(dataDirectoryURL)
+                    liveIsland.model.reset()
                     isChangingDataDirectory = false
+                    directorySelectionFailed = true
                     fileBridge.setDeliveryReady(true)
+                    if isRunning { startDesktopObservation() }
                 }
                 return
             }
+            desktopIPCClient = CodexDesktopIPCClient(configuration: .init(
+                socketURL: target.appendingPathComponent("ipc/ipc.sock")))
             liveIsland.model.reset()
             dataDirectoryURL = target
             hookEventGeneration &+= 1
@@ -410,7 +532,8 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func refreshConnectionStatus() {
-        guard !isConfiguring, !isOpeningSecurityReview else { return }
+        guard !isConfiguring, !isOpeningSecurityReview, !isChangingDataDirectory else { return }
+        if isRunning { startDesktopObservation() }
         reconcileHook(install: automaticHookEnabled)
     }
 
@@ -424,6 +547,12 @@ final class CodexActivityRuntime: ObservableObject {
 
     func stop() async {
         isRunning = false
+        desktopRunGeneration &+= 1
+        desktopObservationTask?.cancel(); desktopObservationTask = nil
+        desktopFollowedThreads.removeAll()
+        await desktopIPCClient.stop()
+        store.setDesktopConnection(connected: false)
+        liveIsland.model.setDesktopConnection(connected: false, epoch: nil)
         nativeHookTrusted = false
         currentRunDeliveredInstallation = nil
         bridgeRunGeneration &+= 1

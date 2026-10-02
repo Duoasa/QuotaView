@@ -95,6 +95,7 @@ final class CodexActivityStore: ObservableObject {
 
     var localPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
     var publicMessageDidReceive: ((Data) -> Void)?
+    var desktopProjectionDidReceive: ((CodexDesktopInteractionProjection, CodexDesktopConversationSnapshot) -> Void)?
     var admittedActivityDidReceive: ((CodexActivityEvent) -> Void)?
     var cumulativeTokensDidReceive: ((CodexActivityTokenUsageUpdate) -> Void)?
     var stateDidChange: (() -> Void)?
@@ -143,6 +144,17 @@ final class CodexActivityStore: ObservableObject {
     private var pendingNativePublicMessages: [BufferedNativePublicMessage] = []
     private var nativePublicEpoch: UInt64?
     private var closedNativePublicEpoch: UInt64?
+    private var desktopPublicEpoch: UInt64?
+    private var closedDesktopPublicEpoch: UInt64?
+    private struct DesktopAdmission {
+        let owner: String
+        let epoch: UInt64
+        let revision: Int64
+        let turnHash: String
+    }
+    private var desktopAdmissions: [String: DesktopAdmission] = [:]
+    private var desktopReceiptReservations: [String: (id: UUID, admission: DesktopAdmission)] = [:]
+    private var desktopWaitEvidence: [String: NativeWaitEvidence] = [:]
     private struct NativeWaitEvidence {
         let identity: CodexActivityTaskIdentity
         let epoch: UInt64
@@ -439,6 +451,125 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    /// Desktop IPC has its own owner/connection scope. Its snapshot proves the
+    /// current turn; it never borrows the observer App Server's RPC ownership.
+    @discardableResult
+    func receiveDesktopProjection(_ projection: CodexDesktopInteractionProjection,
+                                  snapshot desktop: CodexDesktopConversationSnapshot,
+                                  at now: Date = Date()) async -> Bool {
+        let run = nativeGeneration
+        let epoch = desktop.connectionEpoch
+        guard desktop.conversationState.count <= CodexDesktopRequestProjector.maximumStateBytes,
+              !desktop.conversationID.isEmpty, !desktop.ownerClientID.isEmpty,
+              closedDesktopPublicEpoch.map({ epoch > $0 }) ?? true,
+              desktopPublicEpoch.map({ epoch >= $0 }) ?? true,
+              let turnID = projection.currentTurnID, !turnID.isEmpty else { return false }
+        let session = CodexActivityPrivacy.hashIdentifier(desktop.conversationID)
+        let kind = projection.sourceKind == .unknown ? (sessionKinds[session] ?? .unknown) : projection.sourceKind
+        guard kind == .user else { return false }
+        let turnHash = CodexActivityPrivacy.hashIdentifier(turnID)
+        if let prior = desktopReceiptReservations[session]?.admission, prior.epoch == epoch,
+           prior.owner == desktop.ownerClientID, desktop.revision <= prior.revision { return false }
+        if desktopPublicEpoch != epoch {
+            desktopPublicEpoch = epoch
+            desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+        }
+        let active = projection.status == "inProgress"
+        guard active || ["completed", "interrupted", "failed"].contains(projection.status) else { return false }
+        let receiptID = UUID()
+        desktopReceiptReservations[session] = (receiptID, .init(owner: desktop.ownerClientID, epoch: epoch,
+                                                               revision: desktop.revision, turnHash: turnHash))
+        let isCurrentReceipt: () -> Bool = { [weak self] in
+            guard let self else { return false }
+            return nativeGeneration == run && desktopPublicEpoch == epoch
+                && (closedDesktopPublicEpoch.map { epoch > $0 } ?? true)
+                && desktopReceiptReservations[session]?.id == receiptID
+        }
+        if active, taskRegistry.currentIdentity(for: session)?.turnHash != turnHash {
+            let start = CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: turnHash,
+                workspaceName: projection.title, sessionKind: kind, source: .appServer,
+                occurredAt: projection.startedAt ?? now)
+            await receiveClassified(.init(source: .liveSocket, activity: start), generation: run,
+                                    selectionEvidenceAt: now, admissionAllowed: isCurrentReceipt, confirmedCurrentTurn: true)
+        }
+        guard isCurrentReceipt(),
+              closedDesktopPublicEpoch.map({ epoch > $0 }) ?? true,
+              taskRegistry.permitsPublicAttachment(session: session, turn: turnHash,
+                source: .appServer, occurredAt: now, permitsTerminal: !active),
+              let identity = taskRegistry.currentIdentity(for: session), identity.turnHash == turnHash else { return false }
+        desktopAdmissions[session] = .init(owner: desktop.ownerClientID, epoch: epoch,
+                                          revision: desktop.revision, turnHash: turnHash)
+        if active {
+            // A positively identified Desktop current turn can release buffered
+            // local public content through the same Registry boundary.
+            confirmedNativeTurns[session] = identity
+            for record in localRecovery.confirm(identity) {
+                guard isCurrentReceipt() else { return false }
+                await applyLocalRecord(record, replay: true, generation: run, selectionEvidenceAt: now)
+            }
+            guard isCurrentReceipt(), taskRegistry.currentIdentity(for: session) == identity else { return false }
+            flushLocalPublicContent(for: session)
+            let blockers = projection.requests.filter { $0.turnID == turnID && $0.userInputMode != .asynchronous }
+            if let blocker = blockers.first {
+                let question = blocker.method == "item/tool/requestUserInput"
+                let waiting = CodexActivityEvent(event: .permissionRequest, sessionHash: session,
+                    turnHash: turnHash, sessionKind: kind, source: .appServer,
+                    waitReason: question ? .userInput : .approval,
+                    toolName: question ? "request_user_input" : nil, occurredAt: now)
+                await receiveClassified(.init(source: .liveSocket, activity: waiting), generation: run, admissionAllowed: isCurrentReceipt)
+                guard isCurrentReceipt() else { return false }
+                desktopWaitEvidence[session] = .init(identity: identity, epoch: epoch,
+                                                     reason: question ? .userInput : .approval)
+            }
+        } else {
+            let event: CodexActivityHookEvent = projection.status == "interrupted" ? .interrupt : .stop
+            await receiveClassified(.init(source: .liveSocket, activity: .init(event: event,
+                sessionHash: session, turnHash: turnHash, sessionKind: kind,
+                source: .appServer, turnCompletionStatus: projection.status == "failed" ? .failed
+                    : projection.status == "interrupted" ? .interrupted : .completed,
+                occurredAt: now)), generation: run, admissionAllowed: isCurrentReceipt)
+            guard isCurrentReceipt() else { return false }
+            desktopWaitEvidence.removeValue(forKey: session)
+        }
+        guard isCurrentReceipt(),
+              closedDesktopPublicEpoch.map({ epoch > $0 }) ?? true,
+              taskRegistry.currentIdentity(for: session) == identity else { return false }
+        desktopProjectionDidReceive?(projection, desktop)
+        return true
+    }
+
+    func setDesktopConnection(connected: Bool) {
+        guard !connected else { return }
+        if let epoch = desktopPublicEpoch { closedDesktopPublicEpoch = max(closedDesktopPublicEpoch ?? epoch, epoch) }
+        desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+    }
+
+    /// Resource revocation cancels in-flight attachment; it is not settlement.
+    func invalidateDesktopProjection(conversationID: String?, epoch: UInt64) {
+        guard desktopPublicEpoch == epoch else { return }
+        if let conversationID {
+            desktopReceiptReservations.removeValue(forKey: CodexActivityPrivacy.hashIdentifier(conversationID))
+        } else { desktopReceiptReservations.removeAll() }
+    }
+
+    /// Only the owner stream's exact removal can settle Desktop wait evidence.
+    func receiveDesktopRequestSettlement(sessionHash: String, turnHash: String,
+                                         epoch: UInt64, stillWaiting: Bool, at now: Date = Date()) {
+        guard !stillWaiting, desktopPublicEpoch == epoch,
+              closedDesktopPublicEpoch.map({ epoch > $0 }) ?? true,
+              let identity = taskRegistry.currentIdentity(for: sessionHash), identity.turnHash == turnHash,
+              let admitted = desktopAdmissions[sessionHash], admitted.epoch == epoch,
+              admitted.turnHash == turnHash,
+              let entry = admittedSnapshots[sessionHash], entry.snapshot.taskIdentity == identity,
+              entry.snapshot.state == .awaitingConfirmation else { return }
+        if desktopWaitEvidence[sessionHash]?.identity == identity { desktopWaitEvidence.removeValue(forKey: sessionHash) }
+        // Island has settled every bound request/source identity on this turn;
+        // remove the duplicate observer wait only after that exact proof.
+        if nativeWaitEvidence[sessionHash]?.identity == identity { nativeWaitEvidence.removeValue(forKey: sessionHash) }
+        receive(.init(event: .postToolUse, sessionHash: sessionHash, turnHash: turnHash,
+            sessionKind: .user, source: .appServer, occurredAt: now))
+    }
+
     /// Request matching and remaining blockers belong to the request lifecycle.
     /// The ingress boundary only verifies its current task and connection scope.
     /// This stays synchronous so an earlier resolution cannot overtake a new
@@ -733,14 +864,20 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
+        let pendingWait = nextLifecycle == .active
+            ? (desktopWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil }
+                ?? nativeWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil })
+            : nil
         let identifiedSnapshot = CodexActivitySnapshot(
             sessionHash: nextSnapshot.sessionHash, taskIdentity: admission.identity,
-            state: nextSnapshot.state, workspaceName: nextSnapshot.workspaceName,
-            operationKey: nextSnapshot.operationKey, toolCategory: nextSnapshot.toolCategory,
+            state: pendingWait == nil ? nextSnapshot.state : .awaitingConfirmation, workspaceName: nextSnapshot.workspaceName,
+            operationKey: pendingWait == nil ? nextSnapshot.operationKey
+                : pendingWait == .userInput ? .awaitingUserInput : .awaitingApproval,
+            toolCategory: nextSnapshot.toolCategory,
             approximateProgressFraction: nextSnapshot.approximateProgressFraction,
             occurredAt: nextSnapshot.occurredAt
         )
-        let source: CodexActivityEventSource? = nextSnapshot.state == .compactingContext ? event.source : nil
+        let source: CodexActivityEventSource? = identifiedSnapshot.state == .compactingContext ? event.source : nil
         let eligible = !isStaleSettledContinuationEvent(delivery) || selectionEvidenceAt != nil
         if resolvedKind == .user {
             let admittedLifecycle: CodexActivityTurnLifecycle = eligible ? nextLifecycle : .unconfirmed
@@ -811,7 +948,7 @@ final class CodexActivityStore: ObservableObject {
             revision: eventRevision
         )
 
-        if CodexActivityReducer.shouldStartInactivityCycle(after: event) {
+        if identifiedSnapshot.state != .awaitingConfirmation && CodexActivityReducer.shouldStartInactivityCycle(after: event) {
             scheduleInactivityCycle(revision: eventRevision)
         }
     }
@@ -919,6 +1056,8 @@ final class CodexActivityStore: ObservableObject {
         pendingLocalPublicContent.removeAll(); nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll()
         pendingNativePublicMessages.removeAll()
         nativePublicEpoch = nil; closedNativePublicEpoch = nil
+        desktopPublicEpoch = nil; closedDesktopPublicEpoch = nil
+        desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
         selectedActivityAt = nil
         selectedCompactionSource = nil
         updateAutomaticConnection(.init())
