@@ -263,10 +263,12 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             return nil
         }
 
-        let asksQuestion = CodexLocalQuestionContent.isQuestionTool(name)
+        let inputMode = CodexUserInputMode.forToolName(name)
+        let asksQuestion = inputMode != nil
+        let asynchronousQuestion = inputMode == .asynchronous
         let callHash = Self.hashedIdentifier(payload["call_id"])
         if asksQuestion, let callID = payload["call_id"] as? String, !callID.isEmpty, callID.utf8.count <= 1024 {
-            if CodexLocalQuestionContent.isAsynchronous(name) {
+            if asynchronousQuestion {
                 pendingAsyncQuestionCalls.removeAll { $0 == callID }; pendingAsyncQuestionCalls.append(callID)
                 if pendingAsyncQuestionCalls.count > 128 { pendingAsyncQuestionCalls.removeFirst() }
             } else {
@@ -283,7 +285,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             eventID: eventID,
             update: .activity(
                 CodexActivityEvent(
-                    event: asksQuestion ? .permissionRequest : .preToolUse,
+                    // Async launches present a question while the turn continues.
+                    // Only the synchronous tool call itself proves a blocking wait.
+                    event: asksQuestion && !asynchronousQuestion ? .permissionRequest : .preToolUse,
                     sessionHash: sessionHash,
                     turnHash: turnHash,
                     workspaceName: workspaceName,

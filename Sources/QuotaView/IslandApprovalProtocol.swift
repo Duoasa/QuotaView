@@ -1,4 +1,5 @@
 import Foundation
+import QuotaViewCore
 
 // Typed protocol adapter. Unknown decisions never produce an approval action.
 indirect enum IslandApprovalJSON: Codable, Equatable, Sendable {
@@ -114,7 +115,12 @@ struct IslandCodexApprovalRequest: Equatable {
     let envelope: IslandApprovalJSON
     /// A public rollout projection has no RPC owner and can never send a reply.
     private(set) var localObservation: LocalObservation?
-    struct LocalObservation: Equatable { let sessionHash: String; let turnHash: String; let callID: String; let asynchronous: Bool }
+    struct LocalObservation: Equatable {
+        let sessionHash: String; let turnHash: String; let callID: String
+        let mode: CodexUserInputMode
+        var asynchronous: Bool { mode == .asynchronous }
+    }
+    var userInputMode: CodexUserInputMode? { localObservation?.mode }
     var observationOnly: Bool { localObservation != nil }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
@@ -151,7 +157,7 @@ struct IslandCodexApprovalRequest: Equatable {
         raw = data; envelope = v
         localObservation = ["local/tool/requestUserInput", "local/tool/requestUserInputAsync"].contains(v["method"].text)
             ? .init(sessionHash: v["params"]["threadId"].text, turnHash: v["params"]["turnId"].text,
-                callID: v["id"].text, asynchronous: v["method"].text == "local/tool/requestUserInputAsync")
+                callID: v["id"].text, mode: v["method"].text == "local/tool/requestUserInputAsync" ? .asynchronous : .synchronous)
             : nil
     }
     init(localQuestions: [[String: Any]], callID: String, sessionHash: String, turnHash: String, asynchronous: Bool = false) throws {
@@ -160,7 +166,7 @@ struct IslandCodexApprovalRequest: Equatable {
             "params": ["threadId": sessionHash, "turnId": turnHash, "itemId": callID, "questions": localQuestions]
         ], options: [.sortedKeys])
         self = try Self(data: data)
-        localObservation = .init(sessionHash: sessionHash, turnHash: turnHash, callID: callID, asynchronous: asynchronous)
+        localObservation = .init(sessionHash: sessionHash, turnHash: turnHash, callID: callID, mode: asynchronous ? .asynchronous : .synchronous)
     }
     var detail: String {
         switch kind {

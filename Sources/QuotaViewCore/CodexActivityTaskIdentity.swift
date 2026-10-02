@@ -97,9 +97,32 @@ public struct CodexActivityTaskRegistry {
     private var generation: UInt64 = 0
     public init() {}
 
+    public func currentIdentity(for session: String) -> CodexActivityTaskIdentity? {
+        guard let task = tasks[session], task.kind == .user, task.hasTurn else { return nil }
+        return task.identity
+    }
+
+    /// Public data cannot establish or change a task. Lifecycle admission owns
+    /// the identity; trace and request projections can only attach to it.
+    public func permitsPublicAttachment(session: String, turn: String?, source: CodexActivityEventSource,
+                                        occurredAt: Date, timeSensitive: Bool = false,
+                                        permitsTerminal: Bool = false) -> Bool {
+        guard let task = tasks[session], task.kind == .user, task.hasTurn,
+              permitsTerminal || !task.terminal else { return false }
+        if let turn, task.identity.turnHash != turn { return false }
+        if turn == nil, task.identity.turnHash == nil { return false }
+        let authority = source == .localRollout ? 3 : source == .appServer ? 2 : 1
+        if timeSensitive, let latest = task.lastEventAt[authority], occurredAt < latest { return false }
+        return true
+    }
+
+    public func isPriorTurn(session: String, turn: String) -> Bool {
+        tasks[session]?.previousTurns.contains(turn) == true
+    }
+
     public mutating func admit(_ event: CodexActivityEvent, kind: CodexActivitySessionKind,
                                selectedSession: String?, selectedOccurredAt: Date? = nil,
-                               selectionEvidenceAt: Date? = nil) -> Admission? {
+                               selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false) -> Admission? {
         guard kind != .internalTask else { return nil }
         let session = event.sessionHash
         let authority = event.source == .localRollout ? 3 : event.source == .appServer ? 2 : 1
@@ -110,7 +133,8 @@ public struct CodexActivityTaskRegistry {
         // An end-only event cannot establish a currently active turn.
         if event.event == .postCompact, existing?.hasTurn != true { return nil }
         if let old = existing {
-            if let latest = old.lastEventAt[authority], event.occurredAt < latest { return nil }
+            if let latest = old.lastEventAt[authority], event.occurredAt < latest,
+               !(confirmedCurrentTurn && isStart && event.turnHash != old.identity.turnHash) { return nil }
             if event.event == .sessionStart, event.sessionStartSource != .compact { return nil }
             if let turn = event.turnHash, old.previousTurns.contains(turn) { return nil }
             if isTerminal {
@@ -124,9 +148,13 @@ public struct CodexActivityTaskRegistry {
                     && old.identity.turnHash == nil && event.turnHash == nil
                 let newIdentifiedTurn = positive && event.turnHash != nil
                     && event.turnHash != old.identity.turnHash
+                    && (authority >= old.authority || confirmedCurrentTurn)
                 guard newLegacyPrompt || newIdentifiedTurn else { return nil }
             } else if let incoming = event.turnHash, let current = old.identity.turnHash, incoming != current {
-                guard isStart, authority >= old.authority else { return nil }
+                // Receipt time cannot prove a new turn across transports.
+                // Only the native service's explicit current-turn snapshot can
+                // supersede stronger durable context without a local new start.
+                guard isStart, authority >= old.authority || confirmedCurrentTurn else { return nil }
             } else if isStart, event.turnHash == nil, old.identity.turnHash != nil {
                 return nil
             }

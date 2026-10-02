@@ -190,17 +190,32 @@ final class CodexTokenCompatibilityTests: XCTestCase {
             XCTAssertEqual(store.lifecycle, .active)
         }
         XCTAssertNil(decoder.decode(line: try line("compacted", ["window_id": "private-window", "message": "private"])))
-        for name in ["new_context", "request_user_input_async"] {
+        let asyncArguments = String(decoding: try JSONSerialization.data(withJSONObject: [
+            "questions": [["title": "Which scope?", "options": ["This project", "All projects"]]]
+        ]), as: UTF8.self)
+        for (name, arguments) in [("new_context", "{}"), ("functions.request_user_input_async", asyncArguments), ("request_user_input_async", "{}")] {
             let record = try XCTUnwrap(decoder.decode(line: try line("response_item", [
-                "type": "function_call", "name": name, "arguments": "{}"
+                "type": "function_call", "name": name, "call_id": "async-question", "arguments": arguments
             ])))
             guard case .activity(let event) = record.update else { return XCTFail("Expected tool") }
+            XCTAssertEqual(event.event, .preToolUse, "An async question launcher must not fabricate a blocking wait")
             store.receive(event)
             XCTAssertEqual(store.lifecycle, .active)
-            XCTAssertNotEqual(store.snapshot?.state, .awaitingConfirmation)
+            XCTAssertEqual(store.snapshot?.state, .working)
             XCTAssertFalse(store.isConfirmationReminderActive)
             XCTAssertEqual(store.currentTurnTokenUsage, 10_000)
+            XCTAssertEqual(store.snapshot?.approximateProgressFraction, progress)
         }
+        store.receive(CodexActivityEvent(
+            event: .permissionRequest, sessionHash: session, turnHash: turn, source: .hook,
+            waitReason: .userInput, toolCallHash: CodexActivityPrivacy.hashIdentifier("async-question"),
+            toolName: "functions.request_user_input_async"
+        ))
+        XCTAssertEqual(store.snapshot?.state, .working, "A Hook async launch also remains nonblocking")
+        XCTAssertEqual(store.lifecycle, .active)
+        XCTAssertFalse(store.isConfirmationReminderActive)
+        XCTAssertEqual(store.currentTurnTokenUsage, 10_000)
+        XCTAssertEqual(store.snapshot?.approximateProgressFraction, progress)
         XCTAssertNil(decoder.decode(line: try line("event_msg", [
             "type": "item_completed", "thread_id": "thread", "turn_id": "turn",
             "item": ["type": "AgentMessage", "phase": "final_answer", "delivery": "async", "questions": [["title": "private"]]]

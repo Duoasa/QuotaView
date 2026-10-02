@@ -1531,7 +1531,7 @@ final class AppBehaviorTests: XCTestCase {
             timeout: 2,
             dataDirectoryURL: rootURL
         )
-        let result = try inspector.inspectAndEnableHooksIfNeeded()
+        let result = try inspector.inspectAndEnableHooksIfNeeded(preference: .absent)
         XCTAssertEqual(result.version, "codex-cli 0.test")
         XCTAssertTrue(result.hooksEnabled)
         XCTAssertTrue(result.didEnableHooks)

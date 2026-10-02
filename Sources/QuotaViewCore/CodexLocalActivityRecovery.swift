@@ -44,6 +44,16 @@ public struct CodexLocalActivityRecovery {
                           confirmationTime: shouldRecover ? occurredAt : nil)
     }
 
+    /// Native current-turn evidence may confirm recovered disk context, but a
+    /// thread-wide active flag without a turn ID cannot release historical data.
+    public mutating func confirm(_ identity: CodexActivityTaskIdentity) -> [CodexLocalRolloutDecodedRecord] {
+        guard let pending = contexts[identity.sessionHash],
+              pending.identity.sessionHash == identity.sessionHash,
+              pending.identity.turnHash == identity.turnHash, identity.turnHash != nil else { return [] }
+        remove(identity.sessionHash)
+        return pending.records
+    }
+
     private mutating func remove(_ session: String) {
         contexts.removeValue(forKey: session)
         order.removeAll { $0 == session }

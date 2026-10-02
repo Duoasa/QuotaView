@@ -133,7 +133,7 @@ final class HookInstallerRoutingTests: XCTestCase {
         let inspector = CodexActivityEnvironmentInspector(executablePath: executable.path, timeout: 2,
             dataDirectoryURL: selected, environment: ["PATH": "/usr/bin:/bin", "CODEX_HOME": "/ignored"])
         XCTAssertFalse(try inspector.inspect().hooksEnabled)
-        XCTAssertThrowsError(try inspector.inspectAndEnableHooksIfNeeded()) { error in
+        XCTAssertThrowsError(try inspector.inspectAndEnableHooksIfNeeded(preference: .disabled)) { error in
             XCTAssertTrue(error is CodexActivityEnvironmentInspector.InspectionError)
         }
         XCTAssertEqual(try String(contentsOf: root.appendingPathComponent("selected-root.txt"), encoding: .utf8),
@@ -159,7 +159,7 @@ final class HookInstallerRoutingTests: XCTestCase {
         exit 1
         """)
         let result = try CodexActivityEnvironmentInspector(executablePath: executable.path, timeout: 2,
-            dataDirectoryURL: root, environment: ["PATH": "/usr/bin:/bin"]).inspectAndEnableHooksIfNeeded()
+            dataDirectoryURL: root, environment: ["PATH": "/usr/bin:/bin"]).inspectAndEnableHooksIfNeeded(preference: .absent)
         XCTAssertTrue(result.hooksEnabled)
         XCTAssertTrue(result.didEnableHooks)
         XCTAssertEqual(result.hooksFeatureName, "codex_hooks")

@@ -114,7 +114,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
             sessionKind: .user, source: .hook, waitReason: .userInput, toolCallHash: hash("call-1"), occurredAt: date.addingTimeInterval(3)))
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(1.5)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-1"), occurredAt: date.addingTimeInterval(1.5)))
         nativeQuestion(model, at: date.addingTimeInterval(3))
         model.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(1))))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
@@ -124,25 +124,30 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testGenericWaitClearsOnRealContinuationAndNeverInventsApprovalContent() {
+    func testGenericWaitRequiresMatchingCallAndNeverInventsApprovalContent() {
         let model = IslandLiveStore(); start(model)
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(1)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-A"), toolName: "request_user_input", occurredAt: date.addingTimeInterval(1)))
         XCTAssertEqual(model.tasks[0].requests[0].value.question.chinese, "请求详情暂不可用")
         XCTAssertNil(model.tasks[0].requests[0].value.protocolRequest)
         XCTAssertFalse(model.tasks[0].requests[0].value.canRespond)
         model.receiveLegacy(.init(event: .preToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .localRollout, occurredAt: date.addingTimeInterval(2)))
+            sessionKind: .user, source: .localRollout, toolCallHash: hash("call-B"), occurredAt: date.addingTimeInterval(2)))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "Another tool cannot clear A")
+        XCTAssertEqual(model.tasks[0].activityStatus, .working)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receiveLegacy(.init(event: .preToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .localRollout, toolCallHash: hash("call-A"), occurredAt: date.addingTimeInterval(3)))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertEqual(model.tasks[0].status, .working)
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(1.5)))
-        XCTAssertTrue(model.tasks[0].requests.isEmpty, "A generic wait before real continuation cannot return late")
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-A"), occurredAt: date.addingTimeInterval(4)))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty, "Resolved A cannot return")
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(3)))
-        XCTAssertEqual(model.tasks[0].requests.count, 1)
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-C"), occurredAt: date.addingTimeInterval(2.5)))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "A's resolution timestamp cannot suppress independent C")
         model.receiveLegacy(.init(event: .postToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(4)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-C"), occurredAt: date.addingTimeInterval(5)))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertNotEqual(model.tasks[0].status, .waiting)
     }
@@ -160,6 +165,61 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         model.receiveLocalContent(try content(outputLine(at: date.addingTimeInterval(2))))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertFalse(model.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks[0].hasPendingRequest)
+    }
+
+    @MainActor
+    func testKnownQuestionModeSurvivesNativeUpgradeWithoutThreadFlags() throws {
+        let model = IslandLiveStore(); start(model)
+        model.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(1))))
+        nativeQuestion(model, at: date.addingTimeInterval(2))
+        XCTAssertEqual(model.tasks[0].requests.count, 1)
+        XCTAssertEqual(model.tasks[0].requests[0].mode, .synchronous)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active"]]), at: date.addingTimeInterval(3))
+        XCTAssertEqual(model.tasks[0].status, .waiting, "Missing flags cannot discard an identified synchronous request")
+
+        let nativeFirst = IslandLiveStore(); start(nativeFirst)
+        nativeQuestion(nativeFirst, at: date.addingTimeInterval(1))
+        XCTAssertNil(nativeFirst.tasks[0].requests[0].mode, "Unknown native questions do not guess a blocking mode")
+        nativeFirst.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(2))))
+        XCTAssertEqual(nativeFirst.tasks[0].requests.count, 1)
+        XCTAssertFalse(nativeFirst.tasks[0].requests[0].value.protocolRequest!.observationOnly)
+        XCTAssertEqual(nativeFirst.tasks[0].requests[0].mode, .synchronous)
+        XCTAssertEqual(nativeFirst.tasks[0].status, .waiting)
+    }
+
+    @MainActor
+    func testResolvedRPCUnblocksItsNativeWaitWithoutAnotherStatusNotification() {
+        let model = IslandLiveStore(); start(model)
+        model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .appServer, waitReason: .userInput, occurredAt: date.addingTimeInterval(1)))
+        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]), at: date.addingTimeInterval(1.1))
+        nativeQuestion(model, at: date.addingTimeInterval(2))
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 7]), at: date.addingTimeInterval(3))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+        XCTAssertFalse(model.tasks[0].waitingOnSource)
+        XCTAssertEqual(model.tasks[0].status, .thinking)
+    }
+
+    @MainActor
+    func testRPCResolutionKeepsParallelWaitAndDoesNotAnswerIndependentAsyncQuestion() throws {
+        let model = IslandLiveStore(); start(model)
+        nativeQuestion(model, call: "native-A", rpc: 1, at: date.addingTimeInterval(1))
+        nativeQuestion(model, call: "native-B", rpc: 2, at: date.addingTimeInterval(1.1))
+        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]), at: date.addingTimeInterval(2))
+        let args = String(decoding: try JSONSerialization.data(withJSONObject: ["questions": [["title": "独立异步问题", "options": ["继续", "稍后"]]]]), as: UTF8.self)
+        model.receiveLocalContent(try content(line("response_item", ["type": "function_call", "name": "functions.request_user_input_async",
+            "call_id": "async-C", "arguments": args], at: date.addingTimeInterval(3))))
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 2]), at: date.addingTimeInterval(4))
+        XCTAssertEqual(model.tasks[0].requests.count, 2)
+        XCTAssertEqual(model.tasks[0].status, .waiting, "B resolving cannot unblock unresolved A")
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 1]), at: date.addingTimeInterval(5))
+        XCTAssertEqual(model.tasks[0].requests.count, 1)
+        XCTAssertEqual(model.tasks[0].requests[0].value.protocolRequest?.localObservation?.callID, "async-C")
+        XCTAssertFalse(model.tasks[0].waitingOnSource)
+        XCTAssertEqual(model.tasks[0].status, .thinking)
+        XCTAssertFalse(model.tasks[0].resolvedCallHashes.contains(hash("async-C")))
     }
 
     @MainActor
@@ -197,7 +257,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         empty.receiveLocalContent(oldQuestion)
         XCTAssertTrue(empty.tasks.isEmpty, "Historical public data alone cannot admit a task")
         start(empty)
-        XCTAssertTrue(empty.tasks[0].requests.isEmpty, "Answer-before-request replay must remain resolved")
+        XCTAssertEqual(empty.tasks[0].requests.count, 1, "An unknown output cannot answer a future request")
     }
 
     @MainActor
@@ -226,9 +286,12 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         var decoder = CodexLocalRolloutLineDecoder(sessionHash: hash("dsh"), sessionKind: .user)
         _ = decoder.decode(line: line("event_msg", ["type": "task_started", "turn_id": "turn"], at: date))
         guard case .activity(let event) = try XCTUnwrap(decoder.decode(line: data)).update else { return XCTFail("Expected an async question") }
+        XCTAssertEqual(event.event, .preToolUse)
         XCTAssertEqual(event.waitReason, .userInput)
         let model = IslandLiveStore(); start(model); model.receiveLegacy(event)
+        XCTAssertEqual(model.tasks[0].status, .working)
         model.receiveLocalContent(try content(data))
+        XCTAssertEqual(model.tasks[0].status, .working, "Pending async questions do not pause the turn")
         let wire = try XCTUnwrap(model.tasks[0].requests[0].value.protocolRequest)
         XCTAssertEqual(wire.kind, .questions)
         XCTAssertTrue(wire.observationOnly)
@@ -243,6 +306,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
             asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs))
         model.receiveLocalContent(ackContent)
         XCTAssertEqual(model.tasks[0].requests.count, 1, "Starting an async question is not answering it")
+        XCTAssertNotEqual(model.tasks[0].status, .waiting)
         model.receiveLegacy(.init(event: .postToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
             sessionKind: .user, source: .hook, toolCallHash: hash("async-call"), occurredAt: date.addingTimeInterval(2.1)))
         XCTAssertEqual(model.tasks[0].requests.count, 1)
@@ -250,6 +314,41 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         let reordered = IslandLiveStore(); start(reordered)
         reordered.receiveLocalContent(ackContent); reordered.receiveLocalContent(try content(data))
         XCTAssertEqual(reordered.tasks[0].requests.count, 1, "An ack preceding replay cannot suppress its async question")
+        XCTAssertNotEqual(reordered.tasks[0].status, .waiting)
+        let hooked = IslandLiveStore(); start(hooked)
+        let hookLaunch = CodexActivityEvent(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .hook, waitReason: .userInput, toolCallHash: hash("async-call"),
+            toolName: "functions.request_user_input_async", occurredAt: date.addingTimeInterval(1))
+        hooked.receiveLegacy(hookLaunch)
+        XCTAssertEqual(hooked.tasks[0].status, .working)
+        XCTAssertTrue(hooked.tasks[0].requests.isEmpty, "The Hook launcher alone cannot invent question content")
+        hooked.receiveLocalContent(try content(data))
+        XCTAssertEqual(hooked.tasks[0].requests.count, 1)
+        XCTAssertEqual(hooked.tasks[0].status, .working)
+        hooked.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]),
+            at: date.addingTimeInterval(3))
+        XCTAssertEqual(hooked.tasks[0].status, .waiting, "An authoritative native wait still blocks")
+        hooked.receiveLegacy(CodexActivityEvent(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .hook, toolName: "request_user_input_async", occurredAt: date.addingTimeInterval(4)))
+        XCTAssertEqual(hooked.tasks[0].status, .waiting, "A launcher cannot override an authoritative native wait")
+        let synchronous = IslandLiveStore(); start(synchronous)
+        synchronous.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(0.5))))
+        synchronous.receiveLegacy(event); synchronous.receiveLocalContent(try content(data))
+        XCTAssertEqual(synchronous.tasks[0].status, .waiting, "An async question cannot unblock a separate synchronous question")
+        XCTAssertEqual(synchronous.tasks[0].requests.count, 2)
+        synchronous.receiveLegacy(hookLaunch)
+        XCTAssertEqual(synchronous.tasks[0].status, .waiting, "A Hook launcher also preserves the synchronous wait")
+        synchronous.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": []]]),
+            at: date.addingTimeInterval(3))
+        XCTAssertEqual(synchronous.tasks[0].status, .waiting, "An initial active snapshot does not unblock the synchronous tool")
+        synchronous.receive(json("item/started", ["threadId": "dsh", "turnId": "turn", "item": ["type": "mcpToolCall", "id": "unrelated-tool", "tool": "read"]]),
+            at: date.addingTimeInterval(3.5))
+        synchronous.receive(json("item/completed", ["threadId": "dsh", "turnId": "turn", "item": ["type": "mcpToolCall", "id": "unrelated-tool", "tool": "read"]]),
+            at: date.addingTimeInterval(4))
+        XCTAssertEqual(synchronous.tasks[0].status, .waiting, "Unrelated tool activity preserves the synchronous wait")
+        synchronous.receiveLocalContent(try content(outputLine(at: date.addingTimeInterval(5))))
+        XCTAssertEqual(synchronous.tasks[0].requests.count, 1, "Only the unanswered async question remains")
+        XCTAssertNotEqual(synchronous.tasks[0].status, .waiting, "Resolving the blocking question allows an async-only turn to continue")
         start(model, turn: "next")
         XCTAssertTrue(model.tasks[0].requests.isEmpty, "A new turn supersedes the prior async question")
     }
@@ -267,28 +366,28 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testOnlyKnownNativeUserWaitContinuationResolvesLocalAsyncQuestions() throws {
+    func testNativeWaitClearDoesNotAnswerIndependentLocalQuestions() throws {
         let model = IslandLiveStore(); start(model)
         let args = String(decoding: try JSONSerialization.data(withJSONObject: ["questions": [["title": "请选择范围", "options": ["仅 DSH", "全部"]]]]), as: UTF8.self)
-        let question = try content(line("response_item", ["type": "function_call", "name": "functions.request_user_input_async",
-            "call_id": "async-proof", "arguments": args], at: date.addingTimeInterval(1)))
-        model.receiveLocalContent(question)
-        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": []]]),
-            at: date.addingTimeInterval(2))
-        XCTAssertEqual(model.tasks[0].requests.count, 1, "An initial nonwaiting snapshot cannot infer an answer")
-        model.receive(json("item/commandExecution/requestApproval", ["threadId": "dsh", "turnId": "turn", "itemId": "unrelated-command",
-            "command": "swift test", "availableDecisions": ["accept", "decline"]], id: 42), at: date.addingTimeInterval(3))
-        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]),
-            at: date.addingTimeInterval(4))
-        XCTAssertEqual(model.tasks[0].requests.count, 2)
-        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": []]]),
-            at: date.addingTimeInterval(5))
+        func question(_ call: String, _ offset: TimeInterval) throws -> CodexLocalPublicContent {
+            try content(line("response_item", ["type": "function_call", "name": "functions.request_user_input_async",
+                "call_id": call, "arguments": args], at: date.addingTimeInterval(offset)))
+        }
+        model.receiveLocalContent(try question("async-A", 1))
+        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]), at: date.addingTimeInterval(2))
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receiveLocalContent(try question("async-B", 3))
+        model.receive(json("thread/status/changed", ["threadId": "dsh", "status": ["type": "active", "activeFlags": []]]), at: date.addingTimeInterval(4))
+        XCTAssertEqual(model.tasks[0].requests.count, 2, "Thread continuation does not answer A or B")
+        XCTAssertEqual(model.tasks[0].status, .thinking)
+        XCTAssertTrue(model.tasks[0].resolvedCallHashes.isEmpty)
+        nativeQuestion(model, call: "async-A", rpc: 10, at: date.addingTimeInterval(5))
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 10]), at: date.addingTimeInterval(6))
         XCTAssertEqual(model.tasks[0].requests.count, 1)
-        XCTAssertEqual(model.tasks[0].requests[0].value.protocolRequest?.kind, .command)
-        XCTAssertEqual(model.tasks[0].status, .waiting, "Unrelated approvals remain pending")
-        XCTAssertTrue(model.tasks[0].asynchronousQuestionCallHashes.isEmpty)
-        model.receiveLocalContent(question)
-        XCTAssertEqual(model.tasks[0].requests.count, 1, "A answered question cannot return in a delayed public replay")
+        XCTAssertEqual(model.tasks[0].requests[0].value.protocolRequest?.localObservation?.callID, "async-B")
+        XCTAssertFalse(model.tasks[0].resolvedCallHashes.contains(hash("async-B")))
+        model.receiveLocalContent(try question("async-C", 2.5))
+        XCTAssertEqual(model.tasks[0].requests.count, 2, "Independent older-timestamp C is not answered by A")
     }
 
     @MainActor
@@ -319,6 +418,70 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
             XCTAssertFalse(model.tasks[0].resolvedCallHashes.contains(hash("native-early")))
             model.receiveLocalContent(question)
             XCTAssertEqual(model.tasks[0].requests.count, 1, "A native launcher item completion is not a human answer")
+        }
+    }
+
+    @MainActor
+    func testUnknownOutputAndAckNeverAnswerFutureSyncOrAsyncCalls() throws {
+        let model = IslandLiveStore(); start(model)
+        model.receiveLocalContent(try content(outputLine(call: "future-sync", at: date.addingTimeInterval(1))))
+        model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .hook, toolCallHash: hash("future-async"), occurredAt: date.addingTimeInterval(1.5)))
+        model.receiveLegacy(.init(event: .postToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .hook, toolCallHash: hash("future-async"), occurredAt: date.addingTimeInterval(2)))
+        XCTAssertTrue(model.tasks[0].resolvedCallHashes.isEmpty)
+        model.receiveLocalContent(try content(questionLine(call: "future-sync", at: date.addingTimeInterval(3))))
+        let args = String(decoding: try JSONSerialization.data(withJSONObject: ["questions": [["title": "Continue?"]]]), as: UTF8.self)
+        model.receiveLocalContent(try content(line("response_item", ["type": "function_call", "name": "request_user_input_async",
+            "call_id": "future-async", "arguments": args], at: date.addingTimeInterval(4))))
+        XCTAssertEqual(model.tasks[0].requests.count, 2)
+    }
+
+    @MainActor
+    func testPlaceholderUpgradeOnlyReplacesItsOwnCall() throws {
+        let model = IslandLiveStore(); start(model)
+        for call in ["A", "B"] {
+            model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+                sessionKind: .user, source: .hook, toolCallHash: hash(call), occurredAt: date.addingTimeInterval(1)))
+        }
+        model.receiveLocalContent(try content(questionLine(call: "B", at: date.addingTimeInterval(2))))
+        XCTAssertEqual(model.tasks[0].requests.count, 2)
+        XCTAssertEqual(model.tasks[0].requests.filter(\.isGeneric).map(\.callHash), [hash("A")])
+        model.receiveLocalContent(try content(outputLine(call: "B", at: date.addingTimeInterval(3))))
+        XCTAssertEqual(model.tasks[0].requests.count, 1)
+        XCTAssertEqual(model.tasks[0].genericWaitCallHash, hash("A"))
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+    }
+
+    @MainActor
+    func testRPCResolutionCannotCrossConnectionEpoch() throws {
+        let model = IslandLiveStore(); start(model)
+        func scoped(_ method: String, _ params: [String: Any], _ epoch: UInt64, id: Any? = nil) -> Data {
+            var value = try! JSONSerialization.jsonObject(with: json(method, params, id: id)) as! [String: Any]
+            value["_quotaViewConnectionEpoch"] = epoch
+            return try! JSONSerialization.data(withJSONObject: value)
+        }
+        model.receive(scoped("item/commandExecution/requestApproval", ["threadId": "dsh", "turnId": "turn", "itemId": "epoch-A",
+            "command": "swift build", "availableDecisions": ["accept", "decline"]], 1, id: 7), at: date.addingTimeInterval(1))
+        model.receive(scoped("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 7], 2), at: date.addingTimeInterval(2))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "New connection ID reuse cannot resolve old ownership")
+        model.receive(scoped("item/commandExecution/requestApproval", ["threadId": "dsh", "turnId": "turn", "itemId": "epoch-B",
+            "command": "swift test", "availableDecisions": ["accept", "decline"]], 3, id: 7), at: date.addingTimeInterval(3))
+        XCTAssertEqual(model.tasks[0].requests.count, 2)
+        model.receive(scoped("serverRequest/resolved", ["requestId": 7], 3), at: date.addingTimeInterval(4))
+        XCTAssertEqual(model.tasks[0].requests.count, 1)
+        XCTAssertEqual(model.tasks[0].requests[0].rpcEpoch, 1)
+        model.receive(scoped("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 7], 1), at: date.addingTimeInterval(5))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "A stale transport generation cannot act after reconnect")
+    }
+
+    func testUnifiedModeAndWaitReasonAgreeAcrossHookAndLocalEvents() {
+        for (name, mode) in [("request_user_input", CodexUserInputMode.synchronous), ("functions.request_user_input_async", .asynchronous)] {
+            let event = CodexActivityEvent(event: .permissionRequest, sessionHash: hash("dsh"), source: .hook, toolName: name, occurredAt: date)
+            XCTAssertEqual(event.userInputMode, mode)
+            XCTAssertEqual(event.effectiveWaitReason, .userInput)
+            XCTAssertEqual(CodexActivityReducer.snapshot(for: event)?.state, mode == .synchronous ? .awaitingConfirmation : .working)
+            XCTAssertEqual(CodexActivityReducer.snapshot(for: event)?.operationKey, mode == .synchronous ? .awaitingUserInput : .usingTool)
         }
     }
 

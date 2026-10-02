@@ -506,8 +506,10 @@ struct SettingsView: View {
 
                                 Button {
                                     switch activityRuntime.hookConnectionStatus {
-                                    case .notInstalled, .abnormal:
+                                    case .notInstalled:
                                         activityRuntime.enableCompatibilityHook()
+                                    case .abnormal:
+                                        activityRuntime.refreshConnectionStatus()
                                     case .installedNeedsRestart:
                                         activityRuntime.openCodexSecurityReview()
                                     case .awaitingTrust:

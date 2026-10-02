@@ -375,7 +375,8 @@ final class CodexFirstConnectionTests: XCTestCase {
         let compact = await runtime.receiveCompatibilityActivity(.init(source: .liveSocket,
             activity: .init(event: .preCompact, sessionHash: "fixture-session", source: .hook)))
         XCTAssertTrue(compact)
-        XCTAssertEqual(runtime.hookConnectionStatus, .connected)
+        if case .abnormal = runtime.hookConnectionStatus {}
+        else { XCTFail("Authenticated activity cannot replace failed native trust inspection") }
         XCTAssertEqual(store.snapshot?.state, .compactingContext)
         runtime.refreshConnectionStatus()
         try await waitUntil { runtime.hooksFeatureStatus == .enabled && runtime.hookOperation == .idle }

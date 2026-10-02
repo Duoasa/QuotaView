@@ -2,15 +2,17 @@
 
 ## Hook 原生配置与待确认关联修复 · 2026-10-02
 
-本轮用户要求采用 Vibe Island 类似的自动配置，让 App Server 与 Hook 同时工作，并修复真实提问漏报、确认类型/内容不一致及回答后卡住的问题。已核对实际安装的 Vibe Island 1.0.51：自动维护稳定 Hook 命令，通过 Codex 原生配置 API 授权，仍保留一次确认；不是自动打开 CLI 后模拟按 T。
+本轮按用户要求全面梳理 Hook 配置、传输重播、任务准入、请求生命周期和状态投影，修复 Codex 更新后的配置失效、真实提问漏报、确认内容错配与回答后卡住。职责、反例和边界见 [Hook 与请求状态模块梳理](quotaview-hook-request-module-review-2026-10-02.md)。
 
-Hook 配置改为启动时幂等安装/修复，设置中的原生授权只处理所选 CODEX_HOME 的 QuotaView 命令及当前定义哈希；使用 `hooks/list` 核对状态和 `config/batchWrite` 热重载。首次需一次授权，已受信的同一定义不重复要求确认；显式禁用 Hooks 与停用偏好保留，失败不阻塞 App Server/本地活动读取，不退出或重新启动 Codex。移除 Terminal/expect 流程和桌面 PID 门槛。稳定命令指向私有 0600 路由文件，令牌/Socket/重试队列更新不改变命令；Helper 按渠道和数据目录隔离，只迁移能验证当前 Socket/令牌归属的旧条目，保留其它 Hook。Socket 和文件回退使用同一显式队列，修复开发版重试路径误指稳定版；更换目录同时更新 Hook、分类和传输身份。
+Hook 启动时幂等维护稳定命令，通过 Codex 原生 `hooks/list` 核验和 `config/batchWrite` 完成首次所选目录授权及热重载。首次仍需一次授权，不使用 Terminal/expect 模拟按键。私有路由文件与 Helper 按渠道、数据目录隔离；只迁移能验证 Socket/令牌归属的旧条目。`config/read` 只解码 Hook 偏好键，尊重常规、内联表、引号等合法配置中的显式禁用，也兼容其它字段为 null。用户停用意图在清理前持久化；清理失败、重新检查、重启和旧事件均不能恢复已停用通路。App Server 与本地读取继续独立工作。
 
-确认页依据真实类型与公开内容：本地 `request_user_input` 和 `request_user_input_async` 通过会话/轮次/调用 ID 关联真实问题、标题和选项。同步请求的对应输出解除等待；异步提问的发送回执不是用户回答，等待清理由对应解决事件、原生等待状态明确解除、新轮次或终态驱动。Hook/native 的异步启动回执先于问题到达时也不会留下错误的解决标记。Hook 泛化等待只显示详情暂不可用，不猜测命令审批；完整请求替换占位，继续执行清除旧泛化等待，已解决旧事件不能重新激活。仅观察到本地请求时保持只读并提示在 Codex 回答，不声称获得桌面请求的应答权；私有推理不进入显示。
+配置事实、原生信任、历史送达和本轮新鲜送达分开记录。队列先缓冲，配置就绪后明确重播；拒绝不依赖下一次文件写入才能重试。运行代次使换目录、停止后的旧回调失效。收到旧事件不能恢复已撤销的信任。
 
-核验依据：[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[App Server](https://learn.chatgpt.com/docs/app-server) 与当前 0.159.2 CLI 生成的本地 schema。隔离原生探针已验证 `hooks.state."<key>".trusted_hash` + `reloadUserConfig`；测试只使用临时 CODEX_HOME、惰性 Hook，不访问账户或改写真实 Codex 配置。Vibe Island 的一次授权依据见[官方更新记录](https://vibeisland.app/changelog/)。
+所有生产公开消息先通过 Store/Registry 的目录、连接和当前轮次准入，再附着详情。迟到旧轮次不能先覆盖 Island。无线程 ID 的解决通知仅按同连接已观察到的数字/字符串 RPC 关联；重连和歧义 ID 不跨任务清理。启动恢复只取 active 用户线程的最新 inProgress 轮次元数据（limit 1 / notLoaded）；没有明确当前轮次或接口不支持时，历史保持未确认，不猜测运行。
 
-48 项必要隔离冒烟与 Debug arm64 构建通过，包含原生授权边界、渠道/目录隔离、Helper 回退和真实问答生命周期；本轮未执行完整回归或 UI 自动化。开发包已更新并启动 PID 88611，固定身份 0.7.3 / 显示 Build 1 / 内部 49 与 deep strict ad-hoc 签名核对通过。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`；忽略的开发 manifest 已记录源码和包指纹。启动后已核对 12 组旧开发 Hook 按当前 Socket/令牌身份迁入独立配置，6 组其它 Hook 的规范化内容哈希保持不变；73 个源码指纹与开发包 manifest 一致。首次原生 Hook 授权待用户操作，实际连接需自然 Hook 事件；视觉及真实交互待用户验收。源码提交 `1b962b6d7a20929146068c27f0fb9b1c5b12fa09` 已推送至 [PR #67](https://github.com/Duoasa/QuotaView/pull/67)，用户已授权合并 main；CI 与合并状态以该 PR 为准。本轮未发布 Release/appcast。
+请求生命周期集中管理调用、RPC、详情升级与解决，任务状态从执行事实和阻塞证据派生。同步和异步提问使用同一模式定义，展示真实标题、问题及选项；异步发送回执不视为回答。工具 B 不清除 A，线程恢复不回答独立异步问题，未知输出不建立未来请求的解决标记。精确解除通过同轮次、同连接证据同步 Core 快照和提醒；仍有并行阻塞时继续等待。无身份 Hook 等待只由权威线程解除或轮次结束清除。本地观察保持只读，实际应答权不从独立 App Server 推断；私有推理不进入显示。
+
+76 项必要隔离冒烟通过，包括 Shared → Store → Island 的端到端乱序、重连、暂停恢复及并行请求场景、原生配置和 Helper/队列边界。Debug arm64 构建、固定身份和 deep strict ad-hoc 签名核对通过，当前开发包 PID 41104。身份保持 0.7.3 / 显示 Build 1 / 内部 49；源码/包指纹记录在忽略的开发 manifest。证据 `.build/073-native-hook-final-smoke.log`、`.build/073-native-hook-build.log`。此前启动核验的 12 组开发 Hook 迁移与 6 组其它 Hook 内容保留证据继续保留。首次原生授权及视觉、真实交互待用户操作和验收。本地未扩展完整回归或 UI 自动化；GitHub 完整 Swift CI 和 main 合并状态以 [PR #67](https://github.com/Duoasa/QuotaView/pull/67) 为准，本轮未发布 Release/appcast。
 
 
 ## 2026-10-02 设置精简与自动弹出

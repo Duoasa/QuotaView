@@ -180,6 +180,40 @@ final class NativeHookConfigurationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: dotfiles.appendingPathComponent("config.toml").path))
     }
 
+    func testNativeFeaturePreferenceUsesParsedConfigAndNeverWrites() async throws {
+        for (mode, expected) in [("ordinary", CodexHookFeaturePreference.absent), ("featureDisabled", .disabled), ("featureEnabled", .enabled), ("packagedDisabled", .absent)] {
+            let fixture = try makeFixture(mode: mode)
+            defer { fixture.remove() }
+            let client = fixture.client()
+            let preference = try await client.readHookFeaturePreference()
+            await client.stop()
+            XCTAssertEqual(preference, expected)
+            XCTAssertTrue(try fixture.writes().isEmpty)
+        }
+    }
+
+    func testCurrentCodexReadsEquivalentHookOptOutForms() async throws {
+        guard let executable = ProcessInfo.processInfo.environment["QUOTAVIEW_NATIVE_HOOK_TEST_EXECUTABLE"] else {
+            throw XCTSkip("Set QUOTAVIEW_NATIVE_HOOK_TEST_EXECUTABLE for an isolated native config smoke")
+        }
+        let forms = ["", "[features]\nhooks = false\n", "features = { hooks = false }\n", "\"features\".\"hooks\" = false\n", "[\"features\"]\n\"hooks\" = false\n"]
+        for form in forms {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                .standardizedFileURL.resolvingSymlinksInPath()
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let config = root.appendingPathComponent("config.toml")
+            try Data(form.utf8).write(to: config)
+            let client = CodexAppServerClient(executablePath: executable,
+                environment: ["PATH": "/usr/bin:/bin", "HOME": root.path, "CODEX_HOME": root.path],
+                startupTimeoutSeconds: 5, requestTimeoutSeconds: 5)
+            let preference = try await client.readHookFeaturePreference()
+            await client.stop()
+            XCTAssertEqual(preference, form.isEmpty ? .absent : .disabled)
+            XCTAssertEqual(try Data(contentsOf: config), Data(form.utf8), "Configuration inspection never rewrites the user's preference")
+        }
+    }
+
     private struct Fixture {
         let root: URL
         let source: URL
@@ -231,6 +265,12 @@ final class NativeHookConfigurationTests: XCTestCase {
             if 'id' not in request: continue
             method = request['method']
             if method == 'initialize': result = {}
+            elif method == 'config/read':
+                mode = cfg['mode']
+                features = {} if mode == 'ordinary' else dict(hooks=mode == 'featureEnabled')
+                features['network_proxy'] = None
+                source = 'packagedDefaults' if mode == 'packagedDisabled' else 'user'
+                result = dict(config=dict(features=features), origins={} if not features else {'features.hooks':dict(name=dict(type=source),version='fixture')})
             elif method == 'hooks/list':
                 owned = [hook('sessionStart', 'session_start:"quoted":0'), hook('stop', 'stop:0')]
                 mode = cfg['mode']

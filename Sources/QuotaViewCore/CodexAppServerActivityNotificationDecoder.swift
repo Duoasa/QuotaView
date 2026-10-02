@@ -111,7 +111,8 @@ public enum CodexAppServerActivityNotificationDecoder {
                 sessionHash: sessionHash,
                 turnHash: CodexActivityPrivacy.hashIdentifier(turnID),
                 source: .appServer,
-                occurredAt: occurredAt
+                occurredAt: eventDate(from: params["startedAtMs"]
+                    ?? (params["turn"] as? [String: Any])?["startedAtMs"], fallback: occurredAt)
             )
 
         case "turn/plan/updated":

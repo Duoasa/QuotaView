@@ -63,6 +63,11 @@ public enum CodexHookConfigurationError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// Effective preference parsed by Codex itself, independent of TOML spelling.
+public enum CodexHookFeaturePreference: Equatable, Sendable {
+    case absent, enabled, disabled
+}
+
 public actor CodexAppServerClient {
     public enum ClientError: LocalizedError, Equatable {
         case executableNotFound
@@ -240,6 +245,40 @@ public actor CodexAppServerClient {
         return response.data.first {
             $0.matches(sessionHash: sessionHash)
         }?.privacySafeDisplayName
+    }
+
+    /// Reads only the Hook feature preference; complete configuration stays local.
+    public func readHookFeaturePreference(featureName: String = "hooks") async throws -> CodexHookFeaturePreference {
+        guard ["hooks", "codex_hooks"].contains(featureName) else { throw ClientError.invalidMessage }
+        try await connectIfNeeded()
+        let response: HookFeatureReadResponse = try await request(
+            method: "config/read", params: ["includeLayers": true], includeNullParams: false
+        )
+        guard let enabled = response.config.features?.value(for: featureName) else { return .absent }
+        // Packaged defaults are not a user or administrator opt-out.
+        let origin = response.origins["features." + featureName] ?? response.origins["features"]
+        if origin?.name.type == "packagedDefaults" { return .absent }
+        return enabled ? .enabled : .disabled
+    }
+
+    private struct HookFeatureReadResponse: Decodable {
+        let config: Configuration
+        let origins: [String: Origin]
+        struct Configuration: Decodable {
+            let features: Features?
+            // Decode only the two supported Hook keys. Other native features
+            // may legitimately contain nulls or different future value types.
+            struct Features: Decodable {
+                let hooks: Bool?
+                let codexHooks: Bool?
+                enum CodingKeys: String, CodingKey { case hooks; case codexHooks = "codex_hooks" }
+                func value(for name: String) -> Bool? { name == "hooks" ? hooks : codexHooks }
+            }
+        }
+        struct Origin: Decodable {
+            let name: Source
+            struct Source: Decodable { let type: String }
+        }
     }
 
     /// Discovery and authorization deliberately use the same native metadata.

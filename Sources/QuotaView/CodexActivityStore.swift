@@ -132,6 +132,24 @@ final class CodexActivityStore: ObservableObject {
     private var sessionClassifier = CodexActivitySessionClassifier()
     private var hookSessionClassifier = CodexActivitySessionClassifier()
     private var localRecovery = CodexLocalActivityRecovery()
+    private var pendingLocalPublicContent: [CodexLocalPublicContent] = []
+    private struct BufferedNativePublicMessage {
+        let data: Data
+        let epoch: UInt64
+        let session: String
+        let turn: String
+        let receivedAt: Date
+    }
+    private var pendingNativePublicMessages: [BufferedNativePublicMessage] = []
+    private var nativePublicEpoch: UInt64?
+    private var closedNativePublicEpoch: UInt64?
+    private struct NativeWaitEvidence {
+        let identity: CodexActivityTaskIdentity
+        let epoch: UInt64
+        let reason: CodexActivityWaitReason
+    }
+    private var nativeWaitEvidence: [String: NativeWaitEvidence] = [:]
+    private var confirmedNativeTurns: [String: CodexActivityTaskIdentity] = [:]
     private var selectedActivityAt: Date?
     private var selectedCompactionSource: CodexActivityEventSource?
     private let sessionKindResolver: (@Sendable (CodexActivityEvent) async -> CodexActivitySessionKind)?
@@ -233,8 +251,9 @@ final class CodexActivityStore: ObservableObject {
                 }
             )
             guard self.nativeGeneration == run, !Task.isCancelled else { return }
-            await sharedActivityClient.setPublicMessageHandler { [weak self] data in
-                await self?.receivePublicMessage(data, generation: run)
+            await sharedActivityClient.setScopedPublicMessageHandler { [weak self] data, epoch in
+                guard let self else { return }
+                await self.receiveScopedPublicMessage(data, connectionEpoch: epoch, generation: run)
             }
             await sharedActivityClient.start(
                 handler: { [weak self] event in
@@ -259,11 +278,193 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
-    private func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation run: UInt64) {
-        guard nativeGeneration == run else { return }; localPublicContentDidReceive?(content)
+    func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation expected: UInt64? = nil) {
+        let run = expected ?? nativeGeneration
+        guard nativeGeneration == run else { return }
+        if taskRegistry.permitsPublicAttachment(session: content.sessionHash, turn: content.turnHash,
+            source: .localRollout, occurredAt: content.occurredAt, permitsTerminal: true) {
+            localPublicContentDidReceive?(content)
+        } else if !taskRegistry.isPriorTurn(session: content.sessionHash, turn: content.turnHash) {
+            // Disk details never create a task. Retain bounded context until the
+            // matching identified lifecycle receives positive current evidence.
+            pendingLocalPublicContent.append(content)
+            while pendingLocalPublicContent.count > 200
+                || pendingLocalPublicContent.reduce(0, { $0 + $1.data.count }) > 2_097_152 {
+                pendingLocalPublicContent.removeFirst()
+            }
+        }
     }
-    private func receivePublicMessage(_ data: Data, generation run: UInt64) {
-        guard nativeGeneration == run else { return }; publicMessageDidReceive?(data)
+
+    private func flushLocalPublicContent(for session: String) {
+        let buffered = pendingLocalPublicContent.filter { $0.sessionHash == session }
+        pendingLocalPublicContent.removeAll { $0.sessionHash == session }
+        for content in buffered {
+            if taskRegistry.permitsPublicAttachment(session: session, turn: content.turnHash,
+                source: .localRollout, occurredAt: content.occurredAt, permitsTerminal: true) {
+                localPublicContentDidReceive?(content)
+            } else if !taskRegistry.isPriorTurn(session: session, turn: content.turnHash) {
+                pendingLocalPublicContent.append(content)
+            }
+        }
+    }
+
+    /// The shared connection passes one scoped envelope through this ingress.
+    /// Domain admission precedes every Island lifecycle/content projection.
+    func receiveScopedPublicMessage(_ data: Data, connectionEpoch epoch: UInt64,
+                                    generation expected: UInt64? = nil, at now: Date = Date()) async {
+        let run = expected ?? nativeGeneration
+        guard run == nativeGeneration, data.count <= CodexAppServerActivityNotificationDecoder.maximumMessageBytes,
+              closedNativePublicEpoch.map({ epoch > $0 }) ?? true,
+              nativePublicEpoch.map({ epoch >= $0 }) ?? true,
+              var envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let method = envelope["method"] as? String, !method.contains("reasoning"), !method.contains("hook/"),
+              var params = envelope["params"] as? [String: Any],
+              let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
+              !threadID.isEmpty else { return }
+        if nativePublicEpoch != epoch {
+            nativePublicEpoch = epoch; nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll()
+            pendingNativePublicMessages.removeAll()
+        }
+        let session = CodexActivityPrivacy.hashIdentifier(threadID)
+        let turn = params["turn"] as? [String: Any]
+        var turnID = params["turnId"] as? String ?? turn?["id"] as? String
+        let date = Self.publicEventDate(envelope["emittedAtMs"] ?? params["emittedAtMs"], fallback: now)
+        let metadata = params["thread"] as? [String: Any]
+        let status = params["status"] as? [String: Any] ?? metadata?["status"] as? [String: Any]
+        let kind = metadata.map { CodexActivitySessionKind.classify(source: $0["source"], threadSource: $0["threadSource"] as? String) }
+            ?? sessionKinds[session] ?? .user // Shared already verified this connection's thread metadata.
+        guard kind != .internalTask else { return }
+
+        if method == "thread/snapshot", let current = params["currentTurn"] as? [String: Any],
+           status?["type"] as? String == "active", current["status"] as? String == "inProgress",
+           let id = current["id"] as? String, !id.isEmpty {
+            turnID = id
+            let hash = CodexActivityPrivacy.hashIdentifier(id)
+            if taskRegistry.currentIdentity(for: session)?.turnHash != hash {
+                let start = CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: hash,
+                    sessionKind: kind, source: .appServer,
+                    occurredAt: Self.publicEventDate(current["startedAtMs"], fallback: date))
+                await receiveClassified(.init(source: .liveSocket, activity: start), generation: run,
+                                        selectionEvidenceAt: date, confirmedCurrentTurn: true)
+            }
+        } else if let event = CodexAppServerActivityNotificationDecoder.decode(data: data, now: now) {
+            await receiveClassified(.init(source: .liveSocket, activity: event.classified(as: kind)), generation: run)
+        } else if let id = turnID, !id.isEmpty,
+                  ((envelope["id"] != nil && ["item/commandExecution/requestApproval", "item/fileChange/requestApproval",
+                    "item/permissions/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request"].contains(method))
+                    || (method == "item/started" && ["commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall",
+                        "webSearch", "collabToolCall"].contains((params["item"] as? [String: Any])?["type"] as? String ?? ""))) {
+            // A positively identified leading request/item can establish its own
+            // turn, but output, deltas and terminal records have no such right.
+            let blocking = envelope["id"] != nil && method != "item/tool/requestUserInput"
+            let event = CodexActivityEvent(event: blocking ? .permissionRequest : .preToolUse,
+                sessionHash: session, turnHash: CodexActivityPrivacy.hashIdentifier(id),
+                sessionKind: kind, source: .appServer,
+                waitReason: blocking ? .approval : nil,
+                toolCallHash: (params["itemId"] as? String).map(CodexActivityPrivacy.hashIdentifier), occurredAt: date)
+            await receiveClassified(.init(source: .liveSocket, activity: event), generation: run)
+        }
+        guard run == nativeGeneration, nativePublicEpoch == epoch,
+              closedNativePublicEpoch.map({ epoch > $0 }) ?? true else { return }
+        let turnHash = turnID.map(CodexActivityPrivacy.hashIdentifier)
+        let isMetadata = ["thread/started", "thread/snapshot"].contains(method)
+        let terminal = method == "turn/completed" || method == "serverRequest/resolved" || method == "thread/archived" || method == "thread/closed"
+        let stateTransition = ["turn/started", "turn/completed", "thread/status/changed"].contains(method)
+            || ((params["item"] as? [String: Any])?["type"] as? String == "contextCompaction")
+        guard taskRegistry.permitsPublicAttachment(session: session, turn: turnHash,
+            source: .appServer, occurredAt: date, timeSensitive: stateTransition, permitsTerminal: terminal || isMetadata),
+              let identity = taskRegistry.currentIdentity(for: session) else {
+            if let turnHash, !taskRegistry.isPriorTurn(session: session, turn: turnHash),
+               (envelope["id"] != nil || ["item/started", "item/completed", "item/agentMessage/delta", "item/commandExecution/outputDelta", "serverRequest/resolved"].contains(method)) {
+                pendingNativePublicMessages.append(.init(data: data, epoch: epoch, session: session,
+                    turn: turnHash, receivedAt: now))
+                while pendingNativePublicMessages.count > 200
+                    || pendingNativePublicMessages.reduce(0, { $0 + $1.data.count }) > 2_097_152 {
+                    pendingNativePublicMessages.removeFirst()
+                }
+            }
+            return
+        }
+
+        // Attach thread-scoped state to the admitted current turn; never infer an
+        // identified current turn from disk history or a bare active snapshot.
+        if params["turnId"] == nil, let turnID { params["turnId"] = turnID }
+        if method == "turn/started" || (method == "thread/snapshot" && turnID != nil
+            && (params["currentTurn"] as? [String: Any])?["status"] as? String == "inProgress") {
+            confirmedNativeTurns[session] = identity
+            for record in localRecovery.confirm(identity) {
+                guard run == nativeGeneration, nativePublicEpoch == epoch else { return }
+                await applyLocalRecord(record, replay: true, generation: run, selectionEvidenceAt: date)
+            }
+            guard run == nativeGeneration, nativePublicEpoch == epoch,
+                  taskRegistry.currentIdentity(for: session)?.turnHash == identity.turnHash else { return }
+            flushLocalPublicContent(for: session)
+        }
+        if let status, status["type"] as? String == "active", let flags = status["activeFlags"] as? [String] {
+            let reason: CodexActivityWaitReason? = flags.contains("waitingOnUserInput") ? .userInput
+                : flags.contains("waitingOnApproval") ? .approval : nil
+            if let reason {
+                if admittedSnapshots[session]?.snapshot.state != .awaitingConfirmation {
+                    let waiting = CodexActivityEvent(event: .permissionRequest, sessionHash: session,
+                        turnHash: identity.turnHash, sessionKind: .user, source: .appServer,
+                        waitReason: reason, occurredAt: date)
+                    await receiveClassified(.init(source: .liveSocket, activity: waiting), generation: run)
+                    guard run == nativeGeneration, nativePublicEpoch == epoch else { return }
+                }
+                nativeWaitEvidence[session] = .init(identity: identity, epoch: epoch, reason: reason)
+            } else if let prior = nativeWaitEvidence.removeValue(forKey: session), prior.epoch == epoch,
+                    prior.identity == identity {
+                let continued = CodexActivityEvent(event: .postToolUse, sessionHash: session,
+                    turnHash: identity.turnHash, sessionKind: .user, source: .appServer,
+                    waitReason: prior.reason, occurredAt: date)
+                await receiveClassified(.init(source: .liveSocket, activity: continued), generation: run)
+                guard run == nativeGeneration, nativePublicEpoch == epoch else { return }
+            }
+        }
+        envelope["params"] = params
+        envelope["_quotaViewConnectionEpoch"] = epoch
+        if let forwarded = try? JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]) {
+            publicMessageDidReceive?(forwarded)
+        }
+        if let update = CodexAppServerActivityNotificationDecoder.decodeTokenUsage(data: data, now: now) {
+            receiveNativeToken(update, generation: run)
+        }
+        if method == "thread/snapshot", turnID != nil {
+            let waiting = pendingNativePublicMessages.filter { $0.epoch == epoch && $0.session == session && $0.turn == identity.turnHash }
+            pendingNativePublicMessages.removeAll { $0.epoch != epoch || $0.session == session }
+            for message in waiting {
+                guard run == nativeGeneration, nativePublicEpoch == epoch else { return }
+                await receiveScopedPublicMessage(message.data, connectionEpoch: epoch, generation: run, at: message.receivedAt)
+            }
+        }
+    }
+
+    /// Request matching and remaining blockers belong to the request lifecycle.
+    /// The ingress boundary only verifies its current task and connection scope.
+    /// This stays synchronous so an earlier resolution cannot overtake a new
+    /// blocking request within the same turn while waiting on another actor.
+    func receiveRequestSettlement(_ settlement: CodexActivityRequestSettlement,
+                                  at now: Date = Date()) {
+        guard !settlement.stillWaiting,
+              nativePublicEpoch == settlement.connectionEpoch,
+              closedNativePublicEpoch.map({ settlement.connectionEpoch > $0 }) ?? true,
+              let identity = taskRegistry.currentIdentity(for: settlement.sessionHash),
+              identity.turnHash == settlement.turnHash,
+              let entry = admittedSnapshots[settlement.sessionHash],
+              entry.snapshot.taskIdentity == identity,
+              entry.snapshot.state == .awaitingConfirmation else { return }
+        if let wait = nativeWaitEvidence[settlement.sessionHash],
+           wait.identity == identity, wait.epoch == settlement.connectionEpoch {
+            nativeWaitEvidence.removeValue(forKey: settlement.sessionHash)
+        }
+        receive(.init(event: .postToolUse, sessionHash: identity.sessionHash,
+            turnHash: identity.turnHash, sessionKind: .user, source: .appServer,
+            occurredAt: now))
+    }
+
+    private static func publicEventDate(_ value: Any?, fallback: Date) -> Date {
+        guard let number = value as? NSNumber, number.doubleValue.isFinite, number.doubleValue >= 0 else { return fallback }
+        return Date(timeIntervalSince1970: number.doubleValue / 1_000)
     }
     private func setLocalHealth(_ health: CodexLocalActivityHealth, generation run: UInt64) {
         guard nativeGeneration == run else { return }
@@ -293,7 +494,16 @@ final class CodexActivityStore: ObservableObject {
     private func receiveLocalRecord(_ record: CodexLocalRolloutDecodedRecord, replay: Bool,
                                     generation run: UInt64) async {
         guard nativeGeneration == run else { return }
-        guard let projection = localRecovery.project(record) else { return }
+        guard let projection = localRecovery.project(record) else {
+            if let session = Self.localRecordSession(record), let identity = confirmedNativeTurns[session],
+               taskRegistry.currentIdentity(for: session)?.turnHash == identity.turnHash {
+                for recovered in localRecovery.confirm(identity) {
+                    await applyLocalRecord(recovered, replay: true, generation: run, selectionEvidenceAt: Date())
+                }
+                flushLocalPublicContent(for: session)
+            }
+            return
+        }
         for context in projection.context {
             guard nativeGeneration == run else { return }
             await applyLocalRecord(context, replay: true, generation: run,
@@ -301,6 +511,23 @@ final class CodexActivityStore: ObservableObject {
         }
         guard nativeGeneration == run else { return }
         await applyLocalRecord(projection.record, replay: replay, generation: run)
+        // A native snapshot may precede discovery of the paused rollout. Its
+        // identified current turn also confirms context arriving in that order.
+        if let session = Self.localRecordSession(record), let identity = confirmedNativeTurns[session],
+           taskRegistry.currentIdentity(for: session)?.turnHash == identity.turnHash {
+            for recovered in localRecovery.confirm(identity) {
+                await applyLocalRecord(recovered, replay: true, generation: run, selectionEvidenceAt: Date())
+            }
+            flushLocalPublicContent(for: session)
+        }
+    }
+
+    private static func localRecordSession(_ record: CodexLocalRolloutDecodedRecord) -> String? {
+        switch record.update {
+        case .activity(let event): return event.sessionHash
+        case .tokenUsage(let usage): return usage.sessionHash
+        case .tokenUsageReplay(let usages): return usages.first?.sessionHash
+        }
     }
 
     private func applyLocalRecord(_ record: CodexLocalRolloutDecodedRecord, replay: Bool,
@@ -333,7 +560,11 @@ final class CodexActivityStore: ObservableObject {
 
     private func setSharedConnectionState(_ state: CodexSharedAppServerConnectionState, generation run: UInt64) {
         guard nativeGeneration == run else { return }
-        if state != .connected { compactionSourceUnavailable(.appServer) }
+        if state != .connected {
+            compactionSourceUnavailable(.appServer)
+            if let epoch = nativePublicEpoch { closedNativePublicEpoch = max(closedNativePublicEpoch ?? epoch, epoch) }
+            nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll(); pendingNativePublicMessages.removeAll()
+        }
         var next = automaticConnection
         next.sharedState = state
         updateAutomaticConnection(next)
@@ -373,7 +604,8 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func receiveClassified(_ delivery: CodexActivityDelivery, generation expected: UInt64? = nil,
-                           selectionEvidenceAt: Date? = nil, admissionAllowed: (() -> Bool)? = nil) async {
+                           selectionEvidenceAt: Date? = nil, admissionAllowed: (() -> Bool)? = nil,
+                           confirmedCurrentTurn: Bool = false) async {
         let run = expected ?? nativeGeneration
         let classifier = delivery.activity.source == .hook ? hookSessionClassifier : sessionClassifier
         let kind: CodexActivitySessionKind
@@ -383,7 +615,7 @@ final class CodexActivityStore: ObservableObject {
         let before = snapshot
         receive(CodexActivityDelivery(eventID: delivery.eventID, source: delivery.source,
                                       activity: delivery.activity.classified(as: kind)),
-                selectionEvidenceAt: selectionEvidenceAt)
+                selectionEvidenceAt: selectionEvidenceAt, confirmedCurrentTurn: confirmedCurrentTurn)
         CodexActivityDiagnostics.record(delivery: delivery,
             outcome: before != snapshot ? "task_applied" : "task_ignored")
     }
@@ -397,7 +629,7 @@ final class CodexActivityStore: ObservableObject {
         )
     }
 
-    func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil) {
+    func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false) {
         let event = delivery.activity
         if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
         var knownGoalStatus = event.goalStatus
@@ -415,8 +647,10 @@ final class CodexActivityStore: ObservableObject {
         guard let admission = taskRegistry.admit(event, kind: resolvedKind,
                                                 selectedSession: snapshot?.sessionHash,
                                                 selectedOccurredAt: selectedActivityAt ?? snapshot?.occurredAt,
-                                                selectionEvidenceAt: selectionEvidenceAt) else { return }
+                                                selectionEvidenceAt: selectionEvidenceAt,
+                                                confirmedCurrentTurn: confirmedCurrentTurn) else { return }
         admittedActivityDidReceive?(event)
+        flushLocalPublicContent(for: event.sessionHash)
         _ = registerEventID(delivery.eventID)
         for session in admission.evictedSessions { discardSession(session) }
         if resolvedKind != .unknown { sessionKinds[event.sessionHash] = resolvedKind }
@@ -682,6 +916,9 @@ final class CodexActivityStore: ObservableObject {
         acceptedEventIDOrder.removeAll()
         snapshot = nil
         localRecovery = CodexLocalActivityRecovery()
+        pendingLocalPublicContent.removeAll(); nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll()
+        pendingNativePublicMessages.removeAll()
+        nativePublicEpoch = nil; closedNativePublicEpoch = nil
         selectedActivityAt = nil
         selectedCompactionSource = nil
         updateAutomaticConnection(.init())

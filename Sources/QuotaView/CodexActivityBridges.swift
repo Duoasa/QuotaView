@@ -297,6 +297,8 @@ final class CodexActivityFileBridge: @unchecked Sendable {
     private var handler: CodexActivityDeliveryHandler?
     private var startupReplayFileNames: Set<String> = []
     private var inFlightFileNames: Set<String> = []
+    private var deliveryReady = false
+    private var runGeneration: UInt64 = 0
 
     init(
         queueURL: URL,
@@ -308,42 +310,50 @@ final class CodexActivityFileBridge: @unchecked Sendable {
         self.installationIdentifier = installationIdentifier
     }
 
+    /// Configuration owns admission readiness; this bridge owns durable replay.
+    /// Start paused while Runtime inspects or repairs the selected installation.
     func start(
-        handler: @escaping CodexActivityDeliveryHandler
+        handler: @escaping CodexActivityDeliveryHandler,
+        deliveryReady: Bool = true
     ) throws {
-        stop()
-        try prepareQueueDirectory()
-        self.handler = handler
-        startupReplayFileNames = Set(
-            eventURLsInQueue().map(\.lastPathComponent)
-        )
-
-        let directoryDescriptor = Darwin.open(
-            queueURL.path,
-            O_EVTONLY | O_CLOEXEC
-        )
-        guard directoryDescriptor >= 0 else {
-            self.handler = nil
-            throw BridgeError.queueWatchFailed
+        try queue.sync {
+            stopOnQueue()
+            try prepareQueueDirectory()
+            self.handler = handler
+            self.deliveryReady = deliveryReady
+            startupReplayFileNames = Set(eventURLsInQueue().map(\.lastPathComponent))
+            let directoryDescriptor = Darwin.open(queueURL.path, O_EVTONLY | O_CLOEXEC)
+            guard directoryDescriptor >= 0 else {
+                self.handler = nil
+                throw BridgeError.queueWatchFailed
+            }
+            descriptor = directoryDescriptor
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: directoryDescriptor, eventMask: [.write, .extend], queue: queue)
+            source.setEventHandler { [weak self] in self?.drainAvailableEvents() }
+            self.source = source
+            source.resume()
+            queue.async { [weak self] in self?.drainAvailableEvents() }
         }
-        descriptor = directoryDescriptor
+    }
 
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: directoryDescriptor,
-            eventMask: [.write, .extend],
-            queue: queue
-        )
-        source.setEventHandler { [weak self] in
-            self?.drainAvailableEvents()
-        }
-        self.source = source
-        source.resume()
+    /// A readiness transition explicitly retries retained events, even when no
+    /// new file arrives. No periodic polling or transport-state guess is needed.
+    func setDeliveryReady(_ ready: Bool) {
         queue.async { [weak self] in
-            self?.drainAvailableEvents()
+            guard let self, self.descriptor >= 0 else { return }
+            self.deliveryReady = ready
+            if ready { self.drainAvailableEvents() }
         }
     }
 
     func stop() {
+        queue.sync { stopOnQueue() }
+    }
+
+    private func stopOnQueue() {
+        runGeneration &+= 1
+        deliveryReady = false
         source?.cancel()
         source = nil
         if descriptor >= 0 {
@@ -381,6 +391,7 @@ final class CodexActivityFileBridge: @unchecked Sendable {
     }
 
     private func drainAvailableEvents() {
+        guard deliveryReady, descriptor >= 0, handler != nil else { return }
         let eventURLs = eventURLsInQueue()
         var deliveries: [(
             url: URL,
@@ -431,9 +442,11 @@ final class CodexActivityFileBridge: @unchecked Sendable {
             let fileName = item.url.lastPathComponent
             guard let handler else { return }
             inFlightFileNames.insert(fileName)
+            let run = runGeneration
             handler(item.delivery) { [weak self] accepted in
                 guard let self else { return }
                 self.queue.async {
+                    guard self.runGeneration == run, self.descriptor >= 0 else { return }
                     self.inFlightFileNames.remove(fileName)
                     guard accepted else { return }
                     unlink(item.url.path)

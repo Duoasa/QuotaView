@@ -131,12 +131,12 @@ struct CodexActivityEnvironmentInspector: Sendable {
         )
     }
 
-    func inspectAndEnableHooksIfNeeded()
+    func inspectAndEnableHooksIfNeeded(preference: CodexHookFeaturePreference)
         throws -> CodexActivityEnvironmentInspection
     {
         let current = try inspect()
         guard !current.hooksEnabled else { return current }
-        guard !hasExplicitlyDisabledHooks else {
+        guard preference != .disabled else {
             throw InspectionError.hooksFeatureDisabled
         }
         guard let executablePath else {
@@ -232,27 +232,6 @@ struct CodexActivityEnvironmentInspector: Sendable {
         return legacy
     }
 
-    // Enabling a legacy default-off feature is an explicit action. A user's
-    // persistent opt-out must never be overridden by QuotaView's repair path.
-    private var hasExplicitlyDisabledHooks: Bool {
-        let configURL = dataDirectoryURL.appendingPathComponent("config.toml")
-        guard let data = try? Data(contentsOf: configURL), data.count <= 1_048_576,
-              let config = String(data: data, encoding: .utf8) else { return false }
-        var inFeatures = false
-        for rawLine in config.split(whereSeparator: \.isNewline) {
-            let line = rawLine.trimmingCharacters(in: .whitespaces)
-            if line.hasPrefix("[") {
-                inFeatures = line.range(of: #"^\[\s*(?:features|"features"|'features')\s*\]\s*(?:#.*)?$"#,
-                                        options: .regularExpression) != nil
-                continue
-            }
-            let pattern = inFeatures
-                ? #"^(?:hooks|codex_hooks|"hooks"|"codex_hooks"|'hooks'|'codex_hooks')\s*=\s*false\s*(?:#.*)?$"#
-                : #"^features\.(?:hooks|codex_hooks)\s*=\s*false\s*(?:#.*)?$"#
-            if line.range(of: pattern, options: .regularExpression) != nil { return true }
-        }
-        return false
-    }
 
 }
 

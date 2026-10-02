@@ -34,7 +34,7 @@ public struct CodexLocalPublicContent: Sendable {
                 if CodexLocalQuestionContent.isQuestionTool(name),
                    !id.isEmpty, id.utf8.count <= 1024,
                    let questions = CodexLocalQuestionContent.questions(payload) {
-                    clean = ["type": "questionRequest", "id": id, "questions": questions, "asynchronous": CodexLocalQuestionContent.isAsynchronous(name)]
+                    clean = ["type": "questionRequest", "id": id, "questions": questions, "userInputMode": CodexUserInputMode.forToolName(name)!.rawValue, "asynchronous": CodexLocalQuestionContent.isAsynchronous(name)]
                     break
                 }
                 clean = ["type": "tool", "id": id, "name": name,
@@ -64,13 +64,8 @@ public struct CodexLocalPublicContent: Sendable {
 /// Only the documented, public question fields cross the observation boundary.
 /// This projection carries a call ID, not an app-server response capability.
 enum CodexLocalQuestionContent {
-    static func isQuestionTool(_ name: String) -> Bool {
-        ["request_user_input", "request_user_input_async"].contains(name.split(separator: ".").last.map(String.init) ?? "")
-    }
-
-    static func isAsynchronous(_ name: String) -> Bool {
-        name.split(separator: ".").last == "request_user_input_async"
-    }
+    static func isQuestionTool(_ name: String) -> Bool { CodexUserInputMode.forToolName(name) != nil }
+    static func isAsynchronous(_ name: String) -> Bool { CodexUserInputMode.forToolName(name) == .asynchronous }
 
     static func questions(_ payload: [String: Any]) -> [[String: Any]]? {
         guard let raw = payload["arguments"] as? String ?? payload["input"] as? String,
