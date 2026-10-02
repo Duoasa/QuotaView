@@ -3211,7 +3211,8 @@ final class AppBehaviorTests: XCTestCase {
             CodexActivityEvent(
                 event: .userPromptSubmit,
                 sessionHash: "session",
-                turnHash: "turn-2"
+                turnHash: "turn-2",
+                source: .appServer
             )
         )
         store.receive(
