@@ -84,6 +84,8 @@
 		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
 		B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000B /* CodexLocalPublicContent.swift */; };
 		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
+		B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000011 /* CodexDesktopIPCClient.swift */; };
+		B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000012 /* CodexDesktopRequestProjection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -236,6 +238,8 @@
 		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
 		F0730000000000000000000B /* CodexLocalPublicContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalPublicContent.swift; sourceTree = "<group>"; };
 		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
+		F07300000000000000000011 /* CodexDesktopIPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopIPCClient.swift; sourceTree = "<group>"; };
+		F07300000000000000000012 /* CodexDesktopRequestProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopRequestProjection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -360,6 +364,8 @@
 				F48800000000000000000012 /* CodexLocalActivityRecovery.swift */,
 				F10000000000000000000042 /* CodexActivityTaskIdentity.swift */,
 				F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */,
+				F07300000000000000000011 /* CodexDesktopIPCClient.swift */,
+				F07300000000000000000012 /* CodexDesktopRequestProjection.swift */,
 				F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */,
 				F10000000000000000000052 /* SOCKS5HTTPBridge.swift */,
 				F10000000000000000000051 /* ProxyConfiguration.swift */,
@@ -732,6 +738,8 @@
 				B48800000000000000000012 /* CodexLocalActivityRecovery.swift in Sources */,
 				B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */,
 				B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */,
+				B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */,
+				B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */,
 				B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */,
 				B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */,
 				B10000000000000000000051 /* ProxyConfiguration.swift in Sources */,

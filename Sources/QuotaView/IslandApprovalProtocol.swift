@@ -115,12 +115,17 @@ struct IslandCodexApprovalRequest: Equatable {
     let envelope: IslandApprovalJSON
     /// A public rollout projection has no RPC owner and can never send a reply.
     private(set) var localObservation: LocalObservation?
+    /// An opaque capability minted by the Desktop owner stream, never decoded
+    /// from a public JSON envelope or a local rollout projection.
+    private(set) var desktopHandle: CodexDesktopIPCRequestHandle? = nil
     struct LocalObservation: Equatable {
         let sessionHash: String; let turnHash: String; let callID: String
         let mode: CodexUserInputMode
         var asynchronous: Bool { mode == .asynchronous }
     }
-    var userInputMode: CodexUserInputMode? { localObservation?.mode }
+    var userInputMode: CodexUserInputMode? {
+        method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
+    }
     var observationOnly: Bool { localObservation != nil }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
@@ -142,7 +147,7 @@ struct IslandCodexApprovalRequest: Equatable {
             return params["kind"].text == "writeStdin" ? .terminalInput : .command
         case "item/fileChange/requestApproval": return .fileChange
         case "item/permissions/requestApproval": return .permissions
-        case "item/tool/requestUserInput", "local/tool/requestUserInput", "local/tool/requestUserInputAsync": return .questions
+        case "item/tool/requestUserInput", "local/tool/requestUserInput", "local/tool/requestUserInputAsync", "desktop/tool/requestUserInputAsync": return .questions
         case "mcpServer/elicitation/request":
             if params["mode"].text == "url" { return .mcpURL }
             return ["form", "openai/form", "openaiForm"].contains(params["mode"].text) ? .mcpForm : .nativeOnly
@@ -167,6 +172,23 @@ struct IslandCodexApprovalRequest: Equatable {
         ], options: [.sortedKeys])
         self = try Self(data: data)
         localObservation = .init(sessionHash: sessionHash, turnHash: turnHash, callID: callID, mode: asynchronous ? .asynchronous : .synchronous)
+    }
+    func attachingDesktopHandle(_ handle: CodexDesktopIPCRequestHandle?) -> Self {
+        var copy = self
+        // The caller must correlate an actor-issued handle with its exact
+        // projected request. Local question IDs never obtain a write capability.
+        guard !observationOnly, let handle, handle.conversationID == threadID,
+              handle.turnID == turnID, handle.method == method,
+              let object = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+              let id = object["id"], let encoded = try? JSONSerialization.data(withJSONObject: id, options: [.fragmentsAllowed]),
+              let originalID = try? JSONDecoder().decode(CodexDesktopIPCRequestID.self, from: encoded),
+              originalID == handle.requestID else { return copy }
+        copy.desktopHandle = handle
+        return copy
+    }
+    init(desktopAsyncQuestion question: CodexDesktopProjectedAsyncQuestion, conversationID: String) throws {
+        let data = try question.asyncRequestEnvelopeData(conversationID: conversationID)
+        self = try Self(data: data)
     }
     var detail: String {
         switch kind {
@@ -234,10 +256,35 @@ struct IslandCodexApprovalRequest: Equatable {
               url.host != nil, url.user == nil, url.password == nil else { return nil }
         return url
     }
+    /// Codex 0.159.2 command/file response enums are implicit in its Desktop
+    /// protocol: those native params do not carry availableDecisions. This
+    /// compatibility default belongs only to an actor-issued owner request.
+    /// Explicit future decision lists, including empty/unknown lists, win.
+    private var approvalDecisions: [IslandApprovalJSON] {
+        if params.object?.keys.contains("availableDecisions") == true {
+            return params["availableDecisions"].array
+        }
+        guard desktopHandle?.kind == .serverRequest,
+              ["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].contains(method) else { return [] }
+        var decisions: [IslandApprovalJSON] = [.string("accept"), .string("acceptForSession")]
+        if method == "item/commandExecution/requestApproval" {
+            let amendment = params["proposedExecpolicyAmendment"]
+            if case .array(let parts) = amendment, !parts.isEmpty,
+               parts.allSatisfy({ if case .string(let part) = $0 { return !part.isEmpty }; return false }) {
+                decisions.append(.object(["acceptWithExecpolicyAmendment": .object(["execpolicy_amendment": amendment])]))
+            }
+            for amendment in params["proposedNetworkPolicyAmendments"].array {
+                guard amendment.object != nil, ["allow", "deny"].contains(amendment["action"].text),
+                      !amendment["host"].text.isEmpty else { continue }
+                decisions.append(.object(["applyNetworkPolicyAmendment": .object(["network_policy_amendment": amendment])]))
+            }
+        }
+        return decisions + [.string("decline"), .string("cancel")]
+    }
     var actions: [IslandApprovalAction] {
         switch kind {
         case .command, .terminalInput, .network, .fileChange:
-            let decisions = params["availableDecisions"].array
+            let decisions = approvalDecisions
             return decisions.enumerated().compactMap { i, d in
                 let label: IslandDetailText; let positive: Bool
                 switch d.text {
@@ -246,6 +293,7 @@ struct IslandCodexApprovalRequest: Equatable {
                 case "decline": label = .init("拒绝", "Decline"); positive = false
                 case "cancel": label = .init("取消本次", "Cancel"); positive = false
                 default:
+                    guard method == "item/commandExecution/requestApproval" else { return nil }
                     if d["acceptWithExecpolicyAmendment"].object != nil {
                         label = .init("允许并记住命令规则", "Allow and remember command"); positive = true
                     } else if d["applyNetworkPolicyAmendment"].object != nil {

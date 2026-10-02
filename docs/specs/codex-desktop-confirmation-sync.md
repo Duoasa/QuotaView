@@ -1,0 +1,51 @@
+# Codex Desktop 确认详情与双向同步
+
+Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 2026-10-02
+
+用户明确要求参考 Vibe Island 的真实通信，实现灵动岛直接显示、操作和同步 Codex 确认。此前“在 Codex 处理”的观察模式只适用于没有原任务响应能力的来源，本轮增加 Desktop owner 响应能力。既有确认页、页面尺寸、悬停和设置保持，额度重置仍仅演示。
+
+## 目标与可观察结果
+
+- 自动弹出开启时，新真实确认直接进入该任务详情，显示原问题、选项、命令、文件变更、权限或受支持工具表单。重复快照不反复抢焦点，已有另一请求草稿、手动用量/重置页和固定页面保持。关闭自动弹出后仍可手动进入。
+- 普通审批使用原始数字/字符串 RPC ID 和所属 owner 回传；同步问题返回原始问题 ID/答案集合。异步问题保留原生 `questionItemId`，通过 Codex 原生回答消息回传，不把异步提问伪装成审批或阻塞执行。
+- 点击后单次发送，ACK 仅为“已发送”。只有原任务的后续权威状态移除对应请求，或出现被原生接受的精确问题回答，才解除该请求。用户在 Codex 处理后同样同步；并行请求各自保留。
+- 未知协议、未证明的来源、远程任务、外部授权和不支持的表单继续在 Codex 处理；缺失详情不编造可操作内容。
+
+## 通信证据与边界
+
+参考本机原版 `/Applications/Vibe Island.app` 1.0.51 的私有 IPC/owner/follower 通路，以及本机 Codex 0.159.2 实际安装包的协议和原生 owner handler。不是第三方同名开源克隆，也不是独立新启动 app-server 的审批 owner。Vibe 的 [更新记录](https://vibeisland.app/changelog/)可用于产品能力背景；官方 [App Server 文档](https://learn.chatgpt.com/docs/app-server)说明标准 JSON-RPC，不能代替本轮 Desktop 私有协议。
+
+当前本地端点为所选 Codex 数据目录的 `ipc/ipc.sock`。帧是 UInt32 小端长度与 UTF-8 JSON；initialize version 0，owner discovery / following / follower actions version 1，本地 state-changed version 11。真实只读 initialize 握手成功，未向用户任务提交动作。协议是版本相关的非公开接口，不能宣称未来 Codex 更新无需适配。
+
+普通回传使用原生 command/file/permissions/elicitation/user-input follower 方法。当前原生 command/file 请求没有 `availableDecisions`：仅已证明 owner 句柄采用真实四种枚举；规则变体只能来自原请求 proposed exec/network amendment，未来显式列表优先并严格约束。MCP 的 nullable turn 仅在展示层绑定已证明的当前 turn，原 RPC ID 不变。
+
+异步提问来自 `agentMessage.questions`，原生身份是 `JSON.stringify(["request_user_input_async", agentMessage.id, questionIndex])`。回答使用 `<send_user_message_question_reply>` 中的原身份、原问题及用户答案，通过 `thread-follower-steer-turn` 发送。发送前刷新 owner 快照，验证当前轮次和未回答身份；不暴露通用任意 steering API。IPC 没有跨进程原子 turn CAS，采用 Codex 原生界面同样的用户操作语义；ACK turn 不符或发送后超时记为结果未知，不盲目重试。
+
+## 模块职责与不变量
+
+| 模块 | 职责 |
+|---|---|
+| `CodexDesktopIPCClient` | 校验私有 socket/同 UID 对端、发现实际 owner、跟随状态、连续 revision patch、opaque 能力句柄、单次提交与资源预算 |
+| `CodexDesktopRequestProjector` | 从完整状态提取公开请求和原生问题，保留精确 typed ID、当前 turn 和部分历史权威边界；私有推理不投影 |
+| `CodexActivityStore / TaskRegistry` | 所选目录、用户来源、当前 turn 和连接代次准入；分类 await 恢复前再次校验；公共内容不能绕过 |
+| `IslandLiveStore.RequestLifecycle` | 来源详情升级、请求队列、草稿身份、等待证据、独立同步/异步解除；Shared 与 Desktop 的连接撤销互不误伤 |
+| `IslandBoardState` | 真实新请求的自动详情导航；用户选择和草稿保持 |
+| `CodexActivityRuntime` | 连接/目录生命周期，准入任务的 follow 意图，响应路由与 scope 撤销；切目录先撤销旧回调和按钮能力 |
+
+能力只能由当前 owner 的权威状态生成，不能从 JSON、Local rollout、独立 app-server、Hook 或 UI 模拟生成。未知 source 必须经过 Store 已有用户来源证据；辅助任务不进入可操作 UI。同 item 的多个 RPC 仍由真实 ID/方法区分，数字与字符串 ID 不混淆，重连后旧句柄、旧 await/ACK/catch 不能覆盖新状态。
+
+Shared 与 Desktop 等待证据分别保留，精确同步完成才能解除 Core 快照和提醒；来源替代、资源撤销、ACK 和不相关工具结束都不算回答。完整 Desktop question 集合替代同轮只读 Local async 观察，部分状态不清；不按文本猜配，不制造已回答 tombstone。
+
+## 失败、资源与恢复
+
+Owner 尚未就绪或首次 discovery 超时，follow 意图在连接内以 250 ms 至 5 s 的有界退避恢复；read loop 不阻塞等待自身 RPC。stop、换目录、unfollow、旧 epoch 取消恢复任务；提交动作从不自动重试。
+
+单帧 9 MiB、单会话投影 8 MiB、总保留状态 32 MiB；请求/问题数量、树深度、节点数和传输 chunk 队列有界。原始会话状态只在内存短暂保留，不写日志或磁盘。能确定会话的资源超限只撤销该 scope 的交互能力，不解除等待，其他会话继续；无法确定会话的超限帧撤销连接能力并暂停观察，显式重新检查/唤醒可以重建。超限不是协议版本错误，也不承诺无限历史支持。
+
+连接断开或 patch base revision 不连续时，旧句柄失效，等待新的权威快照。已写入后的 timeout/断连保留结果未知；提交身份账本跨临时状态缺口保留直到真实解除或轮次变化，防止再次发送。
+
+## 验证与交付
+
+98 项必要隔离冒烟通过：Core IPC 21、公开投影 15、Island 生命周期 13、Store 准入 10、导航 4、既有准入 11、既有请求恢复 21、自动弹出偏好 3。证据 `.build/073-desktop-confirmation-smoke.log`。全新 Derived Data 的 Debug arm64 开发 Target 构建通过，证据 `.build/073-desktop-confirmation-build.log`；固定身份、资源与 deep strict ad-hoc 签名核对通过，开发包已启动 PID 90147，证据 `.build/073-desktop-confirmation-delivery.json`。真实只读 initialize 握手记录 `.build/073-desktop-confirmation-handshake.json`。测试使用临时 fixture，不替用户批准或回答真实待确认。视觉和真实交互由用户验收，不采用 UI 自动化。
+
+开发身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。本轮源码、已运行开发包和公开 main/Release/appcast 分别记录，不把历史 PR #67 合并误作本功能已推送。

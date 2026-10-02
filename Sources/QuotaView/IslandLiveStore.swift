@@ -6,11 +6,18 @@ import QuotaViewCore
 /// Shared Desktop connections are observers until response ownership is established.
 @MainActor
 final class IslandLiveStore {
+    enum DesktopRequestIdentity: Hashable {
+        case server(CodexDesktopPendingRequestIdentity)
+        case asynchronousQuestion(String)
+    }
     struct Pending: Equatable {
         let key: String
         var value: IslandConfirmation
         var callHash: String? = nil
         var rpcEpoch: UInt64? = nil
+        var desktopIdentity: DesktopRequestIdentity? = nil
+        var desktopOwner: String? = nil
+        var desktopEpoch: UInt64? = nil
         var mode: CodexUserInputMode? = nil
         var isGeneric = false
         var blocksExecution: Bool {
@@ -31,6 +38,7 @@ final class IslandLiveStore {
         }
         var requests: [Pending] = []
         var requestIndex = 0
+        private(set) var desktopAsyncQuestionsAuthoritative = false
         var sourceWait: WaitEvidence?
         var unidentifiedWait: WaitEvidence?
         private var sourcePlaceholder = Pending(key: "observer-placeholder", value: .init(
@@ -72,22 +80,57 @@ final class IslandLiveStore {
                 impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")),
                 callHash: callHash, mode: mode, isGeneric: true))
         }
+        private static func sameLogicalRequest(_ a: Pending, _ b: Pending) -> Bool {
+            if let call = a.callHash, call == b.callHash {
+                if a.isGeneric || b.isGeneric { return true }
+                if a.value.protocolRequest?.observationOnly == true || b.value.protocolRequest?.observationOnly == true {
+                    return a.value.protocolRequest?.kind == b.value.protocolRequest?.kind
+                }
+                // Multiple real approval RPCs may share an item. Their actual
+                // typed IDs and methods must still identify the same request.
+            }
+            guard let left = a.value.protocolRequest, let right = b.value.protocolRequest,
+                  !left.observationOnly, !right.observationOnly else { return false }
+            return left.threadID == right.threadID && left.turnID == right.turnID
+                && left.method == right.method && left.key == right.key
+        }
         mutating func observe(_ pending: Pending) {
-            if let call = pending.callHash, resolvedCallHashes.contains(call) { return }
+            if desktopAsyncQuestionsAuthoritative, pending.mode == .asynchronous,
+               pending.value.protocolRequest?.observationOnly == true { return }
+            // The current owner ledger is authoritative for real Desktop
+            // requests. A shared item/call observer tombstone cannot veto a
+            // separate still-pending RPC that happens to use that same item.
+            if pending.desktopIdentity == nil,
+               let call = pending.callHash, resolvedCallHashes.contains(call) { return }
             if let wire = pending.value.protocolRequest, let epoch = pending.rpcEpoch,
                resolvedRequestKeys.contains(Self.rpcKey(wire.rpcID, epoch: epoch)) { return }
             observeMode(pending.mode, callHash: pending.callHash)
+            // Observer/public duplicates can enrich known mode, but they cannot
+            // replace or manufacture the Desktop owner's response capability.
+            if pending.desktopIdentity == nil,
+               requests.contains(where: { $0.desktopIdentity != nil && Self.sameLogicalRequest($0, pending) }) { return }
             var replacement = pending
             if replacement.mode == nil, let call = replacement.callHash { replacement.mode = mode(for: call) }
-            bindUnidentifiedSourceWait(to: replacement)
-            if requests.contains(where: { $0.key == replacement.key && $0.value.protocolRequest?.raw == replacement.value.protocolRequest?.raw }) { return }
-            if let old = requests.first(where: { $0.key == pending.key }) { replacement.value.id = old.value.id }
-            requests.removeAll { existing in
-                existing.key == pending.key || (pending.callHash != nil && existing.callHash == pending.callHash
-                    && (existing.isGeneric || (pending.rpcEpoch != nil && existing.value.protocolRequest?.observationOnly == true)))
+            let existing = requests.first { $0.key == pending.key
+                || (pending.desktopIdentity != nil && Self.sameLogicalRequest($0, pending)) }
+            if let existing {
+                replacement.value.id = existing.value.id
+                replacement.value.phase = existing.value.phase
             }
-            guard requests.count < 32 else { return }
-            requests.append(replacement); clampSelection()
+            if pending.desktopIdentity == nil,
+               requests.contains(where: { $0.key == pending.key && $0.value.protocolRequest?.raw == pending.value.protocolRequest?.raw }) { return }
+            let replaces: (Pending) -> Bool = { old in
+                old.key == pending.key
+                    || (pending.desktopIdentity != nil && Self.sameLogicalRequest(old, pending))
+                    || (pending.callHash != nil && old.callHash == pending.callHash
+                        && (old.isGeneric || (pending.rpcEpoch != nil && old.value.protocolRequest?.observationOnly == true)))
+            }
+            let previous = requests.filter(replaces)
+            guard requests.count - previous.count < 32 else { return }
+            migrateSourceWait(from: previous, to: replacement)
+            requests.removeAll(where: replaces)
+            requests.append(replacement)
+            bindUnidentifiedSourceWait(to: replacement); clampSelection()
         }
         mutating func continueCall(_ callHash: String?) {
             guard let callHash, requests.contains(where: { $0.isGeneric && $0.callHash == callHash }), mode(for: callHash) != .asynchronous else { return }
@@ -101,7 +144,8 @@ final class IslandLiveStore {
         @discardableResult mutating func resolveCall(_ callHash: String, proofMode: CodexUserInputMode? = nil, epoch: UInt64? = nil) -> Bool {
             guard proofMode != .asynchronous, mode(for: callHash) != .asynchronous else { return false }
             let matches: (Pending) -> Bool = { request in
-                request.callHash == callHash && (epoch == nil || request.rpcEpoch == nil || request.rpcEpoch == epoch)
+                request.desktopIdentity == nil && request.callHash == callHash
+                    && (epoch == nil || request.rpcEpoch == nil || request.rpcEpoch == epoch)
             }
             let matching = requests.filter(matches)
             guard !matching.contains(where: { $0.mode == .asynchronous }) else { return false }
@@ -124,6 +168,47 @@ final class IslandLiveStore {
             clampSelection()
             return !matching.isEmpty
         }
+        mutating func admitAuthoritativeDesktopQuestions() {
+            // Native async questionItemIDs and rollout tool callIDs have no
+            // identity mapping. The full current-owner question set supersedes
+            // only this turn's read-only async source; text is never correlation.
+            desktopAsyncQuestionsAuthoritative = true
+            let local = requests.filter { $0.mode == .asynchronous && $0.value.protocolRequest?.observationOnly == true }
+            let keys = Set(local.map(\.key))
+            requests.removeAll { keys.contains($0.key) }
+            if var wait = sourceWait, var identities = wait.requestIdentities {
+                identities.subtract(local.compactMap(requestIdentity))
+                // Removing a read-only projection is not proof of answering a
+                // thread wait. A later real RPC can bind this unidentified wait.
+                wait.requestIdentities = identities.isEmpty ? nil : identities
+                sourceWait = wait
+            }
+            clampSelection()
+        }
+        @discardableResult
+        mutating func resolveDesktopRequests(owner: String, epoch: UInt64,
+            pending: Set<CodexDesktopPendingRequestIdentity>, asyncQuestions: Set<String>) -> Bool {
+            let matching = requests.filter { request in
+                guard let requestEpoch = request.desktopEpoch, requestEpoch <= epoch,
+                      request.desktopOwner != nil, let identity = request.desktopIdentity else { return false }
+                switch identity {
+                case .server(let identity): return !pending.contains(identity)
+                case .asynchronousQuestion(let id): return !asyncQuestions.contains(id)
+                }
+            }
+            let keys = Set(matching.map(\.key))
+            requests.removeAll { keys.contains($0.key) }
+            for call in Set(matching.compactMap(\.callHash))
+                where !requests.contains(where: { $0.callHash == call }) { rememberCall(call) }
+            settleSourceWait(for: matching); clampSelection()
+            return !matching.isEmpty
+        }
+        mutating func invalidateDesktopResponses(epoch: UInt64? = nil) {
+            for i in requests.indices where requests[i].desktopIdentity != nil && (epoch == nil || requests[i].desktopEpoch == epoch) {
+                requests[i].value.canRespond = false
+                if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
+            }
+        }
         mutating func setSourceWait(_ reason: CodexActivityWaitReason?, waiting: Bool, epoch: UInt64) {
             if waiting {
                 let identities = Set(requests.filter { belongsToSourceWait($0, reason: reason, epoch: epoch) }.compactMap(requestIdentity))
@@ -135,6 +220,7 @@ final class IslandLiveStore {
         }
         private func requestIdentity(_ request: Pending) -> String? {
             if let call = request.callHash { return "call:" + call }
+            if request.desktopIdentity != nil { return request.key }
             if let epoch = request.rpcEpoch, let wire = request.value.protocolRequest {
                 return "rpc:" + Self.rpcKey(wire.rpcID, epoch: epoch)
             }
@@ -149,11 +235,19 @@ final class IslandLiveStore {
             default: return false
             }
         }
+        private mutating func migrateSourceWait(from oldRequests: [Pending], to request: Pending) {
+            guard var wait = sourceWait, var identities = wait.requestIdentities,
+                  let newIdentity = requestIdentity(request) else { return }
+            let oldIdentities = Set(oldRequests.compactMap(requestIdentity))
+            guard !identities.isDisjoint(with: oldIdentities) else { return }
+            identities.subtract(oldIdentities); identities.insert(newIdentity)
+            wait.requestIdentities = identities; sourceWait = wait
+        }
         private mutating func bindUnidentifiedSourceWait(to request: Pending) {
             // A later local question cannot identify an earlier thread wait.
             // A native request on the waiting connection supplies that identity.
-            guard var wait = sourceWait,
-                  let epoch = wait.epoch, request.rpcEpoch == epoch,
+            guard var wait = sourceWait, let epoch = wait.epoch,
+                  (request.rpcEpoch == epoch || (request.desktopIdentity != nil && request.mode != .asynchronous)),
                   belongsToSourceWait(request, reason: wait.reason, epoch: epoch),
                   let identity = requestIdentity(request) else { return }
             var identities = wait.requestIdentities ?? []
@@ -170,7 +264,7 @@ final class IslandLiveStore {
             else { wait.requestIdentities = identities; sourceWait = wait }
         }
         mutating func invalidateResponses(except epoch: UInt64? = nil) {
-            for i in requests.indices where epoch == nil || requests[i].rpcEpoch != epoch {
+            for i in requests.indices where requests[i].desktopIdentity == nil && (epoch == nil || requests[i].rpcEpoch != epoch) {
                 requests[i].value.canRespond = false
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
@@ -258,16 +352,21 @@ final class IslandLiveStore {
     var preservedID: Int?
     private var nextID = 1
     private var nativeConnectionEpoch: UInt64?
+    private var desktopConnected = false
+    private var desktopConnectionEpoch: UInt64?
+    private struct DesktopScope { let owner: String; let epoch: UInt64; let revision: Int64 }
+    private var desktopScopes: [String: DesktopScope] = [:]
     private var priorTurnKeys: [String: Set<String>] = [:]
     private var metadata: [String: [String: Any]] = [:]
     var onChange: (() -> Void)?
     var onPublicChange: (() -> Void)?
     var nativeRequestSettlementDidReceive: ((CodexActivityRequestSettlement) -> Void)?
+    var desktopRequestSettlementDidReceive: ((String, String, UInt64, Bool) -> Void)?
     private var pendingLocalContent: [CodexLocalPublicContent] = []
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { tasks.removeAll(); metadata.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; connectionEpoch += 1; onChange?() }
+    func reset() { tasks.removeAll(); metadata.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -276,6 +375,98 @@ final class IslandLiveStore {
             for i in tasks.indices { tasks[i].requestLifecycle.invalidateResponses() }
         }
         connection = state; onChange?()
+    }
+    func setDesktopConnection(connected: Bool, epoch: UInt64?) {
+        let changedEpoch = epoch != nil && desktopConnectionEpoch != epoch
+        if !connected || changedEpoch {
+            for i in tasks.indices { tasks[i].requestLifecycle.invalidateDesktopResponses() }
+        }
+        desktopConnected = connected
+        if !connected { desktopConnectionEpoch = nil; desktopScopes.removeAll() }
+        else if let epoch { desktopConnectionEpoch = epoch }
+        onChange?()
+    }
+    /// Resource admission failure revokes the affected transport capability;
+    /// it supplies no evidence that the owner answered its pending request.
+    func invalidateDesktopResponses(conversationID: String?, epoch: UInt64) {
+        guard desktopConnectionEpoch == epoch else { return }
+        let key = conversationID.map(CodexActivityPrivacy.hashIdentifier)
+        for i in tasks.indices where key == nil || tasks[i].key == key {
+            tasks[i].requestLifecycle.invalidateDesktopResponses(epoch: epoch)
+        }
+        onChange?()
+    }
+    /// Store has already admitted the conversation and identified current turn.
+    /// Only actor-minted handles, correlated below, can make a form interactive.
+    func receiveDesktopProjection(_ projection: CodexDesktopInteractionProjection,
+                                  snapshot: CodexDesktopConversationSnapshot) {
+        guard desktopConnected, projection.sourceKind != .internalTask,
+              let turn = projection.currentTurnID, !turn.isEmpty else { return }
+        if let epoch = desktopConnectionEpoch, epoch != snapshot.connectionEpoch { return }
+        desktopConnectionEpoch = snapshot.connectionEpoch
+        let key = CodexActivityPrivacy.hashIdentifier(snapshot.conversationID)
+        guard let i = tasks.firstIndex(where: { $0.key == key }), tasks[i].turnKey == CodexActivityPrivacy.hashIdentifier(turn) else { return }
+        if let prior = desktopScopes[key], prior.epoch == snapshot.connectionEpoch {
+            guard prior.owner != snapshot.ownerClientID || snapshot.revision >= prior.revision else { return }
+            if prior.owner != snapshot.ownerClientID { tasks[i].requestLifecycle.invalidateDesktopResponses() }
+        }
+        desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, revision: snapshot.revision)
+        tasks[i].threadID = snapshot.conversationID
+        if !projection.title.isEmpty { tasks[i].title = projection.title }
+        guard !tasks[i].terminal, projection.status == "inProgress" else { onChange?(); return }
+        func handle(_ id: CodexDesktopIPCRequestID, method: String, turn: String) -> CodexDesktopIPCRequestHandle? {
+            snapshot.requests.first { $0.requestID == id && $0.method == method && $0.turnID == turn
+                && $0.ownerClientID == snapshot.ownerClientID && $0.connectionEpoch == snapshot.connectionEpoch
+                && $0.conversationID == snapshot.conversationID }
+        }
+        func pending(_ wire: IslandCodexApprovalRequest, identity: DesktopRequestIdentity,
+                     call: String?, mode: CodexUserInputMode?) -> Pending {
+            let identityKey: String
+            switch identity {
+            case .server(let identity): identityKey = Data(identity.turnID.utf8).base64EncodedString() + ":" + identity.method
+                + ":" + ((try? JSONEncoder().encode(identity.requestID)) ?? Data()).base64EncodedString()
+            case .asynchronousQuestion(let id): identityKey = "async:" + Data(id.utf8).base64EncodedString()
+            }
+            let availableControls: Bool
+            switch wire.kind {
+            case .command, .terminalInput, .network, .fileChange: availableControls = !wire.actions.isEmpty
+            default: availableControls = true
+            }
+            let canRespond = availableControls && snapshot.supportsUntrustedAppInput && wire.desktopHandle != nil
+                && respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly
+                && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm)
+            let title = wire.questions.first?.title ?? (wire.params["message"].text.isEmpty
+                ? (wire.params["reason"].text.isEmpty ? "Codex 请求你的处理" : wire.params["reason"].text) : wire.params["message"].text)
+            return .init(key: "desktop:" + CodexActivityPrivacy.hashIdentifier(snapshot.ownerClientID) + ":\(snapshot.connectionEpoch):" + identityKey,
+                value: .init(question: .init(title), impact: canRespond ? .init("处理后同步至 Codex。", "Send this response to Codex.")
+                    : .init("请在 Codex 处理。", "Handle this request in Codex."), protocolRequest: wire, canRespond: canRespond),
+                callHash: call, desktopIdentity: identity, desktopOwner: snapshot.ownerClientID,
+                desktopEpoch: snapshot.connectionEpoch, mode: mode)
+        }
+        if projection.pendingRequestsAreAuthoritative {
+            tasks[i].requestLifecycle.admitAuthoritativeDesktopQuestions()
+        }
+        for request in projection.requests where request.turnID == turn {
+            guard var wire = try? IslandCodexApprovalRequest(data: request.envelopeData) else { continue }
+            wire = wire.attachingDesktopHandle(handle(request.requestID, method: request.method, turn: turn))
+            if let context = request.contextItemData { wire.contextItem = try? JSONDecoder().decode(IslandApprovalJSON.self, from: context) }
+            let item = wire.params["itemId"].text
+            tasks[i].requestLifecycle.observe(pending(wire, identity: .server(request.identity),
+                call: item.isEmpty ? nil : CodexActivityPrivacy.hashIdentifier(item), mode: request.userInputMode))
+        }
+        for question in projection.asyncQuestions where question.turnID == turn && question.resolvedAnswer == nil {
+            guard var wire = try? IslandCodexApprovalRequest(desktopAsyncQuestion: question, conversationID: snapshot.conversationID) else { continue }
+            wire = wire.attachingDesktopHandle(handle(.string(question.questionItemID), method: wire.method, turn: turn))
+            tasks[i].requestLifecycle.observe(pending(wire, identity: .asynchronousQuestion(question.questionItemID),
+                call: CodexActivityPrivacy.hashIdentifier(question.questionItemID), mode: .asynchronous))
+        }
+        if projection.pendingRequestsAreAuthoritative,
+           tasks[i].requestLifecycle.resolveDesktopRequests(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch,
+                pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs) {
+            desktopRequestSettlementDidReceive?(key, CodexActivityPrivacy.hashIdentifier(turn), snapshot.connectionEpoch,
+                tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest)
+        }
+        onChange?()
     }
     private func index(_ key: String, admit: Bool) -> Int? {
         if let i = tasks.firstIndex(where: { $0.key == key }) { return i }
@@ -442,7 +633,7 @@ final class IslandLiveStore {
                   sessionHash: content.sessionHash, turnHash: content.turnHash, asynchronous: mode == .asynchronous), !wire.questions.isEmpty else { return }
         let call = CodexActivityPrivacy.hashIdentifier(callID)
         tasks[i].requestLifecycle.observeMode(mode, callHash: call)
-        if tasks[i].requests.contains(where: { $0.rpcEpoch != nil && $0.callHash == call }) { onChange?(); return }
+        if tasks[i].requests.contains(where: { ($0.rpcEpoch != nil || $0.desktopIdentity != nil) && $0.callHash == call }) { onChange?(); return }
         tasks[i].requestLifecycle.observe(.init(key: "local:\(content.turnHash):\(callID)", value: .init(
             question: .init(wire.questions[0].title), impact: .init("请在 Codex 回答。", "Answer in Codex."),
             protocolRequest: wire, canRespond: false), callHash: call, mode: mode))
@@ -700,21 +891,46 @@ final class IslandLiveStore {
     }
     func submit(_ id: Int, requestID: UUID, decision: IslandConfirmationDecision) {
         guard let i = tasks.firstIndex(where: { $0.id == id }),
-              let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }),
-              tasks[i].requests[j].value.canRespond, tasks[i].requests[j].value.phase.canSubmit,
-              let wire = tasks[i].requests[j].value.protocolRequest, case .reply(let result) = decision,
-              !wire.observationOnly, wire.permits(result), let respond else { return }
-        tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
+              let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.id == requestID }),
+              tasks[i].requestLifecycle.requests[j].value.canRespond, tasks[i].requestLifecycle.requests[j].value.phase.canSubmit,
+              let wire = tasks[i].requestLifecycle.requests[j].value.protocolRequest, case .reply(let result) = decision,
+              !wire.observationOnly, wire.permits(result), responseCapability?(wire) == true, let respond else { return }
+        let turn = tasks[i].turnKey
         let epoch = connectionEpoch
+        let handle = wire.desktopHandle
+        if let handle {
+            guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
+                  turn == CodexActivityPrivacy.hashIdentifier(handle.turnID),
+                  desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return }
+        }
+        tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
+            guard let self else { return }
+            @MainActor func currentRequest() -> (Int, Int)? {
+                guard let i = tasks.firstIndex(where: { $0.id == id && $0.turnKey == turn }),
+                      let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.id == requestID }),
+                      tasks[i].requestLifecycle.requests[j].value.canRespond,
+                      tasks[i].requestLifecycle.requests[j].value.phase == .submitting(decision) else { return nil }
+                if let handle {
+                    guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
+                          tasks[i].requestLifecycle.requests[j].value.protocolRequest?.desktopHandle == handle,
+                          desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return nil }
+                } else if epoch != connectionEpoch { return nil }
+                return (i, j)
+            }
+            guard let (i, j) = currentRequest() else { return }
+            guard responseCapability?(wire) == true else {
+                tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
+                tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?(); return
+            }
             do {
                 try await respond(wire, result)
-                guard let self, epoch == connectionEpoch, let i = tasks.firstIndex(where: { $0.id == id }),
-                      let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }) else { return }
+                guard let (i, j) = currentRequest() else { return }
                 tasks[i].requestLifecycle.requests[j].value.phase = .sent; onChange?()
             } catch {
-                guard let self, let i = tasks.firstIndex(where: { $0.id == id }), let j = tasks[i].requests.firstIndex(where: { $0.value.id == requestID }) else { return }
-                tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown; tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?()
+                guard let (i, j) = currentRequest() else { return }
+                tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
+                tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?()
             }
         }
     }
@@ -770,6 +986,6 @@ final class IslandLiveStore {
         }
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
             english: english, effect: .dropField, visible: enabled, playbackEnabled: true, totalTokens: nil, remainingPercent: remaining,
-            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected ? (english ? "Connected" : "已连接") : (visibleTasks.isEmpty ? (english ? "Waiting for Codex" : "等待 Codex 任务") : (english ? "Local activity" : "本地活动数据")), privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
+            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected || desktopConnected ? (english ? "Connected" : "已连接") : (visibleTasks.isEmpty ? (english ? "Waiting for Codex" : "等待 Codex 任务") : (english ? "Local activity" : "本地活动数据")), privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
     }
 }

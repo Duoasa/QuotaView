@@ -465,6 +465,9 @@ final class IslandBoardState: ObservableObject {
         let hadAttention = attentionCount > 0
         let wasCompact = display?.state.compact == true
         let previousApprovalID = approval?.task.id
+        let previousRequestIDs = (previous?.activeRequestIDs ?? []).union(
+            previous?.taskDetails.values.compactMap { $0.confirmation?.id } ?? [])
+        var automaticSelection: Int?
         display = value
         // Changing this preference only dismisses content opened by an automatic event.
         // A manually opened request, usage page or pinned island keeps its presentation.
@@ -486,6 +489,20 @@ final class IslandBoardState: ObservableObject {
         if !value.visible { clearResetPresentation(); showsUsage = false }
         if !wasCompact && value.state.compact && presentation != .pinned {
             presentation = .resting; detailID = nil
+        }
+        // Request identities, rather than polling/activity changes, open the
+        // matching detail. Keep a request the user is already reviewing intact;
+        // its queue control provides an explicit way to switch pending requests.
+        if value.visible, value.automaticPopupEnabled, !showsUsage, presentation != .pinned,
+           !(previousApprovalID != nil && approval != nil),
+           let task = tasks.first(where: { task in
+               guard let request = value.taskDetails[task.id]?.confirmation,
+                     request.protocolRequest != nil else { return false }
+               return !previousRequestIDs.contains(request.id)
+           }) {
+            cancelAutomaticPreview(); automaticallyPresented = true; presentation = .preview
+            detailID = task.id; showingTraceHistory = false
+            automaticSelection = task.id
         }
         if !value.visible {
             claimManualPresentation(); presentation = .resting; detailID = nil
@@ -509,7 +526,10 @@ final class IslandBoardState: ObservableObject {
         }
         if attentionCount == 0 { attentionOnly = false }
         if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
-        onChange?()
+        // Selection synchronously publishes the model in production. Avoid a
+        // second layout pass before that selected model reaches the board.
+        if let automaticSelection, let onSelect { onSelect(automaticSelection) }
+        else { onChange?() }
     }
     func select(_ id: Int) {
         guard tasks.contains(where: { $0.id == id }) else { return }
