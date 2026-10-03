@@ -5,6 +5,8 @@ public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case activity(CodexActivityEvent)
     case tokenUsage(CodexActivityTokenUsageUpdate)
     case tokenUsageReplay([CodexActivityTokenUsageUpdate])
+    /// A verified identity update, without inventing another lifecycle event.
+    case sessionMetadata
 }
 
 /// Transient read-only discovery identity from validated session metadata.
@@ -43,7 +45,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
 
     private let sessionHash: String
     private let workspaceName: String?
-    private let sessionKind: CodexActivitySessionKind
+    private(set) var sessionKind: CodexActivitySessionKind
     private(set) var activeTurnHash: String?
     private var pendingQuestionCalls: [String] = []
     private var pendingAsyncQuestionCalls: [String] = []
@@ -53,6 +55,10 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         self.sessionHash = sessionHash
         self.workspaceName = workspaceName
         self.sessionKind = sessionKind
+    }
+
+    mutating func refineSessionKind(_ kind: CodexActivitySessionKind) {
+        sessionKind = kind == .internalTask ? .internalTask : .resolving(sessionKind, kind)
     }
 
     public mutating func decode(
@@ -67,6 +73,14 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
               let recordType = envelope["type"] as? String
         else {
             return nil
+        }
+
+        if recordType == "session_meta" {
+            guard Self.hashedIdentifier(payload["id"]) == sessionHash else { return nil }
+            let kind = CodexActivitySessionKind.classify(source: payload["source"],
+                threadSource: (payload["thread_source"] ?? payload["threadSource"]) as? String)
+            refineSessionKind(kind)
+            return nil // Discovery owns metadata publication; no synthetic lifecycle event.
         }
 
         let occurredAt = Self.eventDate(
@@ -604,8 +618,15 @@ public actor CodexLocalRolloutActivityClient {
             readFailed = discovery.readFailed
             unsupportedMetadata = discovery.unsupportedMetadata
             lastCandidateRefresh = now
+            let reclassified = discovery.excludedIdentities.compactMap { file, identity in
+                tailStates[file]?.sessionHash == identity.sessionHash ? identity : nil
+            }
             let retained = Set(candidates.map(\.fileURL))
             tailStates = tailStates.filter { retained.contains($0.key) }
+            for identity in reclassified {
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+                await updateHandler?(.init(eventID: nil, update: .sessionMetadata, threadIdentity: identity), false)
+            }
         }
 
         for candidate in candidates {
@@ -648,13 +669,25 @@ public actor CodexLocalRolloutActivityClient {
             await bootstrap(candidate: candidate, generation: run)
             return
         }
-        guard size > state.offset else { return }
         guard let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
               metadata.threadID == candidate.threadID, metadata.sessionHash == candidate.sessionHash,
               metadata.kind == candidate.metadataKind else {
             tailStates.removeValue(forKey: candidate.fileURL); lastCandidateRefresh = .distantPast
             return
         }
+        let previousKind = state.decoder.sessionKind
+        state.decoder.refineSessionKind(candidate.sessionKind)
+        if state.decoder.sessionKind != previousKind {
+            // Classification can arrive after the last rollout append. Publish
+            // metadata alone and retain the original decoder/turn/cursor.
+            tailStates[candidate.fileURL] = state
+            await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
+                threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
+                                      sessionKind: state.decoder.sessionKind)), false)
+            guard isStarted, generation == run, !Task.isCancelled,
+                  tailStates[candidate.fileURL]?.offset == state.offset else { return }
+        }
+        guard size > state.offset else { return }
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
             readFailed = true
@@ -824,8 +857,8 @@ private struct BootstrapReplay {
 
     mutating func record(_ record: CodexLocalRolloutDecodedRecord) {
         switch record.update {
-        case .tokenUsageReplay:
-            break // Only the recovery projector creates batches, never the line decoder.
+        case .tokenUsageReplay, .sessionMetadata:
+            break // Neither metadata nor a recovery batch invents a lifecycle start.
         case .activity(let event):
             switch event.event {
             case .userPromptSubmit:

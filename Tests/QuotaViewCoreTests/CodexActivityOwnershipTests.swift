@@ -152,6 +152,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
             case .activity(let event): await s.receive(event)
             case .tokenUsage(let usage): await s.receive(usage)
             case .tokenUsageReplay(let updates): await s.receiveTokenReplay(updates)
+            case .sessionMetadata: return
             }
             received.fulfill()
         }, connectionStateHandler: { _ in })

@@ -318,6 +318,7 @@ final class IslandBoardState: ObservableObject {
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
     var english: Bool { display?.english ?? false }
     var tasks: [CodexMultitaskRenderTask] { display?.state.tasks ?? [] }
+    var memoryActivity: IslandMemoryActivity? { IslandMemoryActivity(snapshots: display?.backgroundMemorySnapshots ?? []) }
     static func needsAttention(_ task: CodexMultitaskRenderTask) -> Bool { task.hasPendingRequest || task.renderState.visualState == .awaitingConfirmation }
     static func isRunning(_ task: CodexMultitaskRenderTask) -> Bool {
         [.working, .thinking, .compactingContext].contains(task.renderState.visualState)
@@ -925,9 +926,19 @@ struct IslandBoardView: View {
                             // the whole card/detail group would consume the top inset.
                         }
                         IslandChromeFooter {
-                            HStack(spacing: 5) {
-                                Text(state.text("\(state.visibleTasks.count) 个会话", "\(state.visibleTasks.count) sessions"))
-                                if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
+                            HStack(spacing: 12) {
+                                HStack(spacing: 5) {
+                                    Text(state.text("\(state.visibleTasks.count) 个会话", "\(state.visibleTasks.count) sessions"))
+                                    if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
+                                }
+                                if let memory = state.memoryActivity {
+                                    IslandActivityOrb(visualState: memory.visualState,
+                                        playback: state.playback && !state.compact && memory.playbackEnabled)
+                                        .frame(width: 22, height: 22)
+                                        .help(memory.label(english: state.english))
+                                        .accessibilityElement(children: .ignore)
+                                        .accessibilityLabel(memory.label(english: state.english))
+                                }
                             }.lineLimit(1)
                         } trailing: {
                             Text(footerStatus).lineLimit(1).truncationMode(.tail)

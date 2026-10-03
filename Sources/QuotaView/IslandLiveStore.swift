@@ -482,6 +482,26 @@ final class IslandLiveStore {
     private var desktopScopes: [String: DesktopScope] = [:]
     private var priorTurnKeys: [String: Set<String>] = [:]
     private var metadata: [String: [String: Any]] = [:]
+    private var sessionKinds: [String: CodexActivitySessionKind] = [:]
+    private var sessionKindOrder: [String] = []
+    /// Classification changes presentation without completing or answering a task.
+    func setSessionKind(_ kind: CodexActivitySessionKind, for key: String) {
+        guard kind != .unknown else { return }
+        let resolved = kind == .internalTask ? kind
+            : CodexActivitySessionKind.resolving(sessionKinds[key] ?? .unknown, kind)
+        sessionKinds[key] = resolved
+        sessionKindOrder.removeAll { $0 == key }; sessionKindOrder.append(key)
+        while sessionKindOrder.count > 256 { sessionKinds.removeValue(forKey: sessionKindOrder.removeFirst()) }
+        guard resolved == .memoryConsolidation || resolved == .internalTask else { return }
+        let removed = tasks.filter { $0.key == key }.map(\.id)
+        tasks.removeAll { $0.key == key }
+        metadata.removeValue(forKey: key); desktopScopes.removeValue(forKey: key)
+        pendingLocalContent.removeAll { $0.sessionHash == key }
+        itemContexts = itemContexts.filter { !$0.key.hasPrefix(key + ":") }
+        if removed.contains(selectedID) { selectedID = tasks.first?.id ?? 0 }
+        if let id = preservedID, removed.contains(id) { preservedID = nil }
+        if !removed.isEmpty { onChange?() }
+    }
     var onChange: (() -> Void)?
     var onPublicChange: (() -> Void)?
     var nativeRequestSettlementDidReceive: ((CodexActivityRequestSettlement) -> Void)?
@@ -490,7 +510,7 @@ final class IslandLiveStore {
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { tasks.removeAll(); metadata.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -524,7 +544,7 @@ final class IslandLiveStore {
     /// Only actor-minted handles, correlated below, can make a form interactive.
     func receiveDesktopProjection(_ projection: CodexDesktopInteractionProjection,
                                   snapshot: CodexDesktopConversationSnapshot) {
-        guard desktopConnected, projection.sourceKind != .internalTask,
+        guard desktopConnected, projection.sourceKind != .internalTask, projection.sourceKind != .memoryConsolidation,
               let turn = projection.currentTurnID, !turn.isEmpty else { return }
         if let epoch = desktopConnectionEpoch, epoch != snapshot.connectionEpoch { return }
         desktopConnectionEpoch = snapshot.connectionEpoch
@@ -598,6 +618,7 @@ final class IslandLiveStore {
         onChange?()
     }
     private func index(_ key: String, admit: Bool) -> Int? {
+        guard sessionKinds[key] != .memoryConsolidation, sessionKinds[key] != .internalTask else { return nil }
         if let i = tasks.firstIndex(where: { $0.key == key }) { return i }
         guard admit else { return nil }
         if !tasks.isEmpty && tasks.allSatisfy({ $0.terminal && $0.requests.isEmpty }) {
@@ -608,7 +629,9 @@ final class IslandLiveStore {
         return tasks.count - 1
     }
     func receiveLegacy(_ event: CodexActivityEvent) {
-        guard event.sessionKind != .internalTask else { return }
+        if let kind = event.sessionKind { setSessionKind(kind, for: event.sessionHash) }
+        guard sessionKinds[event.sessionHash] != .memoryConsolidation,
+              sessionKinds[event.sessionHash] != .internalTask else { return }
         let active = [.userPromptSubmit, .preToolUse, .permissionRequest, .preCompact].contains(event.event)
         guard let i = index(event.sessionHash, admit: active) else { return }
         let key = event.turnHash
@@ -672,6 +695,8 @@ final class IslandLiveStore {
         tasks[i].tokens = update.cumulativeTotalTokens; onChange?()
     }
     func receiveLocalContent(_ content: CodexLocalPublicContent) {
+        guard sessionKinds[content.sessionHash] != .memoryConsolidation,
+              sessionKinds[content.sessionHash] != .internalTask else { return }
         guard let p = try? JSONSerialization.jsonObject(with: content.data) as? [String: Any] else { return }
         guard let i = tasks.firstIndex(where: { $0.key == content.sessionHash }) else {
             pendingLocalContent.append(content)
@@ -808,9 +833,10 @@ final class IslandLiveStore {
         if method == "thread/started" || method == "thread/snapshot" {
             guard let thread = p["thread"] as? [String: Any], let tid = thread["id"] as? String else { return }
             let key = CodexActivityPrivacy.hashIdentifier(tid)
-            if CodexActivitySessionKind.classify(source: thread["source"], threadSource: thread["threadSource"] as? String) == .internalTask {
-                tasks.removeAll { $0.key == key }; metadata.removeValue(forKey: key); onChange?(); return
-            }
+            let kind = CodexActivitySessionKind.classify(source: thread["source"],
+                threadSource: thread["threadSource"] as? String ?? thread["thread_source"] as? String)
+            setSessionKind(kind, for: key)
+            guard sessionKinds[key] != .internalTask, sessionKinds[key] != .memoryConsolidation else { return }
             metadata[key] = thread
             let status = thread["status"] as? [String: Any]
             let active = status?["type"] as? String == "active"
