@@ -1,0 +1,209 @@
+{
+  "provider": "OpenAI Codex",
+  "extractedAt": "2026-10-04",
+  "source": "Embedded Codex renderer in ChatGPT.app/Contents/Resources/app.asar",
+  "renderer": "app-initial-576fc7ca620e.js",
+  "rendererSHA256": "15fbefa3845da8b3ab9635952743d9d540adff5b834994831b0e5c21976215cb",
+  "seed": "original native thread ID / conversation ID",
+  "algorithm": "iterate JavaScript UTF-16 units; h = (h * 31 + unit) % 2147483647; index = h % 28",
+  "conversion": "dark SVG to 64px PNG, displayed at 14pt; native palette order preserved",
+  "licenseScope": "Third-party OpenAI UI artwork; not original Duoasa artwork or included in the QuotaView MIT grant.",
+  "assets": [
+    {
+      "index": 0,
+      "nativeName": "apricot",
+      "nativeDarkSVG_SHA256": "001bf4d89600e06958b18da4e8e568d9bfc32a4653b1db08eced2b3ba908f5bf",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-0.png",
+      "PNG_SHA256": "2ae3d5650c754803b202027284e2fcfe224eece048c4298bd76a18ddda9eaf6c"
+    },
+    {
+      "index": 1,
+      "nativeName": "bloom",
+      "nativeDarkSVG_SHA256": "0ae0a9941104251aa0a148ad27836aa93780744a15172d5c4e3eb28b01b13ed5",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-1.png",
+      "PNG_SHA256": "a6a0509ddc53a4b1bb4e6a30506fbcbbb3c29523cbfe2063007cd0eb2d1385cd"
+    },
+    {
+      "index": 2,
+      "nativeName": "clear-sky",
+      "nativeDarkSVG_SHA256": "d699d8b74d60d1b331c442831b75d057c85de81ab8a20a763e17756e415f2572",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-2.png",
+      "PNG_SHA256": "30904be51c6520e0c91fd6fb9a421611ea1d81601ea72522c91c645fc46790ad"
+    },
+    {
+      "index": 3,
+      "nativeName": "coral-pop",
+      "nativeDarkSVG_SHA256": "8f6a685fc61bf10e8dca4bb82c43894555e59c322032bba03ce2718cdb060d44",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-3.png",
+      "PNG_SHA256": "ba52c6d6537ea6de7674464aabd032e6df8b6824ce42bd04c9e415b878cacfda"
+    },
+    {
+      "index": 4,
+      "nativeName": "inline-4",
+      "nativeDarkSVG_SHA256": "541c528fcc79c7dce0fc42f310507977c5f997271d682ebea605e59c7dc43612",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-4.png",
+      "PNG_SHA256": "8adc4ce817a9e6016bad6ec81318b32812931f60891e6a2403872183fb786251"
+    },
+    {
+      "index": 5,
+      "nativeName": "inline-5",
+      "nativeDarkSVG_SHA256": "8b2abb12805d740fc8bed56cfdfc1dbf8622d83682d326989aa31c386a738c42",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-5.png",
+      "PNG_SHA256": "33e6bd73bc2b093350bdfe60ea34890619b726efb4217711cceca5185587e1f3"
+    },
+    {
+      "index": 6,
+      "nativeName": "inline-6",
+      "nativeDarkSVG_SHA256": "dfd595e064fe6463ac748aad8ec877e7d59dcc33e2ca0a1b75e7b513d23e4f21",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-6.png",
+      "PNG_SHA256": "6d0bb065db7584daef7e0a89cfc6845e3ae4a685bb4a0b0ac3bd72ad67a7f81d"
+    },
+    {
+      "index": 7,
+      "nativeName": "sprout",
+      "nativeDarkSVG_SHA256": "4646c689d8b2f8b8cdf6a49f2aca3946780dcb22f276340334cc2440c6c1f160",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-7.png",
+      "PNG_SHA256": "2d87a448513f27a9417fee99f9ea2dcf0bf6b5647d7890d7f466999394ab60ac"
+    },
+    {
+      "index": 8,
+      "nativeName": "sunbeam",
+      "nativeDarkSVG_SHA256": "d03b4c5aa4b9329bae752c5e55a9f8cfe99879452df3a3374b60af65fec7ba74",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-8.png",
+      "PNG_SHA256": "91be5fa39977f2bdb7cc64a5155b9bc894271cfad57a08f0271287a82714e9f4"
+    },
+    {
+      "index": 9,
+      "nativeName": "inline-9",
+      "nativeDarkSVG_SHA256": "5f969d4dc90d617b1e6166445c075114603e4fc36a69087b66110fa26c9d3ec7",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-9.png",
+      "PNG_SHA256": "725a74d75af0ab5841e1a927ea3e7ac4c123deeb3b7fd1a0b7517aeadd4e5cf0"
+    },
+    {
+      "index": 10,
+      "nativeName": "inline-10",
+      "nativeDarkSVG_SHA256": "a841a246ce365112bf0fc43d343cf16372ced53b5728413e489e36ed6fe3eb89",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-10.png",
+      "PNG_SHA256": "f3b3dcbc4dc613da1e18d654753ccecc2dd04c10ec067dd43754e759611eefcb"
+    },
+    {
+      "index": 11,
+      "nativeName": "apricot-pinwheel",
+      "nativeDarkSVG_SHA256": "5e3df3b5459b7726f887ee9cf4ce5431f55fe6a279915cb0e3663f675f5260e8",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-11.png",
+      "PNG_SHA256": "a4253a80f322ad28c6ac6c59018ed464d7c2a7bcc30dfa1e25ece0e4141e5457"
+    },
+    {
+      "index": 12,
+      "nativeName": "coral-pop-knot",
+      "nativeDarkSVG_SHA256": "23506566602e5707e5141984840f2d6e212d15b696b8722fa209133dc802a761",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-12.png",
+      "PNG_SHA256": "4b9b4a2ef7489ebb52852496f077987082b96daea830c18ea611f66fb7413d4e"
+    },
+    {
+      "index": 13,
+      "nativeName": "bloom-rosette",
+      "nativeDarkSVG_SHA256": "e532454bf77a62794899c0a769825d56627fec48be82f821a78d54c4c34116ff",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-13.png",
+      "PNG_SHA256": "f1e99c0216ca87d3c3d58f0163c199f01a884a6c564bd61dbeae714e1c645d38"
+    },
+    {
+      "index": 14,
+      "nativeName": "inline-14",
+      "nativeDarkSVG_SHA256": "7dcaaa9769d0a95157cdfdb6479d55d389978ee257d082b88730e4f04b675b3b",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-14.png",
+      "PNG_SHA256": "4c3d4e2ac5c1d34be81ce9e14324a8ddfe6ac63fa779cb5e4a0e4a9505e3ac60"
+    },
+    {
+      "index": 15,
+      "nativeName": "inline-15",
+      "nativeDarkSVG_SHA256": "253cf302efeddbd696c10a89c0d0f4855ef849a5ac09da5e8d4cf87abd377f3a",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-15.png",
+      "PNG_SHA256": "5e2c808e3433838ba3a0ffd2db28485dab6b07f8237bcdee1e524693ffa9ec93"
+    },
+    {
+      "index": 16,
+      "nativeName": "inline-16",
+      "nativeDarkSVG_SHA256": "3652ff5ea1e65fd98603ffac62e0bf4d0726c5f6d7bf8be6e01a58f80da169b4",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-16.png",
+      "PNG_SHA256": "a0014d5d4be574141f18b6b5d36916096f2ec01f9eaf37b72583207b15e070ad"
+    },
+    {
+      "index": 17,
+      "nativeName": "inline-17",
+      "nativeDarkSVG_SHA256": "70455c300c5997ad2f205ffc36d1ab98fde7e5359982aa99900bc988b3982298",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-17.png",
+      "PNG_SHA256": "f1d7d601dc454b064a28709d90e543b777cbda25911c6b3c32c703f6bb83c57e"
+    },
+    {
+      "index": 18,
+      "nativeName": "inline-18",
+      "nativeDarkSVG_SHA256": "e5dbb75eb807154a92092cbe499efa6ece1ac50dae9cac3a4c39830b9a540f2c",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-18.png",
+      "PNG_SHA256": "4fcaf567e150bbe6951f26e54f8621b40ebb89a842c80500dffbf7dc2b40f83f"
+    },
+    {
+      "index": 19,
+      "nativeName": "sunbeam-halo",
+      "nativeDarkSVG_SHA256": "183e7c2efa981041cb37afe806c84a27922668ac54217b109e906642a4da1e34",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-19.png",
+      "PNG_SHA256": "91fb7b05e758d8daa7b242e299978aff7c86fe70716c4f8223764664a25372e7"
+    },
+    {
+      "index": 20,
+      "nativeName": "coral-pop-clover",
+      "nativeDarkSVG_SHA256": "b9f76e82e215ea4f8f241903be8322700159d4bbb8070dd82c19546da9b38a2d",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-20.png",
+      "PNG_SHA256": "6b63437db524d476d59117a692233d8544c16cc77cdd7e477e01d6e941352b9d"
+    },
+    {
+      "index": 21,
+      "nativeName": "bloom-orbit",
+      "nativeDarkSVG_SHA256": "9ea803114b80b88c4a9d09db1e03f15ea3895a56433634e62271a8118de7ec2e",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-21.png",
+      "PNG_SHA256": "5bcb2fc8ee9f692a277ca17013be370a07509bf3fb6a55b4bef8ee86eb512829"
+    },
+    {
+      "index": 22,
+      "nativeName": "inline-22",
+      "nativeDarkSVG_SHA256": "e74af3b06c5391d08bce6d3f717f7acb6c177b0242f8830844d09d60b8a88a42",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-22.png",
+      "PNG_SHA256": "0afcfcd8e9eb1d85759a1b1a2d91be000a83ac41274d08530037cb093340a852"
+    },
+    {
+      "index": 23,
+      "nativeName": "inline-23",
+      "nativeDarkSVG_SHA256": "362be34d9fe0df252c4cbc1392d82151d2894a3e263294914c9697c1d2cb7787",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-23.png",
+      "PNG_SHA256": "bb3b3715939731c577bbf0784cb76c2a238e3aca17984547fd5e86274c608035"
+    },
+    {
+      "index": 24,
+      "nativeName": "sprout-bud",
+      "nativeDarkSVG_SHA256": "a49ae215adc7fb97166a4667be886d54104e97fbcd6f3abbc346f073932a5583",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-24.png",
+      "PNG_SHA256": "fe77447c297e756b9a21faf0bd08d2a567ec6654e5464201798d3386be2155ca"
+    },
+    {
+      "index": 25,
+      "nativeName": "inline-25",
+      "nativeDarkSVG_SHA256": "cee41bd3775af2b9692e89bd0457406a3f8928db2d8ca57c5fe951723851a70b",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-25.png",
+      "PNG_SHA256": "538a362a66b7a01eecf5254431d81e3e5cc266cd7feb2b4d57219925c52138b5"
+    },
+    {
+      "index": 26,
+      "nativeName": "inline-26",
+      "nativeDarkSVG_SHA256": "56eba6135b31140f47abe820bfe25c821c7d73a9474e3cf2b9c2a355e61751a8",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-26.png",
+      "PNG_SHA256": "3cf5444cd349c0708085f6ec596c255d9ee8d8655783be64f609824e86eb8ec1"
+    },
+    {
+      "index": 27,
+      "nativeName": "inline-27",
+      "nativeDarkSVG_SHA256": "3c4bab902f6a599925b8f7186202057fdd303be28a37136638df93c058703fbb",
+      "path": "Sources/QuotaView/Resources/CodexAgentAvatars/CodexSubagentAvatar-27.png",
+      "PNG_SHA256": "7b4753540e0dc0978300e9de8046c6a86d32f56756cec120cf9719eee4f7c47f"
+    }
+  ]
+}

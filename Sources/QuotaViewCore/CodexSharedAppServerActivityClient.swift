@@ -186,6 +186,7 @@ public actor CodexSharedAppServerActivityClient {
     private var runGeneration: UInt64 = 0
     private var subscribedThreadHashes: Set<String> = []
     private var threadKinds: [String: CodexActivitySessionKind] = [:]
+    private var threadSubagents: [String: CodexActivitySubagentIdentity] = [:]
     private var frameDecoder = CodexAppServerWebSocketMessageDecoder()
     private var activityNotificationHandler:
         (@Sendable (CodexActivityEvent) async -> Void)?
@@ -378,6 +379,7 @@ public actor CodexSharedAppServerActivityClient {
         initialized = true
         subscribedThreadHashes.removeAll(keepingCapacity: true)
         threadKinds.removeAll(keepingCapacity: true)
+        threadSubagents.removeAll(keepingCapacity: true)
         await publishConnectionState(.connected)
     }
 
@@ -438,7 +440,7 @@ public actor CodexSharedAppServerActivityClient {
     }
 
     private func publishThreadSnapshot(_ thread: [String: Any], threadID: String, generation: UInt64) async {
-        var params: [String: Any] = ["thread": Self.publicThreadMetadata(thread)]
+        var params: [String: Any] = ["thread": projectedThreadMetadata(thread)]
         if Self.observesLifecycle(threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)]),
            (thread["status"] as? [String: Any])?["type"] as? String == "active",
            let current = try? await currentTurn(threadID: threadID), generation == connectionGeneration {
@@ -492,16 +494,37 @@ public actor CodexSharedAppServerActivityClient {
 
     private static func publicThreadMetadata(_ thread: [String: Any]) -> [String: Any] {
         var clean: [String: Any] = [:]
-        for key in ["id", "name", "title", "model", "reasoningEffort", "effort", "source", "threadSource", "status"] {
+        for key in ["id", "name", "title", "model", "reasoningEffort", "effort", "source", "threadSource", "status",
+                    "parentThreadId", "agentNickname", "agentRole"] {
             if let value = thread[key] { clean[key] = value }
         }
         // Raw Core/SQLite metadata uses snake case; consumers use the API name.
         if let value = thread["threadSource"] as? String ?? thread["thread_source"] as? String { clean["threadSource"] = value }
+        for (api, core) in [("parentThreadId", "parent_thread_id"), ("agentNickname", "agent_nickname"), ("agentRole", "agent_role")] {
+            if let value = thread[api] as? String ?? thread[core] as? String { clean[api] = value }
+        }
+        return clean
+    }
+
+    private func projectedThreadMetadata(_ thread: [String: Any]) -> [String: Any] {
+        var clean = Self.publicThreadMetadata(thread)
+        if let id = thread["id"] as? String {
+            let hash = CodexActivityPrivacy.hashIdentifier(id)
+            if threadKinds[hash] == .subagent, let prior = threadSubagents[hash],
+               CodexActivitySubagentIdentity.decode(thread) == nil {
+                // Sparse resume/read replies inherit only the parent verified
+                // for this thread on this connection, never a title guess.
+                clean["parentThreadId"] = prior.parentThreadID
+                if clean["agentNickname"] == nil { clean["agentNickname"] = prior.nickname }
+                if clean["agentRole"] == nil { clean["agentRole"] = prior.role }
+                if clean["name"] == nil, clean["title"] == nil { clean["title"] = prior.title }
+            }
+        }
         return clean
     }
 
     private static func observesLifecycle(_ kind: CodexActivitySessionKind?) -> Bool {
-        kind == .user || kind == .memoryConsolidation
+        kind == .user || kind == .memoryConsolidation || kind == .subagent
     }
 
     private static func observesMetadata(_ kind: CodexActivitySessionKind?) -> Bool {
@@ -541,6 +564,11 @@ public actor CodexSharedAppServerActivityClient {
         guard let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
               let kind = threadKinds[CodexActivityPrivacy.hashIdentifier(threadID)],
               Self.observesMetadata(kind) else { return nil }
+        if let thread = params["thread"] as? [String: Any],
+           let incoming = CodexActivitySubagentIdentity.decode(thread),
+           let prior = threadSubagents[CodexActivityPrivacy.hashIdentifier(threadID)],
+           incoming.parentSessionHash != prior.parentSessionHash { return nil }
+        if let thread = params["thread"] as? [String: Any] { params["thread"] = projectedThreadMetadata(thread) }
         // Background/internal identity reaches Store even when it retracts a
         // previously displayed task. Its content and RPCs never acquire ownership.
         if kind == .memoryConsolidation || kind == .internalTask {
@@ -551,6 +579,16 @@ public actor CodexSharedAppServerActivityClient {
                 metadata["currentTurn"] = current.filter { ["id", "status", "startedAtMs"].contains($0.key) }
             }
             return ["method": method, "params": metadata]
+        }
+        if kind == .subagent {
+            guard threadSubagents[CodexActivityPrivacy.hashIdentifier(threadID)] != nil else { return nil }
+            if params["thread"] == nil {
+                // Each child envelope carries this connection's verified parent
+                // scope, so Store origin-LRU loss cannot turn a sparse event into
+                // the generic user fallback or detach its child relationship.
+                params["thread"] = projectedThreadMetadata(["id": threadID])
+            }
+            return Self.subagentPublicProjection(message, method: method, params: params)
         }
         if let rpc = Self.rpcKey(message["id"]), ["item/commandExecution/requestApproval", "item/fileChange/requestApproval",
             "item/permissions/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request"].contains(method) {
@@ -569,12 +607,51 @@ public actor CodexSharedAppServerActivityClient {
         return clean
     }
 
+    /// Child transport is an observation lane. Its public progress and exact
+    /// lifecycle never enter the ordinary user RPC/request ownership map.
+    private static func subagentPublicProjection(_ message: [String: Any], method: String,
+                                                params: [String: Any]) -> [String: Any]? {
+        let allowed = ["thread/started", "thread/snapshot", "thread/status/changed", "turn/started", "turn/completed",
+            "item/started", "item/completed", "item/agentMessage/delta", "item/commandExecution/outputDelta"]
+        guard message["id"] == nil, allowed.contains(method) else { return nil }
+        var clean = params.filter { ["threadId", "turnId", "itemId", "status", "emittedAtMs"].contains($0.key) }
+        if let thread = params["thread"] as? [String: Any] { clean["thread"] = publicThreadMetadata(thread) }
+        for key in ["turn", "currentTurn"] {
+            if let turn = params[key] as? [String: Any] {
+                clean[key] = turn.filter { ["id", "status", "startedAtMs", "completedAtMs"].contains($0.key) }
+            }
+        }
+        if ["item/started", "item/completed"].contains(method) {
+            guard let item = params["item"] as? [String: Any], let type = item["type"] as? String,
+                  ["agentMessage", "commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall", "webSearch",
+                   "collabToolCall", "contextCompaction"].contains(type) else { return nil }
+            clean["item"] = item.filter { ["id", "type", "text", "phase", "command", "status", "tool", "name",
+                "server", "query", "changes", "arguments", "agentStatus", "receiverThreadIds", "senderThreadId"].contains($0.key) }
+        } else if ["item/agentMessage/delta", "item/commandExecution/outputDelta"].contains(method),
+                  let delta = params["delta"] as? String {
+            clean["delta"] = delta
+        }
+        var envelope: [String: Any] = ["method": method, "params": clean]
+        if let emitted = message["emittedAtMs"] { envelope["emittedAtMs"] = emitted }
+        return envelope
+    }
+
     private func rememberThread(_ thread: [String: Any], hash: String) {
         if threadKinds.count >= 1024, threadKinds[hash] == nil { return }
-        let incoming = CodexActivitySessionKind.classify(source: thread["source"],
-            threadSource: thread["threadSource"] as? String ?? thread["thread_source"] as? String)
-        threadKinds[hash] = incoming == .internalTask ? .internalTask
-            : .resolving(threadKinds[hash] ?? .unknown, incoming)
+        let incoming = CodexActivitySessionKind.classify(metadata: thread)
+        let previous = threadKinds[hash] ?? .unknown
+        if incoming == .subagent, let child = CodexActivitySubagentIdentity.decode(thread) {
+            // A later source subtype may refine generic internal, but an
+            // existing verified parent must never be silently reassigned.
+            if let prior = threadSubagents[hash], prior.parentSessionHash != child.parentSessionHash {
+                threadKinds[hash] = .internalTask
+                return
+            }
+            threadSubagents[hash] = child
+            threadKinds[hash] = previous == .memoryConsolidation ? previous : .subagent
+        } else {
+            threadKinds[hash] = incoming == .internalTask ? .internalTask : .resolving(previous, incoming)
+        }
     }
 
     private func request<Response: Decodable>(
@@ -730,7 +807,7 @@ public actor CodexSharedAppServerActivityClient {
             return
         }
 
-        if message["method"] as? String == "thread/started",
+        if ["thread/started", "thread/snapshot"].contains(message["method"] as? String ?? ""),
            let params = message["params"] as? [String: Any],
            let thread = params["thread"] as? [String: Any], let id = thread["id"] as? String {
             rememberThread(thread, hash: CodexActivityPrivacy.hashIdentifier(id))
@@ -750,7 +827,7 @@ public actor CodexSharedAppServerActivityClient {
         }
         if scopedPublicMessageHandler == nil, let tokenUsage = CodexAppServerActivityNotificationDecoder
             .decodeTokenUsage(data: data),
-           let kind = threadKinds[tokenUsage.sessionHash], kind != .internalTask, kind != .memoryConsolidation,
+           let kind = threadKinds[tokenUsage.sessionHash], kind == .user,
            let tokenUsageNotificationHandler
         {
             await tokenUsageNotificationHandler(tokenUsage)
@@ -825,6 +902,7 @@ public actor CodexSharedAppServerActivityClient {
         initialized = false
         subscribedThreadHashes.removeAll(keepingCapacity: true)
         threadKinds.removeAll(keepingCapacity: true)
+        threadSubagents.removeAll(keepingCapacity: true)
         observedServerRequests.removeAll(); observedServerRequestOrder.removeAll(); ambiguousServerRequests.removeAll()
         snapshotRefreshTasks.values.forEach { $0.cancel() }; snapshotRefreshTasks.removeAll()
         readTask?.cancel()

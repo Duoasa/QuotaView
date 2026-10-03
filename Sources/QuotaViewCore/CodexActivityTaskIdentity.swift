@@ -3,33 +3,29 @@ import SQLite3
 
 /// Classification describes the execution unit, not its current activity.
 public enum CodexActivitySessionKind: String, Codable, Sendable {
-    case user, memoryConsolidation, internalTask, unknown
+    case user, memoryConsolidation, subagent, internalTask, unknown
 
     /// Background memory remains observable without granting user conversation capabilities.
-    public var supportsActivityPresentation: Bool { self == .user || self == .memoryConsolidation }
+    public var supportsActivityPresentation: Bool { self == .user || self == .memoryConsolidation || self == .subagent }
 
     /// Explicit background/internal identity takes precedence over sparse host fallbacks.
     /// Exact memory identity can refine a previously generic internal classification.
     public static func resolving(_ kinds: Self...) -> Self {
         if kinds.contains(.memoryConsolidation) { return .memoryConsolidation }
         if kinds.contains(.internalTask) { return .internalTask }
+        if kinds.contains(.subagent) { return .subagent }
         if kinds.contains(.user) { return .user }
         return .unknown
     }
 
     public static func classify(source: Any?, threadSource: String? = nil) -> Self {
-        let threadKind: Self
-        switch threadSource {
-        case "memory_consolidation": threadKind = .memoryConsolidation
-        case "user", "agent_created_thread": threadKind = .user
-        case .some(let text) where !text.isEmpty: threadKind = .internalTask
-        default: threadKind = .unknown
-        }
         let sourceKind: Self
         if let object = source as? [String: Any] {
             let tags = ["internal", "subagent", "subAgent"].filter { object.keys.contains($0) }
             if tags.count == 1, let tag = tags.first {
-                sourceKind = object[tag] as? String == "memory_consolidation" ? .memoryConsolidation : .internalTask
+                if object[tag] as? String == "memory_consolidation" { sourceKind = .memoryConsolidation }
+                else if tag != "internal", CodexActivitySubagentIdentity.threadSpawn(source: object) != nil { sourceKind = .subagent }
+                else { sourceKind = .internalTask }
             } else {
                 sourceKind = tags.isEmpty ? .unknown : .internalTask
             }
@@ -38,20 +34,37 @@ public enum CodexActivitySessionKind: String, Codable, Sendable {
                let object = try? JSONSerialization.jsonObject(with: data), object is [String: Any] {
                 sourceKind = classify(source: object)
             } else if text.lowercased().contains("subagent") {
-                // Legacy generic subagent text is internal; it never proves memory identity.
                 sourceKind = .internalTask
             } else if ["cli", "exec", "vscode", "appServer", "app-server"].contains(text) {
                 sourceKind = .user
-            } else {
-                sourceKind = .unknown
-            }
-        } else {
-            sourceKind = .unknown
+            } else { sourceKind = .unknown }
+        } else { sourceKind = .unknown }
+        let threadKind: Self
+        switch threadSource {
+        case "memory_consolidation": threadKind = .memoryConsolidation
+        case "user", "agent_created_thread": threadKind = .user
+        case "subagent":
+            // This persisted generic tag is refined only by the exact native
+            // subtype. Alone it grants neither user nor child presentation.
+            threadKind = sourceKind == .subagent || sourceKind == .memoryConsolidation ? .unknown : .internalTask
+        case .some(let text) where !text.isEmpty: threadKind = .internalTask
+        default: threadKind = .unknown
         }
-        // A contradictory explicit internal tag in this metadata batch cannot
-        // silently acquire the memory label. Sparse user/unknown host data can.
         if threadKind == .internalTask || sourceKind == .internalTask { return .internalTask }
         return resolving(threadKind, sourceKind)
+    }
+
+    public static func classify(metadata: [String: Any]) -> Self {
+        let kind = classify(source: metadata["source"],
+                            threadSource: metadata["threadSource"] as? String ?? metadata["thread_source"] as? String)
+        guard kind != .memoryConsolidation else { return kind }
+        let child = CodexActivitySubagentIdentity.decode(metadata)
+        if kind == .internalTask {
+            let threadSource = metadata["threadSource"] as? String ?? metadata["thread_source"] as? String
+            return threadSource == "subagent" && child != nil ? .subagent : .internalTask
+        }
+        if kind == .subagent, child == nil { return .internalTask }
+        return child == nil ? kind : .subagent
     }
 
     /// Legacy hooks contain only a hash. Read local metadata without retaining IDs,
@@ -135,13 +148,41 @@ public struct CodexActivityTaskRegistry {
         return task.identity
     }
 
+    public func subagentIdentity(for session: String) -> CodexActivityTaskIdentity? {
+        guard let task = tasks[session], task.kind == .subagent, task.hasTurn else { return nil }
+        return task.identity
+    }
+
+    /// Bounded admission identities, newest first, for targeted metadata reads.
+    /// Includes terminal executions so late identity can correct a retained card.
+    public var executionIdentities: [CodexActivityTaskIdentity] {
+        order.reversed().compactMap { executionIdentity(for: $0) }
+    }
+
+    /// Metadata can identify an admitted unknown execution without granting it
+    /// the verified-user attachment rights of currentIdentity.
+    public func executionIdentity(for session: String) -> CodexActivityTaskIdentity? {
+        guard let task = tasks[session], task.kind != .internalTask, task.hasTurn else { return nil }
+        return task.identity
+    }
+
     /// Late metadata changes presentation only, preserving turn, clock and terminal evidence.
     @discardableResult
     public mutating func reclassify(session: String, kind: CodexActivitySessionKind) -> CodexActivityTaskIdentity? {
         guard var task = tasks[session] else { return nil }
-        task.kind = kind == .internalTask ? .internalTask : .resolving(task.kind, kind)
+        if kind == .internalTask { task.kind = .internalTask }
+        else if kind == .subagent, task.kind != .memoryConsolidation { task.kind = .subagent }
+        else { task.kind = .resolving(task.kind, kind) }
         tasks[session] = task
         return task.identity
+    }
+
+    /// A native turn trigger labels this execution only; a later execution must
+    /// not inherit the old turn's background presentation.
+    public mutating func reclassifyExecution(session: String, kind: CodexActivitySessionKind) {
+        guard var task = tasks[session] else { return }
+        task.kind = kind
+        tasks[session] = task
     }
 
     public mutating func remove(session: String) {
@@ -163,6 +204,18 @@ public struct CodexActivityTaskRegistry {
         return true
     }
 
+    /// Child progress is read-only and must attach to its admitted exact turn.
+    /// This never grants the user request capabilities of permitsPublicAttachment.
+    public func permitsSubagentAttachment(session: String, turn: String?, source: CodexActivityEventSource,
+                                         occurredAt: Date, timeSensitive: Bool = false,
+                                         permitsTerminal: Bool = false) -> Bool {
+        guard let task = tasks[session], task.kind == .subagent, task.hasTurn,
+              permitsTerminal || !task.terminal, let turn, task.identity.turnHash == turn else { return false }
+        let authority = source == .localRollout ? 3 : source == .appServer ? 2 : 1
+        if timeSensitive, let latest = task.lastEventAt[authority], occurredAt < latest { return false }
+        return true
+    }
+
     public func isPriorTurn(session: String, turn: String) -> Bool {
         tasks[session]?.previousTurns.contains(turn) == true
     }
@@ -177,6 +230,9 @@ public struct CodexActivityTaskRegistry {
         let isTerminal = [.stop, .interrupt, .sessionEnd].contains(event.event)
         let positive = isStart || [.preToolUse, .permissionRequest, .preCompact, .subagentStart].contains(event.event)
         var existing = tasks[session]
+        // A withdrawn child needs new positive observation; output/settlement
+        // alone cannot recreate a running child after the bounded slot expires.
+        if kind == .subagent, existing == nil, !positive { return nil }
         // An end-only event cannot establish a currently active turn.
         if event.event == .postCompact, existing?.hasTurn != true { return nil }
         if let old = existing {
@@ -276,7 +332,7 @@ public struct CodexActivityTaskRegistry {
         }
         return Admission(identity: task.identity, startsTurn: startsTurn,
                          duplicateStart: duplicate,
-                         selectsTask: task.kind != .memoryConsolidation
+                         selectsTask: task.kind != .memoryConsolidation && task.kind != .subagent
                             && (session == selectedSession || (canSelect && (positive || selectedSession == nil))),
                          evictedSessions: evicted)
     }
@@ -286,31 +342,85 @@ public struct CodexActivityTaskRegistry {
 /// because hooks may arrive before the host commits a new thread to SQLite.
 public actor CodexActivitySessionClassifier {
     private var cache: [String: (CodexActivitySessionKind, Date)] = [:]
+    private var executionIdentities: [CodexLocalExecutionMetadata.Identity] = []
+    private var executionCheckedAtByExecution: [CodexLocalExecutionMetadata.Execution: TimeInterval] = [:]
     private let codexHome: URL?
-    public init(codexHome: URL? = nil) { self.codexHome = codexHome }
-    public func kind(for event: CodexActivityEvent) -> CodexActivitySessionKind {
+    private let executionMetadataService: CodexLocalExecutionMetadata.Service
+    public init(codexHome: URL? = nil, executionMetadataService: CodexLocalExecutionMetadata.Service? = nil) {
+        self.codexHome = codexHome
+        let root = codexHome ?? ProcessInfo.processInfo.environment["CODEX_HOME"].map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
+        self.executionMetadataService = executionMetadataService ?? .init(codexHome: root)
+    }
+    public func kind(for event: CodexActivityEvent) async -> CodexActivitySessionKind {
+        (await classification(for: event)).kind
+    }
+
+    public func classification(for event: CodexActivityEvent) async -> CodexActivitySessionClassification {
         let now = Date()
         if event.source != .hook, let kind = event.sessionKind, kind != .unknown {
-            return remember(kind, for: event.sessionHash, at: now)
+            return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now)
         }
         // Hook cannot assert its own execution kind. It may inherit validated
         // native/rollout metadata for the same hashed thread or read SQLite.
         if let (kind, date) = cache[event.sessionHash],
            now.timeIntervalSince(date) < (kind == .unknown || kind == .user ? 1 : 60) {
-            return kind
+            return await classification(kind, event: event, at: now)
         }
         let kind = CodexActivitySessionKind.localKind(sessionHash: event.sessionHash, codexHome: codexHome)
-        return remember(kind, for: event.sessionHash, at: now)
+        return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now)
+    }
+
+    private func classification(_ kind: CodexActivitySessionKind, event: CodexActivityEvent,
+                                at now: Date) async -> CodexActivitySessionClassification {
+        // Origin and execution trigger are independent. An exact native start
+        // can label this turn even when sparse thread metadata says user.
+        guard kind == .unknown || kind == .user || kind == .subagent,
+              let turn = event.turnHash else { return .init(kind: kind) }
+        let execution = CodexLocalExecutionMetadata.Execution(sessionHash: event.sessionHash, turnHash: turn)
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if uptime - (executionCheckedAtByExecution[execution] ?? -.infinity) >= 1 {
+            let result = await executionMetadataService.read(preferred: [execution], now: now)
+            executionIdentities.removeAll { result.resolvedSessions.contains($0.sessionHash) }
+            executionIdentities.append(contentsOf: result.identities)
+            if executionIdentities.count > 128 { executionIdentities.removeFirst(executionIdentities.count - 128) }
+            executionCheckedAtByExecution[execution] = uptime
+            while executionCheckedAtByExecution.count > 128,
+                  let oldest = executionCheckedAtByExecution.min(by: { $0.value < $1.value })?.key {
+                executionCheckedAtByExecution.removeValue(forKey: oldest)
+            }
+        }
+        // A stronger identity can arrive while the service is awaited.
+        if let current = cache[event.sessionHash]?.0,
+           current == .internalTask || current == .memoryConsolidation {
+            return .init(kind: current)
+        }
+        guard executionIdentities.contains(where: {
+            $0.sessionHash == event.sessionHash && $0.turnHash == turn
+        }) else { return .init(kind: cache[event.sessionHash]?.0 ?? kind) }
+        return .init(kind: .memoryConsolidation, executionTurnHash: turn)
     }
 
     private func remember(_ incoming: CodexActivitySessionKind, for session: String, at date: Date) -> CodexActivitySessionKind {
-        let kind = incoming == .internalTask ? .internalTask
-            : CodexActivitySessionKind.resolving(cache[session]?.0 ?? .unknown, incoming)
+        let previous = cache[session]?.0 ?? .unknown
+        let kind: CodexActivitySessionKind
+        if incoming == .internalTask { kind = .internalTask }
+        else if incoming == .subagent, previous != .memoryConsolidation { kind = .subagent }
+        else { kind = .resolving(previous, incoming) }
         if cache.count >= 128, cache[session] == nil,
            let oldest = cache.min(by: { $0.value.1 < $1.value.1 })?.key {
             cache.removeValue(forKey: oldest)
         }
         cache[session] = (kind, date)
         return kind
+    }
+}
+
+public struct CodexActivitySessionClassification: Sendable {
+    public let kind: CodexActivitySessionKind
+    public let executionTurnHash: String?
+    public init(kind: CodexActivitySessionKind, executionTurnHash: String? = nil) {
+        self.kind = kind; self.executionTurnHash = executionTurnHash
     }
 }

@@ -53,7 +53,8 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/CodexActivityRippleGlowShader.txt"),
-                .copy("Resources/CodexProviderIcon.png")
+                .copy("Resources/CodexProviderIcon.png"),
+                .copy("Resources/CodexAgentAvatars")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

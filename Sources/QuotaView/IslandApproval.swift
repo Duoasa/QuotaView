@@ -11,6 +11,14 @@ enum IslandTaskTextMetrics {
             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font, .paragraphStyle: paragraph])
         return max(18, ceil(rect.height) + 2)
     }
+    static func limitedHeight(_ text: String, lines: Int, size: CGFloat = 11,
+                              semibold: Bool = false, code: Bool = false, width: CGFloat) -> CGFloat {
+        let font = code ? NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            : NSFont.systemFont(ofSize: size, weight: semibold ? .semibold : .regular)
+        let limit = ceil(font.ascender - font.descender + font.leading) * CGFloat(lines)
+            + CGFloat(max(0, lines - 1)) * 2 + 2
+        return min(height(text, size: size, semibold: semibold, code: code, width: width), max(18, limit))
+    }
 }
 
 struct IslandApprovalDecisionOption: Identifiable {
@@ -48,8 +56,8 @@ enum IslandApprovalDecisionChoices {
         return options.first { $0.id == id } ?? options.first { $0.action.result["decision"].text == "accept" }
     }
     static func optionHeight(_ option: IslandApprovalDecisionOption, width: CGFloat, english: Bool) -> CGFloat {
-        IslandTaskTextMetrics.height(option.title.value(english), size: 12, semibold: true, width: width - 54)
-            + 4 + IslandTaskTextMetrics.height(option.detail.value(english), size: 11, code: option.isRule, width: width - 54) + 20
+        IslandTaskTextMetrics.limitedHeight(option.title.value(english), lines: 2, size: 12, semibold: true, width: width - 54)
+            + 4 + IslandTaskTextMetrics.limitedHeight(option.detail.value(english), lines: 2, size: 11, code: option.isRule, width: width - 54) + 20
     }
     static func height(_ request: IslandCodexApprovalRequest, width: CGFloat, english: Bool) -> CGFloat {
         let options = options(request)
@@ -63,6 +71,7 @@ enum IslandApprovalDecisionChoices {
 }
 
 struct IslandApprovalMetrics {
+    static let maximumContentViewport: CGFloat = 440
     static let gap: CGFloat = 12
     static let inset: CGFloat = 12
     static let buttonHeight: CGFloat = 42
@@ -82,8 +91,8 @@ struct IslandApprovalMetrics {
     var height: CGFloat { viewportHeight + Self.fixedHeight }
 
     static func optionHeight(_ label: String, description: String, width: CGFloat) -> CGFloat {
-        IslandTaskTextMetrics.height(label, size: 12, semibold: true, width: width - 54)
-            + (description.isEmpty ? 0 : IslandTaskTextMetrics.height(description, width: width - 54) + 4) + 20
+        IslandTaskTextMetrics.limitedHeight(label, lines: 2, size: 12, semibold: true, width: width - 54)
+            + (description.isEmpty ? 0 : IslandTaskTextMetrics.limitedHeight(description, lines: 2, width: width - 54) + 4) + 20
     }
     static let questionNumberSize: CGFloat = 24
     static let questionHeadingGap: CGFloat = 10
@@ -100,7 +109,7 @@ struct IslandApprovalMetrics {
             + (question.header.isEmpty ? 0 : 4 + questionHeaderLabelHeight(question, width: width))
     }
     static func permissionHeight(_ permission: IslandApprovalPermission, width: CGFloat) -> CGFloat {
-        max(60, IslandTaskTextMetrics.height(permission.title, size: 11, code: true, width: width - 100) + 44)
+        max(60, IslandTaskTextMetrics.limitedHeight(permission.title, lines: 2, size: 11, code: true, width: width - 100) + 44)
     }
     static func formFieldHeight(_ field: IslandApprovalField) -> CGFloat {
         let label = IslandTaskTextMetrics.height(field.title + (field.required ? " *" : ""), size: 12, semibold: true, width: 140)
@@ -110,7 +119,7 @@ struct IslandApprovalMetrics {
         return max(label, control) + 24
     }
     init(request: IslandConfirmation, width: CGFloat, english: Bool, maximumViewportHeight: CGFloat, cardHeight: CGFloat = IslandVibeLayout.rowHeight) {
-        self.maximumViewportHeight = max(0, maximumViewportHeight)
+        self.maximumViewportHeight = max(0, min(Self.maximumContentViewport, maximumViewportHeight))
         contentWidth = width
         questionHeight = IslandTaskTextMetrics.height(request.question.value(english), size: 13, semibold: true, width: width)
         impactHeight = IslandTaskTextMetrics.height(request.impact.value(english), size: 12, width: width - Self.inset * 2)
@@ -285,6 +294,7 @@ struct IslandApprovalView: View {
     var utilities: IslandUtilityActions? = nil
     @State private var codexJumpMessage = ""
     @State private var headerVisible = false
+    @State private var taskHeaderHovered = false
     private var muted: Color { IslandApprovalAppearance.muted }
     private var secondary: Color { IslandApprovalAppearance.secondary }
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
@@ -298,13 +308,18 @@ struct IslandApprovalView: View {
     private var firstNegative: IslandApprovalAction? {
         actions.first { $0.result["decision"].text == "decline" || $0.result["action"].text == "decline" || $0.id == "deny" }
     }
-    private var primaryAction: IslandApprovalAction? {
-        if let wire, [.questions, .permissions, .mcpForm, .mcpURL].contains(wire.kind) {
-            return .init(id: "submit", label: wire.kind == .questions || wire.kind == .mcpForm
-                ? (IslandApprovalLayout(wire) == .connector ? .init("确认", "Confirm")
-                    : wire.kind == .mcpForm ? .init("提交参数", "Submit form") : .init("确认", "Confirm"))
-                : (wire.kind == .mcpURL ? .init("完成授权，继续", "Authorization complete, continue") : .init("授予所选权限", "Grant selected")),
-                result: draft.result(for: wire) ?? .null, affirmative: true)
+    var primaryAction: IslandApprovalAction? {
+        if let wire {
+            let label: IslandDetailText? = switch wire.kind {
+            case .questions: .init("确认", "Confirm")
+            case .permissions: .init("授予所选权限", "Grant selected")
+            case .mcpForm: wire.isApprovalOnlyForm ? .init("批准", "Approve") : .init("提交参数", "Submit form")
+            case .mcpURL: .init("完成授权，继续", "Authorization complete, continue")
+            default: nil
+            }
+            if let label {
+                return .init(id: "submit", label: label, result: draft.result(for: wire) ?? .null, affirmative: true)
+            }
         }
         guard var action = wire.flatMap({ IslandApprovalDecisionChoices.selected($0, id: draft.decisionID)?.action })
             ?? actions.first(where: { $0.result["decision"] == .string("accept") }) else { return nil }
@@ -325,6 +340,9 @@ struct IslandApprovalView: View {
         return action
     }
     private var submitting: Bool { if case .submitting = request.phase { true } else { false } }
+    private var submittingTitle: String {
+        wire?.isApprovalOnlyForm == true ? text("批准中…", "Approving…") : text("提交中…", "Submitting…")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -334,7 +352,8 @@ struct IslandApprovalView: View {
                     .padding(.bottom, IslandVibeLayout.rowSpacing)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: metrics.contentHeight, alignment: .top)
-                    .background(IslandTaskScrollConfiguration(layout: .init(taskIDs: [task.id], detailID: nil),
+                    .background(IslandTaskScrollConfiguration(layout: .init(taskIDs: [task.id], detailID: nil,
+                        rowHeights: [task.id: metadata?.taskGroupHeight(width: metrics.contentWidth) ?? IslandVibeLayout.rowHeight]),
                         active: visible, onVisibilityChange: { headerVisible = $0.visible.contains(.task(task.id)) }, link: scrollLink))
             }.scrollIndicators(.never).frame(height: metrics.viewportHeight)
                 .overlay(alignment: .trailing) {
@@ -388,15 +407,20 @@ struct IslandApprovalView: View {
 
     var requestContent: some View {
         VStack(alignment: .leading, spacing: IslandApprovalMetrics.gap) {
+            IslandTaskCardStack(children: metadata?.subagents ?? [], english: english,
+                visible: visible && headerVisible && playbackEnabled, reduceMotion: reduceMotion,
+                appearance: .init(visualState: task.renderState.visualState, selected: true, hovered: taskHeaderHovered)) {
             IslandTaskCard(progressEffect: progressEffect, task: task, selected: true, metadata: metadata, english: english,
                 playback: false, effectVisible: visible && headerVisible && playbackEnabled && task.playbackEnabled,
-                reduceMotion: reduceMotion, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
+                reduceMotion: reduceMotion, hovered: taskHeaderHovered, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
                 .overlay(alignment: .topTrailing) {
                     if let onArchive {
-                        IslandTaskArchiveButton(english: english, action: onArchive)
+                        IslandTaskArchiveButton(english: english, showsArchiveIcon: taskHeaderHovered, action: onArchive)
                             .padding(.top, 6).padding(.trailing, 8)
                     }
                 }
+            }.contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
+                .onHover { taskHeaderHovered = $0 }
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
                     openedURL: draft.openedURL, handoffMessage: codexJumpMessage,
@@ -481,7 +505,7 @@ struct IslandApprovalView: View {
                                     Text(permission.group == "network" ? text("允许此任务建立网络连接", "Allow network connections for this task")
                                         : permission.group == "read" || permission.group == "write" ? permission.value.text : permission.title)
                                         .font(.system(size: 11, design: permission.group == "network" ? .default : .monospaced))
-                                        .foregroundStyle(secondary).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
+                                        .foregroundStyle(secondary).lineSpacing(2).lineLimit(2).truncationMode(.middle)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 selectionMark(selected, multiple: true)
                             }.padding(.horizontal, 12).frame(height: IslandApprovalMetrics.permissionHeight(permission, width: metrics.contentWidth))
@@ -499,7 +523,7 @@ struct IslandApprovalView: View {
                 }.frame(height: IslandApprovalMetrics.inputHeight)
             }
         case .mcpForm:
-            if request.supportedForm {
+            if request.supportedForm && !request.isApprovalOnlyForm {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(request.fields.enumerated()), id: \.element.id) { index, field in
                         formField(field).overlay(alignment: .top) {
@@ -553,6 +577,7 @@ struct IslandApprovalView: View {
                             let chosen = field.choices.first { ($0.text.isEmpty ? $0.pretty : $0.text) == (draft.values[field.id] ?? "") }
                             Text(chosen.map { field.label(for: $0) } ?? text("请选择", "Choose an option"))
                                 .foregroundStyle(chosen == nil ? muted : .white)
+                                .lineLimit(1).truncationMode(.tail)
                             Spacer()
                             Image(systemName: "chevron.down").font(.system(size: 9)).foregroundStyle(secondary)
                         }.padding(.horizontal, 12).frame(height: IslandApprovalMetrics.inputHeight)
@@ -572,7 +597,7 @@ struct IslandApprovalView: View {
         return Button { draft.values[field.id] = value } label: {
             HStack(spacing: 8) {
                 selectionMark(selected, multiple: false)
-                Text(label).foregroundStyle(.white)
+                Text(label).foregroundStyle(.white).lineLimit(1).truncationMode(.tail)
             }.frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.inputHeight)
         }.buttonStyle(IslandApprovalSelectionStyle(selected: selected))
             .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
@@ -595,18 +620,21 @@ struct IslandApprovalView: View {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                        .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.height(label, size: 12, semibold: true, width: availableWidth - 54), alignment: .topLeading)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(label, lines: 2, size: 12, semibold: true, width: availableWidth - 54), alignment: .topLeading)
                     if !option["description"].text.isEmpty {
                         Text(option["description"].text).font(.system(size: 11)).foregroundStyle(secondary).lineSpacing(2)
+                            .lineLimit(2).truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: IslandTaskTextMetrics.height(option["description"].text, width: availableWidth - 54), alignment: .topLeading)
+                            .frame(height: IslandTaskTextMetrics.limitedHeight(option["description"].text, lines: 2, width: availableWidth - 54), alignment: .topLeading)
                     }
                 }.fixedSize(horizontal: false, vertical: true)
                 selectionMark(selected, multiple: false)
             }.padding(.horizontal, 12).frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: height ?? IslandApprovalMetrics.optionHeight(label, description: option["description"].text, width: availableWidth))
         }.buttonStyle(IslandApprovalSelectionStyle(selected: selected))
+            .contextMenu { copyContentButton(label + (option["description"].text.isEmpty ? "" : "\n" + option["description"].text)) }
             .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
     }
     private func selectionMark(_ selected: Bool, multiple: Bool) -> some View {
@@ -616,10 +644,10 @@ struct IslandApprovalView: View {
     private func answered(_ question: IslandApprovalQuestion) -> Bool {
         questionInteraction.isAnswered(questionID: question.id)
     }
-    private var footerStatus: String {
+    var footerStatus: String {
         if !codexJumpMessage.isEmpty { return codexJumpMessage }
         switch request.phase {
-        case .submitting: return text("提交中…", "Submitting…")
+        case .submitting: return submittingTitle
         case .sent: return text("已发送，等待 Codex 确认", "Sent, awaiting Codex confirmation")
         case .resultUnknown: return text("结果未确认，请在 Codex 核对", "Result unconfirmed; check in Codex")
         case .resolved: return text("请求已处理", "Request resolved")
@@ -634,7 +662,9 @@ struct IslandApprovalView: View {
         case .permissions:
             return text("已选 \((draft.selections["permissions"] ?? []).count) 项 · \(draft.sessionScope ? "本会话" : "仅本轮")",
                 "\((draft.selections["permissions"] ?? []).count) selected · \(draft.sessionScope ? "This session" : "This turn")")
-        case .mcpForm: return draft.result(for: wire) == nil ? text("请填写必填项并检查格式", "Complete required fields in the requested format") : text("参数已就绪", "Ready to submit")
+        case .mcpForm:
+            if wire.isApprovalOnlyForm { return text("批准后继续", "Resumes after approval") }
+            return draft.result(for: wire) == nil ? text("请填写必填项并检查格式", "Complete required fields in the requested format") : text("参数已就绪", "Ready to submit")
         case .mcpURL: return draft.openedURL ? text("完成授权后继续", "Continue when authorization is complete") : text("请打开授权页面", "Open the authorization page")
         case .nativeOnly: return text("请在 Codex 处理", "Continue in Codex")
         default: return text("确认后继续", "Resumes after approval")
@@ -666,16 +696,24 @@ struct IslandApprovalView: View {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(option.title.value(english)).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                        .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.height(option.title.value(english), size: 12, semibold: true, width: width - 54), alignment: .topLeading)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.title.value(english), lines: 2, size: 12, semibold: true, width: width - 54), alignment: .topLeading)
                     Text(option.detail.value(english)).font(.system(size: 11, design: option.isRule ? .monospaced : .default)).foregroundStyle(secondary).lineSpacing(2)
+                        .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.height(option.detail.value(english), size: 11, code: option.isRule, width: width - 54), alignment: .topLeading)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.detail.value(english), lines: 2, size: 11, code: option.isRule, width: width - 54), alignment: .topLeading)
                 }.fixedSize(horizontal: false, vertical: true)
                 selectionMark(selected, multiple: false)
             }.padding(.horizontal, 12).frame(maxWidth: .infinity).frame(height: height)
         }.buttonStyle(IslandApprovalSelectionStyle(selected: selected)).disabled(!self.request.phase.canSubmit)
+            .contextMenu { copyContentButton(option.title.value(english) + "\n" + option.detail.value(english)) }
             .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
+    }
+    private func copyContentButton(_ value: String) -> some View {
+        Button(text("复制完整内容", "Copy full text")) {
+            NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
+        }
     }
     private func valueBinding(_ key: String) -> Binding<String> {
         .init(get: { draft.values[key] ?? "" }, set: { draft.values[key] = $0 })
@@ -693,7 +731,7 @@ struct IslandApprovalView: View {
         return Button { send(action) } label: {
             HStack(spacing: 8) {
                 if submitting && primary { ProgressView().controlSize(.small).tint(secondary) }
-                Text(submitting && primary ? text("提交中…", "Submitting…") : action.label.value(english))
+                Text(submitting && primary ? submittingTitle : action.label.value(english))
                 if primary && !submitting { Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)) }
             }.font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
         }.buttonStyle(IslandApprovalActionStyle(primary: primary, destructive: destructive)).disabled(!enabled)

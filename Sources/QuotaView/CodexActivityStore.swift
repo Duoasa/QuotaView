@@ -22,6 +22,33 @@ final class CodexActivityStore: ObservableObject {
     }
     private var observedActivityBySession: [String: ObservedActivity] = [:]
     private var memoryActivityBySession: [String: ObservedActivity] = [:]
+    private var executionMemoryTurns: [String: String] = [:]
+    private struct ExecutionMemoryKey: Hashable {
+        let session: String
+        let turn: String
+    }
+    private struct PendingExecutionMemory {
+        let generation: UInt64
+        let receivedAt: TimeInterval
+    }
+    // Discovery can precede the lifecycle which admits its exact execution.
+    // This is evidence only; it neither creates a task nor grants capabilities.
+    private var pendingExecutionMemory: [ExecutionMemoryKey: PendingExecutionMemory] = [:]
+    private var pendingExecutionMemoryOrder: [ExecutionMemoryKey] = []
+    private static let maximumPendingExecutionMemory = 128
+    private static let pendingExecutionMemoryLifetime: TimeInterval = 86_400
+    var activityExecutionKindDidResolve: ((String, CodexActivitySessionKind) -> Void)?
+    var subagentIdentityDidReceive: ((CodexActivitySubagentIdentity) -> Void)?
+    var subagentActivityDidReceive: ((CodexActivityEvent) -> Void)?
+    var subagentPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
+    var subagentPublicMessageDidReceive: ((Data) -> Void)?
+    var subagentSourceUnavailable: ((CodexActivityEventSource?) -> Void)?
+    /// Capacity/root withdrawal revokes one execution without inventing completion.
+    var subagentObservationDidWithdraw: ((String) -> Void)?
+    private var subagentIdentities: [String: CodexActivitySubagentIdentity] = [:]
+    private var lastAdmittedActivityBySession: [String: CodexActivityEvent] = [:]
+    private var admittedTurnStartBySession: [String: CodexActivityEvent] = [:]
+    private var subagentUnavailableSessions: Set<String> = []
     @Published private(set) var presentation:
         CodexActivityPresentation = .hidden
     @Published private(set) var resolvedThreadTitle: String?
@@ -153,6 +180,8 @@ final class CodexActivityStore: ObservableObject {
     private var turnTokenUsageBySession: [String: StoredTurnTokenUsage] = [:]
     private var sessionClassifier = CodexActivitySessionClassifier()
     private var hookSessionClassifier = CodexActivitySessionClassifier()
+    private var executionMetadataRoot: URL
+    private var executionMetadataService: CodexLocalExecutionMetadata.Service
     private var localRecovery = CodexLocalActivityRecovery()
     private var pendingLocalPublicContent: [CodexLocalPublicContent] = []
     private struct BufferedNativePublicMessage {
@@ -238,8 +267,14 @@ final class CodexActivityStore: ObservableObject {
         self.titleClient = titleClient
         self.sharedActivityClient = sharedActivityClient
         self.localRolloutActivityClient = localRolloutActivityClient
-        sessionClassifier = CodexActivitySessionClassifier(codexHome: sessionDirectory)
-        hookSessionClassifier = CodexActivitySessionClassifier(codexHome: sessionDirectory)
+        let metadataRoot = (sessionDirectory ?? ProcessInfo.processInfo.environment["CODEX_HOME"].map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")).standardizedFileURL
+        let service = CodexLocalExecutionMetadata.Service(codexHome: metadataRoot)
+        executionMetadataRoot = metadataRoot
+        executionMetadataService = service
+        sessionClassifier = CodexActivitySessionClassifier(codexHome: metadataRoot, executionMetadataService: service)
+        hookSessionClassifier = CodexActivitySessionClassifier(codexHome: metadataRoot, executionMetadataService: service)
         compactDelayNanoseconds = UInt64(
             max(compactDelay, 0) * 1_000_000_000
         )
@@ -266,10 +301,22 @@ final class CodexActivityStore: ObservableObject {
         nativeStartTask?.cancel()
         nativeGeneration &+= 1
         let run = nativeGeneration
+        let service = CodexLocalExecutionMetadata.Service(codexHome: executionMetadataRoot)
+        executionMetadataService = service
+        sessionClassifier = .init(codexHome: executionMetadataRoot, executionMetadataService: service)
+        hookSessionClassifier = .init(codexHome: executionMetadataRoot, executionMetadataService: service)
         let sharedActivityClient = sharedActivityClient
         let localRolloutActivityClient = localRolloutActivityClient
         nativeStartTask = Task { [weak self] in
             guard let self, self.nativeGeneration == run, !Task.isCancelled else { return }
+            await localRolloutActivityClient.setExecutionMetadataService(service, preferredExecutions: { [weak self] in
+                await self?.executionMetadataPreferences(generation: run) ?? []
+            })
+            guard self.nativeGeneration == run, !Task.isCancelled else { return }
+            await localRolloutActivityClient.setExecutionMetadataReadHandler { [weak self] summary in
+                await self?.recordExecutionMetadataRead(summary, generation: run)
+            }
+            guard self.nativeGeneration == run, !Task.isCancelled else { return }
             await self.titleClient.setActivityNotificationHandler { [weak self] event in
                 await self?.receiveClassified(.init(source: .liveSocket, activity: event), generation: run)
             }
@@ -314,9 +361,33 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    private func executionMetadataPreferences(generation expected: UInt64) -> [CodexLocalExecutionMetadata.Execution] {
+        guard nativeGeneration == expected else { return [] }
+        return taskRegistry.executionIdentities.filter { observedActivityBySession[$0.sessionHash] != nil }.map {
+            .init(sessionHash: $0.sessionHash, turnHash: $0.turnHash)
+        }
+    }
+
+    private func recordExecutionMetadataRead(_ summary: CodexLocalRolloutActivityClient.MetadataReadSummary,
+                                            generation expected: UInt64) {
+        guard nativeGeneration == expected else { return }
+        CodexActivityDiagnostics.recordMetadata(outcome: "execution_metadata_coverage", sessionHash: "none",
+            turnHash: nil, generation: expected,
+            details: "status=\(summary.status) preferred=\(summary.preferredCount) memory=\(summary.memoryCount) resolved=\(summary.resolvedCount) failed=\(summary.failedCount)")
+    }
+
     func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation expected: UInt64? = nil) {
         let run = expected ?? nativeGeneration
         guard nativeGeneration == run else { return }
+        if sessionKinds[content.sessionHash] == .subagent {
+            guard executionMemoryTurns[content.sessionHash] == nil, isSubagentProgressContent(content.data) else { return }
+            if permitsSubagentContent(session: content.sessionHash, turn: content.turnHash) {
+                subagentPublicContentDidReceive?(content)
+            } else if !taskRegistry.isPriorTurn(session: content.sessionHash, turn: content.turnHash) {
+                bufferLocalPublicContent(content)
+            }
+            return
+        }
         guard !isBackgroundOrInternal(content.sessionHash) else { return }
         if taskRegistry.permitsPublicAttachment(session: content.sessionHash, turn: content.turnHash,
             source: .localRollout, occurredAt: content.occurredAt, permitsTerminal: true) {
@@ -324,15 +395,49 @@ final class CodexActivityStore: ObservableObject {
         } else if !taskRegistry.isPriorTurn(session: content.sessionHash, turn: content.turnHash) {
             // Disk details never create a task. Retain bounded context until the
             // matching identified lifecycle receives positive current evidence.
-            pendingLocalPublicContent.append(content)
-            while pendingLocalPublicContent.count > 200
-                || pendingLocalPublicContent.reduce(0, { $0 + $1.data.count }) > 2_097_152 {
-                pendingLocalPublicContent.removeFirst()
-            }
+            bufferLocalPublicContent(content)
         }
     }
 
+    private func bufferLocalPublicContent(_ content: CodexLocalPublicContent) {
+        pendingLocalPublicContent.append(content)
+        while pendingLocalPublicContent.count > 200
+            || pendingLocalPublicContent.reduce(0, { $0 + $1.data.count }) > 2_097_152 {
+            pendingLocalPublicContent.removeFirst()
+        }
+    }
+
+    private func permitsSubagentContent(session: String, turn: String, source: CodexActivityEventSource = .localRollout,
+            occurredAt: Date = Date(), timeSensitive: Bool = false) -> Bool {
+        sessionKinds[session] == .subagent && subagentIdentities[session] != nil && executionMemoryTurns[session] == nil
+            && taskRegistry.permitsSubagentAttachment(session: session, turn: turn, source: source,
+                occurredAt: occurredAt, timeSensitive: timeSensitive, permitsTerminal: true)
+    }
+
+    private func isSubagentProgressContent(_ data: Data) -> Bool {
+        guard data.count <= 1_048_576,
+              let content = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = content["type"] as? String else { return false }
+        return ["metadata", "message", "tool", "output"].contains(type)
+    }
+
     private func flushLocalPublicContent(for session: String) {
+        if sessionKinds[session] == .subagent {
+            guard executionMemoryTurns[session] == nil else {
+                pendingLocalPublicContent.removeAll { $0.sessionHash == session }; return
+            }
+            let buffered = pendingLocalPublicContent.filter { $0.sessionHash == session }
+            pendingLocalPublicContent.removeAll { $0.sessionHash == session }
+            for content in buffered {
+                guard isSubagentProgressContent(content.data) else { continue }
+                if permitsSubagentContent(session: session, turn: content.turnHash) {
+                    subagentPublicContentDidReceive?(content)
+                } else if !taskRegistry.isPriorTurn(session: session, turn: content.turnHash) {
+                    bufferLocalPublicContent(content)
+                }
+            }
+            return
+        }
         guard !isBackgroundOrInternal(session) else {
             pendingLocalPublicContent.removeAll { $0.sessionHash == session }
             return
@@ -372,10 +477,10 @@ final class CodexActivityStore: ObservableObject {
         let date = Self.publicEventDate(envelope["emittedAtMs"] ?? params["emittedAtMs"], fallback: now)
         let metadata = params["thread"] as? [String: Any]
         let status = params["status"] as? [String: Any] ?? metadata?["status"] as? [String: Any]
-        let metadataKind = metadata.map {
-            CodexActivitySessionKind.classify(source: $0["source"],
-                threadSource: $0["threadSource"] as? String ?? $0["thread_source"] as? String)
-        } ?? .unknown
+        let metadataKind = metadata.map { CodexActivitySessionKind.classify(metadata: $0) } ?? .unknown
+        if let metadata, let child = CodexActivitySubagentIdentity.decode(metadata, expectedThreadID: threadID) {
+            receiveSubagentIdentity(child)
+        }
         // This ingress is fed by Shared's thread-scoped, verified projection.
         // Sparse RPC/settlement envelopes inherit that user scope; explicit or
         // previously known memory/internal metadata still overrides the fallback.
@@ -384,6 +489,11 @@ final class CodexActivityStore: ObservableObject {
         if kind == .internalTask { return }
         if kind == .memoryConsolidation {
             await receiveMemoryPublicLifecycle(data, method: method, params: params,
+                status: status, session: session, epoch: epoch, generation: run, at: now)
+            return
+        }
+        if kind == .subagent {
+            await receiveSubagentPublicMessage(data, envelope: envelope, method: method, params: params,
                 status: status, session: session, epoch: epoch, generation: run, at: now)
             return
         }
@@ -701,8 +811,7 @@ final class CodexActivityStore: ObservableObject {
         sharedActivityClient = CodexSharedAppServerActivityClient(configuration: .live(environment: environment))
         guard await localRolloutActivityClient.setDataDirectory(root),
               nativeGeneration == run, !Task.isCancelled else { return false }
-        sessionClassifier = CodexActivitySessionClassifier(codexHome: root)
-        hookSessionClassifier = CodexActivitySessionClassifier(codexHome: root)
+        executionMetadataRoot = root.standardizedFileURL
         startNativeActivityNotifications()
         return true
     }
@@ -710,9 +819,29 @@ final class CodexActivityStore: ObservableObject {
     func receiveLocalRecord(_ record: CodexLocalRolloutDecodedRecord, replay: Bool,
                             generation expected: UInt64? = nil) async {
         let run = expected ?? nativeGeneration
-        guard nativeGeneration == run else { return }
+        guard nativeGeneration == run else {
+            if let identity = record.threadIdentity, identity.executionTurnHash != nil {
+                CodexActivityDiagnostics.recordMetadata(outcome: "execution_metadata_generation_rejected",
+                    sessionHash: identity.sessionHash, turnHash: identity.executionTurnHash, generation: run)
+            }
+            return
+        }
         if let identity = verifiedLocalRecordIdentity(record) {
-            _ = resolveSessionKind(identity.sessionKind, session: identity.sessionHash)
+            if let child = identity.subagentIdentity, identity.sessionKind == .subagent,
+               child.threadID == identity.threadID, child.sessionHash == identity.sessionHash {
+                receiveSubagentIdentity(child)
+            }
+            if let turn = identity.executionTurnHash, identity.sessionKind == .memoryConsolidation {
+                // Retain an early identity until its matching lifecycle is
+                // admitted. Metadata alone must not change the current turn.
+                rememberExecutionMemory(session: identity.sessionHash, turn: turn, generation: run)
+                let admitted = taskRegistry.executionIdentity(for: identity.sessionHash)
+                if admitted?.turnHash == turn, identity.sessionKind == .memoryConsolidation,
+                   sessionKinds[identity.sessionHash] != .internalTask {
+                    _ = resolveExecutionMemory(session: identity.sessionHash, turn: turn)
+                    removePendingExecutionMemory(session: identity.sessionHash, turn: turn)
+                }
+            } else { _ = resolveSessionKind(identity.sessionKind, session: identity.sessionHash) }
         }
         if case .sessionMetadata = record.update { return }
         let terminal: Bool
@@ -751,6 +880,7 @@ final class CodexActivityStore: ObservableObject {
     private func publishLocalDesktopFollow(_ record: CodexLocalRolloutDecodedRecord, active: Bool, generation run: UInt64) {
         guard nativeGeneration == run, let identity = record.threadIdentity,
               identity.sessionKind == .user, !identity.threadID.isEmpty, identity.threadID.utf8.count <= 1024,
+              !isBackgroundOrInternal(identity.sessionHash),
               identity.sessionHash == CodexActivityPrivacy.hashIdentifier(identity.threadID) else { return }
         let session: String; let turn: String?
         switch record.update {
@@ -853,6 +983,10 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func compactionSourceUnavailable(_ source: CodexActivityEventSource) {
+        for (session, event) in lastAdmittedActivityBySession where (event.source ?? .hook) == source {
+            subagentUnavailableSessions.insert(session)
+        }
+        subagentSourceUnavailable?(source)
         markMemorySourceUnavailable(source)
         for (session, entry) in admittedSnapshots where entry.compactionSource == source && entry.snapshot.state == .compactingContext {
             let old = entry.snapshot
@@ -888,22 +1022,109 @@ final class CodexActivityStore: ObservableObject {
 
     private func isBackgroundOrInternal(_ session: String) -> Bool {
         let kind = sessionKinds[session]
-        return kind == .memoryConsolidation || kind == .internalTask
+        return kind == .memoryConsolidation || kind == .subagent || kind == .internalTask || executionMemoryTurns[session] != nil
+    }
+
+    private func receiveSubagentIdentity(_ identity: CodexActivitySubagentIdentity) {
+        if let previous = subagentIdentities[identity.sessionHash],
+           previous.parentSessionHash != identity.parentSessionHash {
+            CodexActivityDiagnostics.recordMetadata(outcome: "subagent_parent_relation_rejected",
+                sessionHash: identity.sessionHash, turnHash: nil, generation: nativeGeneration)
+            return
+        }
+        subagentIdentities[identity.sessionHash] = identity
+        let resolved = resolveSessionKind(.subagent, session: identity.sessionHash, verifiedChild: true)
+        guard resolved == .subagent else { subagentIdentities.removeValue(forKey: identity.sessionHash); return }
+        subagentIdentities = subagentIdentities.filter { sessionKinds[$0.key] == .subagent }
+        guard executionMemoryTurns[identity.sessionHash] == nil else { return }
+        subagentIdentityDidReceive?(identity)
+        // A relation can arrive after its current lifecycle; replay this admitted
+        // read-only state through the child channel without creating a new turn.
+        if !subagentUnavailableSessions.contains(identity.sessionHash),
+           let event = lastAdmittedActivityBySession[identity.sessionHash],
+           let current = taskRegistry.executionIdentity(for: identity.sessionHash),
+           event.turnHash == nil || event.turnHash == current.turnHash {
+            if let start = admittedTurnStartBySession[identity.sessionHash], start.turnHash == current.turnHash, start != event {
+                subagentActivityDidReceive?(start.classified(as: .subagent))
+            }
+            subagentActivityDidReceive?(event.classified(as: .subagent))
+        }
+    }
+
+    private func rememberExecutionMemory(session: String, turn: String, generation: UInt64) {
+        guard generation == nativeGeneration, sessionKinds[session] != .internalTask,
+              !taskRegistry.isPriorTurn(session: session, turn: turn) else {
+            CodexActivityDiagnostics.recordMetadata(outcome: "execution_metadata_scope_rejected",
+                sessionHash: session, turnHash: turn, generation: generation)
+            return
+        }
+        prunePendingExecutionMemory()
+        let key = ExecutionMemoryKey(session: session, turn: turn)
+        pendingExecutionMemory[key] = .init(generation: generation, receivedAt: ProcessInfo.processInfo.systemUptime)
+        pendingExecutionMemoryOrder.removeAll { $0 == key }
+        pendingExecutionMemoryOrder.append(key)
+        CodexActivityDiagnostics.recordMetadata(outcome: "execution_metadata_pending",
+            sessionHash: session, turnHash: turn, generation: generation)
+        while pendingExecutionMemoryOrder.count > Self.maximumPendingExecutionMemory {
+            pendingExecutionMemory.removeValue(forKey: pendingExecutionMemoryOrder.removeFirst())
+        }
+    }
+
+    private func prunePendingExecutionMemory() {
+        let now = ProcessInfo.processInfo.systemUptime
+        pendingExecutionMemory = pendingExecutionMemory.filter { key, evidence in
+            evidence.generation == nativeGeneration
+                && now - evidence.receivedAt <= Self.pendingExecutionMemoryLifetime
+                && !taskRegistry.isPriorTurn(session: key.session, turn: key.turn)
+        }
+        pendingExecutionMemoryOrder.removeAll { pendingExecutionMemory[$0] == nil }
+    }
+
+    private func removePendingExecutionMemory(session: String, turn: String? = nil) {
+        pendingExecutionMemory = pendingExecutionMemory.filter { key, _ in
+            key.session != session || (turn != nil && key.turn != turn)
+        }
+        pendingExecutionMemoryOrder.removeAll { pendingExecutionMemory[$0] == nil }
     }
 
     /// Late authoritative metadata changes presentation, never execution state.
     @discardableResult
     private func resolveSessionKind(_ incoming: CodexActivitySessionKind,
-                                    session: String) -> CodexActivitySessionKind {
+                                    session: String, verifiedChild: Bool = false) -> CodexActivitySessionKind {
         let known = sessionKinds[session] ?? .unknown
-        let resolved = incoming == .internalTask ? .internalTask : CodexActivitySessionKind.resolving(known, incoming)
+        let resolved = verifiedChild && incoming == .subagent && known != .memoryConsolidation ? .subagent
+            : incoming == .internalTask ? .internalTask : CodexActivitySessionKind.resolving(known, incoming)
         guard resolved != .unknown else { return resolved }
         rememberSessionKind(resolved, session: session)
-        _ = taskRegistry.reclassify(session: session, kind: resolved)
+        if executionMemoryTurns[session] != nil, resolved != .internalTask {
+            // Origin metadata may change while the current execution remains a
+            // proved memory turn. Preserve that execution and its background row.
+            taskRegistry.reclassifyExecution(session: session, kind: .memoryConsolidation)
+        } else if verifiedChild, resolved == .subagent { taskRegistry.reclassifyExecution(session: session, kind: resolved) }
+        else { _ = taskRegistry.reclassify(session: session, kind: resolved) }
         guard known != resolved else { return resolved }
         // The Island withdraws a generic record before any subsequent callback.
         activitySessionKindDidResolve?(session, resolved)
-        guard resolved == .memoryConsolidation || resolved == .internalTask else { return resolved }
+        if resolved == .internalTask { subagentIdentities.removeValue(forKey: session) }
+        if resolved == .subagent, executionMemoryTurns[session] != nil { return resolved }
+        guard resolved == .memoryConsolidation || resolved == .subagent || resolved == .internalTask else { return resolved }
+        withdrawUserPresentation(session: session, resolved: resolved)
+        return resolved
+    }
+
+    @discardableResult
+    private func resolveExecutionMemory(session: String, turn: String) -> CodexActivitySessionKind {
+        guard executionMemoryTurns[session] != turn else { return .memoryConsolidation }
+        executionMemoryTurns[session] = turn
+        CodexActivityDiagnostics.recordMetadata(outcome: "execution_metadata_applied",
+            sessionHash: session, turnHash: turn, generation: nativeGeneration)
+        taskRegistry.reclassifyExecution(session: session, kind: .memoryConsolidation)
+        activityExecutionKindDidResolve?(session, .memoryConsolidation)
+        withdrawUserPresentation(session: session, resolved: .memoryConsolidation)
+        return .memoryConsolidation
+    }
+
+    private func withdrawUserPresentation(session: String, resolved: CodexActivitySessionKind) {
         admittedSnapshots.removeValue(forKey: session)
         multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
         multitaskTitleTasks.removeValue(forKey: session)?.cancel()
@@ -934,7 +1155,6 @@ final class CodexActivityStore: ObservableObject {
         }
         publishMemorySnapshots()
         notifyChange()
-        return resolved
     }
 
     /// Metadata-only threads need no lifecycle slot. Keep bounded identities,
@@ -944,8 +1164,7 @@ final class CodexActivityStore: ObservableObject {
         sessionKindOrder.removeAll { $0 == session }; sessionKindOrder.append(session)
         while sessionKinds.count > Self.maximumRememberedSessionKinds,
               let oldest = sessionKindOrder.first(where: { $0 != session && observedActivityBySession[$0] == nil }) {
-            sessionKinds.removeValue(forKey: oldest)
-            sessionKindOrder.removeAll { $0 == oldest }
+            forgetSessionOrigin(oldest)
         }
     }
 
@@ -1085,6 +1304,47 @@ final class CodexActivityStore: ObservableObject {
         return true // Accepted observation; no user request/owner callback was issued.
     }
 
+    private func receiveSubagentPublicMessage(_ data: Data, envelope: [String: Any], method: String,
+            params: [String: Any], status: [String: Any]?, session: String,
+            epoch: UInt64, generation run: UInt64, at now: Date) async {
+        let allowed = ["thread/started", "thread/snapshot", "thread/status/changed", "turn/started", "turn/completed",
+            "item/started", "item/completed", "item/agentMessage/delta", "item/commandExecution/outputDelta"]
+        guard envelope["id"] == nil, allowed.contains(method), subagentIdentities[session] != nil else { return }
+        if let item = params["item"] as? [String: Any],
+           ["reasoning", "userMessage"].contains(item["type"] as? String ?? "") { return }
+        let current = params["currentTurn"] as? [String: Any]
+        let turn = params["turn"] as? [String: Any]
+        let turnID = params["turnId"] as? String ?? turn?["id"] as? String ?? current?["id"] as? String
+        guard let turnID, !turnID.isEmpty else { return }
+        let hash = CodexActivityPrivacy.hashIdentifier(turnID)
+        if method == "thread/snapshot", status?["type"] as? String == "active",
+           current?["status"] as? String == "inProgress", taskRegistry.executionIdentity(for: session)?.turnHash != hash {
+            let start = CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: hash,
+                sessionKind: .subagent, source: .appServer,
+                occurredAt: Self.publicEventDate(current?["startedAtMs"], fallback: now))
+            await receiveClassified(.init(source: .liveSocket, activity: start), generation: run,
+                                    selectionEvidenceAt: now, confirmedCurrentTurn: true)
+        } else if method == "thread/snapshot", let raw = current?["status"] as? String,
+                  let completion = CodexActivityTurnCompletionStatus(rawValue: raw) {
+            let ended = CodexActivityEvent(event: completion == .interrupted ? .interrupt : .stop,
+                sessionHash: session, turnHash: hash, sessionKind: .subagent, source: .appServer,
+                turnCompletionStatus: completion,
+                occurredAt: Self.publicEventDate(current?["completedAtMs"], fallback: now))
+            await receiveClassified(.init(source: .liveSocket, activity: ended), generation: run)
+        } else if let event = CodexAppServerActivityNotificationDecoder.decode(data: data, now: now) {
+            await receiveClassified(.init(source: .liveSocket, activity: event.classified(as: .subagent)), generation: run)
+        }
+        guard run == nativeGeneration, nativePublicEpoch == epoch,
+              closedNativePublicEpoch.map({ epoch > $0 }) ?? true,
+              permitsSubagentContent(session: session, turn: hash, source: .appServer,
+                occurredAt: now, timeSensitive: ["turn/started", "turn/completed", "thread/status/changed"].contains(method)) else { return }
+        var forwarded = envelope
+        forwarded["_quotaViewConnectionEpoch"] = epoch
+        if let bytes = try? JSONSerialization.data(withJSONObject: forwarded, options: [.sortedKeys]) {
+            subagentPublicMessageDidReceive?(bytes)
+        }
+    }
+
     private func receiveMemoryPublicLifecycle(_ data: Data, method: String, params: [String: Any],
         status: [String: Any]?, session: String, epoch: UInt64, generation run: UInt64, at now: Date) async {
         guard run == nativeGeneration, nativePublicEpoch == epoch,
@@ -1127,14 +1387,15 @@ final class CodexActivityStore: ObservableObject {
                            confirmedCurrentTurn: Bool = false) async {
         let run = expected ?? nativeGeneration
         let classifier = delivery.activity.source == .hook ? hookSessionClassifier : sessionClassifier
-        let kind: CodexActivitySessionKind
-        if let sessionKindResolver { kind = await sessionKindResolver(delivery.activity) }
-        else { kind = await classifier.kind(for: delivery.activity) }
+        let classification: CodexActivitySessionClassification
+        if let sessionKindResolver { classification = .init(kind: await sessionKindResolver(delivery.activity)) }
+        else { classification = await classifier.classification(for: delivery.activity) }
         guard run == nativeGeneration, admissionAllowed?() ?? true else { return }
         let before = snapshot
         receive(CodexActivityDelivery(eventID: delivery.eventID, source: delivery.source,
-                                      activity: delivery.activity.classified(as: kind)),
-                selectionEvidenceAt: selectionEvidenceAt, confirmedCurrentTurn: confirmedCurrentTurn)
+                                      activity: delivery.activity.classified(as: classification.kind)),
+                selectionEvidenceAt: selectionEvidenceAt, confirmedCurrentTurn: confirmedCurrentTurn,
+                executionMemoryTurnHash: classification.executionTurnHash)
         CodexActivityDiagnostics.record(delivery: delivery,
             outcome: before != snapshot ? "task_applied" : "task_ignored")
     }
@@ -1148,7 +1409,8 @@ final class CodexActivityStore: ObservableObject {
         )
     }
 
-    func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false) {
+    func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false,
+                 executionMemoryTurnHash: String? = nil) {
         let event = delivery.activity
         var knownGoalStatus = event.goalStatus
             ?? goalStatusBySession[event.sessionHash]
@@ -1160,21 +1422,79 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        let resolvedKind = resolveSessionKind(event.sessionKind ?? .unknown, session: event.sessionHash)
+        let baseKind = resolveSessionKind(executionMemoryTurnHash == nil ? event.sessionKind ?? .unknown : .unknown,
+                                          session: event.sessionHash)
+        prunePendingExecutionMemory()
+        let pendingTurn = event.turnHash.flatMap { turn in
+            pendingExecutionMemory[.init(session: event.sessionHash, turn: turn)] != nil ? turn : nil
+        }
+        var resolvedKind = baseKind
+        var executionMemoryToAdmit: String?
+        var revokesExecutionMemory = false
+        if baseKind != .memoryConsolidation && baseKind != .internalTask {
+            if let turn = executionMemoryTurnHash ?? pendingTurn, turn == event.turnHash,
+               !taskRegistry.isPriorTurn(session: event.sessionHash, turn: turn) {
+                resolvedKind = .memoryConsolidation
+                executionMemoryToAdmit = turn
+            } else if let turn = executionMemoryTurns[event.sessionHash] {
+                // Sparse tool/session events inherit the already admitted
+                // execution; a missing turn ID cannot revoke its background kind.
+                if event.turnHash == turn || (event.turnHash == nil
+                    && taskRegistry.executionIdentity(for: event.sessionHash)?.turnHash == turn) {
+                    resolvedKind = .memoryConsolidation
+                }
+                else if let nextTurn = event.turnHash,
+                        [.userPromptSubmit, .preToolUse, .permissionRequest].contains(event.event),
+                        !taskRegistry.isPriorTurn(session: event.sessionHash, turn: nextTurn) {
+                    revokesExecutionMemory = true
+                }
+            }
+        }
         if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
-        guard let admission = taskRegistry.admit(event, kind: resolvedKind,
+        // Execution classification and admission commit together. Rejected old
+        // clocks/turns cannot remove the current card before Registry rejects them.
+        var admittingRegistry = taskRegistry
+        if executionMemoryToAdmit != nil || revokesExecutionMemory {
+            admittingRegistry.reclassifyExecution(session: event.sessionHash, kind: resolvedKind)
+        }
+        guard let admission = admittingRegistry.admit(event, kind: resolvedKind,
                                                 selectedSession: snapshot?.sessionHash,
                                                 selectedOccurredAt: selectedActivityAt ?? snapshot?.occurredAt,
                                                 selectionEvidenceAt: selectionEvidenceAt,
                                                 confirmedCurrentTurn: confirmedCurrentTurn) else { return }
-        if resolvedKind != .memoryConsolidation {
+        taskRegistry = admittingRegistry
+        lastAdmittedActivityBySession[event.sessionHash] = event
+        if admission.startsTurn { admittedTurnStartBySession[event.sessionHash] = event }
+        subagentUnavailableSessions.remove(event.sessionHash)
+        if let turn = executionMemoryToAdmit {
+            _ = resolveExecutionMemory(session: event.sessionHash, turn: turn)
+            removePendingExecutionMemory(session: event.sessionHash, turn: turn)
+        }
+        else if revokesExecutionMemory {
+            executionMemoryTurns.removeValue(forKey: event.sessionHash)
+            memoryActivityBySession.removeValue(forKey: event.sessionHash)
+            activityExecutionKindDidResolve?(event.sessionHash, .user)
+            publishMemorySnapshots()
+        }
+        if resolvedKind == .subagent {
+            if let child = subagentIdentities[event.sessionHash] {
+                subagentIdentityDidReceive?(child)
+                subagentActivityDidReceive?(event)
+            }
+            flushLocalPublicContent(for: event.sessionHash)
+        } else if resolvedKind != .memoryConsolidation {
             admittedActivityDidReceive?(event)
             flushLocalPublicContent(for: event.sessionHash)
         }
         _ = registerEventID(delivery.eventID)
-        for session in admission.evictedSessions { discardSession(session) }
-        if resolvedKind != .unknown { sessionKinds[event.sessionHash] = resolvedKind }
+        for session in admission.evictedSessions { discardSession(session, preservingChildOrigin: true) }
+        if resolvedKind != .unknown, executionMemoryTurns[event.sessionHash] == nil {
+            sessionKinds[event.sessionHash] = resolvedKind
+        }
         if admission.startsTurn {
+            // Only accepted new-turn evidence retires identities known to be
+            // previous turns. A rejected clock or a future early identity stays inert.
+            prunePendingExecutionMemory()
             planProgressBySession.removeValue(forKey: event.sessionHash)
             goalStatusBySession.removeValue(forKey: event.sessionHash)
             terminalTurnsBySession.removeValue(forKey: event.sessionHash)
@@ -1191,7 +1511,8 @@ final class CodexActivityStore: ObservableObject {
         if admission.startsTurn { knownGoalStatus = event.goalStatus }
         synchronizeTokenTurn(for: event)
         var nextLifecycle = resolvedKind == .memoryConsolidation
-            ? (memoryActivityBySession[event.sessionHash]?.lifecycle ?? .idle) : lifecycle
+            ? (memoryActivityBySession[event.sessionHash]?.lifecycle ?? .idle)
+            : resolvedKind == .subagent ? (observedActivityBySession[event.sessionHash]?.lifecycle ?? .idle) : lifecycle
 
         switch event.event {
         case .userPromptSubmit:
@@ -1254,7 +1575,7 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        let pendingWait = resolvedKind != .memoryConsolidation && nextLifecycle == .active
+        let pendingWait = resolvedKind != .memoryConsolidation && resolvedKind != .subagent && nextLifecycle == .active
             ? (desktopWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil }
                 ?? nativeWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil })
             : nil
@@ -1279,6 +1600,7 @@ final class CodexActivityStore: ObservableObject {
             observed.isDesktopObservation = previous.isDesktopObservation
         }
         observedActivityBySession[event.sessionHash] = observed
+        if resolvedKind == .subagent { notifyChange(); return }
         if resolvedKind == .memoryConsolidation {
             if event.event == .sessionEnd {
                 memoryActivityBySession.removeValue(forKey: event.sessionHash)
@@ -1453,7 +1775,15 @@ final class CodexActivityStore: ObservableObject {
     func stop() async -> UInt64 {
         setMultitaskEnabled(false)
         admittedSnapshots.removeAll()
+        pendingExecutionMemory.removeAll(); pendingExecutionMemoryOrder.removeAll()
+        for session in Array(executionMemoryTurns.keys) { revokeExecutionMemory(session) }
         observedActivityBySession.removeAll(); memoryActivityBySession.removeAll()
+        for session in subagentIdentities.keys { subagentObservationDidWithdraw?(session) }
+        subagentIdentities.removeAll()
+        lastAdmittedActivityBySession.removeAll()
+        admittedTurnStartBySession.removeAll()
+        subagentUnavailableSessions.removeAll()
+        subagentSourceUnavailable?(nil)
         backgroundMemorySnapshots = []
         nativeIsRunning = false
         nativeGeneration &+= 1
@@ -1842,7 +2172,16 @@ final class CodexActivityStore: ObservableObject {
         return elapsed >= replayAgeThreshold
     }
 
-    private func discardSession(_ session: String) {
+    private func discardSession(_ session: String, preservingChildOrigin: Bool = false) {
+        let retainsChildOrigin = preservingChildOrigin && sessionKinds[session] == .subagent
+            && subagentIdentities[session] != nil
+        if subagentIdentities[session] != nil { subagentObservationDidWithdraw?(session) }
+        removePendingExecutionMemory(session: session)
+        if !retainsChildOrigin { subagentIdentities.removeValue(forKey: session) }
+        lastAdmittedActivityBySession.removeValue(forKey: session)
+        admittedTurnStartBySession.removeValue(forKey: session)
+        subagentUnavailableSessions.remove(session)
+        revokeExecutionMemory(session)
         admittedSnapshots.removeValue(forKey: session)
         observedActivityBySession.removeValue(forKey: session)
         memoryActivityBySession.removeValue(forKey: session)
@@ -1860,8 +2199,24 @@ final class CodexActivityStore: ObservableObject {
         turnTokenUsageBySession.removeValue(forKey: session)
         titleCache.removeValue(forKey: session)
         titleAttemptedAt.removeValue(forKey: session)
+        if !retainsChildOrigin { forgetSessionOrigin(session) }
+    }
+
+    /// Origin proof outlives a bounded execution slot, with its own bounded LRU.
+    /// Pruning that proof also clears the relationship; a later transport must
+    /// supply verified native metadata before the child may reattach.
+    private func forgetSessionOrigin(_ session: String) {
+        if subagentIdentities.removeValue(forKey: session) != nil {
+            subagentObservationDidWithdraw?(session)
+        }
         sessionKinds.removeValue(forKey: session)
         sessionKindOrder.removeAll { $0 == session }
+    }
+
+    private func revokeExecutionMemory(_ session: String) {
+        if executionMemoryTurns.removeValue(forKey: session) != nil {
+            activityExecutionKindDidResolve?(session, .unknown)
+        }
     }
 
     private func registerEventID(_ eventID: String?) -> Bool {

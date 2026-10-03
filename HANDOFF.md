@@ -1,12 +1,128 @@
 # QuotaView Handoff
 
-## 记忆整理底栏显示 · 2026-10-03 当前开发工作
+公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
+
+## 0.7.5真实通道与main集成 · 2026-10-04 当前迭代
+
+用户已授权停止记忆DEBUG、恢复真实通道，将开发版本设为 **0.7.5 / 显示Build1 / 内部50**，推送GitHub并合并main。隔离演示PID1893已停止，原真实包恢复PID3048；模拟源码副本、演示包和Derived Data已清理，生产Sources不含DEBUG注入。`com.quotaview.development073`、AppGroup及既有开发包路径继续作为固定开发身份，保护用户数据与开发socket/队列边界，073后缀不代表产品版本；界面与包内实际版本是0.7.5。公开Release/appcast仍无本版本准入，稳定安装和发布指针保持。
+
+本次整合精确记忆来源/当前轮次身份、有界只读执行元数据和早晚乱序撤销、底栏真实AI球，原生子agent父关系/头像/堆叠横条和公开进展，滚动收起同步恢复，批准语义/长内容预览，量子时钟，重置整区热区/排版，以及18pt共用小球和统一卡片组描边/hover。历史 `HANDOFF-NEXT-SESSION-2026-09-27.md` 与 `Prototypes/MultitaskIslandConsole/` 保留本地，不进入提交。
+
+**177项相关本地冒烟零失败**，覆盖记忆/来源/代次/预算、子任务准入/逐出/头像/单向滚动、Store分流、批准预览和文案、量子时钟、滚动恢复及真实请求投影。fresh Debug arm64与Universal Release均通过；App/Widget均为0.7.5/显示Build1/内部50，Release App/Widget/Core含arm64+x86_64，28款头像及出处NOTICE齐全。185项冻结生产输入、deep strict ad-hoc签名和实际主程序/Debug dylib/Core加载核对通过。开发运行包已替换并启动PID **18877**，旧PID3048退出；完整旧包备份 `.build/runtime-package-backups/20261003T212127Z/`。当前进程无演示参数且持有真实活动socket，临时演示已全部恢复/清理；稳定PID13504保持。运行路径仍沿用 `dist/development-0.7.3/QuotaView 0.7.3 Development.app`，实际包显示名/版本为0.7.5。
+
+证据 `.build/075-related-smoke.log`、`.build/075-development-build.log`、`.build/075-universal-release-build.log`、`.build/075-artifact-verification.json`、`.build/075-delivery.json`、`.build/075-live-channel-verification.json`。源码提交 `0329da18fb37e13c3312a0bffd6182fbb2043f6f` 已推送至 [PR #73](https://github.com/Duoasa/QuotaView/pull/73)，指向main；用户授权完整CI通过后合并。本地检查与GitHub完整CI分开记录，PR/main检查及最终集成以该PR与运行manifest为准，不从本地构建推断。视觉与真实交互由用户验收。
+
+**原生异步提问组关闭仍未完成。** 本次不扩大此能力，现有边界见[关闭合同](docs/design/codex-native-question-closure-contract-2026-10-03.md)。
+
+## 白色18pt记忆演示与统一卡片描边 · 2026-10-04 历史演示已停止
+
+原生视图实测展开底栏播放中的球为18×18pt，收起宿主暂停的球同为18×18pt；记录保存在 `native-visibility-check.json` 的 `currentExpandedState` 与明确尺寸字段。
+
+演示已停止，原开发包已恢复并启动 PID **3048**；原二进制与 184 项生产输入核对一致，临时构建副本已清理。 最新生产包包含下文18pt小球、卡片组描边以及重置热区和排版修订，生产PID99320暂时停止，原包完整保存在 `.build/073-memory-footer-demo-white-small-orb/original/`；当前演示PID **1893**。仅忽略目录构建副本2个文件追加DEBUG展示覆盖：白色固定 `DEBUG-记忆整理`、18pt原AI球和24pt切换/停止图标。真实活动持续工作，模拟不进入Store/Hook/会话统计/Codex，不改变重置的本地演示边界。
+
+fresh Debug构建、deep strict ad-hoc签名、184项生产输入和实际主程序/Debug dylib/Core路径核对通过。启动时原生记录确认展开显示；当前panel visible/onActiveSpace/unoccluded均true、playback=true且精确标签存在，compact=False，保留后续用户收起操作，不强制重开。以上不代替视觉/点击验收。证据 `.build/073-memory-footer-demo-white-small-orb/build.log`、`native-visibility-check.json`、`demo-record.json`。监督exec session **63211**，停止/退出自动恢复本轮生产包、核对指纹、重新启动并清理临时源码/构建；后续改源码前先创建 `.build/073-memory-footer-demo-white-small-orb/stop-requested` 并等待恢复。稳定PID13504保持。
+
+## 18pt小球与卡片组统一描边 · 2026-10-04 当前交付
+
+用户核实DEBUG记忆球尺寸并要求主卡/子agent描边与hover一致。底栏此前22pt，compact18pt（30pt仅排布槽位），同渲染器但直径大22.2%。现在两处复用 `IslandSmallActivityOrb` 的18pt球，任务卡28pt保持。主卡非选中描边此前白0.055、背板固定0.16且无hover；现共用 `IslandTaskCardAppearance`，普通白0.16、hover/选中0.22，完成态保原绿色，普通背景白0.045/hover0.07。hover由整个堆叠组持有，进入主卡或子条同步高亮，审批头卡也共用。前卡不透明底和底圆角、伸出层次、行高、Metal/完成光晕、独立归档及原滚动条件保持。
+
+**64项相关冒烟零失败**（35Island073、11子agent横条、18滚动），fresh Debug arm64构建、184项冻结输入、28款头像、deep strict ad-hoc签名和实际主程序/Debug dylib/Core加载核对通过。既有开发包已替换，生产PID **99320**，旧PID89838退出；备份 `.build/runtime-package-backups/20261003T210801Z/original/QuotaView 0.7.3 Development.app`。身份保持0.7.3/显示Build1/内部49/com.quotaview.development073；证据 `.build/073-small-orb-card-border-final-smoke.log`、`.build/073-small-orb-card-border-build.log`、`.build/073-small-orb-card-border-delivery.json`。同次包含下文重置热区和排版。无UI自动化，视觉与真实交互待用户验收；稳定PID13504及用户数据保持，无提交推送或发布。
+
+## 白色记忆演示与重置热区排版 · 2026-10-04 历史演示已停止
+
+演示已停止，原开发包已恢复并启动 PID **89838**；原二进制与 184 项生产输入核对一致，临时构建副本已清理。 最新生产包包含下文整区热区和重置页排版修订，生产PID82834暂时停止，原包完整保存在 `.build/073-memory-footer-demo-white-reset/original/`；当前演示PID **84942**。仅忽略目录构建副本2个文件追加DEBUG展示覆盖：白色固定 `DEBUG-记忆整理`、22pt原AI球和24pt切换/停止图标。真实活动持续工作，模拟不进入Store/Hook/会话统计/Codex，不改变重置的本地演示边界。
+
+fresh Debug构建、deep strict ad-hoc签名、184项生产输入和实际主程序/Debug dylib/Core路径核对通过。启动时原生记录确认展开显示；当前panel visible/onActiveSpace/unoccluded均true、playback=true且精确标签存在，compact=False，保留后续用户收起操作，不强制重开。以上不代替视觉/点击验收。证据 `.build/073-memory-footer-demo-white-reset/build.log`、`native-visibility-check.json`、`demo-record.json`。监督exec session **81657**，停止/退出自动恢复本轮生产包、核对指纹、重新启动并清理临时源码/构建；后续改源码前先创建 `.build/073-memory-footer-demo-white-reset/stop-requested` 并等待恢复。稳定PID13504保持。
+
+## 重置入口整区与页面排版 · 2026-10-04 当前交付
+
+账户卡片分割线下方整区现在由同一个按钮 label 承载，包含左右14pt、上10pt和下14pt留白；surface不再在按钮外保留不可点击内边距。上半区吸收余高，不与入口重叠。原2秒卡面高光、底部最亮并在中部消失的hover渐变、无手形指针/新增描边保持；卡片过渡源锚点仍是票券自身边界。
+
+重置页统一Asta Sans：标题及次数15pt Semibold，额度标签11pt Regular、数值11pt Medium，须知/空态/未知标题11pt Semibold，正文11pt Regular和3pt行距，按钮13pt Semibold，演示/待刷新说明10.5pt Regular。共享底栏保持12pt Medium，动态自然高度与中英文长文、0次、未知和待刷新分支继续适配；真实重置仍只演示。
+
+**35项Island073冒烟零失败**，fresh Debug arm64构建、184项生产输入、28款头像、deep strict ad-hoc签名与实际主程序/Debug dylib/Core加载核对通过。既有开发包已替换，生产PID **82834**，旧PID77983退出；备份 `.build/runtime-package-backups/20261003T205614Z/original/QuotaView 0.7.3 Development.app`。身份仍为0.7.3/显示Build1/内部49/com.quotaview.development073；证据 `.build/073-reset-entry-typography-final-smoke.log`、`.build/073-reset-entry-typography-build.log`、`.build/073-reset-entry-typography-delivery.json`。本轮无UI自动化；视觉和实际交互由用户验收。稳定PID13504及用户数据保持，无提交推送或发布。
+
+## 白色记忆演示恢复 · 2026-10-04 历史演示已停止
+
+演示已停止，原开发包已恢复并启动 PID **77983**；原二进制与 184 项生产输入核对一致，临时构建副本已清理。 新版对齐/伸出/白色数量已进入真实生产包；当前临时PID **76166**，生产PID73881已临时停止，完整原包保存在 `.build/073-memory-footer-demo-white-alignment/original/`。仅忽略目录构建副本2个文件有DEBUG展示覆盖，继续白色 `DEBUG-记忆整理`、22pt AI球及24pt切换/停止图标按钮；真实任务继续更新，模拟不入Store/Hook/会话统计/Codex。
+
+演示fresh Debug构建和deep strict签名通过；原生检查panel visible/onActiveSpace/unoccluded均true、compact=false、playback=true，准确标签存在；实际加载主程序/Debug dylib/Core、演示包指纹和184项生产输入核对一致。证据 `.build/073-memory-footer-demo-white-alignment/build.log`、`native-visibility-check.json`、`demo-record.json`。监督exec session **84625**，停止/退出自动恢复本轮真实生产包、验指纹、重新启动并清理演示源码/构建。后续修改源码前先创建 `.build/073-memory-footer-demo-white-alignment/stop-requested` 并等待恢复。稳定PID13504保持；视觉待用户验收。
+
+## 子 agent 对齐、伸出层次与白色数量 · 2026-10-04 当前交付
+
+根据用户 04:30–04:35 截图修正横条：头像占位改为11pt正文同字体，横向固定14pt；子 agent之间固定24pt，不再依靠三个约9.475pt的空格。rich lane 使用独立CoreText line显式基线，让11pt capHeight中线和14pt图标中心一致，并按实际CTRun保留静止省略号与同步图标裁剪。动画仍在原textTrack中单向运动，同一成员的文字/时长更新保留时钟；普通与闪烁文字保留CATextLayer。数量白色，名称和括号灰色，固定组标签不进入滚动。
+
+已确认首张普通卡异常来自半透明主卡让上移10pt短底卡的顶圆角/描边透出；Quantum实心底所以同截图第二卡正常。改为全高下层backing在主卡后延伸到底，card+28pt横条零间距排布，主卡原背景后加实心圆角黑底遮住后层；主卡自身底部圆角线保留，不新增顶部胶囊线，不clip整卡以免裁完成光晕。主卡Metal范围、总高度、滚动锚点、卡片选择与独立归档按钮范围保持。
+
+**74项相关冒烟零失败**（11横条、10子任务投影、18滚动、35Island073），fresh Debug arm64构建、184项生产输入、28款头像资源、deep strict ad-hoc签名及实际加载主程序/Debug dylib/Core核对通过。既有开发包已替换，生产PID **73881**，旧PID61633退出；备份 `.build/runtime-package-backups/20261003T204312Z/`。身份保持0.7.3/显示Build1/内部49/com.quotaview.development073；证据 `.build/073-agent-strip-alignment-final-smoke.log`、`.build/073-agent-strip-alignment-build.log`、`.build/073-agent-strip-alignment-delivery.json`。没有UI自动化，视觉/实际交互由用户验收。稳定PID13504保持；无提交推送或发布。
+
+## 白色底栏记忆球演示 · 2026-10-04 历史演示已停止
+
+演示已停止，原开发包已恢复并启动 PID **61633**；原二进制与 184 项生产输入核对一致，临时构建副本已清理。 当前临时 PID **55939**；真实生产包已更新为堆叠子 agent 横条、Codex 原生头像/单向滚动、末尾 Codex/hover 归档共用槽位和量子时钟修复，生产包 PID 53846 已临时停止并完整保存在 `.build/073-memory-footer-demo-white/original/`。
+
+仅忽略目录构建副本追加 DEBUG 底栏演示：白色固定文案 `DEBUG-记忆整理`、22 pt 原 AI 球和两个不压缩的 24 pt 图标按钮；循环箭头切换状态，关闭圆圈停止，均带中文 help/辅助功能标签。模拟不进入 Store、Hook、会话统计或 Codex；真实任务继续更新。持续 thinking，无自动结束；可切换 completed/error/unavailable。停止/退出由监督 exec session 73003 恢复原生产包、核对二进制与184项生产输入、重新启动并清理副本。后续改源码前先创建 `.build/073-memory-footer-demo-white/stop-requested` 并等待恢复结束，避免覆盖保留包。
+
+fresh Debug 构建和 deep strict ad-hoc 签名通过；原生状态确认在 DELL U2725QE 主屏顶部展开，panel visible/onActiveSpace/unoccluded 均 true，compact=false、playback=true，白色标签对应的精确文案存在；真实加载主程序/Debug dylib/Core 与演示包指纹、184项生产源码输入一致。证据 `.build/073-memory-footer-demo-white/build.log`、`native-visibility-check.json`、`demo-record.json`。稳定进程 PID 13504 保持。这些原生检查不代替用户视觉或点击验收。
+
+## 子 agent 堆叠横条、原生头像与量子动画 · 2026-10-04 当前交付
+
+按用户 04:04 参考，主卡后放独立下层卡片，10 pt 重叠、28 pt 可见横条；主卡内容与 Metal 画布不再含子任务。左侧固定 Codex 图标/子 agent 数量，右侧各 agent 名称、模型、真实状态及耗时单向循环滚动，成员稳定时文字宽度变化保留滚动时钟，隐藏与减少动态效果停止。列表/详情/审批共用同一完整行高；审批只露出底卡时仍维持可见播放。隐私模式不带子任务信息。
+
+原生头像来自本机 Codex 的 28 款深色资源及 UTF-16 31 倍模 2147483647、再模 28 的线程 ID 规则；SPM 与 Xcode 包含相同 64 px PNG，14 pt 显示。固定模型/耗时之后末尾仅留一个槽位，平时显示 Codex，整卡 hover 时变归档，操作仍是独立按钮。出处与资源清单保存在 `.build/073-agent-avatar-evidence/`。
+
+量子动画确认修复普通状态更新反复重置 lastFrameAt 及重复布局写入相同尺寸的缺陷，只在真实播放边界重置时钟；60 FPS/原 shader 保持。离屏原 shader GPU 基准：60 pt 主卡 p95 0.108 ms，旧 228 pt 大画布 0.236 ms，跨状态最坏 0.353 ms；不能据此说 GPU 超预算，也不替代用户实际帧率验收。运行采样中的 Local 发现扫描负载未证实为卡顿原因，未在本轮改变。
+
+**111 项相关冒烟零失败**，可见范围接线补齐后 **63 项聚焦复验零失败**；fresh Debug arm64 构建、184 项冻结生产输入、28 款资源、deep strict ad-hoc 签名和实际加载主程序/Debug dylib/Core 核对通过。原开发包 PID 18582 已退出，新生产包 PID **53846**，原包备份 `.build/runtime-package-backups/20261003T201904Z/`。身份保持 **0.7.3 / 显示 Build 1 / 内部 49 / com.quotaview.development073**。证据 `.build/073-agent-strip-quantum-final-smoke.log`、`.build/073-agent-strip-visibility-smoke.log`、`.build/073-agent-strip-quantum-build.log`、`.build/073-agent-strip-quantum-delivery.json`。无 UI 自动化；视觉与真实交互由用户验收。本轮尚未提交推送，稳定进程 PID 13504 及用户数据保持。
+
+## 底栏记忆球持续演示 · 2026-10-04 历史演示已停止
+
+用户未看到前一次限时演示，检查时原开发进程 PID 7383 已不在运行，不能只归因于演示时长。当前改用隔离构建副本的持续 DEBUG 展示覆盖，仅底栏增加 22 pt 原 AI 球、黄色 DEBUG · 记忆整理演示文案、切换及停止按钮。真实 Store、Hook、会话计数与请求持续工作；模拟不写入这些通路。当前临时 PID **13810**，版本身份和原包位置保持，原包保存在 `.build/073-memory-footer-demo-held/original/`。
+
+演示已停止，原开发包已恢复并启动 PID **18582**；原二进制与 156 项生产输入核对一致，临时构建副本已清理。 无短时自动结束；停止或异常退出由监督进程恢复原包、验证指纹并清理临时源码/构建产物。原生检查确认在 DELL U2725QE 主屏顶部居中展开：panel visible/onActiveSpace/unoccluded 均 true，compact=false，playback=true，底栏演示标签存在；实际加载主程序、Debug dylib、Core 来自临时包。156 项生产输入保持一致，稳定进程 PID 13504 保持。证据 `.build/073-memory-footer-demo-held/native-visibility-check.json` 及 `demo-record.json`；这些检查不代替用户视觉验收。
+
+## 底栏记忆球现场演示 · 2026-10-04
+
+用户明确要求直接在当前灵动岛注入模拟数据。仅在忽略目录内的构建副本添加 DEBUG 展示覆盖，复用生产底栏 22 pt AI 球；带黄色 DEBUG 状态及停止按钮，整理中/完成/失败/状态待更新各 20 秒。真实任务持续更新，模拟不进入 Store、Hook、会话统计或 Codex，应答路径未改。
+
+80 秒流程及结束恢复已完成，四状态和恢复检查点均到达。临时演示进程 PID 7119 已退出；原开发包已恢复并启动 PID **7383**，原二进制指纹、实际加载主程序/Debug dylib/Core 和全部 **156 项生产输入**核对一致。临时源码副本、演示包与 Derived Data 已清除，仅保留 `.build/073-memory-footer-demo/demo-record.json` 和日志证据。生产源码没有模拟入口，稳定进程 PID 13504 保持；视觉效果由用户验收。
+
+## Vibe 通信梳理、记忆执行身份与父子卡片 · 2026-10-04 当前增量
+
+用户要求整体研究 Vibe Island 与 Codex 的通信，彻查记忆普通卡，并补齐父卡片中的真实子 agent 和公开进展。已结合 Vibe 官方更新/隐私材料、本机主程序与 helper 的只读静态消息证据、当前 Codex 原生 schema 和生产源码，形成[信息通信契约](docs/specs/codex-island-information-contract.md)。静态字符串不能证明 Vibe 的完整运行分支；其中 cwd/prompt 前缀规则也不替代 QuotaView 的精确身份。Desktop owner IPC 的请求/应答、独立 App Server 用量与观察、Hook 生命周期、Local 公开内容及执行元数据各自保留边界。
+
+本次 memories 实例在旧已运行 Core 中也能严格解析，全部旧交付输入一致，排除旧包；该次 start 正文 54385 bytes。历史诊断不足以确定单一触发原因。已确认并修正的结构性缺口包括早到身份被丢弃而 Local 只发差量、全局日志记录窗口/失败全空、持久来源和轮次用途混用、旧轮次读取节流，以及重置前端晚于新目录观察启动。现在目录/generation 共用有界原生读取服务，按已观察执行优先和历史游标推进；覆盖集合控制撤销，同 session/turn/generation 的 pending 证据在真实事件准入时消费。真实只读探针连续三次匹配目标轮次，22/34/36 ms；部分覆盖不清除未读线程证据。记忆保留底栏 AI 球，不按标题过滤，也不获得用户应答能力。
+
+`thread_spawn` 子 agent 与其它内部任务分开。只由一致的原生父线程关系归到对应主卡片，展示自身名称、状态、模型及耗时，不增加用户会话数。关系不能伪造正在执行；真实生命周期、迟到关系、来源失效和轮次终态分别处理。主卡片保留最近公开进展，工具结束不再清空；运行子任务摘要可填入状态行，私有消息与 reasoning 不进入展示。分组高度与原滚动几何使用同一度量，并修正静态高度缓存未包含动态子任务的问题。子 agent 缓存逐出时同步撤回执行展示，持久父子身份有界保留，仅真实重新准入恢复。
+
+最终 **239 项相关冒烟零失败**，覆盖来源、读取预算/覆盖、身份早到、旧轮次/旧代次、子任务私密边界、动态几何，以及 128 执行/1024 来源逐出和 Shared 稀疏恢复；既有展示基准 P95 **4.64 ms**，只代表状态投影。fresh Debug arm64 构建、冻结的 **156 项生产输入**与 deep strict ad-hoc 签名通过。既有开发运行包已替换并启动（PID **91302**，旧 PID **17729** 已退出）；实际加载主程序、Debug dylib、Core 的路径、arm64 架构和包指纹核对通过。旧包与 manifest 备份到 `.build/runtime-package-backups/20261003T185012Z`，身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。证据 `.build/073-information-contract-smoke.log`、`.build/073-information-contract-build.log`、`.build/073-information-contract-delivery.json`，真实只读材料另保存在该记录引用的 `.build` 文件。本轮增量源码未提交推送；视觉与实际交互待用户验收，稳定进程 PID 13504 与用户数据保持。
+
+**异步原生提问组关闭仍未完成。** owner 接受答案、真实请求结算和 Codex 前端关闭独立管理，不把 ACK 当成关闭或再发一次答案；现有边界见[原生关闭合同](docs/design/codex-native-question-closure-contract-2026-10-03.md)。本轮来源与子任务调整不扩大此能力。
+
+## 收起闪动、批准页缩略与临时记忆来源 · 2026-10-03 上轮开发交付
+
+用户已确认上一轮列表位置修复；收起时闪动来自排队恢复之前的临时顶部位置，以及提前更新的可见卡片/轨道。当前源码改为布局就绪时同步定位、显示前提交，并预热旧集合和目标附近卡片；异步仅清理事务，原生与旧鼠标滚动仍优先。受支持的空字段 MCP form 改为“批准工具操作 / 批准 / 批准后继续”，实际参数表单仍需填写与验证。详见[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md#收起详情的同步布局与纯批准文案--2026-10-03)。23 项聚焦冒烟通过，含 18 项滚动与 5 项批准语义，证据 `.build/073-scroll-flicker-focus-smoke.log`。
+
+用户随后要求缩短长批准页。内容视口最多 440 pt，并服从小屏幕可用高度；按钮和底栏固定。长命令默认 8 行、2048 字符，展开完整内容仍在相同高度内滚动；选项标题、说明及命令规则最多两行，路径中部省略，可查看或复制完整内容。度量与实际文本限制一致，原命令、选项和回传数据不截断。
+
+`memories_v2` 的实际临时线程不进入 state_5.sqlite、rollout 或 Desktop owner，只有 Hook 事件；此前来源识别因 SQLite 缺失而把 unknown 送入普通列表。现只读所选 Codex logs_2.sqlite 的严格原生 start 结构，以 `TurnInputRequest.start.turn_trigger=memory_consolidation` 和 Submission.id 绑定准确线程/轮次；不按标题猜测。读取限定 24 小时、128 记录、2 MiB 总量、64 KiB 单条与 50 ms 查询预算，不完整时保留未知，已有刷新可重试。迟到识别撤回旧普通卡片，转入底栏 AI 球；不同新轮次、淘汰、停止连接撤销临时标签。该补充不增加应答权限，不永久标记整个会话。详见[记忆整理规格](docs/design/quotaview-background-memory-2026-10-03.md)。
+
+最终 **198 项相关冒烟零失败**，含 18 项滚动、5 项批准语义、3 项长内容排版及 13 项临时记忆反例；既有展示基准 P95 4.80 ms，仅代表状态投影。Debug arm64 构建、155 项生产输入和 deep strict ad-hoc 签名通过。既有开发包已替换并启动（PID **17729**，旧 PID **66379** 退出）；主程序、Debug dylib 和 Core 加载路径核对通过，旧包和 manifest 备份到 `.build/runtime-package-backups/20261003T125330Z`。身份保持 0.7.3 / 显示 Build 1 / 内部 49。证据 `.build/073-interaction-fixes-smoke.log`、`.build/073-interaction-fixes-build.log`、`.build/073-interaction-fixes-delivery.json`。本轮源码尚未提交，视觉和真实交互待用户验收；稳定版进程、安装和用户数据保持。
+
+## 内联详情收起时保持列表位置 · 2026-10-03 上轮交付
+
+已定位“底部任务展开再收起后跳到顶部”的几何更新根因：内容先缩短时旧视口更高，AppKit 临时将合法偏移夹到零，后续视口缩小不能恢复。任务排序、稳定 ID 和 hosting view 不变。现在在详情布局变化前捕获任务锚点，最终文档/视口就绪后只恢复一次，用户原生或轨道滚动优先，失效/卸载撤销旧恢复。没有吸附或滚轮拦截；详见[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md#内联详情收起时保持列表位置--2026-10-03)。
+
+59 项相关冒烟零失败（含 13 项原生滚动专项及既有展示基准），最终 Debug arm64 构建、154 项生产输入指纹和 deep strict ad-hoc 签名通过。沿用已授权的开发包替换，当前 PID **66379**，旧 PID **17592** 已退出；旧包与 manifest 备份到 `.build/runtime-package-backups/20261003T112903Z`。已核对运行包加载主程序、Debug dylib 和 Core；版本身份仍为 0.7.3 / 显示 Build 1 / 内部 49。证据 `.build/073-scroll-restoration-related-smoke.log`、`.build/073-scroll-restoration-build.log`、`.build/073-scroll-restoration-delivery.json`。实际展开/收起待用户验收；本轮修复源码尚未提交，稳定安装和用户数据保持。
+
+## 记忆整理底栏显示 · 2026-10-03 已交付
 
 用户已授权统一来源解析、事件接收与展示：确定的记忆整理单独使用底栏 AI 球，不进入用户会话列表、统计、自动呼出或应答能力。已接入精确 `memory_consolidation` 标识、独立后台生命周期、迟到身份迁移和只读 Desktop/App Server/Local 通路。名称或 `unknown` 不推断为记忆；Hook 不读取不存在的来源字段。
 
 [专项规格](docs/design/quotaview-background-memory-2026-10-03.md)记录权威来源、身份/状态边界、底栏布局和失败语义。154 项相关冒烟零失败，Debug arm64 构建通过；证据 `.build/073-background-memory-smoke.log`、`.build/073-background-memory-build.log`。未知 Desktop 来源不能只凭历史类别缓存获得跟随或应答资格；迟到内部分类可撤回旧用户卡片，但不提交或回答 Codex 任务。
 
-本轮构建位于 `.build/Development073BackgroundMemory/Build/Products/Debug/QuotaView.app`，固定身份核对为 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`，未替换当前运行开发包，视觉待用户验收。用户已授权本轮源码推送 GitHub、CI 通过后合并 main；源码集成及 GitHub CI 结果以该分支对应 PR 为准。本地验证与已运行包独立记录，公开 Release/appcast 和稳定安装没有变化。
+源码 `82a7e8a6470a3294dd0065bfd22fbd3f9ca2e02b` 已通过 [PR #72](https://github.com/Duoasa/QuotaView/pull/72) 合并 main `ea5cbcddf6f0123b3de9324e80e3642714eb2343`；PR CI 与同 SHA 的 main CI 均成功，PR CI 545 项 Swift 检查（6 项跳过）和 44 项原生合同检查零失败。
+
+用户随后授权替换运行包。刷新 Debug arm64 构建、154 项生产输入指纹核对、嵌套 ad-hoc 签名及 deep strict 验证通过；既有 `dist/development-0.7.3/QuotaView 0.7.3 Development.app` 已替换并启动，该次交付开发 PID **17592**，旧 PID **75451** 已退出，旧包及 manifest 保存到 `.build/runtime-package-backups/20261003T110345Z`。主程序、Debug dylib 和 Core 的加载路径核对通过；身份仍为 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`，视觉待用户验收。运行证据 `.build/073-background-memory-runtime-build.log`、`.build/073-background-memory-delivery.json`。稳定进程与安装、公开 Release/appcast、版本身份和用户数据保持。
 
 ## 原生提问关闭接口调查与 AX 合同 · 2026-10-03 本轮最新
 
@@ -669,8 +785,9 @@ Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）�
 |---|---|
 | 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，已进入 Stable appcast |
 | 发布源码 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
-| 当前配置身份 | `0.5.2 / display Build 7 / internal 48`；主岛字号回归基线，未发布 |
-| 开发工作区 | `/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8`；目录名不是产品版本 |
+| 当前开发配置身份 | `0.7.5 / display Build 1 / internal 50 / com.quotaview.development073`；沿用固定独立开发身份，未发布 |
+| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-source`；main集成以本文件顶部和对应PR为准 |
+| 已运行开发包 | `dist/development-0.7.3/QuotaView 0.7.3 Development.app`；实际0.7.5/Build1/internal50，真实PID18877，185项输入核对；无DEBUG模拟，现有数据路径保持 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
 

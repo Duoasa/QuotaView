@@ -1935,6 +1935,7 @@ private final class ActivityStateSmokeRenderer:
     }
 
     var displayedProgressPosition: Float? { progressProjection.displayedFrontPosition }
+    var playbackClockReference: CFTimeInterval { lastFrameAt }
     func restoreProgressPosition(_ fraction: Double?) {
         // A newly mounted card resumes its task's position without replaying 0 -> p.
         _ = progressProjection.resolve(approximateProgressFraction: fraction, elapsed: 0, reduceMotion: true)
@@ -2093,7 +2094,11 @@ private final class ActivityStateSmokeRenderer:
             playbackEnabled
             && (!reduceMotion || resolvingPlanWithoutMotion)
             && !completionSettled
-        lastFrameAt = CACurrentMediaTime()
+        // Running-state/profile changes preserve the interval until the next
+        // frame. Only a real pause/resume boundary discards inactive wall time.
+        if view.isPaused != !shouldAnimate {
+            lastFrameAt = CACurrentMediaTime()
+        }
         view.enableSetNeedsDisplay = !shouldAnimate
         view.isPaused = !shouldAnimate
         if playbackEnabled {
@@ -2148,6 +2153,7 @@ final class ActivityStateSmokeMetalView: MTKView {
     }
 
     var displayedProgressPosition: Float? { smokeRenderer?.displayedProgressPosition }
+    var playbackClockReference: CFTimeInterval? { smokeRenderer?.playbackClockReference }
     func restoreProgressPosition(_ fraction: Double?) { smokeRenderer?.restoreProgressPosition(fraction) }
 
     func redrawIfPaused() {

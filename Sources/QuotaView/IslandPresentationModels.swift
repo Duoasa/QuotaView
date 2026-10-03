@@ -26,6 +26,7 @@ struct IslandSessionMetadata: Equatable {
     var modelName: String
     var reasoningEffort: String
     var elapsedSeconds: Int?
+    var subagents: [IslandSubagentPresentation] = []
     var modelTitle: String {
         [shortModelName, shortReasoningEffort].filter { !$0.isEmpty }.joined(separator: " · ")
     }
@@ -62,6 +63,11 @@ struct IslandSessionMetadata: Equatable {
     var usesExtraLine: Bool {
         (modelTitle as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .semibold)]).width > 190
     }
+    // Child activity is a separate single row after the card. It never expands
+    // the card's Metal canvas, even when every admitted child overflows the row.
+    var subagentGroupHeight: CGFloat { subagents.isEmpty ? 0 : 28 }
+    var subagentRowHeight: CGFloat { subagentGroupHeight }
+    func taskGroupHeight(width: CGFloat) -> CGFloat { cardHeight(width: width) + subagentRowHeight }
     func cardHeight(width: CGFloat) -> CGFloat {
         guard usesExtraLine else { return IslandVibeLayout.rowHeight }
         let rect = (modelTitle as NSString).boundingRect(with: .init(width: max(80, width - 20), height: 10000),
@@ -73,6 +79,31 @@ struct IslandSessionMetadata: Equatable {
         if seconds < 60 { return "<1m" }
         if seconds < 3600 { return "\(seconds / 60)m" }
         return "\(seconds / 3600)h \((seconds % 3600) / 60)m"
+    }
+}
+
+
+struct IslandSubagentPresentation: Equatable, Identifiable {
+    let id: String
+    let title: String
+    let status: String
+    let visualState: CodexActivityVisualState
+    let model: String
+    let duration: String
+    let detail: String
+    var avatar: CodexActivitySubagentAvatar? = nil
+}
+
+extension AppCopy {
+    var islandSubagentTitle: String { text("Codex 子 Agent", "Codex agent") }
+    var islandSubagentStatusUnavailable: String { text("状态待更新", "Status unavailable") }
+    var islandSubagentInterrupted: String { text("已中断", "Interrupted") }
+    var islandSubagentGroupName: String { text("Codex子agent", "Codex agents") }
+    func islandSubagentGroupTitle(count: Int) -> String {
+        "\(islandSubagentGroupName) (\(count))"
+    }
+    func islandMoreSubagents(count: Int) -> String {
+        text("另有 \(count) 个子 Agent", "\(count) more agents")
     }
 }
 

@@ -64,6 +64,8 @@
 		B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */; };
 		B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */; };
 		B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000042 /* CodexActivityTaskIdentity.swift */; };
+		B07300000000000000000013 /* CodexLocalExecutionMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000013 /* CodexLocalExecutionMetadata.swift */; };
+		B07300000000000000000014 /* CodexActivitySubagentIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000014 /* CodexActivitySubagentIdentity.swift */; };
 		B48800000000000000000001 /* CodexActivityConnectionPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000001 /* CodexActivityConnectionPresentation.swift */; };
 		B48800000000000000000002 /* CodexActivityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000002 /* CodexActivityStore.swift */; };
 		B48800000000000000000003 /* CodexActivityCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48800000000000000000003 /* CodexActivityCopy.swift */; };
@@ -84,6 +86,7 @@
 		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
 		B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000B /* CodexLocalPublicContent.swift */; };
 		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
+		B07400000000000000000001 /* CodexAgentAvatars in Resources */ = {isa = PBXBuildFile; fileRef = F07400000000000000000001 /* CodexAgentAvatars */; };
 		B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000011 /* CodexDesktopIPCClient.swift */; };
 		B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000012 /* CodexDesktopRequestProjection.swift */; };
 /* End PBXBuildFile section */
@@ -218,6 +221,8 @@
 		F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSharedAppServerActivityClient.swift; sourceTree = "<group>"; };
 		F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalRolloutActivityClient.swift; sourceTree = "<group>"; };
 		F10000000000000000000042 /* CodexActivityTaskIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityTaskIdentity.swift; sourceTree = "<group>"; };
+		F07300000000000000000013 /* CodexLocalExecutionMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalExecutionMetadata.swift; sourceTree = "<group>"; };
+		F07300000000000000000014 /* CodexActivitySubagentIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivitySubagentIdentity.swift; sourceTree = "<group>"; };
 		F48800000000000000000001 /* CodexActivityConnectionPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityConnectionPresentation.swift; sourceTree = "<group>"; };
 		F48800000000000000000002 /* CodexActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityStore.swift; sourceTree = "<group>"; };
 		F48800000000000000000003 /* CodexActivityCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityCopy.swift; sourceTree = "<group>"; };
@@ -238,6 +243,7 @@
 		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
 		F0730000000000000000000B /* CodexLocalPublicContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalPublicContent.swift; sourceTree = "<group>"; };
 		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
+		F07400000000000000000001 /* CodexAgentAvatars */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/CodexAgentAvatars; sourceTree = "<group>"; };
 		F07300000000000000000011 /* CodexDesktopIPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopIPCClient.swift; sourceTree = "<group>"; };
 		F07300000000000000000012 /* CodexDesktopRequestProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopRequestProjection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -313,6 +319,7 @@
 			isa = PBXGroup;
 			children = (
 				F0730000000000000000000C /* CodexProviderIcon.png */,
+				F07400000000000000000001 /* CodexAgentAvatars */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07300000000000000000008 /* IslandSession.swift */,
@@ -363,6 +370,8 @@
 				F48800000000000000000011 /* CodexLocalRolloutDiscovery.swift */,
 				F48800000000000000000012 /* CodexLocalActivityRecovery.swift */,
 				F10000000000000000000042 /* CodexActivityTaskIdentity.swift */,
+				F07300000000000000000013 /* CodexLocalExecutionMetadata.swift */,
+				F07300000000000000000014 /* CodexActivitySubagentIdentity.swift */,
 				F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */,
 				F07300000000000000000011 /* CodexDesktopIPCClient.swift */,
 				F07300000000000000000012 /* CodexDesktopRequestProjection.swift */,
@@ -643,6 +652,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0730000000000000000000C /* CodexProviderIcon.png in Resources */,
+				B07400000000000000000001 /* CodexAgentAvatars in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,
@@ -737,6 +747,8 @@
 				B48800000000000000000011 /* CodexLocalRolloutDiscovery.swift in Sources */,
 				B48800000000000000000012 /* CodexLocalActivityRecovery.swift in Sources */,
 				B10000000000000000000039 /* CodexActivityTaskIdentity.swift in Sources */,
+				B07300000000000000000013 /* CodexLocalExecutionMetadata.swift in Sources */,
+				B07300000000000000000014 /* CodexActivitySubagentIdentity.swift in Sources */,
 				B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */,
 				B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */,
 				B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */,

@@ -3946,6 +3946,9 @@ final class IslandQuantumProgressHost: NSView {
     private var renderState: CodexActivityRenderState?
     private var requestedVisible = false
     private var reduceMotion = false
+    private var hasLaidOutEffect = false
+    private(set) var effectLayoutCommitCount = 0
+    var effectFrame: CGRect { effect.frame }
     var glowIsAttachedToCard: Bool { glow.superview === self }
     var glowFrameInWindow: CGRect { glow.convert(glow.bounds, to: nil) }
     var isRendering: Bool { effect.isRendererAvailable && !effect.isPaused }
@@ -3967,12 +3970,20 @@ final class IslandQuantumProgressHost: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func layout() {
         super.layout()
-        surface.frame = bounds; surface.setCornerRadius(IslandVibeLayout.rowRadius)
-        effect.frame = surface.bounds
-        glow.frame = bounds.insetBy(dx: -30, dy: -30)
+        if surface.frame != bounds { surface.frame = bounds }
+        surface.setCornerRadius(IslandVibeLayout.rowRadius)
+        let effectGeometryChanged = effect.frame != surface.bounds
+        if effectGeometryChanged {
+            effect.frame = surface.bounds
+            effectLayoutCommitCount += 1
+        }
+        let glowFrame = bounds.insetBy(dx: -30, dy: -30)
+        if glow.frame != glowFrame { glow.frame = glowFrame }
         glow.setIslandInset(30); glow.setIslandCornerRadius(IslandVibeLayout.rowRadius)
-        outline.frame = bounds; outline.setIslandCornerRadius(IslandVibeLayout.rowRadius)
-        effect.redrawIfPaused()
+        if outline.frame != bounds { outline.frame = bounds }
+        outline.setIslandCornerRadius(IslandVibeLayout.rowRadius)
+        if effectGeometryChanged || !hasLaidOutEffect { effect.redrawIfPaused() }
+        hasLaidOutEffect = true
     }
     func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool, progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField) {
         effect.setEffect(progressEffect)

@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 import SwiftUI
 import QuotaViewCore
 #if canImport(QuotaViewWidgetContract)
@@ -217,6 +218,7 @@ struct IslandNotchShape: Shape {
 final class IslandBoardState: ObservableObject {
     @Published private(set) var display: CodexMultitaskDisplay?
     @Published private(set) var detailID: Int?
+    let taskScrollLink = IslandTaskScrollLink()
     @Published private(set) var expandedTraceEntries: Set<UUID> = []
     @Published private(set) var showingTraceHistory = false
     private struct DetailMetricsKey: Equatable {
@@ -355,9 +357,13 @@ final class IslandBoardState: ObservableObject {
     private func measuredCardHeight(_ metadata: IslandSessionMetadata?, width: CGFloat) -> CGFloat {
         guard let metadata else { return IslandVibeLayout.rowHeight }
         let key = CardGeometryKey(model: metadata.modelName, effort: metadata.reasoningEffort, width: width)
-        if let height = cardGeometryCache[key] { return height }
+        if let height = cardGeometryCache[key] { return height + metadata.subagentRowHeight }
         if cardGeometryCache.count >= 256 { cardGeometryCache.removeAll() }
-        let height = metadata.cardHeight(width: width); cardGeometryCache[key] = height; return height
+        // Cache static text geometry only. Live child membership changes the
+        // group height without changing model/effort, even on the same card.
+        let height = metadata.cardHeight(width: width)
+        cardGeometryCache[key] = height
+        return height + metadata.subagentRowHeight
     }
     var rowWidth: CGFloat { expandedWidth - IslandVibeLayout.listInset - (showsScrollRail ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset) }
     func rowHeight(_ task: CodexMultitaskRenderTask) -> CGFloat { measuredCardHeight(display?.sessionMetadata[task.id], width: rowWidth) }
@@ -388,7 +394,7 @@ final class IslandBoardState: ObservableObject {
             width: expandedWidth - IslandVibeLayout.listInset - IslandVibeLayout.scrollingListTrailingInset) : metrics
     }
     private func measuredApproval(request: IslandConfirmation, width: CGFloat) -> IslandApprovalMetrics {
-        let key = ApprovalMetricsKey(request: request, english: english, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.cardHeight(width: width) ?? IslandVibeLayout.rowHeight)
+        let key = ApprovalMetricsKey(request: request, english: english, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.taskGroupHeight(width: width) ?? IslandVibeLayout.rowHeight)
         if let cached = approvalMetricsCache[width], cached.0 == key { return cached.1 }
         let result = IslandApprovalMetrics(request: request, width: width, english: english,
             maximumViewportHeight: key.maximumViewportHeight, cardHeight: key.cardHeight)
@@ -575,6 +581,7 @@ final class IslandBoardState: ObservableObject {
     }
     func select(_ id: Int) {
         guard tasks.contains(where: { $0.id == id }) else { return }
+        taskScrollLink.prepareLayoutChange()
         claimManualPresentation()
         if compact { presentation = .preview }
         detailID = detailID == id ? nil : id
@@ -594,13 +601,15 @@ final class IslandBoardState: ObservableObject {
     func toggleCompact() {
         if compact { preview() } else { collapse() }
     }
-    func dismissDetail() { detailID = nil; onChange?() }
+    func dismissDetail() { taskScrollLink.prepareLayoutChange(); detailID = nil; onChange?() }
     func toggleTraceHistory() {
         guard let detail, detailData(for: detail).confirmation == nil else { return }
+        taskScrollLink.prepareLayoutChange()
         showingTraceHistory.toggle(); onChange?()
     }
     func toggleTraceDisclosure(_ id: UUID) {
         guard let detail = inlineDetail, detailData(for: detail).visibleEntries.contains(where: { $0.id == id }) else { return }
+        taskScrollLink.prepareLayoutChange()
         if expandedTraceEntries.contains(id) { expandedTraceEntries.remove(id) } else { expandedTraceEntries.insert(id) }
         onChange?()
     }
@@ -680,6 +689,16 @@ private struct IslandActivityOrb: NSViewRepresentable {
     static func dismantleNSView(_ view: IslandActivityOrbHost, coordinator: ()) { view.stop() }
 }
 
+// Compact status and background memory share the same visible sphere size.
+private struct IslandSmallActivityOrb: View {
+    let visualState: CodexActivityVisualState
+    let playback: Bool
+    var body: some View {
+        IslandActivityOrb(visualState: visualState, playback: playback)
+            .frame(width: 18, height: 18)
+    }
+}
+
 private struct IslandQuantumProgress: NSViewRepresentable {
     let effect: AppPreferences.CodexActivityProgressEffect
     let renderState: CodexActivityRenderState
@@ -722,6 +741,127 @@ private struct IslandOperationLine: View {
     }
 }
 
+// Codex's native dark avatar palette, selected by its raw thread-ID hash in Core.
+// Keep the provider badge fixed; only the complete child activity line scrolls.
+@MainActor
+enum IslandSubagentAvatarImages {
+    private static var images: [Int: NSImage] = [:]
+    static func image(for avatar: CodexActivitySubagentAvatar) -> NSImage? {
+        if let image = images[avatar.paletteIndex] { return image }
+        #if SWIFT_PACKAGE
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle.main
+        #endif
+        guard let url = bundle.url(forResource: avatar.assetName, withExtension: "png", subdirectory: "CodexAgentAvatars"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        images[avatar.paletteIndex] = image
+        return image
+    }
+}
+
+struct IslandSubagentStrip: View {
+    let children: [IslandSubagentPresentation]
+    let english: Bool
+    let visible: Bool
+    let reduceMotion: Bool
+    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    static func activityText(_ children: [IslandSubagentPresentation]) -> NSAttributedString {
+        let result = NSMutableAttributedString(string: "")
+        let font = NSFont.systemFont(ofSize: 11)
+        func append(_ text: String, color: NSColor = IslandTextPalette.muted, weight: NSFont.Weight = .regular) {
+            result.append(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 11, weight: weight), .foregroundColor: color]))
+        }
+        func spacer(_ width: CGFloat, image: NSImage? = nil) {
+            let space = "\u{2003}"
+            let advance = CTLineGetTypographicBounds(CTLineCreateWithAttributedString(
+                NSAttributedString(string: space, attributes: [.font: font])), nil, nil, nil)
+            var attributes: [NSAttributedString.Key: Any] = [.font: font, .kern: width - CGFloat(advance)]
+            if let image { attributes[.islandInlineImage] = image }
+            result.append(NSAttributedString(string: space, attributes: attributes))
+        }
+        for (index, child) in children.enumerated() {
+            if index > 0 { spacer(24) }
+            if let avatar = child.avatar, let image = IslandSubagentAvatarImages.image(for: avatar) {
+                spacer(14, image: image)
+                append(" ")
+            }
+            append(child.title, color: .white, weight: .medium)
+            if !child.model.isEmpty { append(" (" + child.model + ")") }
+            append(" " + child.status + " · " + child.duration)
+        }
+        if result.length == 0 { return NSAttributedString(string: "", attributes: [.font: font]) }
+        return result
+    }
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                if let icon = IslandProviderIcon.image {
+                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 14, height: 14)
+                }
+                (Text(copy.islandSubagentGroupName + " (") + Text("\(children.count)").foregroundColor(.white) + Text(")"))
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
+            }.fixedSize(horizontal: true, vertical: false)
+            IslandAttributedScrollingText(text: Self.activityText(children), font: .systemFont(ofSize: 11),
+                visible: visible, reduceMotion: reduceMotion, streamIdentity: children.map(\.id).joined(separator: "|"))
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        }.padding(.horizontal, 10).frame(height: 28)
+            .help(children.map { [$0.title, $0.model, $0.status, $0.duration, $0.detail].filter { !$0.isEmpty }.joined(separator: " · ") }.joined(separator: "\n"))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(copy.islandSubagentGroupTitle(count: children.count))
+            .accessibilityValue(children.map { [$0.title, $0.model, $0.status, $0.duration].filter { !$0.isEmpty }.joined(separator: ", ") }.joined(separator: "; "))
+    }
+}
+
+// Both surfaces use one palette so the lower card never outshines its parent.
+struct IslandTaskCardAppearance {
+    let visualState: CodexActivityVisualState
+    let selected: Bool
+    let hovered: Bool
+    var fill: Color { Color.white.opacity(hovered ? 0.07 : 0.045) }
+    var stroke: Color {
+        if visualState == .completed {
+            return Color(red: hovered ? 0.40 : 0.29, green: hovered ? 0.59 : 0.44, blue: hovered ? 0.47 : 0.35)
+        }
+        return Color.white.opacity(selected || hovered ? 0.22 : 0.16)
+    }
+}
+
+// The child row belongs behind the parent card, with only its lower edge exposed.
+// Its independent surface and clock never become part of the card's Metal view.
+struct IslandTaskCardStack<Card: View>: View {
+    let children: [IslandSubagentPresentation]
+    let english: Bool
+    let visible: Bool
+    let reduceMotion: Bool
+    let appearance: IslandTaskCardAppearance
+    let card: Card
+    init(children: [IslandSubagentPresentation], english: Bool, visible: Bool, reduceMotion: Bool,
+         appearance: IslandTaskCardAppearance,
+         @ViewBuilder card: () -> Card) {
+        self.children = children; self.english = english; self.visible = visible
+        self.reduceMotion = reduceMotion; self.appearance = appearance; self.card = card()
+    }
+    var body: some View {
+        VStack(spacing: 0) {
+            card.zIndex(1)
+            if !children.isEmpty {
+                IslandSubagentStrip(children: children, english: english, visible: visible, reduceMotion: reduceMotion)
+                    .zIndex(0)
+            }
+        }
+        .background {
+            if !children.isEmpty {
+                RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
+                    .fill(appearance.fill)
+                    .background(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).fill(.black))
+                    .overlay(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).strokeBorder(appearance.stroke, lineWidth: 1))
+                    .allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
+    }
+}
+
 // Shared presentation: list rows add selection, approval headers are read-only.
 struct IslandTaskCard: View {
     var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
@@ -735,6 +875,9 @@ struct IslandTaskCard: View {
     var hovered = false
     var showsArchiveButton = false
     var cardWidth: CGFloat = 656
+    private var appearance: IslandTaskCardAppearance {
+        .init(visualState: task.renderState.visualState, selected: selected, hovered: hovered)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
         HStack(spacing: IslandVibeLayout.contentGap) {
@@ -755,15 +898,16 @@ struct IslandTaskCard: View {
                             .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
                             .accessibilityHint(metadata.fullModelTitle)
                     }
-                    if let icon = IslandProviderIcon.image {
-                        Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
-                            .opacity(0.72)
-                            .accessibilityLabel("Codex").accessibilityHint("Codex")
-                    } else { Text("Codex").foregroundStyle(IslandBoardStyle.muted) }
                     if let metadata {
                         Text(metadata.durationTitle).monospacedDigit()
                             .padding(.horizontal, 5).padding(.vertical, 2)
                             .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                    if !showsArchiveButton {
+                        if let icon = IslandProviderIcon.image {
+                            Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
+                                .opacity(0.72).accessibilityLabel("Codex")
+                        } else { Text("Codex").foregroundStyle(IslandBoardStyle.muted) }
                     }
                 }.padding(.trailing, showsArchiveButton ? 28 : 0)
                     .font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
@@ -790,23 +934,24 @@ struct IslandTaskCard: View {
                         .allowsHitTesting(false).accessibilityHidden(true)
                 } else {
                     RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
-                        .fill(Color.white.opacity(hovered ? 0.07 : 0.045))
+                        .fill(appearance.fill)
                 }
             }
+            // Opaque front card conceals the full-height lower card without
+            // clipping its independent Metal effect or completion glow.
+            .background(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).fill(.black))
             .overlay {
                 // Selected completion already owns the single-island outline/glow.
                 if !(selected && task.renderState.visualState == .completed) {
                     RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
-                        .strokeBorder(task.renderState.visualState == .completed
-                            ? Color(red: hovered ? 0.40 : 0.29, green: hovered ? 0.59 : 0.44, blue: hovered ? 0.47 : 0.35)
-                            : Color.white.opacity(selected ? 0.22 : (hovered ? 0.095 : 0.055)), lineWidth: 1)
+                        .strokeBorder(appearance.stroke, lineWidth: 1)
                         .allowsHitTesting(false).accessibilityHidden(true)
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
             .accessibilityHint("\(task.title) · \(task.renderState.statusTitle)")
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—")")
+            .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—"), \(metadata?.subagents.map { $0.title + ", " + $0.status }.joined(separator: "; ") ?? "")")
     }
 }
 
@@ -819,35 +964,46 @@ private struct IslandBoardTaskRow: View {
     let playback: Bool
     let effectVisible: Bool
     let reduceMotion: Bool
+    let subagentsVisible: Bool
     var cardWidth: CGFloat = 656
     let onArchive: () -> Void
     let action: () -> Void
     @State private var hovered = false
     var body: some View {
+        IslandTaskCardStack(children: metadata?.subagents ?? [], english: english,
+            visible: subagentsVisible, reduceMotion: reduceMotion,
+            appearance: .init(visualState: task.renderState.visualState, selected: selected, hovered: hovered)) {
         Button(action: action) {
             IslandTaskCard(progressEffect: progressEffect, task: task, selected: selected, metadata: metadata, english: english,
                 playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion, hovered: hovered, showsArchiveButton: true, cardWidth: cardWidth)
-        }.buttonStyle(.plain).onHover { hovered = $0 }
+        }.buttonStyle(.plain)
             .overlay(alignment: .topTrailing) {
                 // Sibling hit target: archive must never also select/open the card.
-                IslandTaskArchiveButton(english: english, action: onArchive)
+                IslandTaskArchiveButton(english: english, showsArchiveIcon: hovered, action: onArchive)
                     .padding(.top, 6).padding(.trailing, 8)
             }
             .accessibilityValue(selected ? (english ? "Details open" : "详情已展开") : "")
+        }.contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
+            .onHover { hovered = $0 }
     }
 }
 
 struct IslandTaskArchiveButton: View {
     let english: Bool
+    var showsArchiveIcon = true
     let action: () -> Void
     @State private var hovered = false
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     var body: some View {
         Button(action: action) {
-            Image(systemName: "archivebox")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
-                .frame(width: 24, height: 24).contentShape(RoundedRectangle(cornerRadius: 6))
+            Group {
+                if showsArchiveIcon || IslandProviderIcon.image == nil {
+                    Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
+                } else if let icon = IslandProviderIcon.image {
+                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16).opacity(0.72)
+                }
+            }.frame(width: 24, height: 24).contentShape(RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(IslandArchiveButtonStyle(hovered: hovered))
             .onHover { hovered = $0 }
             .accessibilityLabel(copy.islandArchiveTask)
@@ -869,7 +1025,7 @@ struct IslandBoardView: View {
     let compactContent: Bool
     @State private var visibility = IslandListVisibility()
     private var visibleElements: Set<IslandListElement> { visibility.visible }
-    @State private var scrollLink = IslandTaskScrollLink()
+    private var scrollLink: IslandTaskScrollLink { state.taskScrollLink }
     @State private var approvalScrollLink = IslandTaskScrollLink()
     var body: some View {
         Group {
@@ -892,13 +1048,17 @@ struct IslandBoardView: View {
                             .id(approval.request.id)
                     } else {
                         Group {
+                            let layout = IslandTaskListLayout(taskIDs: state.visibleTasks.map(\.id),
+                                detailID: state.inlineDetail?.id, detailHeight: state.detailHeight, rowHeights: state.rowHeights)
+                            let residents = visibility.residentTaskIDs.union(
+                                scrollLink.transitionResidents(layout: layout, viewport: state.listHeight))
                             ScrollView(.vertical) {
                                 // A variable-height detail makes LazyVStack estimate offscreen rows
                                 // incorrectly. Exact row slots keep rail/visibility geometry deterministic;
                                 // viewport/nearby content stays mounted, with offscreen playback stopped.
                                 VStack(spacing: IslandVibeLayout.rowSpacing) {
                                     ForEach(state.visibleTasks, id: \.id) { task in
-                                        taskGroup(task).id(task.id)
+                                        taskGroup(task, residentTaskIDs: residents).id(task.id)
                                     }
                                     if state.visibleTasks.isEmpty {
                                         Text(state.text("等待任务开始", "Waiting for tasks"))
@@ -910,9 +1070,9 @@ struct IslandBoardView: View {
                                         ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset)
                                     .padding(.vertical, IslandVibeLayout.listVerticalInset)
                                     .background(IslandTaskScrollConfiguration(
-                                        layout: .init(taskIDs: state.visibleTasks.map(\.id), detailID: state.inlineDetail?.id, detailHeight: state.detailHeight, rowHeights: state.rowHeights),
+                                        layout: layout,
                                         active: !state.compact && state.display?.visible == true,
-                                            onVisibilityChange: { visibility = $0 }, link: scrollLink))
+                                            onVisibilityChange: { visibility = $0 }, link: scrollLink, viewportHeight: state.listHeight))
                             }.scrollIndicators(.never).frame(height: state.listHeight)
                             .overlay(alignment: .trailing) {
                                 if state.showsScrollRail {
@@ -922,8 +1082,8 @@ struct IslandBoardView: View {
                                         .padding(.bottom, IslandVibeLayout.rowSpacing)
                                 }
                             }
-                            // Keep native scroll position when details change. Scrolling
-                            // the whole card/detail group would consume the top inset.
+                            // Target rows are mounted in this body; native layout
+                            // restores the anchor before visibility and drawing commit.
                         }
                         IslandChromeFooter {
                             HStack(spacing: 12) {
@@ -932,9 +1092,8 @@ struct IslandBoardView: View {
                                     if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
                                 }
                                 if let memory = state.memoryActivity {
-                                    IslandActivityOrb(visualState: memory.visualState,
+                                    IslandSmallActivityOrb(visualState: memory.visualState,
                                         playback: state.playback && !state.compact && memory.playbackEnabled)
-                                        .frame(width: 22, height: 22)
                                         .help(memory.label(english: state.english))
                                         .accessibilityElement(children: .ignore)
                                         .accessibilityLabel(memory.label(english: state.english))
@@ -1069,9 +1228,9 @@ struct IslandBoardView: View {
         }.padding(.horizontal, IslandChromeMetrics.horizontalInset).font(IslandChromeMetrics.font).frame(width: state.surfaceWidth, height: state.headerHeight)
     }
     private var compactOrb: some View {
-        IslandActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
+        IslandSmallActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
             playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.isRunning) == true)
-            .frame(width: 18, height: 18).frame(width: 30).accessibilityHidden(true)
+            .frame(width: 30).accessibilityHidden(true)
     }
     private var compactStatistics: some View {
         HStack(spacing: 8) {
@@ -1139,20 +1298,21 @@ struct IslandBoardView: View {
     private var footerStatus: String {
         state.tasks.isEmpty ? state.summary : state.statusCounts.map { "\($0.count) \($0.title)" }.joined(separator: " ")
     }
-    private func taskGroup(_ task: CodexMultitaskRenderTask) -> some View {
+    private func taskGroup(_ task: CodexMultitaskRenderTask, residentTaskIDs: Set<Int>) -> some View {
         VStack(spacing: IslandVibeLayout.rowSpacing) {
-            if visibility.residentTaskIDs.contains(task.id) {
+            if residentTaskIDs.contains(task.id) {
                 IslandBoardTaskRow(progressEffect: state.display?.effect ?? .dropField, task: task, selected: (state.detailID ?? state.focusedTask?.id) == task.id,
                     metadata: state.display?.sessionMetadata[task.id], english: state.english,
                     playback: state.playback && !state.compact && visibleElements.contains(.task(task.id))
                         && task.playbackEnabled && (IslandBoardState.isRunning(task) || task.renderState.visualState == .completed),
                     effectVisible: state.display?.visible == true && state.display?.playbackEnabled == true
                         && !state.compact && visibleElements.contains(.task(task.id)) && task.playbackEnabled,
-                    reduceMotion: state.reduceMotion, cardWidth: state.rowWidth,
+                    reduceMotion: state.reduceMotion,
+                    subagentsVisible: state.playback && !state.compact && visibleElements.contains(.task(task.id)), cardWidth: state.rowWidth,
                     onArchive: { state.onArchive?(task.id) }) { state.select(task.id) }
             } else { Color.clear.frame(height: state.rowHeight(task)) }
             if state.inlineDetail?.id == task.id {
-                if visibleElements.contains(.detail(task.id)) { detailView(task) }
+                if residentTaskIDs.contains(task.id) { detailView(task) }
                 else { Color.clear.frame(height: state.detailHeight) }
             }
         }.frame(height: state.rowHeight(task) + (state.inlineDetail?.id == task.id ? state.detailHeight + IslandVibeLayout.rowSpacing : 0))
@@ -1176,6 +1336,7 @@ final class IslandNotchSurface: NSView {
     private let content = NSView()
     private let compactHost: NSHostingView<IslandBoardView>
     private let expandedHost: NSHostingView<IslandBoardView>
+    private let taskScrollLink: IslandTaskScrollLink
     private(set) var targetRect = CGRect.zero
     private var lastCompact: Bool?
     private(set) var transitionCount = 0
@@ -1183,6 +1344,7 @@ final class IslandNotchSurface: NSView {
 
 
     init(state: IslandBoardState) {
+        taskScrollLink = state.taskScrollLink
         compactHost = NSHostingView(rootView: IslandBoardView(state: state, compactContent: true))
         expandedHost = NSHostingView(rootView: IslandBoardView(state: state, compactContent: false))
         super.init(frame: .zero)
@@ -1208,6 +1370,13 @@ final class IslandNotchSurface: NSView {
         if window == nil { stop() }
     }
 
+    override func viewWillDraw() {
+        // Final pre-display boundary, including a late clamp within the same
+        // native layout pass. No frame is drawn at the temporary top position.
+        taskScrollLink.finishLayoutChange()
+        super.viewWillDraw()
+    }
+
     func update(state: IslandBoardState, animated: Bool) {
         let newRect = CGRect(x: (bounds.width - state.surfaceWidth) / 2, y: 0,
                              width: state.surfaceWidth, height: state.height)
@@ -1225,6 +1394,7 @@ final class IslandNotchSurface: NSView {
         if content.frame != bounds { content.frame = bounds }
         if compactHost.frame != compactFrame { compactHost.frame = compactFrame; layoutCommitCount += 1 }
         if expandedHost.frame != expandedFrame { expandedHost.frame = expandedFrame; layoutCommitCount += 1 }
+        if taskScrollLink.isChangingLayout { expandedHost.layoutSubtreeIfNeeded() }
         CATransaction.commit()
         if !animated { cancelAnimations() }
         confirmationGlow.update(
@@ -1349,7 +1519,8 @@ final class IslandBoardController {
         panel.hidesOnDeactivate = false; panel.level = .init(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         panel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]
         panel.animationBehavior = .none; panel.contentView = surface
-        panel.title = "QuotaView 0.7.3 · 任务"
+        panel.title = (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "QuotaView")
+            + " · " + state.text("任务", "Tasks")
         panel.isExcludedFromWindowsMenu = false
         panel.acceptsMouseMovedEvents = true
         state.onSelect = { [weak self] in self?.onSelect?($0) }
@@ -1676,8 +1847,8 @@ struct IslandUsageBento: View {
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private var chart: EstimatedCostChartModel { .init(activity: snapshot?.tokenActivity ?? [], endingAt: Date()) }
     private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
-    private func surface<Content: View>(highlightBottom: Bool = false, @ViewBuilder content: () -> Content) -> some View {
-        content().padding(14).frame(maxWidth: .infinity, alignment: .leading)
+    private func surface<Content: View>(highlightBottom: Bool = false, contentInset: CGFloat = 14, @ViewBuilder content: () -> Content) -> some View {
+        content().padding(contentInset).frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14).fill(Color(white: 0.055))
@@ -1696,7 +1867,7 @@ struct IslandUsageBento: View {
                 .allowsHitTesting(false)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: highlightBottom)
             }
-            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5).allowsHitTesting(false) }
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
@@ -1816,8 +1987,9 @@ struct IslandUsageBento: View {
         }
     }
     private var accountCard: some View {
-        surface(highlightBottom: resetHovered && !hidesTicket) {
-            VStack(alignment: .leading, spacing: 10) {
+        surface(highlightBottom: resetHovered && !hidesTicket, contentInset: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
                 heading(text("账户", "Account"))
                 Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
                     .font(.system(size: 16, weight: .semibold))
@@ -1829,8 +2001,11 @@ struct IslandUsageBento: View {
                     Text(snapshot?.creditBalance ?? "—")
                 }.font(.system(size: 10))
                 }
+                }.padding(.horizontal, 14).padding(.top, 14)
+                    .padding(.bottom, options.reset ? 10 : 14)
                 if options.reset {
                 Rectangle().fill(Color(white: 0.21)).frame(height: 0.5)
+                    .padding(.horizontal, 14)
                 Button(action: onReset) {
                     HStack {
                         IslandResetTicket(playbackEnabled: playbackEnabled).opacity(hidesTicket ? 0 : 1)
@@ -1843,7 +2018,11 @@ struct IslandUsageBento: View {
                                 $0 == 0 ? copy.text("0次 · 暂无可用", "0 left · unavailable") : copy.text("\($0)次", "\($0) left")
                             } ?? "—")
                         }.font(.system(size: 10))
-                    }.contentShape(Rectangle())
+                    }
+                    // The label owns all space beneath the divider, including
+                    // the account surface's side and bottom padding.
+                    .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 14)
+                    .frame(maxWidth: .infinity).contentShape(Rectangle())
                 }.buttonStyle(IslandResetTicketButtonStyle())
                     .onHover { resetHovered = $0 && !hidesTicket }
                     .accessibilityLabel(copy.text("打开额度重置", "Open quota reset"))

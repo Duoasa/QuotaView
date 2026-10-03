@@ -4,11 +4,15 @@
 >
 > 状态：`Accepted`
 >
-> 最近同步：2026-10-02。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
+> 最近同步：2026-10-04。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 当前源码：[0.7.3 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)
+> 当前源码：[0.7.5 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)；显示Build1、内部50，沿用固定独立开发数据身份，记忆DEBUG已停止。
 >
-> 当前增量：[Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md)已接入现有 UI；98 项必要隔离冒烟、真实只读握手、Debug arm64 构建及开发包核对通过。真实点击与视觉待用户验收；源码已推送至 [PR #68](https://github.com/Duoasa/QuotaView/pull/68)，完整 CI/合并状态以该 PR 为准。
+> 源码集成：[PR #73](https://github.com/Duoasa/QuotaView/pull/73)指向main；GitHub完整CI与最终合并以该PR为准，运行包及本地验证单独记录于Handoff。
+>
+> 当前增量：[信息通信契约](codex-island-information-contract.md)统一目录/轮次身份、子 agent 与后台记忆、公开进展及操作所有权；必要冒烟、开发构建和运行包证据以 Handoff 最新节为准，真实交互及视觉待用户验收。
+>
+> 当前展示修订：[生产交互规则](../design/quotaview-island-production-interaction-review-2026-09-30.md)包含整区重置入口、重置页字号、小球共用18pt及主卡/子agent统一描边与hover；0.7.5整合177项必要冒烟、Debug/Universal构建、签名与真实通道运行包核对通过，GitHub main集成以Handoff当前节为准，视觉待用户验收。
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
 0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
@@ -20,9 +24,10 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 精确来源分类、独立记忆生命周期与底栏 AI 球已接入；不进入会话列表、计数或用户待确认；迟到来源迁移、失联和恢复沿用真实证据。154 项相关冒烟与 Debug arm64 构建通过，视觉待用户验收。 |
+| `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 参考 Vibe owner IPC/Hook/rollout 证据，统一线程来源与执行目的、子任务投影、身份乱序及读取覆盖预算；子 agent 伸出下层卡片、原生头像/共同基线、24pt分段、白色数量与量子时钟更新见契约；交付见 Handoff 当前节 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 原生来源与当前执行目的分别管理，记忆仅进入底栏 AI 球。Hook/Local 共用有界读取服务，部分覆盖保留已验证证据；早到身份由同目录代次/线程/轮次准入消费。补齐温缓存、新轮次和执行撤销边界；不按名称过滤。此前 PR #72 已合并；本轮增量、必要检查和已运行包分别见 Handoff，视觉待用户验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 原任务 owner IPC 回传、普通/同步/异步独立解除和自动详情导航已实现；98 项必要冒烟、真实只读握手、开发构建/签名通过，真实交互待用户验收；已推送 PR #68，完整 CI/合并以 PR 为准。 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口使用账户底部渐变高光，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一，长内容滚动保留底栏；视觉/交互待用户验收。 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口整块分割线下方含留白为热区，使用账户底部渐变高光；重置页Asta Sans标题15pt、正文11pt、按钮13pt、辅助10.5pt，35项相关冒烟和运行包核对通过，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一。内联详情布局同步恢复锚点、显示前提交，预热目标卡片并保留中间可见集与轨道，用户滚动优先；纯授权采用“批准”。请求视口最多 440 pt，命令默认 8 行/2048 字符，长选项两行缩略，完整查看/复制保留原始回传。本轮 239 项相关冒烟、开发构建和包核对通过；动态子任务高度与公开进展已统一，已更新运行包，增量源码未提交，视觉/交互待用户验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |
 | `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
 | `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |
