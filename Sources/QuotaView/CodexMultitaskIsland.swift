@@ -370,6 +370,44 @@ struct CodexMultitaskRenderTask: Equatable {
         renderState.visualState == .completed ? .systemGreen : renderState.visualState.activityAccentColor
     }
 }
+/// A bounded background summary, independent of user selection, counts and popups.
+struct IslandMemoryActivity: Equatable {
+    let snapshot: CodexActivitySnapshot
+    let count: Int
+    init?(snapshots: [CodexActivitySnapshot]) {
+        guard let representative = snapshots.sorted(by: {
+            let lhs = Self.isInFlight($0), rhs = Self.isInFlight($1)
+            if lhs != rhs { return lhs }
+            if $0.occurredAt != $1.occurredAt { return $0.occurredAt > $1.occurredAt }
+            return $0.sessionHash < $1.sessionHash
+        }).first else { return nil }
+        snapshot = representative; count = snapshots.count
+    }
+    private static func isInFlight(_ snapshot: CodexActivitySnapshot) -> Bool {
+        [.thinking, .working, .compactingContext, .awaitingConfirmation, .unavailable, .disconnectedCodex].contains(snapshot.state)
+    }
+    var visualState: CodexActivityVisualState { snapshot.state }
+    var playbackEnabled: Bool {
+        [.thinking, .working, .compactingContext, .awaitingConfirmation].contains(snapshot.state)
+    }
+    func label(english: Bool) -> String {
+        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let status: String
+        switch snapshot.state {
+        case .thinking, .working, .compactingContext: status = copy.text("正在整理", "Organizing")
+        case .awaitingConfirmation: status = copy.text("等待处理", "Awaiting action")
+        case .completed: status = copy.text("整理完成", "Completed")
+        case .error: status = copy.text("整理失败", "Failed")
+        case .unavailable, .disconnectedCodex: status = copy.text("状态待更新", "Status unavailable")
+        case .standby:
+            status = snapshot.operationKey == .turnInterrupted
+                ? copy.text("已中断", "Interrupted") : copy.text("待运行", "Idle")
+        }
+        let title = copy.text("记忆整理", "Memory consolidation") + " · " + status
+        return count > 1 ? title + copy.text("（\(count) 个后台任务）", " (\(count) background tasks)") : title
+    }
+}
+
 struct CodexMultitaskDisplay {
     struct State {
         var tasks: [CodexMultitaskRenderTask]
@@ -397,6 +435,8 @@ struct CodexMultitaskDisplay {
     var connectionTitle: String = ""
     var privacyMode = false
     var activeRequestIDs: Set<UUID> = []
+    // Background memory work has its own lifecycle and never becomes a session row.
+    var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
 }
 
 @MainActor

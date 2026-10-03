@@ -18,6 +18,9 @@ final class CodexLocalRolloutDiscovery {
     private var directoryEnumerator: FileManager.DirectoryEnumerator?
     private var discoveredFiles: [URL: Date] = [:]
     private var databaseInternalPaths: Set<URL> = []
+    /// Authoritative exclusions can retract an already-observed identity without
+    /// admitting a new internal task to the visible activity stream.
+    private(set) var excludedIdentities: [URL: CodexLocalRolloutThreadIdentity] = [:]
     private(set) var readFailed = false
     private(set) var unsupportedMetadata = false
 
@@ -31,6 +34,7 @@ final class CodexLocalRolloutDiscovery {
         directoryEnumerator = nil
         discoveredFiles.removeAll()
         databaseInternalPaths.removeAll()
+        excludedIdentities.removeAll()
     }
 
     func recheck() { directoryEnumerator = nil }
@@ -44,6 +48,7 @@ final class CodexLocalRolloutDiscovery {
         readFailed = false
         unsupportedMetadata = false
         databaseInternalPaths.removeAll()
+        excludedIdentities.removeAll()
         let fromDatabase = candidatesFromDatabase(
             databaseURL: databaseURL,
             sessionsURL: sessionsURL
@@ -121,13 +126,21 @@ final class CodexLocalRolloutDiscovery {
             )
             guard databaseKind != .internalTask else {
                 databaseInternalPaths.insert(fileURL)
+                if let metadata = Self.readSessionMetadata(from: fileURL), metadata.sessionHash == sessionHash {
+                    excludedIdentities[fileURL] = .init(threadID: metadata.threadID, sessionHash: sessionHash,
+                                                         sessionKind: .internalTask)
+                }
                 continue
             }
             guard result.count < maximumCandidateCount else { continue }
             guard let metadata = Self.readSessionMetadata(from: fileURL),
-                  metadata.sessionHash == sessionHash,
-                  metadata.kind != .internalTask else { continue }
-            let kind = databaseKind == .unknown ? metadata.kind : databaseKind
+                  metadata.sessionHash == sessionHash else { continue }
+            guard metadata.kind != .internalTask else {
+                excludedIdentities[fileURL] = .init(threadID: metadata.threadID, sessionHash: sessionHash,
+                                                     sessionKind: .internalTask)
+                continue
+            }
+            let kind = CodexActivitySessionKind.resolving(databaseKind, metadata.kind)
             let workspaceName: String?
             if let cwdPointer = sqlite3_column_text(statement, 2) {
                 workspaceName = CodexActivityPrivacy.workspaceName(
@@ -235,7 +248,11 @@ final class CodexLocalRolloutDiscovery {
                 }
                 continue
             }
-            guard metadata.kind != .internalTask else { continue }
+            guard metadata.kind != .internalTask else {
+                excludedIdentities[file] = .init(threadID: metadata.threadID, sessionHash: metadata.sessionHash,
+                                                  sessionKind: .internalTask)
+                continue
+            }
             result.append(Candidate(fileURL: file, threadID: metadata.threadID, sessionHash: metadata.sessionHash,
                                     workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind))
             if result.count == maximumCandidateCount { break }
@@ -262,7 +279,7 @@ final class CodexLocalRolloutDiscovery {
             CodexActivityPrivacy.workspaceName(
                 from: payload["cwd"] as? String
             ),
-            CodexActivitySessionKind.classify(source: payload["source"], threadSource: payload["thread_source"] as? String)
+            CodexActivitySessionKind.classify(source: payload["source"], threadSource: (payload["thread_source"] ?? payload["threadSource"]) as? String)
         )
     }
 

@@ -20,6 +20,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 精确来源分类、独立记忆生命周期与底栏 AI 球已接入；不进入会话列表、计数或用户待确认；迟到来源迁移、失联和恢复沿用真实证据。154 项相关冒烟与 Debug arm64 构建通过，视觉待用户验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 原任务 owner IPC 回传、普通/同步/异步独立解除和自动详情导航已实现；98 项必要冒烟、真实只读握手、开发构建/签名通过，真实交互待用户验收；已推送 PR #68，完整 CI/合并以 PR 为准。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口使用账户底部渐变高光，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一，长内容滚动保留底栏；视觉/交互待用户验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |

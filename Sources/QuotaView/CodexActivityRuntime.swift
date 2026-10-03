@@ -185,6 +185,9 @@ final class CodexActivityRuntime: ObservableObject {
             self?.store.receiveRequestSettlement(settlement)
         }
         store.admittedActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveLegacy(event) }
+        store.activitySessionKindDidResolve = { [weak self] key, kind in
+            self?.liveIsland.model.setSessionKind(kind, for: key)
+        }
         store.cumulativeTokensDidReceive = { [weak self] update in self?.liveIsland.model.receiveToken(update) }
         store.stateDidChange = { [weak self] in
             self?.render()
@@ -987,7 +990,8 @@ final class CodexActivityRuntime: ObservableObject {
             quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state,
             usageOptions: .init(preferences: preferences), progressEffect: preferences.codexActivityProgressEffect,
             automaticPopupEnabled: preferences.codexActivityAutomaticPopupEnabled,
-            automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration)
+            automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration,
+            backgroundMemorySnapshots: store.backgroundMemorySnapshots)
     }
 
     private static func defaultSocketURL() -> URL {

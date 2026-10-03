@@ -54,6 +54,9 @@ public struct CodexLocalActivityRecovery {
         return pending.records
     }
 
+    /// Discard recovered context when authoritative identity changes category.
+    public mutating func forget(session: String) { remove(session) }
+
     private mutating func remove(_ session: String) {
         contexts.removeValue(forKey: session)
         order.removeAll { $0 == session }
@@ -61,6 +64,7 @@ public struct CodexLocalActivityRecovery {
 
     private static func identityAndDate(_ record: CodexLocalRolloutDecodedRecord) -> (CodexActivityTaskIdentity, Date)? {
         switch record.update {
+        case .sessionMetadata: return nil
         case .activity(let event): return (.init(sessionHash: event.sessionHash, turnHash: event.turnHash), event.occurredAt)
         case .tokenUsage(let usage): return (.init(sessionHash: usage.sessionHash, turnHash: usage.turnHash), usage.occurredAt)
         case .tokenUsageReplay(let updates):

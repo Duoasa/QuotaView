@@ -109,15 +109,23 @@ public enum CodexDesktopRequestProjector {
         let json = try JSONDecoder().decode(PublicJSON.self, from: conversationStateData)
         guard let state = json.object else { throw CodexDesktopRequestProjectionError.malformedState }
         guard state["id"]?.string == conversationID else { throw CodexDesktopRequestProjectionError.conversationMismatch }
-        guard let allRequests = state["requests"]?.array, allRequests.count <= maximumPendingRequests else {
-            throw CodexDesktopRequestProjectionError.malformedRequests
+        let source = state["source"].flatMap { try? $0.foundationValue() }
+        let kind = CodexActivitySessionKind.classify(source: source,
+            threadSource: state["threadSource"]?.string ?? state["thread_source"]?.string)
+        // Background memory state is observational; it cannot supply an owner
+        // attachment, question content or a submission capability.
+        let allRequests: [PublicJSON]
+        if kind == .memoryConsolidation { allRequests = [] }
+        else {
+            guard let values = state["requests"]?.array, values.count <= maximumPendingRequests else {
+                throw CodexDesktopRequestProjectionError.malformedRequests
+            }
+            allRequests = values
         }
         let current = currentTurn(state)
         let currentID = current.value?["turnId"]?.nonemptyString
         let rawStatus = current.value?["status"]?.string ?? "unknown"
         let status = ["inProgress", "completed", "interrupted", "failed"].contains(rawStatus) ? rawStatus : "unknown"
-        let source = state["source"].flatMap { try? $0.foundationValue() }
-        let kind = CodexActivitySessionKind.classify(source: source, threadSource: state["threadSource"]?.string)
         let startedAt = current.value?["turnStartedAtMs"]?.finiteNumber.map { Date(timeIntervalSince1970: $0 / 1_000) }
         var requests: [CodexDesktopProjectedRequest] = []
         var identities = Set<CodexDesktopPendingRequestIdentity>()
@@ -161,11 +169,12 @@ public enum CodexDesktopRequestProjector {
                     contextItemData: try contextItem?.encoded()))
             }
         }
-        let questions = try currentID.map { try asyncQuestions(items: items, turnID: $0) } ?? []
+        let questions = kind == .memoryConsolidation ? []
+            : try currentID.map { try asyncQuestions(items: items, turnID: $0) } ?? []
         let pendingAsync = status == "inProgress" ? Set(questions.filter { $0.resolvedAnswer == nil }.map(\.questionItemID)) : []
         return .init(currentTurnID: currentID, status: status, title: state["title"]?.string ?? "", sourceKind: kind,
             startedAt: startedAt, requests: requests, authoritativePendingIdentities: identities,
-            pendingRequestsAreAuthoritative: current.authoritative && currentID != nil && status != "unknown",
+            pendingRequestsAreAuthoritative: kind != .memoryConsolidation && current.authoritative && currentID != nil && status != "unknown",
             asyncQuestions: questions, authoritativeAsyncQuestionIDs: pendingAsync,
             threadWaitStatus: threadWaitStatus(state))
     }

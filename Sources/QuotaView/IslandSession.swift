@@ -25,6 +25,7 @@ final class IslandSession {
     private var observations: [NSObjectProtocol] = []
     private var lockObservations: [NSObjectProtocol] = []
     private var privacy = false
+    private var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
     init() {
         board.onSelect = { [weak self] in self?.model.select($0) }
         board.state.onArchive = { [weak self] in self?.model.archiveFromIsland($0) }
@@ -54,7 +55,8 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
+        self.backgroundMemorySnapshots = backgroundMemorySnapshots
         self.usageOptions = usageOptions
         self.automaticPopupEnabled = automaticPopupEnabled
         self.automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.normalizedDuration(automaticPopupDuration)
@@ -92,6 +94,7 @@ final class IslandSession {
         display.automaticPopupEnabled = automaticPopupEnabled
         display.automaticPopupDuration = automaticPopupDuration
         display.effect = progressEffect
+        display.backgroundMemorySnapshots = backgroundMemorySnapshots
         board.update(model: display,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }

@@ -11,6 +11,17 @@ final class CodexActivityStore: ObservableObject {
     nonisolated static let confirmationReminderDelay: TimeInterval = 10
 
     @Published private(set) var snapshot: CodexActivitySnapshot?
+    /// Background execution is observable without becoming a user conversation.
+    @Published private(set) var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+    private struct ObservedActivity {
+        let snapshot: CodexActivitySnapshot
+        let lifecycle: CodexActivityTurnLifecycle
+        var source: CodexActivityEventSource
+        var isDesktopObservation = false
+        var snapshotBeforeSourceLoss: CodexActivitySnapshot?
+    }
+    private var observedActivityBySession: [String: ObservedActivity] = [:]
+    private var memoryActivityBySession: [String: ObservedActivity] = [:]
     @Published private(set) var presentation:
         CodexActivityPresentation = .hidden
     @Published private(set) var resolvedThreadTitle: String?
@@ -105,6 +116,8 @@ final class CodexActivityStore: ObservableObject {
     var publicMessageDidReceive: ((Data) -> Void)?
     var desktopProjectionDidReceive: ((CodexDesktopInteractionProjection, CodexDesktopConversationSnapshot) -> Void)?
     var admittedActivityDidReceive: ((CodexActivityEvent) -> Void)?
+    /// Classification is published before any user activity/content callback.
+    var activitySessionKindDidResolve: ((String, CodexActivitySessionKind) -> Void)?
     var cumulativeTokensDidReceive: ((CodexActivityTokenUsageUpdate) -> Void)?
     var stateDidChange: (() -> Void)?
     var automaticConnectionDidChange: ((CodexAutomaticActivityConnection) -> Void)?
@@ -161,6 +174,7 @@ final class CodexActivityStore: ObservableObject {
         let turnHash: String
     }
     private var desktopAdmissions: [String: DesktopAdmission] = [:]
+    private var desktopMemoryAdmissions: [String: DesktopAdmission] = [:]
     private var desktopReceiptReservations: [String: (id: UUID, admission: DesktopAdmission)] = [:]
     private var desktopWaitEvidence: [String: NativeWaitEvidence] = [:]
     private struct NativeWaitEvidence {
@@ -177,6 +191,8 @@ final class CodexActivityStore: ObservableObject {
     private var nativeStartTask: Task<Void, Never>?
     private var taskRegistry = CodexActivityTaskRegistry()
     private var sessionKinds: [String: CodexActivitySessionKind] = [:]
+    private var sessionKindOrder: [String] = []
+    private static let maximumRememberedSessionKinds = 1024
     private var revision: UInt64 = 0
 
     private struct StoredPlanProgress {
@@ -301,6 +317,7 @@ final class CodexActivityStore: ObservableObject {
     func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation expected: UInt64? = nil) {
         let run = expected ?? nativeGeneration
         guard nativeGeneration == run else { return }
+        guard !isBackgroundOrInternal(content.sessionHash) else { return }
         if taskRegistry.permitsPublicAttachment(session: content.sessionHash, turn: content.turnHash,
             source: .localRollout, occurredAt: content.occurredAt, permitsTerminal: true) {
             localPublicContentDidReceive?(content)
@@ -316,6 +333,10 @@ final class CodexActivityStore: ObservableObject {
     }
 
     private func flushLocalPublicContent(for session: String) {
+        guard !isBackgroundOrInternal(session) else {
+            pendingLocalPublicContent.removeAll { $0.sessionHash == session }
+            return
+        }
         let buffered = pendingLocalPublicContent.filter { $0.sessionHash == session }
         pendingLocalPublicContent.removeAll { $0.sessionHash == session }
         for content in buffered {
@@ -351,9 +372,21 @@ final class CodexActivityStore: ObservableObject {
         let date = Self.publicEventDate(envelope["emittedAtMs"] ?? params["emittedAtMs"], fallback: now)
         let metadata = params["thread"] as? [String: Any]
         let status = params["status"] as? [String: Any] ?? metadata?["status"] as? [String: Any]
-        let kind = metadata.map { CodexActivitySessionKind.classify(source: $0["source"], threadSource: $0["threadSource"] as? String) }
-            ?? sessionKinds[session] ?? .user // Shared already verified this connection's thread metadata.
-        guard kind != .internalTask else { return }
+        let metadataKind = metadata.map {
+            CodexActivitySessionKind.classify(source: $0["source"],
+                threadSource: $0["threadSource"] as? String ?? $0["thread_source"] as? String)
+        } ?? .unknown
+        // This ingress is fed by Shared's thread-scoped, verified projection.
+        // Sparse RPC/settlement envelopes inherit that user scope; explicit or
+        // previously known memory/internal metadata still overrides the fallback.
+        let incomingKind = metadata == nil ? CodexActivitySessionKind.user : metadataKind
+        let kind = resolveSessionKind(incomingKind, session: session)
+        if kind == .internalTask { return }
+        if kind == .memoryConsolidation {
+            await receiveMemoryPublicLifecycle(data, method: method, params: params,
+                status: status, session: session, epoch: epoch, generation: run, at: now)
+            return
+        }
 
         if method == "thread/snapshot", let current = params["currentTurn"] as? [String: Any],
            status?["type"] as? String == "active", current["status"] as? String == "inProgress",
@@ -476,7 +509,11 @@ final class CodexActivityStore: ObservableObject {
         let kind: CodexActivitySessionKind
         if projection.sourceKind != .unknown {
             kind = projection.sourceKind
-        } else if let known = sessionKinds[session], known != .unknown {
+        } else if let known = sessionKinds[session], known != .unknown,
+                  known != .user || taskRegistry.currentIdentity(for: session) != nil {
+            // Classification cached from paused local metadata is not a live
+            // Desktop attachment. Only admitted user lifecycle can supply this
+            // fallback; local discovery below must still hold its follow lease.
             kind = known
         } else if let local = localDesktopFollows[session]?.identity,
                   local.threadID == desktop.conversationID, local.sessionHash == session,
@@ -489,7 +526,11 @@ final class CodexActivityStore: ObservableObject {
         } else {
             kind = .unknown
         }
-        guard kind == .user else { return false }
+        let resolvedKind = resolveSessionKind(kind, session: session)
+        if resolvedKind == .memoryConsolidation {
+            return await receiveDesktopMemoryProjection(projection, snapshot: desktop, session: session, generation: run, at: now)
+        }
+        guard kind == .user, resolvedKind == .user else { return false }
         let turnHash = CodexActivityPrivacy.hashIdentifier(turnID)
         if let prior = desktopReceiptReservations[session]?.admission, prior.epoch == epoch,
            prior.owner == desktop.ownerClientID, desktop.revision <= prior.revision { return false }
@@ -569,20 +610,31 @@ final class CodexActivityStore: ObservableObject {
         guard !connected else { return }
         if let epoch = desktopPublicEpoch { closedDesktopPublicEpoch = max(closedDesktopPublicEpoch ?? epoch, epoch) }
         desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+        desktopMemoryAdmissions.removeAll()
+        markMemorySourceUnavailable(.appServer, onlyDesktop: true)
     }
 
     /// Unfollow cancels a receipt even before its first capability reaches the
     /// Island. An in-flight source classifier cannot reattach a detached scope.
     func cancelDesktopAttachment(conversationID: String) {
-        desktopReceiptReservations.removeValue(forKey: CodexActivityPrivacy.hashIdentifier(conversationID))
+        let session = CodexActivityPrivacy.hashIdentifier(conversationID)
+        desktopReceiptReservations.removeValue(forKey: session)
+        desktopMemoryAdmissions.removeValue(forKey: session)
+        markMemorySourceUnavailable(.appServer, onlyDesktop: true, sessions: [session])
     }
 
     /// Resource revocation cancels in-flight attachment; it is not settlement.
     func invalidateDesktopProjection(conversationID: String?, epoch: UInt64) {
         guard desktopPublicEpoch == epoch else { return }
         if let conversationID {
-            desktopReceiptReservations.removeValue(forKey: CodexActivityPrivacy.hashIdentifier(conversationID))
-        } else { desktopReceiptReservations.removeAll() }
+            let session = CodexActivityPrivacy.hashIdentifier(conversationID)
+            desktopReceiptReservations.removeValue(forKey: session)
+            desktopMemoryAdmissions.removeValue(forKey: session)
+            markMemorySourceUnavailable(.appServer, onlyDesktop: true, sessions: [session])
+        } else {
+            desktopReceiptReservations.removeAll(); desktopMemoryAdmissions.removeAll()
+            markMemorySourceUnavailable(.appServer, onlyDesktop: true)
+        }
     }
 
     /// Only the owner stream's exact removal can settle Desktop wait evidence.
@@ -659,6 +711,10 @@ final class CodexActivityStore: ObservableObject {
                             generation expected: UInt64? = nil) async {
         let run = expected ?? nativeGeneration
         guard nativeGeneration == run else { return }
+        if let identity = verifiedLocalRecordIdentity(record) {
+            _ = resolveSessionKind(identity.sessionKind, session: identity.sessionHash)
+        }
+        if case .sessionMetadata = record.update { return }
         let terminal: Bool
         if case .activity(let event) = record.update { terminal = [.stop, .interrupt, .sessionEnd].contains(event.event) }
         else { terminal = false }
@@ -705,6 +761,7 @@ final class CodexActivityStore: ObservableObject {
         case .tokenUsageReplay(let updates):
             guard let first = updates.first, updates.allSatisfy({ $0.sessionHash == first.sessionHash && $0.turnHash == first.turnHash }) else { return }
             session = first.sessionHash; turn = first.turnHash
+        case .sessionMetadata: return
         }
         guard session == identity.sessionHash, let turn,
               !taskRegistry.isPriorTurn(session: session, turn: turn) else { return }
@@ -731,11 +788,26 @@ final class CodexActivityStore: ObservableObject {
         localThreadActivityDidReceive?(identity, active)
     }
 
+    private func verifiedLocalRecordIdentity(_ record: CodexLocalRolloutDecodedRecord) -> CodexLocalRolloutThreadIdentity? {
+        guard let identity = record.threadIdentity, !identity.threadID.isEmpty,
+              identity.threadID.utf8.count <= 1024,
+              identity.sessionHash == CodexActivityPrivacy.hashIdentifier(identity.threadID) else { return nil }
+        switch record.update {
+        case .activity(let event): guard event.sessionHash == identity.sessionHash else { return nil }
+        case .tokenUsage(let usage): guard usage.sessionHash == identity.sessionHash else { return nil }
+        case .tokenUsageReplay(let updates):
+            guard !updates.isEmpty, updates.allSatisfy({ $0.sessionHash == identity.sessionHash }) else { return nil }
+        case .sessionMetadata: break
+        }
+        return identity
+    }
+
     private static func localRecordSession(_ record: CodexLocalRolloutDecodedRecord) -> String? {
         switch record.update {
         case .activity(let event): return event.sessionHash
         case .tokenUsage(let usage): return usage.sessionHash
         case .tokenUsageReplay(let usages): return usages.first?.sessionHash
+        case .sessionMetadata: return record.threadIdentity?.sessionHash
         }
     }
 
@@ -748,6 +820,7 @@ final class CodexActivityStore: ObservableObject {
             await receiveClassified(delivery, generation: run, selectionEvidenceAt: selectionEvidenceAt)
         case .tokenUsage(let update): receiveNativeToken(update, generation: run)
         case .tokenUsageReplay(let updates): receiveNativeTokenReplay(updates, generation: run)
+        case .sessionMetadata: break
         }
     }
 
@@ -780,6 +853,7 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func compactionSourceUnavailable(_ source: CodexActivityEventSource) {
+        markMemorySourceUnavailable(source)
         for (session, entry) in admittedSnapshots where entry.compactionSource == source && entry.snapshot.state == .compactingContext {
             let old = entry.snapshot
             let unavailable = CodexActivitySnapshot(sessionHash: session, taskIdentity: old.taskIdentity,
@@ -812,6 +886,242 @@ final class CodexActivityStore: ObservableObject {
         automaticConnectionDidChange?(value)
     }
 
+    private func isBackgroundOrInternal(_ session: String) -> Bool {
+        let kind = sessionKinds[session]
+        return kind == .memoryConsolidation || kind == .internalTask
+    }
+
+    /// Late authoritative metadata changes presentation, never execution state.
+    @discardableResult
+    private func resolveSessionKind(_ incoming: CodexActivitySessionKind,
+                                    session: String) -> CodexActivitySessionKind {
+        let known = sessionKinds[session] ?? .unknown
+        let resolved = incoming == .internalTask ? .internalTask : CodexActivitySessionKind.resolving(known, incoming)
+        guard resolved != .unknown else { return resolved }
+        rememberSessionKind(resolved, session: session)
+        _ = taskRegistry.reclassify(session: session, kind: resolved)
+        guard known != resolved else { return resolved }
+        // The Island withdraws a generic record before any subsequent callback.
+        activitySessionKindDidResolve?(session, resolved)
+        guard resolved == .memoryConsolidation || resolved == .internalTask else { return resolved }
+        admittedSnapshots.removeValue(forKey: session)
+        multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
+        multitaskTitleTasks.removeValue(forKey: session)?.cancel()
+        titleCache.removeValue(forKey: session); titleAttemptedAt.removeValue(forKey: session)
+        nativeWaitEvidence.removeValue(forKey: session); desktopWaitEvidence.removeValue(forKey: session)
+        confirmedNativeTurns.removeValue(forKey: session)
+        desktopAdmissions.removeValue(forKey: session); desktopReceiptReservations.removeValue(forKey: session)
+        pendingNativePublicMessages.removeAll { $0.session == session }
+        pendingLocalPublicContent.removeAll { $0.sessionHash == session }
+        localRecovery.forget(session: session)
+        if let oldFollow = localDesktopFollows.removeValue(forKey: session) {
+            localDesktopFollowOrder.removeAll { $0 == session }
+            localThreadActivityDidReceive?(oldFollow.identity, false)
+        }
+        if snapshot?.sessionHash == session {
+            revision &+= 1
+            inactivityTask?.cancel(); titleTask?.cancel()
+            titleTask = nil; titleTaskSessionHash = nil
+            snapshot = nil; lifecycle = .idle; presentation = .hidden
+            resolvedThreadTitle = nil; selectedActivityAt = nil; selectedCompactionSource = nil
+            resetConfirmationReminder()
+        }
+        if resolved == .memoryConsolidation,
+           let observed = observedActivityBySession[session], observed.snapshot.operationKey != .sessionEnded {
+            memoryActivityBySession[session] = observed
+        } else {
+            memoryActivityBySession.removeValue(forKey: session)
+        }
+        publishMemorySnapshots()
+        notifyChange()
+        return resolved
+    }
+
+    /// Metadata-only threads need no lifecycle slot. Keep bounded identities,
+    /// protecting all admitted observations until Registry explicitly evicts them.
+    private func rememberSessionKind(_ kind: CodexActivitySessionKind, session: String) {
+        sessionKinds[session] = kind
+        sessionKindOrder.removeAll { $0 == session }; sessionKindOrder.append(session)
+        while sessionKinds.count > Self.maximumRememberedSessionKinds,
+              let oldest = sessionKindOrder.first(where: { $0 != session && observedActivityBySession[$0] == nil }) {
+            sessionKinds.removeValue(forKey: oldest)
+            sessionKindOrder.removeAll { $0 == oldest }
+        }
+    }
+
+    private func boundDesktopMemoryAdmissions(keeping session: String) {
+        while desktopMemoryAdmissions.count > 128,
+              let oldest = desktopMemoryAdmissions.keys.filter({ $0 != session }).min(by: {
+                  let firstUnadmitted = taskRegistry.backgroundIdentity(for: $0) == nil
+                  let secondUnadmitted = taskRegistry.backgroundIdentity(for: $1) == nil
+                  if firstUnadmitted != secondUnadmitted { return firstUnadmitted }
+                  return $0 < $1
+              }) {
+            desktopMemoryAdmissions.removeValue(forKey: oldest)
+        }
+    }
+
+    private func publishMemorySnapshots() {
+        backgroundMemorySnapshots = memoryActivityBySession.values.map(\.snapshot).sorted {
+            if $0.occurredAt == $1.occurredAt { return $0.sessionHash < $1.sessionHash }
+            return $0.occurredAt > $1.occurredAt
+        }
+    }
+
+    /// A lost source is uncertainty, not a completed turn. A genuine later
+    /// lifecycle event can resume or settle the same identity.
+    private func markMemorySourceUnavailable(_ source: CodexActivityEventSource, onlyDesktop: Bool = false,
+                                             sessions: Set<String>? = nil) {
+        var changed = false
+        for (session, entry) in memoryActivityBySession where entry.source == source && entry.lifecycle == .active
+            && entry.isDesktopObservation == onlyDesktop && (sessions?.contains(session) ?? true) {
+            let old = entry.snapshot
+            let unavailable = CodexActivitySnapshot(sessionHash: session, taskIdentity: old.taskIdentity,
+                state: .unavailable, workspaceName: old.workspaceName, operationKey: .bridgeUnavailable,
+                toolCategory: old.toolCategory, approximateProgressFraction: old.approximateProgressFraction,
+                occurredAt: old.occurredAt)
+            var uncertain = ObservedActivity(snapshot: unavailable, lifecycle: .unconfirmed, source: source)
+            uncertain.isDesktopObservation = onlyDesktop
+            uncertain.snapshotBeforeSourceLoss = old
+            memoryActivityBySession[session] = uncertain
+            observedActivityBySession[session] = uncertain
+            changed = true
+        }
+        if changed { publishMemorySnapshots(); notifyChange() }
+    }
+
+    private func restoreMemoryObservation(session: String, turnHash: String, desktop: Bool) {
+        guard taskRegistry.backgroundIdentity(for: session)?.turnHash == turnHash,
+              let uncertain = memoryActivityBySession[session], uncertain.lifecycle == .unconfirmed,
+              let confirmed = uncertain.snapshotBeforeSourceLoss else { return }
+        var restored = ObservedActivity(snapshot: confirmed, lifecycle: .active, source: .appServer)
+        restored.isDesktopObservation = desktop
+        memoryActivityBySession[session] = restored; observedActivityBySession[session] = restored
+        publishMemorySnapshots(); notifyChange()
+    }
+
+    private func noteMemoryNativeObservation(session: String, turnHash: String, desktop: Bool) {
+        guard taskRegistry.backgroundIdentity(for: session)?.turnHash == turnHash,
+              var observed = memoryActivityBySession[session], observed.lifecycle == .active else { return }
+        observed.source = .appServer
+        observed.isDesktopObservation = desktop
+        memoryActivityBySession[session] = observed; observedActivityBySession[session] = observed
+    }
+
+    private func clearMemoryWait(session: String, turnHash: String, at now: Date) {
+        guard taskRegistry.backgroundIdentity(for: session)?.turnHash == turnHash,
+              let previous = memoryActivityBySession[session], previous.lifecycle == .active,
+              previous.snapshot.state == .awaitingConfirmation else { return }
+        let old = previous.snapshot
+        let running = CodexActivitySnapshot(sessionHash: session, taskIdentity: old.taskIdentity,
+            state: .thinking, workspaceName: old.workspaceName, operationKey: .analyzingRequest,
+            toolCategory: old.toolCategory, approximateProgressFraction: old.approximateProgressFraction,
+            occurredAt: max(old.occurredAt, now))
+        var observed = ObservedActivity(snapshot: running, lifecycle: .active, source: previous.source)
+        observed.isDesktopObservation = previous.isDesktopObservation
+        memoryActivityBySession[session] = observed; observedActivityBySession[session] = observed
+        publishMemorySnapshots(); notifyChange()
+    }
+
+    /// Desktop current-turn observation can update background lifecycle while
+    /// remaining separate from every user request admission and owner callback.
+    private func receiveDesktopMemoryProjection(_ projection: CodexDesktopInteractionProjection,
+        snapshot desktop: CodexDesktopConversationSnapshot, session: String, generation run: UInt64, at now: Date) async -> Bool {
+        guard let turnID = projection.currentTurnID,
+              ["inProgress", "completed", "interrupted", "failed"].contains(projection.status) else { return false }
+        let epoch = desktop.connectionEpoch, turnHash = CodexActivityPrivacy.hashIdentifier(turnID)
+        let active = projection.status == "inProgress"
+        // A terminal snapshot cannot establish another task or consume receipt capacity.
+        if !active, taskRegistry.backgroundIdentity(for: session)?.turnHash != turnHash { return false }
+        if let prior = desktopMemoryAdmissions[session], prior.epoch == epoch,
+           prior.owner == desktop.ownerClientID, desktop.revision <= prior.revision { return false }
+        if desktopPublicEpoch != epoch {
+            desktopPublicEpoch = epoch
+            desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+            desktopMemoryAdmissions.removeAll()
+        }
+        let receipt = DesktopAdmission(owner: desktop.ownerClientID, epoch: epoch,
+                                       revision: desktop.revision, turnHash: turnHash)
+        desktopMemoryAdmissions[session] = receipt
+        boundDesktopMemoryAdmissions(keeping: session)
+        var accepted = false
+        defer {
+            if !accepted, desktopMemoryAdmissions[session]?.revision == receipt.revision,
+               desktopMemoryAdmissions[session]?.owner == receipt.owner,
+               desktopMemoryAdmissions[session]?.epoch == receipt.epoch {
+                desktopMemoryAdmissions.removeValue(forKey: session)
+            }
+        }
+        let valid: () -> Bool = { [weak self] in
+            guard let self else { return false }
+            return nativeGeneration == run && desktopPublicEpoch == epoch
+                && (closedDesktopPublicEpoch.map { epoch > $0 } ?? true)
+                && desktopMemoryAdmissions[session]?.revision == desktop.revision
+                && desktopMemoryAdmissions[session]?.owner == desktop.ownerClientID
+        }
+        if active, taskRegistry.backgroundIdentity(for: session)?.turnHash != turnHash {
+            let start = CodexActivityEvent(event: .userPromptSubmit, sessionHash: session, turnHash: turnHash,
+                sessionKind: .memoryConsolidation, source: .appServer, occurredAt: projection.startedAt ?? now)
+            await receiveClassified(.init(source: .liveSocket, activity: start), generation: run,
+                admissionAllowed: valid, confirmedCurrentTurn: true)
+        } else if !active {
+            let completion: CodexActivityTurnCompletionStatus = projection.status == "failed" ? .failed
+                : projection.status == "interrupted" ? .interrupted : .completed
+            let event = CodexActivityEvent(event: completion == .interrupted ? .interrupt : .stop,
+                sessionHash: session, turnHash: turnHash, sessionKind: .memoryConsolidation, source: .appServer,
+                turnCompletionStatus: completion, occurredAt: now)
+            await receiveClassified(.init(source: .liveSocket, activity: event), generation: run, admissionAllowed: valid)
+        }
+        guard valid(), taskRegistry.backgroundIdentity(for: session)?.turnHash == turnHash else { return false }
+        if active { restoreMemoryObservation(session: session, turnHash: turnHash, desktop: true) }
+        guard var observed = memoryActivityBySession[session] else { return false }
+        observed.source = .appServer
+        observed.isDesktopObservation = true
+        memoryActivityBySession[session] = observed; observedActivityBySession[session] = observed
+        if active, projection.threadWaitStatus == .running {
+            clearMemoryWait(session: session, turnHash: turnHash, at: now)
+        }
+        accepted = true
+        return true // Accepted observation; no user request/owner callback was issued.
+    }
+
+    private func receiveMemoryPublicLifecycle(_ data: Data, method: String, params: [String: Any],
+        status: [String: Any]?, session: String, epoch: UInt64, generation run: UInt64, at now: Date) async {
+        guard run == nativeGeneration, nativePublicEpoch == epoch,
+              closedNativePublicEpoch.map({ epoch > $0 }) ?? true else { return }
+        if method == "thread/snapshot", let current = params["currentTurn"] as? [String: Any],
+           let id = current["id"] as? String, !id.isEmpty {
+            let turnHash = CodexActivityPrivacy.hashIdentifier(id)
+            if current["status"] as? String == "inProgress", status?["type"] as? String == "active" {
+                if taskRegistry.backgroundIdentity(for: session)?.turnHash != turnHash {
+                    let start = CodexActivityEvent(event: .userPromptSubmit, sessionHash: session,
+                        turnHash: turnHash, sessionKind: .memoryConsolidation, source: .appServer,
+                        occurredAt: Self.publicEventDate(current["startedAtMs"], fallback: now))
+                    await receiveClassified(.init(source: .liveSocket, activity: start), generation: run,
+                        confirmedCurrentTurn: true)
+                }
+                guard run == nativeGeneration, nativePublicEpoch == epoch,
+                      closedNativePublicEpoch.map({ epoch > $0 }) ?? true else { return }
+                restoreMemoryObservation(session: session, turnHash: turnHash, desktop: false)
+                noteMemoryNativeObservation(session: session, turnHash: turnHash, desktop: false)
+                if let flags = status?["activeFlags"] as? [String], flags.isEmpty {
+                    clearMemoryWait(session: session, turnHash: turnHash, at: now)
+                }
+            } else if let raw = current["status"] as? String,
+                      let completion = CodexActivityTurnCompletionStatus(rawValue: raw) {
+                let ended = CodexActivityEvent(event: completion == .interrupted ? .interrupt : .stop,
+                    sessionHash: session, turnHash: turnHash, sessionKind: .memoryConsolidation,
+                    source: .appServer, turnCompletionStatus: completion,
+                    occurredAt: Self.publicEventDate(current["completedAtMs"], fallback: now))
+                await receiveClassified(.init(source: .liveSocket, activity: ended), generation: run)
+            }
+        } else if let event = CodexAppServerActivityNotificationDecoder.decode(data: data, now: now) {
+            await receiveClassified(.init(source: .liveSocket,
+                activity: event.classified(as: .memoryConsolidation)), generation: run)
+        }
+        // Metadata or background lifecycle never grants question/RPC ownership.
+    }
+
     func receiveClassified(_ delivery: CodexActivityDelivery, generation expected: UInt64? = nil,
                            selectionEvidenceAt: Date? = nil, admissionAllowed: (() -> Bool)? = nil,
                            confirmedCurrentTurn: Bool = false) async {
@@ -840,7 +1150,6 @@ final class CodexActivityStore: ObservableObject {
 
     func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false) {
         let event = delivery.activity
-        if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
         var knownGoalStatus = event.goalStatus
             ?? goalStatusBySession[event.sessionHash]
         guard CodexActivityReducer.snapshot(
@@ -851,15 +1160,17 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        let kind = sessionKinds[event.sessionHash] ?? .unknown
-        let resolvedKind = kind == .internalTask ? kind : event.sessionKind ?? kind
+        let resolvedKind = resolveSessionKind(event.sessionKind ?? .unknown, session: event.sessionHash)
+        if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
         guard let admission = taskRegistry.admit(event, kind: resolvedKind,
                                                 selectedSession: snapshot?.sessionHash,
                                                 selectedOccurredAt: selectedActivityAt ?? snapshot?.occurredAt,
                                                 selectionEvidenceAt: selectionEvidenceAt,
                                                 confirmedCurrentTurn: confirmedCurrentTurn) else { return }
-        admittedActivityDidReceive?(event)
-        flushLocalPublicContent(for: event.sessionHash)
+        if resolvedKind != .memoryConsolidation {
+            admittedActivityDidReceive?(event)
+            flushLocalPublicContent(for: event.sessionHash)
+        }
         _ = registerEventID(delivery.eventID)
         for session in admission.evictedSessions { discardSession(session) }
         if resolvedKind != .unknown { sessionKinds[event.sessionHash] = resolvedKind }
@@ -879,7 +1190,8 @@ final class CodexActivityStore: ObservableObject {
         }
         if admission.startsTurn { knownGoalStatus = event.goalStatus }
         synchronizeTokenTurn(for: event)
-        var nextLifecycle = lifecycle
+        var nextLifecycle = resolvedKind == .memoryConsolidation
+            ? (memoryActivityBySession[event.sessionHash]?.lifecycle ?? .idle) : lifecycle
 
         switch event.event {
         case .userPromptSubmit:
@@ -942,7 +1254,7 @@ final class CodexActivityStore: ObservableObject {
             return
         }
 
-        let pendingWait = nextLifecycle == .active
+        let pendingWait = resolvedKind != .memoryConsolidation && nextLifecycle == .active
             ? (desktopWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil }
                 ?? nativeWaitEvidence[event.sessionHash].flatMap { $0.identity == admission.identity ? $0.reason : nil })
             : nil
@@ -955,6 +1267,28 @@ final class CodexActivityStore: ObservableObject {
             approximateProgressFraction: nextSnapshot.approximateProgressFraction,
             occurredAt: nextSnapshot.occurredAt
         )
+        var observed = ObservedActivity(snapshot: identifiedSnapshot, lifecycle: nextLifecycle,
+            source: event.source ?? .hook)
+        if resolvedKind == .memoryConsolidation,
+           let previous = memoryActivityBySession[event.sessionHash],
+           previous.snapshot.taskIdentity == admission.identity, previous.lifecycle == .active,
+           observed.source == .hook, previous.source != .hook {
+            // Hook tool detail supplements an identified native/rollout observer;
+            // it does not replace the source whose disconnect revokes live proof.
+            observed.source = previous.source
+            observed.isDesktopObservation = previous.isDesktopObservation
+        }
+        observedActivityBySession[event.sessionHash] = observed
+        if resolvedKind == .memoryConsolidation {
+            if event.event == .sessionEnd {
+                memoryActivityBySession.removeValue(forKey: event.sessionHash)
+            } else {
+                memoryActivityBySession[event.sessionHash] = observed
+            }
+            publishMemorySnapshots()
+            notifyChange()
+            return
+        }
         let source: CodexActivityEventSource? = identifiedSnapshot.state == .compactingContext ? event.source : nil
         let eligible = !isStaleSettledContinuationEvent(delivery) || selectionEvidenceAt != nil
         if resolvedKind == .user {
@@ -1034,6 +1368,7 @@ final class CodexActivityStore: ObservableObject {
     func receive(_ update: CodexActivityTokenUsageUpdate, publish: Bool = true) {
         guard update.cumulativeTotalTokens >= 0, update.lastReportedTotalTokens >= 0,
               update.cumulativeTotalTokens >= update.lastReportedTotalTokens else { return }
+        guard !isBackgroundOrInternal(update.sessionHash) else { return }
         cumulativeTokensDidReceive?(update)
         // Token records never start a new turn or revive a terminal one.
         guard activeTurnHashBySession[update.sessionHash] == update.turnHash,
@@ -1118,6 +1453,8 @@ final class CodexActivityStore: ObservableObject {
     func stop() async -> UInt64 {
         setMultitaskEnabled(false)
         admittedSnapshots.removeAll()
+        observedActivityBySession.removeAll(); memoryActivityBySession.removeAll()
+        backgroundMemorySnapshots = []
         nativeIsRunning = false
         nativeGeneration &+= 1
         let run = nativeGeneration
@@ -1126,7 +1463,7 @@ final class CodexActivityStore: ObservableObject {
         hide()
         lifecycle = .idle
         taskRegistry = CodexActivityTaskRegistry()
-        for session in Array(latestEventAtBySession.keys) { discardSession(session) }
+        for session in Set(latestEventAtBySession.keys).union(sessionKinds.keys) { discardSession(session) }
         acceptedEventIDs.removeAll()
         acceptedEventIDOrder.removeAll()
         snapshot = nil
@@ -1137,6 +1474,7 @@ final class CodexActivityStore: ObservableObject {
         nativePublicEpoch = nil; closedNativePublicEpoch = nil
         desktopPublicEpoch = nil; closedDesktopPublicEpoch = nil
         desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
+        desktopMemoryAdmissions.removeAll()
         selectedActivityAt = nil
         selectedCompactionSource = nil
         updateAutomaticConnection(.init())
@@ -1506,6 +1844,10 @@ final class CodexActivityStore: ObservableObject {
 
     private func discardSession(_ session: String) {
         admittedSnapshots.removeValue(forKey: session)
+        observedActivityBySession.removeValue(forKey: session)
+        memoryActivityBySession.removeValue(forKey: session)
+        desktopMemoryAdmissions.removeValue(forKey: session)
+        publishMemorySnapshots()
         multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
         multitaskTitleTasks.removeValue(forKey: session)?.cancel()
         latestEventAtBySession.removeValue(forKey: session)
@@ -1519,6 +1861,7 @@ final class CodexActivityStore: ObservableObject {
         titleCache.removeValue(forKey: session)
         titleAttemptedAt.removeValue(forKey: session)
         sessionKinds.removeValue(forKey: session)
+        sessionKindOrder.removeAll { $0 == session }
     }
 
     private func registerEventID(_ eventID: String?) -> Bool {

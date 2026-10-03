@@ -1,5 +1,13 @@
 # QuotaView Handoff
 
+## 记忆整理底栏显示 · 2026-10-03 当前开发工作
+
+用户已授权统一来源解析、事件接收与展示：确定的记忆整理单独使用底栏 AI 球，不进入用户会话列表、统计、自动呼出或应答能力。已接入精确 `memory_consolidation` 标识、独立后台生命周期、迟到身份迁移和只读 Desktop/App Server/Local 通路。名称或 `unknown` 不推断为记忆；Hook 不读取不存在的来源字段。
+
+[专项规格](docs/design/quotaview-background-memory-2026-10-03.md)记录权威来源、身份/状态边界、底栏布局和失败语义。154 项相关冒烟零失败，Debug arm64 构建通过；证据 `.build/073-background-memory-smoke.log`、`.build/073-background-memory-build.log`。未知 Desktop 来源不能只凭历史类别缓存获得跟随或应答资格；迟到内部分类可撤回旧用户卡片，但不提交或回答 Codex 任务。
+
+本轮构建位于 `.build/Development073BackgroundMemory/Build/Products/Debug/QuotaView.app`，固定身份核对为 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`，未替换当前运行开发包，视觉待用户验收。用户已授权本轮源码推送 GitHub、CI 通过后合并 main；源码集成及 GitHub CI 结果以该分支对应 PR 为准。本地验证与已运行包独立记录，公开 Release/appcast 和稳定安装没有变化。
+
 ## 原生提问关闭接口调查与 AX 合同 · 2026-10-03 本轮最新
 
 已继续核对公开生命周期与当前 renderer 状态：同步 resolved 不适用于异步问题，外部 steering 不执行原生本地关闭。纯 Dismiss 会清线程的整个选题组，可包含同轮次跨 source 的后续问题；Skip 可能提交其它草稿，不能作关闭兜底。当前未建立可用的精确组关闭接口、AX 组身份/草稿映射或事务性 lease/CAS，生产 AX 桥未启用。
