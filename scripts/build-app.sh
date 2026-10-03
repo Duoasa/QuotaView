@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir="${0:A:h}"
 project_dir="${script_dir:h}"
 project_file="${project_dir}/QuotaView.xcodeproj"
+distribution_config="${project_dir}/Configs/Distribution.xcconfig"
 scheme="QuotaView"
 configuration="Release"
 dist_dir="${project_dir}/dist"
@@ -18,11 +19,9 @@ display_build_number="$(
         -c 'Print :QuotaViewDisplayBuildNumber' \
         "${info_plist}"
 )"
-app_group_identifier="$(
-    /usr/libexec/PlistBuddy \
-        -c 'Print :QuotaViewAppGroupIdentifier' \
-        "${info_plist}"
-)"
+# Release packaging explicitly uses the stable identity; source/default builds
+# keep the independent development data, activity socket and update boundary.
+app_group_identifier="BUUH229D5Q.com.quotaview.shared"
 update_team_identifier="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :QuotaViewUpdateTeamIdentifier' \
@@ -176,6 +175,7 @@ xcodebuild \
     -project "${project_file}" \
     -scheme "${scheme}" \
     -configuration "${configuration}" \
+    -xcconfig "${distribution_config}" \
     -destination "generic/platform=macOS" \
     -derivedDataPath "${derived_data}" \
     ARCHS="arm64 x86_64" \
@@ -301,6 +301,21 @@ built_version="$(
         -c 'Print :CFBundleShortVersionString' \
         "${staging_app}/Contents/Info.plist"
 )"
+built_bundle_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleIdentifier' \
+        "${staging_app}/Contents/Info.plist"
+)"
+built_app_group_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewAppGroupIdentifier' \
+        "${staging_app}/Contents/Info.plist"
+)"
+widget_app_group_identifier="$(
+    /usr/libexec/PlistBuddy \
+        -c 'Print :QuotaViewAppGroupIdentifier' \
+        "${widget_extension}/Contents/Info.plist"
+)"
 built_build_number="$(
     /usr/libexec/PlistBuddy \
         -c 'Print :CFBundleVersion' \
@@ -393,6 +408,13 @@ if [[ "${widget_version}" != "${version}" ]] \
         "${display_build_number} (update ${build_number}), built " \
         "${widget_version} Build ${widget_display_build_number} " \
         "(update ${widget_build_number})"
+    exit 4
+fi
+
+if [[ "${built_bundle_identifier}" != "com.quotaview.menubar" ]] \
+    || [[ "${built_app_group_identifier}" != "${app_group_identifier}" ]] \
+    || [[ "${widget_app_group_identifier}" != "${app_group_identifier}" ]]; then
+    print -u2 "Release packaging must use the stable app and App Group identity."
     exit 4
 fi
 

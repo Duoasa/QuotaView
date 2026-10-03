@@ -13,7 +13,7 @@
 
 ## 产品行为
 
-- 通用页“检查更新…”调用 Sparkle 标准界面；自动检查是独立原生设置行，
+- 关于页“检查更新…”调用 Sparkle 标准界面；自动检查是独立原生设置行，
   默认关闭，用户开启后每 24 小时检查；每次安装仍需明确确认；
 - 只接收 Stable 通道，不向稳定版提供 Preview/Pre-release；
 - Debug、SwiftPM、非 `.app`、错误 Bundle ID、Ad Hoc/未签名或非预期 Team
@@ -64,6 +64,25 @@
 `APP-UPDATES-07` 和本规格保持 `Verifying`。这不改变各版本已经 Released
 的事实。
 
+## 2026-10-04 0.7.5 发行前准备
+
+候选为0.7.5 / 显示Build2 / 内部51，预期tag `v0.7.5-build.2`、
+ZIP `QuotaView-v0.7.5-build.2.zip`。用户明确要求先验收构建，再决定是否Release；
+本轮不授权正式Release或公开appcast更新。
+
+显式Distribution配置选择正式Bundle/Widget/AppGroup，默认构建保持独立开发
+身份。应用启动恢复唯一更新控制器的start调用，控制器现有Debug/开发/签名
+门禁保持。appcast生成前先校验实际ZIP与源配置的版本、身份、Feed、公钥、
+正式Developer ID及Staple，再访问签名钥匙。仅本次候选ZIP作为生成输入，
+已有Feed提供历史条目，避免旧ZIP被本次tag前缀重新命名。
+
+fresh正式身份Universal无签名构建、App/Widget版本与架构/资源核对通过；
+现有线上Feed与回滚资产只读验证、临时负向门禁结果保存在
+`.build/075-appcast-preparation/readiness.json`。已验签历史Feed另存于
+`.build/075-appcast-preparation/updates/appcast.xml`，发行时配合最终签名公证ZIP。
+当前无签名候选不进入Feed；正式签名、公证、回下载与Feed发布在用户具体
+授权后完成。运行交付和视觉状态见Handoff当前节。
+
 ## 2026-09-11 Build 3 update admission
 
 The owner explicitly authorized 0.4.7 Build 3 / internal 22, tag
@@ -79,3 +98,11 @@ immutable archive and public-download checks. The feed will move from
 [版本历史](../../VERSION_HISTORY.md#当前最新版本)。两项 opt-in 实测已补跑通过。
 main CI 首次因测试夹具 5 秒启动窗口未生成端口文件失败，同提交重跑通过；未更改断言。
 Build 2 转为草稿，公开时间线不再显示；其 tag / 资产保留且继续排除在 Feed 之外。
+
+### 2026-10-04 Build3 发行候选身份
+
+长会话恢复作为同版本下一源码迭代，当前候选为0.7.5/显示Build3/内部52，唯一预期tag/ZIP为 `v0.7.5-build.3` / `QuotaView-v0.7.5-build.3.zip`。fresh正式身份Universal Release无签名构建与App/Widget版本、资源核对通过；实际无签名候选再次被appcast生成器在私钥访问前拒绝，未生成/发布Feed。Build2预检保留作历史证据，已验签Stable回滚基线保持。Release与该精确候选的公开appcast仍等待用户后续决定。
+
+## 2026-10-04 Build3 正式准入授权
+
+用户明确要求推送 GitHub、发布最新版、合并 main 并推送 appcast，精确准入为 **0.7.5 / Build3 / 内部52**，`v0.7.5-build.3` / `QuotaView-v0.7.5-build.3.zip`。这取代上文历史候选的待授权状态。按正式签名、公证/Staple、不可变资产、公开回下载、旧版公钥及签名 Feed 验证顺序执行；目标序列为52 → 49 → 38。完成证据回填版本历史。

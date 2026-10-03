@@ -11,6 +11,7 @@ final class CodexLocalRolloutDiscovery {
         let sessionKind: CodexActivitySessionKind
         let metadataKind: CodexActivitySessionKind
         let title: String?
+        let threadMetadata: CodexLocalRolloutThreadMetadata?
     }
 
     private let codexHomeURL: URL
@@ -82,20 +83,31 @@ final class CodexLocalRolloutDiscovery {
         defer { sqlite3_close(database) }
         sqlite3_busy_timeout(database, 100)
 
+        // Columns differ across Codex releases. Project each optional field into
+        // a stable position instead of making all metadata depend on one schema.
+        var columns = Set<String>()
+        var schema: OpaquePointer?
+        if sqlite3_prepare_v2(database, "PRAGMA table_info(threads)", -1, &schema, nil) == SQLITE_OK,
+           let schema {
+            while sqlite3_step(schema) == SQLITE_ROW {
+                if let name = sqlite3_column_text(schema, 1) { columns.insert(String(cString: name)) }
+            }
+        }
+        if let schema { sqlite3_finalize(schema) }
+        func field(_ name: String) -> String { columns.contains(name) ? name : "NULL" }
         let sql = """
-        SELECT id, rollout_path, cwd, source, thread_source, title
+        SELECT id, rollout_path, cwd, \(field("source")), \(field("thread_source")),
+               \(field("title")), \(field("name")), \(field("model")),
+               \(field("reasoning_effort")), \(field("tokens_used"))
         FROM threads
         WHERE archived = 0
         ORDER BY updated_at_ms DESC, id DESC
         LIMIT ?
         """
         var statement: OpaquePointer?
-        let withoutTitle = sql.replacingOccurrences(of: ", title", with: "")
-        let legacy = withoutTitle.replacingOccurrences(of: ", source, thread_source", with: "")
-        for query in [sql, withoutTitle, legacy] {
-            if sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK { break }
+        if sqlite3_prepare_v2(database, sql, -1, &statement, nil) != SQLITE_OK {
             if let statement { sqlite3_finalize(statement) }
-            statement = nil
+            return nil
         }
         guard let statement else { return nil }
         defer { sqlite3_finalize(statement) }
@@ -151,6 +163,17 @@ final class CodexLocalRolloutDiscovery {
             } else {
                 workspaceName = nil
             }
+            func text(_ index: Int32) -> String? {
+                sqlite3_column_text(statement, index).map { String(cString: $0) }
+            }
+            let explicitName = text(6)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hasExplicitName = explicitName.map { !$0.isEmpty && $0.utf8.count <= 512 } ?? false
+            let total = sqlite3_column_type(statement, 9) == SQLITE_INTEGER
+                ? sqlite3_column_int64(statement, 9) : nil
+            let displayMetadata = CodexLocalRolloutThreadMetadata(
+                title: hasExplicitName ? explicitName : text(5), titleIsExplicitName: hasExplicitName,
+                model: text(7), reasoningEffort: text(8), cumulativeTotalTokens: total
+            )
             result.append(
                 Candidate(
                     fileURL: fileURL,
@@ -159,7 +182,8 @@ final class CodexLocalRolloutDiscovery {
                     workspaceName: workspaceName,
                     sessionKind: kind,
                     metadataKind: metadata.kind,
-                    title: sqlite3_column_text(statement, 5).map { String(cString: $0) } ?? metadata.subagentIdentity?.title
+                    title: displayMetadata.title ?? metadata.subagentIdentity?.title,
+                    threadMetadata: displayMetadata.isEmpty ? nil : displayMetadata
                 )
             )
         }
@@ -258,7 +282,7 @@ final class CodexLocalRolloutDiscovery {
             }
             result.append(Candidate(fileURL: file, threadID: metadata.threadID, sessionHash: metadata.sessionHash,
                                     workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind,
-                                    title: metadata.subagentIdentity?.title))
+                                    title: metadata.subagentIdentity?.title, threadMetadata: nil))
             if result.count == maximumCandidateCount { break }
         }
         return result

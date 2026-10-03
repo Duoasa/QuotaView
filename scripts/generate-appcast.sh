@@ -35,6 +35,15 @@ release_name="QuotaView-v${version}-build.${display_build_number}"
 release_archive="${archives_dir}/${release_name}.zip"
 appcast_path="${archives_dir}/appcast.xml"
 sparkle_key_account="${SPARKLE_KEY_ACCOUNT:-com.quotaview.menubar}"
+expected_feed_url="$(
+    /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "${info_plist}"
+)"
+expected_public_key="$(
+    /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "${info_plist}"
+)"
+expected_signing_team="$(
+    /usr/libexec/PlistBuddy -c 'Print :QuotaViewUpdateTeamIdentifier' "${info_plist}"
+)"
 
 if [[ "${release_tag}" != "${expected_tag}" ]]; then
     print -u2 \
@@ -52,6 +61,46 @@ if [[ ! -f "${release_archive}" ]]; then
     print -u2 "Missing release archive: ${release_archive}"
     exit 2
 fi
+
+# Check the actual archive before accessing the signing key. A development
+# bundle with the right version number must never become a stable update.
+verification_dir="$(mktemp -d "/tmp/quotaview-appcast-check.XXXXXX")"
+trap 'rm -rf "${verification_dir}"' EXIT
+/usr/bin/ditto -x -k "${release_archive}" "${verification_dir}"
+archive_app="${verification_dir}/QuotaView.app"
+archive_info="${archive_app}/Contents/Info.plist"
+widget_info="${archive_app}/Contents/PlugIns/QuotaViewWidgetExtension.appex/Contents/Info.plist"
+if [[ ! -f "${archive_info}" ]] || [[ ! -f "${widget_info}" ]]; then
+    print -u2 "Stable archive must contain QuotaView.app and its widget."
+    exit 4
+fi
+
+for plist in "${archive_info}" "${widget_info}"; do
+    if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${plist}")" != "${version}" ]] \
+        || [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${plist}")" != "${build_number}" ]] \
+        || [[ "$(/usr/libexec/PlistBuddy -c 'Print :QuotaViewDisplayBuildNumber' "${plist}")" != "${display_build_number}" ]] \
+        || [[ "$(/usr/libexec/PlistBuddy -c 'Print :QuotaViewAppGroupIdentifier' "${plist}")" != "BUUH229D5Q.com.quotaview.shared" ]]; then
+        print -u2 "Stable archive version or App Group identity is inconsistent."
+        exit 4
+    fi
+done
+if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${archive_info}")" != "com.quotaview.menubar" ]] \
+    || [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${widget_info}")" != "com.quotaview.menubar.widget" ]] \
+    || [[ "$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "${archive_info}")" != "${expected_feed_url}" ]] \
+    || [[ "$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "${archive_info}")" != "${expected_public_key}" ]] \
+    || [[ "$(/usr/libexec/PlistBuddy -c 'Print :SURequireSignedFeed' "${archive_info}")" != "true" ]] \
+    || [[ "$(/usr/libexec/PlistBuddy -c 'Print :SUVerifyUpdateBeforeExtraction' "${archive_info}")" != "true" ]]; then
+    print -u2 "Stable archive application or Sparkle identity is inconsistent."
+    exit 4
+fi
+codesign --verify --deep --strict "${archive_app}"
+signature_details="$(codesign -dv --verbose=4 "${archive_app}" 2>&1)"
+if ! print -r -- "${signature_details}" | rg -Fq "TeamIdentifier=${expected_signing_team}" \
+    || ! print -r -- "${signature_details}" | rg -Fq 'Authority=Developer ID Application:'; then
+    print -u2 "Stable appcast requires the official Developer ID signature."
+    exit 4
+fi
+xcrun stapler validate "${archive_app}"
 
 if find "${archives_dir}" \
     -maxdepth 1 \
@@ -102,6 +151,13 @@ fi
 download_url_prefix="https://github.com/Duoasa/QuotaView/releases/download/${release_tag}/"
 release_url="https://github.com/Duoasa/QuotaView/releases/tag/${release_tag}"
 
+# Generate from only the selected immutable archive. The existing output feed
+# still supplies historical items, whose version-specific GitHub URLs must not
+# be rewritten using this release's download prefix.
+generation_dir="${verification_dir}/archives"
+mkdir -p "${generation_dir}"
+/usr/bin/ditto "${release_archive}" "${generation_dir}/${release_name}.zip"
+
 "${generate_appcast_tool}" \
     --account "${sparkle_key_account}" \
     --download-url-prefix "${download_url_prefix}" \
@@ -110,7 +166,7 @@ release_url="https://github.com/Duoasa/QuotaView/releases/tag/${release_tag}"
     --maximum-versions 3 \
     --maximum-deltas 0 \
     -o "${appcast_path}" \
-    "${archives_dir}"
+    "${generation_dir}"
 
 "${sign_update_tool}" \
     --account "${sparkle_key_account}" \

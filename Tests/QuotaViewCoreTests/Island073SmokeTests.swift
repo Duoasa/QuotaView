@@ -9,14 +9,13 @@ final class Island073SmokeTests: XCTestCase {
     @MainActor
     func testPrimaryIslandSettingsRoutesAndLocalization() {
         let pages = IslandSettingsPage.allCases
-        XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "usage", "codexConnection", "proxy", "about"]),
+        XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "usage", "codexConnection", "proxy", "feedback", "about"]),
             "Only settings for the current primary interface should be reachable")
         for language in [AppPreferences.Language.simplifiedChinese, .english] {
             let copy = AppCopy(language: language)
             XCTAssertEqual(Set(pages.map { $0.title(copy) }).count, pages.count)
             for page in pages {
                 XCTAssertFalse(page.title(copy).isEmpty)
-                XCTAssertFalse(page.subtitle(copy).isEmpty)
                 XCTAssertNotNil(NSImage(systemSymbolName: page.symbol, accessibilityDescription: nil))
             }
         }

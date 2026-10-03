@@ -154,6 +154,9 @@ final class CodexActivityRuntime: ObservableObject {
 
         liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
         store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
+        store.threadMetadataDidReceive = { [weak self] identity, metadata in
+            self?.liveIsland.model.receiveThreadMetadata(metadata, identity: identity)
+        }
         store.subagentIdentityDidReceive = { [weak self] identity in self?.liveIsland.model.receiveSubagentIdentity(identity) }
         store.subagentActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveSubagentActivity(event) }
         store.subagentPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
@@ -990,7 +993,8 @@ final class CodexActivityRuntime: ObservableObject {
         store.setMultitaskEnabled(enabled)
         liveIsland.model.setConnection(store.automaticConnection.sharedState)
         for entry in store.multitask.entries {
-            liveIsland.model.setTitle(store.title(for: entry.snapshot.sessionHash), for: entry.snapshot.sessionHash)
+            liveIsland.model.setTitle(store.title(for: entry.snapshot.sessionHash), for: entry.snapshot.sessionHash,
+                                      source: store.titleSource(for: entry.snapshot.sessionHash))
         }
         let current = islandUsage.state.isCurrent ? islandUsage.snapshot : nil
         liveIsland.update(english: preferences.resolvedLanguage == .english,

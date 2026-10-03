@@ -6,7 +6,7 @@
 >
 > 最近同步：2026-10-04。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
 >
-> 当前源码：[0.7.5 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)；显示Build1、内部50，沿用固定独立开发数据身份，记忆DEBUG已停止。
+> 当前源码：[0.7.5 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)；显示Build3、内部52，长会话元数据恢复与设置反馈候选已构建运行；101项相关冒烟通过，沿用固定独立开发身份，Release仍待用户后续决定。
 >
 > 源码集成：[PR #73](https://github.com/Duoasa/QuotaView/pull/73)指向main；GitHub完整CI与最终合并以该PR为准，运行包及本地验证单独记录于Handoff。
 >
@@ -20,10 +20,13 @@
 
 0.5.1 Build 13 路径热修复已发布 GitHub / Stable appcast（见 Handoff）；249 项 CI（2 跳过）、Universal 签名公证、公开包回下载与线上 Feed 签名验证通过。定位器修复已同步当前开发源码，未混入本目录实验，README 不变。
 
+当前发行：用户已授权 **0.7.5 Build3 / 内部52** 的 GitHub Stable 与 appcast，精确 tag/ZIP 为 `v0.7.5-build.3` / `QuotaView-v0.7.5-build.3.zip`。发布链正在执行；最终公开资产与验证以[版本历史](../../VERSION_HISTORY.md#当前最新版本)为准。
+
 ## 当前规格
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
+| `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Verifying` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，已运行待用户验收 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 参考 Vibe owner IPC/Hook/rollout 证据，统一线程来源与执行目的、子任务投影、身份乱序及读取覆盖预算；子 agent 伸出下层卡片、原生头像/共同基线、24pt分段、白色数量与量子时钟更新见契约；交付见 Handoff 当前节 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 原生来源与当前执行目的分别管理，记忆仅进入底栏 AI 球。Hook/Local 共用有界读取服务，部分覆盖保留已验证证据；早到身份由同目录代次/线程/轮次准入消费。补齐温缓存、新轮次和执行撤销边界；不按名称过滤。此前 PR #72 已合并；本轮增量、必要检查和已运行包分别见 Handoff，视觉待用户验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 原任务 owner IPC 回传、普通/同步/异步独立解除和自动详情导航已实现；98 项必要冒烟、真实只读握手、开发构建/签名通过，真实交互待用户验收；已推送 PR #68，完整 CI/合并以 PR 为准。 |
@@ -52,7 +55,7 @@
 | `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 的 AI 球尺寸能力保留为发布历史；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.5.0 Build 3 已进入 Stable Feed，线上签名验证通过；真实 N → N+1 安装操作待记录 |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.7.5 Build3/内部52完成正式身份与启动接线、候选包/生成门禁准备；公开Feed未更新，Release待用户验收与授权。现有Stable签名验证通过，真实 N → N+1 安装操作待记录 |
 
 ## 已替代的当前迭代规格
 
