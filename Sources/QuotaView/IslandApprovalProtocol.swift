@@ -247,10 +247,15 @@ struct IslandCodexApprovalRequest: Equatable {
     var supportedForm: Bool {
         let schema = params["requestedSchema"]
         return schema["type"].text == "object" && fields.count <= 32
+            && (schema.object?.keys.contains("properties") != true || schema["properties"].object != nil)
             && fields.allSatisfy(\.supported)
             && Set(schema["required"].array.map(\.text)).isSubset(of: Set(fields.map(\.id)))
             && !["allOf", "anyOf", "oneOf", "$ref", "not", "if", "then", "else"].contains(where: { schema[$0] != .null })
     }
+    /// MCP uses form mode for both parameter entry and consent-only requests.
+    /// The schema, rather than the message or server name, determines whether
+    /// there is anything to fill in. Unsupported schemas never gain approval UI.
+    var isApprovalOnlyForm: Bool { kind == .mcpForm && supportedForm && fields.isEmpty }
     var permissions: [IslandApprovalPermission] {
         let p = params["permissions"]; var result: [IslandApprovalPermission] = []
         if p["network"]["enabled"].boolean {

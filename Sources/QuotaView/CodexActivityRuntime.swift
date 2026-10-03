@@ -154,6 +154,12 @@ final class CodexActivityRuntime: ObservableObject {
 
         liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
         store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
+        store.subagentIdentityDidReceive = { [weak self] identity in self?.liveIsland.model.receiveSubagentIdentity(identity) }
+        store.subagentActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveSubagentActivity(event) }
+        store.subagentPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
+        store.subagentPublicMessageDidReceive = { [weak self] data in self?.liveIsland.model.receiveSubagentPublicMessage(data) }
+        store.subagentSourceUnavailable = { [weak self] source in self?.liveIsland.model.receiveSubagentSourceUnavailable(source) }
+        store.subagentObservationDidWithdraw = { [weak self] session in self?.liveIsland.model.withdrawSubagentObservation(for: session) }
         store.localThreadActivityDidReceive = { [weak self] identity, active in
             if active { self?.followDesktopThread(identity.threadID, source: .localRollout) }
             else { self?.withdrawDesktopFollow(identity.threadID, source: .localRollout) }
@@ -187,6 +193,9 @@ final class CodexActivityRuntime: ObservableObject {
         store.admittedActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveLegacy(event) }
         store.activitySessionKindDidResolve = { [weak self] key, kind in
             self?.liveIsland.model.setSessionKind(kind, for: key)
+        }
+        store.activityExecutionKindDidResolve = { [weak self] key, kind in
+            self?.liveIsland.model.receiveExecutionSessionKind(kind, session: key)
         }
         store.cumulativeTokensDidReceive = { [weak self] update in self?.liveIsland.model.receiveToken(update) }
         store.stateDidChange = { [weak self] in
@@ -589,10 +598,11 @@ final class CodexActivityRuntime: ObservableObject {
             liveIsland.model.setDesktopConnection(connected: false, epoch: nil)
             await desktopIPCClient.stop()
             guard !Task.isCancelled else { return }
+            liveIsland.model.reset()
             guard await store.changeDataDirectory(target), !Task.isCancelled else {
                 if !Task.isCancelled {
-                    _ = await store.changeDataDirectory(dataDirectoryURL)
                     liveIsland.model.reset()
+                    _ = await store.changeDataDirectory(dataDirectoryURL)
                     isChangingDataDirectory = false
                     directorySelectionFailed = true
                     fileBridge.setDeliveryReady(true)
@@ -602,7 +612,6 @@ final class CodexActivityRuntime: ObservableObject {
             }
             desktopIPCClient = CodexDesktopIPCClient(configuration: .init(
                 socketURL: target.appendingPathComponent("ipc/ipc.sock")))
-            liveIsland.model.reset()
             dataDirectoryURL = target
             hookEventGeneration &+= 1
             bridge.stop()

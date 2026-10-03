@@ -80,7 +80,10 @@ final class CodexDesktopRequestProjectionTests: XCTestCase {
     func testInternalTaskClassificationDoesNotInventUserSession() throws {
         var state = base(requests: [], turns: [turn("turn")])
         state["source"] = ["subagent": ["thread_spawn": ["parent_thread_id": "parent"]]]
-        XCTAssertEqual(try project(state).sourceKind, .internalTask)
+        let child = try project(state)
+        XCTAssertEqual(child.sourceKind, .subagent)
+        XCTAssertNotEqual(child.sourceKind, .user)
+        XCTAssertTrue(child.requests.isEmpty)
         state["source"] = "unknown"; state["threadSource"] = NSNull()
         XCTAssertEqual(try project(state).sourceKind, .unknown)
     }

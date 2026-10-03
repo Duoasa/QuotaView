@@ -10,6 +10,7 @@ final class CodexLocalRolloutDiscovery {
         let workspaceName: String?
         let sessionKind: CodexActivitySessionKind
         let metadataKind: CodexActivitySessionKind
+        let title: String?
     }
 
     private let codexHomeURL: URL
@@ -82,18 +83,19 @@ final class CodexLocalRolloutDiscovery {
         sqlite3_busy_timeout(database, 100)
 
         let sql = """
-        SELECT id, rollout_path, cwd, source, thread_source
+        SELECT id, rollout_path, cwd, source, thread_source, title
         FROM threads
         WHERE archived = 0
         ORDER BY updated_at_ms DESC, id DESC
         LIMIT ?
         """
         var statement: OpaquePointer?
-        if sqlite3_prepare_v2(database, sql, -1, &statement, nil) != SQLITE_OK {
+        let withoutTitle = sql.replacingOccurrences(of: ", title", with: "")
+        let legacy = withoutTitle.replacingOccurrences(of: ", source, thread_source", with: "")
+        for query in [sql, withoutTitle, legacy] {
+            if sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK { break }
             if let statement { sqlite3_finalize(statement) }
             statement = nil
-            let legacySQL = sql.replacingOccurrences(of: ", source, thread_source", with: "")
-            guard sqlite3_prepare_v2(database, legacySQL, -1, &statement, nil) == SQLITE_OK else { return nil }
         }
         guard let statement else { return nil }
         defer { sqlite3_finalize(statement) }
@@ -156,7 +158,8 @@ final class CodexLocalRolloutDiscovery {
                     sessionHash: sessionHash,
                     workspaceName: workspaceName,
                     sessionKind: kind,
-                    metadataKind: metadata.kind
+                    metadataKind: metadata.kind,
+                    title: sqlite3_column_text(statement, 5).map { String(cString: $0) } ?? metadata.subagentIdentity?.title
                 )
             )
         }
@@ -254,7 +257,8 @@ final class CodexLocalRolloutDiscovery {
                 continue
             }
             result.append(Candidate(fileURL: file, threadID: metadata.threadID, sessionHash: metadata.sessionHash,
-                                    workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind))
+                                    workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind,
+                                    title: metadata.subagentIdentity?.title))
             if result.count == maximumCandidateCount { break }
         }
         return result
@@ -262,7 +266,8 @@ final class CodexLocalRolloutDiscovery {
 
     static func readSessionMetadata(
         from fileURL: URL
-    ) -> (threadID: String, sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind)? {
+    ) -> (threadID: String, sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind,
+          subagentIdentity: CodexActivitySubagentIdentity?)? {
         guard let line = readMetadataLine(from: fileURL),
               let object = try? JSONSerialization.jsonObject(with: line),
               let envelope = object as? [String: Any],
@@ -279,7 +284,8 @@ final class CodexLocalRolloutDiscovery {
             CodexActivityPrivacy.workspaceName(
                 from: payload["cwd"] as? String
             ),
-            CodexActivitySessionKind.classify(source: payload["source"], threadSource: (payload["thread_source"] ?? payload["threadSource"]) as? String)
+            CodexActivitySessionKind.classify(metadata: payload),
+            CodexActivitySubagentIdentity.decode(payload, expectedThreadID: id)
         )
     }
 

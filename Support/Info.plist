@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>zh_CN</string>
 	<key>CFBundleDisplayName</key>
-	<string>QuotaView 0.7.3 Development</string>
+	<string>QuotaView 0.7.5 Development</string>
 	<key>CFBundleExecutable</key>
 	<string>QuotaView</string>
 	<key>CFBundleIdentifier</key>
@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.7.3</string>
+	<string>0.7.5</string>
 	<key>CFBundleVersion</key>
-	<string>49</string>
+	<string>50</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>

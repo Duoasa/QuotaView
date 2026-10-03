@@ -1,0 +1,6 @@
+These 28 avatar images originate from the dark avatar palette in OpenAI Codex.
+They are used to match the avatars of the corresponding native Codex threads.
+They are not original Duoasa artwork or assets covered by QuotaView's MIT grant.
+
+Provenance and source asset hashes:
+docs/reference/codex-agent-avatar-provenance.json

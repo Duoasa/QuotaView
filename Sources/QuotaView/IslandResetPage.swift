@@ -72,39 +72,41 @@ struct IslandResetPage: View {
                     HStack(spacing: 4) {
                         Text(copy.text("额度重置", "Quota reset")).foregroundStyle(secondary)
                         Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
-                    }.font(AstaSans.regular(16))
+                    }.font(AstaSans.semiBold(15)).tracking(-0.15)
                 }.padding(.vertical, 12).frame(maxWidth: .infinity)
 
                 if usageState.isStale {
                     Text(copy.text("显示上次数据", "Showing previous data"))
-                        .font(AstaSans.regular(10)).foregroundStyle(secondary)
+                        .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack {
                     Text(usageState.isStale ? copy.text("上次额度", "Previous quota") : copy.text("可用额度", "Available quota")).foregroundStyle(secondary)
                     Spacer(minLength: 8)
-                    Text(data.remainingPercent.map { "\($0)%" } ?? "—").monospacedDigit()
-                }.font(AstaSans.regular(10))
+                    Text(data.remainingPercent.map { "\($0)%" } ?? "—")
+                        .font(AstaSans.medium(11)).monospacedDigit()
+                }.font(AstaSans.regular(11))
 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     switch data.creditAvailability {
                     case .empty:
                         Text(copy.text("暂无可用重置卡", "No reset credits available"))
-                            .font(AstaSans.semiBold(12)).foregroundStyle(.white)
+                            .font(AstaSans.semiBold(11)).foregroundStyle(.white)
                         Text(copy.text("返回用量页查看额度与恢复时间。", "Return to usage to check your quota and reset time."))
                             .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                     case .unknown:
                         Text(copy.text("重置卡数据暂不可用", "Reset credits unavailable"))
-                            .font(AstaSans.semiBold(12)).foregroundStyle(.white)
+                            .font(AstaSans.semiBold(11)).foregroundStyle(.white)
                         Text(copy.text("刷新以获取重置次数。", "Refresh to check reset credits."))
                             .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                     case .available:
-                        Text(copy.text("⚠️ 重置须知", "⚠️ Before resetting")).foregroundStyle(.white)
+                        Text(copy.text("⚠️ 重置须知", "⚠️ Before resetting"))
+                            .font(AstaSans.semiBold(11)).foregroundStyle(.white)
                         warning(copy.text("重置会消耗 1 次机会。", "Resetting uses one reset credit."))
                         warning(copy.text("立即重置符合条件的 Codex 用量周期。", "Eligible Codex usage cycles reset immediately."))
                         warning(copy.text("重置后无法撤销。", "A reset cannot be undone."))
                     }
-                }.font(AstaSans.regular(10)).padding(14.5)
+                }.font(AstaSans.regular(11)).lineSpacing(3).padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
                     .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
@@ -114,7 +116,7 @@ struct IslandResetPage: View {
                     previewed = true
                 } label: {
                     Text(data.actionTitle(previewed: previewed, copy: copy))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(AstaSans.semiBold(13))
                         .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
                 }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true))
                     .frame(maxWidth: .infinity).disabled(!data.canPreview)
@@ -125,7 +127,7 @@ struct IslandResetPage: View {
             }
 
             Text(data.caption(previewed: previewed, copy: copy))
-                .font(IslandChromeMetrics.font).foregroundStyle(secondary)
+                .font(AstaSans.regular(10.5)).lineSpacing(2).foregroundStyle(secondary)
                 .fixedSize(horizontal: false, vertical: true)
             }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
         } footer: {

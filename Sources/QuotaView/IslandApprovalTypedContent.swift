@@ -1,8 +1,9 @@
+import AppKit
 import SwiftUI
 
 // Native presentation: presentation follows the supplied Codex request, never a transport.
 enum IslandApprovalLayout: String, CaseIterable {
-    case command, terminalInput, fileChange, network, permissions, connector, questions, form, authorization, verification
+    case command, terminalInput, fileChange, network, permissions, connector, questions, toolApproval, form, authorization, verification
     init(_ request: IslandCodexApprovalRequest) {
         switch request.kind {
         case .command: self = .command
@@ -11,7 +12,7 @@ enum IslandApprovalLayout: String, CaseIterable {
         case .network: self = .network
         case .permissions: self = .permissions
         case .questions: self = request.contextItem?["type"].text == "mcpToolCall" ? .connector : .questions
-        case .mcpForm: self = request.supportedForm ? .form : .verification
+        case .mcpForm: self = request.isApprovalOnlyForm ? .toolApproval : request.supportedForm ? .form : .verification
         case .mcpURL: self = .authorization
         case .nativeOnly: self = .verification
         }
@@ -25,6 +26,7 @@ enum IslandApprovalLayout: String, CaseIterable {
         case .permissions: "folder.badge.person.crop"
         case .connector: "square.stack.3d.up"
         case .questions: "text.bubble"
+        case .toolApproval: "checkmark.shield"
         case .form: "list.bullet.rectangle"
         case .authorization: "arrow.up.right.square"
         case .verification: "lock.shield"
@@ -95,13 +97,27 @@ struct IslandApprovalInput: View {
     }
 }
 
+enum IslandApprovalCodePreview {
+    static let maximumLines = 8
+    static let maximumCharacters = 2_048
+    static func text(_ value: String) -> String { String(value.prefix(maximumCharacters)) }
+    static func height(_ value: String, width: CGFloat) -> CGFloat {
+        IslandTaskTextMetrics.limitedHeight(text(value), lines: maximumLines, size: 11, code: true, width: width)
+    }
+    static func isTruncated(_ value: String, width: CGFloat) -> Bool {
+        value.count > maximumCharacters
+            || IslandTaskTextMetrics.height(text(value), size: 11, code: true, width: width) > height(value, width: width)
+    }
+}
+
 enum IslandApprovalTypedMetrics {
     static func text(_ value: String, width: CGFloat, code: Bool = false) -> CGFloat {
         IslandTaskTextMetrics.height(value, size: code ? 11 : 12, code: code, width: width)
     }
     static func code(_ value: String, caption: String, width: CGFloat) -> CGFloat {
-        36 + 24 + text(value, width: width - 24, code: true)
-            + (caption.isEmpty ? 0 : 1 + 20 + text(caption, width: width - 50, code: true))
+        36 + 24 + IslandApprovalCodePreview.height(value, width: width - 24)
+            + (IslandApprovalCodePreview.isTruncated(value, width: width - 24) ? 32 : 0)
+            + (caption.isEmpty ? 0 : 1 + 20 + IslandTaskTextMetrics.limitedHeight(caption, lines: 2, code: true, width: width - 50))
     }
     static func diffText(_ change: IslandApprovalJSON) -> String {
         change["diff"].text.isEmpty ? change["diff"]["text"].text : change["diff"].text
@@ -141,6 +157,7 @@ enum IslandApprovalTypedMetrics {
         case .permissions: return 24 + 12 + controls + note
         case .connector: return 24 + 12 + argumentsHeight(request, width: width) + 16 + controls
         case .questions: return controls
+        case .toolApproval: return 24 + (request.detail.isEmpty ? 0 : 12 + text(request.detail, width: width))
         case .form: return 24 + 12 + controls + (request.detail.isEmpty ? 0 : 12 + text(request.detail, width: width))
         case .authorization:
             return 24 + 12 + destinationHeight(name: request.url?.host ?? request.params["serverName"].text,
@@ -159,6 +176,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
     let openedURL: Bool
     let handoffMessage: String?
     let controls: Controls
+    @State private var showsCompleteCode = false
     private var layout: IslandApprovalLayout { .init(request) }
     private var muted: Color { IslandApprovalAppearance.muted }
     private var secondary: Color { IslandApprovalAppearance.secondary }
@@ -204,6 +222,9 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                 controls.padding(.top, 4)
             case .questions:
                 controls
+            case .toolApproval:
+                heading(t("批准工具操作", "Approve tool action"))
+                if !request.detail.isEmpty { note(request.detail) }
             case .form:
                 heading(t("填写工具表单", "Complete the tool form"), trailing: t("* 必填", "* Required"))
                 controls
@@ -265,18 +286,39 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                 if !trailing.isEmpty { Text(trailing).foregroundStyle(muted) }
             }.font(.system(size: 10, weight: .medium)).padding(.horizontal, 12).frame(height: 36)
                 .background(IslandApprovalAppearance.raised)
-            Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white).lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: IslandApprovalTypedMetrics.text(value, width: width - 24, code: true), alignment: .topLeading)
-                .textSelection(.enabled).padding(12)
+            Group {
+                if showsCompleteCode {
+                    ScrollView(.vertical) {
+                        Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white).lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                    }.scrollIndicators(.visible)
+                } else {
+                    Text(IslandApprovalCodePreview.text(value))
+                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(.white).lineSpacing(2)
+                        .lineLimit(IslandApprovalCodePreview.maximumLines).truncationMode(.tail)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .textSelection(.enabled)
+                }
+            }.frame(height: IslandApprovalCodePreview.height(value, width: width - 24), alignment: .topLeading).padding(12)
+            if IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
+                HStack {
+                    Button(t(showsCompleteCode ? "收起完整内容" : "查看完整内容",
+                        showsCompleteCode ? "Show preview" : "Show full content")) { showsCompleteCode.toggle() }
+                    Spacer()
+                    Button(t("复制完整内容", "Copy full text")) {
+                        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
+                    }
+                }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(.plain)
+                    .frame(height: 24).padding(.horizontal, 12).padding(.bottom, 8)
+            }
             if !caption.isEmpty {
                 Rectangle().fill(IslandApprovalAppearance.border).frame(height: 1)
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "folder").foregroundStyle(muted).frame(width: 18, height: 18)
                     Text(caption).font(.system(size: 11, design: .monospaced)).foregroundStyle(secondary).lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(height: IslandApprovalTypedMetrics.text(caption, width: width - 50, code: true), alignment: .topLeading)
+                        .lineLimit(2).truncationMode(.middle)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(caption, lines: 2, code: true, width: width - 50), alignment: .topLeading)
                         .textSelection(.enabled)
                 }.padding(.horizontal, 12).padding(.vertical, 10)
             }
@@ -284,6 +326,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             .background(IslandApprovalAppearance.surface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+            .onChange(of: value) { _, _ in showsCompleteCode = false }
     }
     private func destination(icon: String, name: String, subtitle: String, badge: String) -> some View {
         HStack(spacing: 12) {

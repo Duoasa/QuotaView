@@ -557,6 +557,15 @@ enum CodexActivityDiagnostics {
     }
 
     /// Metadata only: never include native request text, payloads or raw IDs.
+    static func recordMetadata(outcome: String, sessionHash: String, turnHash: String?,
+                               generation: UInt64, details: String = "") {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let session = String(sessionHash.prefix(12))
+        let turn = turnHash.map { String($0.prefix(12)) } ?? "none"
+        recordLine("\(timestamp) source=metadata outcome=\(outcome) session=\(session) turn=\(turn) generation=\(generation) \(details)\n")
+    }
+
+    /// Metadata only: never include native request text, payloads or raw IDs.
     static func recordDesktop(outcome: String, conversationID: String? = nil, details: String = "") {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let session = conversationID.map { String(CodexActivityPrivacy.hashIdentifier($0).prefix(12)) } ?? "none"

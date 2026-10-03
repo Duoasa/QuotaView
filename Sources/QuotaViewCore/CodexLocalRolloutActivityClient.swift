@@ -15,8 +15,13 @@ public struct CodexLocalRolloutThreadIdentity: Equatable, Sendable {
     public let threadID: String
     public let sessionHash: String
     public let sessionKind: CodexActivitySessionKind
-    public init(threadID: String, sessionHash: String, sessionKind: CodexActivitySessionKind) {
+    public let executionTurnHash: String?
+    public let subagentIdentity: CodexActivitySubagentIdentity?
+    public init(threadID: String, sessionHash: String, sessionKind: CodexActivitySessionKind,
+                executionTurnHash: String? = nil, subagentIdentity: CodexActivitySubagentIdentity? = nil) {
         self.threadID = threadID; self.sessionHash = sessionHash; self.sessionKind = sessionKind
+        self.executionTurnHash = executionTurnHash
+        self.subagentIdentity = subagentIdentity
     }
 }
 
@@ -58,7 +63,9 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     }
 
     mutating func refineSessionKind(_ kind: CodexActivitySessionKind) {
-        sessionKind = kind == .internalTask ? .internalTask : .resolving(sessionKind, kind)
+        if kind == .internalTask { sessionKind = .internalTask }
+        else if kind == .subagent, sessionKind != .memoryConsolidation { sessionKind = .subagent }
+        else { sessionKind = .resolving(sessionKind, kind) }
     }
 
     public mutating func decode(
@@ -77,8 +84,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
 
         if recordType == "session_meta" {
             guard Self.hashedIdentifier(payload["id"]) == sessionHash else { return nil }
-            let kind = CodexActivitySessionKind.classify(source: payload["source"],
-                threadSource: (payload["thread_source"] ?? payload["threadSource"]) as? String)
+            let kind = CodexActivitySessionKind.classify(metadata: payload)
             refineSessionKind(kind)
             return nil // Discovery owns metadata publication; no synthetic lifecycle event.
         }
@@ -432,6 +438,22 @@ public actor CodexLocalRolloutActivityClient {
         }
     }
 
+    /// Coverage diagnostics contain counts only, never thread IDs or log text.
+    public struct MetadataReadSummary: Equatable, Sendable {
+        public let status: CodexLocalExecutionMetadata.ReadResult.Status
+        public let preferredCount: Int
+        public let memoryCount: Int
+        public let resolvedCount: Int
+        public let failedCount: Int
+    }
+
+    private var metadataReadHandler: (@Sendable (MetadataReadSummary) async -> Void)?
+    private var lastMetadataReadSummary: MetadataReadSummary?
+    public func setExecutionMetadataReadHandler(_ handler: (@Sendable (MetadataReadSummary) async -> Void)?) {
+        metadataReadHandler = handler
+        lastMetadataReadSummary = nil
+    }
+
     public typealias UpdateHandler = @Sendable (
         CodexLocalRolloutDecodedRecord,
         Bool
@@ -469,6 +491,7 @@ public actor CodexLocalRolloutActivityClient {
         var pending = Data()
         var discardingOversizedLine = false
         var decoder: CodexLocalRolloutLineDecoder
+        var subagentIdentity: CodexActivitySubagentIdentity?
     }
 
     private var configuration: Configuration
@@ -488,6 +511,17 @@ public actor CodexLocalRolloutActivityClient {
     private var tailStates: [URL: TailState] = [:]
     private var candidates: [Candidate] = []
     private var lastCandidateRefresh = Date.distantPast
+    private var executionMetadata: Set<CodexLocalExecutionMetadata.Identity> = []
+    private var executionMetadataService: CodexLocalExecutionMetadata.Service
+    private var preferredExecutions: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])?
+
+    public func setExecutionMetadataService(_ service: CodexLocalExecutionMetadata.Service,
+        preferredExecutions: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])? = nil) {
+        executionMetadataService = service
+        self.preferredExecutions = preferredExecutions
+        executionMetadata.removeAll()
+        lastCandidateRefresh = .distantPast
+    }
     private var isStarted = false
     private var generation: UInt64 = 0
     private var pollingGeneration: UInt64?
@@ -500,6 +534,7 @@ public actor CodexLocalRolloutActivityClient {
     ) {
         self.configuration = configuration
         self.fileManager = fileManager
+        executionMetadataService = .init(codexHome: configuration.codexHomeURL)
         discovery = CodexLocalRolloutDiscovery(codexHomeURL: configuration.codexHomeURL,
             maximumCandidateCount: configuration.maximumCandidateCount, fileManager: fileManager)
     }
@@ -551,6 +586,9 @@ public actor CodexLocalRolloutActivityClient {
         healthHandler = nil
         receivedActivity = false
         discovery.reset()
+        executionMetadata.removeAll()
+        metadataReadHandler = nil
+        lastMetadataReadSummary = nil
         tailStates.removeAll()
         candidates.removeAll()
         health = .disabled
@@ -585,6 +623,8 @@ public actor CodexLocalRolloutActivityClient {
                               candidateRefreshSeconds: configuration.candidateRefreshSeconds,
                               maximumCandidateCount: configuration.maximumCandidateCount,
                               startupTailBytes: configuration.startupTailBytes)
+        executionMetadataService = .init(codexHome: url)
+        executionMetadata.removeAll()
         discovery = CodexLocalRolloutDiscovery(codexHomeURL: url,
             maximumCandidateCount: configuration.maximumCandidateCount, fileManager: fileManager)
         return true
@@ -618,6 +658,34 @@ public actor CodexLocalRolloutActivityClient {
             readFailed = discovery.readFailed
             unsupportedMetadata = discovery.unsupportedMetadata
             lastCandidateRefresh = now
+            let preferred = await preferredExecutions?() ?? []
+            guard isStarted, generation == run, !Task.isCancelled else { return }
+            let result = await executionMetadataService.read(preferred: preferred, now: now)
+            guard isStarted, generation == run, !Task.isCancelled else { return }
+            let summary = MetadataReadSummary(status: result.status, preferredCount: preferred.count,
+                memoryCount: result.identities.count, resolvedCount: result.resolvedSessions.count,
+                failedCount: result.failedSessions.count)
+            if summary != lastMetadataReadSummary {
+                lastMetadataReadSummary = summary
+                await metadataReadHandler?(summary)
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+            }
+            let identities = Set(result.identities)
+            let changed = identities.subtracting(executionMetadata)
+            executionMetadata = executionMetadata.filter { !result.resolvedSessions.contains($0.sessionHash) }
+            executionMetadata.formUnion(identities)
+            if executionMetadata.count > 128 {
+                let wanted = Set(preferred.map(\.sessionHash))
+                executionMetadata = Set(executionMetadata.sorted {
+                    wanted.contains($0.sessionHash) && !wanted.contains($1.sessionHash)
+                }.prefix(128))
+            }
+            for identity in changed {
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+                await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
+                    threadIdentity: .init(threadID: identity.threadID, sessionHash: identity.sessionHash,
+                        sessionKind: .memoryConsolidation, executionTurnHash: identity.turnHash)), false)
+            }
             let reclassified = discovery.excludedIdentities.compactMap { file, identity in
                 tailStates[file]?.sessionHash == identity.sessionHash ? identity : nil
             }
@@ -676,16 +744,23 @@ public actor CodexLocalRolloutActivityClient {
             return
         }
         let previousKind = state.decoder.sessionKind
+        let previousChild = state.subagentIdentity
         state.decoder.refineSessionKind(candidate.sessionKind)
-        if state.decoder.sessionKind != previousKind {
+        state.subagentIdentity = metadata.subagentIdentity?.withTitle(candidate.title)
+        if state.decoder.sessionKind != previousKind || state.subagentIdentity != previousChild {
             // Classification can arrive after the last rollout append. Publish
             // metadata alone and retain the original decoder/turn/cursor.
             tailStates[candidate.fileURL] = state
             await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
                 threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
-                                      sessionKind: state.decoder.sessionKind)), false)
+                                      sessionKind: state.decoder.sessionKind,
+                                      subagentIdentity: state.subagentIdentity)), false)
             guard isStarted, generation == run, !Task.isCancelled,
                   tailStates[candidate.fileURL]?.offset == state.offset else { return }
+        }
+        if state.subagentIdentity != previousChild {
+            await publishSubagentTitle(state.subagentIdentity, turnHash: state.decoder.activeTurnHash, generation: run)
+            guard isStarted, generation == run, !Task.isCancelled else { return }
         }
         guard size > state.offset else { return }
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
@@ -718,7 +793,8 @@ public actor CodexLocalRolloutActivityClient {
                     receivedActivity = true
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
                         requiresLiveConfirmation: record.requiresLiveConfirmation,
-                        threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind)), false)
+                        threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind,
+                                              subagentIdentity: state.subagentIdentity)), false)
                 }
                 guard isStarted, generation == run else { return }
                 if let content { await publicContentHandler?(content) }
@@ -789,19 +865,29 @@ public actor CodexLocalRolloutActivityClient {
                 }
                 replay.record(record)
             }
+            let child = metadata.subagentIdentity?.withTitle(candidate.title)
             tailStates[candidate.fileURL] = TailState(
                 fileIdentity: fileIdentity, sessionHash: candidate.sessionHash,
                 offset: actualOffset, pending: pending,
-                discardingOversizedLine: discarding, decoder: decoder
+                discardingOversizedLine: discarding, decoder: decoder, subagentIdentity: child
             )
+            if let child {
+                await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
+                    threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
+                        sessionKind: candidate.sessionKind, subagentIdentity: child)), true)
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+            }
             if replay.isActive {
                 if freshStart { receivedActivity = true }
                 for record in replay.records {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
                                               requiresLiveConfirmation: !freshStart,
-                                              threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind)), true)
+                                              threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind,
+                                                                    subagentIdentity: child)), true)
                 }
+                await publishSubagentTitle(child, turnHash: decoder.activeTurnHash, generation: run)
+                guard isStarted, generation == run, !Task.isCancelled else { return }
                 for content in publicReplay {
                     guard isStarted, generation == run else { return }
                     await publicContentHandler?(content)
@@ -811,6 +897,12 @@ public actor CodexLocalRolloutActivityClient {
             readFailed = true
             return
         }
+    }
+
+    private func publishSubagentTitle(_ child: CodexActivitySubagentIdentity?, turnHash: String?, generation run: UInt64) async {
+        guard isStarted, generation == run, let child, let turnHash, let title = child.title,
+              let data = try? JSONSerialization.data(withJSONObject: ["type": "metadata", "title": title]) else { return }
+        await publicContentHandler?(.init(sessionHash: child.sessionHash, turnHash: turnHash, data: data, occurredAt: Date()))
     }
 
     private func consumeCompleteLines(

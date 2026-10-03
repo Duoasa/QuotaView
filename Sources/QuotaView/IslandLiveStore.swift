@@ -424,6 +424,7 @@ final class IslandLiveStore {
         var resolvedRequestKeys: [String] { requestLifecycle.resolvedRequestKeys }
         var asynchronousQuestionCallHashes: Set<String> { requestLifecycle.asynchronousCallHashes }
         var operation = ""
+        var publicProgress = ""
         var tokens: Int64?
         var startedAt: Date?
         var endedAt: Date?
@@ -484,6 +485,202 @@ final class IslandLiveStore {
     private var metadata: [String: [String: Any]] = [:]
     private var sessionKinds: [String: CodexActivitySessionKind] = [:]
     private var sessionKindOrder: [String] = []
+    struct SubagentRecord {
+        var identity: CodexActivitySubagentIdentity
+        var title = ""
+        var model = ""
+        var effort = ""
+        var turn: String?
+        var status: IslandTaskStatus = .unknown
+        var startedAt: Date?
+        var updatedAt = Date.distantPast
+        var source: CodexActivityEventSource?
+        var progress = ""
+        var publicMessageID: String?
+        var publicMessageText = ""
+        var priorTurns = Set<String>()
+        var terminal: Bool { [.completed, .failed, .cancelled].contains(status) }
+    }
+    private(set) var subagents: [String: SubagentRecord] = [:]
+    private var subagentOrder: [String] = []
+
+    func receiveSubagentIdentity(_ identity: CodexActivitySubagentIdentity) {
+        guard presentationKind(for: identity.sessionHash) != .memoryConsolidation else { return }
+        if let previous = subagents[identity.sessionHash], previous.identity.parentSessionHash != identity.parentSessionHash { return }
+        // Store supplies a validated native parent relation. Legacy generic
+        // internal classification may be refined, but never a memory execution.
+        sessionKinds[identity.sessionHash] = .subagent
+        withdrawNonUserSession(identity.sessionHash, kind: .subagent)
+        if subagents[identity.sessionHash] == nil {
+            subagents[identity.sessionHash] = .init(identity: identity)
+            subagentOrder.append(identity.sessionHash)
+        } else { subagents[identity.sessionHash]?.identity = identity }
+        if let title = identity.title, !title.isEmpty { subagents[identity.sessionHash]?.title = title }
+        while subagentOrder.count > 128 { subagents.removeValue(forKey: subagentOrder.removeFirst()) }
+        onChange?()
+    }
+
+    func receiveSubagentActivity(_ event: CodexActivityEvent) {
+        guard var child = subagents[event.sessionHash],
+              presentationKind(for: event.sessionHash) == .subagent else { return }
+        // Store/Registry has already admitted this event and its source clock.
+        // A confirmed new-turn snapshot can carry an earlier real startedAt;
+        // a second global timestamp comparison would veto that valid admission.
+        let positive = [.userPromptSubmit, .preToolUse, .permissionRequest, .preCompact].contains(event.event)
+        if let turn = event.turnHash {
+            guard !child.priorTurns.contains(turn) else { return }
+            if child.turn != turn {
+                guard positive else { return }
+                if let old = child.turn { child.priorTurns.insert(old) }
+                while child.priorTurns.count > 32 { child.priorTurns.remove(child.priorTurns.sorted().first!) }
+                child.turn = turn; child.startedAt = event.occurredAt; child.progress = ""
+                child.publicMessageID = nil; child.publicMessageText = ""
+            } else if child.terminal { return }
+        } else if child.turn == nil || child.terminal { return }
+        child.updatedAt = max(child.updatedAt, event.occurredAt); child.source = event.source
+        switch event.event {
+        case .userPromptSubmit, .postToolUse, .postCompact: child.status = .thinking
+        case .preToolUse: child.status = .working
+        case .permissionRequest: child.status = .waiting
+        case .preCompact: child.status = .compacting
+        case .stop, .sessionEnd:
+            child.status = event.turnCompletionStatus == .failed ? .failed : event.turnCompletionStatus == .interrupted ? .cancelled : .completed
+        case .interrupt: child.status = .cancelled
+        case .sessionStart, .subagentStart, .subagentStop: return
+        }
+        subagents[event.sessionHash] = child; onChange?()
+    }
+
+    /// Capacity withdrawal clears the execution while retaining harmless display
+    /// metadata. Only a later admitted positive event may show this child again.
+    func withdrawSubagentObservation(for session: String) {
+        guard var child = subagents[session] else { return }
+        if child.terminal, let turn = child.turn { child.priorTurns.insert(turn) }
+        while child.priorTurns.count > 32 { child.priorTurns.remove(child.priorTurns.sorted().first!) }
+        child.turn = nil; child.startedAt = nil; child.status = .unknown; child.source = nil
+        child.progress = ""; child.publicMessageID = nil; child.publicMessageText = ""
+        subagents[session] = child
+        onChange?()
+    }
+
+    func receiveSubagentSourceUnavailable(_ source: CodexActivityEventSource?) {
+        for key in subagents.keys where !subagents[key]!.terminal
+            && (source == nil || subagents[key]!.source == source) {
+            subagents[key]?.status = .unknown
+        }
+        onChange?()
+    }
+
+    private func receiveSubagentContent(_ content: CodexLocalPublicContent, payload: [String: Any]) {
+        guard var child = subagents[content.sessionHash], child.turn == content.turnHash,
+              presentationKind(for: content.sessionHash) == .subagent else { return }
+        switch payload["type"] as? String {
+        case "metadata":
+            if let title = payload["title"] as? String, !title.isEmpty { child.title = title }
+            child.model = payload["model"] as? String ?? child.model
+            child.effort = payload["effort"] as? String ?? child.effort
+        case "message": child.progress = summary(payload["text"] as? String ?? "")
+        case "tool":
+            if !child.terminal { child.progress = toolSummary(payload["name"] as? String ?? "", arguments: payload["text"] as? String ?? "") }
+        default: return
+        }
+        subagents[content.sessionHash] = child; onPublicChange?()
+    }
+
+    func receiveSubagentPublicMessage(_ data: Data) {
+        guard data.count <= 1_048_576, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let method = object["method"] as? String, let payload = object["params"] as? [String: Any] else { return }
+        let metadata = payload["thread"] as? [String: Any]
+        let current = payload["currentTurn"] as? [String: Any] ?? payload["turn"] as? [String: Any]
+        guard let threadID = payload["threadId"] as? String ?? metadata?["id"] as? String,
+              let turn = payload["turnId"] as? String ?? current?["id"] as? String else { return }
+        let key = CodexActivityPrivacy.hashIdentifier(threadID)
+        guard var child = subagents[key], presentationKind(for: key) == .subagent,
+              CodexActivityPrivacy.hashIdentifier(turn) == child.turn else { return }
+        if method == "thread/snapshot" || method == "thread/started", let metadata {
+            if let title = metadata["name"] as? String ?? metadata["title"] as? String, !title.isEmpty { child.title = title }
+            if let model = metadata["model"] as? String ?? current?["model"] as? String, !model.isEmpty { child.model = model }
+            if let effort = metadata["reasoningEffort"] as? String ?? metadata["effort"] as? String ?? current?["reasoningEffort"] as? String,
+               !effort.isEmpty { child.effort = effort }
+        } else if method == "item/agentMessage/delta", let itemID = payload["itemId"] as? String,
+                  itemID == child.publicMessageID, let delta = payload["delta"] as? String, !child.terminal {
+            child.publicMessageText = String((child.publicMessageText + delta).prefix(2048))
+            child.progress = summary(child.publicMessageText)
+        } else if method == "item/started" || method == "item/completed", let item = payload["item"] as? [String: Any],
+           let type = item["type"] as? String,
+           ["agentMessage", "commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall", "webSearch", "collabToolCall"].contains(type) {
+            if type == "agentMessage" {
+                child.publicMessageID = item["id"] as? String
+                child.publicMessageText = String((item["text"] as? String ?? "").prefix(2048))
+                child.progress = summary(child.publicMessageText)
+            }
+            else if method == "item/started" { child.progress = summary(toolName(type, item: item)); if !child.terminal { child.status = .working } }
+        } else { return }
+        subagents[key] = child; onPublicChange?()
+    }
+
+    private func summary(_ value: String) -> String {
+        String(value.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(240))
+    }
+    private func toolSummary(_ name: String, arguments: String) -> String {
+        let name = name.split(separator: ".").last.map(String.init) ?? name
+        let object = arguments.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        if ["spawn_agent", "followup_task", "send_message"].contains(name), let target = object?["task_name"] as? String ?? object?["target"] as? String {
+            let label = target.split(separator: "/").last.map(String.init)?.replacingOccurrences(of: "_", with: " ") ?? target
+            return "Codex · " + summary(label)
+        }
+        return summary(name)
+    }
+
+    private func childPresentations(parent: String, english: Bool, at now: Date) -> [IslandSubagentPresentation] {
+        subagents.values.filter { $0.identity.parentSessionHash == parent && $0.startedAt != nil && !$0.terminal
+            && presentationKind(for: $0.identity.sessionHash) == .subagent }
+            .sorted { ($0.startedAt ?? .distantPast, $0.identity.sessionHash) < ($1.startedAt ?? .distantPast, $1.identity.sessionHash) }
+            .map { child in
+                let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+                let title = child.title.isEmpty ? (child.identity.nickname ?? child.identity.role ?? copy.islandSubagentTitle) : child.title
+                let status: String
+                switch child.status {
+                case .unknown: status = copy.islandSubagentStatusUnavailable
+                case .cancelled: status = copy.islandSubagentInterrupted
+                default: status = CodexActivityCopy(language: english ? .english : .simplifiedChinese).statusTitle(for: child.status.visualState)
+                }
+                let metadata = IslandSessionMetadata(modelName: child.model, reasoningEffort: child.effort,
+                    elapsedSeconds: child.status == .unknown ? nil : child.startedAt.map { max(0, Int(now.timeIntervalSince($0))) })
+                return .init(id: child.identity.sessionHash, title: title, status: status, visualState: child.status.visualState,
+                             model: metadata.modelTitle, duration: metadata.durationTitle, detail: child.progress,
+                             avatar: child.identity.avatar)
+            }
+    }
+
+    /// Native request.start labels one execution, not the lifetime of a thread.
+    /// Keep its revocable presentation separate from persistent source metadata.
+    private var executionMemorySessions: Set<String> = []
+    private var executionKindOrder: [String] = []
+    private func presentationKind(for key: String) -> CodexActivitySessionKind {
+        let persistent = sessionKinds[key] ?? .unknown
+        if persistent == .memoryConsolidation || persistent == .internalTask { return persistent }
+        return executionMemorySessions.contains(key) ? .memoryConsolidation : persistent
+    }
+    func receiveExecutionSessionKind(_ kind: CodexActivitySessionKind, session key: String) {
+        if kind == .memoryConsolidation {
+            if var child = subagents[key] {
+                if let turn = child.turn { child.priorTurns.insert(turn) }
+                child.startedAt = nil; child.status = .unknown; child.progress = ""
+                subagents[key] = child
+            }
+            executionMemorySessions.insert(key)
+            executionKindOrder.removeAll { $0 == key }; executionKindOrder.append(key)
+            while executionKindOrder.count > 256 {
+                executionMemorySessions.remove(executionKindOrder.removeFirst())
+            }
+        } else {
+            executionMemorySessions.remove(key)
+            executionKindOrder.removeAll { $0 == key }
+        }
+        withdrawNonUserSession(key, kind: presentationKind(for: key))
+        onChange?()
+    }
     /// Classification changes presentation without completing or answering a task.
     func setSessionKind(_ kind: CodexActivitySessionKind, for key: String) {
         guard kind != .unknown else { return }
@@ -492,7 +689,10 @@ final class IslandLiveStore {
         sessionKinds[key] = resolved
         sessionKindOrder.removeAll { $0 == key }; sessionKindOrder.append(key)
         while sessionKindOrder.count > 256 { sessionKinds.removeValue(forKey: sessionKindOrder.removeFirst()) }
-        guard resolved == .memoryConsolidation || resolved == .internalTask else { return }
+        withdrawNonUserSession(key, kind: presentationKind(for: key))
+    }
+    private func withdrawNonUserSession(_ key: String, kind: CodexActivitySessionKind) {
+        guard kind == .memoryConsolidation || kind == .internalTask || kind == .subagent else { return }
         let removed = tasks.filter { $0.key == key }.map(\.id)
         tasks.removeAll { $0.key == key }
         metadata.removeValue(forKey: key); desktopScopes.removeValue(forKey: key)
@@ -510,7 +710,7 @@ final class IslandLiveStore {
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -544,7 +744,7 @@ final class IslandLiveStore {
     /// Only actor-minted handles, correlated below, can make a form interactive.
     func receiveDesktopProjection(_ projection: CodexDesktopInteractionProjection,
                                   snapshot: CodexDesktopConversationSnapshot) {
-        guard desktopConnected, projection.sourceKind != .internalTask, projection.sourceKind != .memoryConsolidation,
+        guard desktopConnected, projection.sourceKind != .internalTask, projection.sourceKind != .memoryConsolidation, projection.sourceKind != .subagent,
               let turn = projection.currentTurnID, !turn.isEmpty else { return }
         if let epoch = desktopConnectionEpoch, epoch != snapshot.connectionEpoch { return }
         desktopConnectionEpoch = snapshot.connectionEpoch
@@ -618,7 +818,7 @@ final class IslandLiveStore {
         onChange?()
     }
     private func index(_ key: String, admit: Bool) -> Int? {
-        guard sessionKinds[key] != .memoryConsolidation, sessionKinds[key] != .internalTask else { return nil }
+        guard presentationKind(for: key) != .memoryConsolidation, presentationKind(for: key) != .internalTask, presentationKind(for: key) != .subagent else { return nil }
         if let i = tasks.firstIndex(where: { $0.key == key }) { return i }
         guard admit else { return nil }
         if !tasks.isEmpty && tasks.allSatisfy({ $0.terminal && $0.requests.isEmpty }) {
@@ -630,8 +830,8 @@ final class IslandLiveStore {
     }
     func receiveLegacy(_ event: CodexActivityEvent) {
         if let kind = event.sessionKind { setSessionKind(kind, for: event.sessionHash) }
-        guard sessionKinds[event.sessionHash] != .memoryConsolidation,
-              sessionKinds[event.sessionHash] != .internalTask else { return }
+        guard presentationKind(for: event.sessionHash) != .memoryConsolidation,
+              presentationKind(for: event.sessionHash) != .internalTask, presentationKind(for: event.sessionHash) != .subagent else { return }
         let active = [.userPromptSubmit, .preToolUse, .permissionRequest, .preCompact].contains(event.event)
         guard let i = index(event.sessionHash, admit: active) else { return }
         let key = event.turnHash
@@ -695,8 +895,12 @@ final class IslandLiveStore {
         tasks[i].tokens = update.cumulativeTotalTokens; onChange?()
     }
     func receiveLocalContent(_ content: CodexLocalPublicContent) {
-        guard sessionKinds[content.sessionHash] != .memoryConsolidation,
-              sessionKinds[content.sessionHash] != .internalTask else { return }
+        if subagents[content.sessionHash] != nil {
+            guard let payload = try? JSONSerialization.jsonObject(with: content.data) as? [String: Any] else { return }
+            receiveSubagentContent(content, payload: payload); return
+        }
+        guard presentationKind(for: content.sessionHash) != .memoryConsolidation,
+              presentationKind(for: content.sessionHash) != .internalTask, presentationKind(for: content.sessionHash) != .subagent else { return }
         guard let p = try? JSONSerialization.jsonObject(with: content.data) as? [String: Any] else { return }
         guard let i = tasks.firstIndex(where: { $0.key == content.sessionHash }) else {
             pendingLocalContent.append(content)
@@ -752,7 +956,7 @@ final class IslandLiveStore {
                 let text = message ? body : name + "\n" + body
                 upsert(.init(text: .init(String(text.prefix(65536))), publicItem: .init(category: message ? .message : .command,
                     sourceID: id, turnID: content.turnHash, status: message ? "completed" : "inProgress", sourceTruncated: text.count > 65536)), at: i)
-                if message && tasks[i].status == .thinking { tasks[i].operation = String(body.prefix(240)) }
+                if message { tasks[i].publicProgress = summary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
                 else if !message && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
@@ -789,7 +993,7 @@ final class IslandLiveStore {
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
         tasks[i].activityStatus = .thinking; tasks[i].requestLifecycle = RequestLifecycle(); tasks[i].progress = nil; tasks[i].operation = ""
         tasks[i].progressResolver.reset(); tasks[i].progressUpdatedAt = date; tasks[i].displayedProgress = 0.01
-        tasks[i].activeItems.removeAll(); tasks[i].nativeContentAvailable = false
+        tasks[i].activeItems.removeAll(); tasks[i].nativeContentAvailable = false; tasks[i].publicProgress = ""
         tasks[i].entries.removeAll(); tasks[i].removedEntryCount = 0; tasks[i].updatedAt = date
     }
     private func receiveLocalQuestions(_ questions: [[String: Any]], callID: String, content: CodexLocalPublicContent, mode: CodexUserInputMode, at i: Int) {
@@ -836,7 +1040,7 @@ final class IslandLiveStore {
             let kind = CodexActivitySessionKind.classify(source: thread["source"],
                 threadSource: thread["threadSource"] as? String ?? thread["thread_source"] as? String)
             setSessionKind(kind, for: key)
-            guard sessionKinds[key] != .internalTask, sessionKinds[key] != .memoryConsolidation else { return }
+            guard presentationKind(for: key) != .internalTask, presentationKind(for: key) != .memoryConsolidation, presentationKind(for: key) != .subagent else { return }
             metadata[key] = thread
             let status = thread["status"] as? [String: Any]
             let active = status?["type"] as? String == "active"
@@ -1011,7 +1215,10 @@ final class IslandLiveStore {
         upsert(.init(text: .init(String(text.prefix(65536))), kind: failed ? .failure : .progress,
             publicItem: .init(category: category, sourceID: itemID, turnID: turnID, status: status,
                 output: output.map { String($0.prefix(65536)) }, sourceTruncated: truncated, exitCode: exit)), at: i)
-        if category == .message && tasks[i].status == .thinking { tasks[i].operation = String(text.prefix(240)) }
+        if category == .message {
+            tasks[i].publicProgress = summary(text)
+            if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
+        }
     }
     private func beginNativeContent(_ i: Int) {
         if !tasks[i].nativeContentAvailable { tasks[i].entries.removeAll(); tasks[i].nativeContentAvailable = true }
@@ -1029,6 +1236,10 @@ final class IslandLiveStore {
             }
         } else if message {
             upsert(.init(text: .init(delta), publicItem: .init(category: .message, sourceID: itemID, turnID: tasks[i].turnKey ?? "")), at: i)
+        }
+        if message, let text = tasks[i].entries.last(where: { $0.publicItem?.sourceID == itemID })?.text.chinese {
+            tasks[i].publicProgress = summary(text)
+            if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
         }
         trim(i)
     }
@@ -1140,7 +1351,9 @@ final class IslandLiveStore {
         let items = visibleTasks.map { task -> CodexMultitaskRenderTask in
             let visual = task.status.visualState
             let duration = task.startedAt.map { max(0, Int((task.endedAt ?? now).timeIntervalSince($0))) }
-            metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration)
+            let children = privacy ? [] : childPresentations(parent: task.key, english: english, at: now)
+            let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
+            metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
             var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
             details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: task.status, removedEntryCount: task.removedEntryCount)
@@ -1153,7 +1366,10 @@ final class IslandLiveStore {
             let operation: String
             if task.operation == "exec" || task.operation.hasPrefix("exec · ") {
                 operation = (english ? "Executing" : "执行中") + task.operation.dropFirst(4)
-            } else { operation = task.operation }
+            } else if !task.operation.isEmpty { operation = task.operation }
+            else if !runningChildren.isEmpty && !task.terminal {
+                operation = summary(runningChildren.map(\.title).joined(separator: english ? ", " : "、")) + (english ? " are working" : " 正在工作")
+            } else { operation = task.publicProgress }
             let render = CodexActivityRenderState(taskIdentity: .init(sessionHash: task.key, turnHash: task.turnKey),
                 visualState: visual, approximateProgressFraction: task.displayedProgress,
                 windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (task.status == .waiting
