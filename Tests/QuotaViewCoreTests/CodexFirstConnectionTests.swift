@@ -143,6 +143,8 @@ final class CodexFirstConnectionTests: XCTestCase {
         XCTAssertNil(store.snapshot)
         XCTAssertEqual(store.presentation, .hidden)
         await store.recheckLocalDiscovery()
+        // A recheck can join an in-flight maintenance poll; wait for its health delivery.
+        try await waitUntil { store.localHealth == .ready }
         XCTAssertEqual(store.localHealth, .ready)
         XCTAssertNil(store.snapshot)
         await store.stop()
@@ -477,6 +479,7 @@ final class CodexFirstConnectionTests: XCTestCase {
         try append(startRecord("internal-turn", timestamp: timestamp()), to: file)
         try append(tokenRecord(100, last: 100), to: file)
         await store.recheckLocalDiscovery()
+        try await waitUntil { store.localHealth == .waitingForRecords }
         XCTAssertEqual(store.localHealth, .waitingForRecords)
         XCTAssertNil(store.snapshot)
         await store.stop()
