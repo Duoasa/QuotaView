@@ -161,7 +161,10 @@ open dist/QuotaView.app
 
 The build script prefers a Developer ID Application identity, then an Apple Development identity. If neither is available, it falls back to an ad-hoc signature suitable for local testing. Only a Developer ID Application build can use the notarization path:
 
+Confirm an encrypted backup of your Sparkle signing key before enabling Developer ID packaging.
+
 ```bash
+SPARKLE_KEY_BACKUP_CONFIRMED=YES \
 CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
 NOTARY_PROFILE="<keychain-profile>" \
 ./scripts/build-app.sh

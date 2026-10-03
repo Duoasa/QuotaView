@@ -9,11 +9,44 @@
 
 ## 当前最新版本
 
-> 当前推荐版本由公开资产、签名 Feed 和回下载验证确认；开发入口见 [HANDOFF.md](HANDOFF.md)。
+> 当前推荐版本已由 GitHub Stable / Latest、公开回下载及签名 Feed 验证确认；开发入口见 [HANDOFF.md](HANDOFF.md)。
 
 | 项目 | 当前值 |
 |---|---|
-| 最新推荐版本 | `0.5.1 (Build 13)`；Sparkle 内部 Build `49` |
+| 最新推荐版本 | `0.7.5 (Build 3)`；Sparkle 内部 Build `52` |
+| Git tag | `v0.7.5-build.3` |
+| Tag / 发布提交 | `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；[PR #75](https://github.com/Duoasa/QuotaView/pull/75) 已合并 main |
+| GitHub Release | [QuotaView 0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3) |
+| Release 资产 | `QuotaView-v0.7.5-build.3.zip`；`20,514,531 bytes` |
+| SHA-256 | `fd696fc6bdf1b4f637dc417d45018696993e3c8a55e528b0f34f3d2abaa968fd` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64`；App、Widget、Core、Hook、Sparkle |
+| 正式身份 | App `com.quotaview.menubar`；Widget `com.quotaview.menubar.widget`；App Group `BUUH229D5Q.com.quotaview.shared` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `e0c11cab-0ccf-4585-b3f8-68e67b91e8dd` |
+| 发布状态 | 2026-10-04 GitHub Stable / Latest；非 Draft / Pre-release；用户明确批准精确 Build3 的发布和 appcast 准入 |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `52 → 49 → 38`；提交 `2ec79168a439b84b03060221ce9298f041708a48`；SHA-256 `75c0c8c0ce0f36344d8d43a9fe0abb8a67dcd738ca07dfbdc4e74b015c3beaa8`；[Pages 37160384382](https://github.com/Duoasa/QuotaView/actions/runs/37160384382) 成功 |
+| EdDSA | ZIP `/M309foU9ituyGLlrfboJArwvmtlSgqvaOIKrIe5WOnrn2shCjdllQVpR4xbUfti8NtMHAEU7v22EU498PxTAA==`；ZIP 与线上 Feed 均通过旧稳定版内置公钥独立验证 |
+| CI | [PR 37159713007](https://github.com/Duoasa/QuotaView/actions/runs/37159713007)、[main 37160001482](https://github.com/Duoasa/QuotaView/actions/runs/37160001482) 成功；各 663 项、6 跳过、0 失败，原生提问关闭合同夹具通过 |
+| 产物验证 | 189 项源码/资源输入与发布提交一致；版本、双架构、图标、QQ 原图、28 款头像及出处文件通过；严格签名、Staple、Gatekeeper、解压包 15 秒启动与实际 Framework 加载通过 |
+| 公开验证 | GitHub 回下载逐字节一致；线上 Feed 与本地签名文件逐字节一致；历史 49/38 的资产 URL 与签名保持；两张 README 产品图在 main 可访问且与用户原图一致 |
+| 回滚基线 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13) / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；资产与公证事实完整保留在下节 |
+
+### 0.7.5 Build 3 发布内容与验证边界
+
+- 全新多任务灵动岛、多 Agent 归属展示、任务详情与支持的确认操作、用量面板及独立反馈入口；中英文 README 沿用既有结构，使用用户提供的两张原始产品图。
+- 统一来源识别、事件接收与展示，记忆整理按真实身份分流到底栏；长会话元数据与公开进展恢复不重放历史请求，不改变任务所有权。
+- 本地 101 项相关恢复/身份/传输冒烟及 4 项设置冒烟通过；完整回归由 PR 与 main CI 分别确认。正式包使用独立 Distribution 配置，开发包与其数据身份保持。
+- 当前已获用户正式发布授权；不将其扩大为真实 Intel、多屏、VoiceOver、长期连续运行或完整 N → N+1 客户端替换的全量验收。原生异步提问组关闭仍保留既有能力边界；真实额度重置保持本地演示。
+- 现有 `/Applications/QuotaView.app` 未被替换；解压启动冒烟期间短暂停止原稳定进程，完成后恢复原安装启动。开发运行包保持。
+- 完整本地证据：`dist/verification/0.7.5-build3-release/`；构建公证日志 `.build/075-release-build-sign-notarize.log`。
+
+## 0.5.1 (Build 13)
+
+> 历史稳定版，0.7.5 Build 3 的回滚基线。下方为当时发布与验证事实。
+
+| 项目 | 当前值 |
+|---|---|
+| 历史稳定版本 | `0.5.1 (Build 13)`；Sparkle 内部 Build `49` |
 | Git tag | `v0.5.1-build.13` |
 | Tag / 发布提交 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
 | GitHub Release | [QuotaView 0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13) |
@@ -91,7 +124,8 @@
 
 | 版本 | 日期（Asia/Shanghai） | 状态 | 核心定位 |
 |---|---|---|---|
-| `0.5.1 (Build 13)` | 2026-09-28 | 最新稳定版 | Codex 更新后内置程序路径兼容热修复 |
+| `0.7.5 (Build 3)` | 2026-10-04 | 最新稳定版 | 多任务灵动岛、多 Agent 协作、用量面板与信息链路重构 |
+| `0.5.1 (Build 13)` | 2026-09-28 | 历史稳定 / 0.7.5 回滚基线 | Codex 更新后内置程序路径兼容热修复 |
 | `0.5.1 (Build 9)` | 2026-09-18 | 历史稳定 / Build 13 回滚基线 | 菜单栏额度快捷显示与单周期文字对齐 |
 | `0.5.0 (Build 3)` | 2026-09-14 | 历史稳定 / 0.5.1 回滚基线 | 灵动岛共同回弹、纯黑底色与长时间特效修复 |
 | `0.4.8 (Build 4)` | 2026-09-12 | 历史稳定 / 回滚基线 | 自动连接、历史恢复与连接链路重构 |
