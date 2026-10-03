@@ -10,7 +10,7 @@
 
 **177项相关本地冒烟零失败**，覆盖记忆/来源/代次/预算、子任务准入/逐出/头像/单向滚动、Store分流、批准预览和文案、量子时钟、滚动恢复及真实请求投影。fresh Debug arm64与Universal Release均通过；App/Widget均为0.7.5/显示Build1/内部50，Release App/Widget/Core含arm64+x86_64，28款头像及出处NOTICE齐全。185项冻结生产输入、deep strict ad-hoc签名和实际主程序/Debug dylib/Core加载核对通过。开发运行包已替换并启动PID **18877**，旧PID3048退出；完整旧包备份 `.build/runtime-package-backups/20261003T212127Z/`。当前进程无演示参数且持有真实活动socket，临时演示已全部恢复/清理；稳定PID13504保持。运行路径仍沿用 `dist/development-0.7.3/QuotaView 0.7.3 Development.app`，实际包显示名/版本为0.7.5。
 
-证据 `.build/075-related-smoke.log`、`.build/075-development-build.log`、`.build/075-universal-release-build.log`、`.build/075-artifact-verification.json`、`.build/075-delivery.json`、`.build/075-live-channel-verification.json`。本地检查与GitHub完整CI分开记录，GitHub PR/main CI及最终集成以对应PR和运行manifest为准。视觉与真实交互由用户验收。
+证据 `.build/075-related-smoke.log`、`.build/075-development-build.log`、`.build/075-universal-release-build.log`、`.build/075-artifact-verification.json`、`.build/075-delivery.json`、`.build/075-live-channel-verification.json`。源码提交 `0329da18fb37e13c3312a0bffd6182fbb2043f6f` 已推送至 [PR #73](https://github.com/Duoasa/QuotaView/pull/73)，指向main；用户授权完整CI通过后合并。本地检查与GitHub完整CI分开记录，PR/main检查及最终集成以该PR与运行manifest为准，不从本地构建推断。视觉与真实交互由用户验收。
 
 **原生异步提问组关闭仍未完成。** 本次不扩大此能力，现有边界见[关闭合同](docs/design/codex-native-question-closure-contract-2026-10-03.md)。
 

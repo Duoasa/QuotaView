@@ -8,6 +8,8 @@
 >
 > 当前源码：[0.7.5 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)；显示Build1、内部50，沿用固定独立开发数据身份，记忆DEBUG已停止。
 >
+> 源码集成：[PR #73](https://github.com/Duoasa/QuotaView/pull/73)指向main；GitHub完整CI与最终合并以该PR为准，运行包及本地验证单独记录于Handoff。
+>
 > 当前增量：[信息通信契约](codex-island-information-contract.md)统一目录/轮次身份、子 agent 与后台记忆、公开进展及操作所有权；必要冒烟、开发构建和运行包证据以 Handoff 最新节为准，真实交互及视觉待用户验收。
 >
 > 当前展示修订：[生产交互规则](../design/quotaview-island-production-interaction-review-2026-09-30.md)包含整区重置入口、重置页字号、小球共用18pt及主卡/子agent统一描边与hover；0.7.5整合177项必要冒烟、Debug/Universal构建、签名与真实通道运行包核对通过，GitHub main集成以Handoff当前节为准，视觉待用户验收。
