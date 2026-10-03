@@ -4,33 +4,23 @@
 >
 > 状态：`Accepted`
 >
-> 最近同步：2026-10-04。公开稳定版：[0.5.1 Build 13](../../VERSION_HISTORY.md#当前最新版本)
+> 最近同步：2026-10-04。公开稳定版：[0.7.5 Build 3](../../VERSION_HISTORY.md#当前最新版本)，内部52，已发布 GitHub Stable / Latest 与 appcast。
 >
-> 当前源码：[0.7.5 多任务刘海开发版](../../HANDOFF.md#工作区与版本定位)；显示Build3、内部52，长会话元数据恢复与设置反馈候选已构建运行；101项相关冒烟通过，沿用固定独立开发身份，Release仍待用户后续决定。
+> 当前源码：[PR #75](https://github.com/Duoasa/QuotaView/pull/75) 已合并 main；长会话恢复、设置反馈、正式发行配置和中英文产品文档已交付。PR/main CI 各663项、6跳过、0失败，签名公证、公开回下载及线上 Feed 验签通过。
 >
-> 源码集成：[PR #73](https://github.com/Duoasa/QuotaView/pull/73)指向main；GitHub完整CI与最终合并以该PR为准，运行包及本地验证单独记录于Handoff。
->
-> 当前增量：[信息通信契约](codex-island-information-contract.md)统一目录/轮次身份、子 agent 与后台记忆、公开进展及操作所有权；必要冒烟、开发构建和运行包证据以 Handoff 最新节为准，真实交互及视觉待用户验收。
->
-> 当前展示修订：[生产交互规则](../design/quotaview-island-production-interaction-review-2026-09-30.md)包含整区重置入口、重置页字号、小球共用18pt及主卡/子agent统一描边与hover；0.7.5整合177项必要冒烟、Debug/Universal构建、签名与真实通道运行包核对通过，GitHub main集成以Handoff当前节为准，视觉待用户验收。
+> 开发入口与独立运行包见 [Handoff](../../HANDOFF.md#工作区与版本定位)。源码发布与规格完整验收分别记录；原生异步提问组关闭、真实 Intel 和完整客户端更新安装仍保留验收边界。
 
-本文件只负责规格发现和状态定位，不复制 Requirement、实现或发布证据。
-0.4.8 的交付收尾见[正式发布记录](../design/quotaview-codex-first-connection-0.4.8.md#正式发布)，
-本机小组件显示、实机与自动更新待验收项统一跟踪于 [Handoff](../../HANDOFF.md)。
-
-0.5.1 Build 13 路径热修复已发布 GitHub / Stable appcast（见 Handoff）；249 项 CI（2 跳过）、Universal 签名公证、公开包回下载与线上 Feed 签名验证通过。定位器修复已同步当前开发源码，未混入本目录实验，README 不变。
-
-当前发行：用户已授权 **0.7.5 Build3 / 内部52** 的 GitHub Stable 与 appcast，精确 tag/ZIP 为 `v0.7.5-build.3` / `QuotaView-v0.7.5-build.3.zip`。发布链正在执行；最终公开资产与验证以[版本历史](../../VERSION_HISTORY.md#当前最新版本)为准。
+本文件只负责规格发现和状态定位，不复制 Requirement、实现或完整发布证据。
 
 ## 当前规格
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Verifying` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，已运行待用户验收 |
+| `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Released` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，随0.7.5 Build3正式发布，视觉全矩阵不由构建推断 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 参考 Vibe owner IPC/Hook/rollout 证据，统一线程来源与执行目的、子任务投影、身份乱序及读取覆盖预算；子 agent 伸出下层卡片、原生头像/共同基线、24pt分段、白色数量与量子时钟更新见契约；交付见 Handoff 当前节 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 原生来源与当前执行目的分别管理，记忆仅进入底栏 AI 球。Hook/Local 共用有界读取服务，部分覆盖保留已验证证据；早到身份由同目录代次/线程/轮次准入消费。补齐温缓存、新轮次和执行撤销边界；不按名称过滤。此前 PR #72 已合并；本轮增量、必要检查和已运行包分别见 Handoff，视觉待用户验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 原任务 owner IPC 回传、普通/同步/异步独立解除和自动详情导航已实现；98 项必要冒烟、真实只读握手、开发构建/签名通过，真实交互待用户验收；已推送 PR #68，完整 CI/合并以 PR 为准。 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口整块分割线下方含留白为热区，使用账户底部渐变高光；重置页Asta Sans标题15pt、正文11pt、按钮13pt、辅助10.5pt，35项相关冒烟和运行包核对通过，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一。内联详情布局同步恢复锚点、显示前提交，预热目标卡片并保留中间可见集与轨道，用户滚动优先；纯授权采用“批准”。请求视口最多 440 pt，命令默认 8 行/2048 字符，长选项两行缩略，完整查看/复制保留原始回传。本轮 239 项相关冒烟、开发构建和包核对通过；动态子任务高度与公开进展已统一，已更新运行包，增量源码未提交，视觉/交互待用户验收。 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口整块分割线下方含留白为热区，使用账户底部渐变高光；重置页Asta Sans标题15pt、正文11pt、按钮13pt、辅助10.5pt，35项相关冒烟和运行包核对通过，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一。内联详情布局同步恢复锚点、显示前提交，预热目标卡片并保留中间可见集与轨道，用户滚动优先；纯授权采用“批准”。请求视口最多 440 pt，命令默认 8 行/2048 字符，长选项两行缩略，完整查看/复制保留原始回传。本轮 239 项相关冒烟、开发构建和包核对通过；动态子任务高度与公开进展已统一，已更新运行包，增量源码已随0.7.5 Build3发布，视觉/交互验收范围见Handoff。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |
 | `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
 | `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |
@@ -55,7 +45,7 @@
 | `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 的 AI 球尺寸能力保留为发布历史；0.4.5 已移除 AI 球及其展开尺寸选择器 |
 | `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
 | `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.7.5 Build3/内部52完成正式身份与启动接线、候选包/生成门禁准备；公开Feed未更新，Release待用户验收与授权。现有Stable签名验证通过，真实 N → N+1 安装操作待记录 |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.7.5 Build3/内部52已发布GitHub与签名Stable Feed；正式身份、Developer ID、公证/Staple、公开回下载与旧版公钥验证通过；真实 N → N+1 安装操作待记录 |
 
 ## 已替代的当前迭代规格
 

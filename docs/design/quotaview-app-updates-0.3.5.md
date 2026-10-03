@@ -106,3 +106,7 @@ Build 2 转为草稿，公开时间线不再显示；其 tag / 资产保留且�
 ## 2026-10-04 Build3 正式准入授权
 
 用户明确要求推送 GitHub、发布最新版、合并 main 并推送 appcast，精确准入为 **0.7.5 / Build3 / 内部52**，`v0.7.5-build.3` / `QuotaView-v0.7.5-build.3.zip`。这取代上文历史候选的待授权状态。按正式签名、公证/Staple、不可变资产、公开回下载、旧版公钥及签名 Feed 验证顺序执行；目标序列为52 → 49 → 38。完成证据回填版本历史。
+
+## 2026-10-04 Build3 发布完成
+
+0.7.5 Build3 / 内部52 已经PR #75合并main，发布为GitHub Stable / Latest，签名Feed序列为52 → 49 → 38。正式Developer ID、公证/Staple、Gatekeeper、解压启动、GitHub回下载逐字节比较、旧稳定版公钥校验ZIP及线上Feed全部通过；历史资产URL及签名保持。完整不可变资产和CI/Pages证据见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。`APP-UPDATES-07`真实客户端N → N+1安装仍待独立记录，规格整体保持Verifying。

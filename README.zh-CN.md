@@ -160,7 +160,10 @@ open dist/QuotaView.app
 
 构建脚本会优先使用 Developer ID Application 身份，其次使用 Apple Development 身份。如果两者都不可用，会回退到适合本地测试的 ad-hoc 签名。只有 Developer ID Application 构建可以使用公证流程：
 
+使用 Developer ID 打包前，先确认 Sparkle 签名密钥已有加密备份。
+
 ```bash
+SPARKLE_KEY_BACKUP_CONFIRMED=YES \
 CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
 NOTARY_PROFILE="<keychain-profile>" \
 ./scripts/build-app.sh

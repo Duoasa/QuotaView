@@ -2,13 +2,15 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.7.5 Build3 正式发行 · 2026-10-04 进行中
+## 0.7.5 Build3 正式发行 · 2026-10-04 已完成
 
-用户已审核发布文案，并明确授权使用两张产品图、更新原有中英文 README、推送 GitHub、合并 main、发布最新版及 appcast。精确身份为 **0.7.5 / 显示 Build3 / 内部52**，tag `v0.7.5-build.3`，ZIP `QuotaView-v0.7.5-build.3.zip`。本节取代下方历史交付中的等待发布授权状态；正式签名、公证、CI、公开回下载和签名 Feed 部署正在执行，未完成前不记为已发布。
+用户已审核文案并明确批准本次 GitHub / main / appcast 发布。**0.7.5 Build3 / 内部52** 已通过 [PR #75](https://github.com/Duoasa/QuotaView/pull/75) 合并 main，并发布为 [GitHub 最新稳定版](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；Stable appcast 已上线。PR/main CI 各663项、6跳过、0失败，正式签名、公证/Staple、Gatekeeper、解压启动、公开回下载和旧版公钥验签通过。版本、不可变资产、Feed 和回滚完整事实只保存在[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-当前公开稳定与回滚基线仍是 `v0.5.1-build.13` / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`，完整资产证据见版本历史。生产源码保持已验收的 Build3，README 使用原始产品图；不含记忆 DEBUG 注入。原生异步提问组关闭能力保持既有边界，视觉与真实交互以用户结论为准。
+中英文 README 保持原结构，任务图为主视觉、统计图位于用量章节；产品图原字节及公开访问已核对。原生异步提问组关闭能力保持已记录边界，真实额度重置仍为演示；发布授权不代表未执行的视觉/真实 Intel/完整更新安装矩阵已通过。
 
-## 0.7.5 Build3 长会话元数据恢复 · 2026-10-04 当前迭代
+发布包未覆盖现有稳定安装；启动冒烟后已恢复原稳定安装（PID31945），开发PID16910保持。默认开发身份仍固定为 `com.quotaview.development073`，正式分发使用 Distribution 配置。下方交付记录按发生时点保留，“未提交/待发布”只代表当时状态。
+
+## 0.7.5 Build3 长会话元数据恢复 · 2026-10-04 发行前交付
 
 用户反馈当前会话只显示目录名 `widget`、模型未知与 Token 缺失，其他会话正常。只读核对确认当前 rollout 超过 280 MiB，默认末尾 16 MiB 内有真实 `turn_context` 与 Token 记录，但没有本轮 `task_started`；原恢复 decoder 因没有活跃轮次而丢弃其后的模型/用量/公开内容。原目录名标题缓存还会阻断或覆盖迟到真实标题，空元数据可能覆盖有效字段。
 
@@ -815,13 +817,13 @@ Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）�
 
 | 项目 | 当前状态 |
 |---|---|
-| 公开稳定版 | [0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)；internal 49，已进入 Stable appcast |
-| 发布源码 | `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；已推送 main |
-| 当前开发配置身份 | `0.7.5 / display Build 3 / internal 52 / com.quotaview.development073`；长会话恢复已构建运行，未发布 |
-| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；本轮设置/发行准备及长会话修复未提交，main集成以本文件顶部和对应PR为准 |
+| 公开稳定版 | [0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；internal 52，已进入 Stable appcast |
+| 发布源码 | `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；PR #75 已合并 main |
+| 当前开发配置身份 | `0.7.5 / display Build 3 / internal 52 / com.quotaview.development073`；与已发布 Build3 同源码，保留独立开发身份 |
+| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；本轮源码已合并并正式发布，后续发布记录同步以顶部和 Git 实时状态为准 |
 | 已运行开发包 | `dist/development-0.7.3/QuotaView 0.7.3 Development.app`；实际0.7.5/Build3/internal52，真实PID16910，187项输入核对；无DEBUG模拟，现有数据路径保持 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
-| 回滚入口 | `v0.5.1-build.9` / `927749b1a205495c86b6090e69044b0c39d85730`；完整资产记录见版本历史 |
+| 回滚入口 | `v0.5.1-build.13` / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；完整资产记录见版本历史 |
 
 进入后先用 `git worktree list`、`git status --short --branch` 与 `git log -1` 核实实时状态。
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，
@@ -1419,6 +1421,8 @@ stderr 为空、Codex 配置指纹一致；构建当轮未重跑完整回归。�
 当时的 0.4.8 副本路径与启动记录见该证据目录的 `debug-launch-result.json`；旧主进程现已退出。
 
 ## 下一步与验收边界
+
+- 2026-10-04：0.7.5 Build3 GitHub / appcast 发布完成，后续迭代使用新 Build；继续收集真实使用反馈，原生异步提问组关闭与真实 N → N+1 客户端替换仍按各自合同验收。以下旧版本条目保留历史背景。
 
 - 2026-09-13：[灵动岛开发台](Prototypes/IslandTextConsole/README.md) 与生产共用动画源码；
   后续调整仍保留单实例、手动状态与呼出 / 隐藏，并在新版启动成功后关闭旧开发台。
