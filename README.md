@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.5.0-build.3/QuotaView-v0.5.0-build.3.zip"><strong>Download QuotaView v0.5.0 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.7.5-build.3/QuotaView-v0.7.5-build.3.zip"><strong>Download QuotaView v0.7.5 Build 3</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -35,62 +35,57 @@
 </p>
 
 <p align="center">
-  <img src="Resources/QuotaView-Product-Hero.png" alt="QuotaView Codex Island showing live task progress and quota on macOS" width="100%">
+  <img src="Resources/QuotaView-0.7.5-Island.png" alt="QuotaView Codex Island showing live task progress and quota on macOS" width="100%">
 </p>
 
-Codex can keep working after its window leaves the foreground, but its state should not disappear with it. QuotaView turns the active task into a native, click-through **Codex Island** beneath the menu bar. It shows what Codex is doing, how far a planned task has progressed, when approval is waiting, how many tokens the turn has used, and what remains when the task finishes.
+Keep parallel work in view without switching windows. QuotaView brings tasks, agent collaboration, confirmations, and usage into a native **Codex Island** beneath the menu bar.
 
-QuotaView is open source, lightweight, and local-first. Current Codex releases work on first launch with no Hook setup. Quota and usage stay one click away in the menu panel and native widgets.
+QuotaView is open source, lightweight, and local-first. Active local sessions are discovered automatically, with quota and usage one click away.
 
-## 0.5.0 Build 3: a more natural Island in motion
+## 0.7.5: our biggest update yet
 
-https://github.com/user-attachments/assets/46482b21-735c-4073-96c3-7d6f10848f90
+QuotaView 0.7.5 is our largest redesign and architectural update to date. The new multi-task Island brings task progress, collaboration, and quota together, making parallel work easier to follow.
 
-The Island emerges from a small capsule beneath the menu bar and settles into its expanded state with a soft spring. Text, icons, and the surface move together while text layout stays stable through the rebound. Compact transitions ease into place; dismissal shrinks the Island before it disappears.
+- **Multiple tasks:** follow concurrent sessions, inspect progress and details, and review completed results.
+- **Multi-agent collaboration:** see subagents beneath their parent task, with individual identities and live states.
+- **Task confirmations:** find requests that need your attention and respond to supported confirmations directly.
+- **A new usage dashboard:** see quota, reset times, and token activity in one place.
 
-- **A consistently black surface.** Working and completed tasks share a pure-black background at both sizes, with no gray material exposed as effects fade.
-- **Four effects built for longer sessions.** Bounded clocks and improved noise calculations prevent floating-point degradation and keep clock transitions continuous.
-- **Reliable transitions.** Interrupted animations continue from the current pose. This build fixes early-dismissal sizing and hover bounds during rebound, and respects Reduce Motion.
-
-The development console and app share the motion and rendering code. Automatic connection, HTTP/SOCKS5 proxies, quota, and native widgets remain available.
+Rebuilt data reception and state synchronization improve information continuity across long sessions and concurrent tasks. A dedicated feedback page makes it easier to report issues and share suggestions.
 
 ## The Codex Island
 
-The Island is the primary QuotaView experience—not an add-on to a quota dashboard.
-
 | Moment | What the Island shows |
 | --- | --- |
-| **Thinking and working** | Task title, current operation, live state, turn token usage, and a progress-aware Quantum Noise surface. |
-| **Planned work** | Completed, active, and pending plan steps become conservative progress. Only a real task completion reaches 100%. |
-| **Approval required** | The waiting state appears immediately. After 10 seconds, a yellow outline and halo make the blocked task harder to miss. |
-| **Task completed** | The expanded Island becomes a completion receipt with turn tokens on the left and current remaining quota on the right. |
-| **Compact completion** | “Completed” stays visible beside a small, risk-colored remaining-quota ring before the Island hides. |
-| **Hover** | The whole Island defaults to 20% visibility (80% transparent) and remains click-through. In development builds, **Settings → Codex Island → Hover Visibility** adjusts it from 0–100%, applies changes immediately, and can restore the default. |
+| **Thinking and working** | Task title, public progress, model, elapsed time, and token usage. |
+| **Parallel tasks** | A separate card for each session, with expandable details and completion results. |
+| **Agent collaboration** | A strip extending below the parent card, with individual avatars, names, models, and states. Long groups scroll in one direction. |
+| **Approval required** | Highlighted requests, bounded previews, and supported confirmation actions. |
+| **Memory maintenance** | A small AI orb in the footer, separate from the task list, while its real state continues to update. |
+| **Task completed** | The result remains available for review; cards can be archived locally. |
 
-The Island understands thinking, work, tool calls, approvals, context compaction, completion, interruption, and failure. It can follow the screen where Codex is visible, respects Reduce Motion, adapts to light and dark appearance, and lets you tune its completion timing.
-
-<p align="center">
-  <img src="Resources/QuotaView-0.4.5-Activity-Bridge.png" alt="QuotaView 0.4.5 Codex Island showing live task state and turn token usage" width="100%">
-</p>
+The Island distinguishes thinking, tools, approvals, context compaction, completion, interruption, and failure. Progress reaches 100% only on a real completion event. Compact and expanded views keep the same task context.
 
 ## Ready when Codex starts
 
-QuotaView 0.4.5 adds a read-only local activity bridge for current Codex releases:
-
-- **No first-run Hook setup.** Open QuotaView and start a Codex task; the Island discovers active local work automatically.
-- **Fast state updates.** The bridge follows appended local task events, including lifecycle, plan counts, coarse tool categories, and token totals.
-- **Safe compatibility fallback.** A shared local App Server connection and the signed Activity Hook remain fallback paths for older environments.
-- **No control over Codex.** The bridge observes existing activity; it does not launch, modify, or write to Codex data.
+- **Automatic discovery.** Start a local task and QuotaView follows its activity without first-run Hook setup.
+- **Unified state.** Session metadata, live events, and public progress feed the same task presentation.
+- **Compatibility paths.** Local App Server and signed Activity Hook support complement local activity discovery.
+- **Explicit actions.** Observation is read-only. Supported requests can be answered only through your action; unavailable controls open the task in its original window.
 
 ## Quota and usage, one click away
 
-The Island leads the experience, while the rest of QuotaView provides the context around the task:
+Open usage statistics from the Island to see the account and usage behind your work.
+
+<p align="center">
+  <img src="Resources/QuotaView-0.7.5-Usage.png" alt="QuotaView 0.7.5 usage dashboard with quota, token activity, and cost estimates" width="100%">
+</p>
 
 | Surface | What it is for |
 | --- | --- |
 | **Menu bar** | Keep a chosen quota value or reset countdown visible without opening a window. |
-| **Menu panel** | Review every available Codex quota window, Spark quota, reset times, Credits, latest-day and 30-day tokens, and lifetime usage. |
-| **Token Activity** | Scan daily token usage in a compact monochrome grid across week, month, three-month, and six-month ranges. |
+| **Usage dashboard** | Review every available Codex quota window, Spark quota, reset times, Credits, latest-day and 30-day tokens, and lifetime usage. |
+| **Token Activity** | Explore token activity across daily, weekly, and cumulative views. |
 | **Cost estimate** | See a clearly labeled local 30-day estimate. It is an estimate, not a bill. |
 | **Widgets** | Place native Small or Medium WidgetKit views on the desktop for quota and reset information. |
 | **Updates** | Check the Stable channel manually or opt into a native check every 24 hours. Installing an update always requires confirmation. |
@@ -98,12 +93,12 @@ The Island leads the experience, while the rest of QuotaView provides the contex
 ## Get started
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.5.0-build.3.zip` from the [v0.5.0 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3).
+2. Download `QuotaView-v0.7.5-build.3.zip` from the [v0.7.5 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3).
 3. Unzip it and open `QuotaView.app`.
 4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required. If records are not found, use the Island settings to recheck or choose the Codex data directory.
 
 > [!IMPORTANT]
-> v0.5.0 Build 3 is signed with a Developer ID certificate, notarized by Apple,
+> v0.7.5 Build 3 is signed with a Developer ID certificate, notarized by Apple,
 > and stapled for offline Gatekeeper verification. It opens normally after
 > unzipping, without the Finder right-click workaround used by older unsigned
 > builds.
@@ -112,20 +107,15 @@ The Universal app supports macOS 14 or later on Apple Silicon and Intel Macs. Th
 
 ## Privacy by design
 
-QuotaView does **not**:
+QuotaView processes task information locally. It does not scrape account pages, collect login credentials, or upload task content to a QuotaView service.
 
-- scrape Codex or ChatGPT account pages;
-- read, copy, or store login credentials from `~/.codex`;
-- ingest prompts, reasoning, messages, commands, arguments, tool output, diffs, or completion text into its model or diagnostics;
-- store authentication tokens, cookies, complete account responses, or raw task transcripts.
+The activity bridge reads bounded local session records and metadata to display task state, token counts, and public progress. Public messages and tool details are handled transiently for the task view; private reasoning is excluded. Diagnostics use sanitized identifiers and summaries rather than message bodies or raw transcripts.
 
-For current Codex releases, the activity bridge reads only bounded local task records under the selected Codex data directory’s `sessions` folder (by default `~/.codex/sessions`). It projects hashed session and turn identifiers, the final workspace path component, lifecycle state, plan-status counts, coarse tool category, timestamps, and token numbers. The signed Hook fallback follows the same sanitized boundary.
+Quota information comes from the locally installed App Server. Preferences, compact local state, and a bounded WidgetKit snapshot stay on your Mac. Authentication tokens, cookies, and complete account responses are not persisted by QuotaView.
 
-Quota information is requested from the locally installed `codex app-server` over JSON-RPC. QuotaView stores only display preferences, compact availability/error state, and the latest successful refresh time in its own preferences domain. A bounded, sanitized snapshot is written to the app's App Group for WidgetKit; it contains no credential, account identifier, complete response, or usage history.
+Observation is read-only; supported confirmations require an explicit user action. The quota-reset interface remains a local demo and never consumes a real reset credit.
 
-QuotaView is read-only by default. The quota-reset interface is a local safety demo and never calls `account/rateLimitResetCredit/consume`.
-
-The main app target disables App Sandbox because it needs to communicate with the locally installed Codex service.
+The main app target disables App Sandbox to communicate with the locally installed service.
 
 ## Requirements and current scope
 
@@ -133,17 +123,11 @@ The main app target disables App Sandbox because it needs to communicate with th
 - ChatGPT/Codex installed and signed in
 - Swift 6 or Xcode 16+ only when building from source
 - Current stable support is focused on Codex
-- The stable Island follows one primary task; the separate [0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1) contains the experimental multi-task experience
+- Multiple local sessions and their subagents are shown together; available confirmation actions depend on the current session connection
 - Cost values are local estimates, not billing records
 - Codex protocol details can change between installed versions; QuotaView keeps compatibility fallbacks for that reason
 
-QuotaView looks for the Codex executable in this order:
-
-1. `CODEX_EXECUTABLE`
-2. `/Applications/ChatGPT.app/Contents/Resources/codex`
-3. `/opt/homebrew/bin/codex`
-4. `/usr/local/bin/codex`
-5. The current `PATH`
+QuotaView checks `CODEX_EXECUTABLE`, the current and legacy executable layouts in the installed desktop apps, Homebrew locations, and the current `PATH`.
 
 ## Build from source
 
@@ -230,11 +214,11 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 
 ## Releases and project status
 
-- **Recommended stable:** [QuotaView v0.5.0 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.0-build.3)
-- **Stable rollback:** [QuotaView v0.4.8 Build 4](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.8-build.4)
+- **Recommended stable:** [QuotaView v0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)
+- **Stable rollback:** [QuotaView v0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)
 - **Withdrawn 0.4.7 Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
 - **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.
-- **Experimental multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
+- **Historical multi-task preview:** [QuotaView v0.3.2 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.3.2-preview.1)
 - **Release history and verification:** [VERSION_HISTORY.md](VERSION_HISTORY.md)
 - **Current engineering handoff:** [HANDOFF.md](HANDOFF.md)
 - **Design and behavior specifications:** [docs/specs/README.md](docs/specs/README.md)
@@ -243,7 +227,7 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 
 QuotaView is available under the [MIT License](LICENSE).
 
-Bug reports, Codex compatibility reports, and focused feature proposals are welcome. Start with the [issue templates](https://github.com/Duoasa/QuotaView/issues/new/choose), then read the [specification index](docs/specs/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before preparing a code change.
+Use **Settings → Bug Feedback** to view the QQ group QR code or open GitHub Issues. Bug reports, compatibility reports, and focused feature proposals are welcome. Start with the [issue templates](https://github.com/Duoasa/QuotaView/issues/new/choose), then read the [specification index](docs/specs/README.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before preparing a code change.
 
 Never include authentication tokens, credentials, raw task transcripts, or an unredacted `~/.codex` file in an issue.
 

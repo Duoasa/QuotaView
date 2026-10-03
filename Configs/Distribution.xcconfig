@@ -1,0 +1,7 @@
+// Explicit direct-distribution identity. Routine builds retain the isolated
+// development identity from App.xcconfig / Widget.xcconfig.
+// Use only with the Release configuration and the release packaging script.
+QUOTAVIEW_APP_BUNDLE_ID = com.quotaview.menubar
+QUOTAVIEW_WIDGET_BUNDLE_ID = com.quotaview.menubar.widget
+QUOTAVIEW_APP_GROUP_ID = BUUH229D5Q.com.quotaview.shared
+QUOTAVIEW_APP_DISPLAY_NAME = QuotaView

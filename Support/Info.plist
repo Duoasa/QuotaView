@@ -5,11 +5,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>zh_CN</string>
 	<key>CFBundleDisplayName</key>
-	<string>QuotaView 0.7.5 Development</string>
+	<string>$(QUOTAVIEW_APP_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>QuotaView</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.quotaview.development073</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>0.7.5</string>
 	<key>CFBundleVersion</key>
-	<string>50</string>
+	<string>52</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
@@ -31,9 +31,9 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>QuotaViewAppGroupIdentifier</key>
-	<string>BUUH229D5Q.com.quotaview.development073.shared</string>
+	<string>$(QUOTAVIEW_APP_GROUP_ID)</string>
 	<key>QuotaViewDisplayBuildNumber</key>
-	<string>1</string>
+	<string>3</string>
 	<key>QuotaViewUpdateTeamIdentifier</key>
 	<string>BUUH229D5Q</string>
 	<key>SUAllowsAutomaticUpdates</key>

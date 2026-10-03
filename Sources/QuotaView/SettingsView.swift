@@ -23,7 +23,7 @@ enum SettingsWindowMetrics {
 }
 
 enum IslandSettingsPage: String, CaseIterable, Identifiable {
-    case general, island, usage, codexConnection, proxy, about
+    case general, island, usage, codexConnection, proxy, feedback, about
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -32,6 +32,7 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         case .usage: "chart.bar.xaxis"
         case .codexConnection: "point.3.connected.trianglepath.dotted"
         case .proxy: "network"
+        case .feedback: "ladybug.fill"
         case .about: "info.circle.fill"
         }
     }
@@ -42,6 +43,7 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         case .usage: .systemPink
         case .codexConnection: .systemCyan
         case .proxy: .systemTeal
+        case .feedback: .systemOrange
         case .about: .systemIndigo
         }
     }
@@ -52,19 +54,25 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         case .usage: copy.text("用量显示", "Usage display")
         case .codexConnection: copy.text("Codex 连接", "Codex connection")
         case .proxy: copy.text("网络代理", "Network proxy")
+        case .feedback: copy.text("Bug 反馈", "Bug feedback")
         case .about: copy.text("关于", "About")
         }
     }
-    func subtitle(_ copy: AppCopy) -> String {
-        switch self {
-        case .general: copy.text("语言与外观。", "Language and appearance.")
-        case .island: copy.text("弹出方式、隐私和特效。", "Popups, privacy and effects.")
-        case .usage: copy.text("选择要显示的图表。", "Choose which charts to show.")
-        case .codexConnection: copy.text("连接状态与数据目录。", "Connection status and data directory.")
-        case .proxy: copy.text("额度与用量查询的代理。", "Proxy for quota and usage requests.")
-        case .about: copy.text("版本与更新。", "Version and updates.")
-        }
-    }
+}
+
+enum SettingsFeedbackResources {
+    static let issuesURL = URL(string: "https://github.com/Duoasa/QuotaView/issues")!
+
+    @MainActor
+    static let groupQRCode: NSImage? = {
+        #if SWIFT_PACKAGE
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle.main
+        #endif
+        return bundle.url(forResource: "QuotaViewFeedbackQQ", withExtension: "jpg")
+            .flatMap { NSImage(contentsOf: $0) }
+    }()
 }
 
 struct SettingsView: View {
@@ -82,6 +90,7 @@ struct SettingsView: View {
     @State private var codexActivityDetailsExpanded = false
     @State private var codexCompatibilityExpanded = false
     @State private var showsQuitConfirmation = false
+    @State private var showsFeedbackQRCode = false
 
     private var copy: AppCopy { preferences.copy }
 
@@ -130,6 +139,9 @@ struct SettingsView: View {
         } message: {
             Text(copy.text("Codex 任务会继续运行。", "Codex tasks will keep running."))
         }
+        .sheet(isPresented: $showsFeedbackQRCode) {
+            feedbackQRCode
+        }
         .background {
             SettingsWindowConfigurator()
         }
@@ -145,7 +157,7 @@ struct SettingsView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         sidebarSectionTitle(copy.text("服务", "Services"))
-                        settingsNavigation([.codexConnection, .proxy])
+                        settingsNavigation([.codexConnection, .proxy, .feedback])
                     }
                 }.padding(.horizontal, 10).padding(.top, 48)
             }.scrollIndicators(.never)
@@ -210,6 +222,7 @@ struct SettingsView: View {
                 case .usage: usageSettings
                 case .codexConnection: codexConnectionSettings
                 case .proxy: proxySettings
+                case .feedback: feedbackSettings
                 case .about: aboutSettings
                 }
             }
@@ -227,17 +240,10 @@ struct SettingsView: View {
     private func settingsHeader(
         for page: IslandSettingsPage
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color))
-                    .scaleEffect(1.25).frame(width: 28, height: 28)
-                Text(page.title(copy)).font(.system(size: 22, weight: .semibold)).foregroundStyle(.primary)
-            }
-
-            Text(page.subtitle(copy))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 10) {
+            SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color))
+                .scaleEffect(1.25).frame(width: 28, height: 28)
+            Text(page.title(copy)).font(.system(size: 22, weight: .semibold)).foregroundStyle(.primary)
         }
     }
 
@@ -640,6 +646,76 @@ struct SettingsView: View {
             }
             .buttonStyle(SettingsQuitRowStyle())
         }
+    }
+
+    private var feedbackSettings: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Button { showsFeedbackQRCode = true } label: {
+                feedbackRow(
+                    title: copy.text("QQ群", "QQ group"),
+                    detail: copy.text("群号：1108649282", "Group: 1108649282"),
+                    symbol: "qrcode"
+                )
+            }
+            .buttonStyle(SettingsFeedbackRowStyle())
+            .help(copy.text("显示群二维码", "Show the group QR code"))
+
+            Link(destination: SettingsFeedbackResources.issuesURL) {
+                feedbackRow(
+                    title: "GitHub Issues",
+                    detail: "Duoasa / QuotaView",
+                    symbol: "arrow.up.right"
+                )
+            }
+            .buttonStyle(SettingsFeedbackRowStyle())
+            .help(copy.text("在浏览器中打开反馈页面", "Open the feedback page in your browser"))
+        }
+    }
+
+    private func feedbackRow(title: String, detail: String, symbol: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 28)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.system(size: 14, weight: .medium))
+                Text(detail).font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 12)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var feedbackQRCode: some View {
+        VStack(spacing: 16) {
+            if let image = SettingsFeedbackResources.groupQRCode {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(maxHeight: 460)
+                    .accessibilityLabel(copy.text(
+                        "QuotaView 反馈群二维码，群号 1108649282",
+                        "QuotaView feedback group QR code, group 1108649282"
+                    ))
+            } else {
+                Text(copy.text("二维码暂时无法显示。", "The QR code is unavailable."))
+                    .foregroundStyle(.secondary)
+            }
+            Button(copy.text("关闭", "Close")) { showsFeedbackQRCode = false }
+                .keyboardShortcut(.cancelAction)
+        }
+        .padding(24)
+        .frame(width: 360)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var aboutSettings: some View {
@@ -1368,9 +1444,38 @@ private struct SettingsQuitRowStyle: ButtonStyle {
                             .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovered ? 0.06 : 0))
                     }
             }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            }
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }.onDisappear { hovered = false }
+    }
+}
+
+private struct SettingsFeedbackRowStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.primary)
+            .background(Color(nsColor: .controlBackgroundColor),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.05 : 0))
+                    .allowsHitTesting(false)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    .allowsHitTesting(false)
+            }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
+            .onHover { hovered = $0 }
+            .onDisappear { hovered = false }
     }
 }
 

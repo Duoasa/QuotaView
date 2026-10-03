@@ -32,7 +32,8 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
 
     override init() {
         let preferences = AppPreferences()
-        if UserDefaults.standard.object(forKey: "development073.initialized") == nil {
+        if Bundle.main.bundleIdentifier == "com.quotaview.development073",
+           UserDefaults.standard.object(forKey: "development073.initialized") == nil {
             preferences.codexActivityIslandEnabled = true
             UserDefaults.standard.set(true, forKey: "development073.initialized")
         }
@@ -51,7 +52,9 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         _ notification: Notification
     ) {
         AstaSansFontRegistrar.registerBundledFonts()
-        // Local development build: updater is intentionally not started.
+        // The controller admits only the official, trusted Release identity.
+        // Debug and isolated development builds remain inactive.
+        updateController.start()
         let settings = QuotaViewSettingsWindowController(
             store: store,
             preferences: preferences,

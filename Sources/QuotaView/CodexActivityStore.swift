@@ -86,6 +86,7 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func title(for session: String) -> String? { titleCache[session] }
+    func titleSource(for session: String) -> IslandTaskTitleSource { titleCacheSources[session] ?? .fallback }
 
     func setMultitaskEnabled(_ enabled: Bool) {
         guard multitask.enabled != enabled else { return }
@@ -132,6 +133,7 @@ final class CodexActivityStore: ObservableObject {
     }
 
     var localPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
+    var threadMetadataDidReceive: ((CodexActivityTaskIdentity, CodexLocalRolloutThreadMetadata) -> Void)?
     /// Local-only tasks can request read-only Desktop owner discovery without
     /// waiting for a Shared App Server envelope carrying the raw thread ID.
     var localThreadActivityDidReceive: ((CodexLocalRolloutThreadIdentity, Bool) -> Void)?
@@ -167,6 +169,9 @@ final class CodexActivityStore: ObservableObject {
     private var titleTask: Task<Void, Never>?
     private var titleTaskSessionHash: String?
     private var titleCache: [String: String] = [:]
+    private var titleCacheSources: [String: IslandTaskTitleSource] = [:]
+    private var threadMetadataBySession: [String: CodexLocalRolloutThreadMetadata] = [:]
+    private var threadMetadataOrder: [String] = []
     private var titleAttemptedAt: [String: Date] = [:]
     private var latestEventAtBySession: [String: Date] = [:]
     private var terminalTurnsBySession: [String: TerminalTurn] = [:]
@@ -313,6 +318,10 @@ final class CodexActivityStore: ObservableObject {
                 await self?.executionMetadataPreferences(generation: run) ?? []
             })
             guard self.nativeGeneration == run, !Task.isCancelled else { return }
+            await localRolloutActivityClient.setActiveExecutionProvider { [weak self] in
+                await self?.activeExecutionMetadataPreferences(generation: run) ?? []
+            }
+            guard self.nativeGeneration == run, !Task.isCancelled else { return }
             await localRolloutActivityClient.setExecutionMetadataReadHandler { [weak self] summary in
                 await self?.recordExecutionMetadataRead(summary, generation: run)
             }
@@ -368,6 +377,22 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    private func activeExecutionMetadataPreferences(generation expected: UInt64) -> [CodexLocalExecutionMetadata.Execution] {
+        guard nativeGeneration == expected else { return [] }
+        return taskRegistry.executionIdentities.compactMap { identity in
+            guard let turn = identity.turnHash,
+                  let observed = observedActivityBySession[identity.sessionHash], observed.lifecycle == .active,
+                  observed.snapshot.state != .unavailable,
+                  observed.snapshot.operationKey != .sessionEnded,
+                  executionMemoryTurns[identity.sessionHash] == nil else { return nil }
+            let user = taskRegistry.permitsPublicAttachment(session: identity.sessionHash, turn: turn,
+                source: .localRollout, occurredAt: Date())
+            let child = taskRegistry.permitsSubagentAttachment(session: identity.sessionHash, turn: turn,
+                source: .localRollout, occurredAt: Date())
+            return user || child ? .init(sessionHash: identity.sessionHash, turnHash: turn) : nil
+        }
+    }
+
     private func recordExecutionMetadataRead(_ summary: CodexLocalRolloutActivityClient.MetadataReadSummary,
                                             generation expected: UInt64) {
         guard nativeGeneration == expected else { return }
@@ -379,6 +404,16 @@ final class CodexActivityStore: ObservableObject {
     func receiveLocalPublicContent(_ content: CodexLocalPublicContent, generation expected: UInt64? = nil) {
         let run = expected ?? nativeGeneration
         guard nativeGeneration == run else { return }
+        if let payload = try? JSONSerialization.jsonObject(with: content.data) as? [String: Any],
+           payload["presentationRecovery"] as? Bool == true {
+            guard ["metadata", "message", "tool", "output"].contains(payload["type"] as? String ?? ""),
+                  activeExecutionMetadataPreferences(generation: run).contains(where: {
+                      $0.sessionHash == content.sessionHash && $0.turnHash == content.turnHash
+                  }) else { return }
+            if sessionKinds[content.sessionHash] == .subagent { subagentPublicContentDidReceive?(content) }
+            else { localPublicContentDidReceive?(content) }
+            return
+        }
         if sessionKinds[content.sessionHash] == .subagent {
             guard executionMemoryTurns[content.sessionHash] == nil, isSubagentProgressContent(content.data) else { return }
             if permitsSubagentContent(session: content.sessionHash, turn: content.turnHash) {
@@ -842,8 +877,32 @@ final class CodexActivityStore: ObservableObject {
                     removePendingExecutionMemory(session: identity.sessionHash, turn: turn)
                 }
             } else { _ = resolveSessionKind(identity.sessionKind, session: identity.sessionHash) }
+            if let metadata = identity.threadMetadata,
+               identity.sessionKind != .internalTask, identity.sessionKind != .memoryConsolidation {
+                rememberThreadMetadata(metadata, session: identity.sessionHash)
+            }
         }
-        if case .sessionMetadata = record.update { return }
+        if case .sessionMetadata = record.update {
+            if let identity = verifiedLocalRecordIdentity(record) { publishThreadMetadata(for: identity.sessionHash) }
+            return
+        }
+        // A bounded tail may contain a current turn_context after its start has
+        // fallen outside the read window. Release only its token replay against
+        // the same already admitted live execution; historical activity and
+        // questions retain the existing stronger recovery gate.
+        if record.requiresLiveConfirmation, case .tokenUsageReplay(let updates) = record.update,
+           let local = verifiedLocalRecordIdentity(record), let first = updates.first,
+           updates.allSatisfy({ $0.sessionHash == local.sessionHash && $0.turnHash == first.turnHash }),
+           activeExecutionMetadataPreferences(generation: run).contains(where: {
+               $0.sessionHash == local.sessionHash && $0.turnHash == first.turnHash
+           }) {
+            await applyLocalRecord(record, replay: true, generation: run)
+            publishThreadMetadata(for: local.sessionHash)
+            // This is only read-only owner discovery. Request response ability
+            // still requires the independent Desktop owner/turn/epoch checks.
+            publishLocalDesktopFollow(record, active: true, generation: run)
+            return
+        }
         let terminal: Bool
         if case .activity(let event) = record.update { terminal = [.stop, .interrupt, .sessionEnd].contains(event.event) }
         else { terminal = false }
@@ -1128,7 +1187,8 @@ final class CodexActivityStore: ObservableObject {
         admittedSnapshots.removeValue(forKey: session)
         multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
         multitaskTitleTasks.removeValue(forKey: session)?.cancel()
-        titleCache.removeValue(forKey: session); titleAttemptedAt.removeValue(forKey: session)
+        titleCache.removeValue(forKey: session); titleCacheSources.removeValue(forKey: session)
+        titleAttemptedAt.removeValue(forKey: session)
         nativeWaitEvidence.removeValue(forKey: session); desktopWaitEvidence.removeValue(forKey: session)
         confirmedNativeTurns.removeValue(forKey: session)
         desktopAdmissions.removeValue(forKey: session); desktopReceiptReservations.removeValue(forKey: session)
@@ -1486,6 +1546,7 @@ final class CodexActivityStore: ObservableObject {
             admittedActivityDidReceive?(event)
             flushLocalPublicContent(for: event.sessionHash)
         }
+        publishThreadMetadata(for: event.sessionHash)
         _ = registerEventID(delivery.eventID)
         for session in admission.evictedSessions { discardSession(session, preservingChildOrigin: true) }
         if resolvedKind != .unknown, executionMemoryTurns[event.sessionHash] == nil {
@@ -1641,6 +1702,7 @@ final class CodexActivityStore: ObservableObject {
                 notifyChange()
             }
             titleCache.removeValue(forKey: event.sessionHash)
+            titleCacheSources.removeValue(forKey: event.sessionHash)
             titleAttemptedAt.removeValue(forKey: event.sessionHash)
             planProgressBySession.removeValue(
                 forKey: event.sessionHash
@@ -1800,6 +1862,7 @@ final class CodexActivityStore: ObservableObject {
         localRecovery = CodexLocalActivityRecovery()
         localDesktopFollows.removeAll(); localDesktopFollowOrder.removeAll()
         pendingLocalPublicContent.removeAll(); nativeWaitEvidence.removeAll(); confirmedNativeTurns.removeAll()
+        threadMetadataBySession.removeAll(); threadMetadataOrder.removeAll(); titleCacheSources.removeAll()
         pendingNativePublicMessages.removeAll()
         nativePublicEpoch = nil; closedNativePublicEpoch = nil
         desktopPublicEpoch = nil; closedDesktopPublicEpoch = nil
@@ -1911,11 +1974,45 @@ final class CodexActivityStore: ObservableObject {
         )
     }
 
+    private func rememberTitle(_ value: String?, session: String, source: IslandTaskTitleSource) {
+        guard let value else { return }
+        let title = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, title.utf8.count <= 512,
+              source.rawValue >= titleSource(for: session).rawValue else { return }
+        titleCache[session] = title; titleCacheSources[session] = source
+    }
+
+    private func rememberThreadMetadata(_ value: CodexLocalRolloutThreadMetadata, session: String) {
+        let previous = threadMetadataBySession[session]
+        let preservesName = previous?.titleIsExplicitName == true && !value.titleIsExplicitName
+        let title = preservesName ? previous?.title : value.title ?? previous?.title
+        let total = [value.cumulativeTotalTokens, previous?.cumulativeTotalTokens].compactMap { $0 }.max()
+        threadMetadataBySession[session] = .init(title: title,
+            titleIsExplicitName: preservesName || (value.title != nil ? value.titleIsExplicitName : previous?.titleIsExplicitName == true),
+            model: value.model ?? previous?.model, reasoningEffort: value.reasoningEffort ?? previous?.reasoningEffort,
+            cumulativeTotalTokens: total)
+        threadMetadataOrder.removeAll { $0 == session }; threadMetadataOrder.append(session)
+        while threadMetadataOrder.count > 128 {
+            threadMetadataBySession.removeValue(forKey: threadMetadataOrder.removeFirst())
+        }
+    }
+
+    private func publishThreadMetadata(for session: String) {
+        guard executionMemoryTurns[session] == nil, let value = threadMetadataBySession[session],
+              let identity = taskRegistry.currentIdentity(for: session) ?? taskRegistry.subagentIdentity(for: session),
+              identity.turnHash != nil else { return }
+        if taskRegistry.currentIdentity(for: session) != nil {
+            rememberTitle(value.title, session: session, source: value.titleIsExplicitName ? .explicitName : .threadTitle)
+            if snapshot?.sessionHash == session { resolvedThreadTitle = titleCache[session] }
+        }
+        threadMetadataDidReceive?(identity, value)
+    }
+
     private func resolveTitleIfNeeded(
         for sessionHash: String,
         revision: UInt64
     ) {
-        guard titleCache[sessionHash] == nil,
+        guard titleSource(for: sessionHash) == .fallback,
               titleTaskSessionHash != sessionHash
         else {
             return
@@ -1940,10 +2037,10 @@ final class CodexActivityStore: ObservableObject {
                 guard self.snapshot?.sessionHash == sessionHash else {
                     return
                 }
-                if let title {
-                    self.titleCache[sessionHash] = title
-                }
-                self.resolvedThreadTitle = title
+                // The legacy lookup may return cwd rather than an explicit
+                // name. It remains a replaceable fallback, never higher evidence.
+                self.rememberTitle(title, session: sessionHash, source: .fallback)
+                self.resolvedThreadTitle = self.titleCache[sessionHash]
                 if self.revision >= revision {
                     self.notifyChange()
                 }
@@ -2198,6 +2295,8 @@ final class CodexActivityStore: ObservableObject {
         activeTurnHashBySession.removeValue(forKey: session)
         turnTokenUsageBySession.removeValue(forKey: session)
         titleCache.removeValue(forKey: session)
+        titleCacheSources.removeValue(forKey: session)
+        threadMetadataBySession.removeValue(forKey: session); threadMetadataOrder.removeAll { $0 == session }
         titleAttemptedAt.removeValue(forKey: session)
         if !retainsChildOrigin { forgetSessionOrigin(session) }
     }
@@ -2282,7 +2381,7 @@ final class CodexActivityStore: ObservableObject {
         let generation = multitaskGeneration
         for entry in multitask.entries where multitaskTitleTasks.count < 2 {
             let session = entry.snapshot.sessionHash
-            guard titleCache[session] == nil, multitaskTitleTasks[session] == nil,
+            guard titleSource(for: session) == .fallback, multitaskTitleTasks[session] == nil,
                   titleAttemptedAt[session].map({ Date().timeIntervalSince($0) >= 10 }) ?? true else { continue }
             titleAttemptedAt[session] = Date()
             multitaskTitleTasks[session] = Task { [weak self, titleClient] in
@@ -2290,8 +2389,8 @@ final class CodexActivityStore: ObservableObject {
                 guard let self, !Task.isCancelled, self.multitask.enabled,
                       self.multitaskGeneration == generation else { return }
                 self.multitaskTitleTasks.removeValue(forKey: session)
-                if let title { self.titleCache[session] = title }
-                if self.snapshot?.sessionHash == session { self.resolvedThreadTitle = title }
+                self.rememberTitle(title, session: session, source: .fallback)
+                if self.snapshot?.sessionHash == session { self.resolvedThreadTitle = self.titleCache[session] }
                 self.notifyChange()
             }
         }

@@ -2,6 +2,12 @@ import AppKit
 import Foundation
 import QuotaViewCore
 
+/// A workspace label is useful while disconnected, but cannot replace a real
+/// thread title or the user-visible name obtained from Codex.
+enum IslandTaskTitleSource: Int {
+    case fallback, threadTitle, explicitName
+}
+
 /// Identity, ordering and request lifecycle are independent of presentation/focus.
 /// Shared Desktop connections are observers until response ownership is established.
 @MainActor
@@ -407,8 +413,11 @@ final class IslandLiveStore {
         var threadID: String?
         var turnKey: String?
         var title = ""
+        var titleSource: IslandTaskTitleSource = .fallback
         var model = ""
         var effort = ""
+        var modelTurnKey: String?
+        var effortTurnKey: String?
         var activityStatus: IslandTaskStatus = .thinking
         var requestLifecycle = RequestLifecycle()
         var status: IslandTaskStatus {
@@ -574,14 +583,17 @@ final class IslandLiveStore {
     private func receiveSubagentContent(_ content: CodexLocalPublicContent, payload: [String: Any]) {
         guard var child = subagents[content.sessionHash], child.turn == content.turnHash,
               presentationKind(for: content.sessionHash) == .subagent else { return }
+        if payload["presentationRecovery"] as? Bool == true && child.terminal { return }
         switch payload["type"] as? String {
         case "metadata":
             if let title = payload["title"] as? String, !title.isEmpty { child.title = title }
-            child.model = payload["model"] as? String ?? child.model
-            child.effort = payload["effort"] as? String ?? child.effort
+            if let model = nonempty(payload["model"]) { child.model = model }
+            if let effort = nonempty(payload["effort"]) { child.effort = effort }
         case "message": child.progress = summary(payload["text"] as? String ?? "")
         case "tool":
-            if !child.terminal { child.progress = toolSummary(payload["name"] as? String ?? "", arguments: payload["text"] as? String ?? "") }
+            if !child.terminal && payload["presentationRecovery"] as? Bool != true {
+                child.progress = toolSummary(payload["name"] as? String ?? "", arguments: payload["text"] as? String ?? "")
+            }
         default: return
         }
         subagents[content.sessionHash] = child; onPublicChange?()
@@ -756,7 +768,7 @@ final class IslandLiveStore {
         }
         desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, revision: snapshot.revision)
         tasks[i].threadID = snapshot.conversationID
-        if !projection.title.isEmpty { tasks[i].title = projection.title }
+        applyTitle(projection.title, source: .explicitName, at: i)
         guard !tasks[i].terminal, projection.status == "inProgress" else { onChange?(); return }
         func handle(_ id: CodexDesktopIPCRequestID, method: String, turn: String) -> CodexDesktopIPCRequestHandle? {
             snapshot.requests.first { $0.requestID == id && $0.method == method && $0.turnID == turn
@@ -847,7 +859,7 @@ final class IslandLiveStore {
             tasks[i].requestLifecycle.observeMode(event.userInputMode, callHash: event.toolCallHash)
         }
         tasks[i].updatedAt = max(tasks[i].updatedAt, event.occurredAt)
-        if tasks[i].title.isEmpty { tasks[i].title = event.workspaceName ?? "" }
+        if tasks[i].title.isEmpty { applyTitle(event.workspaceName, source: .fallback, at: i) }
         switch event.event {
         case .userPromptSubmit: tasks[i].activityStatus = .thinking; tasks[i].operation = ""
         case .preToolUse:
@@ -891,8 +903,12 @@ final class IslandLiveStore {
     func receiveToken(_ update: CodexActivityTokenUsageUpdate) {
         guard let i = tasks.firstIndex(where: { $0.key == update.sessionHash }),
               tasks[i].turnKey == nil || tasks[i].turnKey == update.turnHash,
-              update.occurredAt >= (tasks[i].startedAt ?? .distantPast) else { return }
-        tasks[i].tokens = update.cumulativeTotalTokens; onChange?()
+              update.cumulativeTotalTokens >= 0,
+              tasks[i].turnKey != nil || update.occurredAt >= (tasks[i].startedAt ?? .distantPast) else { return }
+        // The first Hook observation can be much later than the actual turn
+        // start. Its exact turn ID admits older same-turn cumulative display,
+        // while monotonic totals prevent replay from moving the count backwards.
+        tasks[i].tokens = max(tasks[i].tokens ?? 0, update.cumulativeTotalTokens); onChange?()
     }
     func receiveLocalContent(_ content: CodexLocalPublicContent) {
         if subagents[content.sessionHash] != nil {
@@ -909,6 +925,10 @@ final class IslandLiveStore {
         }
         guard tasks[i].turnKey == content.turnHash else { return }
         let type = p["type"] as? String
+        let presentationRecovery = p["presentationRecovery"] as? Bool == true
+        if presentationRecovery {
+            guard !tasks[i].terminal, ["metadata", "message", "tool", "output"].contains(type ?? "") else { return }
+        }
         if type == "questionReply", let raw = p["replies"] as? [[String: String]], (1...32).contains(raw.count) {
             let proofs = raw.compactMap { item -> (String, String)? in
                 guard let identity = item["questionItemHash"], let question = item["questionHash"],
@@ -927,14 +947,15 @@ final class IslandLiveStore {
             receiveLocalQuestions(questions, callID: id, content: content, mode: mode, at: i)
             return
         }
-        if type == "output", let id = p["id"] as? String {
+        if !presentationRecovery, type == "output", let id = p["id"] as? String {
             let mode = (p["userInputMode"] as? String).flatMap(CodexUserInputMode.init(rawValue:))
                 ?? (p["asynchronous"] as? Bool == true ? .asynchronous : nil)
             if tasks[i].requestLifecycle.resolveCall(CodexActivityPrivacy.hashIdentifier(id), proofMode: mode) { onChange?() }
         }
         if type == "metadata" {
-            if let model = p["model"] as? String, !model.isEmpty { tasks[i].model = model }
-            if let effort = p["effort"] as? String, !effort.isEmpty { tasks[i].effort = effort }
+            applyTitle(p["title"] as? String, source: p["titleIsExplicitName"] as? Bool == true ? .explicitName : .threadTitle, at: i)
+            if let model = nonempty(p["model"]) { tasks[i].model = model; tasks[i].modelTurnKey = content.turnHash }
+            if let effort = nonempty(p["effort"]) { tasks[i].effort = effort; tasks[i].effortTurnKey = content.turnHash }
         } else {
             guard !(tasks[i].nativeContentAvailable && connection == .connected), let id = p["id"] as? String else {
                 if type == "output" { onChange?() }
@@ -947,17 +968,19 @@ final class IslandLiveStore {
                     tasks[i].entries[j].publicItem?.sourceTruncated = output.count > 65536
                     tasks[i].entries[j].publicItem?.status = "completed"
                 }
-                tasks[i].activeItems.removeValue(forKey: id)
-                if tasks[i].activeItems.isEmpty && tasks[i].activityStatus == .working { tasks[i].activityStatus = .thinking; tasks[i].operation = "" }
+                if !presentationRecovery {
+                    tasks[i].activeItems.removeValue(forKey: id)
+                    if tasks[i].activeItems.isEmpty && tasks[i].activityStatus == .working { tasks[i].activityStatus = .thinking; tasks[i].operation = "" }
+                }
             } else {
                 let message = type == "message"
                 let name = p["name"] as? String ?? ""
                 let body = p["text"] as? String ?? ""
                 let text = message ? body : name + "\n" + body
                 upsert(.init(text: .init(String(text.prefix(65536))), publicItem: .init(category: message ? .message : .command,
-                    sourceID: id, turnID: content.turnHash, status: message ? "completed" : "inProgress", sourceTruncated: text.count > 65536)), at: i)
+                    sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536)), at: i)
                 if message { tasks[i].publicProgress = summary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
-                else if !message && !tasks[i].terminal {
+                else if !message && !presentationRecovery && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
                     let label = name.split(separator: ".").last.map(String.init) ?? name
@@ -968,9 +991,45 @@ final class IslandLiveStore {
         }
         trim(i); onPublicChange?()
     }
-    func setTitle(_ title: String?, for key: String) {
-        guard let title, !title.isEmpty, let i = tasks.firstIndex(where: { $0.key == key }), tasks[i].title != title else { return }
-        tasks[i].title = title; onChange?()
+    func setTitle(_ title: String?, for key: String, source: IslandTaskTitleSource = .explicitName) {
+        guard let i = tasks.firstIndex(where: { $0.key == key }) else { return }
+        if applyTitle(title, source: source, at: i) { onChange?() }
+    }
+
+    /// Thread-row metadata enriches an existing admitted execution. It cannot
+    /// create a card, change its turn/status, or mint confirmation controls.
+    func receiveThreadMetadata(_ value: CodexLocalRolloutThreadMetadata, identity: CodexActivityTaskIdentity) {
+        guard let turn = identity.turnHash else { return }
+        if var child = subagents[identity.sessionHash], child.turn == turn,
+           presentationKind(for: identity.sessionHash) == .subagent {
+            if let title = value.title, child.title.isEmpty { child.title = title }
+            if let model = value.model, child.model.isEmpty { child.model = model }
+            if let effort = value.reasoningEffort, child.effort.isEmpty { child.effort = effort }
+            subagents[identity.sessionHash] = child; onChange?(); return
+        }
+        guard let i = tasks.firstIndex(where: { $0.key == identity.sessionHash }), tasks[i].turnKey == turn,
+              ![.memoryConsolidation, .internalTask, .subagent].contains(presentationKind(for: identity.sessionHash)) else { return }
+        applyTitle(value.title, source: value.titleIsExplicitName ? .explicitName : .threadTitle, at: i)
+        // The thread row may lag a just-started turn. Exact-turn metadata is
+        // stronger, so database fields only fill missing execution labels.
+        if let model = value.model, tasks[i].model.isEmpty { tasks[i].model = model }
+        if let effort = value.reasoningEffort, tasks[i].effort.isEmpty { tasks[i].effort = effort }
+        if let total = value.cumulativeTotalTokens { tasks[i].tokens = max(tasks[i].tokens ?? 0, total) }
+        onChange?()
+    }
+
+    @discardableResult
+    private func applyTitle(_ title: String?, source: IslandTaskTitleSource, at i: Int) -> Bool {
+        guard let title = nonempty(title), source.rawValue >= tasks[i].titleSource.rawValue else { return false }
+        let changed = tasks[i].title != title || tasks[i].titleSource != source
+        tasks[i].title = title; tasks[i].titleSource = source
+        return changed
+    }
+
+    private func nonempty(_ value: Any?) -> String? {
+        guard let text = value as? String else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
     private func startTurn(_ i: Int, key: String?, at date: Date) {
         if let key, priorTurnKeys[tasks[i].key]?.contains(key) == true { return }
@@ -1099,8 +1158,8 @@ final class IslandLiveStore {
             guard !(tasks[i].terminal && tasks[i].turnKey == turnKey) else { return }
             startTurn(i, key: turnKey, at: eventDate(p["startedAtMs"] ?? turn?["startedAtMs"], fallback: now))
             tasks[i].nativeState = true
-            if let model = p["model"] as? String { tasks[i].model = model }
-            if let effort = p["reasoningEffort"] as? String { tasks[i].effort = effort }
+            if let model = nonempty(p["model"]) { tasks[i].model = model; tasks[i].modelTurnKey = tasks[i].turnKey }
+            if let effort = nonempty(p["reasoningEffort"]) { tasks[i].effort = effort; tasks[i].effortTurnKey = tasks[i].turnKey }
         case "turn/completed":
             guard !tasks[i].terminal else { return }
             let status = turn?["status"] as? String
@@ -1159,11 +1218,11 @@ final class IslandLiveStore {
     }
     private var itemContexts: [String: IslandApprovalJSON] = [:]
     private func applyMetadata(_ data: [String: Any], at i: Int) {
-        let name = (data["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            ?? (data["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        if let name { tasks[i].title = name }
-        if let model = data["model"] as? String { tasks[i].model = model }
-        if let effort = data["reasoningEffort"] as? String ?? data["effort"] as? String { tasks[i].effort = effort }
+        if let name = nonempty(data["name"]) { applyTitle(name, source: .explicitName, at: i) }
+        else { applyTitle(nonempty(data["title"]), source: .threadTitle, at: i) }
+        if let model = nonempty(data["model"]), tasks[i].modelTurnKey == nil || tasks[i].modelTurnKey != tasks[i].turnKey { tasks[i].model = model }
+        if let effort = nonempty(data["reasoningEffort"]) ?? nonempty(data["effort"]),
+           tasks[i].effortTurnKey == nil || tasks[i].effortTurnKey != tasks[i].turnKey { tasks[i].effort = effort }
     }
     private func applyFlags(_ status: [String: Any]?, at i: Int, epoch: UInt64) {
         guard !tasks[i].terminal, let status, status["type"] as? String == "active" else { return }

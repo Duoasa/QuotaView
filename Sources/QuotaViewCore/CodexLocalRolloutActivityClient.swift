@@ -9,6 +9,31 @@ public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case sessionMetadata
 }
 
+/// Bounded display fields read from the verified thread row. These are not
+/// evidence of an active turn and never convey a request/response capability.
+public struct CodexLocalRolloutThreadMetadata: Equatable, Sendable {
+    public let title: String?
+    public let titleIsExplicitName: Bool
+    public let model: String?
+    public let reasoningEffort: String?
+    public let cumulativeTotalTokens: Int64?
+    public init(title: String? = nil, titleIsExplicitName: Bool = false,
+                model: String? = nil, reasoningEffort: String? = nil,
+                cumulativeTotalTokens: Int64? = nil) {
+        func bounded(_ value: String?, _ limit: Int) -> String? {
+            guard let value else { return nil }
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !trimmed.isEmpty && trimmed.utf8.count <= limit ? trimmed : nil
+        }
+        self.title = bounded(title, 512)
+        self.titleIsExplicitName = self.title != nil && titleIsExplicitName
+        self.model = bounded(model, 256)
+        self.reasoningEffort = bounded(reasoningEffort, 64)
+        self.cumulativeTotalTokens = cumulativeTotalTokens.flatMap { $0 >= 0 ? $0 : nil }
+    }
+    var isEmpty: Bool { title == nil && model == nil && reasoningEffort == nil && cumulativeTotalTokens == nil }
+}
+
 /// Transient read-only discovery identity from validated session metadata.
 /// It is never an RPC capability, never persisted, and contains no user content.
 public struct CodexLocalRolloutThreadIdentity: Equatable, Sendable {
@@ -17,11 +42,14 @@ public struct CodexLocalRolloutThreadIdentity: Equatable, Sendable {
     public let sessionKind: CodexActivitySessionKind
     public let executionTurnHash: String?
     public let subagentIdentity: CodexActivitySubagentIdentity?
+    public let threadMetadata: CodexLocalRolloutThreadMetadata?
     public init(threadID: String, sessionHash: String, sessionKind: CodexActivitySessionKind,
-                executionTurnHash: String? = nil, subagentIdentity: CodexActivitySubagentIdentity? = nil) {
+                executionTurnHash: String? = nil, subagentIdentity: CodexActivitySubagentIdentity? = nil,
+                threadMetadata: CodexLocalRolloutThreadMetadata? = nil) {
         self.threadID = threadID; self.sessionHash = sessionHash; self.sessionKind = sessionKind
         self.executionTurnHash = executionTurnHash
         self.subagentIdentity = subagentIdentity
+        self.threadMetadata = threadMetadata
     }
 }
 
@@ -52,14 +80,27 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     private let workspaceName: String?
     private(set) var sessionKind: CodexActivitySessionKind
     private(set) var activeTurnHash: String?
+    private var metadataRecoveryTurnHash: String?
+    private(set) var isMetadataRecoveredTurn = false
     private var pendingQuestionCalls: [String] = []
     private var pendingAsyncQuestionCalls: [String] = []
     var asynchronousQuestionCallIDs: Set<String> { Set(pendingAsyncQuestionCalls) }
 
-    public init(sessionHash: String, workspaceName: String? = nil, sessionKind: CodexActivitySessionKind = .unknown) {
+    public init(sessionHash: String, workspaceName: String? = nil, sessionKind: CodexActivitySessionKind = .unknown,
+                metadataRecoveryTurnHash: String? = nil) {
         self.sessionHash = sessionHash
         self.workspaceName = workspaceName
         self.sessionKind = sessionKind
+        self.metadataRecoveryTurnHash = metadataRecoveryTurnHash
+    }
+
+    mutating func restrictMetadataRecovery(to turnHash: String?) {
+        metadataRecoveryTurnHash = turnHash
+        if isMetadataRecoveredTurn, activeTurnHash != turnHash {
+            activeTurnHash = nil
+            isMetadataRecoveredTurn = false
+            pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
+        }
     }
 
     mutating func refineSessionKind(_ kind: CodexActivitySessionKind) {
@@ -87,6 +128,23 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             let kind = CodexActivitySessionKind.classify(metadata: payload)
             refineSessionKind(kind)
             return nil // Discovery owns metadata publication; no synthetic lifecycle event.
+        }
+
+        if recordType == "turn_context" {
+            // Only an independently admitted live execution may bind a missing
+            // start. Context alone must never manufacture a lifecycle event.
+            if let thread = payload["thread_id"], Self.hashedIdentifier(thread) != sessionHash { return nil }
+            let contextTurn = Self.hashedIdentifier(payload["turn_id"])
+            if isMetadataRecoveredTurn, contextTurn != activeTurnHash {
+                activeTurnHash = nil
+                isMetadataRecoveredTurn = false
+                pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
+            }
+            if let contextTurn, contextTurn == metadataRecoveryTurnHash, contextTurn != activeTurnHash {
+                activeTurnHash = contextTurn
+                isMetadataRecoveredTurn = true
+            }
+            return nil
         }
 
         let occurredAt = Self.eventDate(
@@ -177,6 +235,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                 return nil
             }
             activeTurnHash = turnHash
+            isMetadataRecoveredTurn = false
             pendingQuestionCalls.removeAll(); pendingAsyncQuestionCalls.removeAll()
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
@@ -492,6 +551,8 @@ public actor CodexLocalRolloutActivityClient {
         var discardingOversizedLine = false
         var decoder: CodexLocalRolloutLineDecoder
         var subagentIdentity: CodexActivitySubagentIdentity?
+        var threadMetadata: CodexLocalRolloutThreadMetadata?
+        var recoveryAttemptedTurnHash: String?
     }
 
     private var configuration: Configuration
@@ -514,6 +575,15 @@ public actor CodexLocalRolloutActivityClient {
     private var executionMetadata: Set<CodexLocalExecutionMetadata.Identity> = []
     private var executionMetadataService: CodexLocalExecutionMetadata.Service
     private var preferredExecutions: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])?
+    private var activeExecutionProvider: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])?
+    private var activeExecutionTurns: [String: String] = [:]
+
+    /// The owner supplies only currently admitted user/subagent executions in
+    /// this root/generation. Historical or unknown turns must not be returned.
+    public func setActiveExecutionProvider(_ provider: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])?) {
+        activeExecutionProvider = provider
+        activeExecutionTurns.removeAll()
+    }
 
     public func setExecutionMetadataService(_ service: CodexLocalExecutionMetadata.Service,
         preferredExecutions: (@Sendable () async -> [CodexLocalExecutionMetadata.Execution])? = nil) {
@@ -587,6 +657,8 @@ public actor CodexLocalRolloutActivityClient {
         receivedActivity = false
         discovery.reset()
         executionMetadata.removeAll()
+        activeExecutionProvider = nil
+        activeExecutionTurns.removeAll()
         metadataReadHandler = nil
         lastMetadataReadSummary = nil
         tailStates.removeAll()
@@ -625,6 +697,7 @@ public actor CodexLocalRolloutActivityClient {
                               startupTailBytes: configuration.startupTailBytes)
         executionMetadataService = .init(codexHome: url)
         executionMetadata.removeAll()
+        activeExecutionTurns.removeAll()
         discovery = CodexLocalRolloutDiscovery(codexHomeURL: url,
             maximumCandidateCount: configuration.maximumCandidateCount, fileManager: fileManager)
         return true
@@ -697,6 +770,11 @@ public actor CodexLocalRolloutActivityClient {
             }
         }
 
+        let active = await activeExecutionProvider?() ?? []
+        guard isStarted, generation == run, !Task.isCancelled else { return }
+        activeExecutionTurns = Dictionary(active.prefix(128).compactMap { identity in
+            identity.turnHash.map { (identity.sessionHash, $0) }
+        }, uniquingKeysWith: { first, _ in first })
         for candidate in candidates {
             guard isStarted, generation == run, !Task.isCancelled else { return }
             await consume(candidate: candidate, generation: run)
@@ -743,18 +821,31 @@ public actor CodexLocalRolloutActivityClient {
             tailStates.removeValue(forKey: candidate.fileURL); lastCandidateRefresh = .distantPast
             return
         }
+        let recoveryTurn = [CodexActivitySessionKind.user, .subagent].contains(candidate.sessionKind)
+            ? activeExecutionTurns[candidate.sessionHash] : nil
+        if state.decoder.isMetadataRecoveredTurn, recoveryTurn == nil { state.recoveryAttemptedTurnHash = nil }
+        state.decoder.restrictMetadataRecovery(to: recoveryTurn)
+        if let recoveryTurn, state.decoder.activeTurnHash != recoveryTurn,
+           state.recoveryAttemptedTurnHash != recoveryTurn {
+            await bootstrap(candidate: candidate, generation: run)
+            return
+        }
         let previousKind = state.decoder.sessionKind
         let previousChild = state.subagentIdentity
+        let previousMetadata = state.threadMetadata
         state.decoder.refineSessionKind(candidate.sessionKind)
         state.subagentIdentity = metadata.subagentIdentity?.withTitle(candidate.title)
-        if state.decoder.sessionKind != previousKind || state.subagentIdentity != previousChild {
+        state.threadMetadata = candidate.threadMetadata
+        if state.decoder.sessionKind != previousKind || state.subagentIdentity != previousChild
+            || state.threadMetadata != previousMetadata {
             // Classification can arrive after the last rollout append. Publish
             // metadata alone and retain the original decoder/turn/cursor.
             tailStates[candidate.fileURL] = state
             await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
                 threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
                                       sessionKind: state.decoder.sessionKind,
-                                      subagentIdentity: state.subagentIdentity)), false)
+                                      subagentIdentity: state.subagentIdentity,
+                                      threadMetadata: state.threadMetadata)), false)
             guard isStarted, generation == run, !Task.isCancelled,
                   tailStates[candidate.fileURL]?.offset == state.offset else { return }
         }
@@ -762,6 +853,7 @@ public actor CodexLocalRolloutActivityClient {
             await publishSubagentTitle(state.subagentIdentity, turnHash: state.decoder.activeTurnHash, generation: run)
             guard isStarted, generation == run, !Task.isCancelled else { return }
         }
+        tailStates[candidate.fileURL] = state
         guard size > state.offset else { return }
         guard let handle = try? FileHandle(forReadingFrom: candidate.fileURL)
         else {
@@ -794,7 +886,8 @@ public actor CodexLocalRolloutActivityClient {
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
                         requiresLiveConfirmation: record.requiresLiveConfirmation,
                         threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind,
-                                              subagentIdentity: state.subagentIdentity)), false)
+                                              subagentIdentity: state.subagentIdentity,
+                                              threadMetadata: state.threadMetadata)), false)
                 }
                 guard isStarted, generation == run else { return }
                 if let content { await publicContentHandler?(content) }
@@ -835,23 +928,38 @@ public actor CodexLocalRolloutActivityClient {
                 } else { data.removeAll(); discarding = true }
             }
 
+            let recoveryTurn = [CodexActivitySessionKind.user, .subagent].contains(candidate.sessionKind)
+                ? activeExecutionTurns[candidate.sessionHash] : nil
             var decoder = CodexLocalRolloutLineDecoder(
                 sessionHash: candidate.sessionHash,
                 workspaceName: candidate.workspaceName,
-                sessionKind: candidate.sessionKind
+                sessionKind: candidate.sessionKind,
+                metadataRecoveryTurnHash: recoveryTurn
             )
+            var recoveryTokens: [CodexActivityTokenUsageUpdate] = []
             var replay = BootstrapReplay()
             var freshStart = false
-            var publicReplay: [CodexLocalPublicContent] = []
-            var publicReplayBytes = 0
+            var publicReplay = CodexLocalPublicReplayBuffer()
+            var latestPublicMetadata: CodexLocalPublicContent?
             var pending = data
             consumeCompleteLines(from: &pending, discarding: &discarding) { line in
                 let decoded = decoder.decode(line: line)
+                publicReplay.selectTurn(decoder.activeTurnHash)
                 if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash, asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs) {
-                    publicReplay.append(content); publicReplayBytes += content.data.count
-                    while publicReplay.count > 200 || publicReplayBytes > 2_097_152 { publicReplayBytes -= publicReplay.removeFirst().data.count }
+                    let fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any]
+                    if fields?["type"] as? String == "metadata" {
+                        // Model/effort must survive a busy turn's 200-output
+                        // replay cap without retaining additional user content.
+                        latestPublicMetadata = content
+                    } else {
+                        publicReplay.append(content, isAssistantMessage: fields?["type"] as? String == "message")
+                    }
                 }
                 guard let record = decoded else { return }
+                if case .tokenUsage(let usage) = record.update, decoder.isMetadataRecoveredTurn {
+                    recoveryTokens.append(usage)
+                    if recoveryTokens.count > 256 { recoveryTokens.removeFirst() }
+                }
                 if case .activity(let event) = record.update, event.event == .userPromptSubmit {
                     // Do not use the decoder's missing-timestamp fallback as live evidence.
                     let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any]
@@ -869,28 +977,71 @@ public actor CodexLocalRolloutActivityClient {
             tailStates[candidate.fileURL] = TailState(
                 fileIdentity: fileIdentity, sessionHash: candidate.sessionHash,
                 offset: actualOffset, pending: pending,
-                discardingOversizedLine: discarding, decoder: decoder, subagentIdentity: child
+                discardingOversizedLine: discarding, decoder: decoder, subagentIdentity: child,
+                threadMetadata: candidate.threadMetadata, recoveryAttemptedTurnHash: recoveryTurn
             )
-            if let child {
+            if child != nil || candidate.threadMetadata != nil {
                 await updateHandler?(.init(eventID: nil, update: .sessionMetadata,
                     threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
-                        sessionKind: candidate.sessionKind, subagentIdentity: child)), true)
+                        sessionKind: candidate.sessionKind, subagentIdentity: child,
+                        threadMetadata: candidate.threadMetadata)), true)
                 guard isStarted, generation == run, !Task.isCancelled else { return }
             }
-            if replay.isActive {
+            if replay.isActive, !decoder.isMetadataRecoveredTurn {
                 if freshStart { receivedActivity = true }
                 for record in replay.records {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
                     await updateHandler?(.init(eventID: record.eventID, update: record.update,
                                               requiresLiveConfirmation: !freshStart,
                                               threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash, sessionKind: candidate.sessionKind,
-                                                                    subagentIdentity: child)), true)
+                                                                    subagentIdentity: child,
+                                                                    threadMetadata: candidate.threadMetadata)), true)
                 }
                 await publishSubagentTitle(child, turnHash: decoder.activeTurnHash, generation: run)
                 guard isStarted, generation == run, !Task.isCancelled else { return }
-                for content in publicReplay {
+                if let content = latestPublicMetadata, content.turnHash == decoder.activeTurnHash {
+                    await publicContentHandler?(content)
+                }
+                for content in publicReplay.contents {
                     guard isStarted, generation == run else { return }
                     await publicContentHandler?(content)
+                }
+            } else if decoder.isMetadataRecoveredTurn, let turn = decoder.activeTurnHash, turn == recoveryTurn {
+                // Repair presentation for an already-live execution. Neither
+                // lifecycle events nor old questions gain authority from disk.
+                let currentTokens = recoveryTokens.filter { $0.turnHash == turn }
+                if !currentTokens.isEmpty {
+                    await updateHandler?(.init(eventID: nil, update: .tokenUsageReplay(currentTokens),
+                        requiresLiveConfirmation: true,
+                        threadIdentity: .init(threadID: candidate.threadID, sessionHash: candidate.sessionHash,
+                            sessionKind: candidate.sessionKind, threadMetadata: candidate.threadMetadata)), true)
+                }
+                guard isStarted, generation == run, !Task.isCancelled else { return }
+                if let content = latestPublicMetadata, content.turnHash == turn {
+                    await publicContentHandler?(content)
+                }
+                let currentContent = publicReplay.contents.filter { $0.turnHash == turn }
+                let observedToolIDs = Set(currentContent.compactMap { content -> String? in
+                    guard let fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any],
+                          fields["type"] as? String == "tool", let name = fields["name"] as? String,
+                          !CodexLocalQuestionContent.isQuestionTool(name) else { return nil }
+                    return fields["id"] as? String
+                })
+                for content in currentContent {
+                    guard isStarted, generation == run, !Task.isCancelled else { return }
+                    guard var fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any],
+                          let type = fields["type"] as? String else { continue }
+                    let ordinaryTool = type == "tool"
+                        && (fields["id"] as? String).map(observedToolIDs.contains) == true
+                    let ordinaryOutput = type == "output"
+                        && (fields["id"] as? String).map(observedToolIDs.contains) == true
+                    guard type == "message" || ordinaryTool || ordinaryOutput else { continue }
+                    // Consumers restore public text only. An observed old tool
+                    // is not evidence that it is still running or awaiting input.
+                    fields["presentationRecovery"] = true
+                    guard let data = try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]) else { continue }
+                    await publicContentHandler?(.init(sessionHash: content.sessionHash, turnHash: content.turnHash,
+                        data: data, occurredAt: content.occurredAt))
                 }
             }
         } catch {
@@ -936,6 +1087,40 @@ public actor CodexLocalRolloutActivityClient {
         guard connectionState != state else { return }
         connectionState = state
         await connectionStateHandler?(state)
+    }
+}
+
+/// One recent assistant progress record shares the existing content budget with
+/// tools/outputs. Keeping this slot prevents a busy tool stream from erasing the
+/// public progress summary, without retaining a second unbounded text buffer.
+struct CodexLocalPublicReplayBuffer {
+    static let maximumCount = 200
+    static let maximumBytes = 2_097_152
+    private(set) var contents: [CodexLocalPublicContent] = []
+    private(set) var byteCount = 0
+    private var currentTurn: String?
+    private var protectedMessageIndex: Int?
+
+    mutating func selectTurn(_ turn: String?) {
+        if currentTurn != turn { protectedMessageIndex = nil }
+        currentTurn = turn
+    }
+
+    mutating func append(_ content: CodexLocalPublicContent, isAssistantMessage: Bool) {
+        selectTurn(content.turnHash)
+        contents.append(content)
+        byteCount += content.data.count
+        if isAssistantMessage { protectedMessageIndex = contents.count - 1 }
+        while contents.count > Self.maximumCount || byteCount > Self.maximumBytes {
+            // Prefer the oldest ordinary record; a sole oversized message is
+            // still removed, so the same hard byte/count bounds always apply.
+            let removedIndex = protectedMessageIndex == 0 && contents.count > 1 ? 1 : 0
+            byteCount -= contents.remove(at: removedIndex).data.count
+            if let protected = protectedMessageIndex {
+                protectedMessageIndex = protected == removedIndex ? nil
+                    : protected > removedIndex ? protected - 1 : protected
+            }
+        }
     }
 }
 
