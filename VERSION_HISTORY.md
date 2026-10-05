@@ -9,7 +9,41 @@
 
 ## 当前最新版本
 
-> 当前推荐版本已由 GitHub Stable / Latest、公开回下载及签名 Feed 验证确认；开发入口见 [HANDOFF.md](HANDOFF.md)。
+> 当前推荐版本为 GitHub Stable / Latest 0.7.7 Build 1；开发入口见 [HANDOFF.md](HANDOFF.md)。自动更新部署与线上核验状态见下表。
+
+| 项目 | 当前值 |
+|---|---|
+| 最新推荐版本 | `0.7.7 (Build 1)`；Sparkle 内部 Build `57` |
+| Git tag | `v0.7.7-build.1` |
+| Tag / 发布提交 | `3866177cfa19db734d657ef505a4dc72c3338fba`；[PR #81](https://github.com/Duoasa/QuotaView/pull/81) 已合并 main |
+| GitHub Release | [QuotaView 0.7.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1)；2026-10-06 Stable / Latest，非 Draft / Pre-release |
+| Release 资产 | `QuotaView-v0.7.7-build.1.zip`；`20,752,870 bytes` |
+| SHA-256 | `38087c6eaae9b1ff4d77efab662133d856b85432d7170a0bc6d101b3f068f5ee` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64`；App、Widget、Core、Hook、Sparkle |
+| 正式身份 | App `com.quotaview.menubar`；Widget `com.quotaview.menubar.widget`；App Group `BUUH229D5Q.com.quotaview.shared` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `03cf52c8-20df-47af-a707-e0fab5f790e9` |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `57 → 52 → 49`；提交 `e65eb18467e6a4367b1f75900a3883753c80d9cf`；SHA-256 `34e8e1fdaee1a581bed7ec058fa13342ae278af6d23b6d41d1ba2ec5f365853f` |
+| Feed 部署核验 | [Pages 37351078297](https://github.com/Duoasa/QuotaView/actions/runs/37351078297) 成功；线上文件与本地签名Feed逐字节一致，并使用旧版内置公钥验证通过 |
+| EdDSA | ZIP `9KSf8/vbnk7CAPoxhimOrgX/SaBwTTrigd82C6GjyG8s0DS1vX0EQEQyEk6TjguauOyBCrNLgwTEhXTLfineCA==`；ZIP 与线上签名 Feed 已用 0.7.5 稳定版内置公钥独立验证 |
+| CI | [PR 37349790708](https://github.com/Duoasa/QuotaView/actions/runs/37349790708)、[main 37350250490](https://github.com/Duoasa/QuotaView/actions/runs/37350250490) 成功；各 676 项、6 跳过、0 失败，另有 44 项原生提问合同夹具通过 |
+| 产物验证 | 191 项源码/资源/构建输入与发布提交一致；版本、双架构、图标和签名通过；Staple、Gatekeeper、解压包 15 秒启动与实际 Core 加载通过 |
+| 公开验证 | GitHub 回下载与本地公证 ZIP 逐字节一致；保留 Feed 历史 52/49 的 URL、长度、签名与 Release 链接 |
+| 回滚基线 | [0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3) / `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；原始资产 SHA-256 已复核，下节保留全部发布事实 |
+
+### 0.7.7 Build 1 更新内容与验证边界
+
+- 修复审批详情延迟、问题选项只读及请求处理后残留等待；原生可操作请求仍由用户确认，macOS 系统权限仅提示到系统处理。
+- 减少长会话历史重复编解码与冗余界面刷新，改善灵动岛响应和动画连续性。
+- 完成页直接呈现 Codex 回答，优化灰度/字重层次并支持点击链接；新会话开始不再自动清理已完成卡片。
+- 完成后短暂显示剩余额度，按需轮播会话/完成统计；记忆整理独立标注并使用固定压缩效果，卡片描边更柔和。
+- 用户明确批准当前修订作为0.7.7发布并加入appcast；不将其扩大为真实Intel、多屏、辅助功能、长期运行或完整N→N+1安装的全量验收。异步原生问题组关闭仍有既有边界，额度重置保持演示。
+- 本机运行开发身份0.7.7 / Build1 / 内部57（PID50354），原开发37278已退出；`/Applications/QuotaView.app`未替换。正式解压启动核验进程已退出。
+- 完整本地证据：`dist/verification/0.7.7-build1-release/`；正式构建公证日志 `.build/077-release-build-sign-notarize.log`。
+
+## 0.7.5 (Build 3)
+
+> 历史稳定版，0.7.7 Build 1 的回滚基线。以下为当时的发布与验证事实。
 
 | 项目 | 当前值 |
 |---|---|
