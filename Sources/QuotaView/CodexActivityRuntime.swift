@@ -395,7 +395,7 @@ final class CodexActivityRuntime: ObservableObject {
     private func receiveDesktopInvalidation(_ invalidation: CodexDesktopIPCInvalidation, run: UInt64) {
         guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run else { return }
         CodexActivityDiagnostics.recordDesktop(outcome: "resource_limit", conversationID: invalidation.conversationID,
-            details: "epoch=\(invalidation.connectionEpoch) scope=\(invalidation.conversationID == nil ? "connection" : "conversation")")
+            details: "epoch=\(invalidation.connectionEpoch) scope=\(invalidation.conversationID == nil ? "connection" : "conversation") reason=\(invalidation.diagnosticCode)")
         store.invalidateDesktopProjection(conversationID: invalidation.conversationID, epoch: invalidation.connectionEpoch)
         liveIsland.model.invalidateDesktopResponses(conversationID: invalidation.conversationID, epoch: invalidation.connectionEpoch)
         render()

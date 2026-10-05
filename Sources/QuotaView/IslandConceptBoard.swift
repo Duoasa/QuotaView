@@ -249,7 +249,9 @@ final class IslandBoardState: ObservableObject {
     }
     @Published private(set) var attentionOnly = false
     enum Presentation: Equatable { case resting, preview, pinned }
-    @Published private(set) var presentation: Presentation = .resting
+    @Published private(set) var presentation: Presentation = .resting {
+        didSet { if presentation != oldValue { reconcileCompactSignals() } }
+    }
     @Published private(set) var geometry = IslandNotchGeometry(frame: CGRect(x: 0, y: 0, width: 1400, height: 900))
     var reviewingCompletion: Bool { presentation != .resting && display?.state.allCompleted == true }
     @Published private(set) var reduceMotion = false
@@ -434,6 +436,66 @@ final class IslandBoardState: ObservableObject {
         tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
     }
     var showsCompactQuota: Bool { focusedTask == nil }
+    @Published private(set) var showsCompletionQuota = false
+    @Published private(set) var showsCompletedStatistic = false
+    private var completionQuotaPending = false
+    private var completionQuotaClose: DispatchWorkItem?
+    private var statisticRotation: DispatchWorkItem?
+    private var completionQuotaSerial: UInt64 = 0
+    private var statisticSerial: UInt64 = 0
+    private func noteCompletion() {
+        // A burst is one presentation, extended by each new completion. Never
+        // queue one animation per task or replay completions from initial sync.
+        completionQuotaPending = true
+        cancelCompletionQuota()
+        showsCompletedStatistic = true
+        cancelStatisticRotation()
+        reconcileCompactSignals()
+    }
+    private func cancelCompletionQuota() {
+        completionQuotaClose?.cancel(); completionQuotaClose = nil
+        completionQuotaSerial &+= 1
+    }
+    private func cancelStatisticRotation() {
+        statisticRotation?.cancel(); statisticRotation = nil
+        statisticSerial &+= 1
+    }
+    private func reconcileCompactSignals() {
+        guard display?.visible == true, !tasks.isEmpty else {
+            cancelCompletionQuota(); cancelStatisticRotation()
+            completionQuotaPending = false
+            if showsCompletionQuota { showsCompletionQuota = false }
+            if showsCompletedStatistic { showsCompletedStatistic = false }
+            return
+        }
+        guard compact else {
+            // Automatic completion previews also last three seconds. Defer the
+            // orb replacement until the compact island is actually visible.
+            cancelCompletionQuota(); cancelStatisticRotation()
+            if showsCompletionQuota { showsCompletionQuota = false }
+            return
+        }
+        if completionQuotaPending, completionQuotaClose == nil {
+            showsCompletionQuota = true
+            let serial = completionQuotaSerial
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, serial == completionQuotaSerial else { return }
+                completionQuotaClose = nil; completionQuotaPending = false
+                showsCompletionQuota = false
+            }
+            completionQuotaClose = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        }
+        guard statisticRotation == nil else { return }
+        let serial = statisticSerial
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, serial == statisticSerial else { return }
+            statisticRotation = nil; showsCompletedStatistic.toggle()
+            reconcileCompactSignals()
+        }
+        statisticRotation = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+    }
     var compactTaskText: String {
         guard let task = focusedTask else { return summary }
         let render = task.renderState
@@ -586,6 +648,14 @@ final class IslandBoardState: ObservableObject {
         }
         if attentionOnly && attentionCount == 0 { attentionOnly = false }
         if let detailID, !visibleTasks.contains(where: { $0.id == detailID }) { self.detailID = nil }
+        let newCompletion = previous?.visible == true && value.visible && tasks.contains { task in
+            guard task.renderState.visualState == .completed,
+                  let old = previous?.state.tasks.first(where: { $0.id == task.id }) else { return false }
+            return old.renderState.visualState != .completed
+                || old.renderState.taskIdentity != task.renderState.taskIdentity
+        }
+        if newCompletion { noteCompletion() }
+        else { reconcileCompactSignals() }
         // Selection synchronously publishes the model in production. Avoid a
         // second layout pass before that selected model reaches the board.
         if let automaticSelection, let onSelect { onSelect(automaticSelection) }
@@ -743,7 +813,7 @@ private struct IslandOperationLine: View {
                     .foregroundStyle(IslandBoardStyle.muted).fixedSize()
                 IslandScrollingText(text: copy.detail,
                     font: .monospacedSystemFont(ofSize: IslandVibeLayout.operationFont, weight: .medium),
-                    color: completed ? .white : IslandTextPalette.detail,
+                    color: IslandTextPalette.detail,
                     visible: visible, reduceMotion: reduceMotion, shimmer: running)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
@@ -1253,6 +1323,10 @@ struct IslandBoardView: View {
     }
     @ViewBuilder private var compactLeading: some View {
         if state.showsCompactQuota { compactQuotaPercent }
+        else { compactActivitySymbol }
+    }
+    @ViewBuilder private var compactActivitySymbol: some View {
+        if state.showsCompletionQuota { compactQuotaPercent.frame(minWidth: 30) }
         else { compactOrb }
     }
     private var compactOrb: some View {
@@ -1262,8 +1336,14 @@ struct IslandBoardView: View {
     }
     private var compactStatistics: some View {
         HStack(spacing: 8) {
-            Text(state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions"))
-                .foregroundStyle(IslandBoardStyle.muted)
+            ZStack(alignment: .trailing) {
+                // Reserve both labels so switching cannot move the task text.
+                Text(state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions")).hidden()
+                Text(state.text("\(state.completedCount) 完成", "\(state.completedCount) done")).hidden()
+                Text(state.showsCompletedStatistic
+                    ? state.text("\(state.completedCount) 完成", "\(state.completedCount) done")
+                    : state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions"))
+            }.foregroundStyle(IslandBoardStyle.muted)
             attentionIndicators(showCounts: false)
         }.font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
             .frame(minWidth: 30, alignment: .trailing)
@@ -1283,7 +1363,7 @@ struct IslandBoardView: View {
                                 compactQuotaPercent.frame(maxWidth: .infinity, alignment: .leading)
                             } else {
                                 HStack(spacing: 10) {
-                                    compactOrb
+                                    compactActivitySymbol
                                     compactText.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                                 }
                             }

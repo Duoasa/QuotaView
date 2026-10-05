@@ -1,5 +1,7 @@
 # QuotaView SDD 注册表
 
+> 2026-10-05 23:16 后续修订：完成正文灰度/字重分层、摘要 Markdown 解码、完成后剩余用量提示 3 秒与统计轮播；修订 Desktop IPC 分片读取停滞计时，普通确认继续沿用原生 owner 应答能力，macOS 权限只作系统弹窗提示。开发运行与 GitHub 集成以 [Handoff](../../HANDOFF.md) 顶部记录为准；视觉及真实应答仍由用户验收。
+
 > 文档编号：`QV-SDD-INDEX-001`
 >
 > 状态：`Accepted`

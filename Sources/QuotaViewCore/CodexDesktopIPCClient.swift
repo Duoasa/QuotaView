@@ -82,6 +82,8 @@ public struct CodexDesktopIPCInvalidation: Equatable, Sendable {
     public let hostID: String?
     public let connectionEpoch: UInt64
     public let reason: Reason
+    /// Fixed metadata only; never includes a request or conversation payload.
+    public var diagnosticCode: String = "conversation_budget"
 }
 
 public enum CodexDesktopIPCSubmissionResult: Equatable, Sendable {
@@ -494,8 +496,11 @@ public actor CodexDesktopIPCClient {
     }
     private func consume(_ chunk: Data, epoch run: UInt64) async throws {
         guard run == epoch, started else { return }
+        // The socket is backpressured while we decode and deliver this chunk.
+        // Our own processing time is not a stalled peer. Restart the idle
+        // deadline on actual read progress, not only at the first frame byte.
+        frameDeadline?.cancel(); frameDeadline = nil; deadlineFrame = nil
         let events = try decoder.append(chunk)
-        updateFrameDeadline(epoch: run)
         for event in events {
             guard run == epoch, started else { return }
             switch event {
@@ -508,6 +513,8 @@ public actor CodexDesktopIPCClient {
                 try await handleResourceEnvelope(reduced, epoch: run)
             }
         }
+        guard run == epoch, started else { return }
+        updateFrameDeadline(epoch: run)
     }
     private func updateFrameDeadline(epoch run: UInt64) {
         guard decoder.pendingFrame != deadlineFrame else { return }
@@ -521,8 +528,8 @@ public actor CodexDesktopIPCClient {
         }
     }
     private func expireFrame(_ frame: UInt64, epoch run: UInt64) async {
-        guard run == epoch, decoder.pendingFrame == frame else { return }
-        await suspendForResourceLimit(epoch: run)
+        guard !Task.isCancelled, run == epoch, deadlineFrame == frame, decoder.pendingFrame == frame else { return }
+        await suspendForResourceLimit(epoch: run, diagnosticCode: "frame_stalled")
     }
     /// The whole declared frame has been consumed. Only a unique envelope from
     /// an already discovered owner can quarantine one follow; body contents are
@@ -721,14 +728,14 @@ public actor CodexDesktopIPCClient {
         await invalidationHandler?(.init(conversationID: key.conversationID, hostID: key.hostID,
             connectionEpoch: run, reason: .resourceLimit))
     }
-    private func suspendForResourceLimit(epoch run: UInt64) async {
+    private func suspendForResourceLimit(epoch run: UInt64, diagnosticCode: String = "frame_unroutable") async {
         guard run == epoch else { return }
         // Incomplete/unroutable drain has no trustworthy conversation scope.
         // Stop automatic observation until explicit start; never reconnect in
         // a loop into the same resource pressure or call it a version mismatch.
         resourceSuspended = true
         await invalidationHandler?(.init(conversationID: nil, hostID: nil,
-            connectionEpoch: run, reason: .resourceLimit))
+            connectionEpoch: run, reason: .resourceLimit, diagnosticCode: diagnosticCode))
         guard run == epoch else { return }
         await closeConnection()
     }

@@ -76,7 +76,8 @@ final class IslandLiveStore {
         private var desktopRuntimeWait: WaitEvidence?
         private var sourcePlaceholder = Pending(key: "observer-placeholder", value: .init(
             question: .init("请求详情暂不可用", "Request details unavailable"),
-            impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
+            impact: .init("正在同步请求详情。如有 macOS 权限弹窗，请在系统弹窗中处理。",
+                "Syncing request details. If macOS shows a permission dialog, respond in that system dialog.")), isGeneric: true)
         var resolvedCallHashes: [String] = []
         private(set) var retiredObserverCallHashes: [String] = []
         var resolvedRequestKeys: [String] = []
@@ -890,7 +891,7 @@ final class IslandLiveStore {
             if let title = payload["title"] as? String, !title.isEmpty { child.title = title }
             if let model = nonempty(payload["model"]) { child.model = model }
             if let effort = nonempty(payload["effort"]) { child.effort = effort }
-        case "message": child.progress = summary(payload["text"] as? String ?? "")
+        case "message": child.progress = messageSummary(payload["text"] as? String ?? "")
         case "tool":
             if !child.terminal && payload["presentationRecovery"] as? Bool != true {
                 child.progress = toolSummary(payload["name"] as? String ?? "", arguments: payload["text"] as? String ?? "")
@@ -918,20 +919,34 @@ final class IslandLiveStore {
         } else if method == "item/agentMessage/delta", let itemID = payload["itemId"] as? String,
                   itemID == child.publicMessageID, let delta = payload["delta"] as? String, !child.terminal {
             child.publicMessageText = String((child.publicMessageText + delta).prefix(2048))
-            child.progress = summary(child.publicMessageText)
+            child.progress = messageSummary(child.publicMessageText)
         } else if method == "item/started" || method == "item/completed", let item = payload["item"] as? [String: Any],
            let type = item["type"] as? String,
            ["agentMessage", "commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall", "webSearch", "collabToolCall"].contains(type) {
             if type == "agentMessage" {
                 child.publicMessageID = item["id"] as? String
                 child.publicMessageText = String((item["text"] as? String ?? "").prefix(2048))
-                child.progress = summary(child.publicMessageText)
+                child.progress = messageSummary(child.publicMessageText)
             }
             else if method == "item/started" { child.progress = summary(toolName(type, item: item)); if !child.terminal { child.status = .working } }
         } else { return }
         subagents[key] = child; onPublicChange?()
     }
 
+    private var messageSummaryCache: [String: String] = [:]
+    private func messageSummary(_ value: String) -> String {
+        // Summaries show prose, not Markdown markers or link destinations.
+        // Bound parsing and cache the prefix: later streaming deltas do not
+        // repeatedly parse the entire answer or even this unchanged prefix.
+        let prefix = String(value.prefix(1024))
+        if let cached = messageSummaryCache[prefix] { return cached }
+        let parsed = try? AttributedString(markdown: prefix,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        let result = summary(parsed.map { String($0.characters) } ?? prefix)
+        if messageSummaryCache.count >= 64 { messageSummaryCache.removeAll(keepingCapacity: true) }
+        messageSummaryCache[prefix] = result
+        return result
+    }
     private func summary(_ value: String) -> String {
         // Streaming deltas used to split and join the entire accumulated answer
         // on the main actor, only to discard everything beyond 240 characters.
@@ -1035,7 +1050,7 @@ final class IslandLiveStore {
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -1326,7 +1341,7 @@ final class IslandLiveStore {
                 upsert(.init(text: .init(String(text.prefix(65536))), kind: channel == "final" ? .result : .progress,
                     publicItem: .init(category: message ? .message : .command,
                     sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536, messagePhase: channel)), at: i)
-                if message { tasks[i].publicProgress = summary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
+                if message { tasks[i].publicProgress = messageSummary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
                 else if !message && !presentationRecovery && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
@@ -1638,7 +1653,7 @@ final class IslandLiveStore {
             publicItem: .init(category: category, sourceID: itemID, turnID: turnID, status: status,
                 output: output.map { String($0.prefix(65536)) }, sourceTruncated: truncated, exitCode: exit, messagePhase: phase)), at: i)
         if category == .message {
-            tasks[i].publicProgress = summary(text)
+            tasks[i].publicProgress = messageSummary(text)
             if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
         }
     }
@@ -1664,7 +1679,7 @@ final class IslandLiveStore {
             upsert(.init(text: .init(delta), publicItem: .init(category: .message, sourceID: itemID, turnID: tasks[i].turnKey ?? "")), at: i)
         }
         if message, let text = tasks[i].entries.last(where: { $0.publicItem?.sourceID == itemID })?.text.chinese {
-            tasks[i].publicProgress = summary(text)
+            tasks[i].publicProgress = messageSummary(text)
             if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
         }
         trim(i)

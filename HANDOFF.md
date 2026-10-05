@@ -2,6 +2,14 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
+## 0.7.5 排版、完成提示与确认通道 · 2026-10-05 23:16 反馈
+
+基于 main `6d00efe`，正文改为灰色 Regular、标题/源文本重点分层、引用更弱与代码深色底，蓝色链接仍可点击。卡片摘要使用次级色，最多 1024 字符的行内 Markdown 解析与 64 项前缀缓存去掉原始语法标记。完成时收起态用剩余百分比替换球 3 秒；连续完成合并至最后一次后 3 秒，展开期间只保留一次并在收起后展示。统计每 3 秒轮播会话/完成，展开或隐藏不持续轮播；历史初始快照不重播完成提示。
+
+只读原生连接调查确认两个审批会话的 owner 仍提供 `supportsUntrustedAppInput=true`、协议 v11。旧开发进程重连后于 15:33:29Z 再现 `resource_limit scope=connection`，随后断线，使所有会话失去应答句柄。这与系统权限无关，旧日志未细分具体资源分支。代码确认帧读取期限从首分片起固定 5 秒，包含自身解析/回调耗时；改为按真实接收进展重置停滞期限，暂停计入自身背压处理，取消旧计时器不可终止新读取。所有资源上限、owner/epoch/请求身份校验与单会话隔离保持。新增固定诊断原因码以区别 `frame_stalled`、`frame_unroutable` 与 `conversation_budget`。普通批准/提问继续走原有原生应答；没有句柄的观察提醒不会伪装可操作，macOS 权限弹窗仅条件提示系统处理，不猜测无详情就是 TCC，不增加权限。
+
+Debug arm64 最小增量开发编译成功，已重启开发版；未增加/运行本地测试，未进行发行打包、签名、公证或发布。调查元数据、采样、前后运行日志与最终开发 PID/源码/GitHub 结果保存在 `.build/075-island-refinement-20261005/`。重新连接后已观察到 owner 能力与当前轮次快照，尚未代用户提交真实批准；视觉、轮播和交互由用户验收。后续 GitHub CI、PR 和 main 的确切提交及状态另记该目录的 `delivery.json`，不把连接/构建成功等同于交互验收。
+
 ## 0.7.5 完成回答与动画刷新 · 2026-10-05 源码开发
 
 22:51 用户截图反馈完成正文空白。根因已定位到新 `IslandResultTextView` 的指定初始化方法：`NSTextView(frame: .zero, textContainer: nil)` 不创建文本系统。独立初始化诊断确认 textContainer、layoutManager、textStorage 全为 nil；缓存测量栈算出高度，但显示栈通过可选链写入时被静默跳过。修订为显式连接 NSTextStorage → NSLayoutManager → NSTextContainer 并传给 NSTextView，视图持有存储，配置直接写入该存储。初次轻量类型检查发现 CGFloat/Double 字面量重载歧义，显式 CGFloat 后通过。Debug arm64 增量开发编译通过，日志 `.build/075-result-animation-20261005/blank-result-development-build.log`；按持续运行授权重启开发版。前轮 [PR #79](https://github.com/Duoasa/QuotaView/pull/79) 已合并 main `53b2cfc`，PR/main 各676项、6跳过、0失败，但既有 CI 没覆盖正文显示栈的初始化；这些结果不代表此视觉缺陷已被验证。此次修正的运行与 GitHub 结果见同目录 `blank-result-delivery.json`，不做发行签名、打包或发布。
