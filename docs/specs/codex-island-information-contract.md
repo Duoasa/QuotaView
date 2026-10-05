@@ -130,3 +130,5 @@ Store 接到早于生命周期的精确记忆身份时，保存有界 pending ev
 完成详情直接使用本轮 Codex 公开 final / final_answer 消息，保留 Markdown 段落、强调、列表、代码及可点击链接；不混入工具执行、历史折叠或原文展开。旧协议缺省 phase 时兼容最后一条 assistant 消息，明确 commentary 不作结果。终态后的同轮完整 assistant item 或 local final 仅补齐内容，不恢复执行、进度或批准状态。现有 200 条 / 2 MiB 缓存与单项长度预算继续生效，缺失和截断明确说明。
 
 使用 Foundation Markdown 与原生 NSTextView，不读取 Codex 私有渲染器或增加权限。网页链接由用户点击后打开；绝对文件路径去掉行号后由 Finder 定位，不执行链接脚本。解析与文本高度复用详情缓存；摘要有界扫描、重复 display 不发布、同批设置更新合并及扫光时钟连续规则见[效果契约](PROGRESS_EFFECT_ADAPTATION.md#8-2026-10-05-刷新与动画连续性修订)。用户后续授权运行后已启动最小增量开发编译产物，源码交付、开发主 PID 与 CI 见 Handoff；实际效果由用户验收。
+
+22:51 空白正文反馈的修正：实际显示视图必须持有并连接独立的 TextKit 存储、排版器和容器；不得向 NSTextView 指定初始化方法传 nil 后靠可选链写入。缓存的测量成功不代表显示栈存在，CI 编译成功也不代表实际正文可见。根因与增量开发运行记录见 Handoff。

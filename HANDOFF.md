@@ -4,6 +4,8 @@
 
 ## 0.7.5 完成回答与动画刷新 · 2026-10-05 源码开发
 
+22:51 用户截图反馈完成正文空白。根因已定位到新 `IslandResultTextView` 的指定初始化方法：`NSTextView(frame: .zero, textContainer: nil)` 不创建文本系统。独立初始化诊断确认 textContainer、layoutManager、textStorage 全为 nil；缓存测量栈算出高度，但显示栈通过可选链写入时被静默跳过。修订为显式连接 NSTextStorage → NSLayoutManager → NSTextContainer 并传给 NSTextView，视图持有存储，配置直接写入该存储。初次轻量类型检查发现 CGFloat/Double 字面量重载歧义，显式 CGFloat 后通过。Debug arm64 增量开发编译通过，日志 `.build/075-result-animation-20261005/blank-result-development-build.log`；按持续运行授权重启开发版。前轮 [PR #79](https://github.com/Duoasa/QuotaView/pull/79) 已合并 main `53b2cfc`，PR/main 各676项、6跳过、0失败，但既有 CI 没覆盖正文显示栈的初始化；这些结果不代表此视觉缺陷已被验证。此次修正的运行与 GitHub 结果见同目录 `blank-result-delivery.json`，不做发行签名、打包或发布。
+
 基于 main `5102d52`，完成详情直接渲染 Codex 最终公开回答，支持原生 Markdown 链接、段落、列表和代码；移除完成页的工具记录/历史/查看原文层级。优先使用 final/channel 或 final_answer/phase，旧 native 无 phase 时兼容最后 assistant；晚到的同轮终态内容仅补齐结果。文件链接在 Finder 定位，网页交给浏览器。新增 IslandMarkdownResult.swift 已注册 Xcode target；原始文本继续保存在 trace，显示层去除 Codex 内部记忆引用 XML。
 
 动画检查确认流式摘要逐 delta 全文 split/join、重复 display 发布与文字扫光重置延迟等开销。源码改为有界摘要扫描、同主循环设置合并、相同 display 不发布、逐出缓存增量扣减、保持扫光 beginTime，以及 Metal 只在真实播放边界调整时钟。3 秒运行包 sample 主要空闲，不作为掉帧率实测；原始采样保存在 `.build/075-result-animation-20261005/running-build7-sample.txt`。
