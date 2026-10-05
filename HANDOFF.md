@@ -16,6 +16,8 @@
 
 用户随后授权本轮源码推送GitHub并合并main，源码交付、对应CI与合并提交见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)。首轮提交 `28b4a2f` 的 [CI](https://github.com/Duoasa/QuotaView/actions/runs/37315297108) 自动执行676项、6跳过，产生205个断言失败；日志保留于 `runtime/pr77-ci-first-failure.log`。失败包含旧user分类夹具、同步RPC误用工具完成结算的旧预期，以及真实的Desktop重复无owner等待和正向blocker迁移回归。后续源码修正仅由owner projection向Island提供Desktop等待，保留Shared AppServer独立等待；真实blocker可正向迁移runtime作用域，空集合不能迁移旧owner；精确恢复的弱call留下防重墓碑，但不拒绝独立真实RPC。只修订既有测试夹具与断言，未增加测试函数或执行本地测试。**这些后续源码修正尚未重新编译、签名或替换安装；上方Build7包核对只证明修正前的本地产物。** 最新PR及实际main提交的CI结果分别按GitHub核验，不能从该包推断。
 
+PR #77最新head `40f1ad9` 的 [CI](https://github.com/Duoasa/QuotaView/actions/runs/37319285727) 已通过：676项、6跳过、0失败，原生问题合同夹具通过；已合并为 `e8b41df`。该合并提交的首轮 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/37319873668) 有1个既有长rollout夹具超时：`.ready`回调先于首轮poll退出，随后手动poll可能被重入门禁忽略，而原夹具周期10秒大于3秒截止时间。后续仅将该既有测试轮询周期改为0.1秒以允许自然重试，保留3秒期限、相同EOF恢复与不追加文件/不重复生命周期断言；没有修改生产恢复逻辑。失败日志保留于 `runtime/pr77-main-ci-first-failure.log`。后续源码集成和实际main检查以 [main CI记录](https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml?query=branch%3Amain) 与 `runtime/pr77-main-integration.json` 为准，PR通过不能替代main结果。
+
 未授权本版本Release/appcast，公开稳定仍为0.7.5 Build3/内部52；未新公证。用户同时修订后续流程：常规开发使用固定开发工作区和开发版，默认源码迭代与轻量检查，不自动重复正式构建、打包、签名或安装替换；确定发布版本后再走完整产物链。当前Build7上述签名替换发生在此流程修订之前，后续不重复；新Swift源码未经增量编译不能被声明为已运行效果。具体规则见[验证规则](docs/workflow/VALIDATION.md)与[发布规则](docs/workflow/RELEASE.md)。
 
 ## 0.7.5 Build6 待机百分比与纯色描边 · 2026-10-05 上轮交付
