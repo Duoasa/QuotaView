@@ -2098,10 +2098,10 @@ private final class ActivityStateSmokeRenderer:
         // frame. Only a real pause/resume boundary discards inactive wall time.
         if view.isPaused != !shouldAnimate {
             lastFrameAt = CACurrentMediaTime()
+            view.enableSetNeedsDisplay = !shouldAnimate
+            view.isPaused = !shouldAnimate
         }
-        view.enableSetNeedsDisplay = !shouldAnimate
-        view.isPaused = !shouldAnimate
-        if playbackEnabled {
+        if playbackEnabled && view.isPaused {
             view.needsDisplay = true
         }
     }

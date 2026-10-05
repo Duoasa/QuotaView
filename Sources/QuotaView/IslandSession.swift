@@ -10,6 +10,7 @@ final class IslandSession {
     let board = IslandBoardController()
     private var clock: Timer?
     private var contentRefresh: DispatchWorkItem?
+    private var stateRefresh: DispatchWorkItem?
     private var enabled = false
     private var english = false
     private var remaining: Int?
@@ -69,7 +70,14 @@ final class IslandSession {
         self.weeklyRemaining = weeklyRemaining
         if self.privacy != privacy { self.privacy = privacy; board.state.clearDrafts() }
         self.english = english; self.remaining = remaining; self.enabled = enabled
-        updateClock(); refresh()
+        updateClock()
+        // A source batch can update connection, titles, usage and activity in
+        // one main-loop turn. Publish its latest display once. Direct selection
+        // and approval callbacks still use the synchronous model.onChange path.
+        guard stateRefresh == nil else { return }
+        let work = DispatchWorkItem { [weak self] in self?.stateRefresh = nil; self?.refresh() }
+        stateRefresh = work
+        DispatchQueue.main.async(execute: work)
     }
     private func updateClock() {
         if enabled && !locked && clock == nil {
@@ -84,6 +92,8 @@ final class IslandSession {
         updateClock(); refresh()
     }
     private func refresh() {
+        stateRefresh?.cancel(); stateRefresh = nil
+        contentRefresh?.cancel(); contentRefresh = nil
         if (!enabled || locked) && !board.isVisible { return }
         model.preservedID = board.state.detailID
         board.screen = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.screens.first
@@ -101,6 +111,7 @@ final class IslandSession {
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
     func stop() {
+        stateRefresh?.cancel(); stateRefresh = nil
         clock?.invalidate(); clock = nil; contentRefresh?.cancel(); contentRefresh = nil
         observations.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }; observations.removeAll()
         lockObservations.forEach { DistributedNotificationCenter.default().removeObserver($0) }; lockObservations.removeAll()

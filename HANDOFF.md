@@ -2,6 +2,14 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
+## 0.7.5 完成回答与动画刷新 · 2026-10-05 源码开发
+
+基于 main `5102d52`，完成详情直接渲染 Codex 最终公开回答，支持原生 Markdown 链接、段落、列表和代码；移除完成页的工具记录/历史/查看原文层级。优先使用 final/channel 或 final_answer/phase，旧 native 无 phase 时兼容最后 assistant；晚到的同轮终态内容仅补齐结果。文件链接在 Finder 定位，网页交给浏览器。新增 IslandMarkdownResult.swift 已注册 Xcode target；原始文本继续保存在 trace，显示层去除 Codex 内部记忆引用 XML。
+
+动画检查确认流式摘要逐 delta 全文 split/join、重复 display 发布与文字扫光重置延迟等开销。源码改为有界摘要扫描、同主循环设置合并、相同 display 不发布、逐出缓存增量扣减、保持扫光 beginTime，以及 Metal 只在真实播放边界调整时钟。3 秒运行包 sample 主要空闲，不作为掉帧率实测；原始采样保存在 `.build/075-result-animation-20261005/running-build7-sample.txt`。
+
+源码语法检查、新 Markdown 文件独立类型检查与 Xcode project plist 检查通过。复用旧 SwiftPM 模块进行全应用 typecheck 时，缓存的 QuotaViewCore 早于既有记忆修复，导致 API 不匹配；日志保留于 `.build/075-result-animation-20261005/source-typecheck.log`，不作为通过。用户随后明确要求启动开发版替换当前运行版，已按该授权完成现有 Debug arm64 目录的增量开发编译（CODE_SIGNING_ALLOWED=NO），结果成功，日志为同目录 `development-build.log`。不新增或运行本地测试；不走 Distribution / Universal / Developer ID / 公证 / Release 或 appcast，不改正式数据。开发版已启动：主 PID43098，路径 `.build/Development075Build3/Build/Products/Debug/QuotaView.app`，Bundle `com.quotaview.development073`，0.7.5 / Build7 / 内部56；旧正式主 PID62058已退出，正式安装与账户数据保留。仅由 arm64 linker 自动提供本地 ad-hoc 代码页签名，没有额外 codesign 发行流程。对应 PR/main CI 按实际结果更新；前一轮 main CI 失败及停止记录属于下方历史任务。
+
 ## 0.7.5 Build7 等待回收与异步提醒退场 · 2026-10-05 本地交付与源码集成
 
 用户已授权修复系统授权后过期待确认、异步问题无人接管后长期停留两条状态链，并沿用本地替换授权。源码配置与正式本地安装均为 **0.7.5 / 显示Build7 / 内部56**。
