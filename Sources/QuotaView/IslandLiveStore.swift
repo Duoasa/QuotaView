@@ -38,12 +38,26 @@ final class IslandLiveStore {
         struct WaitEvidence {
             var reason: CodexActivityWaitReason?
             var epoch: UInt64?
+            var observedAt: Date = .distantPast
+            var source: CodexActivityEventSource? = nil
             // Only owner-proven runtime wait evidence carries this owner. A
             // new connection's empty set cannot settle an old owner's wait.
             var desktopOwner: String? = nil
             // nil means the source reported waiting before a request identity
             // was available. A bound set is scoped to this task, turn and epoch.
             var requestIdentities: Set<String>? = nil
+            var toolName: String? = nil
+            var toolCallHash: String? = nil
+            var toolCallIsExplicit = false
+            // A complete positive owner ledger binds every matching blocker,
+            // rather than guessing which one caused an anonymous Hook notice.
+            var nativeRequestIdentities: Set<CodexDesktopPendingRequestIdentity>? = nil
+            var boundAt: Date? = nil
+        }
+        private struct HookToolObservation {
+            var toolName: String
+            var startedAt: Date
+            var endedAt: Date? = nil
         }
         var requests: [Pending] = []
         var requestIndex = 0
@@ -52,7 +66,10 @@ final class IslandLiveStore {
         // this per-turn presentation preference separate from settlement proof.
         private(set) var skippedAsyncQuestionIDs: Set<String> = []
         var sourceWait: WaitEvidence?
-        var unidentifiedWait: WaitEvidence?
+        private var unidentifiedWaits: [WaitEvidence] = []
+        private var unidentifiedWaitOverflow = false
+        private var unidentifiedWaitOverflowIsWeak = true
+        var unidentifiedWait: WaitEvidence? { unidentifiedWaits.first }
         // The current Desktop runtime may still be waiting after a typed RPC
         // disappears, or have an unsupported concurrent request. Keep its
         // evidence independent of observer request bindings and settlements.
@@ -61,19 +78,42 @@ final class IslandLiveStore {
             question: .init("请求详情暂不可用", "Request details unavailable"),
             impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
         var resolvedCallHashes: [String] = []
+        private(set) var retiredObserverCallHashes: [String] = []
         var resolvedRequestKeys: [String] = []
         private var acceptedAsyncReplyProofs: [String: String] = [:]
         private var acceptedAsyncReplyOrder: [String] = []
         private var callModes: [String: CodexUserInputMode] = [:]
         private var callModeOrder: [String] = []
+        private var genericWaitEvidence: [String: WaitEvidence] = [:]
+        private var hookTools: [String: HookToolObservation] = [:]
+        private var hookToolsOverflowed = false
+        private var hookHistoryFloor = Date.distantPast
+        private var uncertainHistoricalHookCalls: Set<String> = []
+        private var completedHookTools: [String: Date] = [:]
+        private var completedHookToolOrder: [String] = []
 
-        var waitingOnSource: Bool { sourceWait != nil || unidentifiedWait != nil || desktopRuntimeWait != nil }
+        var waitingOnSource: Bool {
+            sourceWait != nil || unidentifiedWait != nil || unidentifiedWaitOverflow || desktopRuntimeWait != nil
+        }
         var hasBlockingRequest: Bool { requests.contains(where: \.blocksExecution) }
         var visibleRequests: [Pending] { requests.isEmpty && waitingOnSource ? [sourcePlaceholder] : requests }
+        var canHideObserverReminder: Bool {
+            guard !visibleRequests.isEmpty, visibleRequests.allSatisfy(\.isGeneric),
+                  sourceWait == nil, desktopRuntimeWait == nil,
+                  !unidentifiedWaitOverflow || unidentifiedWaitOverflowIsWeak else { return false }
+            return unidentifiedWaits.allSatisfy {
+                ($0.source == .hook || $0.source == nil) && $0.desktopOwner == nil && $0.nativeRequestIdentities == nil
+            } && requests.allSatisfy {
+                $0.desktopIdentity == nil && $0.rpcEpoch == nil && $0.value.protocolRequest == nil
+                    && genericWaitEvidence[$0.key]?.source != .appServer
+                    && genericWaitEvidence[$0.key]?.desktopOwner == nil
+            }
+        }
         var waitReason: CodexActivityWaitReason? {
             if let desktopRuntimeWait { return desktopRuntimeWait.reason }
             if let sourceWait { return sourceWait.reason }
             if let unidentifiedWait { return unidentifiedWait.reason }
+            if unidentifiedWaitOverflow { return .approval }
             guard let blocker = requests.first(where: \.blocksExecution) else { return nil }
             return blocker.mode == .synchronous ? .userInput : .approval
         }
@@ -85,19 +125,129 @@ final class IslandLiveStore {
             callModes[callHash] = mode; callModeOrder.removeAll { $0 == callHash }; callModeOrder.append(callHash)
             while callModeOrder.count > 256 { callModes.removeValue(forKey: callModeOrder.removeFirst()) }
             for i in requests.indices where requests[i].callHash == callHash
-                && (requests[i].isGeneric || requests[i].value.protocolRequest?.kind == .questions) {
+                && (requests[i].isGeneric || (requests[i].value.protocolRequest?.kind == .questions
+                    && requests[i].value.protocolRequest?.observationOnly == true)) {
+                // Local or Hook mode evidence cannot downgrade a real native
+                // question RPC's independently assigned blocking mode.
                 requests[i].mode = mode
             }
         }
-        mutating func observeWait(callHash: String?, mode: CodexUserInputMode?, reason: CodexActivityWaitReason?, epoch: UInt64? = nil) {
+        mutating func observeWait(callHash: String?, mode: CodexUserInputMode?, reason: CodexActivityWaitReason?,
+            epoch: UInt64? = nil, toolName: String? = nil, at: Date = Date(), source: CodexActivityEventSource? = nil) {
             observeMode(mode, callHash: callHash)
             guard mode != .asynchronous else { return }
-            guard let callHash else { unidentifiedWait = .init(reason: reason, epoch: epoch); return }
-            guard !resolvedCallHashes.contains(callHash), !requests.contains(where: { $0.callHash == callHash }), requests.count < 32 else { return }
-            requests.append(.init(key: "observer-call:\(callHash)", value: .init(
+            var evidence = WaitEvidence(reason: reason, epoch: epoch, observedAt: at, source: source,
+                toolName: toolName, toolCallHash: callHash, toolCallIsExplicit: callHash != nil)
+            guard let callHash else {
+                if source == .hook { evidence.toolCallHash = uniqueHookCall(toolName: toolName, before: at) }
+                if let call = evidence.toolCallHash, completedHookTools[call].map({ $0 > at }) == true { return }
+                guard !unidentifiedWaits.contains(where: {
+                    $0.observedAt == at && $0.reason == reason && $0.source == source && $0.toolName == toolName
+                        && $0.epoch == epoch
+                }) else { return }
+                if unidentifiedWaits.count < 32 { unidentifiedWaits.append(evidence) }
+                else {
+                    // Fail closed until turn termination. Neither a single
+                    // call result nor another owner's snapshot covers overflow.
+                    unidentifiedWaitOverflow = true
+                    unidentifiedWaitOverflowIsWeak = unidentifiedWaitOverflowIsWeak && (source == .hook || source == nil)
+                }
+                return
+            }
+            if source == .hook, completedHookTools[callHash].map({ $0 > at }) == true { return }
+            if let existing = requests.first(where: { $0.isGeneric && $0.callHash == callHash }) {
+                if genericWaitEvidence[existing.key]?.desktopOwner != nil {
+                    guard genericWaitEvidence[existing.key].map({ at > $0.observedAt }) ?? true,
+                          !unidentifiedWaits.contains(where: {
+                              $0.observedAt == at && $0.source == source && $0.toolCallHash == callHash
+                                  && $0.reason == reason && $0.epoch == epoch
+                          }) else { return }
+                    // A new Hook notice cannot erase an earlier owner's
+                    // binding. Keep the new weak wait as separate evidence.
+                    if unidentifiedWaits.count < 32 { unidentifiedWaits.append(evidence) }
+                    else {
+                        unidentifiedWaitOverflow = true
+                        unidentifiedWaitOverflowIsWeak = unidentifiedWaitOverflowIsWeak && (source == .hook || source == nil)
+                    }
+                    return
+                }
+                if genericWaitEvidence[existing.key].map({ at > $0.observedAt }) ?? true {
+                    genericWaitEvidence[existing.key] = evidence
+                }
+                return
+            }
+            guard !resolvedCallHashes.contains(callHash), !retiredObserverCallHashes.contains(callHash),
+                  !requests.contains(where: { $0.callHash == callHash }) else { return }
+            guard requests.count < 32 else {
+                unidentifiedWaitOverflow = true
+                unidentifiedWaitOverflowIsWeak = unidentifiedWaitOverflowIsWeak && source != .appServer
+                return
+            }
+            let key = "observer-call:\(callHash)"
+            genericWaitEvidence[key] = evidence
+            requests.append(.init(key: key, value: .init(
                 question: .init("请求详情暂不可用", "Request details unavailable"),
                 impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")),
                 callHash: callHash, mode: mode, isGeneric: true))
+        }
+        mutating func observeToolStart(callHash: String?, toolName: String?, at: Date, source: CodexActivityEventSource?) {
+            guard source == .hook, let callHash, !callHash.isEmpty, let toolName, !toolName.isEmpty else { return }
+            pruneHookHistory(before: at)
+            if let existing = hookTools[callHash] {
+                // A changed tool name does not identify the old call's wait.
+                guard existing.toolName == toolName else { return }
+                hookTools[callHash]?.startedAt = min(existing.startedAt, at)
+            } else if at <= hookHistoryFloor {
+                // A previously unobserved start below the retained history
+                // floor may still be active. It cannot support unique matching
+                // until its exact result removes that uncertainty.
+                if let endedAt = completedHookTools[callHash], endedAt > hookHistoryFloor {
+                    if hookTools.count < 128 {
+                        hookTools[callHash] = .init(toolName: toolName, startedAt: at, endedAt: endedAt)
+                    } else { hookToolsOverflowed = true }
+                } else if completedHookTools[callHash] == nil {
+                    if uncertainHistoricalHookCalls.count < 128 { uncertainHistoricalHookCalls.insert(callHash) }
+                    else { hookToolsOverflowed = true }
+                }
+            } else if hookTools.count < 128 {
+                hookTools[callHash] = .init(toolName: toolName, startedAt: at,
+                    endedAt: completedHookTools[callHash])
+            } else { hookToolsOverflowed = true }
+            refreshHookBindings()
+            // A result may have arrived before its start or permission notice.
+            // Retain its event timestamp instead of reviving an already-ended call.
+            if let completedAt = completedHookTools[callHash] {
+                settleHookWait(callHash, at: completedAt, source: .hook)
+            }
+        }
+        private func uniqueHookCall(toolName: String?, before at: Date) -> String? {
+            guard !hookToolsOverflowed, uncertainHistoricalHookCalls.isEmpty, at > hookHistoryFloor,
+                  let toolName, !toolName.isEmpty else { return nil }
+            let matching = hookTools.filter {
+                $0.value.toolName == toolName && $0.value.startedAt < at
+                    && ($0.value.endedAt.map { $0 > at } ?? true)
+            }
+            return matching.count == 1 ? matching.first?.key : nil
+        }
+        private mutating func refreshHookBindings() {
+            for i in unidentifiedWaits.indices where unidentifiedWaits[i].source == .hook
+                && unidentifiedWaits[i].desktopOwner == nil && !unidentifiedWaits[i].toolCallIsExplicit {
+                // A late second start invalidates an earlier unique match;
+                // direct call IDs never depend on tool-name inference.
+                unidentifiedWaits[i].toolCallHash = uniqueHookCall(toolName: unidentifiedWaits[i].toolName,
+                    before: unidentifiedWaits[i].observedAt)
+            }
+        }
+        private mutating func pruneHookHistory(before at: Date) {
+            let earliestWait = unidentifiedWaits.filter {
+                $0.source == .hook && $0.desktopOwner == nil && !$0.toolCallIsExplicit
+                    && $0.observedAt > hookHistoryFloor
+            }.map(\.observedAt).min() ?? at
+            let obsolete = hookTools.filter { $0.value.endedAt.map { $0 < earliestWait } ?? false }
+            for (call, tool) in obsolete {
+                if let endedAt = tool.endedAt { hookHistoryFloor = max(hookHistoryFloor, endedAt) }
+                hookTools.removeValue(forKey: call)
+            }
         }
         private static func sameLogicalRequest(_ a: Pending, _ b: Pending) -> Bool {
             if let call = a.callHash, call == b.callHash {
@@ -122,7 +272,7 @@ final class IslandLiveStore {
             // The current owner ledger is authoritative for real Desktop
             // requests. A shared item/call observer tombstone cannot veto a
             // separate still-pending RPC that happens to use that same item.
-            if pending.desktopIdentity == nil,
+            if pending.desktopIdentity == nil, pending.rpcEpoch == nil,
                let call = pending.callHash, resolvedCallHashes.contains(call) { return }
             if let wire = pending.value.protocolRequest, let epoch = pending.rpcEpoch,
                resolvedRequestKeys.contains(Self.rpcKey(wire.rpcID, epoch: epoch)) { return }
@@ -150,6 +300,7 @@ final class IslandLiveStore {
             let previous = requests.filter(replaces)
             guard requests.count - previous.count < 32 else { return }
             migrateSourceWait(from: previous, to: replacement)
+            for old in previous { genericWaitEvidence.removeValue(forKey: old.key) }
             requests.removeAll(where: replaces)
             requests.append(replacement)
             bindUnidentifiedSourceWait(to: replacement); clampSelection()
@@ -211,30 +362,84 @@ final class IslandLiveStore {
             clampSelection()
             return true
         }
-        mutating func continueCall(_ callHash: String?) {
-            guard let callHash, requests.contains(where: { $0.isGeneric && $0.callHash == callHash }), mode(for: callHash) != .asynchronous else { return }
-            let identifiedQuestion = mode(for: callHash) == .synchronous
-            let matching = requests.filter { $0.isGeneric && $0.callHash == callHash }
-            requests.removeAll { $0.isGeneric && $0.callHash == callHash }
-            settleSourceWait(for: matching)
-            if identifiedQuestion { rememberCall(callHash) }
+        mutating func continueCall(_ callHash: String?, at: Date = Date(), source: CodexActivityEventSource? = .appServer) {
+            guard let callHash else { return }
+            let retiredAnonymous = settleHookWait(callHash, at: at, source: source)
+            guard mode(for: callHash) != .asynchronous else { return }
+            let matching = requests.filter {
+                $0.isGeneric && $0.desktopIdentity == nil && $0.callHash == callHash
+                    && (genericWaitEvidence[$0.key].map {
+                        source != nil && $0.source == source && at > $0.observedAt
+                    } ?? false)
+                    && genericWaitEvidence[$0.key]?.desktopOwner == nil
+            }
+            let keys = Set(matching.map(\.key))
+            requests.removeAll { keys.contains($0.key) }
+            for key in keys { genericWaitEvidence.removeValue(forKey: key) }
+            // A Hook only withdraws its weak observation. It cannot settle an
+            // independent native thread flag even when a call ID is shared.
+            if source != .hook { settleSourceWait(for: matching) }
+            if mode(for: callHash) == .synchronous, !matching.isEmpty { rememberCall(callHash) }
+            else if !matching.isEmpty || retiredAnonymous { rememberObserverCall(callHash) }
+            guard !matching.isEmpty || retiredAnonymous else { return }
             clampSelection()
         }
-        @discardableResult mutating func resolveCall(_ callHash: String, proofMode: CodexUserInputMode? = nil, epoch: UInt64? = nil) -> Bool {
+        @discardableResult mutating func resolveCall(_ callHash: String, proofMode: CodexUserInputMode? = nil,
+            epoch: UInt64? = nil, at: Date = Date(), source: CodexActivityEventSource? = .appServer) -> Bool {
+            guard source != nil else { return false }
+            if source == .hook { recordHookCompletion(callHash, at: at) }
+            let retiredAnonymous = settleObserverCompletion(callHash, at: at, source: source)
             guard proofMode != .asynchronous, mode(for: callHash) != .asynchronous else { return false }
             let matches: (Pending) -> Bool = { request in
-                request.desktopIdentity == nil && request.callHash == callHash
+                request.desktopIdentity == nil && request.rpcEpoch == nil && request.callHash == callHash
+                    && (request.isGeneric || request.value.protocolRequest?.observationOnly == true)
                     && (epoch == nil || request.rpcEpoch == nil || request.rpcEpoch == epoch)
+                    && (genericWaitEvidence[request.key].map { at > $0.observedAt } ?? true)
+                    && genericWaitEvidence[request.key]?.desktopOwner == nil
             }
             let matching = requests.filter(matches)
             guard !matching.contains(where: { $0.mode == .asynchronous }) else { return false }
-            // A correlated result may clear missing-detail wait evidence. Only
-            // a known request can leave an answered-call tombstone for replay.
-            guard !matching.isEmpty || mode(for: callHash) == .synchronous else { return false }
+            // Retiring unknown observer evidence is not an answered question.
+            // Its replay record cannot veto a later typed async question or RPC.
+            guard !matching.isEmpty || mode(for: callHash) == .synchronous || retiredAnonymous else { return false }
             if mode(for: callHash) == .synchronous || matching.contains(where: { !$0.isGeneric }) { rememberCall(callHash) }
+            else { rememberObserverCall(callHash) }
             requests.removeAll(where: matches)
-            settleSourceWait(for: matching)
+            for request in matching { genericWaitEvidence.removeValue(forKey: request.key) }
+            if source != .hook { settleSourceWait(for: matching) }
             clampSelection(); return true
+        }
+        private mutating func recordHookCompletion(_ callHash: String, at: Date) {
+            completedHookTools[callHash] = max(completedHookTools[callHash] ?? .distantPast, at)
+            completedHookToolOrder.removeAll { $0 == callHash }; completedHookToolOrder.append(callHash)
+            while completedHookToolOrder.count > 256 {
+                completedHookTools.removeValue(forKey: completedHookToolOrder.removeFirst())
+            }
+            if let tool = hookTools[callHash], at >= tool.startedAt {
+                hookTools[callHash]?.endedAt = min(tool.endedAt ?? at, at)
+            }
+            uncertainHistoricalHookCalls.remove(callHash)
+            refreshHookBindings()
+        }
+        @discardableResult private mutating func settleHookWait(_ callHash: String, at: Date,
+            source: CodexActivityEventSource?) -> Bool {
+            guard source == .hook else { return false }
+            let oldCount = unidentifiedWaits.count
+            unidentifiedWaits.removeAll {
+                $0.source == .hook && $0.desktopOwner == nil && $0.nativeRequestIdentities == nil
+                    && $0.toolCallHash == callHash && at > $0.observedAt
+            }
+            return unidentifiedWaits.count != oldCount
+        }
+        @discardableResult private mutating func settleObserverCompletion(_ callHash: String, at: Date,
+            source: CodexActivityEventSource?) -> Bool {
+            guard source != nil else { return false }
+            let oldCount = unidentifiedWaits.count
+            unidentifiedWaits.removeAll {
+                $0.desktopOwner == nil && $0.nativeRequestIdentities == nil && $0.source != .appServer
+                    && $0.toolCallHash == callHash && at > $0.observedAt
+            }
+            return unidentifiedWaits.count != oldCount
         }
         @discardableResult mutating func resolveRPC(_ id: IslandApprovalJSON, epoch: UInt64) -> Bool {
             let key = Self.rpcKey(id, epoch: epoch)
@@ -264,19 +469,24 @@ final class IslandLiveStore {
             }
             clampSelection()
         }
-        mutating func observeDesktopRuntimeWait(_ projection: CodexDesktopInteractionProjection, owner: String, epoch: UInt64) {
+        mutating func observeDesktopRuntimeWait(_ projection: CodexDesktopInteractionProjection,
+            owner: String, epoch: UInt64, at: Date = Date()) {
             guard projection.pendingRequestsAreAuthoritative else { return }
             let represented = Set(projection.requests.map(\.identity))
             let unknownPending = projection.authoritativePendingIdentities.subtracting(represented)
-            let blocker = projection.requests.first { $0.turnID == projection.currentTurnID
-                && $0.userInputMode != .asynchronous }
-            // A real blocking RPC is positive waiting evidence even if runtime
-            // flags have not caught up. Reobserving it migrates aggregate wait
-            // scope along with the typed request, allowing later settlement.
-            if desktopRuntimeWait != nil, projection.threadWaitStatus != .waiting(.approval),
-               projection.threadWaitStatus != .waiting(.userInput), let blocker {
+            reconcileObserverDesktopEvidence(projection, owner: owner, epoch: epoch, at: at)
+            let blocker = projection.requests.first {
+                $0.turnID == projection.currentTurnID && $0.userInputMode != .asynchronous
+                    && projection.authoritativePendingIdentities.contains($0.identity)
+            }
+            // Reobserving a real blocker is positive evidence in the new owner
+            // scope even before runtime flags catch up. An empty set cannot
+            // migrate an older owner's aggregate wait.
+            if let previous = desktopRuntimeWait, at >= previous.observedAt, let blocker,
+               projection.threadWaitStatus != .waiting(.approval),
+               projection.threadWaitStatus != .waiting(.userInput) {
                 desktopRuntimeWait = .init(reason: blocker.method == "item/tool/requestUserInput" ? .userInput : .approval,
-                    epoch: epoch, desktopOwner: owner)
+                    epoch: epoch, observedAt: at, source: .appServer, desktopOwner: owner)
                 return
             }
             let currentScope = desktopRuntimeWait == nil || (desktopRuntimeWait?.desktopOwner == owner
@@ -285,34 +495,89 @@ final class IslandLiveStore {
             case .waiting(let reason):
                 // Positively observing waiting again can migrate the aggregate
                 // runtime evidence. A negative snapshot cannot do that.
-                desktopRuntimeWait = .init(reason: reason, epoch: epoch, desktopOwner: owner)
+                if desktopRuntimeWait.map({ at >= $0.observedAt }) ?? true {
+                    desktopRuntimeWait = .init(reason: reason, epoch: epoch, observedAt: at,
+                        source: .appServer, desktopOwner: owner)
+                }
             case .running:
                 // An unknown RPC does not invent a new user-facing wait. It
                 // does prevent discarding a wait already observed on this turn.
                 if !unknownPending.isEmpty, waitingOnSource || hasBlockingRequest {
                     if currentScope {
-                        desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch, desktopOwner: owner)
+                        desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch,
+                            observedAt: at, source: .appServer, desktopOwner: owner)
                     }
-                } else if currentScope { desktopRuntimeWait = nil }
+                } else if currentScope, desktopRuntimeWait.map({ at > $0.observedAt }) ?? true {
+                    desktopRuntimeWait = nil
+                }
             case .unavailable:
                 if currentScope, !unknownPending.isEmpty, waitingOnSource || hasBlockingRequest {
-                    desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch, desktopOwner: owner)
+                    desktopRuntimeWait = .init(reason: waitReason ?? .approval, epoch: epoch,
+                        observedAt: at, source: .appServer, desktopOwner: owner)
                 }
             }
         }
-        mutating func reconcileDesktopContinuation(_ projection: CodexDesktopInteractionProjection) {
+        mutating func reconcileDesktopContinuation(_ projection: CodexDesktopInteractionProjection,
+            owner: String, epoch: UInt64, at: Date = Date()) {
+            reconcileObserverDesktopEvidence(projection, owner: owner, epoch: epoch, at: at)
             guard projection.provesNoPendingConfirmation else { return }
-            // Explicit running flags plus the full owner's empty pending set
-            // retire stale, unanswerable observer evidence. This does not mark
-            // an async question or a typed request as answered.
-            let generic = requests.filter { $0.isGeneric && $0.desktopIdentity == nil }
-            let keys = Set(generic.map(\.key))
-            requests.removeAll { keys.contains($0.key) }
-            settleSourceWait(for: generic)
-            if sourceWait?.requestIdentities == nil { sourceWait = nil }
-            unidentifiedWait = nil
-            // Runtime evidence was reconciled separately in its exact owner
-            // scope. Preserve an older scope until it is positively reobserved.
+            if let wait = sourceWait, wait.requestIdentities == nil,
+               wait.desktopOwner == owner, wait.epoch == epoch, at > wait.observedAt {
+                sourceWait = nil
+            }
+            clampSelection()
+        }
+        private mutating func reconcileObserverDesktopEvidence(_ projection: CodexDesktopInteractionProjection,
+            owner: String, epoch: UInt64, at: Date) {
+            guard projection.pendingRequestsAreAuthoritative,
+                  projection.authoritativePendingIdentities.subtracting(Set(projection.requests.map(\.identity))).isEmpty else { return }
+            let blockers = projection.requests.filter {
+                $0.turnID == projection.currentTurnID && $0.userInputMode != .asynchronous
+                    && projection.authoritativePendingIdentities.contains($0.identity)
+            }
+            func reconcile(_ evidence: WaitEvidence) -> WaitEvidence? {
+                var wait = evidence
+                guard at >= wait.observedAt else { return wait }
+                let matching = Set(blockers.filter {
+                    ($0.method == "item/tool/requestUserInput" ? CodexActivityWaitReason.userInput : .approval) == wait.reason
+                }.map(\.identity))
+                let positiveWait: Bool
+                if case .waiting = projection.threadWaitStatus { positiveWait = true }
+                else { positiveWait = false }
+                if let existingOwner = wait.desktopOwner {
+                    guard existingOwner == owner, wait.epoch == epoch,
+                          at > (wait.boundAt ?? wait.observedAt) else { return wait }
+                    if let identities = wait.nativeRequestIdentities, !identities.isEmpty,
+                       identities.isDisjoint(with: projection.authoritativePendingIdentities),
+                       blockers.isEmpty, !positiveWait { return nil }
+                    // A flag-only positive witness needs an explicit running
+                    // transition; absent runtime fields cannot settle it.
+                    if wait.nativeRequestIdentities == nil, projection.provesNoPendingConfirmation { return nil }
+                    if !matching.isEmpty {
+                        wait.nativeRequestIdentities = matching; wait.boundAt = at
+                    }
+                    return wait
+                }
+                guard wait.source != .appServer, wait.epoch == nil || wait.epoch == epoch else { return wait }
+                let matchingRuntimeWait: Bool
+                if case .waiting(let reason) = projection.threadWaitStatus { matchingRuntimeWait = reason == wait.reason }
+                else { matchingRuntimeWait = false }
+                guard !matching.isEmpty || matchingRuntimeWait else { return wait }
+                wait.desktopOwner = owner; wait.epoch = epoch; wait.boundAt = at
+                if !matching.isEmpty { wait.nativeRequestIdentities = matching }
+                return wait
+            }
+            unidentifiedWaits = unidentifiedWaits.compactMap(reconcile)
+            let genericKeys = Set(requests.filter { $0.isGeneric && $0.desktopIdentity == nil }.map(\.key))
+            var settledKeys: Set<String> = []
+            for key in genericKeys {
+                guard let evidence = genericWaitEvidence[key] else { continue }
+                if let updated = reconcile(evidence) { genericWaitEvidence[key] = updated }
+                else { genericWaitEvidence.removeValue(forKey: key); settledKeys.insert(key) }
+            }
+            requests.removeAll { $0.isGeneric && settledKeys.contains($0.key) }
+            // Received-at guards replay only. A negative snapshot alone never
+            // establishes ordering with a Hook from another transport.
             clampSelection()
         }
         @discardableResult
@@ -339,24 +604,29 @@ final class IslandLiveStore {
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
         }
-        mutating func setSourceWait(_ reason: CodexActivityWaitReason?, waiting: Bool, epoch: UInt64) {
+        mutating func setSourceWait(_ reason: CodexActivityWaitReason?, waiting: Bool, epoch: UInt64, at: Date = Date()) {
             if waiting {
+                guard sourceWait.map({ at >= $0.observedAt }) ?? true else { return }
                 let identities = Set(requests.filter { belongsToSourceWait($0, reason: reason, epoch: epoch) }.compactMap(requestIdentity))
-                sourceWait = .init(reason: reason, epoch: epoch, requestIdentities: identities.isEmpty ? nil : identities)
-            } else { sourceWait = nil }
-            // Missing-ID Hook notices are wait evidence, never answerable requests.
-            // Explicit active flags can clear that evidence without resolving calls.
-            if !waiting { unidentifiedWait = nil }
+                sourceWait = .init(reason: reason, epoch: epoch, observedAt: at, source: .appServer,
+                    requestIdentities: identities.isEmpty ? nil : identities)
+            } else if let wait = sourceWait, wait.epoch == epoch, at > wait.observedAt {
+                sourceWait = nil
+            }
+            // Direct flags can retire this connection's own source wait. They
+            // do not identify a Hook notice on an independent transport.
         }
         private func requestIdentity(_ request: Pending) -> String? {
-            if let call = request.callHash { return "call:" + call }
             if request.desktopIdentity != nil { return request.key }
             if let epoch = request.rpcEpoch, let wire = request.value.protocolRequest {
                 return "rpc:" + Self.rpcKey(wire.rpcID, epoch: epoch)
             }
+            if let call = request.callHash { return "call:" + call }
             return nil
         }
         private func belongsToSourceWait(_ request: Pending, reason: CodexActivityWaitReason?, epoch: UInt64) -> Bool {
+            guard request.blocksExecution, !request.isGeneric,
+                  request.value.protocolRequest?.observationOnly != true else { return false }
             if let requestEpoch = request.rpcEpoch, requestEpoch != epoch { return false }
             let question = request.mode != nil || request.value.protocolRequest?.kind == .questions
             switch reason {
@@ -399,7 +669,18 @@ final class IslandLiveStore {
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
         }
-        mutating func finishTurn() { requests.removeAll(); sourceWait = nil; unidentifiedWait = nil; desktopRuntimeWait = nil; requestIndex = 0 }
+        mutating func finishTurn() {
+            requests.removeAll(); sourceWait = nil; unidentifiedWaits.removeAll(); unidentifiedWaitOverflow = false
+            unidentifiedWaitOverflowIsWeak = true
+            desktopRuntimeWait = nil; genericWaitEvidence.removeAll(); hookTools.removeAll(); hookToolsOverflowed = false
+            hookHistoryFloor = .distantPast; uncertainHistoricalHookCalls.removeAll()
+            completedHookTools.removeAll(); completedHookToolOrder.removeAll(); requestIndex = 0
+            retiredObserverCallHashes.removeAll()
+        }
+        private mutating func rememberObserverCall(_ hash: String) {
+            retiredObserverCallHashes.removeAll { $0 == hash }; retiredObserverCallHashes.append(hash)
+            if retiredObserverCallHashes.count > 256 { retiredObserverCallHashes.removeFirst() }
+        }
         private mutating func rememberCall(_ hash: String) {
             resolvedCallHashes.removeAll { $0 == hash }; resolvedCallHashes.append(hash)
             if resolvedCallHashes.count > 256 { resolvedCallHashes.removeFirst() }
@@ -420,11 +701,16 @@ final class IslandLiveStore {
         var effortTurnKey: String?
         var activityStatus: IslandTaskStatus = .thinking
         var requestLifecycle = RequestLifecycle()
+        var observerReminderDismissed = false
+        var observedPermissionNotices: Set<String> = []
         var status: IslandTaskStatus {
             if terminal { return activityStatus }
+            if observerReminderDismissed && requestLifecycle.canHideObserverReminder { return activityStatus }
             return requestLifecycle.waitingOnSource || requestLifecycle.hasBlockingRequest ? .waiting : activityStatus
         }
-        var requests: [Pending] { requestLifecycle.visibleRequests }
+        var requests: [Pending] {
+            observerReminderDismissed && requestLifecycle.canHideObserverReminder ? [] : requestLifecycle.visibleRequests
+        }
         var requestIndex: Int { get { requestLifecycle.requestIndex } set { requestLifecycle.requestIndex = newValue } }
         var waitingOnSource: Bool { requestLifecycle.waitingOnSource }
         var sourceWaitReason: CodexActivityWaitReason? { requestLifecycle.waitReason }
@@ -455,9 +741,24 @@ final class IslandLiveStore {
     private static let unknownTurn = "unknown-turn"
     private let archiveDefaults: UserDefaults?
     private var archivedTurns: [String: String]
+    private static let retiredAsyncKey = "island.retiredAsyncPresentations.v1"
+    private struct AsyncPresentation {
+        var expiresAt: Date?
+        var claimed = false
+        var handoffAt: Date?
+    }
+    private var asyncPresentations: [String: AsyncPresentation] = [:]
+    // Only hashed thread/turn/question identity and retirement time are saved.
+    // This is presentation suppression, never a response or settlement ledger.
+    private var retiredAsyncPresentations: [String: Double]
     init(archiveDefaults: UserDefaults? = nil) {
         self.archiveDefaults = archiveDefaults
         archivedTurns = archiveDefaults?.dictionary(forKey: Self.archivedTurnsKey) as? [String: String] ?? [:]
+        let saved = archiveDefaults?.dictionary(forKey: Self.retiredAsyncKey) as? [String: Double] ?? [:]
+        retiredAsyncPresentations = Dictionary(uniqueKeysWithValues: saved.filter {
+            $0.key.utf8.count == 64 && $0.key.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
+                && $0.value.isFinite && $0.value > 0
+        }.sorted { $0.value > $1.value }.prefix(4096).map { ($0.key, $0.value) })
     }
     private func isArchived(_ task: TaskRecord) -> Bool {
         guard let turn = archivedTurns[task.key] else { return false }
@@ -722,7 +1023,7 @@ final class IslandLiveStore {
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -760,10 +1061,11 @@ final class IslandLiveStore {
               let turn = projection.currentTurnID, !turn.isEmpty else { return }
         if let epoch = desktopConnectionEpoch, epoch != snapshot.connectionEpoch { return }
         desktopConnectionEpoch = snapshot.connectionEpoch
+        let observedAt = Date()
         let key = CodexActivityPrivacy.hashIdentifier(snapshot.conversationID)
         guard let i = tasks.firstIndex(where: { $0.key == key }), tasks[i].turnKey == CodexActivityPrivacy.hashIdentifier(turn) else { return }
         if let prior = desktopScopes[key], prior.epoch == snapshot.connectionEpoch {
-            guard prior.owner != snapshot.ownerClientID || snapshot.revision >= prior.revision else { return }
+            guard prior.owner != snapshot.ownerClientID || snapshot.revision > prior.revision else { return }
             if prior.owner != snapshot.ownerClientID { tasks[i].requestLifecycle.invalidateDesktopResponses() }
         }
         desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, revision: snapshot.revision)
@@ -800,9 +1102,11 @@ final class IslandLiveStore {
                 callHash: call, desktopIdentity: identity, desktopOwner: snapshot.ownerClientID,
                 desktopEpoch: snapshot.connectionEpoch, mode: mode)
         }
+        let wasWaiting = tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest
         if projection.pendingRequestsAreAuthoritative {
             tasks[i].requestLifecycle.admitAuthoritativeDesktopQuestions()
-            tasks[i].requestLifecycle.observeDesktopRuntimeWait(projection, owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch)
+            tasks[i].requestLifecycle.observeDesktopRuntimeWait(projection, owner: snapshot.ownerClientID,
+                epoch: snapshot.connectionEpoch, at: observedAt)
         }
         for request in projection.requests where request.turnID == turn {
             guard var wire = try? IslandCodexApprovalRequest(data: request.envelopeData) else { continue }
@@ -815,16 +1119,19 @@ final class IslandLiveStore {
         for question in projection.asyncQuestions where question.turnID == turn && question.resolvedAnswer == nil {
             guard var wire = try? IslandCodexApprovalRequest(desktopAsyncQuestion: question, conversationID: snapshot.conversationID) else { continue }
             wire = wire.attachingDesktopHandle(handle(.string(question.questionItemID), method: wire.method, turn: turn))
-            tasks[i].requestLifecycle.observe(pending(wire, identity: .asynchronousQuestion(question.questionItemID),
-                call: CodexActivityPrivacy.hashIdentifier(question.questionItemID), mode: .asynchronous))
+            let request = pending(wire, identity: .asynchronousQuestion(question.questionItemID),
+                call: CodexActivityPrivacy.hashIdentifier(question.questionItemID), mode: .asynchronous)
+            if !isRetiredAsync(request, task: tasks[i]) { tasks[i].requestLifecycle.observe(request) }
         }
         if projection.pendingRequestsAreAuthoritative {
             let settled = tasks[i].requestLifecycle.resolveDesktopRequests(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch,
                 pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs)
-            tasks[i].requestLifecycle.reconcileDesktopContinuation(projection)
-            if settled || projection.provesNoPendingConfirmation {
+            tasks[i].requestLifecycle.reconcileDesktopContinuation(projection, owner: snapshot.ownerClientID,
+                epoch: snapshot.connectionEpoch, at: observedAt)
+            let stillWaiting = tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest
+            if settled || projection.provesNoPendingConfirmation || wasWaiting != stillWaiting {
                 desktopRequestSettlementDidReceive?(key, CodexActivityPrivacy.hashIdentifier(turn), snapshot.connectionEpoch,
-                    tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest)
+                    stillWaiting)
             }
         }
         onChange?()
@@ -841,6 +1148,7 @@ final class IslandLiveStore {
         return tasks.count - 1
     }
     func receiveLegacy(_ event: CodexActivityEvent) {
+        guard event.sessionKind != .unknown else { return }
         if let kind = event.sessionKind { setSessionKind(kind, for: event.sessionHash) }
         guard presentationKind(for: event.sessionHash) != .memoryConsolidation,
               presentationKind(for: event.sessionHash) != .internalTask, presentationKind(for: event.sessionHash) != .subagent else { return }
@@ -854,7 +1162,9 @@ final class IslandLiveStore {
         }
         if let key, tasks[i].turnKey != nil, tasks[i].turnKey != key { return }
         if tasks[i].terminal && !active { return }
-        if let call = event.toolCallHash, tasks[i].resolvedCallHashes.contains(call), event.event == .permissionRequest { return }
+        if let call = event.toolCallHash, event.event == .permissionRequest,
+           tasks[i].resolvedCallHashes.contains(call)
+                || tasks[i].requestLifecycle.retiredObserverCallHashes.contains(call) { return }
         if [.preToolUse, .permissionRequest].contains(event.event) {
             tasks[i].requestLifecycle.observeMode(event.userInputMode, callHash: event.toolCallHash)
         }
@@ -863,21 +1173,33 @@ final class IslandLiveStore {
         switch event.event {
         case .userPromptSubmit: tasks[i].activityStatus = .thinking; tasks[i].operation = ""
         case .preToolUse:
-            tasks[i].requestLifecycle.continueCall(event.toolCallHash)
+            tasks[i].requestLifecycle.observeToolStart(callHash: event.toolCallHash, toolName: event.toolName,
+                at: event.occurredAt, source: event.source)
+            tasks[i].requestLifecycle.continueCall(event.toolCallHash, at: event.occurredAt, source: event.source)
             tasks[i].activityStatus = .working; tasks[i].operation = ""
         case .postToolUse:
             if let call = event.toolCallHash {
-                tasks[i].requestLifecycle.resolveCall(call, proofMode: event.userInputMode)
+                tasks[i].requestLifecycle.resolveCall(call, proofMode: event.userInputMode,
+                    at: event.occurredAt, source: event.source)
             }
             if event.userInputMode != .asynchronous && event.toolCallHash.flatMap({ tasks[i].requestLifecycle.mode(for: $0) }) != .asynchronous {
                 tasks[i].activityStatus = tasks[i].activeItems.isEmpty ? .thinking : .working
             }
         case .permissionRequest:
+            let notice = CodexActivityPrivacy.hashIdentifier([
+                event.source?.rawValue ?? "unknown", event.toolCallHash ?? "", event.toolName ?? "",
+                event.effectiveWaitReason?.rawValue ?? "", String(event.occurredAt.timeIntervalSince1970)
+            ].joined(separator: ":"))
+            if !tasks[i].observedPermissionNotices.contains(notice), tasks[i].observedPermissionNotices.count < 256 {
+                tasks[i].observedPermissionNotices.insert(notice)
+                tasks[i].observerReminderDismissed = false
+            }
             if event.source == .appServer, event.toolCallHash == nil, event.userInputMode != .asynchronous {
                 tasks[i].requestLifecycle.setSourceWait(event.effectiveWaitReason, waiting: true,
-                    epoch: nativeConnectionEpoch ?? UInt64(connectionEpoch))
+                    epoch: nativeConnectionEpoch ?? UInt64(connectionEpoch), at: event.occurredAt)
             } else {
-                tasks[i].requestLifecycle.observeWait(callHash: event.toolCallHash, mode: event.userInputMode, reason: event.effectiveWaitReason)
+                tasks[i].requestLifecycle.observeWait(callHash: event.toolCallHash, mode: event.userInputMode,
+                    reason: event.effectiveWaitReason, toolName: event.toolName, at: event.occurredAt, source: event.source)
             }
             if event.userInputMode == .asynchronous { tasks[i].activityStatus = .working }
         case .preCompact: tasks[i].activityStatus = .compacting
@@ -898,6 +1220,14 @@ final class IslandLiveStore {
         let pending = pendingLocalContent.filter { $0.sessionHash == event.sessionHash && $0.turnHash == tasks[i].turnKey }
         pendingLocalContent.removeAll { $0.sessionHash == event.sessionHash }
         for content in pending { receiveLocalContent(content) }
+        onChange?()
+    }
+    func withdrawHookExecution(session: String, turn: String) {
+        let removed = Set(tasks.filter { $0.key == session && $0.turnKey == turn }.map(\.id))
+        guard !removed.isEmpty else { return }
+        tasks.removeAll { removed.contains($0.id) }
+        if removed.contains(selectedID) { selectedID = tasks.first?.id ?? 0 }
+        if let preservedID, removed.contains(preservedID) { self.preservedID = nil }
         onChange?()
     }
     func receiveToken(_ update: CodexActivityTokenUsageUpdate) {
@@ -1051,6 +1381,8 @@ final class IslandLiveStore {
         if let old = tasks[i].turnKey { priorTurnKeys[tasks[i].key, default: []].insert(old) }
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
         tasks[i].activityStatus = .thinking; tasks[i].requestLifecycle = RequestLifecycle(); tasks[i].progress = nil; tasks[i].operation = ""
+        tasks[i].observerReminderDismissed = false
+        tasks[i].observedPermissionNotices.removeAll()
         tasks[i].progressResolver.reset(); tasks[i].progressUpdatedAt = date; tasks[i].displayedProgress = 0.01
         tasks[i].activeItems.removeAll(); tasks[i].nativeContentAvailable = false; tasks[i].publicProgress = ""
         tasks[i].entries.removeAll(); tasks[i].removedEntryCount = 0; tasks[i].updatedAt = date
@@ -1062,9 +1394,10 @@ final class IslandLiveStore {
         let call = CodexActivityPrivacy.hashIdentifier(callID)
         tasks[i].requestLifecycle.observeMode(mode, callHash: call)
         if tasks[i].requests.contains(where: { ($0.rpcEpoch != nil || $0.desktopIdentity != nil) && $0.callHash == call }) { onChange?(); return }
-        tasks[i].requestLifecycle.observe(.init(key: "local:\(content.turnHash):\(callID)", value: .init(
+        let pending = Pending(key: "local:\(content.turnHash):\(callID)", value: .init(
             question: .init(wire.questions[0].title), impact: .init("请在 Codex 回答。", "Answer in Codex."),
-            protocolRequest: wire, canRespond: false), callHash: call, mode: mode))
+            protocolRequest: wire, canRespond: false), callHash: call, mode: mode)
+        if !isRetiredAsync(pending, task: tasks[i]) { tasks[i].requestLifecycle.observe(pending) }
         onChange?()
     }
     @discardableResult
@@ -1142,15 +1475,14 @@ final class IslandLiveStore {
             let requestKey = RequestLifecycle.rpcKey(wire.rpcID, epoch: scope)
             guard !tasks[i].resolvedRequestKeys.contains(requestKey) else { return }
             let itemID = wire.params["itemId"].text
-            if wire.kind == .questions, !itemID.isEmpty,
-               tasks[i].resolvedCallHashes.contains(CodexActivityPrivacy.hashIdentifier(itemID)) { return }
             guard !tasks[i].terminal else { return }
             let question = !wire.questions.isEmpty ? wire.questions[0].title : wire.params["message"].text.isEmpty ? (wire.params["reason"].text.isEmpty ? "Codex 请求你的处理" : wire.params["reason"].text) : wire.params["message"].text
             let canRespond = !wire.observationOnly && respond != nil && responseCapability?(wire) == true && wire.kind != .nativeOnly && wire.kind != .mcpURL && (wire.kind != .mcpForm || wire.supportedForm) && (wire.kind != .questions || wire.supportedQuestions)
             tasks[i].requestLifecycle.observe(.init(key: requestKey, value: .init(question: .init(question),
                 impact: canRespond ? .init("确认后继续任务。", "Approve to resume the task.")
                     : .init("此连接仅支持查看，请在 Codex 处理。", "This connection is read-only; handle the request in Codex."), protocolRequest: wire, canRespond: canRespond),
-                callHash: itemID.isEmpty ? nil : CodexActivityPrivacy.hashIdentifier(itemID), rpcEpoch: scope))
+                callHash: itemID.isEmpty ? nil : CodexActivityPrivacy.hashIdentifier(itemID), rpcEpoch: scope,
+                mode: method == "item/tool/requestUserInput" ? .synchronous : nil))
             onChange?(); return
         }
         switch method {
@@ -1325,7 +1657,90 @@ final class IslandLiveStore {
         guard let n = value as? NSNumber, n.doubleValue > 0 else { return fallback }
         return Date(timeIntervalSince1970: n.doubleValue / 1000)
     }
+    private func asyncPresentationKey(_ pending: Pending, task: TaskRecord) -> String? {
+        guard pending.mode == .asynchronous, let turn = task.turnKey,
+              let wire = pending.value.protocolRequest, wire.kind == .questions else { return nil }
+        let identity: String
+        if case .asynchronousQuestion(let id)? = pending.desktopIdentity { identity = "native:" + id }
+        else if let local = wire.localObservation, local.mode == .asynchronous { identity = "local:" + local.callID }
+        else { return nil }
+        return CodexActivityPrivacy.hashIdentifier(task.key + ":" + turn + ":" + identity)
+    }
+    private func isRetiredAsync(_ pending: Pending, task: TaskRecord) -> Bool {
+        asyncPresentationKey(pending, task: task).map { retiredAsyncPresentations[$0] != nil } ?? false
+    }
+    private func retireAsyncPresentation(taskIndex i: Int, requestID: UUID, at now: Date) -> Bool {
+        guard let pending = tasks[i].requestLifecycle.requests.first(where: { $0.value.id == requestID }),
+              let key = asyncPresentationKey(pending, task: tasks[i]) else { return false }
+        if case .submitting = pending.value.phase { return false }
+        retiredAsyncPresentations[key] = now.timeIntervalSince1970
+        if retiredAsyncPresentations.count > 4096 {
+            for old in retiredAsyncPresentations.sorted(by: { $0.value < $1.value })
+                .prefix(retiredAsyncPresentations.count - 4096) { retiredAsyncPresentations.removeValue(forKey: old.key) }
+        }
+        archiveDefaults?.set(retiredAsyncPresentations, forKey: Self.retiredAsyncKey)
+        asyncPresentations.removeValue(forKey: key)
+        tasks[i].requestLifecycle.requests.removeAll { $0.value.id == requestID }
+        tasks[i].requestIndex = min(tasks[i].requestIndex, max(0, tasks[i].requests.count - 1))
+        // Do not emit an accepted reply, serverRequest/resolved, or wait settlement.
+        return true
+    }
+    func claimConfirmation(taskID: Int, requestID: UUID) {
+        guard let task = tasks.first(where: { $0.id == taskID }),
+              let pending = task.requestLifecycle.requests.first(where: { $0.value.id == requestID }),
+              let key = asyncPresentationKey(pending, task: task) else { return }
+        var presentation = asyncPresentations[key] ?? .init()
+        presentation.claimed = true; presentation.expiresAt = nil
+        asyncPresentations[key] = presentation
+    }
+    func dismissConfirmation(taskID: Int, requestID: UUID) {
+        guard let i = tasks.firstIndex(where: { $0.id == taskID }),
+              let pending = tasks[i].requests.first(where: { $0.value.id == requestID }) else { return }
+        if retireAsyncPresentation(taskIndex: i, requestID: requestID, at: Date()) { onChange?(); return }
+        if pending.isGeneric, tasks[i].requestLifecycle.canHideObserverReminder {
+            tasks[i].observerReminderDismissed = true
+            onChange?()
+        }
+    }
+    private func advanceConfirmationPresentation(at now: Date, visible: Bool) {
+        var activeKeys: Set<String> = []
+        for i in tasks.indices {
+            let pendingRequests = tasks[i].requestLifecycle.requests
+            for pending in pendingRequests {
+                guard let key = asyncPresentationKey(pending, task: tasks[i]) else { continue }
+                activeKeys.insert(key)
+                if retiredAsyncPresentations[key] != nil {
+                    tasks[i].requestLifecycle.requests.removeAll { $0.value.id == pending.value.id }
+                    continue
+                }
+                var presentation = asyncPresentations[key] ?? .init()
+                switch pending.value.phase {
+                case .submitting:
+                    presentation.claimed = true; presentation.expiresAt = nil
+                case .sent, .resultUnknown:
+                    // Submission is not settlement. Retire the local panel while
+                    // Codex remains the place to inspect an uncertain result.
+                    if presentation.handoffAt == nil { presentation.handoffAt = now.addingTimeInterval(3) }
+                case .ready, .failed:
+                    if visible && !isArchived(tasks[i]) && !presentation.claimed && presentation.expiresAt == nil {
+                        presentation.expiresAt = now.addingTimeInterval(30)
+                    }
+                case .resolved: presentation.handoffAt = now
+                }
+                asyncPresentations[key] = presentation
+                if let deadline = presentation.handoffAt ?? presentation.expiresAt, now >= deadline {
+                    _ = retireAsyncPresentation(taskIndex: i, requestID: pending.value.id, at: now)
+                }
+            }
+            tasks[i].requestIndex = min(tasks[i].requestIndex, max(0, tasks[i].requests.count - 1))
+        }
+        asyncPresentations = asyncPresentations.filter { activeKeys.contains($0.key) }
+    }
     func submit(_ id: Int, requestID: UUID, decision: IslandConfirmationDecision) {
+        if decision == .skipQuestion, let task = tasks.first(where: { $0.id == id }),
+           let pending = task.requests.first(where: { $0.value.id == requestID }), pending.mode == .asynchronous {
+            dismissConfirmation(taskID: id, requestID: requestID); return
+        }
         guard let i = tasks.firstIndex(where: { $0.id == id }),
               let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.id == requestID }),
               tasks[i].requestLifecycle.requests[j].value.canRespond, tasks[i].requestLifecycle.requests[j].value.phase.canSubmit,
@@ -1351,6 +1766,7 @@ final class IslandLiveStore {
             return
         }
         guard case .reply(let result) = decision, wire.permits(result), let respond else { return }
+        claimConfirmation(taskID: id, requestID: requestID)
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
             guard let self else { return }
@@ -1403,6 +1819,7 @@ final class IslandLiveStore {
         }
     }
     func display(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, at now: Date = Date()) -> CodexMultitaskDisplay {
+        advanceConfirmationPresentation(at: now, visible: enabled && !privacy)
         advanceProgress(at: now)
         var details: [Int: IslandTaskDetailData] = [:]; var metas: [Int: IslandSessionMetadata] = [:]
         let copy = CodexActivityCopy(language: english ? .english : .simplifiedChinese)
@@ -1414,6 +1831,10 @@ final class IslandLiveStore {
             let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
             metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
             var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
+            if let pending = task.requests.first(where: { $0.value.id == request?.id }) {
+                request?.canDismissLocally = asyncPresentationKey(pending, task: task) != nil
+                    || (pending.isGeneric && task.requestLifecycle.canHideObserverReminder)
+            }
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
             details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: task.status, removedEntryCount: task.removedEntryCount)
             let title = privacy ? (english ? "Codex task" : "Codex 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
@@ -1437,8 +1858,12 @@ final class IslandLiveStore {
                 accessibilityLabel: "\(title), \(status)")
             return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: !task.requests.isEmpty)
         }
+        let connectionCopy = AppCopy(language: english ? .english : .simplifiedChinese)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
             english: english, effect: .dropField, visible: enabled, playbackEnabled: true, totalTokens: nil, remainingPercent: remaining,
-            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected || desktopConnected ? (english ? "Connected" : "已连接") : (visibleTasks.isEmpty ? (english ? "Waiting for Codex" : "等待 Codex 任务") : (english ? "Local activity" : "本地活动数据")), privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
+            sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected || desktopConnected
+                ? (visibleTasks.isEmpty ? connectionCopy.text("就绪", "Ready") : connectionCopy.text("已连接", "Connected"))
+                : (visibleTasks.isEmpty ? connectionCopy.text("等待 Codex 任务", "Waiting for Codex") : connectionCopy.text("本地活动数据", "Local activity")),
+            privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
     }
 }

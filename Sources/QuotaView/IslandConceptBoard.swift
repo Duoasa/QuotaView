@@ -239,7 +239,13 @@ final class IslandBoardState: ObservableObject {
     private var approvalMetricsCache: [CGFloat: (ApprovalMetricsKey, IslandApprovalMetrics)] = [:]
     @Published private var approvalDrafts: [UUID: IslandApprovalDraft] = [:]
     func approvalDraftBinding(for id: UUID) -> Binding<IslandApprovalDraft> {
-        .init(get: { self.approvalDrafts[id] ?? .init() }, set: { self.approvalDrafts[id] = $0 })
+        .init(get: { self.approvalDrafts[id] ?? .init() }, set: { value in
+            guard value != (self.approvalDrafts[id] ?? .init()) else { return }
+            self.approvalDrafts[id] = value
+            if let task = self.tasks.first(where: { self.detailData(for: $0).confirmation?.id == id }) {
+                self.onClaimConfirmation?(task.id, id)
+            }
+        })
     }
     @Published private(set) var attentionOnly = false
     enum Presentation: Equatable { case resting, preview, pinned }
@@ -318,6 +324,8 @@ final class IslandBoardState: ObservableObject {
     func closeUsage() { clearResetPresentation(); showsUsage = false; onChange?() }
     func clearDrafts() { approvalDrafts.removeAll() }
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
+    var onClaimConfirmation: ((Int, UUID) -> Void)?
+    var onDismissConfirmation: ((Int, UUID) -> Void)?
     var english: Bool { display?.english ?? false }
     var tasks: [CodexMultitaskRenderTask] { display?.state.tasks ?? [] }
     var memoryActivity: IslandMemoryActivity? { IslandMemoryActivity(snapshots: display?.backgroundMemorySnapshots ?? []) }
@@ -425,6 +433,7 @@ final class IslandBoardState: ObservableObject {
     var focusedTask: CodexMultitaskRenderTask? {
         tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
     }
+    var showsCompactQuota: Bool { focusedTask == nil }
     var compactTaskText: String {
         guard let task = focusedTask else { return summary }
         let render = task.renderState
@@ -491,11 +500,13 @@ final class IslandBoardState: ObservableObject {
         guard let tokens = display?.totalTokens else { return "Token —" }
         return text("会话累计 ", "Session total ") + CodexActivityTokenUsageFormatter.string(for: tokens) + " tokens"
     }
+    var quotaPercent: String {
+        display?.remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"
+    }
     var quota: String {
-        let percent = display?.remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"
         let countdown = MenuBarQuotaImage.countdown(until: display?.quotaResetsAt, now: Date(),
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
-        return percent + " · " + countdown
+        return quotaPercent + " · " + countdown
     }
     func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
         let previous = display
@@ -823,7 +834,8 @@ struct IslandTaskCardAppearance {
         if visualState == .completed {
             return Color(red: hovered ? 0.40 : 0.29, green: hovered ? 0.59 : 0.44, blue: hovered ? 0.47 : 0.35)
         }
-        return Color.white.opacity(selected || hovered ? 0.22 : 0.16)
+        let channel = (selected || hovered ? 32.0 : 24.0) / 255.0
+        return Color(.sRGB, red: channel, green: channel, blue: channel, opacity: 1)
     }
 }
 
@@ -1043,6 +1055,8 @@ struct IslandBoardView: View {
                             scrollLink: approvalScrollLink,
                             draft: state.approvalDraftBinding(for: approval.request.id),
                             onDecision: { requestID, decision in state.onConfirmation?(approval.task.id, requestID, decision) },
+                            onDismiss: { state.onDismissConfirmation?(approval.task.id, approval.request.id) },
+                            showsLocalDismiss: approval.request.canDismissLocally,
                             onArchive: { state.onArchive?(approval.task.id) },
                             progressEffect: state.display?.effect ?? .dropField, utilities: IslandUtilityActions(state: state))
                             .id(approval.request.id)
@@ -1179,10 +1193,8 @@ struct IslandBoardView: View {
                         .foregroundStyle(IslandBoardStyle.confirmationHighlight)
                 } else {
                     Button { state.openUsage() } label: {
-                        HStack(spacing: 6) {
-                            IslandQuotaRing(remainingPercent: state.display?.remainingPercent)
-                            Text(state.quota).font(IslandChromeMetrics.font).monospacedDigit().foregroundStyle(.white)
-                        }.padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
+                        quotaSummary.padding(.horizontal, IslandChromeMetrics.labelInset)
+                            .frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
                     }.buttonStyle(IslandUtilityButtonStyle()).accessibilityLabel(state.text("查看用量统计", "View usage"))
                 }
                 Spacer(minLength: 0)
@@ -1227,6 +1239,21 @@ struct IslandBoardView: View {
                 .clipped()
         }.padding(.horizontal, IslandChromeMetrics.horizontalInset).font(IslandChromeMetrics.font).frame(width: state.surfaceWidth, height: state.headerHeight)
     }
+    private var quotaSummary: some View {
+        HStack(spacing: 6) {
+            IslandQuotaRing(remainingPercent: state.display?.remainingPercent).fixedSize()
+            Text(state.quota).font(IslandChromeMetrics.font).monospacedDigit().foregroundStyle(.white)
+                .lineLimit(1).truncationMode(.tail)
+        }.help(state.quota)
+    }
+    private var compactQuotaPercent: some View {
+        Text(state.quotaPercent).font(IslandChromeMetrics.font).monospacedDigit().foregroundStyle(.white)
+            .lineLimit(1).help(state.quotaPercent)
+    }
+    @ViewBuilder private var compactLeading: some View {
+        if state.showsCompactQuota { compactQuotaPercent }
+        else { compactOrb }
+    }
     private var compactOrb: some View {
         IslandSmallActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
             playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.isRunning) == true)
@@ -1250,18 +1277,28 @@ struct IslandBoardView: View {
             Group {
                 if state.geometry.hasCamera {
                     HStack(spacing: 0) {
-                        HStack(spacing: 10) {
-                            compactOrb
-                            compactText.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                        }.frame(width: state.compactSideWidth)
-                            .frame(maxWidth: .infinity).clipped()
+                        Group {
+                            if state.showsCompactQuota {
+                                compactQuotaPercent.frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                HStack(spacing: 10) {
+                                    compactOrb
+                                    compactText.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }.frame(width: state.compactSideWidth).frame(maxWidth: .infinity).clipped()
                         Color.clear.frame(width: state.geometry.cameraWidth + 16)
-                        compactStatistics.frame(width: state.compactSideWidth, alignment: .trailing)
+                        HStack(spacing: 6) {
+                            if state.showsCompactQuota {
+                                compactText.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                            }
+                            compactStatistics
+                        }.frame(width: state.compactSideWidth, alignment: .trailing)
                             .frame(maxWidth: .infinity, alignment: .trailing).clipped()
                     }
                 } else {
                     IslandCompactContentLayout {
-                        compactOrb
+                        compactLeading
                         compactText
                         compactStatistics
                     }
@@ -1270,7 +1307,7 @@ struct IslandBoardView: View {
                 .contentShape(Rectangle())
         }.buttonStyle(.plain)
             .accessibilityHint(state.text("悬停或点击展开会话详情", "Hover or click to expand session details"))
-            .accessibilityLabel("\(state.summary), \(state.quota)")
+            .accessibilityLabel("\(state.summary), \(state.showsCompactQuota ? state.quotaPercent : state.quota)")
             .accessibilityValue(state.attentionCount > 0
                 ? state.text("待确认", "Awaiting confirmation") : "")
     }
@@ -1506,6 +1543,8 @@ final class IslandBoardController {
     private var simulateHardwareNotch = false
     var onSelect: ((Int) -> Void)?
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
+    var onClaimConfirmation: ((Int, UUID) -> Void)?
+    var onDismissConfirmation: ((Int, UUID) -> Void)?
     var isVisible: Bool { panel.isVisible }
     var frame: CGRect { panel.frame }
     init(presentsWindows: Bool = true) {
@@ -1525,6 +1564,8 @@ final class IslandBoardController {
         panel.acceptsMouseMovedEvents = true
         state.onSelect = { [weak self] in self?.onSelect?($0) }
         state.onConfirmation = { [weak self] id, requestID, decision in self?.onConfirmation?(id, requestID, decision) }
+        state.onClaimConfirmation = { [weak self] id, requestID in self?.onClaimConfirmation?(id, requestID) }
+        state.onDismissConfirmation = { [weak self] id, requestID in self?.onDismissConfirmation?(id, requestID) }
         state.onChange = { [weak self] in self?.refresh() }
         if let local = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown, .rightMouseDown, .keyDown], handler: { [weak self] event in
             guard let self, panel.isVisible else { return event }

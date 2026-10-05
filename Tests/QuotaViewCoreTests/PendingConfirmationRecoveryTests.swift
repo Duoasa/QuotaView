@@ -107,7 +107,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testLateGenericOrDetailedRequestCannotResurrectAnsweredCall() throws {
+    func testLateWeakRequestCannotResurrectAnsweredCallOrSuppressNativeRPC() throws {
         let model = IslandLiveStore(); start(model)
         model.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(1))))
         model.receiveLocalContent(try content(outputLine(at: date.addingTimeInterval(2))))
@@ -115,8 +115,15 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
             sessionKind: .user, source: .hook, waitReason: .userInput, toolCallHash: hash("call-1"), occurredAt: date.addingTimeInterval(3)))
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
             sessionKind: .user, source: .hook, toolCallHash: hash("call-1"), occurredAt: date.addingTimeInterval(1.5)))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty, "Late observer notices cannot restore an answered call")
         nativeQuestion(model, at: date.addingTimeInterval(3))
         model.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(1))))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "A call tombstone cannot suppress a real pending RPC")
+        XCTAssertFalse(model.tasks[0].requests[0].value.protocolRequest!.observationOnly)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 7]),
+            at: date.addingTimeInterval(3.1))
+        nativeQuestion(model, at: date.addingTimeInterval(3.2))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertEqual(model.tasks[0].status, .thinking)
         model.receiveLocalContent(try content(questionLine(call: "new-call", at: date.addingTimeInterval(4))))
@@ -137,7 +144,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         XCTAssertEqual(model.tasks[0].activityStatus, .working)
         XCTAssertEqual(model.tasks[0].status, .waiting)
         model.receiveLegacy(.init(event: .preToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
-            sessionKind: .user, source: .localRollout, toolCallHash: hash("call-A"), occurredAt: date.addingTimeInterval(3)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("call-A"), occurredAt: date.addingTimeInterval(3)))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertEqual(model.tasks[0].status, .working)
         model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
@@ -153,7 +160,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testNativeRequestReplacesLocalDetailAndOutputResolvesWithNativeTrace() throws {
+    func testNativeRequestReplacesLocalDetailAndRequiresExactSettlementWithNativeTrace() throws {
         let model = IslandLiveStore(); start(model)
         model.setConnection(.connected)
         model.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(1))))
@@ -163,6 +170,10 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         model.receive(json("item/agentMessage/delta", ["threadId": "dsh", "turnId": "turn", "itemId": "message", "delta": "Current response"]), at: date.addingTimeInterval(1.2))
         XCTAssertTrue(model.tasks[0].nativeContentAvailable)
         model.receiveLocalContent(try content(outputLine(at: date.addingTimeInterval(2))))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "A tool output cannot settle an independent real RPC")
+        XCTAssertTrue(model.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks[0].hasPendingRequest)
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 7]),
+            at: date.addingTimeInterval(2.1))
         XCTAssertTrue(model.tasks[0].requests.isEmpty)
         XCTAssertFalse(model.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks[0].hasPendingRequest)
     }
@@ -180,7 +191,9 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
 
         let nativeFirst = IslandLiveStore(); start(nativeFirst)
         nativeQuestion(nativeFirst, at: date.addingTimeInterval(1))
-        XCTAssertNil(nativeFirst.tasks[0].requests[0].mode, "Unknown native questions do not guess a blocking mode")
+        XCTAssertEqual(nativeFirst.tasks[0].requests[0].mode, .synchronous,
+            "The exact native requestUserInput method identifies a synchronous RPC")
+        XCTAssertEqual(nativeFirst.tasks[0].status, .waiting)
         nativeFirst.receiveLocalContent(try content(questionLine(at: date.addingTimeInterval(2))))
         XCTAssertEqual(nativeFirst.tasks[0].requests.count, 1)
         XCTAssertFalse(nativeFirst.tasks[0].requests[0].value.protocolRequest!.observationOnly)
@@ -261,7 +274,7 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
-    func testCompletedOperationClearsItsApprovalWithoutClearingOtherRequest() {
+    func testCompletedOperationPreservesApprovalsUntilExactRPCResolution() {
         let model = IslandLiveStore(); start(model)
         for (id, item) in [(1, "first-command"), (2, "second-command")] {
             model.receive(json("item/commandExecution/requestApproval", ["threadId": "dsh", "turnId": "turn",
@@ -270,6 +283,9 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         }
         model.receiveLegacy(.init(event: .postToolUse, sessionHash: hash("dsh"), turnHash: hash("turn"),
             sessionKind: .user, source: .hook, toolCallHash: hash("first-command"), occurredAt: date.addingTimeInterval(2)))
+        XCTAssertEqual(model.tasks[0].requests.count, 2, "A matching tool result cannot answer a real approval RPC")
+        model.receive(json("serverRequest/resolved", ["threadId": "dsh", "turnId": "turn", "requestId": 1]),
+            at: date.addingTimeInterval(2.1))
         XCTAssertEqual(model.tasks[0].requests.count, 1)
         XCTAssertEqual(model.tasks[0].requests[0].value.protocolRequest?.params["itemId"].text, "second-command")
         XCTAssertEqual(model.tasks[0].status, .waiting)

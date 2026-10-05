@@ -307,6 +307,11 @@ final class DesktopRequestLifecycleSmokeTests: XCTestCase {
         XCTAssertTrue(model.tasks[0].requests.contains { $0.value.protocolRequest?.localObservation?.asynchronous == true },
                       "A partial owner projection cannot discard another source")
         try apply(model, snapshot)
+        XCTAssertTrue(model.tasks[0].requests.contains { $0.value.protocolRequest?.localObservation?.asynchronous == true },
+                      "Replaying the same owner revision cannot upgrade a partial receipt to new authority")
+        let authoritativeCount = await recorder.count
+        fixture.setState(CodexDesktopIPCClientTests.state(requests: [], items: [native]), revision: 8)
+        try apply(model, await recorder.wait(after: authoritativeCount))
         XCTAssertEqual(model.tasks[0].requests.count, 3, "Two real native questions plus the independent local synchronous request")
         XCTAssertFalse(model.tasks[0].requests.contains { $0.value.protocolRequest?.localObservation?.asynchronous == true })
         XCTAssertEqual(model.tasks[1].requests.count, 1, "Authority is scoped to one task and turn")
@@ -316,7 +321,7 @@ final class DesktopRequestLifecycleSmokeTests: XCTestCase {
         let reply: [String: Any] = ["type": "steeringUserMessage", "id": "external-reply", "status": "accepted", "input": [[
             "type": "text", "text": CodexDesktopRequestProjector.asyncReplyOpeningTag + answer + CodexDesktopRequestProjector.asyncReplyClosingTag]]]
         let count = await recorder.count
-        fixture.setState(CodexDesktopIPCClientTests.state(requests: [], items: [native, reply]), revision: 8)
+        fixture.setState(CodexDesktopIPCClientTests.state(requests: [], items: [native, reply]), revision: 9)
         try apply(model, await recorder.wait(after: count))
         XCTAssertEqual(model.tasks[0].requests.count, 2, "Only the exact answered native question disappears")
         model.receiveLocalContent(leading)

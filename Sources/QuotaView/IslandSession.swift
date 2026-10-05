@@ -30,6 +30,8 @@ final class IslandSession {
         board.onSelect = { [weak self] in self?.model.select($0) }
         board.state.onArchive = { [weak self] in self?.model.archiveFromIsland($0) }
         board.onConfirmation = { [weak self] id, rid, decision in self?.model.submit(id, requestID: rid, decision: decision) }
+        board.onClaimConfirmation = { [weak self] id, rid in self?.model.claimConfirmation(taskID: id, requestID: rid) }
+        board.onDismissConfirmation = { [weak self] id, rid in self?.model.dismissConfirmation(taskID: id, requestID: rid) }
         board.state.onNextRequest = { [weak self] in self?.model.nextRequest($0) }
         model.onChange = { [weak self] in self?.refresh() }
         model.onPublicChange = { [weak self] in

@@ -149,6 +149,8 @@ struct IslandConfirmation: Identifiable, Equatable {
     var resumeOperation = IslandDetailText(""); var phase: Phase = .ready
     var protocolRequest: IslandCodexApprovalRequest?
     var canRespond = false; var queueIndex = 1; var queueCount = 1
+    // Local presentation handoff, never an approval or an answer.
+    var canDismissLocally = false
 }
 struct IslandTaskDetailData: Equatable {
     var entries: [IslandTraceEntry]; var confirmation: IslandConfirmation?; var status: IslandTaskStatus

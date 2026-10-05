@@ -289,6 +289,8 @@ struct IslandApprovalView: View {
     let scrollLink: IslandTaskScrollLink
     @Binding var draft: IslandApprovalDraft
     let onDecision: (UUID, IslandConfirmationDecision) -> Void
+    var onDismiss: (() -> Void)? = nil
+    var showsLocalDismiss = false
     var onArchive: (() -> Void)? = nil
     var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     var utilities: IslandUtilityActions? = nil
@@ -340,6 +342,7 @@ struct IslandApprovalView: View {
         return action
     }
     private var submitting: Bool { if case .submitting = request.phase { true } else { false } }
+    private var canDismissLocally: Bool { showsLocalDismiss && onDismiss != nil && !submitting }
     private var submittingTitle: String {
         wire?.isApprovalOnlyForm == true ? text("批准中…", "Approving…") : text("提交中…", "Submitting…")
     }
@@ -381,14 +384,17 @@ struct IslandApprovalView: View {
         IslandApprovalActionLayout {
             if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
                 specialButton(text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                if showsLocalDismiss { localDismissButton }
             } else if wire?.kind == .questions {
-                Button { questionInteraction.skip() } label: {
-                    Text(text("跳过", "Skip")).font(.system(size: 13, weight: .semibold))
-                        .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!questionInteraction.canSkip)
-                    .help(wire?.userInputMode == .asynchronous
-                        ? text("暂时跳过此提示，问题保持未回答", "Dismiss this prompt; the question remains unanswered")
-                        : text("跳过这些问题并通知 Codex", "Skip these questions and notify Codex"))
+                if wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
+                    if showsLocalDismiss { localDismissButton }
+                } else {
+                    Button { questionInteraction.skip() } label: {
+                        Text(text("跳过", "Skip")).font(.system(size: 13, weight: .semibold))
+                            .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
+                    }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!questionInteraction.canSkip)
+                        .help(text("跳过这些问题并通知 Codex", "Skip these questions and notify Codex"))
+                }
                 if let action = primaryAction { actionButton(action, primary: true) }
             } else {
             if let action = cancelAction { actionButton(action) }
@@ -401,8 +407,20 @@ struct IslandApprovalView: View {
             else if firstNegative == nil {
                 specialButton(text("在 Codex 中处理", "Continue in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
             }
+            if showsLocalDismiss { localDismissButton }
             }
         }
+    }
+
+    private var localDismissButton: some View {
+        Button {
+            guard canDismissLocally else { return }
+            onDismiss?()
+        } label: {
+            Text(text("隐藏此提醒", "Hide reminder")).font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
+        }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!canDismissLocally)
+            .help(text("仅隐藏灵动岛提醒，请在 Codex 继续处理", "Hide this island reminder; continue in Codex"))
     }
 
     var requestContent: some View {

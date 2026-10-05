@@ -21,11 +21,11 @@ final class CodexCompactionTransportTests: XCTestCase {
         let session = CodexActivityPrivacy.hashIdentifier("fixture-session")
         let turn = CodexActivityPrivacy.hashIdentifier("fixture-turn")
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
-                            source: .localRollout, occurredAt: Date().addingTimeInterval(-1)))
+                            sessionKind: .user, source: .localRollout, occurredAt: Date().addingTimeInterval(-1)))
         store.receive(CodexActivityTokenUsageUpdate(sessionHash: session, turnHash: turn,
             cumulativeTotalTokens: 500, lastReportedTotalTokens: 20,
             directTurnTotalTokens: 300, occurredAt: Date()))
-        let identity = store.snapshot?.taskIdentity
+        let identity = try XCTUnwrap(store.snapshot?.taskIdentity)
         let sink = CompactionDeliverySink()
         let received = expectation(description: "Two distinct helper events reach the domain through either transport")
         received.expectedFulfillmentCount = 2

@@ -194,6 +194,9 @@ final class CodexActivityRuntime: ObservableObject {
             self?.store.receiveRequestSettlement(settlement)
         }
         store.admittedActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveLegacy(event) }
+        store.hookExecutionDidRebind = { [weak self] session, turn in
+            self?.liveIsland.model.withdrawHookExecution(session: session, turn: turn)
+        }
         store.activitySessionKindDidResolve = { [weak self] key, kind in
             self?.liveIsland.model.setSessionKind(kind, for: key)
         }

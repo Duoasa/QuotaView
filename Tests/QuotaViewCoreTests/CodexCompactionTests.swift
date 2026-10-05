@@ -45,7 +45,7 @@ final class CodexCompactionTests: XCTestCase {
     func testNativeStartAndEndOnlyRolloutPreserveProgressAndDoNotCompleteTurn() async throws {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
-                            source: .localRollout, occurredAt: base))
+                            sessionKind: .user, source: .localRollout, occurredAt: base))
         store.receive(.init(event: .preToolUse, sessionHash: session, turnHash: turn,
                             planProgress: .init(completedSteps: 1, inProgressSteps: 1, pendingSteps: 2),
                             source: .localRollout, planSource: .localRollout,
@@ -127,7 +127,7 @@ final class CodexCompactionTests: XCTestCase {
         store.receive(.init(event: .postCompact, sessionHash: session, source: .hook, occurredAt: base))
         XCTAssertNil(store.snapshot)
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
-                            source: .localRollout, occurredAt: base))
+                            sessionKind: .user, source: .localRollout, occurredAt: base))
         store.receive(CodexActivityTokenUsageUpdate(sessionHash: session, turnHash: turn,
             cumulativeTotalTokens: 20_000, lastReportedTotalTokens: 100,
             directTurnTotalTokens: 10_000, occurredAt: base))
@@ -160,7 +160,7 @@ final class CodexCompactionTests: XCTestCase {
     func testMissingEndRecoversOnActivityAndCancellationCannotBeRevived() async throws {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
-                            source: .localRollout, occurredAt: base))
+                            sessionKind: .user, source: .localRollout, occurredAt: base))
         store.receive(try XCTUnwrap(native("item/started", at: 1)))
         store.compactionSourceUnavailable(.appServer)
         XCTAssertEqual(store.snapshot?.state, .unavailable)

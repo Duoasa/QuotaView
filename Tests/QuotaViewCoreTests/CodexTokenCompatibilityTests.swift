@@ -38,7 +38,7 @@ final class CodexTokenCompatibilityTests: XCTestCase {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
         store.receive(CodexActivityEvent(
             event: .userPromptSubmit, sessionHash: session,
-            turnHash: turn, source: .localRollout
+            turnHash: turn, sessionKind: .user, source: .localRollout
         ))
         return store
     }

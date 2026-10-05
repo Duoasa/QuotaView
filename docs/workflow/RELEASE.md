@@ -9,6 +9,24 @@
 开发最新版及待验收项：[Handoff](../../HANDOFF.md)。
 产物检查：[验证规则](VALIDATION.md#发布与产物)。
 
+## 开发与发布边界
+
+2026-10-05 用户最新要求：后续常规开发复用既有开发版，以源码迭代、代码
+审查和轻量检查推进，不自动执行 Universal / Distribution 产物构建、
+打包、Developer ID 签名、公证或安装替换。确定发布版本并取得对应授权后，
+才执行完整构建、打包、签名及发布检查；公开发布和 appcast 仍遵循下方
+精确版本授权规则。
+
+源码修改不会自动更新已经运行的包。用户明确请求运行新 Swift 改动或查看
+其实际运行效果时，按该次运行授权执行所需的最小增量开发编译与运行，
+复用现有开发环境和身份，不重复正式包装链。当前源码、当前运行包与正式
+发布产物分别记录，不能把源码修改描述成已安装或已发布。
+
+此规则不取消既有 CI 或源码合入 `main` 的门禁；获准推送与合并时仍按
+[CI 与源码合入 main](VALIDATION.md#ci-与源码合入-main)核对对应提交的
+必需检查和实际 `main` 的 CI。用户数据、开发身份、不可变发布资产和回滚
+约束继续生效。
+
 ## 版本身份与文档联动
 
 版本与交接文档必须双向联动，但不得复制整段历史：
@@ -30,9 +48,11 @@
 - 删除 Release 后仍在 `VERSION_HISTORY.md` 保留“已撤回”记录，说明原因
   和替代版本，防止后续恢复问题版本；
 - 产品可见 Build Number 按 Marketing Version 独立计数：Marketing Version
-  变化时重置为 `Build 1`；Marketing Version 不变时，每次后续开发迭代都
-  必须递增，不得复用旧 Build Number。每个构建使用唯一 tag 和带 Build
-  Number 的 ZIP；Marketing Version 是否升级由用户明确决定。
+  变化时重置为 `Build 1`；Marketing Version 不变时，每个后续发布构建
+  必须递增，不得复用旧发布 Build Number。常规源码迭代不自动递增版本或
+  Build，显式运行新代码的增量开发编译复用现有开发身份。每个发布构建
+  使用唯一 tag 和带 Build Number 的 ZIP；Marketing Version 是否升级由
+  用户明确决定。
 - Sparkle 使用的 `CFBundleVersion` / `CURRENT_PROJECT_VERSION` 是机器可读的
   内部更新序号，必须跨 Marketing Version 单调递增，不能随产品可见 Build
   归 1。产品可见 Build 使用 `QuotaViewDisplayBuildNumber` /

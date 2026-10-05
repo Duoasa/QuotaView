@@ -826,16 +826,24 @@ final class Island073SmokeTests: XCTestCase {
         XCTAssertTrue(missing.actions.isEmpty, "No invented choices when the source omits availableDecisions")
     }
     @MainActor
-    func testNonblockingQuestionAndFailedToolDoNotEndTurn() throws {
+    func testSynchronousQuestionAndFailedToolDoNotEndTurn() throws {
         let model = IslandLiveStore(); start(model, "a", "one", at: Date())
         model.receive(json("item/tool/requestUserInput", ["threadId": "a", "turnId": "one", "questions": [["id": "q", "question": "Choose", "options": [["label": "A", "description": "A"]]]]], id: 3))
-        XCTAssertEqual(model.tasks[0].status, .thinking)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        XCTAssertEqual(model.tasks[0].requests[0].mode, .synchronous)
         model.receive(json("item/started", ["threadId": "a", "turnId": "one", "item": ["id": "tool", "type": "commandExecution", "command": "false"]]))
         model.receive(json("item/completed", ["threadId": "a", "turnId": "one", "item": ["id": "tool", "type": "commandExecution", "command": "false", "status": "failed", "exitCode": 1]]))
-        XCTAssertEqual(model.tasks[0].status, .thinking); XCTAssertEqual(model.tasks[0].entries.last?.kind, .failure)
+        XCTAssertEqual(model.tasks[0].status, .waiting)
+        XCTAssertEqual(model.tasks[0].activityStatus, .thinking)
+        XCTAssertFalse(model.tasks[0].terminal)
+        XCTAssertEqual(model.tasks[0].entries.last?.kind, .failure)
         XCTAssertTrue(model.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks[0].hasPendingRequest)
         model.receive(json("thread/status/changed", ["threadId": "a", "status": ["type": "active", "activeFlags": ["waitingOnUserInput"]]]))
         XCTAssertEqual(model.tasks[0].status, .waiting)
+        model.receive(json("serverRequest/resolved", ["threadId": "a", "turnId": "one", "requestId": 3]))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+        XCTAssertEqual(model.tasks[0].status, .thinking)
+        XCTAssertFalse(model.tasks[0].terminal)
     }
     @MainActor
     func testLocalContentCannotActivateHistoricalTaskOrExposeReasoning() throws {

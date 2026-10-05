@@ -68,24 +68,30 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         XCTAssertFalse(island.tasks.first?.requestLifecycle.waitingOnSource ?? true, file: file, line: line)
     }
 
-    func testExplicitOwnerContinuationClearsAnonymousHookWaitInBothStoresAndOrdinaryActivityKeepsRunning() async throws {
+    func testOwnerContinuationRequiresPositiveBindingBeforeClearingAnonymousHookWait() async throws {
         let (store, island) = setup()
         let initial = await apply(store, try pair(revision: 1, flags: nil)); XCTAssertTrue(initial)
         hookWait(store)
         XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
         XCTAssertEqual(island.tasks.first?.requests.first?.key, "observer-placeholder")
         let continued = await apply(store, try pair(revision: 2)); XCTAssertTrue(continued)
+        XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
+        XCTAssertEqual(island.tasks[0].status, .waiting,
+            "An empty owner snapshot cannot identify an independent Hook wait")
+        _ = await apply(store, try pair(revision: 3, flags: ["waitingOnApproval"]))
+        XCTAssertEqual(island.tasks[0].status, .waiting)
+        _ = await apply(store, try pair(revision: 4))
         assertRunning(store, island)
         XCTAssertTrue(island.tasks[0].requests.isEmpty)
         XCTAssertTrue(island.tasks[0].requestLifecycle.resolvedCallHashes.isEmpty,
             "Clearing anonymous evidence never fabricates an answered call")
         store.receive(.init(event: .preToolUse, sessionHash: hash("task"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, toolCallHash: hash("ordinary"), occurredAt: base.addingTimeInterval(3)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("ordinary"), occurredAt: base.addingTimeInterval(5)))
         assertRunning(store, island)
         await store.stop()
     }
 
-    func testSharedUnidentifiedWaitWithoutTypedRemovalReconcilesBothStoresAndDoesNotResurrect() async throws {
+    func testSharedUnidentifiedWaitRequiresSameSourceContinuationAndDoesNotResurrect() async throws {
         let (store, island) = setup()
         _ = await apply(store, try pair(revision: 1, flags: nil))
         let shared = try JSONSerialization.data(withJSONObject: ["method": "thread/snapshot", "params": [
@@ -94,23 +100,34 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         await store.receiveScopedPublicMessage(shared, connectionEpoch: 3, at: base.addingTimeInterval(2))
         XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
         XCTAssertEqual(island.tasks[0].sourceWaitReason, .userInput)
-        _ = await apply(store, try pair(revision: 3)); assertRunning(store, island)
+        _ = await apply(store, try pair(revision: 3))
+        XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
+        XCTAssertEqual(island.tasks[0].status, .waiting,
+            "The Desktop owner's empty ledger cannot settle independent Shared flags")
+        let sharedContinued = try JSONSerialization.data(withJSONObject: ["method": "thread/status/changed", "params": [
+            "threadId": "task", "turnId": "turn", "status": ["type": "active", "activeFlags": [String]()]]])
+        await store.receiveScopedPublicMessage(sharedContinued, connectionEpoch: 3, at: base.addingTimeInterval(4))
+        assertRunning(store, island)
         store.receive(.init(event: .preToolUse, sessionHash: hash("task"), turnHash: hash("turn"),
-            sessionKind: .user, source: .hook, toolCallHash: hash("ordinary"), occurredAt: base.addingTimeInterval(4)))
+            sessionKind: .user, source: .hook, toolCallHash: hash("ordinary"), occurredAt: base.addingTimeInterval(5)))
         assertRunning(store, island)
         await store.stop()
     }
 
-    func testLateAnonymousWaitRemainsAdmissibleAndNextOwnerProofReconcilesWithoutBlockingFutureTypedRequest() async throws {
+    func testLateAnonymousWaitRequiresPositiveOwnerProofAndDoesNotBlockFutureTypedRequest() async throws {
         let (store, island) = setup()
         _ = await apply(store, try pair(revision: 1))
         hookWait(store)
         XCTAssertEqual(island.tasks[0].status, .waiting, "Independent channels do not share a causal clock")
-        _ = await apply(store, try pair(revision: 2)); assertRunning(store, island)
+        _ = await apply(store, try pair(revision: 2))
+        XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
+        XCTAssertEqual(island.tasks[0].status, .waiting,
+            "A later negative receipt does not supply Hook provenance")
         _ = await apply(store, try pair(revision: 3, requests: [request("new")]))
         XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
         XCTAssertEqual(island.tasks[0].status, .waiting)
         XCTAssertEqual(island.tasks[0].requests.first?.value.protocolRequest?.params["itemId"].text, "new")
+        _ = await apply(store, try pair(revision: 4)); assertRunning(store, island)
         await store.stop()
     }
 
@@ -137,7 +154,13 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         _ = await apply(store, try pair(revision: 4, flags: ["futureWaitingFlag"]))
         XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
         XCTAssertEqual(island.tasks[0].status, .waiting)
-        _ = await apply(store, try pair(revision: 5)); assertRunning(store, island)
+        _ = await apply(store, try pair(revision: 5))
+        XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
+        XCTAssertEqual(island.tasks[0].status, .waiting,
+            "Even a full running snapshot cannot settle an unbound Hook wait")
+        _ = await apply(store, try pair(revision: 6, flags: ["waitingOnApproval"]))
+        XCTAssertEqual(island.tasks[0].status, .waiting)
+        _ = await apply(store, try pair(revision: 7)); assertRunning(store, island)
         await store.stop()
     }
 
@@ -153,14 +176,20 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         await store.stop()
     }
 
-    func testUnknownRPCAloneDoesNotInventANewUserWaitButCannotEraseAnObservedOne() async throws {
+    func testUnknownRPCAloneDoesNotInventANewUserWaitAndCannotIdentifyAnObservedHook() async throws {
         let (store, island) = setup()
         let future = request("future", method: "future/approval/request")
         _ = await apply(store, try pair(revision: 1, requests: [future])); assertRunning(store, island)
         hookWait(store)
         _ = await apply(store, try pair(revision: 2, requests: [future]))
         XCTAssertEqual(island.tasks[0].status, .waiting)
-        _ = await apply(store, try pair(revision: 3)); assertRunning(store, island)
+        _ = await apply(store, try pair(revision: 3))
+        XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
+        XCTAssertEqual(island.tasks[0].status, .waiting,
+            "Removing an unknown RPC cannot identify the independent Hook wait")
+        _ = await apply(store, try pair(revision: 4, requests: [request("known")]))
+        XCTAssertEqual(island.tasks[0].status, .waiting)
+        _ = await apply(store, try pair(revision: 5)); assertRunning(store, island)
         await store.stop()
     }
 
@@ -169,7 +198,9 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         let async: [String: Any] = ["id": "message", "type": "agentMessage", "questions": [[
             "title": "Which target?", "options": ["A", "B"]]]]
         _ = await apply(store, try pair(revision: 1, flags: nil, items: [async])); hookWait(store)
-        _ = await apply(store, try pair(revision: 2, items: [async])); assertRunning(store, island)
+        _ = await apply(store, try pair(revision: 2, flags: ["waitingOnApproval"], items: [async]))
+        XCTAssertEqual(island.tasks[0].status, .waiting)
+        _ = await apply(store, try pair(revision: 3, items: [async])); assertRunning(store, island)
         XCTAssertEqual(island.tasks[0].requests.count, 1)
         XCTAssertEqual(island.tasks[0].requests[0].mode, .asynchronous)
         XCTAssertTrue(island.tasks[0].requestLifecycle.resolvedCallHashes.isEmpty)

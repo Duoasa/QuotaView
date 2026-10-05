@@ -113,12 +113,18 @@ final class IslandQuestionInteractionSmokeTests: XCTestCase {
         XCTAssertEqual(model.tasks[0].requests.count, 1)
         XCTAssertTrue(model.tasks[0].requestLifecycle.hasBlockingRequest)
         XCTAssertTrue(model.tasks[0].requestLifecycle.resolvedCallHashes.isEmpty)
-        XCTAssertTrue(model.tasks[0].requestLifecycle.skippedAsyncQuestionIDs.contains(question.id))
+        XCTAssertTrue(model.tasks[0].requestLifecycle.resolvedRequestKeys.isEmpty)
+        XCTAssertTrue(model.tasks[0].requestLifecycle.skippedAsyncQuestionIDs.isEmpty,
+            "Local retirement does not create a request lifecycle settlement")
         try apply(model, snapshot)
         XCTAssertEqual(model.tasks[0].requests.count, 1)
         let count = await recorder.count
-        fixture.setState(CodexDesktopIPCClientTests.state(requests: [blocker], items: [first, asyncQuestion("second")]), revision: 8)
+        fixture.setState(CodexDesktopIPCClientTests.state(requests: [blocker], items: [first]), revision: 8)
         try apply(model, await recorder.wait(after: count))
+        XCTAssertEqual(model.tasks[0].requests.count, 1, "A new authoritative revision cannot restore the retired async question")
+        let refreshedCount = await recorder.count
+        fixture.setState(CodexDesktopIPCClientTests.state(requests: [blocker], items: [first, asyncQuestion("second")]), revision: 9)
+        try apply(model, await recorder.wait(after: refreshedCount))
         XCTAssertEqual(model.tasks[0].requests.count, 2)
         let next = try XCTUnwrap(model.tasks[0].requests.first { $0.mode == .asynchronous })
         XCTAssertNotEqual(next.value.id, pending.value.id)

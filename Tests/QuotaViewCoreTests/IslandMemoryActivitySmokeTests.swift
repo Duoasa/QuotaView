@@ -105,7 +105,8 @@ final class IslandMemoryActivitySmokeTests: XCTestCase {
     @MainActor func testStoreExecutionScopeCallbacksMoveLateUnknownTaskAndRestoreOnlyNewUserTurn() async throws {
         let model = IslandLiveStore()
         let store = CodexActivityStore(titleClient: .init(executablePath: nil))
-        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        var userDeliveries = 0
+        store.admittedActivityDidReceive = { userDeliveries += 1; model.receiveLegacy($0) }
         store.activitySessionKindDidResolve = { model.setSessionKind($1, for: $0) }
         var scopes: [CodexActivitySessionKind] = []
         store.activityExecutionKindDidResolve = {
@@ -118,20 +119,26 @@ final class IslandMemoryActivitySmokeTests: XCTestCase {
         let now = Date()
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
             sessionKind: .unknown, source: .hook, occurredAt: now))
-        XCTAssertEqual(model.tasks.count, 1)
+        XCTAssertTrue(model.tasks.isEmpty, "Unknown execution remains observed without a user card")
+        XCTAssertNil(store.snapshot)
+        XCTAssertEqual(userDeliveries, 0)
         await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
             threadIdentity: .init(threadID: thread, sessionHash: session, sessionKind: .memoryConsolidation,
                 executionTurnHash: turn)), replay: false)
         XCTAssertTrue(model.tasks.isEmpty)
         XCTAssertEqual(store.backgroundMemorySnapshots.count, 1)
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.taskIdentity?.turnHash, turn)
+        XCTAssertEqual(userDeliveries, 0, "Late memory proof must not pass through the user channel")
         XCTAssertEqual(scopes, [.memoryConsolidation])
         let next = CodexActivityPrivacy.hashIdentifier("user-turn")
         store.receive(.init(event: .userPromptSubmit, sessionHash: session, turnHash: next,
-            sessionKind: .unknown, source: .hook, occurredAt: now.addingTimeInterval(1)))
+            sessionKind: .user, source: .appServer, occurredAt: now.addingTimeInterval(1)))
         XCTAssertEqual(scopes, [.memoryConsolidation, .user])
         XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
         XCTAssertEqual(model.tasks.count, 1)
         XCTAssertEqual(model.tasks.first?.turnKey, next)
+        XCTAssertEqual(store.snapshot?.taskIdentity?.turnHash, next)
+        XCTAssertEqual(userDeliveries, 1, "Only the new verified user turn enters the user channel")
         await store.stop()
     }
 

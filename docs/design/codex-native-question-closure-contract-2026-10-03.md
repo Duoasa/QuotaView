@@ -3,7 +3,25 @@
 状态：**方案与隔离夹具；生产 AX 桥未启用，原生框关闭仍未完成。** 2026-10-03。
 范围为 Codex Desktop 26.928.40906 / Build 12694 / `com.openai.codex`，不把 CLI 版本或后续 Desktop 更新混为同一接口契约。
 
-## 本轮结论
+## 2026-10-05 本地退场增量
+
+用户已授权QuotaView本地提醒退场；0.7.5 / Build7 / 内部56源码已实现并本地交付，当前为Verifying / 真实交互待用户验收。该增量只撤下QuotaView的问题页面，保留本合同的原生问题组关闭未完成边界。
+
+现有Desktop IPC传递owner的conversation快照与patches，Projector提取`agentMessage.questions`及精确接受的原生回答，没有renderer的缩略状态、`selectedQuestionKey`或`deadlineMs`。已有静态源的`aPt`为新异步题设置`deadlineMs = now + 30_000`，`cPt/sPt/uPt`在草稿或用户交互时取消，`dPt/rS`清理renderer选题状态。这些renderer atom未进入已调查的thread stream；静态位置和版本受上方范围约束，不是后续版本稳定接口。
+
+当前采用本地规则：首次有效显示后30秒无人接管退场；重复快照不重置；实际草稿变更后保留；提交中不退场；首次进入已发送或结果未知阶段后保留3秒交回Codex，禁止自动重发。此固定时间是QuotaView展示期限，不能记为原生到期、已缩略或已回答。
+
+本地隐藏独立于`canRespond`；按thread、turn和原生`questionItemId`的哈希持久保存最多4096项退场记录，同作用域问题不因重复快照、重连或应用重启再次被接管。用户后来在Codex补答仅产生真实回答结算。账本不保存题目、草稿或答案，不承诺无限历史防重。
+
+本地退场不发空answers、Skip/steer、`serverRequest/resolved`，不清除并行同步RPC或匿名runtime等待，不请求AX、Screen Recording或Automation权限。可显示的精确回答、owner dispatch ACK、响应未知与renderer关闭仍分别记录。真实同步RPC显式标记为synchronous，不受观察call墓碑拒绝；工具开始/完成只撤弱观察，真实RPC仍依赖精确原生结算。
+
+弱观察恢复另见[信息契约](../specs/codex-island-information-contract.md#等待证据与恢复)：Hook历史修剪保留floor，历史缺口或并发拒绝唯一推断；`source:nil`不参与Hook推断；本轮256项notice fingerprint防止重播或容量满后重启已隐藏提醒，完整owner集合与未知pending仍保持真实结算边界。
+
+首次本地交付未新增或运行本地测试；GitHub自动CI及后续恢复记录见Handoff。首轮Universal构建因两处`source` optional API编译错误失败并保留`.build/075-confirmation-lifecycle-20261005/build7-distribution-build-first-failure.log`；修正后第二次Universal构建成功。正式本地包App PID62058、Widget PID62064；190项生产输入、4项安装二进制哈希、4个Universal二进制、同Team Developer ID deep strict签名与实际exe/Core加载核对通过。App/Widget entitlements和NS权限声明与旧包严格相同；活动socket、启动后Hook ACK及Local生命周期准入已核对。
+
+证据位于`.build/075-confirmation-lifecycle-20261005/runtime/`的`build7-preflight.json`、`build7-delivery.json`、`build7-installed-verification.json`、`build7-live-channel-verification.json`及对应loaded-paths/channel日志；旧包在`.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。源码及CI/main集成见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)；后续CI源码恢复修订未重新编译或安装，上述输入及运行证据只对应首次本地Build7；未新增公证或公开Release/appcast。不能复用下方2026-10-03历史CI或夹具数量作为本次结果，不能宣称原生minimize精确同步或原生问题组关闭已实现，实际交互与视觉待用户验收。
+
+## 2026-10-03 原生关闭调查结论
 
 在当前安装包、公开 App Server 文档与现有可调用工具中，未建立“按原始异步问题组身份提交并关闭”的接口路径。现有 API 能送达答案并得到精确接受证据；原生窗口还需要 renderer 本地状态变化。不能因 Vibe 缺少公开源码或字面字符串未命中断言它不能解决；当前缺的是同一种异步分支成功的可核实证据。
 
@@ -84,7 +102,7 @@
 
 权限和手动验收尚未进行，原生异步框关闭不记录为完成；夹具通过、CI 或源码合并不能替代这一结论。
 
-## 交付与已有 main 核验
+## 2026-10-03 交付与已有 main 核验
 
 PR #70 合并提交 `9e67f2bde7a8a31d981e5e21e6a1cf1bfdb4ad8c` 的 [postmerge push CI](https://github.com/Duoasa/QuotaView/actions/runs/37073125800)已只读核验：head SHA 完全一致，completed/success，508 项测试、6 项跳过、0 失败。证据 `.build/073-question-presentation-postmerge-ci.json` 和 `.log`。此前 203 项本地冒烟、运行包与修复内容不重复验收；本轮未修改生产源码或替换运行包。
 
