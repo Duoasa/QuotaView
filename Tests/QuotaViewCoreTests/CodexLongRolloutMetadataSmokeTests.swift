@@ -163,12 +163,13 @@ final class CodexLongRolloutMetadataSmokeTests: XCTestCase {
         let root = try root(); defer { try? FileManager.default.removeItem(at: root) }
         let file = try writeThread(root, long: true, oldStartInsideTail: true)
         try sql(root, metadataSQL(file))
+        let eof = try XCTUnwrap((FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.uint64Value)
         let provider = LongMetadataActiveProvider()
         let sink = LongMetadataSink()
         let ready = expectation(description: "initial EOF established")
         let token = expectation(description: "late admission triggers bounded recovery")
         let client = CodexLocalRolloutActivityClient(configuration: .init(isEnabled: true, codexHomeURL: root,
-            pollIntervalSeconds: 10, startupTailBytes: 1_048_576))
+            pollIntervalSeconds: 0.1, startupTailBytes: 1_048_576))
         await client.setActiveExecutionProvider { await provider.executions }
         await client.start(handler: { record, _ in
             await sink.append(record)
@@ -182,10 +183,13 @@ final class CodexLongRolloutMetadataSmokeTests: XCTestCase {
         XCTAssertEqual(oldStart.turnHash, hash("old"))
         XCTAssertTrue(before.last?.requiresLiveConfirmation == true)
         await provider.set([.init(sessionHash: hash("user"), turnHash: hash("active"))])
+        // .ready precedes release of pollingGeneration. If this manual poll is
+        // skipped as reentrant, maintenance must revisit the same EOF in time.
         await client.pollOnceForTesting()
         await fulfillment(of: [token], timeout: 3)
         await client.pollOnceForTesting()
         await client.stop()
+        XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.uint64Value, eof)
         let after = await sink.records
         XCTAssertEqual(after.filter { if case .tokenUsageReplay = $0.update { return true }; return false }.count, 1)
         XCTAssertEqual(after.filter { if case .activity = $0.update { return true }; return false }.count, 1,
