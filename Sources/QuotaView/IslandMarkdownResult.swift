@@ -108,9 +108,19 @@ enum IslandResultLink {
 }
 
 private final class IslandResultTextView: NSTextView, NSTextViewDelegate {
+    private let resultStorage: NSTextStorage
     private var renderedLayout: IslandMarkdownResultLayout?
     init() {
-        super.init(frame: .zero, textContainer: nil)
+        // This designated initializer does not create a text system for nil.
+        // Wire and retain the actual display stack, independently of the
+        // temporary stack used to measure the cached result above.
+        let storage = NSTextStorage()
+        let manager = NSLayoutManager()
+        let container = NSTextContainer(size: NSSize(width: 40, height: CGFloat.greatestFiniteMagnitude))
+        manager.addTextContainer(container)
+        storage.addLayoutManager(manager)
+        resultStorage = storage
+        super.init(frame: .zero, textContainer: container)
         drawsBackground = false; isEditable = false; isSelectable = true
         isRichText = true; importsGraphics = false
         textContainerInset = .zero
@@ -126,7 +136,7 @@ private final class IslandResultTextView: NSTextView, NSTextViewDelegate {
         guard renderedLayout !== layout else { return }
         renderedLayout = layout
         textContainer?.containerSize = NSSize(width: layout.width, height: .greatestFiniteMagnitude)
-        textStorage?.setAttributedString(layout.text)
+        resultStorage.setAttributedString(layout.text)
         invalidateIntrinsicContentSize()
     }
     func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
