@@ -47,14 +47,16 @@ final class IslandMarkdownResultLayout {
             paragraph.paragraphSpacing = 10
             paragraph.lineBreakMode = .byWordWrapping
             var size: CGFloat = 13
+            var heading = false
+            var quote = false
             var bold = run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true
             var code = run.inlinePresentationIntent?.contains(.code) == true
             var prefix = ""
             for intent in intents {
                 switch intent.kind {
-                case .header(let level): size = level == 1 ? 18 : (level == 2 ? 16 : 14); bold = true
+                case .header(let level): size = level == 1 ? 18 : (level == 2 ? 16 : 14); bold = true; heading = true
                 case .codeBlock: code = true
-                case .blockQuote: paragraph.headIndent += 12; paragraph.firstLineHeadIndent += 12
+                case .blockQuote: quote = true; paragraph.headIndent += 12; paragraph.firstLineHeadIndent += 12
                 case .listItem(let ordinal):
                     let ordered = intents.contains { $0.kind == .orderedList }
                     prefix = ordered ? "\(ordinal). " : "• "
@@ -75,9 +77,13 @@ final class IslandMarkdownResultLayout {
             if run.inlinePresentationIntent?.contains(.emphasized) == true {
                 font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask)
             }
+            // Opaque tones keep prose quieter than the result title, while
+            // preserving the emphasis and headings in Codex's actual answer.
+            let tone: CGFloat = heading ? 0.92 : (bold ? 0.85 : (quote ? 0.56 : 0.70))
             var attributes: [NSAttributedString.Key: Any] = [
-                .font: font, .foregroundColor: NSColor.white, .paragraphStyle: paragraph
+                .font: font, .foregroundColor: NSColor(white: tone, alpha: 1), .paragraphStyle: paragraph
             ]
+            if code { attributes[.backgroundColor] = NSColor(white: 0.10, alpha: 1) }
             if run.inlinePresentationIntent?.contains(.strikethrough) == true {
                 attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
             }

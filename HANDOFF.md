@@ -2,6 +2,66 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
+## 0.7.7 Build 1 发布准备 · 2026-10-06
+
+用户明确将当前版本定为0.7.7，并授权GitHub源码、README、Release简介及appcast更新。按版本规则绑定0.7.7 / 显示Build1 / 内部57、tag `v0.7.7-build.1`、ZIP `QuotaView-v0.7.7-build.1.zip`；本次授权含生产源码合入、正式签名公证、Stable/Latest及签名Feed完整链路。发布尚在准备中，公开稳定回滚基线仍为0.7.5 Build3 / `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`，既有资产保持。证据目录 `dist/verification/0.7.7-build1-release/`。README与Release使用简要更新概述；用户Handoff与Prototype未跟踪文件继续保留在本地。
+
+## 0.7.5 审批详情通道阻塞与取消批次清理 · 2026-10-06 01:17现场
+
+用户复现“批准前只读/选项不可点”，并留下网络审批不处理。01:16:12开发进程owner订阅超时；独立只读owner快照已有1个pending，支持输入。原进程未重启、没有代答，于01:17:39自行接收handles=1/actionable=1，用户01:17:51截图确认恢复。01:17:31两秒采样中IPC工作线程1134份样本都在全历史转换：700份PublicJSON解码、434份DesktopIPCJSON编码。长会话每个patch重复处理完整历史，积压同一reader并拖延其它任务owner discovery/详情；之前放大容量并未解决此处理成本。
+
+本轮直接在现有JSON树上投影，去掉全历史encode/decode往返；容量初始计量一次，patch仅增减变化子树、键及逗号，保留64/72/128MiB有界约束。Runtime继续消费缓存投影，Store读字节预算而非物化Data，完整编码只供兼容调用者按需使用。没有丢弃中间patch、截断当前轮次或放宽owner/revision/句柄校验；没有自动批准、提交答案或扩大权限。另按用户要求移除新任务开始时对上一批已完成卡片的自动删除；运行期间保留至手动归档，重启恢复仍遵循原有来源准入，未实现持久历史列表。
+
+Debug arm64最小增量编译通过，已替换开发主进程为PID37278（旧19838退出），身份仍com.quotaview.development073 / 0.7.5 / 内部56。01:27:28原生连接、01:27:31当前开发会话与用户留下的网络待确认均完成准入，后者handles=1/actionable=1，无代答。随后用户继续操作：01:27:52新一轮网络等待与原生handles=1/actionable=1在同一秒进入，01:27:54权威请求移除并恢复running，01:28:01真实完成；这是日志状态证据，尚无用户对新版点击/显示效果的验收结论。新采样未再出现全历史编解码的阻塞栈；这是只读运行证据，不代表后续所有负载或真实点击通过。源文件/二进制哈希、实际加载路径、日志与前后采样见 `.build/075-retention-approval-20261006/`。未新增/运行测试，未发布打包签名，未提交/推送/合并；普通批准和异步选项真实交互仍由用户验收。
+
+## 0.7.5 Hook审批类型与零完成统计 · 2026-10-06 00:55复测
+
+用户再次复测失败，并要求对照上一发行版与VibeIsland。已对照 `v0.7.5-build.3`：发行版在完整owner空pending且明确running后清理generic/unidentified观察；后来的系统权限等待修订改成按原因关联，再凭原生身份结算。实际Hook的 `SanitizedActivity` 根本不含 `waitReason` 字段，普通命令/网络审批的 `effectiveWaitReason` 原来因此为nil，永远匹配不上原生approval。00:55:15日志为handles=1/actionable=1、observers=1/bound_observers=0；00:55:17请求清空后仍有这条未关联记录，settlement=true但presentation=none。上一轮只修已绑定记录，所以没有覆盖实际入口。
+
+本轮在事件语义入口补齐PermissionRequest缺省approval；明确waitReason和已知提问工具的userInput优先，其他无原因事件仍为nil。已有同owner/epoch完整pending关联、移除与恢复规则由此可用于真实Hook；没有新增延时、猜测TCC、代答或扩大权限。诊断补untyped_observers计数。右侧收起统计在完成数为0时固定显示会话数、取消轮播，有完成后恢复既有3秒规则。
+
+Vibe参考范围：本机1.0.51主程序静态信息包含owner authority cleanup、submission ledger与stale handoff，官方1.0.51/1.0.48更新记录描述请求所属方与过期状态处理；官方社区仓库未开放产品完整实现。不能将符号、文案当作已验证运行算法，未复制其mtime fallback或使用AX。证据及发行版源码摘录在 `.build/075-approval-baseline-20261006/`。
+
+源码检查、Debug arm64最小增量编译通过，已替换开发进程为PID19838；01:05:27日志确认原生连接及当前会话准入，加载的新Debug dylib/Core路径已核对。此时无待处理请求，不作为真实批准验收。未新增/运行测试，未触发CI，未提交/推送/合并；真实审批过渡和统计显示仍待用户验收。哈希、运行与日志证据见delivery.json。
+
+## 0.7.5 批准后重复占位的关联修订 · 2026-10-06 00:46反馈
+
+用户复测仍短暂出现占位，前轮效果未通过验收。已保存运行日志：00:45:32网络会话handles=1/actionable=1，00:45:34降为0/0，同时继续接收appServer等待通知；00:45:52→54第二次呈现同样顺序，两条命令均获批并完成。旧日志没有逐条Hook/native关联元数据，不能单凭记录断言具体ID值，但排除了该轮容量断连（批准期间原生能力持续可用）。
+
+源码修正两处遗漏：同owner/epoch完整pending集合已移除全部关联原生请求、无未知/其他阻塞请求时，结算这些原生身份绑定的观察副本，不再等待aggregate waiting flag消失；aggregate runtime wait仍由自身状态维护。已有原生身份关联的观察，展示相关性按原生身份集核对，不再同时要求Hook tool-call ID等于native item ID（两者不属于同一命名空间）。未绑定观察、独立Shared等待、新原生请求继续保持各自证据，不以点击、ACK或工具结束猜测原生批准结果。未增加延时。
+
+补充仅固定状态/计数的诊断：native_wait、source_wait、runtime_wait、observer/bound observer数量、settlement是否存在与展示模式；无题目、答案、命令或原始ID，沿用去重及有界日志。后续可直接确认占位来自哪个等待来源，无需靠截图猜测。
+
+已完成源码检查、Debug arm64最小增量编译并替换运行开发版，最终PID10891；00:50:58日志确认本会话snapshot_admitted、authoritative=true、owner_input=true，并包含新增等待来源诊断。此时handles=0不代表真实批准提交验收。实际点击/过渡仍待用户验收，不能凭编译成功声称真实场景已通过。未新增或运行本地测试，未触发CI，未提交/推送/合并。证据、最终PID和库哈希在 `.build/075-approval-reappearance-20261006/`。
+
+## 0.7.5 网络审批续行、长会话应答与记忆标识 · 2026-10-06 00:24反馈
+
+用户确认网络审批仍是在点允许后短暂显示占位。读取“测试网络访问审批”最近两轮公开记录确认请求获批；截图00:24:38时对应命令仍执行，约5.832秒后返回，00:24:45任务结束。此前展示凭据固定2秒失效会重新暴露旧弱观察等待，不能用短暂遮挡代替已恢复状态。现在同owner/epoch明确移除阻塞请求且随后证明running、无pending后，旧观察的展示保持退场至新证据/轮次结束，不因计时复活；尚未证明恢复的runtime过渡仍最多2秒。保留底层等待证据，独立Shared等待、新请求/未知pending、更新观察、作用域变化、恢复后的新原生等待仍优先，不自动代答或扩大权限。旧回执前后逐事件IPC顺序未留存，截图和源码支持上述覆盖缺口，实际效果待用户复测。
+
+用户同时反馈本会话问题选项只读。开发日志00:25:06记录该会话resource_limit；只读owner快照现为9,474,522字节，其中turnHistory约9,467,091字节，超过旧8MiB状态/9MiB帧限制，owner仍支持输入。网络测试会话仅141,670字节，不能将两类故障混同。进一步只读统计为110,852个JSON节点、深度14，亦超过旧100,000节点门槛。live配置改为状态64MiB、帧72MiB、全部会话128MiB与最多1,000,000节点（深度64不变）；配置默认的较低预算仍可供独立调用者使用，projector默认8MiB，所有路径最高64MiB。actor保留树与字节计数、不长期保存重复编码Data；将一次解析结果随snapshot传递，避免MainActor再次解码长历史。未实现历史裁剪或改变原生follow协议，不声称无限容量。超限诊断细分frame/json_structure/state/retained/patch/request/projection；身份及应答校验不变。
+
+记忆整理 footer 增加固定“记忆整理 / Memory consolidation”文案；球固定为压缩上下文外观与播放，不随后台任务完成/等待/失败变色；可见性、减少动态仍生效，Tooltip保留真实后台状态。
+
+Debug arm64最小增量编译通过并启动开发版。首次编译的guard闭包语法错误已修正；首次启动PID2396暴露自定义目录初始化仍走旧配置，已统一启动/目录切换为live预算；PID4220进一步暴露节点门槛，完成上述节点统计与预算修订后再次增量编译。最终开发PID6681，00:43:42日志确认本会话snapshot_admitted、authoritative=true、owner_input=true；此时无待处理请求，因此不把handles=0当成真实提交验收。未新增或运行本地测试，未触发CI。运行PID、动态库哈希和只读连接证据见 `.build/075-network-approval-20261006/`。保留此前本地改动与用户文件，本次仍未提交、推送或合并。下方为前轮历史记录，实际交付状态以本节及delivery.json为准；视觉和真实操作待用户验收。
+
+## 0.7.5 批准后的占位闪现 · 2026-10-06
+
+用户提供 `录屏2026-10-06 00.03.54.mov`：17.5秒仍显示可操作的原生命令批准；18.5–19秒 Codex 批准框消失、命令运行，但灵动岛切成“请求详情暂不可用”；20秒恢复工作。录屏证明该次原生命令批准路径已可用，同时揭示请求清理与观察等待退场之间的展示缺口。`visibleRequests` 在具体请求清空而旧等待仍在时会生成通用 placeholder；录屏占位页还允许本地隐藏，符合弱观察等待残留条件，不能把它当成新 macOS 权限请求。
+
+修订仅作用于展示衔接：当前 owner/epoch 的完整 pending 集合明确移除已展示的阻塞请求、且没有其他原生 pending/异步问题时，记录最长2秒的本轮衔接凭据。此间若只剩较早的弱观察或相同作用域/原因的 runtime 等待，退出确认页，显示“同步中 · 请求已处理”。不会清除底层等待、伪造执行完成、重发答案或扩大权限；点击、ACK、断线不产生凭据。新真实请求、未知 pending、owner/epoch变化、独立 Shared 等待、较新观察、不同原因/显式call/绑定身份均不被遮住。重复空快照不续期，期限后若仍在等待恢复正常提醒；真实恢复立即接续正常活动。
+
+已完成源码检查与 Debug arm64 最小增量开发编译，未新增/运行本地测试；按既有运行授权替换开发进程，当前PID85558，已核对加载本次Debug动态库与Core。提取帧、开发日志、最终PID/源码/CI记录位于 `.build/075-approval-settlement-20261006/`。此新反馈恢复了针对该缺陷的开发；上一轮失败记录保留，不重跑旧CI、不修改其超时用例。用户最新要求后续仅在明确指示时推送，因此本次修改保留本地，未提交、未推送、未合并，未触发新CI。PR #81仍为上一轮head；下方停止记录属于上一轮历史状态。实际过渡效果仍由用户验收。
+
+## 0.7.5 排版、完成提示与确认通道 · 2026-10-05 23:16 反馈
+
+交付停止记录（本地补记、未再次推送）：源码 `9b71c58` 已推送 [PR #81](https://github.com/Duoasa/QuotaView/pull/81)，开发 PID73682 正在运行，程序、debug dylib 与 Core 哈希见 `delivery.json`。对应 [CI 37335145869](https://github.com/Duoasa/QuotaView/actions/runs/37335145869) 676项、6跳过、1失败：`ActivityIngressBoundaryTests.testPausedBootstrapUsesBoundedCurrentTurnEndpointAndPreservesRealQuestion` 第293行等待隔离输入夹具超时。按用户此前“还是失败就停止”要求停止追加修补与重跑，PR保持打开，未合并main。失败日志 `.build/075-island-refinement-20261005/pr-ci-failure.log`；本地此条Handoff补记保持未提交，避免文档推送再次触发CI。
+
+基于 main `6d00efe`，正文改为灰色 Regular、标题/源文本重点分层、引用更弱与代码深色底，蓝色链接仍可点击。卡片摘要使用次级色，最多 1024 字符的行内 Markdown 解析与 64 项前缀缓存去掉原始语法标记。完成时收起态用剩余百分比替换球 3 秒；连续完成合并至最后一次后 3 秒，展开期间只保留一次并在收起后展示。统计每 3 秒轮播会话/完成，展开或隐藏不持续轮播；历史初始快照不重播完成提示。
+
+只读原生连接调查确认两个审批会话的 owner 仍提供 `supportsUntrustedAppInput=true`、协议 v11。旧开发进程重连后于 15:33:29Z 再现 `resource_limit scope=connection`，随后断线，使所有会话失去应答句柄。这与系统权限无关，旧日志未细分具体资源分支。代码确认帧读取期限从首分片起固定 5 秒，包含自身解析/回调耗时；改为按真实接收进展重置停滞期限，暂停计入自身背压处理，取消旧计时器不可终止新读取。所有资源上限、owner/epoch/请求身份校验与单会话隔离保持。新增固定诊断原因码以区别 `frame_stalled`、`frame_unroutable` 与 `conversation_budget`。普通批准/提问继续走原有原生应答；没有句柄的观察提醒不会伪装可操作，macOS 权限弹窗仅条件提示系统处理，不猜测无详情就是 TCC，不增加权限。
+
+Debug arm64 最小增量开发编译成功，已重启开发版；未增加/运行本地测试，未进行发行打包、签名、公证或发布。调查元数据、采样、前后运行日志与最终开发 PID/源码/GitHub 结果保存在 `.build/075-island-refinement-20261005/`。重新连接后已观察到 owner 能力与当前轮次快照，尚未代用户提交真实批准；视觉、轮播和交互由用户验收。后续 GitHub CI、PR 和 main 的确切提交及状态另记该目录的 `delivery.json`，不把连接/构建成功等同于交互验收。
+
 ## 0.7.5 完成回答与动画刷新 · 2026-10-05 源码开发
 
 22:51 用户截图反馈完成正文空白。根因已定位到新 `IslandResultTextView` 的指定初始化方法：`NSTextView(frame: .zero, textContainer: nil)` 不创建文本系统。独立初始化诊断确认 textContainer、layoutManager、textStorage 全为 nil；缓存测量栈算出高度，但显示栈通过可选链写入时被静默跳过。修订为显式连接 NSTextStorage → NSLayoutManager → NSTextContainer 并传给 NSTextView，视图持有存储，配置直接写入该存储。初次轻量类型检查发现 CGFloat/Double 字面量重载歧义，显式 CGFloat 后通过。Debug arm64 增量开发编译通过，日志 `.build/075-result-animation-20261005/blank-result-development-build.log`；按持续运行授权重启开发版。前轮 [PR #79](https://github.com/Duoasa/QuotaView/pull/79) 已合并 main `53b2cfc`，PR/main 各676项、6跳过、0失败，但既有 CI 没覆盖正文显示栈的初始化；这些结果不代表此视觉缺陷已被验证。此次修正的运行与 GitHub 结果见同目录 `blank-result-delivery.json`，不做发行签名、打包或发布。
@@ -903,9 +963,9 @@ Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）�
 |---|---|
 | 公开稳定版 | [0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；internal 52，已进入 Stable appcast |
 | 发布源码 | `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；PR #75 已合并 main |
-| 当前开发配置身份 | `0.7.5 / display Build 7 / internal 56 / com.quotaview.development073`；本轮等待与异步提醒修复已递增Build，默认开发身份保持；当前本地正式运行包由Distribution配置构建，尚未公开发布 |
+| 当前开发配置身份 | `0.7.7 / display Build 1 / internal 57 / com.quotaview.development073`；用户已批准此版本Stable及appcast，正式产物准备中，开发身份保持 |
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；2026-10-05基准HEAD `f881356` 与当时 `origin/main` 一致，新增修复状态见顶部；用户Handoff与Prototype未提交文件保留 |
-| 当前运行包 | `/Applications/QuotaView.app`，正式身份、0.7.5/Build7/internal56，主PID62058、Widget PID62064；用户已授权本地替换，旧91483/91523退出，完整旧包备份及实际Core加载证据见顶部 |
+| 当前运行包 | 既有Development075Build3目录中的开发身份包，0.7.5/Build7/internal56，主PID37278；0.7.7源码版本提升不自动替换该开发进程 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.13` / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；完整资产记录见版本历史 |
 

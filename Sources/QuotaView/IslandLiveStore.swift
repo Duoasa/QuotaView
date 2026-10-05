@@ -74,9 +74,53 @@ final class IslandLiveStore {
         // disappears, or have an unsupported concurrent request. Keep its
         // evidence independent of observer request bindings and settlements.
         private var desktopRuntimeWait: WaitEvidence?
+        private struct DesktopSettlementPresentation {
+            let owner: String
+            let epoch: UInt64
+            let reason: CodexActivityWaitReason
+            let settledAt: Date
+            let identities: Set<CodexDesktopPendingRequestIdentity>
+            let callHashes: Set<String>
+            var continuationObserved = false
+        }
+        private var desktopSettlementPresentation: DesktopSettlementPresentation?
+        enum DesktopSettlementDisplay { case synchronizing, resumed }
+        /// A settled RPC and its observer flags can arrive on different ticks.
+        /// Explicit owner continuation retires only the older observer presentation.
+        /// The two-second grace applies only while runtime continuation is unproven;
+        /// elapsed time cannot resurrect old observer evidence after that proof.
+        func desktopSettlementDisplay(at now: Date) -> DesktopSettlementDisplay? {
+            guard let receipt = desktopSettlementPresentation,
+                  now >= receipt.settledAt,
+                  waitingOnSource, sourceWait == nil, !unidentifiedWaitOverflow,
+                  visibleRequests.allSatisfy(\.isGeneric) else { return nil }
+            if let wait = desktopRuntimeWait,
+               receipt.continuationObserved || wait.desktopOwner != receipt.owner
+                    || wait.epoch != receipt.epoch || wait.reason != receipt.reason { return nil }
+            func isEarlierObserver(_ wait: WaitEvidence) -> Bool {
+                guard wait.source != .appServer, wait.reason == receipt.reason, wait.observedAt <= receipt.settledAt,
+                      wait.desktopOwner == nil || (wait.desktopOwner == receipt.owner && wait.epoch == receipt.epoch) else { return false }
+                // Once the owner has bound this observer to native requests,
+                // those identities are the correlation proof. Hook tool call
+                // IDs and native item IDs belong to different namespaces.
+                if let identities = wait.nativeRequestIdentities, !identities.isEmpty {
+                    return wait.desktopOwner == receipt.owner && wait.epoch == receipt.epoch
+                        && identities.isSubset(of: receipt.identities)
+                }
+                if wait.toolCallIsExplicit, let call = wait.toolCallHash, !receipt.callHashes.contains(call) { return false }
+                return true
+            }
+            guard unidentifiedWaits.allSatisfy(isEarlierObserver)
+                && requests.allSatisfy({ request in
+                    request.isGeneric && genericWaitEvidence[request.key].map(isEarlierObserver) == true
+                }) else { return nil }
+            if receipt.continuationObserved { return .resumed }
+            return now.timeIntervalSince(receipt.settledAt) < 2 ? .synchronizing : nil
+        }
         private var sourcePlaceholder = Pending(key: "observer-placeholder", value: .init(
             question: .init("请求详情暂不可用", "Request details unavailable"),
-            impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
+            impact: .init("正在同步请求详情。如有 macOS 权限弹窗，请在系统弹窗中处理。",
+                "Syncing request details. If macOS shows a permission dialog, respond in that system dialog.")), isGeneric: true)
         var resolvedCallHashes: [String] = []
         private(set) var retiredObserverCallHashes: [String] = []
         var resolvedRequestKeys: [String] = []
@@ -116,6 +160,19 @@ final class IslandLiveStore {
             if unidentifiedWaitOverflow { return .approval }
             guard let blocker = requests.first(where: \.blocksExecution) else { return nil }
             return blocker.mode == .synchronous ? .userInput : .approval
+        }
+        /// Fixed metadata for diagnosing cross-source ordering, no request content or IDs.
+        func desktopDiagnosticSummary(at now: Date) -> String {
+            let observers = unidentifiedWaits + Array(genericWaitEvidence.values)
+            let bound = observers.filter { $0.nativeRequestIdentities?.isEmpty == false }.count
+            let untyped = observers.filter { $0.reason == nil }.count
+            let presentation: String
+            switch desktopSettlementDisplay(at: now) {
+            case .synchronizing: presentation = "sync"
+            case .resumed: presentation = "resumed"
+            case nil: presentation = "none"
+            }
+            return "source_wait=\(sourceWait != nil) runtime_wait=\(desktopRuntimeWait != nil) observers=\(observers.count) untyped_observers=\(untyped) bound_observers=\(bound) settlement=\(desktopSettlementPresentation != nil) presentation=\(presentation)"
         }
         var asynchronousCallHashes: Set<String> { Set(callModes.filter { $0.value == .asynchronous }.map(\.key)) }
         func mode(for call: String) -> CodexUserInputMode? { callModes[call] }
@@ -264,6 +321,7 @@ final class IslandLiveStore {
                 && left.method == right.method && left.key == right.key
         }
         mutating func observe(_ pending: Pending) {
+            if !pending.isGeneric { desktopSettlementPresentation = nil }
             if Self.asyncQuestionsAreAnswered(pending, proofs: acceptedAsyncReplyProofs) { return }
             if case .asynchronousQuestion(let id)? = pending.desktopIdentity,
                skippedAsyncQuestionIDs.contains(id) { return }
@@ -472,6 +530,16 @@ final class IslandLiveStore {
         mutating func observeDesktopRuntimeWait(_ projection: CodexDesktopInteractionProjection,
             owner: String, epoch: UInt64, at: Date = Date()) {
             guard projection.pendingRequestsAreAuthoritative else { return }
+            if let receipt = desktopSettlementPresentation {
+                let changedReason: Bool
+                if case .waiting(let reason) = projection.threadWaitStatus { changedReason = reason != receipt.reason }
+                else { changedReason = false }
+                if receipt.owner != owner || receipt.epoch != epoch || changedReason
+                    || (receipt.continuationObserved && projection.threadWaitStatus != .running)
+                    || !projection.authoritativePendingIdentities.isEmpty || !projection.authoritativeAsyncQuestionIDs.isEmpty {
+                    desktopSettlementPresentation = nil
+                }
+            }
             let represented = Set(projection.requests.map(\.identity))
             let unknownPending = projection.authoritativePendingIdentities.subtracting(represented)
             reconcileObserverDesktopEvidence(projection, owner: owner, epoch: epoch, at: at)
@@ -521,6 +589,10 @@ final class IslandLiveStore {
             owner: String, epoch: UInt64, at: Date = Date()) {
             reconcileObserverDesktopEvidence(projection, owner: owner, epoch: epoch, at: at)
             guard projection.provesNoPendingConfirmation else { return }
+            if let receipt = desktopSettlementPresentation, receipt.owner == owner, receipt.epoch == epoch,
+               at >= receipt.settledAt, projection.authoritativeAsyncQuestionIDs.isEmpty {
+                desktopSettlementPresentation?.continuationObserved = true
+            }
             if let wait = sourceWait, wait.requestIdentities == nil,
                wait.desktopOwner == owner, wait.epoch == epoch, at > wait.observedAt {
                 sourceWait = nil
@@ -541,15 +613,16 @@ final class IslandLiveStore {
                 let matching = Set(blockers.filter {
                     ($0.method == "item/tool/requestUserInput" ? CodexActivityWaitReason.userInput : .approval) == wait.reason
                 }.map(\.identity))
-                let positiveWait: Bool
-                if case .waiting = projection.threadWaitStatus { positiveWait = true }
-                else { positiveWait = false }
                 if let existingOwner = wait.desktopOwner {
                     guard existingOwner == owner, wait.epoch == epoch,
                           at > (wait.boundAt ?? wait.observedAt) else { return wait }
                     if let identities = wait.nativeRequestIdentities, !identities.isEmpty,
                        identities.isDisjoint(with: projection.authoritativePendingIdentities),
-                       blockers.isEmpty, !positiveWait { return nil }
+                       blockers.isEmpty { return nil }
+                    // An exact pending-set removal settles its bound observer
+                    // alias even if the aggregate runtime flag arrives later.
+                    // desktopRuntimeWait independently retains that flag; this
+                    // cannot answer a system prompt or another pending RPC.
                     // A flag-only positive witness needs an explicit running
                     // transition; absent runtime fields cannot settle it.
                     if wait.nativeRequestIdentities == nil, projection.provesNoPendingConfirmation { return nil }
@@ -582,7 +655,7 @@ final class IslandLiveStore {
         }
         @discardableResult
         mutating func resolveDesktopRequests(owner: String, epoch: UInt64,
-            pending: Set<CodexDesktopPendingRequestIdentity>, asyncQuestions: Set<String>) -> Bool {
+            pending: Set<CodexDesktopPendingRequestIdentity>, asyncQuestions: Set<String>, at: Date = Date()) -> Bool {
             let matching = requests.filter { request in
                 guard request.desktopEpoch == epoch, request.desktopOwner == owner,
                       let identity = request.desktopIdentity else { return false }
@@ -590,6 +663,15 @@ final class IslandLiveStore {
                 case .server(let identity): return !pending.contains(identity)
                 case .asynchronousQuestion(let id): return !asyncQuestions.contains(id)
                 }
+            }
+            // Only disappearance from the admitted owner's complete pending
+            // set starts this transition. A click, ACK or timeout cannot do so.
+            if pending.isEmpty, asyncQuestions.isEmpty,
+               let settled = matching.first(where: { $0.blocksExecution && !$0.isGeneric && $0.desktopIdentity != nil }) {
+                desktopSettlementPresentation = .init(owner: owner, epoch: epoch,
+                    reason: settled.mode == .synchronous ? .userInput : .approval, settledAt: at,
+                    identities: Set(matching.compactMap { if case .server(let id)? = $0.desktopIdentity { return id }; return nil }),
+                    callHashes: Set(matching.compactMap(\.callHash)))
             }
             let keys = Set(matching.map(\.key))
             requests.removeAll { keys.contains($0.key) }
@@ -599,6 +681,7 @@ final class IslandLiveStore {
             return !matching.isEmpty
         }
         mutating func invalidateDesktopResponses(epoch: UInt64? = nil) {
+            desktopSettlementPresentation = nil
             for i in requests.indices where requests[i].desktopIdentity != nil && (epoch == nil || requests[i].desktopEpoch == epoch) {
                 requests[i].value.canRespond = false
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
@@ -670,6 +753,7 @@ final class IslandLiveStore {
             }
         }
         mutating func finishTurn() {
+            desktopSettlementPresentation = nil
             requests.removeAll(); sourceWait = nil; unidentifiedWaits.removeAll(); unidentifiedWaitOverflow = false
             unidentifiedWaitOverflowIsWeak = true
             desktopRuntimeWait = nil; genericWaitEvidence.removeAll(); hookTools.removeAll(); hookToolsOverflowed = false
@@ -890,7 +974,7 @@ final class IslandLiveStore {
             if let title = payload["title"] as? String, !title.isEmpty { child.title = title }
             if let model = nonempty(payload["model"]) { child.model = model }
             if let effort = nonempty(payload["effort"]) { child.effort = effort }
-        case "message": child.progress = summary(payload["text"] as? String ?? "")
+        case "message": child.progress = messageSummary(payload["text"] as? String ?? "")
         case "tool":
             if !child.terminal && payload["presentationRecovery"] as? Bool != true {
                 child.progress = toolSummary(payload["name"] as? String ?? "", arguments: payload["text"] as? String ?? "")
@@ -918,20 +1002,34 @@ final class IslandLiveStore {
         } else if method == "item/agentMessage/delta", let itemID = payload["itemId"] as? String,
                   itemID == child.publicMessageID, let delta = payload["delta"] as? String, !child.terminal {
             child.publicMessageText = String((child.publicMessageText + delta).prefix(2048))
-            child.progress = summary(child.publicMessageText)
+            child.progress = messageSummary(child.publicMessageText)
         } else if method == "item/started" || method == "item/completed", let item = payload["item"] as? [String: Any],
            let type = item["type"] as? String,
            ["agentMessage", "commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall", "webSearch", "collabToolCall"].contains(type) {
             if type == "agentMessage" {
                 child.publicMessageID = item["id"] as? String
                 child.publicMessageText = String((item["text"] as? String ?? "").prefix(2048))
-                child.progress = summary(child.publicMessageText)
+                child.progress = messageSummary(child.publicMessageText)
             }
             else if method == "item/started" { child.progress = summary(toolName(type, item: item)); if !child.terminal { child.status = .working } }
         } else { return }
         subagents[key] = child; onPublicChange?()
     }
 
+    private var messageSummaryCache: [String: String] = [:]
+    private func messageSummary(_ value: String) -> String {
+        // Summaries show prose, not Markdown markers or link destinations.
+        // Bound parsing and cache the prefix: later streaming deltas do not
+        // repeatedly parse the entire answer or even this unchanged prefix.
+        let prefix = String(value.prefix(1024))
+        if let cached = messageSummaryCache[prefix] { return cached }
+        let parsed = try? AttributedString(markdown: prefix,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        let result = summary(parsed.map { String($0.characters) } ?? prefix)
+        if messageSummaryCache.count >= 64 { messageSummaryCache.removeAll(keepingCapacity: true) }
+        messageSummaryCache[prefix] = result
+        return result
+    }
     private func summary(_ value: String) -> String {
         // Streaming deltas used to split and join the entire accumulated answer
         // on the main actor, only to discard everything beyond 240 characters.
@@ -1035,7 +1133,7 @@ final class IslandLiveStore {
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
 
-    func reset() { asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -1137,7 +1235,7 @@ final class IslandLiveStore {
         }
         if projection.pendingRequestsAreAuthoritative {
             let settled = tasks[i].requestLifecycle.resolveDesktopRequests(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch,
-                pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs)
+                pending: projection.authoritativePendingIdentities, asyncQuestions: projection.authoritativeAsyncQuestionIDs, at: observedAt)
             tasks[i].requestLifecycle.reconcileDesktopContinuation(projection, owner: snapshot.ownerClientID,
                 epoch: snapshot.connectionEpoch, at: observedAt)
             let stillWaiting = tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest
@@ -1152,9 +1250,8 @@ final class IslandLiveStore {
         guard presentationKind(for: key) != .memoryConsolidation, presentationKind(for: key) != .internalTask, presentationKind(for: key) != .subagent else { return nil }
         if let i = tasks.firstIndex(where: { $0.key == key }) { return i }
         guard admit else { return nil }
-        if !tasks.isEmpty && tasks.allSatisfy({ $0.terminal && $0.requests.isEmpty }) {
-            tasks.removeAll { $0.id != preservedID && $0.status != .failed }
-        }
+        // New conversations append to the list. Completed cards remain until
+        // the user archives them; starting another task is not a dismissal.
         tasks.append(.init(id: nextID, key: key)); nextID += 1
         if !tasks.contains(where: { $0.id == selectedID }) { selectedID = tasks.last!.id }
         return tasks.count - 1
@@ -1326,7 +1423,7 @@ final class IslandLiveStore {
                 upsert(.init(text: .init(String(text.prefix(65536))), kind: channel == "final" ? .result : .progress,
                     publicItem: .init(category: message ? .message : .command,
                     sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536, messagePhase: channel)), at: i)
-                if message { tasks[i].publicProgress = summary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
+                if message { tasks[i].publicProgress = messageSummary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
                 else if !message && !presentationRecovery && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
@@ -1638,7 +1735,7 @@ final class IslandLiveStore {
             publicItem: .init(category: category, sourceID: itemID, turnID: turnID, status: status,
                 output: output.map { String($0.prefix(65536)) }, sourceTruncated: truncated, exitCode: exit, messagePhase: phase)), at: i)
         if category == .message {
-            tasks[i].publicProgress = summary(text)
+            tasks[i].publicProgress = messageSummary(text)
             if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
         }
     }
@@ -1664,7 +1761,7 @@ final class IslandLiveStore {
             upsert(.init(text: .init(delta), publicItem: .init(category: .message, sourceID: itemID, turnID: tasks[i].turnKey ?? "")), at: i)
         }
         if message, let text = tasks[i].entries.last(where: { $0.publicItem?.sourceID == itemID })?.text.chinese {
-            tasks[i].publicProgress = summary(text)
+            tasks[i].publicProgress = messageSummary(text)
             if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
         }
         trim(i)
@@ -1862,23 +1959,28 @@ final class IslandLiveStore {
         let copy = CodexActivityCopy(language: english ? .english : .simplifiedChinese)
         let visibleTasks = tasks.filter { !isArchived($0) }
         let items = visibleTasks.map { task -> CodexMultitaskRenderTask in
-            let visual = task.status.visualState
+            let settlement = task.terminal ? nil : task.requestLifecycle.desktopSettlementDisplay(at: now)
+            let synchronizing = settlement == .synchronizing
+            let presentationStatus = settlement == nil ? task.status : task.activityStatus
+            let visual: CodexActivityVisualState = synchronizing ? .working : presentationStatus.visualState
             let duration = task.startedAt.map { max(0, Int((task.endedAt ?? now).timeIntervalSince($0))) }
             let children = privacy ? [] : childPresentations(parent: task.key, english: english, at: now)
             let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
             metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
             var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
+            if settlement != nil { request = nil }
             if let pending = task.requests.first(where: { $0.value.id == request?.id }) {
                 request?.canDismissLocally = asyncPresentationKey(pending, task: task) != nil
                     || (pending.isGeneric && task.requestLifecycle.canHideObserverReminder)
             }
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
-            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: task.status, removedEntryCount: task.removedEntryCount)
+            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount)
             let title = privacy ? (english ? "Codex task" : "Codex 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
             let status: String
-            if task.status == .cancelled { status = english ? "Interrupted" : "已中断" }
+            if synchronizing { status = english ? "Syncing" : "同步中" }
+            else if task.status == .cancelled { status = english ? "Interrupted" : "已中断" }
             else if task.status == .queued { status = english ? "Queued" : "排队中" }
-            else if task.status == .waiting && task.sourceWaitReason == .userInput { status = english ? "Awaiting answer" : "等待回答" }
+            else if presentationStatus == .waiting && task.sourceWaitReason == .userInput { status = english ? "Awaiting answer" : "等待回答" }
             else { status = copy.statusTitle(for: visual) }
             let operation: String
             if task.operation == "exec" || task.operation.hasPrefix("exec · ") {
@@ -1889,11 +1991,12 @@ final class IslandLiveStore {
             } else { operation = task.publicProgress }
             let render = CodexActivityRenderState(taskIdentity: .init(sessionHash: task.key, turnHash: task.turnKey),
                 visualState: visual, approximateProgressFraction: task.displayedProgress,
-                windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (task.status == .waiting
+                windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (synchronizing
+                    ? (english ? "Request handled" : "请求已处理") : presentationStatus == .waiting
                     ? status + " · " + (request?.question.value(english) ?? "") : operation),
                 tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tokens" },
                 accessibilityLabel: "\(title), \(status)")
-            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: !task.requests.isEmpty)
+            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty)
         }
         let connectionCopy = AppCopy(language: english ? .english : .simplifiedChinese)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
@@ -1901,6 +2004,8 @@ final class IslandLiveStore {
             sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected || desktopConnected
                 ? (visibleTasks.isEmpty ? connectionCopy.text("就绪", "Ready") : connectionCopy.text("已连接", "Connected"))
                 : (visibleTasks.isEmpty ? connectionCopy.text("等待 Codex 任务", "Waiting for Codex") : connectionCopy.text("本地活动数据", "Local activity")),
-            privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap { $0.requests.map { $0.value.id } }))
+            privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap {
+                $0.requestLifecycle.desktopSettlementDisplay(at: now) != nil ? [] : $0.requests.map { $0.value.id }
+            }))
     }
 }
