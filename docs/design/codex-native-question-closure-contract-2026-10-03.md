@@ -17,9 +17,9 @@
 
 弱观察恢复另见[信息契约](../specs/codex-island-information-contract.md#等待证据与恢复)：Hook历史修剪保留floor，历史缺口或并发拒绝唯一推断；`source:nil`不参与Hook推断；本轮256项notice fingerprint防止重播或容量满后重启已隐藏提醒，完整owner集合与未知pending仍保持真实结算边界。
 
-本轮未新增或运行测试。首轮Universal构建因两处`source` optional API编译错误失败并保留`.build/075-confirmation-lifecycle-20261005/build7-distribution-build-first-failure.log`；修正后第二次Universal构建成功。正式本地包App PID62058、Widget PID62064；190项生产输入、4项安装二进制哈希、4个Universal二进制、同Team Developer ID deep strict签名与实际exe/Core加载核对通过。App/Widget entitlements和NS权限声明与旧包严格相同；活动socket、启动后Hook ACK及Local生命周期准入已核对。
+首次本地交付未新增或运行本地测试；GitHub自动CI及后续恢复记录见Handoff。首轮Universal构建因两处`source` optional API编译错误失败并保留`.build/075-confirmation-lifecycle-20261005/build7-distribution-build-first-failure.log`；修正后第二次Universal构建成功。正式本地包App PID62058、Widget PID62064；190项生产输入、4项安装二进制哈希、4个Universal二进制、同Team Developer ID deep strict签名与实际exe/Core加载核对通过。App/Widget entitlements和NS权限声明与旧包严格相同；活动socket、启动后Hook ACK及Local生命周期准入已核对。
 
-证据位于`.build/075-confirmation-lifecycle-20261005/runtime/`的`build7-preflight.json`、`build7-delivery.json`、`build7-installed-verification.json`、`build7-live-channel-verification.json`及对应loaded-paths/channel日志；旧包在`.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。源码推送、CI/main集成待后续核验；未新增公证或公开Release/appcast。不能复用下方2026-10-03历史CI或夹具数量作为本次结果，不能宣称原生minimize精确同步或原生问题组关闭已实现，实际交互与视觉待用户验收。
+证据位于`.build/075-confirmation-lifecycle-20261005/runtime/`的`build7-preflight.json`、`build7-delivery.json`、`build7-installed-verification.json`、`build7-live-channel-verification.json`及对应loaded-paths/channel日志；旧包在`.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。源码及CI/main集成见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)；后续CI源码恢复修订未重新编译或安装，上述输入及运行证据只对应首次本地Build7；未新增公证或公开Release/appcast。不能复用下方2026-10-03历史CI或夹具数量作为本次结果，不能宣称原生minimize精确同步或原生问题组关闭已实现，实际交互与视觉待用户验收。
 
 ## 2026-10-03 原生关闭调查结论
 

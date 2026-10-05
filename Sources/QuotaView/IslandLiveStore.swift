@@ -78,6 +78,7 @@ final class IslandLiveStore {
             question: .init("请求详情暂不可用", "Request details unavailable"),
             impact: .init("请在 Codex 查看并处理。", "Review and handle this request in Codex.")), isGeneric: true)
         var resolvedCallHashes: [String] = []
+        private(set) var retiredObserverCallHashes: [String] = []
         var resolvedRequestKeys: [String] = []
         private var acceptedAsyncReplyProofs: [String: String] = [:]
         private var acceptedAsyncReplyOrder: [String] = []
@@ -124,7 +125,10 @@ final class IslandLiveStore {
             callModes[callHash] = mode; callModeOrder.removeAll { $0 == callHash }; callModeOrder.append(callHash)
             while callModeOrder.count > 256 { callModes.removeValue(forKey: callModeOrder.removeFirst()) }
             for i in requests.indices where requests[i].callHash == callHash
-                && (requests[i].isGeneric || requests[i].value.protocolRequest?.kind == .questions) {
+                && (requests[i].isGeneric || (requests[i].value.protocolRequest?.kind == .questions
+                    && requests[i].value.protocolRequest?.observationOnly == true)) {
+                // Local or Hook mode evidence cannot downgrade a real native
+                // question RPC's independently assigned blocking mode.
                 requests[i].mode = mode
             }
         }
@@ -172,7 +176,8 @@ final class IslandLiveStore {
                 }
                 return
             }
-            guard !resolvedCallHashes.contains(callHash), !requests.contains(where: { $0.callHash == callHash }) else { return }
+            guard !resolvedCallHashes.contains(callHash), !retiredObserverCallHashes.contains(callHash),
+                  !requests.contains(where: { $0.callHash == callHash }) else { return }
             guard requests.count < 32 else {
                 unidentifiedWaitOverflow = true
                 unidentifiedWaitOverflowIsWeak = unidentifiedWaitOverflowIsWeak && source != .appServer
@@ -361,7 +366,6 @@ final class IslandLiveStore {
             guard let callHash else { return }
             let retiredAnonymous = settleHookWait(callHash, at: at, source: source)
             guard mode(for: callHash) != .asynchronous else { return }
-            let identifiedQuestion = mode(for: callHash) == .synchronous
             let matching = requests.filter {
                 $0.isGeneric && $0.desktopIdentity == nil && $0.callHash == callHash
                     && (genericWaitEvidence[$0.key].map {
@@ -375,12 +379,14 @@ final class IslandLiveStore {
             // A Hook only withdraws its weak observation. It cannot settle an
             // independent native thread flag even when a call ID is shared.
             if source != .hook { settleSourceWait(for: matching) }
-            if identifiedQuestion && !matching.isEmpty { rememberCall(callHash) }
+            if mode(for: callHash) == .synchronous, !matching.isEmpty { rememberCall(callHash) }
+            else if !matching.isEmpty || retiredAnonymous { rememberObserverCall(callHash) }
             guard !matching.isEmpty || retiredAnonymous else { return }
             clampSelection()
         }
         @discardableResult mutating func resolveCall(_ callHash: String, proofMode: CodexUserInputMode? = nil,
             epoch: UInt64? = nil, at: Date = Date(), source: CodexActivityEventSource? = .appServer) -> Bool {
+            guard source != nil else { return false }
             if source == .hook { recordHookCompletion(callHash, at: at) }
             let retiredAnonymous = settleObserverCompletion(callHash, at: at, source: source)
             guard proofMode != .asynchronous, mode(for: callHash) != .asynchronous else { return false }
@@ -393,10 +399,11 @@ final class IslandLiveStore {
             }
             let matching = requests.filter(matches)
             guard !matching.contains(where: { $0.mode == .asynchronous }) else { return false }
-            // A correlated result may clear missing-detail wait evidence. Only
-            // a known request can leave an answered-call tombstone for replay.
+            // Retiring unknown observer evidence is not an answered question.
+            // Its replay record cannot veto a later typed async question or RPC.
             guard !matching.isEmpty || mode(for: callHash) == .synchronous || retiredAnonymous else { return false }
             if mode(for: callHash) == .synchronous || matching.contains(where: { !$0.isGeneric }) { rememberCall(callHash) }
+            else { rememberObserverCall(callHash) }
             requests.removeAll(where: matches)
             for request in matching { genericWaitEvidence.removeValue(forKey: request.key) }
             if source != .hook { settleSourceWait(for: matching) }
@@ -468,6 +475,20 @@ final class IslandLiveStore {
             let represented = Set(projection.requests.map(\.identity))
             let unknownPending = projection.authoritativePendingIdentities.subtracting(represented)
             reconcileObserverDesktopEvidence(projection, owner: owner, epoch: epoch, at: at)
+            let blocker = projection.requests.first {
+                $0.turnID == projection.currentTurnID && $0.userInputMode != .asynchronous
+                    && projection.authoritativePendingIdentities.contains($0.identity)
+            }
+            // Reobserving a real blocker is positive evidence in the new owner
+            // scope even before runtime flags catch up. An empty set cannot
+            // migrate an older owner's aggregate wait.
+            if let previous = desktopRuntimeWait, at >= previous.observedAt, let blocker,
+               projection.threadWaitStatus != .waiting(.approval),
+               projection.threadWaitStatus != .waiting(.userInput) {
+                desktopRuntimeWait = .init(reason: blocker.method == "item/tool/requestUserInput" ? .userInput : .approval,
+                    epoch: epoch, observedAt: at, source: .appServer, desktopOwner: owner)
+                return
+            }
             let currentScope = desktopRuntimeWait == nil || (desktopRuntimeWait?.desktopOwner == owner
                 && desktopRuntimeWait?.epoch == epoch)
             switch projection.threadWaitStatus {
@@ -654,6 +675,11 @@ final class IslandLiveStore {
             desktopRuntimeWait = nil; genericWaitEvidence.removeAll(); hookTools.removeAll(); hookToolsOverflowed = false
             hookHistoryFloor = .distantPast; uncertainHistoricalHookCalls.removeAll()
             completedHookTools.removeAll(); completedHookToolOrder.removeAll(); requestIndex = 0
+            retiredObserverCallHashes.removeAll()
+        }
+        private mutating func rememberObserverCall(_ hash: String) {
+            retiredObserverCallHashes.removeAll { $0 == hash }; retiredObserverCallHashes.append(hash)
+            if retiredObserverCallHashes.count > 256 { retiredObserverCallHashes.removeFirst() }
         }
         private mutating func rememberCall(_ hash: String) {
             resolvedCallHashes.removeAll { $0 == hash }; resolvedCallHashes.append(hash)
@@ -1136,7 +1162,9 @@ final class IslandLiveStore {
         }
         if let key, tasks[i].turnKey != nil, tasks[i].turnKey != key { return }
         if tasks[i].terminal && !active { return }
-        if let call = event.toolCallHash, tasks[i].resolvedCallHashes.contains(call), event.event == .permissionRequest { return }
+        if let call = event.toolCallHash, event.event == .permissionRequest,
+           tasks[i].resolvedCallHashes.contains(call)
+                || tasks[i].requestLifecycle.retiredObserverCallHashes.contains(call) { return }
         if [.preToolUse, .permissionRequest].contains(event.event) {
             tasks[i].requestLifecycle.observeMode(event.userInputMode, callHash: event.toolCallHash)
         }

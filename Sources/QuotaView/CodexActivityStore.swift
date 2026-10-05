@@ -740,7 +740,11 @@ final class CodexActivityStore: ObservableObject {
                 let waiting = CodexActivityEvent(event: .permissionRequest, sessionHash: session,
                     turnHash: turnHash, sessionKind: kind, source: .appServer,
                     waitReason: waitReason, toolName: question ? "request_user_input" : nil, occurredAt: now)
-                await receiveClassified(.init(source: .liveSocket, activity: waiting), generation: run, admissionAllowed: isCurrentReceipt)
+                // The Island receives this wait through the owner-scoped
+                // projection below. Forwarding a second legacy AppServer wait
+                // would lose its Desktop owner and strand its settlement.
+                await receiveClassified(.init(source: .liveSocket, activity: waiting), generation: run,
+                    admissionAllowed: isCurrentReceipt, forwardAdmittedActivity: false)
                 guard isCurrentReceipt() else { return false }
                 desktopWaitEvidence[session] = .init(identity: identity, epoch: epoch, reason: waitReason)
             }
@@ -1466,7 +1470,8 @@ final class CodexActivityStore: ObservableObject {
 
     func receiveClassified(_ delivery: CodexActivityDelivery, generation expected: UInt64? = nil,
                            selectionEvidenceAt: Date? = nil, admissionAllowed: (() -> Bool)? = nil,
-                           confirmedCurrentTurn: Bool = false, forceExecutionMetadataRead: Bool = false) async {
+                           confirmedCurrentTurn: Bool = false, forceExecutionMetadataRead: Bool = false,
+                           forwardAdmittedActivity: Bool = true) async {
         let run = expected ?? nativeGeneration
         let classifier = delivery.activity.source == .hook ? hookSessionClassifier : sessionClassifier
         let classification: CodexActivitySessionClassification
@@ -1506,7 +1511,8 @@ final class CodexActivityStore: ObservableObject {
         receive(CodexActivityDelivery(eventID: delivery.eventID, source: delivery.source,
                                       activity: activity),
                 selectionEvidenceAt: selectionEvidenceAt, confirmedCurrentTurn: confirmedCurrentTurn,
-                executionMemoryTurnHash: classification.executionTurnHash)
+                executionMemoryTurnHash: classification.executionTurnHash,
+                forwardAdmittedActivity: forwardAdmittedActivity)
         if let canonical, let turn = classification.executionTurnHash,
            let observation = hookExecutionObservations[.init(session: delivery.activity.sessionHash, turn: turn)],
            observation.terminal, observation.latest != delivery.activity,
@@ -1588,7 +1594,7 @@ final class CodexActivityStore: ObservableObject {
     }
 
     func receive(_ delivery: CodexActivityDelivery, selectionEvidenceAt: Date? = nil, confirmedCurrentTurn: Bool = false,
-                 executionMemoryTurnHash: String? = nil) {
+                 executionMemoryTurnHash: String? = nil, forwardAdmittedActivity: Bool = true) {
         let event = delivery.activity
         var knownGoalStatus = event.goalStatus
             ?? goalStatusBySession[event.sessionHash]
@@ -1667,7 +1673,7 @@ final class CodexActivityStore: ObservableObject {
             }
             flushLocalPublicContent(for: event.sessionHash)
         } else if resolvedKind == .user {
-            admittedActivityDidReceive?(event.classified(as: resolvedKind))
+            if forwardAdmittedActivity { admittedActivityDidReceive?(event.classified(as: resolvedKind)) }
             flushLocalPublicContent(for: event.sessionHash)
         }
         publishThreadMetadata(for: event.sessionHash)

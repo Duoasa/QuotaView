@@ -13,7 +13,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testForeignTerminalCannotOwnCurrentTask() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .stop, sessionHash: "background", turnHash: "other", source: .localRollout, turnCompletionStatus: .completed))
         XCTAssertEqual(s.snapshot?.sessionHash, "user")
         XCTAssertEqual(s.lifecycle, .active)
@@ -23,7 +23,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testLateOldTurnCannotCompleteNewTurn() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "old", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "old", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "new", source: .localRollout))
         s.receive(CodexActivityEvent(event: .stop, sessionHash: "user", turnHash: "old", source: .hook))
         XCTAssertEqual(s.lifecycle, .active)
@@ -34,7 +34,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testOldSessionEndCannotDisableCurrentPlayback() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .sessionEnd, sessionHash: "background", source: .hook))
         XCTAssertEqual(s.lifecycle, .active)
         XCTAssertTrue(s.shouldPlayVisualEffects)
@@ -44,7 +44,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testDuplicatedStartCannotEraseSameTurnPlan() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .preToolUse, sessionHash: "user", turnHash: "active", planProgress: .init(completedSteps: 2, inProgressSteps: 1, pendingSteps: 1), source: .localRollout, planSource: .localRollout))
         s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .hook))
         XCTAssertEqual(s.snapshot?.approximateProgressFraction, 0.525)
@@ -54,7 +54,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testUnscopedWaitingCannotReviveCompletedTurn() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .stop, sessionHash: "user", turnHash: "active", source: .localRollout, turnCompletionStatus: .completed))
         s.receive(CodexActivityEvent(event: .permissionRequest, sessionHash: "user", source: .appServer, waitReason: .approval))
         XCTAssertEqual(s.lifecycle, .completed)
@@ -65,7 +65,7 @@ final class CodexActivityOwnershipTests: XCTestCase {
     @MainActor
     func testGoalCompletionDoesNotCompleteRunningTurn() async {
         let s = store()
-        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", source: .localRollout))
+        s.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "user", turnHash: "active", sessionKind: .user, source: .localRollout))
         s.receive(CodexActivityEvent(event: .postToolUse, sessionHash: "user", toolCategory: .goal, source: .appServer, goalStatus: .complete))
         XCTAssertNotEqual(s.snapshot?.state, .completed)
         XCTAssertEqual(s.lifecycle, .active)

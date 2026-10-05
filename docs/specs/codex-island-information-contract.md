@@ -49,7 +49,7 @@ flowchart LR
 
 ## 观察等待与本地提醒退场 · 2026-10-05
 
-用户已授权修复系统文件访问提示后的残留等待与异步问题长期接管。0.7.5 / Build7 / 内部56源码已实现并本地交付；当前为Verifying，真实交互与视觉待用户验收。已运行Build6的证据不作为本次验证结果。
+用户已授权修复系统文件访问提示后的残留等待与异步问题长期接管。0.7.5 / Build7 / 内部56首次实现已本地交付；后续CI恢复修订尚未重新编译或安装，源码及合并检查见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)。当前为Verifying，真实交互与视觉待用户验收。已运行Build6的证据不作为本次验证结果。
 
 ### 等待证据与恢复
 
@@ -60,6 +60,8 @@ flowchart LR
 - 弱generic提醒允许仅在QuotaView本地隐藏；隐藏不调用响应路由、不发送答案或resolved，也不结算执行等待或owner请求。此本地操作独立于`canRespond`，只读或结果未知仍可交还Codex。
 - 每轮最多保存256个permission notice fingerprint；相同notice重播不重启已隐藏的弱提醒，容量满后也不以无法记录的新notice重新弹出。隐藏偏好不阻止后续真实owner RPC进入。
 - 原生同步问题RPC显式标记为synchronous，真实RPC准入不受观察call墓碑否决。工具开始、完成只撤回对应弱观察；真实RPC只能依赖精确native request settlement或同作用域完整owner账本结算，不能把同call工具事件当作原生RPC已回答。
+- Desktop合成PermissionRequest只更新Store活动，不再经legacy回调向Island生成丢失owner的AppServer等待；Island的Desktop等待仅来自已准入owner projection。Shared AppServer来源等待保持独立。正向重观察真实blocker可迁移runtime等待到新owner；空集合无法迁移旧owner等待。
+- 精确同来源call恢复或可信同call结果为已观察的弱提醒留下独立、有界256项退场记录；无明确来源不提供结算证明。弱退场记录不等于已回答，不拒绝后来出现的真实异步题或RPC。Local/Hook mode也不能把真实同步问题RPC降级为非阻塞。
 
 ### 原生异步问题的本地展示期限
 
@@ -75,9 +77,9 @@ flowchart LR
 
 退场按thread、turn与原生`questionItemId`组成的哈希持久记录，最多4096项；不保存题目、草稿或答案。已退场的同作用域问题在重复快照、重连和应用重启后不重新接管；用户后来在Codex补答仍只更新真实结算证据。账本有界，不承诺无限历史身份永久去重。同步RPC、未知pending及非问题等待不进入异步展示计时器。
 
-本轮已完成对应源码与静态通道审查，未新增或运行测试。首轮Universal Distribution构建因两处`source` optional API适配编译错误失败，原日志保留于`.build/075-confirmation-lifecycle-20261005/build7-distribution-build-first-failure.log`；修正后第二次Universal构建成功。正式本地包已运行：App PID62058、Widget PID62064，版本0.7.5 / Build7 / 内部56。190项生产输入与4项安装二进制哈希一致，App/Widget/Core/Hook均含arm64+x86_64；同Developer ID Team的deep strict签名核对通过。App/Widget entitlements及NS权限声明与旧包严格相同；实际exe、Core加载、活动socket、启动后Hook ACK与Local生命周期准入均核对通过。没有新增公证或公开发布，Stable/appcast仍为Build3。
+首次本地交付已完成对应源码与静态通道审查，未新增或运行本地测试；后续GitHub自动CI及恢复记录见Handoff。首轮Universal Distribution构建因两处`source` optional API适配编译错误失败，原日志保留于`.build/075-confirmation-lifecycle-20261005/build7-distribution-build-first-failure.log`；修正后第二次Universal构建成功。正式本地包已运行：App PID62058、Widget PID62064，版本0.7.5 / Build7 / 内部56。190项生产输入与4项安装二进制哈希一致，App/Widget/Core/Hook均含arm64+x86_64；同Developer ID Team的deep strict签名核对通过。App/Widget entitlements及NS权限声明与旧包严格相同；实际exe、Core加载、活动socket、启动后Hook ACK与Local生命周期准入均核对通过。没有新增公证或公开发布，Stable/appcast仍为Build3。
 
-本轮交付证据位于`.build/075-confirmation-lifecycle-20261005/runtime/`：`build7-preflight.json`、`build7-delivery.json`、`build7-installed-verification.json`、`build7-live-channel-verification.json`、`build7-live-loaded-paths.log`及`build7-live-channel.log`。旧包保留于`.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。用户已授权后续源码推送与CI通过后的main集成，其结果另行核验；本次不发布Release/appcast。原生minimize精确同步、原生问题组关闭、视觉和真实交互仍未记录为完成，最终状态随[Handoff](../../HANDOFF.md)中的本轮证据更新。
+本轮交付证据位于`.build/075-confirmation-lifecycle-20261005/runtime/`：`build7-preflight.json`、`build7-delivery.json`、`build7-installed-verification.json`、`build7-live-channel-verification.json`、`build7-live-loaded-paths.log`及`build7-live-channel.log`。旧包保留于`.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。用户已授权源码推送与CI通过后的main集成，对应提交和结果见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)；后续CI源码修订未重新编译或安装，上述190项输入及包证据属于首次本地交付；本次不发布Release/appcast。原生minimize精确同步、原生问题组关闭、视觉和真实交互仍未记录为完成，最终状态随[Handoff](../../HANDOFF.md)中的本轮证据更新。
 
 ## 同步、预算与恢复
 
