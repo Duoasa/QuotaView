@@ -30,10 +30,10 @@ final class CodexEphemeralMemorySmokeTests: XCTestCase {
         try sql(root, "INSERT INTO logs(ts,ts_nanos,target,module_path,file,thread_id,feedback_log_body) VALUES(\(Int((timestamp ?? now).timeIntervalSince1970)),0,\(q(target)),'codex_core::session::handlers','core/src/session/handlers.rs',\(q(thread)),\(q(text)));" )
     }
     private func hook(_ type: CodexActivityHookEvent = .preToolUse, turn: String? = "turn",
-                      occurredAt: Date = Date()) -> CodexActivityEvent {
-        .init(event: type, sessionHash: CodexActivityPrivacy.hashIdentifier("memory"),
+                      occurredAt: Date = Date(), session: String = "memory") -> CodexActivityEvent {
+        .init(event: type, sessionHash: CodexActivityPrivacy.hashIdentifier(session),
               turnHash: turn.map(CodexActivityPrivacy.hashIdentifier), workspaceName: "memories_v2",
-              source: .hook, occurredAt: occurredAt)
+              sessionKind: .user, source: .hook, occurredAt: occurredAt)
     }
 
     func testExactStartMetadataClassifiesEphemeralHookWithoutAThreadOrRollout() async throws {
@@ -48,6 +48,275 @@ final class CodexEphemeralMemorySmokeTests: XCTestCase {
         XCTAssertNil(next.executionTurnHash)
         let unbound = await classifier.classification(for: hook(turn: nil))
         XCTAssertEqual(unbound.kind, .unknown)
+    }
+
+    func testHookHostAliasBindsOnlyTheExactNativeMemoryTurn() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let classifier = CodexActivitySessionClassifier(codexHome: root)
+        let incoming = hook(session: "host")
+        let proof = await classifier.classification(for: incoming)
+        XCTAssertEqual(proof.kind, .memoryConsolidation)
+        XCTAssertEqual(proof.executionSessionHash, hook().sessionHash)
+        XCTAssertEqual(proof.executionTurnHash, incoming.turnHash)
+        let next = await classifier.classification(for: hook(turn: "different", session: "host"))
+        XCTAssertEqual(next.kind, .unknown, "The host alias must not acquire a permanent memory origin")
+        let native = await classifier.classification(for: incoming.classified(as: .user))
+        XCTAssertEqual(native.kind, .memoryConsolidation)
+        let nonHook = CodexActivityEvent(event: .preToolUse, sessionHash: incoming.sessionHash,
+            turnHash: incoming.turnHash, sessionKind: .user, source: .appServer)
+        let rejected = await classifier.classification(for: nonHook)
+        XCTAssertEqual(rejected.kind, .user)
+        XCTAssertNil(rejected.executionSessionHash)
+    }
+
+    func testAmbiguousNativeMemoryTurnCannotRewriteAHookHost() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root); try insert(root, thread: "other-memory")
+        let classifier = CodexActivitySessionClassifier(codexHome: root)
+        let result = await classifier.classification(for: hook(session: "host"))
+        XCTAssertEqual(result.kind, .unknown)
+        XCTAssertNil(result.executionSessionHash)
+    }
+
+    @MainActor
+    func testLateMemoryIdentityPreservesSessionEndCleanup() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        for (offset, event) in [CodexActivityHookEvent.userPromptSubmit, .stop, .sessionEnd].enumerated() {
+            await store.receiveClassified(.init(source: .liveSocket,
+                activity: hook(event, occurredAt: now.addingTimeInterval(Double(offset)), session: "host")))
+        }
+        try insert(root)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash,
+                sessionKind: .memoryConsolidation, executionTurnHash: hook().turnHash)), replay: false)
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.stop()
+    }
+
+    @MainActor
+    func testTerminalBeforeStartCannotReviveMemoryAsThinking() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        await store.receiveClassified(.init(eventID: "stop", source: .liveSocket,
+            activity: hook(.stop, occurredAt: now.addingTimeInterval(2), session: "host")))
+        await store.receiveClassified(.init(eventID: "late-start", source: .liveSocket,
+            activity: hook(.userPromptSubmit, occurredAt: now.addingTimeInterval(1), session: "host")))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .completed)
+        await store.stop()
+    }
+
+    @MainActor
+    func testSparseUnknownHookStillUpdatesAVerifiedUserExecution() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let model = IslandLiveStore()
+        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        store.receive(hook(.userPromptSubmit, occurredAt: now, session: "host"))
+        await store.receiveClassified(.init(source: .liveSocket,
+            activity: hook(.preToolUse, occurredAt: now.addingTimeInterval(1), session: "host")))
+        XCTAssertEqual(model.tasks.count, 1)
+        XCTAssertEqual(model.tasks.first?.status, .working)
+        XCTAssertEqual(store.snapshot?.state, .working)
+        await store.stop()
+    }
+
+    @MainActor
+    func testDuplicateHookIDCannotRecreateAnEvictedCanonicalMemoryTurn() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let start = hook(.userPromptSubmit, session: "host")
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket, activity: start))
+        await store.receiveClassified(.init(eventID: "stop", source: .liveSocket,
+            activity: hook(.stop, occurredAt: start.occurredAt.addingTimeInterval(1), session: "host")))
+        for number in 0..<129 {
+            store.receive(.init(event: .userPromptSubmit, sessionHash: "user-\(number)",
+                turnHash: "turn-\(number)", sessionKind: .user, source: .appServer,
+                occurredAt: start.occurredAt.addingTimeInterval(2 + Double(number))))
+        }
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket, activity: start))
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.stop()
+    }
+
+    @MainActor
+    func testMetadataAndNonPositiveHookCannotRecreateAnEvictedBoundMemoryExecution() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let start = hook(.userPromptSubmit, occurredAt: now, session: "host")
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket, activity: start))
+        await store.receiveClassified(.init(eventID: "stop", source: .liveSocket,
+            activity: hook(.stop, occurredAt: now.addingTimeInterval(1), session: "host")))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .completed)
+        for number in 0..<129 {
+            store.receive(.init(event: .userPromptSubmit, sessionHash: "user-\(number)",
+                turnHash: "turn-\(number)", sessionKind: .user, source: .appServer,
+                occurredAt: now.addingTimeInterval(2 + Double(number))))
+        }
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash,
+                sessionKind: .memoryConsolidation, executionTurnHash: hook().turnHash)), replay: false)
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty, "Metadata cannot replay an already bound start")
+        await store.receiveClassified(.init(eventID: "late-tool-output", source: .liveSocket,
+            activity: hook(.postToolUse, occurredAt: now.addingTimeInterval(1), session: "host")))
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty, "A tool result cannot replay an evicted start")
+        await store.receiveClassified(.init(eventID: "late-start-copy", source: .liveSocket, activity: start))
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty, "A new delivery ID cannot restore an ended turn")
+        await store.stop()
+    }
+
+    @MainActor
+    func testEvictedActiveMemoryRequiresNewPositiveHookWithoutReplayingItsOldStart() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket,
+            activity: hook(.userPromptSubmit, occurredAt: now, session: "host")))
+        for number in 0..<129 {
+            store.receive(.init(event: .userPromptSubmit, sessionHash: "user-\(number)",
+                turnHash: "turn-\(number)", sessionKind: .user, source: .appServer,
+                occurredAt: now.addingTimeInterval(2 + Double(number))))
+        }
+        let parent = store.snapshot
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash,
+                sessionKind: .memoryConsolidation, executionTurnHash: hook().turnHash)), replay: false)
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        let freshClock = now.addingTimeInterval(200)
+        await store.receiveClassified(.init(eventID: "fresh-positive", source: .liveSocket,
+            activity: hook(.preToolUse, occurredAt: freshClock, session: "host")))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .working)
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.occurredAt, freshClock)
+        XCTAssertEqual(store.snapshot, parent)
+        await store.stop()
+    }
+
+    @MainActor
+    func testRejectedWeakHookStopCannotPreventAnEvictedActiveMemoryFromRecovering() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root)
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        store.receive(.init(event: .userPromptSubmit, sessionHash: hook().sessionHash,
+            turnHash: hook().turnHash, sessionKind: .memoryConsolidation, source: .localRollout, occurredAt: now))
+        await store.receiveClassified(.init(eventID: "bind", source: .liveSocket,
+            activity: hook(.preToolUse, occurredAt: now.addingTimeInterval(1), session: "host")))
+        await store.receiveClassified(.init(eventID: "weak-stop", source: .liveSocket,
+            activity: hook(.stop, occurredAt: now.addingTimeInterval(2), session: "host")))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .working)
+        for number in 0..<129 {
+            store.receive(.init(event: .userPromptSubmit, sessionHash: "user-\(number)",
+                turnHash: "turn-\(number)", sessionKind: .user, source: .appServer,
+                occurredAt: now.addingTimeInterval(3 + Double(number))))
+        }
+        let parent = store.snapshot
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        let freshClock = now.addingTimeInterval(200)
+        await store.receiveClassified(.init(eventID: "fresh", source: .liveSocket,
+            activity: hook(.preToolUse, occurredAt: freshClock, session: "host")))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .working)
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.occurredAt, freshClock)
+        XCTAssertEqual(store.snapshot, parent)
+        await store.stop()
+    }
+
+    @MainActor
+    func testSharedHostMemoryTurnsUseTheirOwnThreadsAndPreserveParent() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try insert(root); try insert(root, thread: "other-memory", turn: "other-turn")
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let model = IslandLiveStore()
+        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        store.hookExecutionDidRebind = { model.withdrawHookExecution(session: $0, turn: $1) }
+        let parent = CodexActivityEvent(event: .userPromptSubmit, sessionHash: hook(session: "host").sessionHash,
+            turnHash: CodexActivityPrivacy.hashIdentifier("parent-turn"), workspaceName: "Normal task",
+            sessionKind: .user, source: .appServer, occurredAt: now)
+        store.receive(parent)
+        let parentSnapshot = store.snapshot
+        await store.receiveClassified(.init(source: .liveSocket, activity: hook(.userPromptSubmit, session: "host")))
+        await store.receiveClassified(.init(source: .liveSocket,
+            activity: hook(.preToolUse, turn: "other-turn", session: "host")))
+        XCTAssertEqual(store.snapshot, parentSnapshot)
+        XCTAssertEqual(model.tasks.count, 1)
+        XCTAssertEqual(model.tasks.first?.turnKey, parent.turnHash)
+        XCTAssertEqual(Set(store.backgroundMemorySnapshots.map(\.sessionHash)),
+            [hook().sessionHash, CodexActivityPrivacy.hashIdentifier("other-memory")])
+        await store.stop()
+    }
+
+    @MainActor
+    func testLateIdentityMovesRealCompletedHookObservationAndWithdrawsOnlyItsTurn() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let model = IslandLiveStore()
+        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        store.hookExecutionDidRebind = { model.withdrawHookExecution(session: $0, turn: $1) }
+        let start = hook(.userPromptSubmit, occurredAt: now, session: "host")
+        let stop = hook(.stop, occurredAt: now.addingTimeInterval(1), session: "host")
+        // Simulate the retained pre-fix card independently of the new ingress.
+        model.receiveLegacy(start)
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket, activity: start))
+        await store.receiveClassified(.init(eventID: "stop", source: .liveSocket, activity: stop))
+        XCTAssertNil(store.snapshot)
+        try insert(root)
+        let identity = CodexLocalRolloutThreadIdentity(threadID: "memory", sessionHash: hook().sessionHash,
+            sessionKind: .memoryConsolidation, executionTurnHash: start.turnHash)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata, threadIdentity: identity), replay: false)
+        XCTAssertTrue(model.tasks.isEmpty)
+        XCTAssertEqual(store.backgroundMemorySnapshots.count, 1)
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .completed)
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.occurredAt, stop.occurredAt)
+        await store.receiveClassified(.init(eventID: "start", source: .liveSocket, activity: start))
+        XCTAssertEqual(store.backgroundMemorySnapshots.first?.state, .completed, "External duplicate cannot revive a migrated terminal turn")
+        await store.stop()
+    }
+
+    @MainActor
+    func testLateMemoryIdentityCannotWithdrawANewerParentTurn() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let model = IslandLiveStore()
+        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        store.hookExecutionDidRebind = { model.withdrawHookExecution(session: $0, turn: $1) }
+        await store.receiveClassified(.init(source: .liveSocket, activity: hook(.userPromptSubmit, session: "host")))
+        let parent = CodexActivityEvent(event: .userPromptSubmit, sessionHash: hook(session: "host").sessionHash,
+            turnHash: CodexActivityPrivacy.hashIdentifier("parent-turn"), sessionKind: .user,
+            source: .appServer, occurredAt: now.addingTimeInterval(2))
+        store.receive(parent)
+        let before = store.snapshot
+        try insert(root)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash,
+                sessionKind: .memoryConsolidation, executionTurnHash: hook().turnHash)), replay: false)
+        XCTAssertEqual(store.snapshot, before)
+        XCTAssertEqual(model.tasks.count, 1)
+        XCTAssertEqual(model.tasks.first?.turnKey, parent.turnHash)
+        XCTAssertEqual(store.backgroundMemorySnapshots.count, 1)
+        await store.stop()
+    }
+
+    @MainActor
+    func testUnknownHookHasNoUserProjectionAndTerminalOnlyProofCreatesNoMemoryExecution() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let store = CodexActivityStore(titleClient: .init(executablePath: nil), sessionDirectory: root)
+        let model = IslandLiveStore()
+        store.admittedActivityDidReceive = { model.receiveLegacy($0) }
+        await store.receiveClassified(.init(source: .liveSocket, activity: hook(.preToolUse, turn: "unknown", session: "host")))
+        XCTAssertTrue(model.tasks.isEmpty)
+        XCTAssertNil(store.snapshot)
+        await store.receiveClassified(.init(source: .liveSocket, activity: hook(.stop, session: "host")))
+        try insert(root)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash,
+                sessionKind: .memoryConsolidation, executionTurnHash: hook().turnHash)), replay: false)
+        XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
+        await store.stop()
     }
 
     func testQuotedPromptCannotForgeMemoryTrigger() {
@@ -179,6 +448,8 @@ final class CodexEphemeralMemorySmokeTests: XCTestCase {
         XCTAssertNil(store.snapshot)
         await store.receiveClassified(.init(source: .liveSocket, activity: hook(.preToolUse)))
         XCTAssertEqual(store.backgroundMemorySnapshots.count, 1)
+        await store.receiveLocalRecord(.init(eventID: nil, update: .sessionMetadata,
+            threadIdentity: .init(threadID: "memory", sessionHash: hook().sessionHash, sessionKind: .user)), replay: false)
         await store.receiveClassified(.init(source: .liveSocket, activity: hook(.userPromptSubmit, turn: "next")))
         XCTAssertTrue(store.backgroundMemorySnapshots.isEmpty)
         XCTAssertEqual(store.snapshot?.taskIdentity?.turnHash, hook(turn: "next").turnHash)

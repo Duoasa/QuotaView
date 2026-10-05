@@ -192,8 +192,8 @@ public extension CodexActivityEvent {
     var userInputMode: CodexUserInputMode? { CodexUserInputMode.forToolName(toolName) }
     var effectiveWaitReason: CodexActivityWaitReason? { userInputMode == nil ? waitReason : .userInput }
 
-    func classified(as kind: CodexActivitySessionKind) -> Self {
-        Self(schemaVersion: schemaVersion, event: event, sessionHash: sessionHash,
+    func classified(as kind: CodexActivitySessionKind, sessionHash canonicalSession: String? = nil) -> Self {
+        Self(schemaVersion: schemaVersion, event: event, sessionHash: canonicalSession ?? sessionHash,
              turnHash: turnHash, workspaceName: workspaceName, toolCategory: toolCategory,
              sessionStartSource: sessionStartSource, planProgress: planProgress,
              sessionKind: kind, source: source, planSource: planSource,

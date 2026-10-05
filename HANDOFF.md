@@ -2,6 +2,76 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
+## 0.7.5 Build7 等待回收与异步提醒退场 · 2026-10-05 本地交付，main集成进行中
+
+用户已授权修复系统授权后过期待确认、异步问题无人接管后长期停留两条状态链，并沿用本地替换授权。源码配置与正式本地安装均为 **0.7.5 / 显示Build7 / 内部56**。
+
+匿名观察按独立证据保存。Hook只在明确来源、同轮精确call或发生时唯一活跃的同工具关联后回收弱等待；历史记录有界修剪并保留时间覆盖边界，迟到或并发歧义不作唯一推断。完整当前owner pending正向证据可聚合绑定同类全部阻塞身份，后续仅同owner/epoch新权威集合与真实恢复结算；未知pending、强source/runtime和其他并发请求保留。Native同步问题明确标记为阻塞RPC，精确RPC身份不受弱call墓碑否决。重复权限notice不重启用户已隐藏的弱提醒。无call、无唯一Hook关联和无原生正向证据的匿名等待仍无法自动判定，提供仅本地“隐藏此提醒”；此操作不结算执行等待，不分类TCC或代替系统授权。
+
+异步问题首次有效观察后采用QuotaView本地30秒展示期限，重复快照不重置；实际草稿变更后保留，提交中不退场，已发送/结果未知保留3秒后交回Codex。退场按线程、轮次和问题身份哈希持久记录，最多4096项，重连/重启不重新接管同一问题；不记录答案、不重发响应或伪造resolved。当前IPC没有renderer缩略信号，此策略不能证明原生已缩略，原生问题组关闭仍未实现。详细合同见[信息契约](docs/specs/codex-island-information-contract.md)与[原生问题边界](docs/design/codex-native-question-closure-contract-2026-10-03.md)。
+
+源码交叉审查和最终Distribution Universal Release构建通过。首轮因两个optional event.source参数未兼容而编译失败，修正后第二轮通过，保留first-failure日志。本轮未新增或执行本地测试、未做UI自动化，视觉与真实交互由用户验收；此前记忆修复124条冒烟是原阶段证据。190项生产输入与4个安装二进制哈希一致，App/Core/Hook/Widget均arm64+x86_64。保持现有Developer ID / Team BUUH229D5Q，逐层timestamp/hardened runtime与deep strict核验通过，App/Widget旧新entitlements及NS权限声明严格一致，正式身份/AppGroup/Feed/公钥和固定默认开发身份保持。
+
+`/Applications/QuotaView.app` 已运行新主 **PID62058**、Widget **PID62064**，旧91483/91523退出。实际主程序/Core加载、活动socket与启动后真实Hook ACK、Local活动准入已核对。完整Build6旧包备份 `.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app`。证据 `.build/075-confirmation-lifecycle-20261005/` 下的 `build7-distribution-build.log`、`build7-distribution-build-first-failure.log` 及 `runtime/build7-preflight.json`、`build7-delivery.json`、`build7-signing.log`、`build7-installed-verification.json`、`build7-live-channel-verification.json`、`build7-live-loaded-paths.log`、`build7-live-channel.log`。运行核对脚本初次误用临时诊断目录作socket路径，已按实际Application Support路径纠正；首次检查JSON保留，未将其作为通过证据。
+
+用户随后授权本轮源码推送GitHub并合并main，目前准备PR与CI。未授权本版本Release/appcast，公开稳定仍为0.7.5 Build3/内部52；未新公证。用户同时修订后续流程：常规开发使用固定开发工作区和开发版，默认源码迭代与轻量检查，不自动重复正式构建、打包、签名或安装替换；确定发布版本后再走完整产物链。当前Build7上述签名替换发生在此流程修订之前，后续不重复；新Swift源码未经增量编译不能被声明为已运行效果。具体规则见[验证规则](docs/workflow/VALIDATION.md)与[发布规则](docs/workflow/RELEASE.md)。
+
+## 0.7.5 Build6 待机百分比与纯色描边 · 2026-10-05 上轮交付
+
+用户修订待机用量为“仅显示百分比”，描边改为更淡的纯色。收起态左侧现在只显示真实剩余百分比，未知为“—”，不显示用量环或倒计时；help与辅助标签同步。“就绪”、会话数、两种刘海布局及摄像头安全区保持；展开栏仍显示完整用量，两处百分比共用0–100范围格式。
+
+主卡、子agent背板和审批头卡共用1pt不透明sRGB描边：普通 **#181818**，选中/hover **#202020**，alpha固定1，不使用白色透明度叠加。背景fill与完成态原纯色绿色/高光保持。规则同步至[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md)、[信息契约](docs/specs/codex-island-information-contract.md)及[界面规范](docs/design/QUOTAVIEW_UI_RULES.md)。只读交叉审查通过，本轮未新增或执行测试，没有UI自动化或截图；视觉由用户验收。
+
+源码配置及本地正式安装均为 **0.7.5 / 显示Build6 / 内部55**。Distribution Universal Release构建通过；190项生产输入和四个安装二进制哈希一致，App/Core/Hook/Widget均arm64+x86_64，App/Widget版本一致。同Developer ID / Team `BUUH229D5Q`逐层timestamp及hardened runtime签名、deep strict核验通过。正式身份、AppGroup、Feed/公钥及默认开发身份 `com.quotaview.development073` 保持。
+
+已按同范围持续授权替换 `/Applications/QuotaView.app`，新主 **PID91483**、Widget **PID91523** 存活，旧72096/72102退出。实际主程序/Core加载、活动socket归属及启动后真实Hook ACK/Local准入已核对。完整Build5旧包备份 `.build/runtime-package-backups/standby-build6-20261005T120100Z/QuotaView.app`，以前的Build4/Build3备份保留。
+
+证据 `.build/075-standby-solid-border-20261005/` 的 `build6-distribution-build.log` 与 `runtime/build6-preflight.json`、`build6-delivery.json`、`build6-signing.log`、`build6-installed-verification.json`、`build6-live-channel-verification.json`、`build6-live-loaded-paths.log`、`build6-live-channel.log`。产物路径沿用 `.build/Distribution075MemoryBuild4/`，以包内版本和输入清单定位。本轮仅本地交付，未新公证、提交/推送/公开发布或更新appcast；公开稳定仍为0.7.5 Build3/内部52。上轮记忆124条冒烟的结果没有作为本轮重复执行证据。
+
+## 系统授权后的待确认卡住 · 2026-10-05 修复前只读诊断
+
+用户转述他人Codex出现macOS级文件访问授权后，灵动岛一直待确认；用户进一步确认Codex已继续、只有灵动岛卡住，属于过期观察等待。截图是无详情、仅查看的通用观察占位，并非已经识别macOS TCC。Hook PermissionRequest、App Server等待flags或Desktop runtime等待均可能产生该占位，当前sanitizer没有系统授权域/请求类型，未获得对方该turn的事件证据，不能确认具体入口。
+
+已证实代码缺口：没有callHash的Hook等待写入 `unidentifiedWait`（IslandLiveStore:95）；该证据优先覆盖working/thinking（425）。Pre/PostToolUse只清匹配call的等待（214–237），迟到原生请求的绑定函数仅处理sourceWait而未迁移unidentifiedWait（379），因此真实请求完成后仍可能报告stillWaiting；Store拒绝解除（CodexActivityStore:819）。当前已有同turn权威空pending集合加明确runtime running、active flags恢复及真实终态的安全清理；缺字段/未知flag不能当作已恢复（CodexDesktopRequestProjection:71、182）。没有复现对方原始事件，也没有执行测试。
+
+当时待用户选择的方向：优先完善匿名等待与后续真实请求的有界、精确关联和恢复证明；真实RPC与未知pending保持独立，不靠超时或任意并发工具活动统一清等待。可同时将无法操作的观察提示分级并提供仅本地隐藏；另一方向是只过滤明确系统请求，但需先获得可靠来源标记，不能以“无详情”代替系统分类。macOS文件权限仍由系统向用户取同意，QuotaView不会申请辅助功能、屏幕录制或全盘权限，也不代替用户授权。此次历史阶段仅诊断与方案，Build6只包含前述UI修订；用户后续已授权修复，见顶部Build7记录。
+
+## 0.7.5 Build5 待机用量与卡片描边 · 2026-10-05 上轮交付
+
+用户要求待机时“已连接”改为“就绪”，左侧AI球改为展开栏用量，并同时淡化选中与未选中卡片描边。收起状态在没有可聚焦用户任务时复用展开栏的用量环、剩余比例及重置倒计时；无物理刘海时“就绪”居中，有物理刘海时左翼显示用量，右翼显示“就绪”和会话数，保持摄像头区域留空。文案仅在实际连接且用户列表为空时为“就绪 / Ready”；离线等待与真实任务状态沿用原语义，后台记忆继续使用独立底栏AI球。
+
+主卡、子agent背板和审批头卡共用 `IslandTaskCardAppearance`：普通白色描边由0.16降至 **0.08**，选中/hover由0.22降至 **0.12**，线宽仍为1pt。整个堆叠组同步hover，背景、完成态绿色与完成高光保持。最新显示规则见[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md)和[信息契约](docs/specs/codex-island-information-contract.md)。
+
+源码配置及本地正式安装均已递增为 **0.7.5 / 显示Build5 / 内部54**。Distribution Universal Release构建通过，190项生产输入核对一致；App/Core/Hook helper/Widget均含arm64+x86_64，App/Widget版本一致。使用同一Developer ID / Team `BUUH229D5Q`，逐层timestamp与hardened runtime签名、deep strict核验通过，正式bundle ID、AppGroup、Feed及公钥保持。默认开发身份仍为 `com.quotaview.development073`。本轮没有新增或执行测试；上轮记忆修复的124条冒烟属于其原交付证据。
+
+已按持续有效的本地替换授权更新 `/Applications/QuotaView.app`，新主 **PID72096**、Widget **PID72102** 存活，旧46174/46182已退出。四个安装二进制哈希、实际主程序/Core加载、活动socket归属、启动后真实Hook ACK与Local生命周期准入均已核对。完整Build4旧包备份 `.build/runtime-package-backups/standby-build5-20261005T114428Z/QuotaView.app`；Build3备份继续保留。
+
+证据目录 `.build/075-standby-card-style-20261005/`：`build5-distribution-build.log` 及 `runtime/build5-preflight.json`、`build5-delivery.json`、`build5-signing.log`、`build5-installed-verification.json`、`build5-live-channel-verification.json`、`build5-live-loaded-paths.log`、`build5-live-channel.log`。构建产物目录沿用 `.build/Distribution075MemoryBuild4/`，以包内版本和此次输入清单定位。本轮仅本地交付，未新公证、未提交/推送/公开发布或更新appcast，公开稳定版仍为0.7.5 Build3/内部52；视觉与真实交互由用户验收。
+
+## 0.7.5 Build4 记忆身份修复本地运行 · 2026-10-05 上轮交付
+
+用户已明确授权“替换新的构建”，现已替换 `/Applications/QuotaView.app` 并启动 **0.7.5 / 显示Build4 / 内部53**。按发布规则为新迭代递增 Build，仅调整 `Configs/App.xcconfig`、`Configs/Widget.xcconfig` 和 `Support/Info.plist` 的版本配置；应用逻辑与下方已通过124条冒烟的Build3候选逐项一致，本次版本递增没有重新宣称执行该124条检查。
+
+Distribution 配置的 Universal Release 构建通过，产物位于 `.build/Distribution075MemoryBuild4/Build/Products/Release/QuotaView.app`，190项生产输入核对一致。App/Core/Hook helper/Widget均含arm64+x86_64；App/Widget均为0.7.5/Build4/内部53。使用与旧正式安装一致的 Developer ID / Team `BUUH229D5Q`，逐层签名带timestamp及hardened runtime，deep strict验证通过。正式bundle ID、AppGroup、Feed和公钥保持，默认开发身份仍为 `com.quotaview.development073`；本轮没有操作正式账户数据。
+
+新主进程 **PID46174**、Widget **PID46182**；旧主PID47451和Widget PID35451已退出。实际加载Core的哈希已核对，新运行包包含本轮记忆身份分流修复，继续使用既有底栏AI球。新PID持有活动socket，启动后的真实Hook socket ACK与Local活动准入均已核对；运行与构建结果不代替视觉和真实交互验收。
+
+完整旧包保存在 `.build/runtime-package-backups/memory-build4-20261005T111719Z/QuotaView.app`。交付证据：`.build/075-memory-hook-identity-20261005/runtime/build4-delivery.json`、`build4-preflight.json`、`build4-signing.log`、`build4-installed-verification.json`、`build4-live-channel-verification.json`、`build4-live-loaded-paths.log`、`build4-live-channel.log`，及父目录 `build4-distribution-build.log`。本次签名用于授权的本地替换；未新公证、未提交/推送/发布、未更新appcast，公开稳定版仍为 **0.7.5 Build3 / 内部52**。视觉与真实交互由用户验收；下方Build3隔离验证与旧PID记录属于此前阶段。
+
+## 0.7.5 记忆任务身份修复与Build3隔离验证 · 2026-10-05 上一阶段
+
+用户提供的截图中 `memories` 与 `memories_v2` 再次进入普通会话列表。本轮从两个任务的原生来源追查：两个临时线程不在 `state_5.sqlite`，但 `logs_2.sqlite` 的原生 `codex_core::session::handlers` Submission start 均明确包含 `turn_trigger: memory_consolidation`。本次真实解析与读取服务四次均识别两个准确轮次，耗时10.87/10.17/9.58/11.73 ms；格式变化与读取预算不是这次漏分流的原因。
+
+根因是旧分类链要求 Hook `session_id` 哈希等于原生线程哈希。现场后一记忆轮次的 Hook session 为 `985c838a42ec`，原生线程为 `5f72dc66e4b0`，两者 turn 均为 `78c2e8dfbec4`；前一原生记忆线程/轮次为 `bd77683695db` / `18cdd6bea903`，其 Hook 原始观测未保留。官方 [Hook 定义](https://learn.chatgpt.com/docs/hooks)说明子 agent Hook 可能使用父会话 `session_id`，因此不能把该字段当作原生线程 ID。未匹配事件维持 unknown 后，旧单任务回调又将其接纳到普通列表。此前检查覆盖了相同 session/thread 的夹具，没有覆盖本次真实身份差异，不能据此宣称分类全链已解决。
+
+候选修复仅对 Hook 使用独一、精确的原生记忆 turn 证明，将执行归到原生线程；不永久修改 Hook 宿主的来源。Store 有界保留真实 Hook 开始与终态，身份迟到时迁移原轮次，只撤回别名下同一 turn 的普通卡片，保留并行父会话及其元数据。unknown 不进入普通投影或用户统计；记忆继续复用既有底栏 AI 球。重复事件、终态先到、SessionEnd、旧轮次和多线程冲突不得复活执行，不按名称/目录过滤。
+
+**124条相关冒烟零失败，Universal Release 无签名构建通过。** App、Core、Hook helper和Widget均含arm64+x86_64；App/Widget均为0.7.5/显示Build3/内部52，图标和Assets.car齐全。初次31条核心冒烟通过；扩大122条首轮有5个用例/10个断言失败，其中4个用例是旧user夹具/unknown展示预期，1个是确实存在的非正向Hook逐出复活。修复并新增已接受结算与弱来源拒绝的反例后，最终124条通过，首轮日志保留。终态墓碑只由Registry真正接受的结算建立，拒绝的弱Hook stop不能阻止仍活跃执行重新准入。
+
+源码已从隔离候选写回当前开发工作区，配置身份保持；生产输入逐项核对一致，交付清单为 `.build/075-memory-hook-identity-20261005/delivery-manifest.json`。原始来源/首轮失败/最终冒烟/构建证据及无签名开发候选保存在该忽略目录。最终日志为 `related-smoke-final-3.log`、`universal-build-final-2.log`、`artifact-verification.json`；只读来源复验为 `native-source-probe.log`。实际构建Core对真实原生记忆记录加合成Hook宿主别名精确绑定两轮，且其他轮次/非Hook不被改写，见 `built-core-probe.json`；现场仅保留Hook ID前缀，未声称完整重放实际Hook输入。该隔离验证阶段尚未替换运行包；后续Build4本地运行交付见上方Build4历史节。
+
+Build3隔离验证阶段的现场只读核对：运行的是 `/Applications/QuotaView.app`，`com.quotaview.menubar`，0.7.5 / 内部52，PID47451；当时未发现运行中的开发包，也未替换安装。该阶段源码配置为 **0.7.5 / 显示Build3 / 内部52**，固定开发身份为 `com.quotaview.development073`；随后用户授权的Build4本地替换与递增版本记录在上方Build4历史节；当前Build6交付见顶部。本轮修复仍未提交、推送或发布。相关目标与证据见[记忆规格](docs/design/quotaview-background-memory-2026-10-03.md)和[信息契约](docs/specs/codex-island-information-contract.md)。下方PID、构建和“当前”表述均为发生时点的历史交付记录。
+
 ## 0.7.5 Build3 正式发行 · 2026-10-04 已完成
 
 用户已审核文案并明确批准本次 GitHub / main / appcast 发布。**0.7.5 Build3 / 内部52** 已通过 [PR #75](https://github.com/Duoasa/QuotaView/pull/75) 合并 main，并发布为 [GitHub 最新稳定版](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；Stable appcast 已上线。PR/main CI 各663项、6跳过、0失败，正式签名、公证/Staple、Gatekeeper、解压启动、公开回下载和旧版公钥验签通过。版本、不可变资产、Feed 和回滚完整事实只保存在[版本历史](VERSION_HISTORY.md#当前最新版本)。
@@ -819,9 +889,9 @@ Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）�
 |---|---|
 | 公开稳定版 | [0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；internal 52，已进入 Stable appcast |
 | 发布源码 | `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；PR #75 已合并 main |
-| 当前开发配置身份 | `0.7.5 / display Build 3 / internal 52 / com.quotaview.development073`；与已发布 Build3 同源码，保留独立开发身份 |
-| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；本轮源码已合并并正式发布，后续发布记录同步以顶部和 Git 实时状态为准 |
-| 已运行开发包 | `dist/development-0.7.3/QuotaView 0.7.3 Development.app`；实际0.7.5/Build3/internal52，真实PID16910，187项输入核对；无DEBUG模拟，现有数据路径保持 |
+| 当前开发配置身份 | `0.7.5 / display Build 7 / internal 56 / com.quotaview.development073`；本轮等待与异步提醒修复已递增Build，默认开发身份保持；当前本地正式运行包由Distribution配置构建，尚未公开发布 |
+| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；2026-10-05基准HEAD `f881356` 与当时 `origin/main` 一致，新增修复状态见顶部；用户Handoff与Prototype未提交文件保留 |
+| 当前运行包 | `/Applications/QuotaView.app`，正式身份、0.7.5/Build7/internal56，主PID62058、Widget PID62064；用户已授权本地替换，旧91483/91523退出，完整旧包备份及实际Core加载证据见顶部 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
 | 回滚入口 | `v0.5.1-build.13` / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；完整资产记录见版本历史 |
 

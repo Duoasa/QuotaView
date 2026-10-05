@@ -230,9 +230,9 @@ public struct CodexActivityTaskRegistry {
         let isTerminal = [.stop, .interrupt, .sessionEnd].contains(event.event)
         let positive = isStart || [.preToolUse, .permissionRequest, .preCompact, .subagentStart].contains(event.event)
         var existing = tasks[session]
-        // A withdrawn child needs new positive observation; output/settlement
-        // alone cannot recreate a running child after the bounded slot expires.
-        if kind == .subagent, existing == nil, !positive { return nil }
+        // A withdrawn child or background execution needs new positive
+        // observation; output alone cannot recreate it after its slot expires.
+        if (kind == .subagent || kind == .memoryConsolidation), existing == nil, !positive { return nil }
         // An end-only event cannot establish a currently active turn.
         if event.event == .postCompact, existing?.hasTurn != true { return nil }
         if let old = existing {
@@ -357,30 +357,30 @@ public actor CodexActivitySessionClassifier {
         (await classification(for: event)).kind
     }
 
-    public func classification(for event: CodexActivityEvent) async -> CodexActivitySessionClassification {
+    public func classification(for event: CodexActivityEvent, forceExecutionMetadataRead: Bool = false) async -> CodexActivitySessionClassification {
         let now = Date()
         if event.source != .hook, let kind = event.sessionKind, kind != .unknown {
-            return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now)
+            return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now, forceRead: forceExecutionMetadataRead)
         }
         // Hook cannot assert its own execution kind. It may inherit validated
         // native/rollout metadata for the same hashed thread or read SQLite.
         if let (kind, date) = cache[event.sessionHash],
            now.timeIntervalSince(date) < (kind == .unknown || kind == .user ? 1 : 60) {
-            return await classification(kind, event: event, at: now)
+            return await classification(kind, event: event, at: now, forceRead: forceExecutionMetadataRead)
         }
         let kind = CodexActivitySessionKind.localKind(sessionHash: event.sessionHash, codexHome: codexHome)
-        return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now)
+        return await classification(remember(kind, for: event.sessionHash, at: now), event: event, at: now, forceRead: forceExecutionMetadataRead)
     }
 
     private func classification(_ kind: CodexActivitySessionKind, event: CodexActivityEvent,
-                                at now: Date) async -> CodexActivitySessionClassification {
+                                at now: Date, forceRead: Bool = false) async -> CodexActivitySessionClassification {
         // Origin and execution trigger are independent. An exact native start
         // can label this turn even when sparse thread metadata says user.
         guard kind == .unknown || kind == .user || kind == .subagent,
               let turn = event.turnHash else { return .init(kind: kind) }
         let execution = CodexLocalExecutionMetadata.Execution(sessionHash: event.sessionHash, turnHash: turn)
         let uptime = ProcessInfo.processInfo.systemUptime
-        if uptime - (executionCheckedAtByExecution[execution] ?? -.infinity) >= 1 {
+        if forceRead || uptime - (executionCheckedAtByExecution[execution] ?? -.infinity) >= 1 {
             let result = await executionMetadataService.read(preferred: [execution], now: now)
             executionIdentities.removeAll { result.resolvedSessions.contains($0.sessionHash) }
             executionIdentities.append(contentsOf: result.identities)
@@ -396,10 +396,18 @@ public actor CodexActivitySessionClassifier {
            current == .internalTask || current == .memoryConsolidation {
             return .init(kind: current)
         }
-        guard executionIdentities.contains(where: {
-            $0.sessionHash == event.sessionHash && $0.turnHash == turn
-        }) else { return .init(kind: cache[event.sessionHash]?.0 ?? kind) }
-        return .init(kind: .memoryConsolidation, executionTurnHash: turn)
+        // Command hooks may use a parent/host session ID instead of the native
+        // execution thread. Bind only this exact memory turn; never remember
+        // that the Hook alias itself is a memory thread or grant it owner rights.
+        let matches = executionIdentities.filter {
+            $0.turnHash == turn && (event.source == .hook || $0.sessionHash == event.sessionHash)
+        }
+        let sessions = Set(matches.map(\.sessionHash))
+        guard sessions.count == 1, let session = sessions.first else {
+            return .init(kind: cache[event.sessionHash]?.0 ?? kind)
+        }
+        return .init(kind: .memoryConsolidation, executionTurnHash: turn,
+                     executionSessionHash: session == event.sessionHash ? nil : session)
     }
 
     private func remember(_ incoming: CodexActivitySessionKind, for session: String, at date: Date) -> CodexActivitySessionKind {
@@ -420,7 +428,10 @@ public actor CodexActivitySessionClassifier {
 public struct CodexActivitySessionClassification: Sendable {
     public let kind: CodexActivitySessionKind
     public let executionTurnHash: String?
-    public init(kind: CodexActivitySessionKind, executionTurnHash: String? = nil) {
+    public let executionSessionHash: String?
+    public init(kind: CodexActivitySessionKind, executionTurnHash: String? = nil,
+                executionSessionHash: String? = nil) {
         self.kind = kind; self.executionTurnHash = executionTurnHash
+        self.executionSessionHash = executionSessionHash
     }
 }

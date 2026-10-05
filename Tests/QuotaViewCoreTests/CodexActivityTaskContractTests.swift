@@ -6,8 +6,9 @@ import SQLite3
 
 final class CodexActivityTaskContractTests: XCTestCase {
     private func event(_ type: CodexActivityHookEvent, session: String = "user", turn: String? = "one",
-                       source: CodexActivityEventSource = .localRollout, at: Date = Date()) -> CodexActivityEvent {
-        .init(event: type, sessionHash: session, turnHash: turn, source: source, occurredAt: at)
+                       source: CodexActivityEventSource = .localRollout, kind: CodexActivitySessionKind? = nil,
+                       at: Date = Date()) -> CodexActivityEvent {
+        .init(event: type, sessionHash: session, turnHash: turn, sessionKind: kind, source: source, occurredAt: at)
     }
 
     func testEverySourceRejectsInternalExecutionUnitsAndUnownedTerminals() {
@@ -55,17 +56,17 @@ final class CodexActivityTaskContractTests: XCTestCase {
     @MainActor
     func testActiveToActiveTaskSwitchResetsProductionProgressBinding() async throws {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
-        store.receive(event(.userPromptSubmit))
+        store.receive(event(.userPromptSubmit, kind: .user))
         store.receive(.init(event: .preToolUse, sessionHash: "user", turnHash: "one",
                             planProgress: .init(completedSteps: 3, inProgressSteps: 1, pendingSteps: 0),
-                            source: .localRollout, planSource: .localRollout))
+                            sessionKind: .user, source: .localRollout, planSource: .localRollout))
         let first = try XCTUnwrap(store.snapshot?.taskIdentity)
         var projection = CodexActivityStateSmokeProgressProjection()
         XCTAssertTrue(projection.bindTask(first))
         _ = projection.resolve(approximateProgressFraction: 0.775, elapsed: 1, reduceMotion: true)
         XCTAssertFalse(projection.bindTask(first))
         XCTAssertEqual(projection.displayedFrontPosition, 0.775)
-        store.receive(event(.userPromptSubmit, turn: "two"))
+        store.receive(event(.userPromptSubmit, turn: "two", kind: .user))
         let second = try XCTUnwrap(store.snapshot?.taskIdentity)
         XCTAssertNotEqual(first, second)
         XCTAssertEqual(store.lifecycle, .active)
@@ -80,10 +81,10 @@ final class CodexActivityTaskContractTests: XCTestCase {
     func testLateSessionStartAndWeakerClockDoNotResetCurrentTurn() async {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
         let date = Date()
-        store.receive(event(.userPromptSubmit, at: date))
-        store.receive(event(.permissionRequest, source: .hook, at: date.addingTimeInterval(10)))
+        store.receive(event(.userPromptSubmit, kind: .user, at: date))
+        store.receive(event(.permissionRequest, source: .hook, kind: .user, at: date.addingTimeInterval(10)))
         // Arrival-time Hook clocks cannot suppress a newer native turn fact.
-        store.receive(event(.userPromptSubmit, turn: "two", at: date.addingTimeInterval(1)))
+        store.receive(event(.userPromptSubmit, turn: "two", kind: .user, at: date.addingTimeInterval(1)))
         XCTAssertEqual(store.snapshot?.taskIdentity?.turnHash, "two")
         store.receive(.init(event: .sessionStart, sessionHash: "user", sessionStartSource: .resume, source: .hook,
                             occurredAt: date.addingTimeInterval(11)))
@@ -257,7 +258,7 @@ final class CodexActivityTaskContractTests: XCTestCase {
     @MainActor
     func testRecoveryUsesLiveTokenRulesAndPublishesOnlyOnce() async {
         let store = CodexActivityStore(titleClient: CodexAppServerClient(executablePath: nil))
-        store.receive(event(.userPromptSubmit))
+        store.receive(event(.userPromptSubmit, kind: .user))
         var notifications = 0
         store.stateDidChange = { notifications += 1 }
         let updates = [(100, 100), (400, 300), (100, 100), (150, 50)].map { total, last in

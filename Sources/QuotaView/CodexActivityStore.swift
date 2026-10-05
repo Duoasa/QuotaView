@@ -38,6 +38,16 @@ final class CodexActivityStore: ObservableObject {
     private static let maximumPendingExecutionMemory = 128
     private static let pendingExecutionMemoryLifetime: TimeInterval = 86_400
     var activityExecutionKindDidResolve: ((String, CodexActivitySessionKind) -> Void)?
+    var hookExecutionDidRebind: ((String, String) -> Void)?
+    private struct HookExecutionObservation {
+        var start: CodexActivityEvent?
+        var latest: CodexActivityEvent
+        var terminal: Bool
+        var canonicalSessionHash: String? = nil
+        var canonicalSettled = false
+    }
+    private var hookExecutionObservations: [ExecutionMemoryKey: HookExecutionObservation] = [:]
+    private var hookExecutionOrder: [ExecutionMemoryKey] = []
     var subagentIdentityDidReceive: ((CodexActivitySubagentIdentity) -> Void)?
     var subagentActivityDidReceive: ((CodexActivityEvent) -> Void)?
     var subagentPublicContentDidReceive: ((CodexLocalPublicContent) -> Void)?
@@ -870,6 +880,18 @@ final class CodexActivityStore: ObservableObject {
                 // Retain an early identity until its matching lifecycle is
                 // admitted. Metadata alone must not change the current turn.
                 rememberExecutionMemory(session: identity.sessionHash, turn: turn, generation: run)
+                // A late native identity may belong to a Hook host alias. Replay
+                // only real, previously observed lifecycle events for this turn.
+                let aliases = hookExecutionObservations.keys.filter {
+                    $0.turn == turn && $0.session != identity.sessionHash
+                        && hookExecutionObservations[$0]?.canonicalSessionHash == nil
+                }
+                for alias in aliases {
+                    guard run == nativeGeneration, let observation = hookExecutionObservations[alias] else { return }
+                    await receiveClassified(.init(source: .liveSocket, activity: observation.latest), generation: run,
+                                            forceExecutionMetadataRead: true)
+                }
+                guard run == nativeGeneration else { return }
                 let admitted = taskRegistry.executionIdentity(for: identity.sessionHash)
                 if admitted?.turnHash == turn, identity.sessionKind == .memoryConsolidation,
                    sessionKinds[identity.sessionHash] != .internalTask {
@@ -1444,20 +1466,116 @@ final class CodexActivityStore: ObservableObject {
 
     func receiveClassified(_ delivery: CodexActivityDelivery, generation expected: UInt64? = nil,
                            selectionEvidenceAt: Date? = nil, admissionAllowed: (() -> Bool)? = nil,
-                           confirmedCurrentTurn: Bool = false) async {
+                           confirmedCurrentTurn: Bool = false, forceExecutionMetadataRead: Bool = false) async {
         let run = expected ?? nativeGeneration
         let classifier = delivery.activity.source == .hook ? hookSessionClassifier : sessionClassifier
         let classification: CodexActivitySessionClassification
         if let sessionKindResolver { classification = .init(kind: await sessionKindResolver(delivery.activity)) }
-        else { classification = await classifier.classification(for: delivery.activity) }
+        else { classification = await classifier.classification(for: delivery.activity,
+                                        forceExecutionMetadataRead: forceExecutionMetadataRead) }
         guard run == nativeGeneration, admissionAllowed?() ?? true else { return }
+        if let id = delivery.eventID, acceptedEventIDs.contains(id) { return }
+        if delivery.activity.source == .hook, delivery.source != .startupReplay {
+            rememberHookExecution(delivery.activity)
+        }
         let before = snapshot
+        let canonical = classification.executionSessionHash
+        let activity = delivery.activity.classified(as: classification.kind, sessionHash: canonical)
+        if let canonical, let turn = classification.executionTurnHash,
+           let observation = hookExecutionObservations[.init(session: delivery.activity.sessionHash, turn: turn)],
+           observation.canonicalSessionHash != nil, observation.canonicalSettled,
+           taskRegistry.executionIdentity(for: canonical)?.turnHash != turn {
+            // Retained settlement is a tombstone after execution-slot eviction.
+            // A late event cannot re-create this already bound, ended turn.
+            _ = registerEventID(delivery.eventID)
+            CodexActivityDiagnostics.record(delivery: delivery, outcome: "hook_memory_settled_replay_rejected")
+            return
+        }
+        if let canonical, let turn = classification.executionTurnHash,
+           classification.kind == .memoryConsolidation, activity.source == .hook,
+           let observation = hookExecutionObservations[.init(session: delivery.activity.sessionHash, turn: turn)],
+           !taskRegistry.isPriorTurn(session: canonical, turn: turn) {
+            // Terminal-only observations cannot create an execution. Preserve
+            // the real start clock when identity arrives after completion.
+            if observation.canonicalSessionHash == nil,
+               taskRegistry.executionIdentity(for: canonical)?.turnHash != turn, let start = observation.start {
+                receive(.init(source: .liveSocket, activity: start.classified(as: .memoryConsolidation, sessionHash: canonical)),
+                        executionMemoryTurnHash: turn)
+            }
+        }
         receive(CodexActivityDelivery(eventID: delivery.eventID, source: delivery.source,
-                                      activity: delivery.activity.classified(as: classification.kind)),
+                                      activity: activity),
                 selectionEvidenceAt: selectionEvidenceAt, confirmedCurrentTurn: confirmedCurrentTurn,
                 executionMemoryTurnHash: classification.executionTurnHash)
+        if let canonical, let turn = classification.executionTurnHash,
+           let observation = hookExecutionObservations[.init(session: delivery.activity.sessionHash, turn: turn)],
+           observation.terminal, observation.latest != delivery.activity,
+           observation.canonicalSessionHash == nil || observation.canonicalSettled {
+            receive(.init(source: .liveSocket,
+                activity: observation.latest.classified(as: .memoryConsolidation, sessionHash: canonical)),
+                executionMemoryTurnHash: turn)
+        }
+        if canonical != nil, activity.source == .hook { _ = registerEventID(delivery.eventID) }
+        if let canonical, let turn = classification.executionTurnHash,
+           taskRegistry.backgroundIdentity(for: canonical)?.turnHash == turn {
+            let key = ExecutionMemoryKey(session: delivery.activity.sessionHash, turn: turn)
+            if hookExecutionObservations[key]?.canonicalSessionHash == nil {
+                hookExecutionObservations[key]?.canonicalSessionHash = canonical
+                CodexActivityDiagnostics.recordMetadata(outcome: "hook_memory_execution_bound",
+                    sessionHash: canonical, turnHash: turn, generation: run)
+            }
+            if let settled = terminalTurnsBySession[canonical], settled.turnHash == turn || settled.turnHash == nil {
+                hookExecutionObservations[key]?.canonicalSettled = true
+            }
+            withdrawReboundHookExecution(session: delivery.activity.sessionHash, turn: turn)
+        }
         CodexActivityDiagnostics.record(delivery: delivery,
             outcome: before != snapshot ? "task_applied" : "task_ignored")
+    }
+
+    private func rememberHookExecution(_ event: CodexActivityEvent) {
+        guard let turn = event.turnHash else { return }
+        let key = ExecutionMemoryKey(session: event.sessionHash, turn: turn)
+        let positive = [.userPromptSubmit, .preToolUse, .permissionRequest, .preCompact].contains(event.event)
+        let terminal = [.stop, .interrupt, .sessionEnd].contains(event.event)
+        if var previous = hookExecutionObservations[key] {
+            if positive, previous.start == nil || event.occurredAt < previous.start!.occurredAt {
+                if !previous.terminal || event.occurredAt <= previous.latest.occurredAt { previous.start = event }
+            }
+            if event.occurredAt >= previous.latest.occurredAt,
+               !previous.terminal || event.event == .sessionEnd {
+                previous.latest = event; previous.terminal = terminal
+            }
+            hookExecutionObservations[key] = previous
+        } else {
+            hookExecutionObservations[key] = .init(start: positive ? event : nil, latest: event, terminal: terminal)
+        }
+        hookExecutionOrder.removeAll { $0 == key }; hookExecutionOrder.append(key)
+        while hookExecutionOrder.count > 128 {
+            hookExecutionObservations.removeValue(forKey: hookExecutionOrder.removeFirst())
+        }
+    }
+
+    private func withdrawReboundHookExecution(session: String, turn: String) {
+        hookExecutionDidRebind?(session, turn)
+        // A shared Hook alias may now contain a different, real parent turn.
+        // Keep its source, tokens, metadata and owner evidence intact.
+        guard taskRegistry.executionIdentity(for: session)?.turnHash == turn,
+              lastAdmittedActivityBySession[session]?.source == .hook else { return }
+        taskRegistry.remove(session: session)
+        multitask.remove(session, now: ProcessInfo.processInfo.systemUptime)
+        if admittedSnapshots[session]?.snapshot.taskIdentity?.turnHash == turn { admittedSnapshots.removeValue(forKey: session) }
+        if observedActivityBySession[session]?.snapshot.taskIdentity?.turnHash == turn { observedActivityBySession.removeValue(forKey: session) }
+        lastAdmittedActivityBySession.removeValue(forKey: session)
+        admittedTurnStartBySession.removeValue(forKey: session)
+        if activeTurnHashBySession[session] == turn { activeTurnHashBySession.removeValue(forKey: session) }
+        if snapshot?.sessionHash == session, snapshot?.taskIdentity?.turnHash == turn {
+            revision &+= 1; inactivityTask?.cancel(); titleTask?.cancel()
+            snapshot = nil; lifecycle = .idle; presentation = .hidden
+            resolvedThreadTitle = nil; selectedActivityAt = nil; selectedCompactionSource = nil
+            resetConfirmationReminder()
+        }
+        notifyChange()
     }
 
     func receive(_ event: CodexActivityEvent) {
@@ -1523,6 +1641,12 @@ final class CodexActivityStore: ObservableObject {
                                                 selectionEvidenceAt: selectionEvidenceAt,
                                                 confirmedCurrentTurn: confirmedCurrentTurn) else { return }
         taskRegistry = admittingRegistry
+        if [.stop, .interrupt, .sessionEnd].contains(event.event), let turn = admission.identity.turnHash {
+            for key in hookExecutionObservations.keys where key.turn == turn
+                && hookExecutionObservations[key]?.canonicalSessionHash == event.sessionHash {
+                hookExecutionObservations[key]?.canonicalSettled = true
+            }
+        }
         lastAdmittedActivityBySession[event.sessionHash] = event
         if admission.startsTurn { admittedTurnStartBySession[event.sessionHash] = event }
         subagentUnavailableSessions.remove(event.sessionHash)
@@ -1542,8 +1666,8 @@ final class CodexActivityStore: ObservableObject {
                 subagentActivityDidReceive?(event)
             }
             flushLocalPublicContent(for: event.sessionHash)
-        } else if resolvedKind != .memoryConsolidation {
-            admittedActivityDidReceive?(event)
+        } else if resolvedKind == .user {
+            admittedActivityDidReceive?(event.classified(as: resolvedKind))
             flushLocalPublicContent(for: event.sessionHash)
         }
         publishThreadMetadata(for: event.sessionHash)
@@ -1672,6 +1796,7 @@ final class CodexActivityStore: ObservableObject {
             notifyChange()
             return
         }
+        if resolvedKind == .unknown { notifyChange(); return }
         let source: CodexActivityEventSource? = identifiedSnapshot.state == .compactingContext ? event.source : nil
         let eligible = !isStaleSettledContinuationEvent(delivery) || selectionEvidenceAt != nil
         if resolvedKind == .user {
@@ -1838,6 +1963,7 @@ final class CodexActivityStore: ObservableObject {
         setMultitaskEnabled(false)
         admittedSnapshots.removeAll()
         pendingExecutionMemory.removeAll(); pendingExecutionMemoryOrder.removeAll()
+        hookExecutionObservations.removeAll(); hookExecutionOrder.removeAll()
         for session in Array(executionMemoryTurns.keys) { revokeExecutionMemory(session) }
         observedActivityBySession.removeAll(); memoryActivityBySession.removeAll()
         for session in subagentIdentities.keys { subagentObservationDidWithdraw?(session) }
