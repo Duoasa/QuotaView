@@ -2,9 +2,13 @@
 
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.7.7 Build 1 发布准备 · 2026-10-06
+## 0.7.7 Build 1 已发布 · 2026-10-06
 
-用户明确将当前版本定为0.7.7，并授权GitHub源码、README、Release简介及appcast更新。按版本规则绑定0.7.7 / 显示Build1 / 内部57、tag `v0.7.7-build.1`、ZIP `QuotaView-v0.7.7-build.1.zip`；本次授权含生产源码合入、正式签名公证、Stable/Latest及签名Feed完整链路。发布尚在准备中，公开稳定回滚基线仍为0.7.5 Build3 / `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`，既有资产保持。证据目录 `dist/verification/0.7.7-build1-release/`。README与Release使用简要更新概述；用户Handoff与Prototype未跟踪文件继续保留在本地。
+用户明确批准当前修订发布0.7.7与appcast。版本为0.7.7 / 显示Build1 / 内部57，tag `v0.7.7-build.1`；[PR #81](https://github.com/Duoasa/QuotaView/pull/81)已合入main，源码PR和main CI均通过（各676项、6跳过、0失败，另44项原生提问合同夹具通过）。中英文README与英文Release简要更新说明已同步，GitHub Stable / Latest已公开，回下载ZIP与本地公证产物一致。签名Feed已部署，线上回读与本地逐字节一致且旧版公钥验证通过；完整证据见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+正式Universal包完成Developer ID签名、Apple Accepted / Staple、Gatekeeper、191项输入一致性及解压启动/实际Core加载核验；没有替换/Applications正式安装。已按本会话开发版运行要求增量编译并启动0.7.7开发包PID50354，原37278退出，开发身份和数据目录保持。真实视觉/交互验收边界仍保留。未新增或主动运行本地测试，CI由源码推送自动执行。
+
+回滚基线现为0.7.5 Build3 / `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`，原tag和资产保持。完整不可变版本/资产/签名/公证/Feed事实只在版本历史维护，证据目录 `dist/verification/0.7.7-build1-release/`。用户Handoff与Prototype未跟踪文件继续留在本地。
 
 ## 0.7.5 审批详情通道阻塞与取消批次清理 · 2026-10-06 01:17现场
 
@@ -961,13 +965,13 @@ Staple、Gatekeeper、15 秒解压启动、249 项 CI（2 跳过、0 失败）�
 
 | 项目 | 当前状态 |
 |---|---|
-| 公开稳定版 | [0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)；internal 52，已进入 Stable appcast |
-| 发布源码 | `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；PR #75 已合并 main |
-| 当前开发配置身份 | `0.7.7 / display Build 1 / internal 57 / com.quotaview.development073`；用户已批准此版本Stable及appcast，正式产物准备中，开发身份保持 |
-| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；2026-10-05基准HEAD `f881356` 与当时 `origin/main` 一致，新增修复状态见顶部；用户Handoff与Prototype未提交文件保留 |
-| 当前运行包 | 既有Development075Build3目录中的开发身份包，0.7.5/Build7/internal56，主PID37278；0.7.7源码版本提升不自动替换该开发进程 |
+| 公开稳定版 | [0.7.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1)；internal 57，Stable / Latest；appcast见版本历史 |
+| 发布源码 | `3866177cfa19db734d657ef505a4dc72c3338fba`；PR #81 已合并 main |
+| 当前开发配置身份 | `0.7.7 / display Build 1 / internal 57 / com.quotaview.development073`；已发布Stable，开发身份保持，完整发布记录见版本历史 |
+| 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；`codex/0.7.5-release-preparation`；发布源码 `3866177` 已合入main，当前记录以顶部为准；用户Handoff与Prototype未提交文件保留 |
+| 当前运行包 | 既有Development075Build3目录中的开发身份包，0.7.7/Build1/internal57，主PID50354；开发编译、实际加载与原生准入已核对 |
 | 已确认动效基线 | `0.5.0 Build 2`；正常动效参数保持，原本地归档保留 |
-| 回滚入口 | `v0.5.1-build.13` / `ec99dc184d84fbb011f3e337c95be1f3d82c775c`；完整资产记录见版本历史 |
+| 回滚入口 | `v0.7.5-build.3` / `b9af7cb78bf676392db536289a14a5ef3f0b6f9e`；完整资产记录见版本历史 |
 
 进入后先用 `git worktree list`、`git status --short --branch` 与 `git log -1` 核实实时状态。
 正式发布在隔离工作区完成，原开发目录的分支与未提交改动保留；当前文档已同步，

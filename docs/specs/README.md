@@ -1,6 +1,6 @@
 # QuotaView SDD 注册表
 
-> 2026-10-06：用户已批准当前修订以0.7.7 Build1（内部57）发布GitHub Stable与appcast；中英文README和英文Release简述同步准备。合入、产物及渠道实证见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
+> 2026-10-06：0.7.7 Build1（内部57）已合入main并发布GitHub Stable / Latest；源码PR/main CI、签名公证与回下载通过，appcast与Pages部署成功、线上旧版公钥验证通过；中英文README和英文Release简述同步。开发版PID50354已运行，线上Feed核验及完整证据见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 > 2026-10-06 01:17现场：审批在订阅超时约87秒后自行恢复；进程采样定位每次patch全历史编码/解码阻塞IPC reader。修订为复用JSON树投影、变化子树容量记账，并按用户要求取消完成批次自动清理。当前开发运行与验收见[Handoff](../../HANDOFF.md)，详见[信息契约](codex-island-information-contract.md#2026-10-06-审批详情延迟与数据通道修订)。
 
@@ -12,7 +12,7 @@
 >
 > 状态：`Accepted`
 >
-> 最近同步：2026-10-05。公开稳定版：[0.7.5 Build 3](../../VERSION_HISTORY.md#当前最新版本)，内部52，已发布 GitHub Stable / Latest 与 appcast。
+> 最近同步：2026-10-06。公开稳定版：[0.7.7 Build 1](../../VERSION_HISTORY.md#当前最新版本)，内部57；GitHub Stable / Latest与appcast发布事实见版本历史。下方0.7.5条目为历史交付，不代表当前进程。
 >
 > 已发布源码：[PR #75](https://github.com/Duoasa/QuotaView/pull/75) 已合并 main；长会话恢复、设置反馈、正式发行配置和中英文产品文档已交付。其PR/main CI各663项、6跳过、0失败，签名公证、公开回下载及线上Feed验签通过。开发基准HEAD `f881356`；此前本地Build6/内部55包含记忆Hook身份、待机百分比与纯色描边修订。Build3记忆候选124条冒烟、Build4记忆修复交付、Build5历史UI交付和Build6构建/签名/190项输入核对分别见Handoff；这些历史结果不作为本轮Build7重复验证。
 >
