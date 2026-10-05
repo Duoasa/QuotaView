@@ -148,6 +148,8 @@ final class IslandScrollingTextHost: NSView {
     override func viewDidUnhide() { super.viewDidUnhide(); needsLayout = true; layoutSubtreeIfNeeded() }
 
     func configure(text: String, font: NSFont, color: NSColor, visible: Bool, reduceMotion: Bool, shimmer: Bool) {
+        guard self.text != text || self.font != font || self.color != color.withAlphaComponent(1)
+            || attributedText != nil || self.visible != visible || self.reduceMotion != reduceMotion || shimmering != shimmer else { return }
         self.text = text; self.font = font; self.color = color.withAlphaComponent(1)
         attributedText = nil
         streamIdentity = nil
@@ -193,6 +195,11 @@ final class IslandScrollingTextHost: NSView {
         // A duration or status repaint with compatible geometry must not restart
         // the rich lane's travel. Preserve its existing animation and beginTime.
         let preserveScroll = sameRichStream && scrollGeometry == geometry && previousAnimation != nil
+        // Updating streaming glyphs must not restart the 600 ms sweep delay.
+        // Keep the clock through text changes; a real visibility/motion boundary
+        // still starts a new cycle. Rebuild only its geometry when needed.
+        let shimmerBeginTime = key.shimmer && previousKey?.shimmer == true
+            ? shimmerLayer.animation(forKey: Self.shimmerKey)?.beginTime : nil
         // Status labels can change width many times during the opening pause.
         // Stable membership retains the stream's clock while values adapt to
         // new widths, so repeated updates cannot keep postponing that pause.
@@ -289,7 +296,7 @@ final class IslandScrollingTextHost: NSView {
             animation.keyTimes = (0...48).map { NSNumber(value: Double($0) / 48 / 4) } + [1]
             animation.calculationMode = .discrete
             animation.duration = 4; animation.repeatCount = .infinity
-            animation.beginTime = shimmerLayer.convertTime(CACurrentMediaTime(), from: nil) + 0.6
+            animation.beginTime = shimmerBeginTime ?? (shimmerLayer.convertTime(CACurrentMediaTime(), from: nil) + 0.6)
             shimmerLayer.add(animation, forKey: Self.shimmerKey)
         }
     }

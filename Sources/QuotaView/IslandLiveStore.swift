@@ -933,7 +933,19 @@ final class IslandLiveStore {
     }
 
     private func summary(_ value: String) -> String {
-        String(value.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(240))
+        // Streaming deltas used to split and join the entire accumulated answer
+        // on the main actor, only to discard everything beyond 240 characters.
+        var result = ""
+        var count = 0
+        var space = false
+        for character in value {
+            if character.isWhitespace { space = !result.isEmpty; continue }
+            if space { result.append(" "); count += 1; space = false }
+            if count == 240 { break }
+            result.append(character); count += 1
+            if count == 240 { break }
+        }
+        return result
     }
     private func toolSummary(_ name: String, arguments: String) -> String {
         let name = name.split(separator: ".").last.map(String.init) ?? name
@@ -1287,7 +1299,10 @@ final class IslandLiveStore {
             if let model = nonempty(p["model"]) { tasks[i].model = model; tasks[i].modelTurnKey = content.turnHash }
             if let effort = nonempty(p["effort"]) { tasks[i].effort = effort; tasks[i].effortTurnKey = content.turnHash }
         } else {
-            guard !(tasks[i].nativeContentAvailable && connection == .connected), let id = p["id"] as? String else {
+            // The rollout may supply the final channel after the native stream
+            // has stopped. Accept this public answer without reviving execution.
+            let isFinal = type == "message" && p["channel"] as? String == "final"
+            guard (!(tasks[i].nativeContentAvailable && connection == .connected) || isFinal), let id = p["id"] as? String else {
                 if type == "output" { onChange?() }
                 return
             }
@@ -1307,8 +1322,10 @@ final class IslandLiveStore {
                 let name = p["name"] as? String ?? ""
                 let body = p["text"] as? String ?? ""
                 let text = message ? body : name + "\n" + body
-                upsert(.init(text: .init(String(text.prefix(65536))), publicItem: .init(category: message ? .message : .command,
-                    sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536)), at: i)
+                let channel = message ? p["channel"] as? String : nil
+                upsert(.init(text: .init(String(text.prefix(65536))), kind: channel == "final" ? .result : .progress,
+                    publicItem: .init(category: message ? .message : .command,
+                    sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536, messagePhase: channel)), at: i)
                 if message { tasks[i].publicProgress = summary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
                 else if !message && !presentationRecovery && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -1500,6 +1517,9 @@ final class IslandLiveStore {
             tasks[i].progress = status == "completed" ? 1 : tasks[i].progress
             tasks[i].endedAt = eventDate(turn?["completedAtMs"], fallback: now)
             tasks[i].requestLifecycle.finishTurn(); tasks[i].activeItems.removeAll()
+            for item in turn?["items"] as? [[String: Any]] ?? [] where item["type"] as? String == "agentMessage" {
+                appendItem(item, turnID: turnID ?? "", at: i)
+            }
             if let error = turn?["error"] as? [String: Any], let message = error["message"] as? String {
                 upsert(.init(text: .init(message), kind: .failure), at: i)
             }
@@ -1515,8 +1535,18 @@ final class IslandLiveStore {
                 resolveRequest(i, id: id, epoch: scope)
             }
         case "item/started", "item/completed":
-            guard !tasks[i].terminal, let item = p["item"] as? [String: Any], let type = item["type"] as? String,
+            guard let item = p["item"] as? [String: Any], let type = item["type"] as? String,
                   type != "reasoning", let itemID = item["id"] as? String else { break }
+            if tasks[i].terminal {
+                // Some streams deliver the final item after the terminal event.
+                // Require its current turn and update content only, never state.
+                if tasks[i].status == .completed, turnKey != nil, turnKey == tasks[i].turnKey,
+                   method == "item/completed", type == "agentMessage" {
+                    appendItem(item, turnID: turnID ?? "", at: i)
+                    onPublicChange?()
+                }
+                return
+            }
             if let context = try? IslandApprovalJSON(any: item) { itemContexts[key + ":" + itemID] = context }
             if type == "contextCompaction" { tasks[i].activityStatus = method == "item/started" ? .compacting : .thinking; break }
             let mode = CodexUserInputMode.forToolName(item["tool"] as? String ?? item["name"] as? String ?? item["toolName"] as? String)
@@ -1603,9 +1633,10 @@ final class IslandLiveStore {
         let status = item["status"] as? String
         let exit = item["exitCode"] as? Int
         let failed = status == "failed" || exit.map { $0 != 0 } == true
-        upsert(.init(text: .init(String(text.prefix(65536))), kind: failed ? .failure : .progress,
+        let phase = category == .message ? (item["phase"] as? String ?? item["channel"] as? String) : nil
+        upsert(.init(text: .init(String(text.prefix(65536))), kind: failed ? .failure : (["final", "final_answer"].contains(phase ?? "") ? .result : .progress),
             publicItem: .init(category: category, sourceID: itemID, turnID: turnID, status: status,
-                output: output.map { String($0.prefix(65536)) }, sourceTruncated: truncated, exitCode: exit)), at: i)
+                output: output.map { String($0.prefix(65536)) }, sourceTruncated: truncated, exitCode: exit, messagePhase: phase)), at: i)
         if category == .message {
             tasks[i].publicProgress = summary(text)
             if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress }
@@ -1619,7 +1650,11 @@ final class IslandLiveStore {
         if let j = tasks[i].entries.firstIndex(where: { $0.publicItem?.sourceID == itemID }) {
             if message { tasks[i].entries[j].text.chinese += delta; tasks[i].entries[j].text.english = tasks[i].entries[j].text.chinese }
             else { let output = (tasks[i].entries[j].publicItem?.output ?? "") + delta; tasks[i].entries[j].publicItem?.output = output }
-            if tasks[i].entries[j].text.chinese.count > 65536 || (tasks[i].entries[j].publicItem?.output?.count ?? 0) > 65536 {
+            let body = tasks[i].entries[j].text.chinese
+            let output = tasks[i].entries[j].publicItem?.output ?? ""
+            // UTF-8 size is cheap for native Swift strings and bounds character
+            // count. Avoid walking every accumulated grapheme for short deltas.
+            if (body.utf8.count > 65536 && body.count > 65536) || (output.utf8.count > 65536 && output.count > 65536) {
                 tasks[i].entries[j].text = .init(String(tasks[i].entries[j].text.chinese.prefix(65536)))
                 let output = tasks[i].entries[j].publicItem?.output.map { String($0.prefix(65536)) }
                 tasks[i].entries[j].publicItem?.output = output
@@ -1647,9 +1682,11 @@ final class IslandLiveStore {
             if let id = entry.publicItem?.sourceID { itemContexts.removeValue(forKey: tasks[index].key + ":" + id) }
         }
         while tasks[i].entries.count > 200 { discardOldest(i) }
-        func bytes() -> Int { tasks.reduce(0) { $0 + $1.entries.reduce(0) { $0 + $1.text.chinese.utf8.count + ($1.publicItem?.output?.utf8.count ?? 0) } } }
-        while bytes() > 2_097_152,
+        var bytes = tasks.reduce(0) { $0 + $1.entries.reduce(0) { $0 + $1.text.chinese.utf8.count + ($1.publicItem?.output?.utf8.count ?? 0) } }
+        while bytes > 2_097_152,
               let old = tasks.indices.filter({ !tasks[$0].entries.isEmpty }).min(by: { tasks[$0].updatedAt < tasks[$1].updatedAt }) {
+            let entry = tasks[old].entries[0]
+            bytes -= entry.text.chinese.utf8.count + (entry.publicItem?.output?.utf8.count ?? 0)
             discardOldest(old)
         }
     }

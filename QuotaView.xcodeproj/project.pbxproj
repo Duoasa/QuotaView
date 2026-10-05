@@ -83,6 +83,7 @@
 		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
 		B07300000000000000000008 /* IslandSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000008 /* IslandSession.swift */; };
 		B07300000000000000000009 /* IslandTaskDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000009 /* IslandTaskDetail.swift */; };
+		B07500000000000000000031 /* IslandMarkdownResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000031 /* IslandMarkdownResult.swift */; };
 		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
 		B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000B /* CodexLocalPublicContent.swift */; };
 		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
@@ -241,6 +242,7 @@
 		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
 		F07300000000000000000008 /* IslandSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandSession.swift; sourceTree = "<group>"; };
 		F07300000000000000000009 /* IslandTaskDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskDetail.swift; sourceTree = "<group>"; };
+		F07500000000000000000031 /* IslandMarkdownResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandMarkdownResult.swift; sourceTree = "<group>"; };
 		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
 		F0730000000000000000000B /* CodexLocalPublicContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalPublicContent.swift; sourceTree = "<group>"; };
 		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 				F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
+				F07500000000000000000031 /* IslandMarkdownResult.swift */,
 				F07300000000000000000008 /* IslandSession.swift */,
 				F07300000000000000000007 /* IslandScrollingText.swift */,
 				F07300000000000000000006 /* IslandPresentationModels.swift */,
@@ -703,6 +706,7 @@
 			files = (
 				B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */,
 				B07300000000000000000009 /* IslandTaskDetail.swift in Sources */,
+				B07500000000000000000031 /* IslandMarkdownResult.swift in Sources */,
 				B07300000000000000000008 /* IslandSession.swift in Sources */,
 				B07300000000000000000007 /* IslandScrollingText.swift in Sources */,
 				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,

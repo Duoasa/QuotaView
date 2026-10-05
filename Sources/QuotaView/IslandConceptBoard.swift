@@ -516,7 +516,8 @@ final class IslandBoardState: ObservableObject {
         let previousRequestIDs = (previous?.activeRequestIDs ?? []).union(
             previous?.taskDetails.values.compactMap { $0.confirmation?.id } ?? [])
         var automaticSelection: Int?
-        display = value
+        // Repeated source/clock snapshots must not invalidate both hosting trees.
+        if display != value { display = value }
         // Changing this preference only dismisses content opened by an automatic event.
         // A manually opened request, usage page or pinned island keeps its presentation.
         if !value.automaticPopupEnabled && automaticallyPresented {
@@ -583,8 +584,8 @@ final class IslandBoardState: ObservableObject {
             if event && value.automaticPopupEnabled { showAutomaticPreview(at: now) }
             else if hadAttention && presentation != .pinned && !showsUsage { collapse() }
         }
-        if attentionCount == 0 { attentionOnly = false }
-        if !visibleTasks.contains(where: { $0.id == detailID }) { detailID = nil }
+        if attentionOnly && attentionCount == 0 { attentionOnly = false }
+        if let detailID, !visibleTasks.contains(where: { $0.id == detailID }) { self.detailID = nil }
         // Selection synchronously publishes the model in production. Avoid a
         // second layout pass before that selected model reaches the board.
         if let automaticSelection, let onSelect { onSelect(automaticSelection) }

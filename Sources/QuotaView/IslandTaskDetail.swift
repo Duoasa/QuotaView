@@ -1,12 +1,17 @@
 import AppKit
 import SwiftUI
 
-// Selection changes hierarchy only. Every displayed body remains a literal
-// prefix of the supplied source; disclosure restores the available original.
+// Completion presents the original assistant answer; live progress retains its
+// bounded trace and optional tool history.
 struct IslandTaskDetailSelection {
     let focus: [IslandTraceEntry]
     let history: [IslandTraceEntry]
     init(data: IslandTaskDetailData) {
+        if data.status == .completed {
+            focus = data.finalResponse.map { [$0] } ?? []
+            history = []
+            return
+        }
         let entries = data.visibleEntries
         let message = (data.status == .failed ? entries.last(where: { $0.kind == .failure && $0.publicItem?.category != .command && $0.publicItem?.category != .fileChange }) : nil)
             ?? entries.last(where: { $0.publicItem == nil || $0.publicItem?.category == .message })
@@ -101,16 +106,20 @@ struct IslandTaskDetailMetrics {
     let entryHeights: [CGFloat]
     let primaryHeights: [CGFloat]
     let outputHeights: [CGFloat]
+    let result: IslandMarkdownResultLayout?
     let height: CGFloat
 
     init(data: IslandTaskDetailData, width: CGFloat, english: Bool, expandedEntries: Set<UUID> = [], showsHistory: Bool = false) {
         mode = .init(data: data)
-        self.showsHistory = showsHistory
+        self.showsHistory = showsHistory && mode != .completion
         let selection = IslandTaskDetailSelection(data: data)
         focusCount = data.confirmation == nil ? selection.focus.count : 0
         historyCount = data.confirmation == nil ? selection.history.count : 0
         let usable = max(80, width - Self.horizontalPadding * 2)
-        let entries = data.confirmation == nil ? selection.focus + (showsHistory ? selection.history : []) : []
+        result = mode == .completion ? data.finalResponse.map {
+            IslandMarkdownResultLayout(source: $0.text.value(english), width: usable)
+        } : nil
+        let entries = data.confirmation == nil && mode != .completion ? selection.focus + (showsHistory ? selection.history : []) : []
         let items = entries.map { IslandTracePresentation(entry: $0, english: english,
             expanded: expandedEntries.contains($0.id), revealOutput: !data.running) }
         presentations = items
@@ -130,7 +139,8 @@ struct IslandTaskDetailMetrics {
         let historyFooter = historyCount == 0 ? 0 : Self.entryGap + Self.historyHeader
         let historySection = showsHistory && historyCount > 0 ? Self.entryGap + 18 : 0
         let cacheNotice: CGFloat = data.removedEntryCount > 0 ? Self.entryGap + 32 : 0
-        let body = cacheNotice + (entryHeights.isEmpty ? 32 : entryHeights.reduce(0, +)
+        let body = mode == .completion ? (result?.height ?? 32) + (data.finalResponse?.publicItem?.sourceTruncated == true ? 30 : 0)
+            : cacheNotice + (entryHeights.isEmpty ? 32 : entryHeights.reduce(0, +)
             + CGFloat(entryHeights.count - 1) * Self.entryGap + historyFooter + historySection)
         height = max(IslandVibeLayout.minimumDetailHeight, Self.padding * 2 + Self.headerHeight + 12 + body)
     }
@@ -157,7 +167,7 @@ struct IslandTaskDetailView: View {
                 Image(systemName: metrics.mode.symbol).font(.system(size: 12))
                 Text(metrics.mode.title(data: data, english: english)).font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Text(text("Codex 公开内容", "Codex public content"))
+                Text(metrics.mode == .completion ? "Codex" : text("Codex 公开内容", "Codex public content"))
                     .font(.system(size: 10)).foregroundStyle(muted)
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
@@ -165,12 +175,29 @@ struct IslandTaskDetailView: View {
                 }.buttonStyle(.plain).accessibilityHint(text("关闭详情", "Close details"))
                     .accessibilityLabel(text("关闭详情", "Close details"))
             }.foregroundStyle(accent).frame(height: IslandTaskDetailMetrics.headerHeight)
-            progress
+            if metrics.mode == .completion { result } else { progress }
         }.padding(.horizontal, IslandTaskDetailMetrics.horizontalPadding)
             .padding(.vertical, IslandTaskDetailMetrics.padding)
             .frame(height: metrics.height, alignment: .top)
             .background(Color(red: 0.035, green: 0.035, blue: 0.035), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 24.0 / 255.0), lineWidth: 1))
+    }
+
+    private var result: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let layout = metrics.result {
+                IslandMarkdownResultView(layout: layout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: layout.height)
+                if data.finalResponse?.publicItem?.sourceTruncated == true {
+                    Text(text("回答超出本地缓存，请在 Codex 查看后续内容", "Answer exceeds the local cache; continue in Codex"))
+                        .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
+                }
+            } else {
+                Text(text("最终回答尚未同步，请在 Codex 查看", "Final answer has not synced; view it in Codex"))
+                    .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 32)
+            }
+        }
     }
 
     private var progress: some View {

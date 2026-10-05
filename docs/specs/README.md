@@ -10,6 +10,8 @@
 >
 > 当前本地已交付：0.7.5/Build7/内部56观察等待恢复与原生异步问题本地退场；App PID62058、Widget PID62064。首轮编译失败日志保留，修正后Universal构建、190项生产输入/4项安装二进制哈希、同Team Developer ID签名、旧新权限声明及实际加载/活动通道核对通过；首次本地交付未新增或运行本地测试，真实交互待用户验收。30秒无人接管及发送/结果未知后3秒退场只管理本地展示；同thread/turn/question哈希持久账本有界4096项，不能证明原生缩略或已回答/关闭。源码与对应CI/main集成见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)；CI恢复修订尚未重新编译或替换安装，上述产物证据不包含后续源码；不发布Release/appcast。证据与边界见[信息契约](codex-island-information-contract.md#观察等待与本地提醒退场--2026-10-05)、[原生关闭合同](../design/codex-native-question-closure-contract-2026-10-03.md#2026-10-05-本地退场增量)及Handoff。
 >
+> 2026-10-05 新增源码：完成详情直接渲染 Codex 最终回答与可点击链接；有界摘要、重复刷新抑制、扫光/Metal 时钟连续修订。见[信息契约](codex-island-information-contract.md#完成回答与刷新成本--2026-10-05)及[效果契约](PROGRESS_EFFECT_ADAPTATION.md#8-2026-10-05-刷新与动画连续性修订)。用户随后授权运行，Debug arm64 增量开发编译通过，开发主 PID43098 已替换旧正式主进程；实际效果待用户验收，GitHub 合入状态见 Handoff。
+>
 > 开发入口与当前本地运行包见 [Handoff](../../HANDOFF.md#工作区与版本定位)。源码发布与规格完整验收分别记录；原生异步提问组关闭、真实 Intel 和完整客户端更新安装仍保留验收边界。
 
 本文件只负责规格发现和状态定位，不复制 Requirement、实现或完整发布证据。

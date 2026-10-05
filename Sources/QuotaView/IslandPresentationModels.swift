@@ -137,6 +137,7 @@ struct CodexPublicTraceItem: Equatable {
     enum Category { case message, command, fileChange }
     var category: Category; var sourceID: String; var turnID: String
     var status: String?; var output: String?; var sourceTruncated = false; var exitCode: Int?
+    var messagePhase: String? = nil
 }
 enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }
 struct IslandConfirmation: Identifiable, Equatable {
@@ -156,5 +157,11 @@ struct IslandTaskDetailData: Equatable {
     var entries: [IslandTraceEntry]; var confirmation: IslandConfirmation?; var status: IslandTaskStatus
     var removedEntryCount = 0
     var visibleEntries: [IslandTraceEntry] { entries }
+    // Older native protocols omit phase. Use their last assistant message only
+    // when no explicit final exists; a known commentary/tool is never a result.
+    var finalResponse: IslandTraceEntry? {
+        entries.last { $0.kind == .result && $0.publicItem?.category == .message }
+            ?? entries.last { $0.publicItem?.category == .message && $0.publicItem?.messagePhase == nil }
+    }
     var running: Bool { [.thinking, .working, .compacting, .queued].contains(status) }
 }

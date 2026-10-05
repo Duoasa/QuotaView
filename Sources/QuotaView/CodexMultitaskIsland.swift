@@ -408,8 +408,8 @@ struct IslandMemoryActivity: Equatable {
     }
 }
 
-struct CodexMultitaskDisplay {
-    struct State {
+struct CodexMultitaskDisplay: Equatable {
+    struct State: Equatable {
         var tasks: [CodexMultitaskRenderTask]
         var selectedID: Int
         var allCompleted: Bool
