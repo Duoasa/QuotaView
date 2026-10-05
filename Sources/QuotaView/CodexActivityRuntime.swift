@@ -102,7 +102,7 @@ final class CodexActivityRuntime: ObservableObject {
         let root = defaults.string(forKey: Self.dataDirectoryKey).map { URL(fileURLWithPath: $0) }
             ?? defaultDataDirectory
         dataDirectoryURL = root
-        self.desktopIPCClient = desktopIPCClient ?? CodexDesktopIPCClient(configuration: .init(
+        self.desktopIPCClient = desktopIPCClient ?? CodexDesktopIPCClient(configuration: .live(
             socketURL: root.appendingPathComponent("ipc/ipc.sock")))
         let environment = CodexActivityDirectoryEnvironment.make(root: root)
         store = activityStore ?? CodexActivityStore(
@@ -356,7 +356,7 @@ final class CodexActivityRuntime: ObservableObject {
               desktopFollowedThreads.contains(snapshot.conversationID) else { return }
         let projection: CodexDesktopInteractionProjection
         do {
-            projection = try CodexDesktopRequestProjector.project(
+            projection = try snapshot.interactionProjection ?? CodexDesktopRequestProjector.project(
                 conversationID: snapshot.conversationID, conversationStateData: snapshot.conversationState)
         } catch {
             recordDesktopDiagnostic(snapshot.conversationID, outcome: "projection_rejected", details: "epoch=\(snapshot.connectionEpoch)")
@@ -369,7 +369,16 @@ final class CodexActivityRuntime: ObservableObject {
             $0.value.canRespond && $0.value.protocolRequest?.desktopHandle?.conversationID == snapshot.conversationID
         }.count
         let status = ["inProgress", "completed", "interrupted", "failed"].contains(projection.status) ? projection.status : "unknown"
-        let details = "epoch=\(snapshot.connectionEpoch) status=\(status) source_kind=\(projection.sourceKind.rawValue) authoritative=\(projection.pendingRequestsAreAuthoritative) owner_input=\(snapshot.supportsUntrustedAppInput) handles=\(snapshot.requests.count) actionable=\(actionable)"
+        let wait: String
+        switch projection.threadWaitStatus {
+        case .running: wait = "running"
+        case .unavailable: wait = "unavailable"
+        case .waiting(let reason): wait = reason.rawValue
+        }
+        let session = CodexActivityPrivacy.hashIdentifier(snapshot.conversationID)
+        let lifecycle = liveIsland.model.tasks.first { $0.key == session }?
+            .requestLifecycle.desktopDiagnosticSummary(at: Date()) ?? "task_absent=true"
+        let details = "epoch=\(snapshot.connectionEpoch) status=\(status) source_kind=\(projection.sourceKind.rawValue) authoritative=\(projection.pendingRequestsAreAuthoritative) owner_input=\(snapshot.supportsUntrustedAppInput) handles=\(snapshot.requests.count) actionable=\(actionable) native_wait=\(wait) \(lifecycle)"
         recordDesktopDiagnostic(snapshot.conversationID, outcome: admitted ? "snapshot_admitted" : "snapshot_rejected", details: details)
         if admitted, ["completed", "interrupted", "failed"].contains(projection.status) {
             stopFollowingDesktopThread(snapshot.conversationID)
@@ -616,7 +625,7 @@ final class CodexActivityRuntime: ObservableObject {
                 }
                 return
             }
-            desktopIPCClient = CodexDesktopIPCClient(configuration: .init(
+            desktopIPCClient = CodexDesktopIPCClient(configuration: .live(
                 socketURL: target.appendingPathComponent("ipc/ipc.sock")))
             dataDirectoryURL = target
             hookEventGeneration &+= 1

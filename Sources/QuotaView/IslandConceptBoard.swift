@@ -486,6 +486,11 @@ final class IslandBoardState: ObservableObject {
             completionQuotaClose = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
         }
+        guard completedCount > 0 else {
+            cancelStatisticRotation()
+            if showsCompletedStatistic { showsCompletedStatistic = false }
+            return
+        }
         guard statisticRotation == nil else { return }
         let serial = statisticSerial
         let work = DispatchWorkItem { [weak self] in
@@ -1177,11 +1182,15 @@ struct IslandBoardView: View {
                                     if state.showsScrollRail { Image(systemName: "arrow.up.arrow.down") }
                                 }
                                 if let memory = state.memoryActivity {
-                                    IslandSmallActivityOrb(visualState: memory.visualState,
-                                        playback: state.playback && !state.compact && memory.playbackEnabled)
-                                        .help(memory.label(english: state.english))
-                                        .accessibilityElement(children: .ignore)
-                                        .accessibilityLabel(memory.label(english: state.english))
+                                    HStack(spacing: 5) {
+                                        IslandSmallActivityOrb(visualState: .compactingContext,
+                                            playback: state.playback && !state.compact)
+                                        Text(state.text("记忆整理", "Memory consolidation"))
+                                    }
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .help(memory.label(english: state.english))
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel(memory.label(english: state.english))
                                 }
                             }.lineLimit(1)
                         } trailing: {
@@ -1340,7 +1349,7 @@ struct IslandBoardView: View {
                 // Reserve both labels so switching cannot move the task text.
                 Text(state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions")).hidden()
                 Text(state.text("\(state.completedCount) 完成", "\(state.completedCount) done")).hidden()
-                Text(state.showsCompletedStatistic
+                Text(state.showsCompletedStatistic && state.completedCount > 0
                     ? state.text("\(state.completedCount) 完成", "\(state.completedCount) done")
                     : state.text("\(state.tasks.count) 会话", "\(state.tasks.count) sessions"))
             }.foregroundStyle(IslandBoardStyle.muted)

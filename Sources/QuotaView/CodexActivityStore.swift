@@ -655,7 +655,7 @@ final class CodexActivityStore: ObservableObject {
                                   at now: Date = Date()) async -> Bool {
         let run = nativeGeneration
         let epoch = desktop.connectionEpoch
-        guard desktop.conversationState.count <= CodexDesktopRequestProjector.maximumStateBytes,
+        guard desktop.conversationStateByteCount <= CodexDesktopRequestProjector.maximumDesktopStateBytes,
               !desktop.conversationID.isEmpty, !desktop.ownerClientID.isEmpty,
               closedDesktopPublicEpoch.map({ epoch > $0 }) ?? true,
               desktopPublicEpoch.map({ epoch >= $0 }) ?? true,

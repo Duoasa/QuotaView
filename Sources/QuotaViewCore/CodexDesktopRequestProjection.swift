@@ -99,14 +99,22 @@ public enum CodexDesktopRequestProjectionError: Error, Equatable {
 /// use agentMessage.questions and accepted native question-reply steering messages.
 public enum CodexDesktopRequestProjector {
     public static let maximumStateBytes = 8 * 1_048_576
+    public static let maximumDesktopStateBytes = 64 * 1_048_576
     public static let maximumPendingRequests = 256
     public static let maximumAsyncQuestions = 256
     public static let asyncReplyOpeningTag = "<send_user_message_question_reply>"
     public static let asyncReplyClosingTag = "</send_user_message_question_reply>"
 
-    public static func project(conversationID: String, conversationStateData: Data) throws -> CodexDesktopInteractionProjection {
-        guard conversationStateData.count <= maximumStateBytes else { throw CodexDesktopRequestProjectionError.oversizedState }
-        let json = try JSONDecoder().decode(PublicJSON.self, from: conversationStateData)
+    public static func project(conversationID: String, conversationStateData: Data,
+                               maximumBytes: Int = maximumStateBytes) throws -> CodexDesktopInteractionProjection {
+        guard conversationStateData.count <= min(maximumBytes, maximumDesktopStateBytes) else { throw CodexDesktopRequestProjectionError.oversizedState }
+        let json = try JSONDecoder().decode(DesktopIPCJSON.self, from: conversationStateData)
+        return try project(conversationID: conversationID, state: json)
+    }
+
+    /// The live follower already owns a decoded, bounded tree. Reuse it without
+    /// serializing and decoding the entire history for every streaming patch.
+    static func project(conversationID: String, state json: DesktopIPCJSON) throws -> CodexDesktopInteractionProjection {
         guard let state = json.object else { throw CodexDesktopRequestProjectionError.malformedState }
         guard state["id"]?.string == conversationID else { throw CodexDesktopRequestProjectionError.conversationMismatch }
         let source = state["source"].flatMap { try? $0.foundationValue() }
@@ -349,36 +357,14 @@ public enum CodexDesktopRequestProjector {
     }
 }
 
-private indirect enum PublicJSON: Codable {
-    case object([String: PublicJSON]), array([PublicJSON]), string(String), integer(Int64), decimal(Double), bool(Bool), null
-    init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() { self = .null }
-        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
-        else if let v = try? c.decode(String.self) { self = .string(v) }
-        else if let v = try? c.decode(Int64.self) { self = .integer(v) }
-        else if let v = try? c.decode(Double.self), v.isFinite { self = .decimal(v) }
-        else if let v = try? c.decode([Self].self) { self = .array(v) }
-        else { self = .object(try c.decode([String: Self].self)) }
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.singleValueContainer()
-        switch self {
-        case .object(let v): try c.encode(v)
-        case .array(let v): try c.encode(v)
-        case .string(let v): try c.encode(v)
-        case .integer(let v): try c.encode(v)
-        case .decimal(let v): try c.encode(v)
-        case .bool(let v): try c.encode(v)
-        case .null: try c.encodeNil()
-        }
-    }
-    var object: [String: Self]? { if case .object(let v) = self { return v }; return nil }
-    var array: [Self]? { if case .array(let v) = self { return v }; return nil }
-    var string: String? { if case .string(let v) = self { return v }; return nil }
+// Share the transport's value tree; these helpers encode only the small public
+// request envelopes after projection, never the complete conversation history.
+private typealias PublicJSON = DesktopIPCJSON
+
+private extension DesktopIPCJSON {
     var nonemptyString: String? { string.flatMap { $0.isEmpty ? nil : $0 } }
     var finiteNumber: Double? {
-        switch self { case .integer(let v): return Double(v); case .decimal(let v): return v; default: return nil }
+        switch self { case .integer(let v): return Double(v); case .number(let v): return v; default: return nil }
     }
     var requestID: CodexDesktopIPCRequestID? {
         switch self { case .integer(let v): return .integer(v); case .string(let v) where !v.isEmpty: return .string(v); default: return nil }

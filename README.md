@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.7.5-build.3/QuotaView-v0.7.5-build.3.zip"><strong>Download QuotaView v0.7.5 Build 3</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.7.7-build.1/QuotaView-v0.7.7-build.1.zip"><strong>Download QuotaView v0.7.7 Build 1</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -42,6 +42,13 @@ Keep parallel work in view without switching windows. QuotaView brings tasks, ag
 
 QuotaView is open source, lightweight, and local-first. Active local sessions are discovered automatically, with quota and usage one click away.
 
+## 0.7.7: smoother tasks and confirmations
+
+- **More reliable confirmations:** fixes delayed approval details, temporarily unavailable options, and stale waiting states after a request is handled. macOS permission dialogs remain under system control.
+- **Smoother long sessions:** reduces repeated history processing and unnecessary redraws to keep the Island responsive.
+- **Clearer completion results:** shows the Codex answer directly, with readable text hierarchy and clickable links. Starting a new session no longer clears completed cards.
+- **Refined compact view:** briefly shows remaining quota after completion, rotates session/completion counts only when needed, and gives memory maintenance a labeled, dedicated indicator.
+
 ## 0.7.5: our biggest update yet
 
 QuotaView 0.7.5 is our largest redesign and architectural update to date. The new multi-task Island brings task progress, collaboration, and quota together, making parallel work easier to follow.
@@ -61,7 +68,7 @@ Rebuilt data reception and state synchronization improve information continuity 
 | **Parallel tasks** | A separate card for each session, with expandable details and completion results. |
 | **Agent collaboration** | A strip extending below the parent card, with individual avatars, names, models, and states. Long groups scroll in one direction. |
 | **Approval required** | Highlighted requests, bounded previews, and supported confirmation actions. |
-| **Memory maintenance** | A small AI orb in the footer, separate from the task list, while its real state continues to update. |
+| **Memory maintenance** | A labeled indicator in the footer with the context-compaction orb, separate from the task list. |
 | **Task completed** | The result remains available for review; cards can be archived locally. |
 
 The Island distinguishes thinking, tools, approvals, context compaction, completion, interruption, and failure. Progress reaches 100% only on a real completion event. Compact and expanded views keep the same task context.
@@ -93,12 +100,12 @@ Open usage statistics from the Island to see the account and usage behind your w
 ## Get started
 
 1. Make sure ChatGPT or Codex is installed and signed in.
-2. Download `QuotaView-v0.7.5-build.3.zip` from the [v0.7.5 Build 3 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3).
+2. Download `QuotaView-v0.7.7-build.1.zip` from the [v0.7.7 Build 1 release](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1).
 3. Unzip it and open `QuotaView.app`.
 4. Start a Codex task. Current Codex releases connect automatically; no Hook installation or restart is required. If records are not found, use the Island settings to recheck or choose the Codex data directory.
 
 > [!IMPORTANT]
-> v0.7.5 Build 3 is signed with a Developer ID certificate, notarized by Apple,
+> v0.7.7 Build 1 is signed with a Developer ID certificate, notarized by Apple,
 > and stapled for offline Gatekeeper verification. It opens normally after
 > unzipping, without the Finder right-click workaround used by older unsigned
 > builds.
@@ -217,7 +224,7 @@ The reusable [Island Text Console](Prototypes/IslandTextConsole/README.md) lets 
 
 ## Releases and project status
 
-- **Recommended stable:** [QuotaView v0.7.5 Build 3](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.5-build.3)
+- **Recommended stable:** [QuotaView v0.7.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1)
 - **Stable rollback:** [QuotaView v0.5.1 Build 13](https://github.com/Duoasa/QuotaView/releases/tag/v0.5.1-build.13)
 - **Withdrawn 0.4.7 Build 2:** the release is retained as a draft outside the public timeline; see [version history](VERSION_HISTORY.md) for the withdrawal record.
 - **Historical proxy preview:** [QuotaView v0.4.7 Preview 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.4.7-preview.1) — retained as historical test evidence, not the recommended stable release.

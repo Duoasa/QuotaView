@@ -61,10 +61,38 @@ public struct CodexDesktopConversationSnapshot: Sendable {
     public let ownerClientID: String
     public let connectionEpoch: UInt64
     public let revision: Int64
-    /// Bounded, transient in-memory desktop state. Never persisted or logged.
-    public let conversationState: Data
+    private let stateData: Data?
+    private let decodedState: DesktopIPCJSON?
+    /// Compatibility access for data-based callers. Production consumes the
+    /// projection and byte budget, so streaming never materializes this copy.
+    /// The decoded tree contains only valid JSON values; failure stays closed.
+    public var conversationState: Data { stateData ?? (try? decodedState?.encode()) ?? Data() }
+    /// Conservative serialized size, maintained from changed subtrees.
+    public let conversationStateByteCount: Int
     public let supportsUntrustedAppInput: Bool
     public let requests: [CodexDesktopIPCRequestHandle]
+    /// Computed once on the transport actor; avoids decoding history again on MainActor.
+    public var interactionProjection: CodexDesktopInteractionProjection? = nil
+
+    init(conversationID: String, hostID: String, ownerClientID: String, connectionEpoch: UInt64,
+         revision: Int64, conversationState: Data, supportsUntrustedAppInput: Bool,
+         requests: [CodexDesktopIPCRequestHandle], interactionProjection: CodexDesktopInteractionProjection? = nil) {
+        self.conversationID = conversationID; self.hostID = hostID; self.ownerClientID = ownerClientID
+        self.connectionEpoch = connectionEpoch; self.revision = revision
+        stateData = conversationState; decodedState = nil; conversationStateByteCount = conversationState.count
+        self.supportsUntrustedAppInput = supportsUntrustedAppInput; self.requests = requests
+        self.interactionProjection = interactionProjection
+    }
+
+    fileprivate init(conversationID: String, hostID: String, ownerClientID: String, connectionEpoch: UInt64,
+                     revision: Int64, state: DesktopIPCJSON, byteCount: Int, supportsUntrustedAppInput: Bool,
+                     requests: [CodexDesktopIPCRequestHandle], interactionProjection: CodexDesktopInteractionProjection) {
+        self.conversationID = conversationID; self.hostID = hostID; self.ownerClientID = ownerClientID
+        self.connectionEpoch = connectionEpoch; self.revision = revision
+        stateData = nil; decodedState = state; conversationStateByteCount = byteCount
+        self.supportsUntrustedAppInput = supportsUntrustedAppInput; self.requests = requests
+        self.interactionProjection = interactionProjection
+    }
 }
 
 public enum CodexDesktopIPCConnectionState: Equatable, Sendable {
@@ -121,22 +149,35 @@ public actor CodexDesktopIPCClient {
         public let requestTimeoutSeconds: TimeInterval
         public let maximumFrameBytes: Int
         public let maximumRetainedStateBytes: Int
+        public let maximumConversationStateBytes: Int
+        public let maximumJSONNodes: Int
         public let frameDrainTimeoutSeconds: TimeInterval
         public init(isEnabled: Bool = true, socketURL: URL,
                     requestTimeoutSeconds: TimeInterval = 5,
                     maximumFrameBytes: Int = 9_437_184,
                     maximumRetainedStateBytes: Int = 33_554_432,
-                    frameDrainTimeoutSeconds: TimeInterval = 5) {
+                    frameDrainTimeoutSeconds: TimeInterval = 5,
+                    maximumConversationStateBytes: Int = CodexDesktopRequestProjector.maximumStateBytes,
+                    maximumJSONNodes: Int = 100_000) {
             self.isEnabled = isEnabled; self.socketURL = socketURL
             self.requestTimeoutSeconds = max(0.05, requestTimeoutSeconds)
-            self.maximumFrameBytes = max(1024, min(maximumFrameBytes, 9_437_184))
-            self.maximumRetainedStateBytes = max(self.maximumFrameBytes, min(maximumRetainedStateBytes, 33_554_432))
+            self.maximumFrameBytes = max(1024, min(maximumFrameBytes, 72 * 1_048_576))
+            self.maximumRetainedStateBytes = max(self.maximumFrameBytes, min(maximumRetainedStateBytes, 128 * 1_048_576))
+            self.maximumConversationStateBytes = max(1024, min(maximumConversationStateBytes,
+                CodexDesktopRequestProjector.maximumDesktopStateBytes))
+            self.maximumJSONNodes = max(1024, min(maximumJSONNodes, 1_000_000))
             self.frameDrainTimeoutSeconds = max(0.05, min(frameDrainTimeoutSeconds, 30))
         }
         public static func live(environment: [String: String] = ProcessInfo.processInfo.environment) -> Self {
             let root = environment["CODEX_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
                 ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
-            return .init(socketURL: root.appendingPathComponent("ipc/ipc.sock"))
+            return live(socketURL: root.appendingPathComponent("ipc/ipc.sock"))
+        }
+        public static func live(socketURL: URL) -> Self {
+            .init(socketURL: socketURL,
+                maximumFrameBytes: 72 * 1_048_576, maximumRetainedStateBytes: 128 * 1_048_576,
+                maximumConversationStateBytes: CodexDesktopRequestProjector.maximumDesktopStateBytes,
+                maximumJSONNodes: 1_000_000)
         }
     }
     private struct FollowKey: Hashable { let conversationID: String; let hostID: String }
@@ -145,7 +186,7 @@ public actor CodexDesktopIPCClient {
         var owner: Owner
         var revision: Int64
         var state: DesktopIPCJSON
-        var encoded: Data
+        var stateByteCount: Int
         var handles: [CodexDesktopIPCRequestHandle]
     }
     private struct AttemptIdentity: Hashable {
@@ -507,7 +548,8 @@ public actor CodexDesktopIPCClient {
             case .message(let data):
                 do { try await handle(data, epoch: run) }
                 catch CodexDesktopIPCError.resourceLimit {
-                    try await handleResourceEnvelope(DesktopIPCEnvelopeReducer.reduce(data), epoch: run)
+                    try await handleResourceEnvelope(DesktopIPCEnvelopeReducer.reduce(data), epoch: run,
+                        diagnosticCode: "json_structure")
                 }
             case .oversized(let reduced):
                 try await handleResourceEnvelope(reduced, epoch: run)
@@ -534,7 +576,7 @@ public actor CodexDesktopIPCClient {
     /// The whole declared frame has been consumed. Only a unique envelope from
     /// an already discovered owner can quarantine one follow; body contents are
     /// never materialized. Audience/foreign/unfollowed traffic is simply ignored.
-    private func handleResourceEnvelope(_ reduced: Data?, epoch run: UInt64) async throws {
+    private func handleResourceEnvelope(_ reduced: Data?, epoch run: UInt64, diagnosticCode: String = "frame_bytes") async throws {
         guard let reduced else { throw CodexDesktopIPCError.resourceLimit }
         let message = try DesktopIPCJSON.decode(reduced, limit: DesktopIPCEnvelopeReducer.maximumMetadataBytes)
         guard initialized, message["type"]?.string == "broadcast",
@@ -553,10 +595,11 @@ public actor CodexDesktopIPCClient {
         guard message["version"]?.integer == 11 else {
             incompatible = true; await closeConnection(); return
         }
-        await invalidateResourceLimit(key, epoch: run)
+        await invalidateResourceLimit(key, epoch: run, diagnosticCode: diagnosticCode)
     }
     private func handle(_ data: Data, epoch run: UInt64) async throws {
-        let message = try DesktopIPCJSON.decode(data, limit: configuration.maximumFrameBytes)
+        let message = try DesktopIPCJSON.decode(data, limit: configuration.maximumFrameBytes,
+            maximumNodes: configuration.maximumJSONNodes)
         switch message["type"]?.string {
         case "response":
             guard let id = message["requestId"]?.string, let request = pending.removeValue(forKey: id) else { return }
@@ -612,11 +655,13 @@ public actor CodexDesktopIPCClient {
             throw CodexDesktopIPCError.invalidMessage
         }
         let state: DesktopIPCJSON
+        var stateByteCount: Int
         switch change["type"]?.string {
         case "snapshot":
             guard let candidate = change["conversationState"], candidate["id"]?.string == conversation else { throw CodexDesktopIPCError.invalidMessage }
             if let previous = ledger[key], revision < previous.revision { return }
             state = candidate
+            stateByteCount = candidate.budgetByteCount
         case "patches":
             guard let entry = ledger[key], change["baseRevision"]?.integer == entry.revision,
                   revision > entry.revision, let patches = change["patches"]?.array else {
@@ -624,26 +669,28 @@ public actor CodexDesktopIPCClient {
                 try broadcast(method: "thread-stream-following-changed", version: 1,
                               params: ["conversationId": .string(conversation), "hostId": .string(host), "following": .bool(true)], targets: [source]); return
             }
-            guard patches.count <= 1024 else { await invalidateResourceLimit(key, epoch: run); return }
-            do { state = try DesktopIPCJSON.applying(patches, to: entry.state) }
+            guard patches.count <= 1024 else { await invalidateResourceLimit(key, epoch: run, diagnosticCode: "patch_count"); return }
+            stateByteCount = entry.stateByteCount
+            do { state = try DesktopIPCJSON.applying(patches, to: entry.state, byteCount: &stateByteCount) }
             catch { removeLedger(key); throw CodexDesktopIPCError.invalidMessage }
             guard state["id"]?.string == conversation else { throw CodexDesktopIPCError.invalidMessage }
         default: throw CodexDesktopIPCError.invalidMessage
         }
-        let encoded = try state.encode()
-        let retained = ledger.filter { $0.key != key }.reduce(encoded.count) { $0 + $1.value.encoded.count }
-        guard encoded.count <= CodexDesktopRequestProjector.maximumStateBytes,
-              retained <= configuration.maximumRetainedStateBytes else {
-            await invalidateResourceLimit(key, epoch: run); return
+        let retained = ledger.filter { $0.key != key }.reduce(stateByteCount) { $0 + $1.value.stateByteCount }
+        guard stateByteCount <= configuration.maximumConversationStateBytes else {
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "state_bytes"); return
+        }
+        guard retained <= configuration.maximumRetainedStateBytes else {
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "retained_bytes"); return
         }
         guard let requests = state["requests"]?.array else { throw CodexDesktopIPCError.invalidMessage }
         guard requests.count <= CodexDesktopRequestProjector.maximumPendingRequests else {
-            await invalidateResourceLimit(key, epoch: run); return
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "request_count"); return
         }
         let projection: CodexDesktopInteractionProjection
-        do { projection = try CodexDesktopRequestProjector.project(conversationID: conversation, conversationStateData: encoded) }
+        do { projection = try CodexDesktopRequestProjector.project(conversationID: conversation, state: state) }
         catch CodexDesktopRequestProjectionError.oversizedState {
-            await invalidateResourceLimit(key, epoch: run); return
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "projection_budget"); return
         }
         let old = ledger[key]?.handles ?? []
         var handles: [CodexDesktopIPCRequestHandle] = []
@@ -671,13 +718,14 @@ public actor CodexDesktopIPCClient {
             let live = Set(handles.map(AttemptIdentity.init))
             attempted = attempted.filter { $0.conversationID != conversation || $0.ownerClientID != source || live.contains($0) }
         }
-        ledger[key] = .init(owner: owner, revision: revision, state: state, encoded: encoded, handles: handles)
+        ledger[key] = .init(owner: owner, revision: revision, state: state, stateByteCount: stateByteCount, handles: handles)
         if change["type"]?.string == "snapshot", let waiters = snapshotWaiters.removeValue(forKey: key) {
             for waiter in waiters.values { waiter.timer.cancel(); waiter.continuation.resume() }
         }
         await snapshotHandler?(.init(conversationID: conversation, hostID: host, ownerClientID: source,
-                                     connectionEpoch: run, revision: revision, conversationState: encoded,
-                                     supportsUntrustedAppInput: owner.supportsInput && host == "local" && projection.pendingRequestsAreAuthoritative, requests: handles))
+                                     connectionEpoch: run, revision: revision, state: state, byteCount: stateByteCount,
+                                     supportsUntrustedAppInput: owner.supportsInput && host == "local" && projection.pendingRequestsAreAuthoritative,
+                                     requests: handles, interactionProjection: projection))
     }
     private static let submittableMethods: Set<String> = ["item/commandExecution/requestApproval", "item/fileChange/requestApproval",
         "item/permissions/requestApproval", "item/tool/requestUserInput", "mcpServer/elicitation/request"]
@@ -712,7 +760,7 @@ public actor CodexDesktopIPCClient {
         guard run == epoch, let request = pending.removeValue(forKey: id) else { return }
         request.continuation.resume(throwing: request.submission ? CodexDesktopIPCError.outcomeUnknown : CodexDesktopIPCError.unavailable)
     }
-    private func invalidateResourceLimit(_ key: FollowKey, epoch run: UInt64) async {
+    private func invalidateResourceLimit(_ key: FollowKey, epoch run: UInt64, diagnosticCode: String = "conversation_budget") async {
         guard run == epoch, !resourceBlockedFollows.contains(key) else { return }
         resourceBlockedFollows.insert(key)
         followRecoveries.removeValue(forKey: key)?.task.cancel()
@@ -726,7 +774,7 @@ public actor CodexDesktopIPCClient {
                 params: ["conversationId": .string(key.conversationID), "hostId": .string(key.hostID), "following": .bool(false)], targets: [owner.clientID])
         }
         await invalidationHandler?(.init(conversationID: key.conversationID, hostID: key.hostID,
-            connectionEpoch: run, reason: .resourceLimit))
+            connectionEpoch: run, reason: .resourceLimit, diagnosticCode: diagnosticCode))
     }
     private func suspendForResourceLimit(epoch run: UInt64, diagnosticCode: String = "frame_unroutable") async {
         guard run == epoch else { return }
@@ -788,7 +836,7 @@ struct CodexDesktopIPCFrameDecoder {
 }
 
 /// Framing and drain use the native 256MiB wire bound, independently from the
-/// 9MiB materialization limit. Retained state limits are never raised.
+/// configured materialization limit. Oversized frames are routed and discarded.
 private struct DesktopIPCInboundDecoder {
     enum Event { case message(Data), oversized(Data?) }
     static let maximumWireBytes = 256 * 1_048_576
@@ -1107,7 +1155,7 @@ private final class DesktopIPCSocket: @unchecked Sendable {
 }
 
 /// Bounded JSON tree, used only for atomic desktop Immer patch reconstruction.
-fileprivate indirect enum DesktopIPCJSON: Equatable, Codable {
+indirect enum DesktopIPCJSON: Equatable, Codable, Sendable {
     case object([String: Self]), array([Self]), string(String), integer(Int64), number(Double), bool(Bool), null
     var object: [String: Self]? { if case .object(let value) = self { return value }; return nil }
     var array: [Self]? { if case .array(let value) = self { return value }; return nil }
@@ -1138,12 +1186,43 @@ fileprivate indirect enum DesktopIPCJSON: Equatable, Codable {
         }
     }
     func encode() throws -> Data { let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]; return try encoder.encode(self) }
-    static func decode(_ data: Data, limit: Int) throws -> Self {
+    /// Upper bound for the compact JSON encoding. Count once for snapshots;
+    /// patches subtract/replace only their affected leaves, including commas
+    /// and keys. No complete-history encoding or scan is needed per patch.
+    var budgetByteCount: Int {
+        switch self {
+        case .object(let values):
+            return 2 + max(0, values.count - 1) + values.reduce(0) {
+                $0 + Self.stringBudget($1.key) + 1 + $1.value.budgetByteCount
+            }
+        case .array(let values): return 2 + max(0, values.count - 1) + values.reduce(0) { $0 + $1.budgetByteCount }
+        case .string(let value): return Self.stringBudget(value)
+        case .integer(let value): return String(value).utf8.count
+        case .number: return 32 // Includes exponent/sign for every finite Double.
+        case .bool(let value): return value ? 4 : 5
+        case .null: return 4
+        }
+    }
+    private static func stringBudget(_ value: String) -> Int {
+        var count = 2
+        for scalar in value.unicodeScalars {
+            switch scalar.value {
+            case 8, 9, 10, 12, 13, 34, 47, 92: count += 2
+            case 0...31, 0x2028, 0x2029: count += 6
+            case 0...0x7f: count += 1
+            case 0...0x7ff: count += 2
+            case 0...0xffff: count += 3
+            default: count += 4
+            }
+        }
+        return count
+    }
+    static func decode(_ data: Data, limit: Int, maximumNodes: Int = 100_000) throws -> Self {
         guard data.count <= limit else { throw CodexDesktopIPCError.resourceLimit }
         let value = try JSONDecoder().decode(Self.self, from: data)
         var nodes = 0
         func bounded(_ value: Self, depth: Int) -> Bool {
-            nodes += 1; guard depth <= 64, nodes <= 100_000 else { return false }
+            nodes += 1; guard depth <= 64, nodes <= maximumNodes else { return false }
             switch value {
             case .object(let object): return object.values.allSatisfy { bounded($0, depth: depth + 1) }
             case .array(let array): return array.allSatisfy { bounded($0, depth: depth + 1) }
@@ -1153,34 +1232,58 @@ fileprivate indirect enum DesktopIPCJSON: Equatable, Codable {
         guard bounded(value, depth: 0) else { throw CodexDesktopIPCError.resourceLimit }
         return value
     }
-    static func applying(_ patches: [Self], to state: Self) throws -> Self {
+    static func applying(_ patches: [Self], to state: Self, byteCount: inout Int) throws -> Self {
         var candidate = state
         for patch in patches {
             guard let operation = patch["op"]?.string, ["add", "remove", "replace"].contains(operation),
                   let path = patch["path"]?.array, !path.isEmpty, path.count <= 64,
                   operation == "remove" || patch["value"] != nil else { throw CodexDesktopIPCError.invalidMessage }
-            candidate = try candidate.patch(path[...], operation: operation, value: patch["value"])
+            candidate = try candidate.patch(path[...], operation: operation, value: patch["value"], byteCount: &byteCount)
         }
         return candidate
     }
-    private func patch(_ path: ArraySlice<Self>, operation: String, value: Self?) throws -> Self {
+    private func patch(_ path: ArraySlice<Self>, operation: String, value: Self?, byteCount: inout Int) throws -> Self {
         guard let component = path.first else { throw CodexDesktopIPCError.invalidMessage }
         let tail = path.dropFirst()
         switch self {
         case .object(var object):
             guard let key = component.string else { throw CodexDesktopIPCError.invalidMessage }
             if tail.isEmpty {
-                if operation == "remove" { guard object.removeValue(forKey: key) != nil else { throw CodexDesktopIPCError.invalidMessage } }
-                else { guard operation == "add" || object[key] != nil else { throw CodexDesktopIPCError.invalidMessage }; object[key] = value! }
-            } else { guard let child = object[key] else { throw CodexDesktopIPCError.invalidMessage }; object[key] = try child.patch(tail, operation: operation, value: value) }
+                if operation == "remove" {
+                    guard let removed = object.removeValue(forKey: key) else { throw CodexDesktopIPCError.invalidMessage }
+                    byteCount -= Self.stringBudget(key) + 1 + removed.budgetByteCount + (object.isEmpty ? 0 : 1)
+                } else {
+                    guard operation == "add" || object[key] != nil else { throw CodexDesktopIPCError.invalidMessage }
+                    if let previous = object[key] { byteCount += value!.budgetByteCount - previous.budgetByteCount }
+                    else { byteCount += Self.stringBudget(key) + 1 + value!.budgetByteCount + (object.isEmpty ? 0 : 1) }
+                    object[key] = value!
+                }
+            } else {
+                guard let child = object[key] else { throw CodexDesktopIPCError.invalidMessage }
+                object[key] = try child.patch(tail, operation: operation, value: value, byteCount: &byteCount)
+            }
             return .object(object)
         case .array(var array):
             guard let raw = component.integer, raw >= 0, raw <= Int64(array.count) else { throw CodexDesktopIPCError.invalidMessage }
             let index = Int(raw)
             if tail.isEmpty {
-                if operation == "add" { array.insert(value!, at: index) }
-                else { guard index < array.count else { throw CodexDesktopIPCError.invalidMessage }; if operation == "remove" { array.remove(at: index) } else { array[index] = value! } }
-            } else { guard index < array.count else { throw CodexDesktopIPCError.invalidMessage }; array[index] = try array[index].patch(tail, operation: operation, value: value) }
+                if operation == "add" {
+                    byteCount += value!.budgetByteCount + (array.isEmpty ? 0 : 1)
+                    array.insert(value!, at: index)
+                } else {
+                    guard index < array.count else { throw CodexDesktopIPCError.invalidMessage }
+                    if operation == "remove" {
+                        byteCount -= array[index].budgetByteCount + (array.count > 1 ? 1 : 0)
+                        array.remove(at: index)
+                    } else {
+                        byteCount += value!.budgetByteCount - array[index].budgetByteCount
+                        array[index] = value!
+                    }
+                }
+            } else {
+                guard index < array.count else { throw CodexDesktopIPCError.invalidMessage }
+                array[index] = try array[index].patch(tail, operation: operation, value: value, byteCount: &byteCount)
+            }
             return .array(array)
         default: throw CodexDesktopIPCError.invalidMessage
         }

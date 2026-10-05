@@ -190,7 +190,15 @@ public struct CodexActivityEvent: Codable, Equatable, Sendable {
 
 public extension CodexActivityEvent {
     var userInputMode: CodexUserInputMode? { CodexUserInputMode.forToolName(toolName) }
-    var effectiveWaitReason: CodexActivityWaitReason? { userInputMode == nil ? waitReason : .userInput }
+    var effectiveWaitReason: CodexActivityWaitReason? {
+        if userInputMode != nil { return .userInput }
+        if let waitReason { return waitReason }
+        // Hook PermissionRequest payloads do not carry waitReason. Normalize
+        // the event's approval semantics before matching native wait evidence;
+        // nil would leave the Hook alias unbound after the real RPC disappears.
+        // This identifies a permission request, not a macOS system dialog.
+        return event == .permissionRequest ? .approval : nil
+    }
 
     func classified(as kind: CodexActivitySessionKind, sessionHash canonicalSession: String? = nil) -> Self {
         Self(schemaVersion: schemaVersion, event: event, sessionHash: canonicalSession ?? sessionHash,

@@ -1,5 +1,11 @@
 # QuotaView SDD 注册表
 
+> 2026-10-06：用户已批准当前修订以0.7.7 Build1（内部57）发布GitHub Stable与appcast；中英文README和英文Release简述同步准备。合入、产物及渠道实证见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
+
+> 2026-10-06 01:17现场：审批在订阅超时约87秒后自行恢复；进程采样定位每次patch全历史编码/解码阻塞IPC reader。修订为复用JSON树投影、变化子树容量记账，并按用户要求取消完成批次自动清理。当前开发运行与验收见[Handoff](../../HANDOFF.md)，详见[信息契约](codex-island-information-contract.md#2026-10-06-审批详情延迟与数据通道修订)。
+
+> 2026-10-06 00:55复测：对照发行版与Vibe参考，定位真实Hook不含waitReason导致审批观察始终未绑定；在事件语义入口补齐PermissionRequest缺省approval，保留提问类型与原生能力校验。完成数为0时停止右侧统计轮播。开发编译/运行和真实验收状态见[Handoff](../../HANDOFF.md)；修订详见[信息契约](codex-island-information-contract.md#2026-10-06-hook审批类型修正)。前轮64/72/128MiB预算、actor投影与记忆文案/固定压缩球修改保持本地。
+
 > 2026-10-05 23:16 后续修订：完成正文灰度/字重分层、摘要 Markdown 解码、完成后剩余用量提示 3 秒与统计轮播；修订 Desktop IPC 分片读取停滞计时，普通确认继续沿用原生 owner 应答能力，macOS 权限只作系统弹窗提示。开发运行与 GitHub 集成以 [Handoff](../../HANDOFF.md) 顶部记录为准；视觉及真实应答仍由用户验收。
 
 > 文档编号：`QV-SDD-INDEX-001`
