@@ -64,9 +64,11 @@ sparkle_installer_xpc="${sparkle_version_dir}/XPCServices/Installer.xpc"
 sparkle_downloader_xpc="${sparkle_version_dir}/XPCServices/Downloader.xpc"
 sparkle_autoupdate="${sparkle_version_dir}/Autoupdate"
 sparkle_updater_app="${sparkle_version_dir}/Updater.app"
-destination_app="${dist_dir}/QuotaView.app"
+destination_release="${dist_dir}/${release_name}"
+destination_app="${destination_release}/QuotaView.app"
 staging_zip="${staging_dir}/${release_name}.zip"
-destination_zip="${dist_dir}/${release_name}.zip"
+destination_zip="${destination_release}/${release_name}.zip"
+destination_manifest="${destination_release}/${release_name}.manifest.json"
 signing_identity="${CODESIGN_IDENTITY:-}"
 notary_profile="${NOTARY_PROFILE:-}"
 sparkle_key_account="${SPARKLE_KEY_ACCOUNT:-com.quotaview.menubar}"
@@ -171,6 +173,10 @@ mkdir -p "${dist_dir}"
 
 cd "${project_dir}"
 
+# Freeze provenance before the compiler reads source inputs.
+source_identity_file="${staging_dir}/source-identity.json"
+python3 "${script_dir}/release-source-identity.py" capture "${project_dir}" "${source_identity_file}"
+
 xcodebuild \
     -project "${project_file}" \
     -scheme "${scheme}" \
@@ -183,6 +189,8 @@ xcodebuild \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
     clean build
+
+python3 "${script_dir}/release-source-identity.py" verify "${project_dir}" "${source_identity_file}"
 
 if [[ ! -d "${built_app}" ]]; then
     print -u2 "Xcode did not produce ${built_app}"
@@ -586,72 +594,134 @@ staging_zip_sha256="$(
     shasum -a 256 "${staging_zip}" | awk '{print $1}'
 )"
 
-if [[ -d "${destination_app}" ]]; then
-    previous_app="${dist_dir}/QuotaView.previous.$(date +%Y%m%d%H%M%S).app"
-    mv "${destination_app}" "${previous_app}"
-fi
-
-mv "${staging_app}" "${destination_app}"
-mv -f "${staging_zip}" "${destination_zip}"
-
-xattr -cr "${destination_app}"
-destination_sparkle_version_dir="${destination_app}/Contents/Frameworks/"
-destination_sparkle_version_dir+="Sparkle.framework/Versions/Current"
-packaged_bundles=(
-    "${destination_sparkle_version_dir}/XPCServices/Installer.xpc"
-    "${destination_sparkle_version_dir}/XPCServices/Downloader.xpc"
-    "${destination_sparkle_version_dir}/Updater.app"
-    "${destination_app}"/Contents/Frameworks/*.framework(N)
-    "${destination_app}"/Contents/PlugIns/*.appex(N)
-    "${destination_app}"
-)
-for packaged_bundle in "${packaged_bundles[@]}"; do
-    xattr -d com.apple.FinderInfo "${packaged_bundle}" 2>/dev/null || true
-done
-codesign \
-    --verify \
-    --deep \
-    --strict \
-    --verbose=4 \
-    "${destination_app}"
-destination_zip_sha256="$(
-    shasum -a 256 "${destination_zip}" | awk '{print $1}'
-)"
-if [[ "${destination_zip_sha256}" != "${staging_zip_sha256}" ]]; then
-    print -u2 "Release archive changed while moving into dist."
-    exit 4
-fi
-
+# AUDIT-027: BEGIN SEAL
+# Validate the candidate before touching any sealed output or historical App.
+sparkle_signature=""
+sparkle_archive_length="$(stat -f '%z' "${staging_zip}")"
 if [[ "${is_developer_id}" == true ]]; then
     sign_update_tool="$(
         find "${derived_data}/SourcePackages/artifacts" \
-            -path '*/Sparkle/bin/sign_update' \
-            -type f \
-            -perm -111 \
-            -print \
-            -quit
+            -path '*/Sparkle/bin/sign_update' -type f -perm -111 -print -quit
     )"
     if [[ -z "${sign_update_tool}" ]]; then
         print -u2 "Sparkle sign_update tool was not resolved."
         exit 4
     fi
-
     sparkle_signature="$(
-        "${sign_update_tool}" \
-            --account "${sparkle_key_account}" \
-            -p \
-            "${destination_zip}"
+        "${sign_update_tool}" --account "${sparkle_key_account}" -p "${staging_zip}"
     )"
-    "${sign_update_tool}" \
-        --account "${sparkle_key_account}" \
-        --verify \
-        "${destination_zip}" \
-        "${sparkle_signature}"
-    sparkle_archive_length="$(stat -f '%z' "${destination_zip}")"
+    if [[ -z "${sparkle_signature}" ]]; then
+        print -u2 "Sparkle returned an empty archive signature."
+        exit 4
+    fi
+    "${sign_update_tool}" --account "${sparkle_key_account}" --verify \
+        "${staging_zip}" "${sparkle_signature}"
 fi
+
+python3 "${script_dir}/release-source-identity.py" verify "${project_dir}" "${source_identity_file}"
+source_commit="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "${source_identity_file}")"
+source_dirty="$(python3 -c 'import json,sys; print("dirty" if json.load(open(sys.argv[1]))["dirty"] else "")' "${source_identity_file}")"
+python3 - "${staging_app}" "${staging_zip}" "${destination_release}" \
+    "${release_name}" "${staging_zip_sha256}" "${source_commit}" \
+    "${source_dirty}" "${signing_identity}" "${is_developer_id}" \
+    "${notary_profile}" "${sparkle_signature}" <<'PY'
+import hashlib, json, os, plistlib, shutil, sys, tempfile
+from pathlib import Path
+
+(app_arg, zip_arg, release_arg, name, expected_sha, commit, dirty,
+ signer, developer_id, notary_profile, signature) = sys.argv[1:]
+app, archive, release = map(Path, (app_arg, zip_arg, release_arg))
+dist = release.parent
+lock = dist / ('.' + name + '.seal-lock')
+candidate = None
+locked = False
+
+def digest(path):
+    value = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            value.update(chunk)
+    return value.hexdigest()
+
+def app_tree(path):
+    entries = []
+    for file in sorted(path.rglob('*')):
+        relative = file.relative_to(path).as_posix()
+        if file.is_symlink():
+            entries.append([relative, 'symlink', os.readlink(file)])
+        elif file.is_file():
+            entries.append([relative, file.stat().st_mode & 0o777, digest(file)])
+        elif file.is_dir():
+            entries.append([relative, 'directory'])
+    return hashlib.sha256(json.dumps(entries, separators=(',', ':')).encode()).hexdigest()
+
+def identity(path):
+    data = plistlib.loads(path.read_bytes())
+    keys = ['CFBundleIdentifier', 'CFBundleShortVersionString', 'CFBundleVersion',
+            'QuotaViewDisplayBuildNumber', 'QuotaViewAppGroupIdentifier']
+    return {key: data[key] for key in keys}
+
+try:
+    if digest(archive) != expected_sha:
+        raise ValueError('Staging archive changed after verification')
+    manifest = {
+        'format': 1,
+        'releaseName': name,
+        'sourceCommit': commit,
+        'sourceDirty': bool(dirty),
+        'archive': {'name': archive.name, 'sha256': expected_sha,
+                    'length': archive.stat().st_size, 'sparkleSignature': signature},
+        'appTreeSHA256': app_tree(app),
+        'identity': {
+            'app': identity(app / 'Contents/Info.plist'),
+            'widget': identity(app / 'Contents/PlugIns/QuotaViewWidgetExtension.appex/Contents/Info.plist')
+        },
+        'signing': {'identity': signer, 'developerID': developer_id == 'true',
+                    'notarized': bool(notary_profile)}
+    }
+    # Old flat-layout artifacts are immutable as well. A retry must never hide
+    # a same-identity legacy ZIP behind a newly sealed directory.
+    if (dist / (name + '.zip')).exists() or (dist / (name + '.manifest.json')).exists():
+        raise ValueError('Legacy artifact already uses this identity; preserve it and choose a new identity')
+    lock.mkdir()
+    locked = True
+    if release.exists() or release.is_symlink():
+        if release.is_symlink() or not release.is_dir():
+            raise ValueError('Sealed output is not a release directory')
+        old_manifest = json.loads((release / (name + '.manifest.json')).read_text())
+        old_archive = release / (name + '.zip')
+        if old_manifest != manifest or digest(old_archive) != expected_sha \
+            or old_archive.stat().st_size != manifest['archive']['length'] \
+            or app_tree(release / 'QuotaView.app') != manifest['appTreeSHA256']:
+            raise ValueError('Sealed identity already exists with different bytes or evidence')
+        print('Reused verified sealed unit:', release)
+    else:
+        # Keep the rename on one filesystem and promote App/ZIP/manifest together.
+        candidate = Path(tempfile.mkdtemp(prefix='.' + name + '.seal-', dir=dist))
+        shutil.move(str(app), candidate / 'QuotaView.app')
+        shutil.move(str(archive), candidate / (name + '.zip'))
+        (candidate / (name + '.manifest.json')).write_text(json.dumps(manifest, indent=2) + '\n')
+        if digest(candidate / (name + '.zip')) != expected_sha \
+            or app_tree(candidate / 'QuotaView.app') != manifest['appTreeSHA256']:
+            raise ValueError('Candidate changed while preparing sealed unit')
+        os.rename(candidate, release)
+        candidate = None
+        print('Sealed release unit:', release)
+except (OSError, ValueError, KeyError) as error:
+    print('Cannot seal release:', error, file=sys.stderr)
+    sys.exit(4)
+finally:
+    if candidate is not None:
+        shutil.rmtree(candidate)
+    if locked:
+        lock.rmdir()
+PY
+destination_zip_sha256="$(shasum -a 256 "${destination_zip}" | awk '{print $1}')"
+# AUDIT-027: END SEAL
 
 print "Built ${destination_app}"
 print "Archived ${destination_zip}"
+print "Manifest ${destination_manifest}"
 print "Architectures: ${architectures}"
 print "Widget architectures: ${widget_architectures}"
 print "SHA-256: ${destination_zip_sha256}"

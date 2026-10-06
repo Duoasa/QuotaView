@@ -576,7 +576,11 @@ final class IslandBoardState: ObservableObject {
         return quotaPercent + " · " + countdown
     }
     func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
+        // Preview, completion quota and statistics deadlines have their own
+        // cancellable timers. An identical clock snapshot needs no layout pass.
+        if display == value && self.reduceMotion == reduceMotion { return }
         let previous = display
+        let previousByID = Dictionary(uniqueKeysWithValues: (previous?.state.tasks ?? []).map { ($0.id, $0) })
         let hadAttention = attentionCount > 0
         let wasCompact = display?.state.compact == true
         let previousApprovalID = approval?.task.id
@@ -595,7 +599,7 @@ final class IslandBoardState: ObservableObject {
         let newRequestIDs = requestIDs.subtracting(previousRequestIDs)
         let newAttention = tasks.contains { task in
             guard Self.needsAttention(task) else { return false }
-            guard let old = previous?.state.tasks.first(where: { $0.id == task.id }) else { return true }
+            guard let old = previousByID[task.id] else { return true }
             return !Self.needsAttention(old) || old.renderState.taskIdentity != task.renderState.taskIdentity
         }
         let drafts = approvalDrafts.filter { requestIDs.contains($0.key) }
@@ -640,7 +644,7 @@ final class IslandBoardState: ObservableObject {
             // Compare semantic task/turn transitions, not selection, progress or text.
             // First sync (and wake) is a baseline so historical completions do not replay.
             let event = previous?.visible == true && tasks.contains { task in
-                let old = previous?.state.tasks.first { $0.id == task.id }
+                let old = previousByID[task.id]
                 if Self.isRunning(task) {
                     return old == nil || old?.renderState.taskIdentity != task.renderState.taskIdentity
                         || (old.map { !Self.isRunning($0) && !Self.needsAttention($0) } ?? false)
@@ -655,7 +659,7 @@ final class IslandBoardState: ObservableObject {
         if let detailID, !visibleTasks.contains(where: { $0.id == detailID }) { self.detailID = nil }
         let newCompletion = previous?.visible == true && value.visible && tasks.contains { task in
             guard task.renderState.visualState == .completed,
-                  let old = previous?.state.tasks.first(where: { $0.id == task.id }) else { return false }
+                  let old = previousByID[task.id] else { return false }
             return old.renderState.visualState != .completed
                 || old.renderState.taskIdentity != task.renderState.taskIdentity
         }

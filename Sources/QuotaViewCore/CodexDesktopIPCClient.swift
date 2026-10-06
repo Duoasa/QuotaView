@@ -188,6 +188,9 @@ public actor CodexDesktopIPCClient {
         var state: DesktopIPCJSON
         var stateByteCount: Int
         var handles: [CodexDesktopIPCRequestHandle]
+        var projectionCache: CodexDesktopProjectionCache
+        var knownAsyncQuestions: [CodexDesktopProjectedAsyncQuestion]
+        var retainedAsyncBytes: Int
     }
     private struct AttemptIdentity: Hashable {
         let connectionEpoch: UInt64
@@ -295,8 +298,10 @@ public actor CodexDesktopIPCClient {
         let key = FollowKey(conversationID: conversationID, hostID: hostID)
         follows.insert(key)
         guard initialized else { return }
-        do { try await establishFollow(key) }
-        catch { scheduleFollowRecovery(key); throw error }
+        do {
+            try await establishFollow(key)
+            if !hasOwnerState(key) { scheduleFollowRecovery(key) }
+        } catch { scheduleFollowRecovery(key); throw error }
     }
     public func unfollow(conversationID: String, hostID: String = "local") async {
         let key = FollowKey(conversationID: conversationID, hostID: hostID)
@@ -401,8 +406,10 @@ public actor CodexDesktopIPCClient {
                     let run = epoch
                     for key in follows {
                         guard initialized, run == epoch, !Task.isCancelled else { break }
-                        do { try await establishFollow(key) }
-                        catch { scheduleFollowRecovery(key) }
+                        do {
+                            try await establishFollow(key)
+                            if !hasOwnerState(key) { scheduleFollowRecovery(key) }
+                        } catch { scheduleFollowRecovery(key) }
                     }
                 } catch {
                     guard started, !resourceSuspended, !Task.isCancelled else { return }
@@ -442,9 +449,16 @@ public actor CodexDesktopIPCClient {
         clientID = id; initialized = true
         await stateHandler?(.connected)
     }
+    private func hasOwnerState(_ key: FollowKey) -> Bool {
+        guard let owner = owners[key], let entry = ledger[key] else { return false }
+        return entry.owner.clientID == owner.clientID
+    }
     private func establishFollow(_ key: FollowKey, candidateOwner: String? = nil) async throws {
         guard initialized, follows.contains(key), !resourceBlockedFollows.contains(key), !followingInFlight.contains(key) else { return }
-        if candidateOwner == nil, owners[key] != nil { return }
+        if candidateOwner == nil, owners[key] != nil {
+            if !hasOwnerState(key) { try await refreshSnapshot(key) }
+            return
+        }
         followingInFlight.insert(key); let run = epoch
         defer { if run == epoch { followingInFlight.remove(key) } }
         let response = try await requestEnvelope(method: "thread-owner-discovery", version: 1,
@@ -455,11 +469,11 @@ public actor CodexDesktopIPCClient {
               let ownerID = message["handledByClientId"]?.string, !ownerID.isEmpty,
               candidateOwner == nil || ownerID == candidateOwner else { throw CodexDesktopIPCError.peerMismatch }
         let owner = Owner(clientID: ownerID, supportsInput: message["result"]?["supportsUntrustedAppInput"]?.bool == true)
-        if owners[key]?.clientID != ownerID { removeLedger(key) }
-        owners[key] = owner
         try broadcast(method: "thread-stream-following-changed", version: 1,
                       params: ["conversationId": .string(key.conversationID), "hostId": .string(key.hostID), "following": .bool(true)],
                       targets: [ownerID])
+        if owners[key]?.clientID != ownerID { removeLedger(key) }
+        owners[key] = owner
     }
     /// Readiness recovery belongs to each unresolved follow, not to event polling
     /// or submission retries. A native status request accelerates formal discovery;
@@ -484,7 +498,7 @@ public actor CodexDesktopIPCClient {
         var waitBeforeDiscovery = candidate == nil
         while started, initialized, run == epoch, follows.contains(key),
               followRecoveries[key]?.id == id, !Task.isCancelled {
-            if candidate == nil, owners[key] != nil { return }
+            if candidate == nil, hasOwnerState(key) { return }
             if waitBeforeDiscovery {
                 do { try await Task.sleep(nanoseconds: backoff) } catch { return }
                 guard started, initialized, run == epoch, follows.contains(key),
@@ -493,7 +507,7 @@ public actor CodexDesktopIPCClient {
             do { try await establishFollow(key, candidateOwner: candidate) } catch { }
             guard started, initialized, run == epoch, follows.contains(key),
                   followRecoveries[key]?.id == id, !Task.isCancelled else { return }
-            if owners[key] != nil { return }
+            if hasOwnerState(key) { return }
             candidate = nil; waitBeforeDiscovery = true
             backoff = min(backoff * 2, 5_000_000_000)
         }
@@ -645,7 +659,8 @@ public actor CodexDesktopIPCClient {
         guard method == "thread-stream-state-changed" else { return }
         guard let source = message["sourceClientId"]?.string, let owner = owners[key] else { return }
         guard source == owner.clientID else {
-            removeLedger(key)
+            // A candidate broadcast is not proof of ownership. Keep the
+            // healthy capability until discovery validates a replacement.
             scheduleFollowRecovery(key, candidateOwner: source); return
         }
         guard message["version"]?.integer == 11 else {
@@ -655,6 +670,7 @@ public actor CodexDesktopIPCClient {
             throw CodexDesktopIPCError.invalidMessage
         }
         let state: DesktopIPCJSON
+        var projectionPatches: [DesktopIPCJSON]?
         var stateByteCount: Int
         switch change["type"]?.string {
         case "snapshot":
@@ -670,13 +686,14 @@ public actor CodexDesktopIPCClient {
                               params: ["conversationId": .string(conversation), "hostId": .string(host), "following": .bool(true)], targets: [source]); return
             }
             guard patches.count <= 1024 else { await invalidateResourceLimit(key, epoch: run, diagnosticCode: "patch_count"); return }
+            projectionPatches = patches
             stateByteCount = entry.stateByteCount
             do { state = try DesktopIPCJSON.applying(patches, to: entry.state, byteCount: &stateByteCount) }
             catch { removeLedger(key); throw CodexDesktopIPCError.invalidMessage }
             guard state["id"]?.string == conversation else { throw CodexDesktopIPCError.invalidMessage }
         default: throw CodexDesktopIPCError.invalidMessage
         }
-        let retained = ledger.filter { $0.key != key }.reduce(stateByteCount) { $0 + $1.value.stateByteCount }
+        let retained = ledger.filter { $0.key != key }.reduce(stateByteCount) { $0 + $1.value.stateByteCount + $1.value.retainedAsyncBytes }
         guard stateByteCount <= configuration.maximumConversationStateBytes else {
             await invalidateResourceLimit(key, epoch: run, diagnosticCode: "state_bytes"); return
         }
@@ -687,10 +704,67 @@ public actor CodexDesktopIPCClient {
         guard requests.count <= CodexDesktopRequestProjector.maximumPendingRequests else {
             await invalidateResourceLimit(key, epoch: run, diagnosticCode: "request_count"); return
         }
-        let projection: CodexDesktopInteractionProjection
-        do { projection = try CodexDesktopRequestProjector.project(conversationID: conversation, state: state) }
+        var projectionCache = ledger[key]?.projectionCache ?? CodexDesktopProjectionCache()
+        let previousProjectionBuildCount = projectionCache.projectionBuildCount
+        var projection: CodexDesktopInteractionProjection
+        do { projection = try projectionCache.project(conversationID: conversation, state: state, patches: projectionPatches) }
         catch CodexDesktopRequestProjectionError.oversizedState {
             await invalidateResourceLimit(key, epoch: run, diagnosticCode: "projection_budget"); return
+        }
+        let visibleQuestions = projection.asyncQuestions
+        var knownQuestions = visibleQuestions
+        if !projection.asyncQuestionsAreAuthoritative, projection.pendingRequestsAreAuthoritative,
+           let turnID = projection.currentTurnID {
+            let previous = ledger[key]?.knownAsyncQuestions.filter { $0.turnID == turnID } ?? []
+            var byID = Dictionary(previous.map { ($0.questionItemID, $0) }, uniquingKeysWith: { first, _ in first })
+            for question in visibleQuestions {
+                let priorAnswer = byID[question.questionItemID].flatMap { $0.question == question.question ? $0.resolvedAnswer : nil }
+                byID[question.questionItemID] = .init(questionItemID: question.questionItemID, sourceItemID: question.sourceItemID,
+                    questionIndex: question.questionIndex, turnID: question.turnID, question: question.question,
+                    options: question.options, resolvedAnswer: question.resolvedAnswer ?? priorAnswer)
+            }
+            guard byID.count <= CodexDesktopRequestProjector.maximumAsyncQuestions else {
+                await invalidateResourceLimit(key, epoch: run, diagnosticCode: "retained_question_count"); return
+            }
+            let visibleIDs = Set(visibleQuestions.map(\.questionItemID))
+            let answers: [String: String]
+            if projectionPatches != nil, projectionCache.projectionBuildCount == previousProjectionBuildCount {
+                // A cached presentation patch cannot introduce an accepted
+                // reply; preserve known evidence without another item scan.
+                answers = [:]
+            } else {
+                answers = projectionCache.previouslyObservedAsyncAnswers(state: state, turnID: turnID,
+                    questions: previous.filter { !visibleIDs.contains($0.questionItemID) })
+            }
+            let priorIDs = Set(previous.map(\.questionItemID))
+            let order = previous.map(\.questionItemID) + visibleQuestions.map(\.questionItemID).filter { !priorIDs.contains($0) }
+            knownQuestions = order.compactMap { id in
+                guard let question = byID[id] else { return nil }
+                return .init(questionItemID: id, sourceItemID: question.sourceItemID, questionIndex: question.questionIndex,
+                    turnID: question.turnID, question: question.question, options: question.options,
+                    resolvedAnswer: answers[id] ?? question.resolvedAnswer)
+            }
+            projection = .init(currentTurnID: projection.currentTurnID, status: projection.status, title: projection.title,
+                sourceKind: projection.sourceKind, startedAt: projection.startedAt, requests: projection.requests,
+                authoritativePendingIdentities: projection.authoritativePendingIdentities,
+                pendingRequestsAreAuthoritative: projection.pendingRequestsAreAuthoritative,
+                asyncQuestions: knownQuestions,
+                authoritativeAsyncQuestionIDs: Set(knownQuestions.filter { $0.resolvedAnswer == nil }.map(\.questionItemID)),
+                threadWaitStatus: projection.threadWaitStatus, asyncQuestionsAreAuthoritative: false)
+        }
+        let visibleByID = Dictionary(visibleQuestions.map { ($0.questionItemID, $0) }, uniquingKeysWith: { first, _ in first })
+        var retainedAsyncBytes = 0
+        for question in knownQuestions {
+            if let visible = visibleByID[question.questionItemID] {
+                if visible.resolvedAnswer == nil { retainedAsyncBytes += (question.resolvedAnswer?.utf8.count ?? 0) * 6 }
+            } else {
+                retainedAsyncBytes += try question.asyncRequestEnvelopeData(conversationID: conversation).count
+                retainedAsyncBytes += (question.resolvedAnswer?.utf8.count ?? 0) * 6
+            }
+        }
+        guard stateByteCount + retainedAsyncBytes <= configuration.maximumConversationStateBytes,
+              retained + retainedAsyncBytes <= configuration.maximumRetainedStateBytes else {
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "retained_question_bytes"); return
         }
         let old = ledger[key]?.handles ?? []
         var handles: [CodexDesktopIPCRequestHandle] = []
@@ -714,11 +788,36 @@ public actor CodexDesktopIPCClient {
                 turnID: question.turnID, requestID: id, method: "desktop/tool/requestUserInputAsync", revision: oldHandle?.revision ?? revision,
                 rawRequest: raw, nonce: oldHandle?.nonce ?? UUID()))
         }
+        // A partial page may omit a still-pending async question. Preserve
+        // its nonce and attempted identity for the same owner/current turn.
+        let answered = Set(projection.asyncQuestions.filter { $0.resolvedAnswer != nil }.map(\.questionItemID))
+        if !projection.asyncQuestionsAreAuthoritative, projection.pendingRequestsAreAuthoritative {
+            let visible = Set(handles.map { $0.requestID })
+            handles += old.filter { handle in
+                guard handle.kind == .asynchronousQuestion, handle.turnID == projection.currentTurnID,
+                      handle.ownerClientID == source, handle.connectionEpoch == run,
+                      !visible.contains(handle.requestID) else { return false }
+                if case .string(let id) = handle.requestID { return !answered.contains(id) }
+                return true
+            }
+        }
+        guard handles.filter({ $0.kind == .asynchronousQuestion }).count <= CodexDesktopRequestProjector.maximumAsyncQuestions else {
+            await invalidateResourceLimit(key, epoch: run, diagnosticCode: "retained_question_count"); return
+        }
         if projection.pendingRequestsAreAuthoritative {
             let live = Set(handles.map(AttemptIdentity.init))
-            attempted = attempted.filter { $0.conversationID != conversation || $0.ownerClientID != source || live.contains($0) }
+            attempted = attempted.filter { attempt in
+                if attempt.conversationID != conversation || attempt.ownerClientID != source { return true }
+                if !projection.asyncQuestionsAreAuthoritative,
+                   attempt.method == "desktop/tool/requestUserInputAsync", attempt.turnID == projection.currentTurnID {
+                    if case .string(let id) = attempt.requestID, answered.contains(id) { return false }
+                    return true
+                }
+                return live.contains(attempt)
+            }
         }
-        ledger[key] = .init(owner: owner, revision: revision, state: state, stateByteCount: stateByteCount, handles: handles)
+        ledger[key] = .init(owner: owner, revision: revision, state: state, stateByteCount: stateByteCount, handles: handles, projectionCache: projectionCache,
+            knownAsyncQuestions: knownQuestions, retainedAsyncBytes: retainedAsyncBytes)
         if change["type"]?.string == "snapshot", let waiters = snapshotWaiters.removeValue(forKey: key) {
             for waiter in waiters.values { waiter.timer.cancel(); waiter.continuation.resume() }
         }

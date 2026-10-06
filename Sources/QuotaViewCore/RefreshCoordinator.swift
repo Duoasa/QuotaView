@@ -76,8 +76,15 @@ public actor RefreshCoordinator {
             case .replace:
                 activeRefresh.task.cancel()
                 generation &+= 1
+                let transition = generation
                 self.activeRefresh = nil
                 await provider.stop()
+                // stop() may suspend while a newer refresh/configuration takes
+                // ownership. Recheck before creating any provider work.
+                guard !isStopped else { return .stopped }
+                guard enabled, !demand.capabilities.isEmpty else { return .disabled }
+                guard generation == transition, self.activeRefresh == nil,
+                      !Task.isCancelled else { return .discarded }
             }
         }
 
@@ -176,6 +183,11 @@ public actor RefreshCoordinator {
     private func finish(
         _ active: ActiveRefresh
     ) async -> RefreshCoordinatorResult {
+        defer {
+            // A discarded completion may still own a handle; never clear a
+            // newer request's context while finishing an older one.
+            if activeRefresh?.context == active.context { activeRefresh = nil }
+        }
         do {
             let result = try await active.task.value
 

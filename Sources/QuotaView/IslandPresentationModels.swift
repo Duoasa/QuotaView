@@ -152,6 +152,7 @@ struct IslandConfirmation: Identifiable, Equatable {
     var canRespond = false; var queueIndex = 1; var queueCount = 1
     // Local presentation handoff, never an approval or an answer.
     var canDismissLocally = false
+    var contentRevised = false
 }
 struct IslandTaskDetailData: Equatable {
     var entries: [IslandTraceEntry]; var confirmation: IslandConfirmation?; var status: IslandTaskStatus

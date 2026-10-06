@@ -858,25 +858,31 @@ final class AppBehaviorTests: XCTestCase {
             compactDelay: 0.02,
             hiddenDelayAfterCompact: 0.20
         )
+        let hidden = expectation(description: "Completed activity reached hidden")
+        var observed: [CodexActivityPresentation] = []
+        var fulfilled = false
         store.receive(CodexActivityEvent(event: .userPromptSubmit, sessionHash: "session", sessionKind: .user, occurredAt: Date().addingTimeInterval(-0.01)))
-        store.receive(
-            CodexActivityEvent(
-                event: .stop,
-                sessionHash: "session"
-            )
-        )
+        store.stateDidChange = { [weak store] in
+            guard let store else { return }
+            observed.append(store.presentation)
+            if store.presentation == .hidden && !fulfilled {
+                fulfilled = true
+                hidden.fulfill()
+            }
+        }
+        store.receive(CodexActivityEvent(event: .stop, sessionHash: "session"))
         XCTAssertEqual(store.presentation, .expanded)
         XCTAssertEqual(store.snapshot?.state, .completed)
 
-        for _ in 0..<100 where store.presentation != .compact {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
-        XCTAssertEqual(store.presentation, .compact)
-
-        for _ in 0..<100 where store.presentation != .hidden {
-            try? await Task.sleep(nanoseconds: 5_000_000)
-        }
+        // Observe every transition instead of polling a short compact window.
+        await fulfillment(of: [hidden], timeout: 2)
+        let compactIndex = observed.firstIndex(of: .compact)
+        let hiddenIndex = observed.firstIndex(of: .hidden)
+        XCTAssertNotNil(compactIndex)
+        XCTAssertNotNil(hiddenIndex)
+        if let compactIndex, let hiddenIndex { XCTAssertLessThan(compactIndex, hiddenIndex) }
         XCTAssertEqual(store.presentation, .hidden)
+        store.stateDidChange = nil
         await store.stop()
     }
 

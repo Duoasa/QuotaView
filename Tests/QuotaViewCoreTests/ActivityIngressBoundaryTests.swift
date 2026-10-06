@@ -236,11 +236,17 @@ final class ActivityIngressBoundaryTests: XCTestCase {
     private func verifyPausedBootstrap(unsupportedCurrentTurn: Bool) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("qv-ingress-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root.appendingPathComponent("sessions"), withIntermediateDirectories: true)
-        let socket = URL(fileURLWithPath: "/tmp/qvi-" + String(UUID().uuidString.prefix(8)) + ".sock")
+        // The upgraded transport requires a canonical, private, user-owned
+        // parent. /tmp is a symlink and its sticky shared root is not a peer
+        // provenance boundary. Keep this fixture independent of the real home.
+        let socketRoot = URL(fileURLWithPath: "/private/tmp/qvi-" + String(UUID().uuidString.prefix(8)))
+        try FileManager.default.createDirectory(at: socketRoot, withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700])
+        let socket = socketRoot.appendingPathComponent("peer.sock")
         let server = Process()
         defer {
             if server.isRunning { server.terminate() }
-            try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: socket)
+            try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: socketRoot)
         }
         let format = ISO8601DateFormatter(); format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let old = Date().addingTimeInterval(-120)

@@ -671,6 +671,7 @@ struct IslandApprovalView: View {
         case .resolved: return text("请求已处理", "Request resolved")
         default: break
         }
+        if request.contentRevised { return text("请求已更新，请重新选择", "Request updated; choose again") }
         if !request.canRespond { return text("请在 Codex 处理", "Handle this request in Codex") }
         guard let wire else { return text("等待选择", "Awaiting a choice") }
         switch wire.kind {

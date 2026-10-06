@@ -64,12 +64,16 @@ public struct CodexDesktopInteractionProjection: Sendable {
     public let requests: [CodexDesktopProjectedRequest]
     public let authoritativePendingIdentities: Set<CodexDesktopPendingRequestIdentity>
     public let pendingRequestsAreAuthoritative: Bool
+    /// Only a complete item set (or a proven terminal turn) permits absence
+    /// to settle an async question. Synchronous RPC completeness is independent.
+    public let asyncQuestionsAreAuthoritative: Bool
     public let asyncQuestions: [CodexDesktopProjectedAsyncQuestion]
     public let authoritativeAsyncQuestionIDs: Set<String>
     public let threadWaitStatus: CodexDesktopThreadWaitStatus
 
     public var provesNoPendingConfirmation: Bool {
         status == "inProgress" && pendingRequestsAreAuthoritative
+            && asyncQuestionsAreAuthoritative && authoritativeAsyncQuestionIDs.isEmpty
             && threadWaitStatus == .running && authoritativePendingIdentities.isEmpty
     }
 
@@ -80,11 +84,13 @@ public struct CodexDesktopInteractionProjection: Sendable {
                 pendingRequestsAreAuthoritative: Bool,
                 asyncQuestions: [CodexDesktopProjectedAsyncQuestion],
                 authoritativeAsyncQuestionIDs: Set<String>,
-                threadWaitStatus: CodexDesktopThreadWaitStatus = .unavailable) {
+                threadWaitStatus: CodexDesktopThreadWaitStatus = .unavailable,
+                asyncQuestionsAreAuthoritative: Bool? = nil) {
         self.currentTurnID = currentTurnID; self.status = status; self.title = title
         self.sourceKind = sourceKind; self.startedAt = startedAt; self.requests = requests
         self.authoritativePendingIdentities = authoritativePendingIdentities
         self.pendingRequestsAreAuthoritative = pendingRequestsAreAuthoritative
+        self.asyncQuestionsAreAuthoritative = asyncQuestionsAreAuthoritative ?? pendingRequestsAreAuthoritative
         self.asyncQuestions = asyncQuestions; self.authoritativeAsyncQuestionIDs = authoritativeAsyncQuestionIDs
         self.threadWaitStatus = threadWaitStatus
     }
@@ -115,6 +121,11 @@ public enum CodexDesktopRequestProjector {
     /// The live follower already owns a decoded, bounded tree. Reuse it without
     /// serializing and decoding the entire history for every streaming patch.
     static func project(conversationID: String, state json: DesktopIPCJSON) throws -> CodexDesktopInteractionProjection {
+        try project(conversationID: conversationID, state: json, index: CodexDesktopProjectionIndex(state: json))
+    }
+
+    static func project(conversationID: String, state json: DesktopIPCJSON,
+                        index: CodexDesktopProjectionIndex) throws -> CodexDesktopInteractionProjection {
         guard let state = json.object else { throw CodexDesktopRequestProjectionError.malformedState }
         guard state["id"]?.string == conversationID else { throw CodexDesktopRequestProjectionError.conversationMismatch }
         let source = state["source"].flatMap { try? $0.foundationValue() }
@@ -130,7 +141,7 @@ public enum CodexDesktopRequestProjector {
             }
             allRequests = values
         }
-        let current = currentTurn(state)
+        let current = currentTurn(state, index: index)
         let currentID = current.value?["turnId"]?.nonemptyString
         let rawStatus = current.value?["status"]?.string ?? "unknown"
         let status = ["inProgress", "completed", "interrupted", "failed"].contains(rawStatus) ? rawStatus : "unknown"
@@ -139,6 +150,17 @@ public enum CodexDesktopRequestProjector {
         var identities = Set<CodexDesktopPendingRequestIdentity>()
         var requestIDs = Set<CodexDesktopIPCRequestID>()
         let items = current.value?["items"]?.array ?? []
+        let itemsComplete: Bool
+        if let pagination = current.value?["itemsPagination"] {
+            itemsComplete = pagination.object?["hasLoadedOldest"]?.bool == true
+                && pagination.object?["hasLoadedNewest"]?.bool != false
+        } else { itemsComplete = current.value?["items"]?.array != nil }
+        let asyncAuthoritative = kind != .memoryConsolidation && current.authoritative && currentID != nil
+            && (status == "inProgress" ? itemsComplete : ["completed", "interrupted", "failed"].contains(status))
+        let itemsByID = Dictionary(items.compactMap { item -> (String, PublicJSON)? in
+            guard item.object?["type"]?.string == "fileChange" else { return nil }
+            return item.object?["id"]?.nonemptyString.map { ($0, item) }
+        }, uniquingKeysWith: { first, _ in first })
         if let currentID, status == "inProgress" {
             for raw in allRequests {
                 if case .bool(true)? = raw.object?["completed"] { continue }
@@ -170,7 +192,7 @@ public enum CodexDesktopRequestProjector {
                     publicParams["questions"] = .array(questions.map(sanitizeQuestion))
                 }
                 let publicEnvelope = PublicJSON.object(["id": object["id"]!, "method": .string(method), "params": .object(publicParams)])
-                let contextItem = fileContext(method: method, params: params, items: items)
+                let contextItem = fileContext(method: method, params: params, itemsByID: itemsByID)
                 requests.append(.init(requestID: requestID, method: method, turnID: currentID,
                     paramsData: try PublicJSON.object(publicParams).encoded(), envelopeData: try publicEnvelope.encoded(),
                     userInputMode: method == "item/tool/requestUserInput" ? .synchronous : nil,
@@ -184,10 +206,10 @@ public enum CodexDesktopRequestProjector {
             startedAt: startedAt, requests: requests, authoritativePendingIdentities: identities,
             pendingRequestsAreAuthoritative: kind != .memoryConsolidation && current.authoritative && currentID != nil && status != "unknown",
             asyncQuestions: questions, authoritativeAsyncQuestionIDs: pendingAsync,
-            threadWaitStatus: threadWaitStatus(state))
+            threadWaitStatus: threadWaitStatus(state), asyncQuestionsAreAuthoritative: asyncAuthoritative)
     }
 
-    private static func threadWaitStatus(_ state: [String: PublicJSON]) -> CodexDesktopThreadWaitStatus {
+    static func threadWaitStatus(_ state: [String: DesktopIPCJSON]) -> CodexDesktopThreadWaitStatus {
         guard let runtime = state["threadRuntimeStatus"]?.object,
               runtime["type"]?.string == "active", let rawFlags = runtime["activeFlags"]?.array,
               rawFlags.allSatisfy({ $0.string != nil }) else { return .unavailable }
@@ -223,9 +245,9 @@ public enum CodexDesktopRequestProjector {
         return .object(result)
     }
 
-    private static func fileContext(method: String, params: [String: PublicJSON], items: [PublicJSON]) -> PublicJSON? {
+    private static func fileContext(method: String, params: [String: PublicJSON], itemsByID: [String: PublicJSON]) -> PublicJSON? {
         guard method == "item/fileChange/requestApproval", let itemID = params["itemId"]?.string,
-              let item = items.first(where: { $0.object?["id"]?.string == itemID && $0.object?["type"]?.string == "fileChange" })?.object else { return nil }
+              let item = itemsByID[itemID]?.object, item["type"]?.string == "fileChange" else { return nil }
         var publicItem = item.filter { ["id", "type", "status"].contains($0.key) }
         if let changes = item["changes"]?.array {
             publicItem["changes"] = .array(changes.map { change in
@@ -236,32 +258,15 @@ public enum CodexDesktopRequestProjector {
         return .object(publicItem)
     }
 
-    private static func currentTurn(_ state: [String: PublicJSON]) -> (value: [String: PublicJSON]?, authoritative: Bool) {
+    private static func currentTurn(_ state: [String: PublicJSON], index: CodexDesktopProjectionIndex) -> (value: [String: PublicJSON]?, authoritative: Bool) {
         let live = state["turns"]?.array?.compactMap(\.object) ?? []
         if let historyWrapper = state["turnHistory"]?.object, historyWrapper["kind"]?.string == "canonical" {
-            guard let history = historyWrapper["history"]?.object, let lastIsland = history["islands"]?.array?.last?.object,
-                  lastIsland["newerBoundary"]?.object?["status"]?.string == "exhausted",
-                  let entries = lastIsland["entries"]?.array, let entities = history["entitiesByKey"]?.object else { return (nil, false) }
-            var canonicalTurns: [[String: PublicJSON]] = []
-            for entry in entries {
-                // Native canonical entries are turn references, not optional
-                // display rows. A missing tail entity cannot make an older turn
-                // authoritative for settlement or completion/unfollow.
-                guard let key = entry.object?["value"]?.nonemptyString, let turn = entities[key]?.object,
-                      turn["turnId"]?.nonemptyString != nil else { return (nil, false) }
-                canonicalTurns.append(turn)
-            }
-            guard let canonical = canonicalTurns.last, let id = canonical["turnId"]?.nonemptyString else {
+            guard index.tailIsAuthoritative, let entities = historyWrapper["history"]?["entitiesByKey"]?.object else { return (nil, false) }
+            guard let key = index.tailKey, let canonical = entities[key]?.object,
+                  let id = canonical["turnId"]?.nonemptyString else {
                 return (live.last(where: { $0["turnId"]?.nonemptyString != nil }), true)
             }
-            // Native zR/Jm inserts unmatched live prefixes before their next
-            // canonical anchor and appends the remaining suffix after history.
-            // Ordering comes from this owner state, not optional start times.
-            let allCanonicalIDs = Set(history["islands"]?.array?.flatMap { island in
-                island.object?["entries"]?.array?.compactMap { entry in
-                    entry.object?["value"]?.string.flatMap { entities[$0]?.object?["turnId"]?.nonemptyString }
-                } ?? []
-            } ?? [])
+            let allCanonicalIDs = index.canonicalIDs
             var suffix: [[String: PublicJSON]] = []
             for turn in live {
                 if let liveID = turn["turnId"]?.nonemptyString, allCanonicalIDs.contains(liveID) {
@@ -308,6 +313,7 @@ public enum CodexDesktopRequestProjector {
     private static func asyncQuestions(items: [PublicJSON], turnID: String) throws -> [CodexDesktopProjectedAsyncQuestion] {
         var questions: [CodexDesktopProjectedAsyncQuestion] = []
         var questionIndices: [String: Int] = [:]
+        var questionTitles: [String: String] = [:]
         var answered: [String: String] = [:]
         for (itemIndex, value) in items.enumerated() {
             guard let item = value.object else { continue }
@@ -321,6 +327,7 @@ public enum CodexDesktopRequestProjector {
                     let rawOptions = question["options"]?.array ?? []
                     guard rawOptions.allSatisfy({ $0.string != nil }) else { continue }
                     questionIndices[identity] = itemIndex
+                    questionTitles[identity] = title
                     questions.append(.init(questionItemID: identity, sourceItemID: sourceID, questionIndex: index,
                         turnID: turnID, question: title, options: rawOptions.compactMap(\.string), resolvedAnswer: nil))
                 }
@@ -332,12 +339,32 @@ public enum CodexDesktopRequestProjector {
                   let replies = questionReplies(text) else { continue }
             for reply in replies {
                 guard let originalIndex = questionIndices[reply.id], originalIndex < itemIndex,
-                      questions.contains(where: { $0.questionItemID == reply.id && $0.question == reply.question }) else { continue }
+                      questionTitles[reply.id] == reply.question else { continue }
                 answered[reply.id] = reply.answer
             }
         }
         return questions.map { .init(questionItemID: $0.questionItemID, sourceItemID: $0.sourceItemID, questionIndex: $0.questionIndex,
             turnID: $0.turnID, question: $0.question, options: $0.options, resolvedAnswer: answered[$0.questionItemID]) }
+    }
+
+    /// Partial pages may carry a precise accepted reply without repeating the
+    /// question. Match only this owner's previously observed current-turn IDs.
+    static func previouslyObservedAsyncAnswers(state: DesktopIPCJSON, index: CodexDesktopProjectionIndex,
+        turnID: String, questions: [CodexDesktopProjectedAsyncQuestion]) -> [String: String] {
+        let current = currentTurn(state.object ?? [:], index: index)
+        guard current.authoritative, current.value?["turnId"]?.string == turnID else { return [:] }
+        let titles = Dictionary(questions.filter { $0.turnID == turnID }.map { ($0.questionItemID, $0.question) },
+            uniquingKeysWith: { first, _ in first })
+        var answered: [String: String] = [:]
+        for value in current.value?["items"]?.array ?? [] {
+            let type = value["type"]?.string
+            guard type == "userMessage" || (type == "steeringUserMessage" && value["status"]?.string == "accepted"),
+                  let input = value[type == "userMessage" ? "content" : "input"]?.array, input.count == 1,
+                  input[0]["type"]?.string == "text", let text = input[0]["text"]?.string,
+                  let replies = questionReplies(text) else { continue }
+            for reply in replies where titles[reply.id] == reply.question { answered[reply.id] = reply.answer }
+        }
+        return answered
     }
 
     private static func questionReplies(_ text: String) -> [(id: String, question: String, answer: String)]? {

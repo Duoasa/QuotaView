@@ -175,6 +175,14 @@ public actor CodexSharedAppServerActivityClient {
     private let requestTimeoutNanoseconds: UInt64
     private let subscriptionPollNanoseconds: UInt64
     private var serverProcess: Process?
+    private var openingSocket: CodexSocketOpening?
+    private var openingSocketCloseObserver: (@Sendable (Int32) -> Void)?
+    // Internal diagnostic injection: only the owned opening fd's close result,
+    // with no application call site or process-wide resource assumption.
+    func setOpeningSocketCloseObserver(_ observer: (@Sendable (Int32) -> Void)?) {
+        openingSocketCloseObserver = observer
+    }
+    private var socketReader: CodexBoundedInputReader?
     private var socketHandle: FileHandle?
     private var readTask: Task<Void, Never>?
     private var maintenanceTask: Task<Void, Never>?
@@ -310,13 +318,15 @@ public actor CodexSharedAppServerActivityClient {
     private func connectAndInitialize(generation run: UInt64) async throws {
         closeConnection(error: ClientError.connectionClosed)
 
+        let deadline = CodexSocketOpening.deadline(after: configuration.startupTimeoutSeconds)
         let opened: OpenedSocket
         do {
-            opened = try await openSocket()
+            opened = try await openSocket(deadline: deadline)
         } catch {
+            guard isStarted, run == runGeneration, !Task.isCancelled else { throw CancellationError() }
             guard configuration.launchServerIfNeeded else { throw error }
             try launchServerIfNeeded()
-            opened = try await waitForServerSocket()
+            opened = try await waitForServerSocket(deadline: deadline)
         }
 
         guard isStarted, run == runGeneration, !Task.isCancelled else {
@@ -334,7 +344,8 @@ public actor CodexSharedAppServerActivityClient {
             maximumMessageBytes: configuration.maximumMessageBytes
         )
 
-        let stream = Self.dataStream(from: handle)
+        let socketReader = CodexBoundedInputReader(handle: handle, isSocket: true)
+        self.socketReader = socketReader
         let client = self
         readTask = Task.detached(priority: .utility) {
             do {
@@ -344,7 +355,9 @@ public actor CodexSharedAppServerActivityClient {
                         generation: generation
                     )
                 }
-                for await chunk in stream {
+                for await chunk in socketReader.chunks {
+                    defer { socketReader.acknowledgeRead() }
+                    try Task.checkCancellation()
                     try await client.consumeSocketData(
                         chunk,
                         generation: generation
@@ -732,7 +745,7 @@ public actor CodexSharedAppServerActivityClient {
         opcode: CodexAppServerWebSocketOpcode,
         payload: Data
     ) throws {
-        guard let socketHandle else {
+        guard let socketReader else {
             throw ClientError.connectionClosed
         }
         let frame = CodexAppServerWebSocketFrameEncoder.clientFrame(
@@ -740,7 +753,8 @@ public actor CodexSharedAppServerActivityClient {
             payload: payload
         )
         do {
-            try socketHandle.write(contentsOf: frame)
+            try socketReader.writeSocket(frame,
+                deadline: CodexSocketOpening.deadline(after: configuration.requestTimeoutSeconds))
         } catch {
             throw ClientError.connectionClosed
         }
@@ -905,8 +919,10 @@ public actor CodexSharedAppServerActivityClient {
         threadSubagents.removeAll(keepingCapacity: true)
         observedServerRequests.removeAll(); observedServerRequestOrder.removeAll(); ambiguousServerRequests.removeAll()
         snapshotRefreshTasks.values.forEach { $0.cancel() }; snapshotRefreshTasks.removeAll()
+        openingSocket?.cancel(); openingSocket = nil
         readTask?.cancel()
         readTask = nil
+        socketReader?.close(); socketReader = nil
         socketHandle?.closeFile()
         socketHandle = nil
         frameDecoder = CodexAppServerWebSocketMessageDecoder(
@@ -956,15 +972,12 @@ public actor CodexSharedAppServerActivityClient {
         serverProcess = process
     }
 
-    private func waitForServerSocket() async throws -> OpenedSocket {
-        let deadline = Date().addingTimeInterval(
-            configuration.startupTimeoutSeconds
-        )
+    private func waitForServerSocket(deadline: UInt64) async throws -> OpenedSocket {
         var lastError: Error = ClientError.connectionClosed
 
-        while Date() < deadline, !Task.isCancelled {
+        while DispatchTime.now().uptimeNanoseconds < deadline, !Task.isCancelled {
             do {
-                return try await openSocket()
+                return try await openSocket(deadline: deadline)
             } catch {
                 lastError = error
                 try await Task.sleep(nanoseconds: 100_000_000)
@@ -973,15 +986,17 @@ public actor CodexSharedAppServerActivityClient {
         throw lastError
     }
 
-    private func openSocket() async throws -> OpenedSocket {
+    private func openSocket(deadline: UInt64) async throws -> OpenedSocket {
         let path = configuration.socketURL.path
         let maximum = configuration.maximumMessageBytes
-        return try await Task.detached(priority: .utility) {
-            try Self.openSocket(
-                path: path,
-                maximumMessageBytes: maximum
-            )
-        }.value
+        let owner = try CodexSocketOpening(deadline: deadline, didClose: openingSocketCloseObserver)
+        openingSocket = owner
+        defer { if openingSocket === owner { openingSocket = nil } }
+        return try await withTaskCancellationHandler {
+            try await Task.detached(priority: .utility) {
+                try Self.openSocket(path: path, maximumMessageBytes: maximum, owner: owner)
+            }.value
+        } onCancel: { owner.cancel() }
     }
 
     private struct OpenedSocket: @unchecked Sendable {
@@ -991,30 +1006,14 @@ public actor CodexSharedAppServerActivityClient {
 
     private nonisolated static func openSocket(
         path: String,
-        maximumMessageBytes: Int
+        maximumMessageBytes: Int,
+        owner: CodexSocketOpening
     ) throws -> OpenedSocket {
-        let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        guard descriptor >= 0 else {
-            throw ClientError.connectionFailed(
-                String(cString: strerror(errno))
-            )
-        }
-
-        var shouldClose = true
-        defer {
-            if shouldClose {
-                Darwin.close(descriptor)
-            }
-        }
-
-        var noSignal: Int32 = 1
-        setsockopt(
-            descriptor,
-            SOL_SOCKET,
-            SO_NOSIGPIPE,
-            &noSignal,
-            socklen_t(MemoryLayout<Int32>.size)
-        )
+        try CodexSocketOpening.verifyPath(path)
+        let originalIdentity = try CodexSocketOpening.pathIdentity(path)
+        let descriptor = owner.descriptor
+        var transferred = false
+        defer { if !transferred { owner.finish() } }
 
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
@@ -1036,7 +1035,8 @@ public actor CodexSharedAppServerActivityClient {
         let addressLength = socklen_t(
             MemoryLayout<sa_family_t>.size + path.utf8.count + 1
         )
-        let connectionResult = withUnsafePointer(to: &address) { pointer in
+        let connectionResult = try owner.perform { descriptor in
+            withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(
                 to: sockaddr.self,
                 capacity: 1
@@ -1044,11 +1044,25 @@ public actor CodexSharedAppServerActivityClient {
                 Darwin.connect(descriptor, $0, addressLength)
             }
         }
-        guard connectionResult == 0 else {
-            throw ClientError.connectionFailed(
-                String(cString: strerror(errno))
-            )
         }
+        if connectionResult != 0 {
+            guard errno == EINPROGRESS || errno == EAGAIN || errno == EINTR else {
+                throw ClientError.connectionFailed(String(cString: strerror(errno)))
+            }
+            try owner.wait(for: Int16(POLLOUT))
+            var socketError: Int32 = 0, size = socklen_t(MemoryLayout<Int32>.size)
+            try owner.perform { descriptor in
+                guard getsockopt(descriptor, SOL_SOCKET, SO_ERROR, &socketError, &size) == 0, socketError == 0 else {
+                    throw ClientError.connectionFailed(String(cString: strerror(socketError == 0 ? errno : socketError)))
+                }
+            }
+        }
+        try owner.perform { descriptor in
+            var peerUID: uid_t = 0, peerGID: gid_t = 0
+            guard getpeereid(descriptor, &peerUID, &peerGID) == 0, peerUID == getuid() else { throw ClientError.invalidHandshake }
+        }
+        try CodexSocketOpening.verifyPath(path)
+        guard try CodexSocketOpening.pathIdentity(path) == originalIdentity else { throw ClientError.invalidHandshake }
 
         let keyData = Data(UUID().uuidString.utf8.prefix(16))
         let key = keyData.base64EncodedString()
@@ -1062,19 +1076,18 @@ public actor CodexSharedAppServerActivityClient {
         \r
 
         """
-        try writeAll(
-            Data(request.utf8),
-            to: descriptor
-        )
+        try owner.write(Data(request.utf8))
 
         var response = Data()
         let separator = Data([0x0D, 0x0A, 0x0D, 0x0A])
         var buffer = [UInt8](repeating: 0, count: 4_096)
         while response.range(of: separator) == nil {
-            let count = Darwin.read(descriptor, &buffer, buffer.count)
-            guard count > 0 else {
-                throw ClientError.connectionClosed
+            let count = try owner.perform { Darwin.read($0, &buffer, buffer.count) }
+            if count < 0, errno == EINTR { continue }
+            if count < 0, errno == EAGAIN || errno == EWOULDBLOCK {
+                try owner.wait(for: Int16(POLLIN)); continue
             }
+            guard count > 0 else { throw ClientError.connectionClosed }
             response.append(buffer, count: count)
             guard response.count <= 16_384 else {
                 throw ClientError.invalidHandshake
@@ -1111,7 +1124,11 @@ public actor CodexSharedAppServerActivityClient {
         guard remaining.count <= maximumMessageBytes else {
             throw ClientError.messageTooLarge
         }
-        shouldClose = false
+        // Recheck source after the entire upgrade, including path replacement.
+        try CodexSocketOpening.verifyPath(path)
+        guard try CodexSocketOpening.pathIdentity(path) == originalIdentity else { throw ClientError.invalidHandshake }
+        try owner.transfer()
+        transferred = true
         return OpenedSocket(
             fileDescriptor: descriptor,
             remainingData: remaining
@@ -1127,45 +1144,7 @@ public actor CodexSharedAppServerActivityClient {
         return Data(Insecure.SHA1.hash(data: source)).base64EncodedString()
     }
 
-    private nonisolated static func writeAll(
-        _ data: Data,
-        to descriptor: Int32
-    ) throws {
-        try data.withUnsafeBytes { bytes in
-            guard let baseAddress = bytes.baseAddress else { return }
-            var offset = 0
-            while offset < data.count {
-                let count = Darwin.write(
-                    descriptor,
-                    baseAddress.advanced(by: offset),
-                    data.count - offset
-                )
-                guard count > 0 else {
-                    throw ClientError.connectionClosed
-                }
-                offset += count
-            }
-        }
-    }
 
-    private nonisolated static func dataStream(
-        from handle: FileHandle
-    ) -> AsyncStream<Data> {
-        AsyncStream { continuation in
-            handle.readabilityHandler = { readableHandle in
-                let data = readableHandle.availableData
-                if data.isEmpty {
-                    readableHandle.readabilityHandler = nil
-                    continuation.finish()
-                } else {
-                    continuation.yield(data)
-                }
-            }
-            continuation.onTermination = { _ in
-                handle.readabilityHandler = nil
-            }
-        }
-    }
 }
 
 enum CodexAppServerWebSocketOpcode: UInt8 {
@@ -1222,6 +1201,10 @@ enum CodexAppServerWebSocketFrameEncoder {
 
 struct CodexAppServerWebSocketMessageDecoder {
     private(set) var buffer = Data()
+    private var readOffset = 0
+    private var expectedFrameLength: Int?
+    private(set) var copiedPayloadBytes = 0
+    private(set) var compactedBytes = 0
     private var fragmentedText = Data()
     private var isReadingFragmentedText = false
     private let maximumMessageBytes: Int
@@ -1283,7 +1266,7 @@ struct CodexAppServerWebSocketMessageDecoder {
                 events.append(.close)
             }
         }
-        guard buffer.count <= maximumMessageBytes + 14 else {
+        guard buffer.count - readOffset <= maximumMessageBytes + 14 else {
             throw CodexSharedAppServerActivityClient.ClientError
                 .messageTooLarge
         }
@@ -1291,10 +1274,13 @@ struct CodexAppServerWebSocketMessageDecoder {
     }
 
     private mutating func nextFrame() throws -> Frame? {
-        guard buffer.count >= 2 else { return nil }
-        let bytes = [UInt8](buffer)
-        let first = bytes[0]
-        let second = bytes[1]
+        let available = buffer.count - readOffset
+        if let expectedFrameLength, available < expectedFrameLength { return nil }
+        guard available >= 2 else { return nil }
+        // Only the header is inspected until this exact frame is complete.
+        func byte(_ offset: Int) -> UInt8 { buffer[buffer.startIndex + readOffset + offset] }
+        let first = byte(0)
+        let second = byte(1)
         let isFinal = first & 0x80 != 0
         guard first & 0x70 == 0,
               second & 0x80 == 0,
@@ -1309,15 +1295,13 @@ struct CodexAppServerWebSocketMessageDecoder {
         var index = 2
         var payloadLength = UInt64(second & 0x7F)
         if payloadLength == 126 {
-            guard bytes.count >= 4 else { return nil }
-            payloadLength = UInt64(bytes[2]) << 8 | UInt64(bytes[3])
+            guard available >= 4 else { return nil }
+            payloadLength = UInt64(byte(2)) << 8 | UInt64(byte(3))
             index = 4
         } else if payloadLength == 127 {
-            guard bytes.count >= 10 else { return nil }
+            guard available >= 10 else { return nil }
             payloadLength = 0
-            for byte in bytes[2..<10] {
-                payloadLength = payloadLength << 8 | UInt64(byte)
-            }
+            for offset in 2..<10 { payloadLength = payloadLength << 8 | UInt64(byte(offset)) }
             index = 10
         }
 
@@ -1328,9 +1312,20 @@ struct CodexAppServerWebSocketMessageDecoder {
                 .messageTooLarge
         }
         let totalLength = index + Int(payloadLength)
-        guard bytes.count >= totalLength else { return nil }
-        let payload = Data(bytes[index..<totalLength])
-        buffer.removeFirst(totalLength)
+        expectedFrameLength = totalLength
+        guard available >= totalLength else { return nil }
+        let start = buffer.startIndex + readOffset
+        let payload = Data(buffer[(start + index)..<(start + totalLength)])
+        copiedPayloadBytes += payload.count
+        readOffset += totalLength
+        expectedFrameLength = nil
+        if readOffset == buffer.count {
+            buffer.removeAll(keepingCapacity: true); readOffset = 0
+        } else if readOffset >= 65_536 && readOffset >= buffer.count / 2 {
+            let remaining = Data(buffer[(buffer.startIndex + readOffset)...])
+            compactedBytes += remaining.count
+            buffer = remaining; readOffset = 0
+        }
         return Frame(
             isFinal: isFinal,
             opcode: opcode,

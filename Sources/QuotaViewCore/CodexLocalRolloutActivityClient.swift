@@ -1,5 +1,8 @@
 import Foundation
 import Darwin
+#if canImport(QuotaViewActivityHookSupport)
+import QuotaViewActivityHookSupport
+#endif
 
 public enum CodexLocalRolloutDecodedUpdate: Equatable, Sendable {
     case activity(CodexActivityEvent)
@@ -113,15 +116,12 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         line: Data,
         now: Date = Date()
     ) -> CodexLocalRolloutDecodedRecord? {
-        guard !line.isEmpty,
-              line.count <= Self.maximumLineBytes,
-              let object = try? JSONSerialization.jsonObject(with: line),
-              let envelope = object as? [String: Any],
-              let payload = envelope["payload"] as? [String: Any],
-              let recordType = envelope["type"] as? String
-        else {
-            return nil
-        }
+        guard let envelope = CodexLocalRolloutEnvelope(line) else { return nil }
+        return decode(envelope, now: now)
+    }
+
+    mutating func decode(_ decoded: CodexLocalRolloutEnvelope, now: Date = Date()) -> CodexLocalRolloutDecodedRecord? {
+        let envelope = decoded.object, payload = decoded.payload, recordType = decoded.type
 
         if recordType == "session_meta" {
             guard Self.hashedIdentifier(payload["id"]) == sessionHash else { return nil }
@@ -147,10 +147,7 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             return nil
         }
 
-        let occurredAt = Self.eventDate(
-            from: envelope["timestamp"],
-            fallback: now
-        )
+        let occurredAt = decoded.timestamp ?? now
         let eventID = Self.eventID(
             sessionHash: sessionHash,
             ordinal: envelope["ordinal"],
@@ -421,21 +418,6 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
         return "rollout:\(sessionHash):\(ordinal):\(recordType):\(payloadType ?? "-")"
     }
 
-    private static func eventDate(
-        from value: Any?,
-        fallback: Date
-    ) -> Date {
-        guard let string = value as? String else { return fallback }
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [
-            .withInternetDateTime,
-            .withFractionalSeconds
-        ]
-        if let date = fractional.date(from: string) {
-            return date
-        }
-        return ISO8601DateFormatter().date(from: string) ?? fallback
-    }
 }
 
 public enum CodexLocalActivityHealth: Sendable, Equatable {
@@ -566,6 +548,14 @@ public actor CodexLocalRolloutActivityClient {
     private var startedAt = Date.distantFuture
     private var receivedActivity = false
     private var readFailed = false
+    struct ParsingWorkSummary {
+        var processedLines = 0
+        var yieldedSlices = 0
+        var maximumSliceSeconds: Double = 0
+    }
+    private(set) var parsingWorkSummary = ParsingWorkSummary()
+    private var parsingSliceObserver: (@Sendable () async -> Void)?
+    func setParsingSliceObserverForTesting(_ observer: (@Sendable () async -> Void)?) { parsingSliceObserver = observer }
     private var unsupportedMetadata = false
     private var discovery: CodexLocalRolloutDiscovery
     private var maintenanceTask: Task<Void, Never>?
@@ -630,6 +620,7 @@ public actor CodexLocalRolloutActivityClient {
             return
         }
         isStarted = true
+        parsingWorkSummary = .init()
         startedAt = Date()
         generation &+= 1
         let run = generation
@@ -660,6 +651,7 @@ public actor CodexLocalRolloutActivityClient {
         activeExecutionProvider = nil
         activeExecutionTurns.removeAll()
         metadataReadHandler = nil
+        parsingSliceObserver = nil
         lastMetadataReadSummary = nil
         tailStates.removeAll()
         candidates.removeAll()
@@ -815,7 +807,7 @@ public actor CodexLocalRolloutActivityClient {
             await bootstrap(candidate: candidate, generation: run)
             return
         }
-        guard let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+        guard let metadata = discovery.sessionMetadata(from: candidate.fileURL),
               metadata.threadID == candidate.threadID, metadata.sessionHash == candidate.sessionHash,
               metadata.kind == candidate.metadataKind else {
             tailStates.removeValue(forKey: candidate.fileURL); lastCandidateRefresh = .distantPast
@@ -872,11 +864,13 @@ public actor CodexLocalRolloutActivityClient {
             state.offset = try handle.offset()
             state.pending.append(data)
             var records: [(CodexLocalRolloutDecodedRecord?, CodexLocalPublicContent?)] = []
-            consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine) { line in
-                let record = state.decoder.decode(line: line)
-                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash, asynchronousQuestionCallIDs: state.decoder.asynchronousQuestionCallIDs)
+            let complete = await consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine, generation: run) { line in
+                guard let envelope = CodexLocalRolloutEnvelope(line) else { return }
+                let record = state.decoder.decode(envelope)
+                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(envelope, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash, asynchronousQuestionCallIDs: state.decoder.asynchronousQuestionCallIDs)
                 if record != nil || content != nil { records.append((record, content)) }
             }
+            guard complete, isStarted, generation == run, !Task.isCancelled else { return }
             // Commit the cursor before any reentrant callback can stop/restart us.
             tailStates[candidate.fileURL] = state
             for (record, content) in records {
@@ -908,7 +902,7 @@ public actor CodexLocalRolloutActivityClient {
 
         do {
             guard let fileIdentity = FileIdentity(handle: handle),
-                  let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+                  let metadata = discovery.sessionMetadata(from: candidate.fileURL),
                   metadata.sessionHash == candidate.sessionHash, metadata.threadID == candidate.threadID,
                   metadata.kind == candidate.metadataKind else {
                 lastCandidateRefresh = .distantPast
@@ -942,17 +936,17 @@ public actor CodexLocalRolloutActivityClient {
             var publicReplay = CodexLocalPublicReplayBuffer()
             var latestPublicMetadata: CodexLocalPublicContent?
             var pending = data
-            consumeCompleteLines(from: &pending, discarding: &discarding) { line in
-                let decoded = decoder.decode(line: line)
+            let complete = await consumeCompleteLines(from: &pending, discarding: &discarding, generation: run) { line in
+                guard let envelope = CodexLocalRolloutEnvelope(line) else { return }
+                let decoded = decoder.decode(envelope)
                 publicReplay.selectTurn(decoder.activeTurnHash)
-                if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash, asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs) {
-                    let fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any]
-                    if fields?["type"] as? String == "metadata" {
+                if let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(envelope, sessionHash: candidate.sessionHash, activeTurnHash: decoder.activeTurnHash, asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs) {
+                    if content.projectionKind == "metadata" {
                         // Model/effort must survive a busy turn's 200-output
                         // replay cap without retaining additional user content.
                         latestPublicMetadata = content
                     } else {
-                        publicReplay.append(content, isAssistantMessage: fields?["type"] as? String == "message")
+                        publicReplay.append(content, isAssistantMessage: content.projectionKind == "message")
                     }
                 }
                 guard let record = decoded else { return }
@@ -962,17 +956,14 @@ public actor CodexLocalRolloutActivityClient {
                 }
                 if case .activity(let event) = record.update, event.event == .userPromptSubmit {
                     // Do not use the decoder's missing-timestamp fallback as live evidence.
-                    let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any]
-                    let rawDate = object?["timestamp"] as? String
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    let timestamp = rawDate.flatMap { formatter.date(from: $0) ?? ISO8601DateFormatter().date(from: $0) }
+                    let timestamp = envelope.timestamp
                     let now = Date()
                     freshStart = timestamp.map { $0 >= startedAt && $0 >= now.addingTimeInterval(-5)
                         && $0 <= now.addingTimeInterval(2) } ?? false
                 }
                 replay.record(record)
             }
+            guard complete, isStarted, generation == run, !Task.isCancelled else { return }
             let child = metadata.subagentIdentity?.withTitle(candidate.title)
             tailStates[candidate.fileURL] = TailState(
                 fileIdentity: fileIdentity, sessionHash: candidate.sessionHash,
@@ -1022,22 +1013,20 @@ public actor CodexLocalRolloutActivityClient {
                 }
                 let currentContent = publicReplay.contents.filter { $0.turnHash == turn }
                 let observedToolIDs = Set(currentContent.compactMap { content -> String? in
-                    guard let fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any],
-                          fields["type"] as? String == "tool", let name = fields["name"] as? String,
-                          !CodexLocalQuestionContent.isQuestionTool(name) else { return nil }
-                    return fields["id"] as? String
+                    guard content.projectionKind == "tool" else { return nil }
+                    return content.projectionCallID
                 })
                 for content in currentContent {
                     guard isStarted, generation == run, !Task.isCancelled else { return }
-                    guard var fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any],
-                          let type = fields["type"] as? String else { continue }
+                    guard let type = content.projectionKind else { continue }
                     let ordinaryTool = type == "tool"
-                        && (fields["id"] as? String).map(observedToolIDs.contains) == true
+                        && content.projectionCallID.map(observedToolIDs.contains) == true
                     let ordinaryOutput = type == "output"
-                        && (fields["id"] as? String).map(observedToolIDs.contains) == true
+                        && content.projectionCallID.map(observedToolIDs.contains) == true
                     guard type == "message" || ordinaryTool || ordinaryOutput else { continue }
                     // Consumers restore public text only. An observed old tool
                     // is not evidence that it is still running or awaiting input.
+                    guard var fields = (try? JSONSerialization.jsonObject(with: content.data)) as? [String: Any] else { continue }
                     fields["presentationRecovery"] = true
                     guard let data = try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]) else { continue }
                     await publicContentHandler?(.init(sessionHash: content.sessionHash, turnHash: content.turnHash,
@@ -1059,20 +1048,45 @@ public actor CodexLocalRolloutActivityClient {
     private func consumeCompleteLines(
         from data: inout Data,
         discarding: inout Bool,
+        generation run: UInt64,
         body: (Data) -> Void
-    ) {
-        while let newline = data.firstIndex(of: 0x0A) {
-            let line = Data(data[..<newline])
-            data.removeSubrange(data.startIndex...newline)
-            if !discarding, line.count <= CodexLocalRolloutLineDecoder.maximumLineBytes {
-                body(line)
-            }
-            discarding = false
+    ) async -> Bool {
+        var cursor = data.startIndex
+        var sliceBytes = 0, sliceLines = 0
+        var sliceStarted = ContinuousClock.now
+        defer { data.removeSubrange(data.startIndex..<cursor) }
+        func recordSlice() {
+            let duration = sliceStarted.duration(to: .now).components
+            let seconds = Double(duration.seconds) + Double(duration.attoseconds) / 1e18
+            parsingWorkSummary.maximumSliceSeconds = max(parsingWorkSummary.maximumSliceSeconds, seconds)
         }
-        if data.count > CodexLocalRolloutLineDecoder.maximumLineBytes {
-            data.removeAll(keepingCapacity: true)
+        // Scan without repeatedly shifting a multi-MiB tail after every line.
+        while let range = data.range(of: Data([10]), in: cursor..<data.endIndex) {
+            let newline = range.lowerBound
+            let count = newline - cursor
+            parsingWorkSummary.processedLines += 1
+            if !discarding, count <= CodexLocalRolloutLineDecoder.maximumLineBytes {
+                body(Data(data[cursor..<newline]))
+            }
+            cursor = range.upperBound
+            discarding = false
+            sliceBytes += count + 1; sliceLines += 1
+            if sliceBytes >= 262_144 || sliceLines >= 128
+                || sliceStarted.duration(to: .now) >= .milliseconds(5) {
+                recordSlice()
+                parsingWorkSummary.yieldedSlices += 1
+                await Task.yield()
+                await parsingSliceObserver?()
+                guard isStarted, generation == run, !Task.isCancelled else { return false }
+                sliceBytes = 0; sliceLines = 0; sliceStarted = .now
+            }
+        }
+        if sliceLines > 0 { recordSlice() }
+        if data.endIndex - cursor > CodexLocalRolloutLineDecoder.maximumLineBytes {
+            cursor = data.endIndex
             discarding = true
         }
+        return true
     }
 
     private func publishHealth(_ value: CodexLocalActivityHealth, force: Bool = false) async {
@@ -1183,403 +1197,10 @@ private struct BootstrapReplay {
 }
 
 private enum CodexLocalRolloutPlanParser {
-    private static let wrappedToolNames: Set<String> = [
-        "exec", "functions.exec", "functions__exec"
-    ]
-
-    static func parse(
-        toolName: String,
-        arguments: Any?,
-        input: Any?
-    ) -> CodexActivityPlanProgress? {
-        if toolName == "update_plan" {
-            return direct(arguments ?? input)
-        }
-        guard wrappedToolNames.contains(toolName),
-              let source = input as? String,
-              source.utf8.count
-                <= CodexLocalRolloutLineDecoder.maximumLineBytes
-        else {
-            return nil
-        }
-        return LoosePlanScanner(source: source).lastPlan()
-    }
-
-    private static func direct(_ value: Any?) -> CodexActivityPlanProgress? {
-        let object: [String: Any]?
-        if let value = value as? [String: Any] {
-            object = value
-        } else if let value = value as? String,
-                  let data = value.data(using: .utf8),
-                  data.count <= CodexLocalRolloutLineDecoder.maximumLineBytes
-        {
-            object = (try? JSONSerialization.jsonObject(with: data))
-                as? [String: Any]
-        } else {
-            object = nil
-        }
-        guard let plan = object?["plan"] as? [[String: Any]],
-              (1...CodexActivityPlanProgress.maximumStepCount)
-                .contains(plan.count)
-        else {
-            return nil
-        }
-        var counts = PlanCounts()
-        for item in plan {
-            guard let status = item["status"] as? String,
-                  counts.record(status)
-            else {
-                return nil
-            }
-        }
-        return counts.progress
-    }
-}
-
-private struct PlanCounts {
-    var completed = 0
-    var inProgress = 0
-    var pending = 0
-
-    mutating func record(_ status: String) -> Bool {
-        switch status {
-        case "completed": completed += 1
-        case "in_progress", "inProgress": inProgress += 1
-        case "pending": pending += 1
-        default: return false
-        }
-        return true
-    }
-
-    var progress: CodexActivityPlanProgress {
-        CodexActivityPlanProgress(
-            completedSteps: completed,
-            inProgressSteps: inProgress,
-            pendingSteps: pending
-        )
-    }
-}
-
-private struct LoosePlanScanner {
-    private let bytes: [UInt8]
-
-    init(source: String) {
-        bytes = Array(source.utf8)
-    }
-
-    func lastPlan() -> CodexActivityPlanProgress? {
-        var result: CodexActivityPlanProgress?
-        var index = 0
-        while index < bytes.count {
-            if let end = triviaOrLiteralEnd(at: index) {
-                index = end
-                continue
-            }
-            guard let argument = updatePlanArgument(at: index) else {
-                index += 1
-                continue
-            }
-            if let planRange = planArrayRange(in: argument),
-               let progress = countPlan(in: planRange)
-            {
-                result = progress
-            }
-            index = max(argument.upperBound, index + 1)
-        }
-        return result
-    }
-
-    private func updatePlanArgument(at start: Int) -> Range<Int>? {
-        guard matches("tools", at: start) else { return nil }
-        var cursor = start + 5
-        skipTrivia(&cursor)
-        guard consume(46, &cursor) else { return nil }
-        skipTrivia(&cursor)
-        guard matches("update_plan", at: cursor) else { return nil }
-        cursor += 11
-        skipTrivia(&cursor)
-        guard consume(40, &cursor),
-              let closing = matchingDelimiter(
-                from: cursor - 1,
-                open: 40,
-                close: 41
-              )
-        else {
-            return nil
-        }
-        return cursor..<closing
-    }
-
-    private func planArrayRange(in argument: Range<Int>) -> Range<Int>? {
-        var index = argument.lowerBound
-        while index < argument.upperBound {
-            if let end = commentEnd(at: index) {
-                index = end
-                continue
-            }
-            let keyEnd: Int?
-            if bytes[index] == 34 || bytes[index] == 39 {
-                let literal = stringLiteral(at: index)
-                keyEnd = literal?.value == "plan" ? literal?.end : nil
-                if keyEnd == nil {
-                    index = literal?.end ?? argument.upperBound
-                    continue
-                }
-            } else if matches("plan", at: index) {
-                keyEnd = index + 4
-            } else {
-                keyEnd = nil
-            }
-            guard let keyEnd else {
-                index += 1
-                continue
-            }
-            var cursor = keyEnd
-            skipTrivia(&cursor)
-            guard cursor < argument.upperBound,
-                  consume(58, &cursor)
-            else {
-                index += 1
-                continue
-            }
-            skipTrivia(&cursor)
-            guard cursor < argument.upperBound,
-                  bytes[cursor] == 91,
-                  let closing = matchingDelimiter(
-                    from: cursor,
-                    open: 91,
-                    close: 93
-                  ),
-                  closing <= argument.upperBound
-            else {
-                index += 1
-                continue
-            }
-            return (cursor + 1)..<closing
-        }
-        return nil
-    }
-
-    private func countPlan(
-        in range: Range<Int>
-    ) -> CodexActivityPlanProgress? {
-        var counts = PlanCounts()
-        var rootItems = 0
-        var objectDepth = 0
-        var arrayDepth = 0
-        var index = range.lowerBound
-
-        while index < range.upperBound {
-            if let end = commentEnd(at: index) {
-                index = end
-                continue
-            }
-            if bytes[index] == 34 || bytes[index] == 39 {
-                let parsed = stringLiteral(at: index)
-                guard let parsed else { return nil }
-                if objectDepth == 1, arrayDepth == 0,
-                   parsed.value == "status",
-                   let status = propertyStringValue(
-                    after: parsed.end,
-                    upperBound: range.upperBound
-                   ), !counts.record(status.value)
-                {
-                    return nil
-                }
-                index = parsed.end
-                continue
-            }
-            switch bytes[index] {
-            case 123:
-                objectDepth += 1
-                if objectDepth == 1, arrayDepth == 0 { rootItems += 1 }
-            case 125:
-                objectDepth -= 1
-                if objectDepth < 0 { return nil }
-            case 91:
-                arrayDepth += 1
-            case 93:
-                arrayDepth -= 1
-                if arrayDepth < 0 { return nil }
-            default:
-                if objectDepth == 1, arrayDepth == 0,
-                   matches("status", at: index),
-                   let status = propertyStringValue(
-                    after: index + 6,
-                    upperBound: range.upperBound
-                   ), !counts.record(status.value)
-                {
-                    return nil
-                }
-            }
-            index += 1
-        }
-
-        let statusCount = counts.completed + counts.inProgress + counts.pending
-        guard objectDepth == 0,
-              arrayDepth == 0,
-              rootItems == statusCount,
-              (1...CodexActivityPlanProgress.maximumStepCount)
-                .contains(rootItems)
-        else {
-            return nil
-        }
-        return counts.progress
-    }
-
-    private func propertyStringValue(
-        after keyEnd: Int,
-        upperBound: Int
-    ) -> (value: String, end: Int)? {
-        var cursor = keyEnd
-        skipTrivia(&cursor)
-        guard cursor < upperBound, consume(58, &cursor) else {
-            return nil
-        }
-        skipTrivia(&cursor)
-        guard cursor < upperBound,
-              let value = stringLiteral(at: cursor),
-              value.end <= upperBound
-        else {
-            return nil
-        }
-        return value
-    }
-
-    private func matchingDelimiter(
-        from start: Int,
-        open: UInt8,
-        close: UInt8
-    ) -> Int? {
-        var depth = 0
-        var index = start
-        while index < bytes.count {
-            if let end = triviaOrLiteralEnd(at: index) {
-                index = end
-                continue
-            }
-            if bytes[index] == open { depth += 1 }
-            if bytes[index] == close {
-                depth -= 1
-                if depth == 0 { return index }
-            }
-            index += 1
-        }
-        return nil
-    }
-
-    private func stringLiteral(
-        at start: Int
-    ) -> (value: String, end: Int)? {
-        guard start < bytes.count,
-              bytes[start] == 34 || bytes[start] == 39
-        else {
-            return nil
-        }
-        let quote = bytes[start]
-        var value: [UInt8] = []
-        var index = start + 1
-        while index < bytes.count {
-            if bytes[index] == 92 {
-                guard index + 1 < bytes.count else { return nil }
-                value.append(bytes[index + 1])
-                index += 2
-            } else if bytes[index] == quote {
-                return (String(decoding: value, as: UTF8.self), index + 1)
-            } else {
-                value.append(bytes[index])
-                index += 1
-            }
-        }
-        return nil
-    }
-
-    private func triviaOrLiteralEnd(at index: Int) -> Int? {
-        if let end = commentEnd(at: index) { return end }
-        guard index < bytes.count,
-              bytes[index] == 34 || bytes[index] == 39 || bytes[index] == 96
-        else {
-            return nil
-        }
-        let quote = bytes[index]
-        var cursor = index + 1
-        while cursor < bytes.count {
-            if bytes[cursor] == 92 {
-                cursor = min(cursor + 2, bytes.count)
-            } else if bytes[cursor] == quote {
-                return cursor + 1
-            } else {
-                cursor += 1
-            }
-        }
-        return bytes.count
-    }
-
-    private func commentEnd(at index: Int) -> Int? {
-        guard index + 1 < bytes.count, bytes[index] == 47 else {
-            return nil
-        }
-        if bytes[index + 1] == 47 {
-            var cursor = index + 2
-            while cursor < bytes.count,
-                  bytes[cursor] != 10,
-                  bytes[cursor] != 13
-            {
-                cursor += 1
-            }
-            return cursor
-        }
-        if bytes[index + 1] == 42 {
-            var cursor = index + 2
-            while cursor + 1 < bytes.count,
-                  !(bytes[cursor] == 42 && bytes[cursor + 1] == 47)
-            {
-                cursor += 1
-            }
-            return min(cursor + 2, bytes.count)
-        }
-        return nil
-    }
-
-    private func skipTrivia(_ index: inout Int) {
-        while index < bytes.count {
-            if [9, 10, 13, 32].contains(bytes[index]) {
-                index += 1
-            } else if let end = commentEnd(at: index) {
-                index = end
-            } else {
-                return
-            }
-        }
-    }
-
-    private func consume(_ byte: UInt8, _ index: inout Int) -> Bool {
-        guard index < bytes.count, bytes[index] == byte else {
-            return false
-        }
-        index += 1
-        return true
-    }
-
-    private func matches(_ value: String, at index: Int) -> Bool {
-        let token = Array(value.utf8)
-        guard index >= 0,
-              index + token.count <= bytes.count,
-              Array(bytes[index..<(index + token.count)]) == token
-        else {
-            return false
-        }
-        if index > 0, Self.isIdentifier(bytes[index - 1]) { return false }
-        let end = index + token.count
-        if end < bytes.count, Self.isIdentifier(bytes[end]) { return false }
-        return true
-    }
-
-    private static func isIdentifier(_ byte: UInt8) -> Bool {
-        (byte >= 48 && byte <= 57)
-            || (byte >= 65 && byte <= 90)
-            || (byte >= 97 && byte <= 122)
-            || byte == 95
-            || byte == 36
+    static func parse(toolName: String, arguments: Any?, input: Any?) -> CodexActivityPlanProgress? {
+        guard let counts = CodexActivityPlanInputParser.parseRollout(
+            toolName: toolName, arguments: arguments, input: input) else { return nil }
+        return .init(completedSteps: counts.completedSteps,
+                     inProgressSteps: counts.inProgressSteps, pendingSteps: counts.pendingSteps)
     }
 }
