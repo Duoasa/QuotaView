@@ -127,7 +127,7 @@ QuotaView 在本地处理任务信息，不抓取账户网页，不收集登录�
 
 - macOS 14 或更高版本
 - 已安装并登录 ChatGPT/Codex
-- 仅从源码构建时需要 Swift 6 或 Xcode 16+
+- 从源码构建需要 Xcode 26+、macOS 26 SDK 和 Swift 6；最低运行系统仍为 macOS 14
 - 当前稳定版聚焦支持 Codex
 - 同时展示多个本地会话及其子 Agent；可用确认操作取决于当前会话连接能力
 - 成本数值是本地估算，不是账单记录
@@ -151,18 +151,13 @@ swift test
 swift run QuotaViewProbe
 ```
 
-在开发环境中运行应用：
-
-```bash
-swift run QuotaView
-```
+开发时在 `QuotaView.xcodeproj` 中选择共享 **QuotaView** Scheme 和 **My Mac** 运行应用。SwiftPM 支持测试套件与探针；`swift run QuotaView` 不是受支持的应用启动入口，因为它不生成 Xcode 应用包、字体资源、Widget 与开发身份。
 
 或者构建 Universal 应用和 ZIP：
 
 ```bash
 chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
-open dist/QuotaView.app
 ```
 
 构建脚本会优先使用 Developer ID Application 身份，其次使用 Apple Development 身份。如果两者都不可用，会回退到适合本地测试的 ad-hoc 签名。只有 Developer ID Application 构建可以使用公证流程：
@@ -175,6 +170,8 @@ CODESIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
 NOTARY_PROFILE="<keychain-profile>" \
 ./scripts/build-app.sh
 ```
+
+封存产物写入 `dist/<release-name>/`，其中包含 `QuotaView.app`、ZIP 和 manifest；使用脚本打印的应用路径。已有版本身份不会被覆盖。
 
 使用 Xcode 时，请打开 `QuotaView.xcodeproj`，选择共享的 **QuotaView** Scheme 和 **My Mac**，然后运行或测试。
 

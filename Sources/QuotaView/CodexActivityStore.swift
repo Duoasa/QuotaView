@@ -1,6 +1,13 @@
 import Combine
 import Foundation
 import QuotaViewCore
+/// Store-resolved business state. UI content and response ownership stay in
+/// their existing stores; this small value carries no raw reasoning or RPC.
+struct CodexIslandActivityProjection {
+    let snapshot: CodexActivitySnapshot
+    let lifecycle: CodexActivityTurnLifecycle
+    let event: CodexActivityEvent?
+}
 
 
 @MainActor
@@ -153,8 +160,11 @@ final class CodexActivityStore: ObservableObject {
         localDesktopFollowOrder.compactMap { localDesktopFollows[$0]?.identity }
     }
     var publicMessageDidReceive: ((Data) -> Void)?
+    var decodedPublicMessageDidReceive: (([String: Any], Int) -> Void)?
+    private(set) var forwardedPublicSerializationCount = 0
     var desktopProjectionDidReceive: ((CodexDesktopInteractionProjection, CodexDesktopConversationSnapshot) -> Void)?
     var admittedActivityDidReceive: ((CodexActivityEvent) -> Void)?
+    var islandActivityProjectionDidReceive: ((CodexIslandActivityProjection) -> Void)?
     /// Classification is published before any user activity/content callback.
     var activitySessionKindDidResolve: ((String, CodexActivitySessionKind) -> Void)?
     var cumulativeTokensDidReceive: ((CodexActivityTokenUsageUpdate) -> Void)?
@@ -608,7 +618,8 @@ final class CodexActivityStore: ObservableObject {
                   taskRegistry.currentIdentity(for: session)?.turnHash == identity.turnHash else { return }
             flushLocalPublicContent(for: session)
         }
-        if let status, status["type"] as? String == "active", let flags = status["activeFlags"] as? [String] {
+        if let status, status["type"] as? String == "active", let flags = status["activeFlags"] as? [String],
+           Set(flags).isSubset(of: ["waitingOnUserInput", "waitingOnApproval"]) {
             let reason: CodexActivityWaitReason? = flags.contains("waitingOnUserInput") ? .userInput
                 : flags.contains("waitingOnApproval") ? .approval : nil
             if let reason {
@@ -631,7 +642,9 @@ final class CodexActivityStore: ObservableObject {
         }
         envelope["params"] = params
         envelope["_quotaViewConnectionEpoch"] = epoch
-        if let forwarded = try? JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]) {
+        decodedPublicMessageDidReceive?(envelope, data.count)
+        if publicMessageDidReceive != nil, let forwarded = try? JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]) {
+            forwardedPublicSerializationCount += 1
             publicMessageDidReceive?(forwarded)
         }
         if let update = CodexAppServerActivityNotificationDecoder.decodeTokenUsage(data: data, now: now) {
@@ -1082,6 +1095,7 @@ final class CodexActivityStore: ObservableObject {
             admittedSnapshots[session] = .init(id: 0, snapshot: unavailable, lifecycle: .unconfirmed, compactionSource: nil)
             multitask.receive(unavailable, lifecycle: .unconfirmed, compactionSource: nil,
                               now: ProcessInfo.processInfo.systemUptime, permitsNewEntry: false)
+            islandActivityProjectionDidReceive?(.init(snapshot: unavailable, lifecycle: .unconfirmed, event: nil))
         }
         if multitask.enabled { notifyChange() }
         guard selectedCompactionSource == source, let current = snapshot,
@@ -1811,6 +1825,10 @@ final class CodexActivityStore: ObservableObject {
                 lifecycle: admittedLifecycle, compactionSource: source)
             multitask.receive(identifiedSnapshot, lifecycle: admittedLifecycle, compactionSource: source,
                               now: ProcessInfo.processInfo.systemUptime, permitsNewEntry: eligible)
+            if forwardAdmittedActivity || event.planProgress != nil {
+                islandActivityProjectionDidReceive?(.init(snapshot: identifiedSnapshot, lifecycle: admittedLifecycle,
+                    event: event.classified(as: resolvedKind)))
+            }
         }
         // Single-island selection and timers retain their existing behavior.
         guard admission.selectsTask else {

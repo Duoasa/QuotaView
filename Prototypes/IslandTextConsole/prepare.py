@@ -29,13 +29,10 @@ shutil.copy2(console / 'ConsoleApp.swift', app / 'ConsoleApp.swift')
 shutil.copy2(console / 'ConsoleMotion.swift', app / 'ConsoleMotion.swift')
 island = app / 'CodexActivityIsland.swift'
 source = island.read_text()
-old = 'private final class ActivityIslandContentView:'
-assert source.count(old) == 1
-island.write_text(source.replace(old, 'final class ActivityIslandContentView:'))
 shutil.copy2(console / 'tests/RendererTextLayoutTests.swift',
              stage / 'Tests/QuotaViewCoreTests/RendererTextLayoutTests.swift')
-# The only renderer change in this workspace is visibility for the preview host.
-assert island.read_text().replace('final class ActivityIslandContentView:', old) == source
+# The shared renderer is already internal; copy it without any visibility adapter.
+assert island.read_bytes() == (root / 'Sources/QuotaView/CodexActivityIsland.swift').read_bytes()
 
 version = plistlib.loads((root / 'Support/Info.plist').read_bytes())
 info = {
@@ -50,22 +47,9 @@ for key in ['CFBundleShortVersionString', 'CFBundleVersion', 'QuotaViewDisplayBu
     info[key] = version[key]
 (console / '.build' / 'Console-Info.plist').write_bytes(plistlib.dumps(info))
 
-# Resolve the bundled shader from standard macOS Resources in the standalone app.
-ripple = app / 'CodexActivityRippleGlow.swift'
-text = ripple.read_text()
-old = '        let bundle = Bundle.module'
-assert text.count(old) == 1
-text = text.replace(old, '\n'.join([
-    '        let bundle = Bundle.main.resourceURL',
-    '            .flatMap { Bundle(url: $0.appendingPathComponent("QuotaView_QuotaView.bundle")) }',
-    '            ?? Bundle.module'
-]))
-ripple.write_text(text)
-
 # Record the complete current source, including LONG-020's shared Metal code and clocks.
-# Apart from these three host adapters, every production file must be byte-identical.
-adapters = {'Sources/QuotaView/QuotaViewApp.swift', 'Sources/QuotaView/CodexActivityIsland.swift',
-            'Sources/QuotaView/CodexActivityRippleGlow.swift'}
+# Only the host entry point differs; the renderer/resources need no adapters.
+adapters = {'Sources/QuotaView/QuotaViewApp.swift'}
 production_files = {}
 for path in sorted((root / 'Sources').rglob('*')):
     if not path.is_file():
@@ -77,7 +61,7 @@ for path in sorted((root / 'Sources').rglob('*')):
 (console / '.build' / 'source-manifest.json').write_text(json.dumps({
     'source': str(root / 'Sources/QuotaView/CodexActivityIsland.swift'),
     'sha256': hashlib.sha256(source.encode()).hexdigest(),
-    'rendererChanges': 'ActivityIslandContentView visibility only',
+    'rendererChanges': 'none; byte-identical production renderer',
     'hostAdapters': sorted(adapters),
     'effectSource': 'Sources/QuotaView/CodexActivityStateSmoke.swift',
     'productionFiles': production_files,

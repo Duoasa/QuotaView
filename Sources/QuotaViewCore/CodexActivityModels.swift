@@ -1,4 +1,7 @@
 import CryptoKit
+#if canImport(QuotaViewActivityHookSupport)
+import QuotaViewActivityHookSupport
+#endif
 import Foundation
 
 public enum CodexActivityHookEvent: String, Codable, CaseIterable, Sendable {
@@ -560,50 +563,16 @@ public enum CodexActivityReducer {
 
 public enum CodexActivityPrivacy {
     public static func hashIdentifier(_ identifier: String) -> String {
-        let digest = SHA256.hash(data: Data(identifier.utf8))
-        return digest.map { String(format: "%02x", $0) }.joined()
+        CodexActivityPrivacyRules.hashIdentifier(identifier)
     }
 
     public static func workspaceName(from path: String?) -> String? {
-        guard let path, !path.isEmpty else { return nil }
-        let name = URL(fileURLWithPath: path)
-            .standardizedFileURL
-            .lastPathComponent
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? nil : String(name.prefix(80))
+        CodexActivityPrivacyRules.workspaceName(from: path)
     }
 
-    public static func toolCategory(
-        for canonicalName: String?
-    ) -> CodexActivityToolCategory? {
-        guard let canonicalName, !canonicalName.isEmpty else {
-            return nil
-        }
-
-        if canonicalName == "Bash" || canonicalName == "exec_command" {
-            return .shell
-        }
-        if ["apply_patch", "Edit", "Write"].contains(canonicalName) {
-            return .fileEdit
-        }
-        if canonicalName == "Agent"
-            || canonicalName == "spawn_agent"
-            || canonicalName.contains("subagent")
-        {
-            return .subagent
-        }
-        if ["create_goal", "get_goal", "update_goal"].contains(
-            canonicalName
-        ) || canonicalName.hasSuffix("__create_goal")
-            || canonicalName.hasSuffix("__get_goal")
-            || canonicalName.hasSuffix("__update_goal")
-        {
-            return .goal
-        }
-        if canonicalName.hasPrefix("mcp__") {
-            return .mcp
-        }
-        return .localTool
+    public static func toolCategory(for canonicalName: String?) -> CodexActivityToolCategory? {
+        CodexActivityPrivacyRules.toolCategoryRawValue(for: canonicalName)
+            .flatMap(CodexActivityToolCategory.init(rawValue:))
     }
 }
 
