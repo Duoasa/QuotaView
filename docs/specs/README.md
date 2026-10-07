@@ -1,7 +1,5 @@
 # QuotaView SDD 注册表
 
-> 2026-10-06审计整合：35项源码修复及定向反例/隔离验证已实施，本地整合验证/开发交付完成，源码PR/main CI继续按门禁核对。公开稳定版不变；逐ID证据与边界见[审计修复记录](../audits/quotaview-audit-repair-2026-10-06.md)，实际运行包见Handoff。
-
 > 2026-10-06：0.7.7 Build1（内部57）已合入main并发布GitHub Stable / Latest；源码PR/main CI、签名公证与回下载通过，appcast与Pages部署成功、线上旧版公钥验证通过；中英文README和英文Release简述同步。开发版PID50354已运行，线上Feed核验及完整证据见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 > 2026-10-06 01:17现场：审批在订阅超时约87秒后自行恢复；进程采样定位每次patch全历史编码/解码阻塞IPC reader。修订为复用JSON树投影、变化子树容量记账，并按用户要求取消完成批次自动清理。当前开发运行与验收见[Handoff](../../HANDOFF.md)，详见[信息契约](codex-island-information-contract.md#2026-10-06-审批详情延迟与数据通道修订)。
@@ -30,7 +28,6 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-FIX-AUDIT-20261006-001` | [35项审计修复](../audits/quotaview-audit-repair-2026-10-06.md) | `Accepted / Verifying` | 生产状态投影、请求内容版本/选择、传输所有权与预算、恢复切片、模块/资源/CI及封存脚本修订；native746项零失败、6跳过及最后定向检查通过，开发包已运行；GitHub当前提交检查另记，不等于发布或视觉验收 |
 | `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Released` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，随0.7.5 Build3正式发布，视觉全矩阵不由构建推断 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | Build7/内部56本地已交付Hook有界历史/floor、notice去重、完整owner pending聚合结算及异步本地退场；真实RPC只依精确native结算，工具事件仅撤弱观察。30秒无人接管、草稿接管、发送/未知后3秒交回及持久4096项退场账本保留。Universal构建、190输入/4哈希、同Team签名与加载/活动通道核对通过，首次本地交付无本地测试；源码CI/main见PR #77；CI恢复源码未重新编译或替换安装，真实交互待用户验收，原生minimize精确同步及问题组关闭仍未实现 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 2026-10-05两个临时任务来源已确认，现场读取均准确匹配；旧Hook宿主与原生线程身份假设导致漏分流。以独一原生记忆turn绑定真实Hook生命周期，迟到身份仅撤回同turn别名卡，保留并行父任务；记忆复用既有底栏AI球，不按名称过滤。Build3候选124条冒烟通过；Build4/内部53已交付记忆修复，Build6包含UI修订，当前Build7/内部56延续这些逻辑并含等待与本地退场修复；本轮Universal构建、190项输入/4哈希、签名及实际Core加载核对通过，未重跑记忆冒烟；未公开发布，活动通道和视觉验收见Handoff。 |

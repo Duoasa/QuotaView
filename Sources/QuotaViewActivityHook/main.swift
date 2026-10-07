@@ -137,29 +137,55 @@ private struct Arguments {
         guard let socketPath = value(for: "--socket"),
               let authenticationToken = value(for: "--token"),
               let installationIdentifier = value(for: "--installation-id") else { return nil }
-        guard socketPath.hasPrefix("/"),
-              let queuePath = value(for: "--queue") ?? CodexActivityPrivacyRules.legacyQueuePath(
-                socketPath: socketPath,
-                applicationSupportPath: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.path,
-                userID: getuid()), queuePath.hasPrefix("/") else { return nil }
         self.socketPath = socketPath
-        self.queuePath = queuePath
+        self.queuePath = value(for: "--queue") ?? defaultQueuePath()
         self.authenticationToken = authenticationToken
         self.installationIdentifier = installationIdentifier
     }
 }
 
 private func hashIdentifier(_ identifier: String) -> String {
-    CodexActivityPrivacyRules.hashIdentifier(identifier)
+    let digest = SHA256.hash(data: Data(identifier.utf8))
+    return digest.map { String(format: "%02x", $0) }.joined()
 }
 
 private func sanitizedWorkspaceName(_ path: String?) -> String? {
-    CodexActivityPrivacyRules.workspaceName(from: path)
+    guard let path, !path.isEmpty else { return nil }
+    let name = URL(fileURLWithPath: path)
+        .standardizedFileURL
+        .lastPathComponent
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    return name.isEmpty ? nil : String(name.prefix(80))
 }
 
 private func toolCategory(_ canonicalName: String?) -> ToolCategory? {
-    CodexActivityPrivacyRules.toolCategoryRawValue(for: canonicalName)
-        .flatMap(ToolCategory.init(rawValue:))
+    guard let canonicalName, !canonicalName.isEmpty else {
+        return nil
+    }
+    if canonicalName == "Bash" || canonicalName == "exec_command" {
+        return .shell
+    }
+    if ["apply_patch", "Edit", "Write"].contains(canonicalName) {
+        return .fileEdit
+    }
+    if canonicalName == "Agent"
+        || canonicalName == "spawn_agent"
+        || canonicalName.contains("subagent")
+    {
+        return .subagent
+    }
+    if canonicalName.hasPrefix("mcp__") {
+        return .mcp
+    }
+    if ["create_goal", "get_goal", "update_goal"].contains(
+        canonicalName
+    ) || canonicalName.hasSuffix("__create_goal")
+        || canonicalName.hasSuffix("__get_goal")
+        || canonicalName.hasSuffix("__update_goal")
+    {
+        return .goal
+    }
+    return .localTool
 }
 
 private func sanitizedPlanProgress(
@@ -374,6 +400,10 @@ private func send(
         }
     }
     return .failed("socket_acknowledgement_missing")
+}
+
+private func defaultQueuePath() -> String {
+    "/tmp/com.quotaview.codex-activity-\(getuid())"
 }
 
 private func writeFallback(

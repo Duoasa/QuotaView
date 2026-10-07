@@ -123,14 +123,3 @@ GitHub 版本发布与 Sparkle 自动更新序列是两个独立动作。产品�
 当前回滚基线不得在本长期规范中硬编码；以
 `VERSION_HISTORY.md#当前最新版本` 为唯一事实源。Preview、Beta 或 RC 不得
 自动成为稳定回滚基线。
-
-
-## 不可覆盖的本地产物单元
-
-`scripts/build-app.sh` 在 staging 中完成 App/ZIP 验证、Sparkle ZIP 签名与验签，再生成 manifest。构建前捕获 HEAD、完整工作树状态及受 Git 管理/未忽略源码的字节摘要，构建后及封存前复验；任一变化均拒绝封存。manifest 使用构建前捕获的源提交和工作树状态，并记录 App/Widget 包内身份、ZIP SHA-256/长度/签名、App 文件树摘要、签名及公证证据。最终封存目录为 `dist/<release-name>/`，其中的 App、ZIP、manifest 作为一个单元在同一文件系统上晋升。
-
-已有同名目录或旧平铺 ZIP/manifest 不会被覆盖。同名目录只有 ZIP、App 文件树和 manifest 全部一致并重新验签后才可复用；不同 bytes 或不同证据必须拒绝，按既有精确授权规则使用新身份。签名工具缺失、签名失败、验签失败或封存冲突均保留旧发行产物。旧 `dist/QuotaView.app` 不作为新的发行输出；使用脚本打印的版本目录路径。
-
-`scripts/generate-appcast.sh` 的 archives-directory 指向这一封存目录。它要求 clean source commit、Developer ID、公证和非空 Sparkle 签名的 sealed manifest，先核对本地 ZIP SHA-256/长度，再从该精确 tag 的公开下载 URL 回下载并匹配 bytes；缺少 manifest 或公开 bytes 不一致时在访问签名器之前失败。最终 feed 的 URL、版本、长度和 ZIP 签名必须绑定同一 manifest。每版新封存目录没有历史 feed；调用时必须用 `SPARKLE_APPCAST_BASE_FEED=/绝对路径/上一版已核验/appcast.xml` 显式指定前版 feed（同目录已有 feed 时可直接复用）。脚本复制到 staging 并验签、检查 RSS 后才合并本版，保留历史版本的原 URL；缺少前版输入默认拒绝。仅明确首次创建全新 feed 时使用 `SPARKLE_APPCAST_INITIAL_FEED=YES`。feed 在 staging 中生成、验签和校验，全部成功后才原子替换本地输出，前版输入不被改写。
-
-以上脚本行为不提供任何新版本、签名、公证、Release 或 appcast 准入授权。`Tests/BuildScripts/AuditBuildReleaseSmoke.py` 只使用临时合成产物、假签名器/公证命令和假下载；它验证失败传播、旧产物保留和清单绑定，不能替代真实 macOS 签名链、公证或公开回下载验收。

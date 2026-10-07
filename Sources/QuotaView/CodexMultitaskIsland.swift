@@ -358,3 +358,268 @@ final class CodexMultitaskTaskNode: NSView {
         updateSatelliteEmphasis()
     }
 }
+
+
+struct CodexMultitaskRenderTask: Equatable {
+    let id: Int
+    let renderState: CodexActivityRenderState
+    var playbackEnabled = true
+    var hasPendingRequest = false
+    var title: String { renderState.windowTitle }
+    var color: NSColor {
+        renderState.visualState == .completed ? .systemGreen : renderState.visualState.activityAccentColor
+    }
+}
+/// A bounded background summary, independent of user selection, counts and popups.
+struct IslandMemoryActivity: Equatable {
+    let snapshot: CodexActivitySnapshot
+    let count: Int
+    init?(snapshots: [CodexActivitySnapshot]) {
+        guard let representative = snapshots.sorted(by: {
+            let lhs = Self.isInFlight($0), rhs = Self.isInFlight($1)
+            if lhs != rhs { return lhs }
+            if $0.occurredAt != $1.occurredAt { return $0.occurredAt > $1.occurredAt }
+            return $0.sessionHash < $1.sessionHash
+        }).first else { return nil }
+        snapshot = representative; count = snapshots.count
+    }
+    private static func isInFlight(_ snapshot: CodexActivitySnapshot) -> Bool {
+        [.thinking, .working, .compactingContext, .awaitingConfirmation, .unavailable, .disconnectedCodex].contains(snapshot.state)
+    }
+    var visualState: CodexActivityVisualState { snapshot.state }
+    var playbackEnabled: Bool {
+        [.thinking, .working, .compactingContext, .awaitingConfirmation].contains(snapshot.state)
+    }
+    func label(english: Bool) -> String {
+        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let status: String
+        switch snapshot.state {
+        case .thinking, .working, .compactingContext: status = copy.text("正在整理", "Organizing")
+        case .awaitingConfirmation: status = copy.text("等待处理", "Awaiting action")
+        case .completed: status = copy.text("整理完成", "Completed")
+        case .error: status = copy.text("整理失败", "Failed")
+        case .unavailable, .disconnectedCodex: status = copy.text("状态待更新", "Status unavailable")
+        case .standby:
+            status = snapshot.operationKey == .turnInterrupted
+                ? copy.text("已中断", "Interrupted") : copy.text("待运行", "Idle")
+        }
+        let title = copy.text("记忆整理", "Memory consolidation") + " · " + status
+        return count > 1 ? title + copy.text("（\(count) 个后台任务）", " (\(count) background tasks)") : title
+    }
+}
+
+struct CodexMultitaskDisplay: Equatable {
+    struct State: Equatable {
+        var tasks: [CodexMultitaskRenderTask]
+        var selectedID: Int
+        var allCompleted: Bool
+        var compact: Bool
+        var receiptStartedAt: TimeInterval?
+    }
+    var state: State
+    var english: Bool
+    var effect: AppPreferences.CodexActivityProgressEffect
+    var visible = true
+    var playbackEnabled = true
+    var totalTokens: Int64?
+    var remainingPercent: Int?
+    var weeklyRemainingPercent: Int? = nil
+    var quotaResetsAt: Date? = nil
+    var usageSnapshot: CurrentCodexPresentation? = nil
+    var usageState: IslandUsagePresentation.State = .loading
+    var usageOptions = IslandUsageOptions()
+    var automaticPopupEnabled = true
+    var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
+    var sessionMetadata: [Int: IslandSessionMetadata] = [:]
+    var taskDetails: [Int: IslandTaskDetailData] = [:]
+    var connectionTitle: String = ""
+    var privacyMode = false
+    var activeRequestIDs: Set<UUID> = []
+    // Background memory work has its own lifecycle and never becomes a session row.
+    var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+}
+
+@MainActor
+final class CodexMultitaskIslandController: NSObject {
+    private let panel: NSPanel
+    private let canvas = NSView()
+    private let bridges = CAShapeLayer()
+    private var nodes: [Int: CodexMultitaskTaskNode] = [:]
+    private var motion = CodexMultitaskMotion()
+    private var presentation = CodexMultitaskPresentation()
+    private var completionKey: String?
+    private var handoffContent: (destination: Int, previous: CodexMultitaskRenderTask, opacity: CGFloat)?
+    private var targets: [Int: CodexMultitaskMotion.Pose] = [:]
+    private var model: CodexMultitaskDisplay?
+    private var reduceMotion = false
+    private var stopped = false
+    private var timer: Timer?
+    private var monitors: [Any] = []
+    private var renderedFrames: [Int: CGRect] = [:]
+    private var controlVisible: Bool { !stopped }
+    var screen: NSScreen?
+    var onSelect: ((Int) -> Void)?
+    var isVisible: Bool { panel.isVisible && model?.visible == true }
+
+    override init() {
+        panel = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 1400, height: 230), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        super.init()
+        panel.isReleasedWhenClosed = false; panel.isFloatingPanel = true
+        panel.hidesOnDeactivate = false; panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+        panel.level = .statusBar
+        panel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]
+        panel.animationBehavior = .none; panel.acceptsMouseMovedEvents = true
+        canvas.wantsLayer = true; canvas.layer?.masksToBounds = true
+        bridges.fillColor = NSColor.black.cgColor
+        bridges.actions = ["path": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        canvas.layer?.addSublayer(bridges); panel.contentView = canvas
+        if let monitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged], handler: { [weak self] _ in self?.hitRegion() }) { monitors.append(monitor) }
+        if let monitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged], handler: { [weak self] event in self?.hitRegion(); return event }) { monitors.append(monitor) }
+    }
+    deinit {
+        timer?.invalidate(); monitors.forEach(NSEvent.removeMonitor)
+    }
+    func update(model: CodexMultitaskDisplay, reduceMotion: Bool) {
+        self.model = model; self.reduceMotion = reduceMotion; stopped = false
+        let now = ProcessInfo.processInfo.systemUptime
+        let ids = model.state.tasks.map(\.id)
+        let allDone = model.state.allCompleted && ids.count > 1
+        presentation.update(visible: model.visible, compact: model.state.compact, at: now, animate: !reduceMotion && controlVisible,
+                            compactWidth: allDone ? CodexMultitaskCompletionSummary.compactWidth(count: ids.count, english: model.english) : nil)
+        let newCompletionKey = allDone ? model.state.receiptStartedAt.map { "\($0)-\(model.state.selectedID)" } : nil
+        let collectionChanged = newCompletionKey != completionKey
+        for id in Array(nodes.keys) where !ids.contains(id) { nodes[id]?.setPresented(false); nodes[id]?.setPlayback(false); nodes[id]?.removeFromSuperview(); nodes[id] = nil }
+        for task in model.state.tasks {
+            if nodes[task.id] == nil { let node = CodexMultitaskTaskNode(frame: .zero); nodes[task.id] = node; canvas.addSubview(node) }
+            nodes[task.id]?.onSelect = { [weak self] in self?.onSelect?(task.id) }
+        }
+        // The task arrangement remains expanded. The production timeline owns ALL
+        // show/hide and compact/expand geometry, so liquid motion cannot replace it.
+        let frames = CodexMultitaskGeometry.frames(ids: ids, selected: model.state.selectedID, compact: false)
+        let next = frames.mapValues { CodexMultitaskMotion.Pose(frame: $0) }.map { id, pose -> (Int, CodexMultitaskMotion.Pose) in
+            var pose = pose
+            pose.capsule = ids.count > 1 ? 1 : 0
+            if id != model.state.selectedID && !model.visible { pose.opacity = 0 }
+            return (id, pose)
+        }
+        let newTargets = Dictionary(uniqueKeysWithValues: next)
+        let changed = Set(targets.keys) != Set(newTargets.keys) || newTargets.contains { targets[$0.key]?.frame != $0.value.frame || targets[$0.key]?.opacity != $0.value.opacity || targets[$0.key]?.capsule != $0.value.capsule }
+        targets = newTargets
+        if collectionChanged || (newCompletionKey == nil && (changed || reduceMotion)) {
+            motion.retarget(targets, selected: model.state.selectedID, now: now,
+                            animate: !reduceMotion && controlVisible && newCompletionKey == nil)
+            if let handoff = motion.activeHandoff(now), let source = nodes[handoff.previous], let previous = source.displayedTask {
+                handoffContent = (handoff.current, previous, source.displayedTextOpacity)
+                nodes[handoff.current]?.takeRenderer(from: source)
+            } else { handoffContent = nil }
+        }
+        if newCompletionKey != nil && (collectionChanged || reduceMotion) {
+            motion.gatherCompleted(selected: model.state.selectedID, started: model.state.receiptStartedAt ?? now,
+                                   now: now, animate: !reduceMotion && controlVisible)
+        }
+        completionKey = newCompletionKey
+        updateTaskMenu(); positionPanel(); render()
+        if (motion.isAnimating(now) || presentation.isAnimating(at: now)) && timer == nil {
+            let timer = Timer(timeInterval: 1 / 60.0, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.render() }
+            }
+            timer.tolerance = 0.002; RunLoop.main.add(timer, forMode: .common); self.timer = timer
+        }
+
+    }
+    private func positionPanel() {
+        guard let screen = screen else { return }
+        let area = screen.visibleFrame
+        panel.setFrame(CGRect(x: area.minX, y: area.maxY - 230, width: area.width, height: 230), display: false)
+        if model != nil { render() }
+    }
+    private func render() {
+        guard let model, !stopped else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard let single = presentation.sample(at: now) else { return }
+        let sampled = motion.sample(now)
+        let handoff = motion.activeHandoff(now)
+        if handoff == nil { handoffContent = nil }
+        let surface = single.surface(in: canvas.bounds)
+        let scaleX = surface.width / CodexMultitaskGeometry.mainSize.width
+        let scaleY = surface.height / CodexMultitaskGeometry.mainSize.height
+        let anchor = CGPoint(x: surface.midX, y: surface.midY)
+        renderedFrames = [:]
+        for task in model.state.tasks {
+            guard let pose = sampled[task.id], let node = nodes[task.id] else { continue }
+            var display = pose
+            display.contentLayoutSize = pose.contentLayoutSize ?? pose.frame.size
+            let isMain = task.id == model.state.selectedID
+            let previousContent = isMain && handoff?.showsPrevious == true && handoffContent?.destination == task.id ? handoffContent : nil
+            let allDone = model.state.allCompleted && model.state.tasks.count > 1
+            node.configure(task: previousContent?.previous ?? task, english: model.english, effect: model.effect, reduceMotion: reduceMotion,
+                           completionCount: allDone && isMain ? model.state.tasks.count : nil,
+                           totalTokens: model.totalTokens, remainingPercent: model.remainingPercent)
+            display.frame = CGRect(x: anchor.x + pose.frame.minX * scaleX, y: anchor.y + pose.frame.minY * scaleY,
+                                   width: pose.frame.width * scaleX, height: pose.frame.height * scaleY)
+            display.opacity *= single.shell.visibility
+            // A single task takes the original renderer path without any new jelly or
+            // contour overlay. Multi-task impulses layer on top only when applicable.
+            if model.state.tasks.count == 1 {
+                display.capsule = 0; display.contourRecoil = 0; display.shellJelly = 0
+            }
+            let presented = controlVisible && model.visible && display.opacity > 0.01 && display.frame.intersects(canvas.bounds)
+            node.setPresented(presented)
+            node.setPlayback(presented && model.playbackEnabled && task.playbackEnabled)
+            let expansion = min(1, max(0, (pose.frame.width - CodexMultitaskGeometry.satelliteWidth) / (CodexMultitaskGeometry.mainSize.width - CodexMultitaskGeometry.satelliteWidth)))
+            let handoffAlpha = handoff?.current == task.id ? (handoff?.textOpacity ?? 1) * (previousContent?.opacity ?? 1) : 1
+            node.apply(display, isMain: isMain, compact: model.state.compact, presentation: isMain ? single : nil,
+                       selectionTextOpacity: min(1, max(0, (expansion - 0.72) / 0.28)) * handoffAlpha)
+            if display.opacity > 0.1 { renderedFrames[task.id] = display.frame }
+        }
+        let path = CGMutablePath()
+        if motion.isAnimating(now) && !reduceMotion {
+            let births = motion.activeBirths(now)
+            let ordered = model.state.tasks.filter { births[$0.id] == nil }.compactMap { renderedFrames[$0.id] }
+            for pair in zip(ordered, ordered.dropFirst()) {
+                if let bridge = CodexMultitaskGeometry.bridge(pair.0, pair.1) { path.addPath(bridge) }
+            }
+            for (id, birth) in births {
+                guard let source = renderedFrames[birth.donor], let child = renderedFrames[id] else { continue }
+                if let bridge = birth.side > 0 ? CodexMultitaskGeometry.bridge(source, child) : CodexMultitaskGeometry.bridge(child, source) { path.addPath(bridge) }
+            }
+        }
+        bridges.path = path
+        if !motion.isAnimating(now) && !presentation.isAnimating(at: now) { timer?.invalidate(); timer = nil }
+        hitRegion()
+        if controlVisible && renderedFrames.count > 0 { if !panel.isVisible { panel.orderFrontRegardless() } }
+        else { panel.orderOut(nil) }
+    }
+    private func hitRegion() {
+        let cursor = panel.convertPoint(fromScreen: NSEvent.mouseLocation)
+        panel.ignoresMouseEvents = !renderedFrames.values.contains { $0.contains(cursor) }
+    }
+
+    private func updateTaskMenu() {
+        guard let model else { return }
+        let menu = NSMenu()
+        for task in model.state.tasks {
+            let item = NSMenuItem(title: "\(task.title) · \(task.renderState.statusTitle)", action: #selector(selectFromMenu(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = task.id
+            item.state = task.id == model.state.selectedID ? .on : .off
+            menu.addItem(item)
+        }
+        canvas.menu = menu
+        nodes.values.forEach { $0.menu = menu }
+    }
+    @objc private func selectFromMenu(_ item: NSMenuItem) {
+        if let id = item.representedObject as? Int { onSelect?(id) }
+    }
+    func reposition(on screen: NSScreen?) { self.screen = screen; positionPanel() }
+    func hide(animated: Bool = true) {
+        guard var model, model.visible else { return }
+        model.visible = false
+        update(model: model, reduceMotion: reduceMotion || !animated)
+    }
+    func stop() {
+        stopped = true; timer?.invalidate(); timer = nil
+        monitors.forEach(NSEvent.removeMonitor); monitors.removeAll()
+        nodes.values.forEach { $0.setPresented(false); $0.setPlayback(false) }; panel.orderOut(nil)
+        model = nil
+    }
+}

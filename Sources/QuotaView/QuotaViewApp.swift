@@ -22,9 +22,6 @@ struct QuotaViewApp: App {
 
 @MainActor
 final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
-    private static var runtimeDisabledForTests: Bool {
-        ProcessInfo.processInfo.environment["QUOTAVIEW_DISABLE_RUNTIME_FOR_TESTS"] == "1"
-    }
     let store: CodexStatusStore
     let preferences: AppPreferences
     let activityRuntime: CodexActivityRuntime
@@ -34,23 +31,18 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     private var isPreparingTermination = false
 
     override init() {
-        let defaults = Self.runtimeDisabledForTests
-            ? UserDefaults(suiteName: "com.quotaview.hosted-tests.\(ProcessInfo.processInfo.processIdentifier)")!
-            : CodexActivityChannelIdentity.current.defaults
-        let preferences = AppPreferences(defaults: defaults)
-        if !Self.runtimeDisabledForTests,
-           Bundle.main.bundleIdentifier == "com.quotaview.development073",
-           defaults.object(forKey: "development073.initialized") == nil {
+        let preferences = AppPreferences()
+        if Bundle.main.bundleIdentifier == "com.quotaview.development073",
+           UserDefaults.standard.object(forKey: "development073.initialized") == nil {
             preferences.codexActivityIslandEnabled = true
-            defaults.set(true, forKey: "development073.initialized")
+            UserDefaults.standard.set(true, forKey: "development073.initialized")
         }
         let statusStore = CodexStatusStore(preferences: preferences)
         self.preferences = preferences
         self.store = statusStore
         self.activityRuntime = CodexActivityRuntime(
             preferences: preferences,
-            quotaStatusStore: statusStore,
-            defaults: defaults
+            quotaStatusStore: statusStore
         )
         self.updateController = AppUpdateController()
         super.init()
@@ -59,7 +51,6 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(
         _ notification: Notification
     ) {
-        guard !Self.runtimeDisabledForTests else { return }
         AstaSansFontRegistrar.registerBundledFonts()
         // The controller admits only the official, trusted Release identity.
         // Debug and isolated development builds remain inactive.

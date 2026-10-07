@@ -62,23 +62,6 @@ public enum CodexActivityPlanInputParser {
         return counts.sanitized
     }
 
-    /// Rollout strings are a transport adapter; counting uses the same bounded
-    /// parser as the hook and returns no step text.
-    public static func parseRollout(toolName: String, arguments: Any?, input: Any?) -> CodexActivitySanitizedPlanProgress? {
-        if toolName == "update_plan" {
-            let value = arguments ?? input
-            if let raw = value as? String {
-                guard raw.utf8.count <= maximumSourceBytes,
-                      let object = try? JSONSerialization.jsonObject(with: Data(raw.utf8)) else { return nil }
-                return directPlanProgress(from: object)
-            }
-            return directPlanProgress(from: value)
-        }
-        // Custom exec calls use input, whereas hook tool_input can be a dictionary.
-        guard let source = input as? String else { return nil }
-        return parse(toolName: toolName, toolInput: source)
-    }
-
     private static func wrappedSource(from toolInput: Any?) -> String? {
         if let source = toolInput as? String {
             return source
@@ -305,7 +288,6 @@ private struct JavaScriptPlanArgumentParser {
             skipTrivia()
 
             if key == "plan" {
-                guard parsedPlan == nil else { return nil }
                 guard let plan = parsePlanArray() else { return nil }
                 parsedPlan = plan
             } else if !skipValue() {
@@ -369,7 +351,6 @@ private struct JavaScriptPlanArgumentParser {
             guard consume(58) else { return nil }
             skipTrivia()
             if key == "status" {
-                guard status == nil else { return nil }
                 guard let literal = parseStringLiteral() else {
                     return nil
                 }

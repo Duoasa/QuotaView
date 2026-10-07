@@ -147,16 +147,11 @@ final class CodexActivityTextRenderingTests: XCTestCase {
 
     private func astaFont(size: CGFloat, bold: Bool = true) throws -> NSFont {
         let name = bold ? "AstaSans-SemiBold" : "AstaSans-Regular"
-        #if SWIFT_PACKAGE
-        // SwiftPM exercises layout only; it is not a supported app launch path.
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = root.appendingPathComponent("Resources/Fonts/\(name).ttf")
         CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-        #else
-        AstaSansFontRegistrar.registerBundledFonts()
-        #endif
         return try XCTUnwrap(NSFont(name: name, size: size))
     }
 

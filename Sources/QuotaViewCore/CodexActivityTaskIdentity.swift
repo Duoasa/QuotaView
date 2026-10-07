@@ -125,7 +125,6 @@ public struct CodexActivityTaskRegistry {
         var identity: CodexActivityTaskIdentity
         var kind: CodexActivitySessionKind
         var authority: Int
-        let turnStartedAt: Date
         var terminal = false
         var hasTurn = true
         var lastEventAt: [Int: Date] = [:]
@@ -242,12 +241,6 @@ public struct CodexActivityTaskRegistry {
             if event.event == .sessionStart, event.sessionStartSource != .compact { return nil }
             if let turn = event.turnHash, old.previousTurns.contains(turn) { return nil }
             if isTerminal {
-                if event.event == .sessionEnd {
-                    // Session-wide hooks have no turn ID. They can settle a
-                    // fresh execution, but cannot close a turn that began later.
-                    guard event.occurredAt >= old.turnStartedAt,
-                          event.turnHash == nil || event.turnHash == old.identity.turnHash else { return nil }
-                }
                 guard (!old.terminal || event.event == .sessionEnd),
                       event.event == .sessionEnd || old.identity.turnHash == event.turnHash,
                       event.event == .sessionEnd || authority >= old.authority
@@ -289,7 +282,7 @@ public struct CodexActivityTaskRegistry {
             if let old = existing?.identity.turnHash, old != event.turnHash { previous.append(old) }
             existing = TaskState(identity: .init(sessionHash: session, turnHash: event.turnHash,
                                                 generation: generation),
-                                 kind: kind, authority: authority, turnStartedAt: event.occurredAt,
+                                 kind: kind, authority: authority,
                                  hasTurn: event.event != .sessionStart || event.sessionStartSource == .compact,
                                  previousTurns: Array(previous.suffix(16)))
         }
