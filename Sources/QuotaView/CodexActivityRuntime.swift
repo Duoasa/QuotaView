@@ -49,6 +49,7 @@ final class CodexActivityRuntime: ObservableObject {
     private var bridgeRunStartedAt = Date()
     private var configurationClient: CodexAppServerClient?
     let liveIsland = IslandSession()
+    private(set) lazy var claudeCode = ClaudeCodeRuntime(preferences: preferences, island: liveIsland, defaults: defaults)
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
     private var desktopIPCClient: CodexDesktopIPCClient
@@ -323,6 +324,7 @@ final class CodexActivityRuntime: ObservableObject {
             ? .listening
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
+        claudeCode.start()
     }
 
     private func startDesktopObservation() {
@@ -669,6 +671,7 @@ final class CodexActivityRuntime: ObservableObject {
 
     func stop() async {
         isRunning = false
+        claudeCode.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()

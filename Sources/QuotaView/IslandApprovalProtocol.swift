@@ -129,6 +129,9 @@ struct IslandCodexApprovalRequest: Equatable {
         method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
     }
     var observationOnly: Bool { localObservation != nil }
+    /// Built by QuotaView from a Claude Code PermissionRequest Hook; answered
+    /// over that Hook's own connection, never through a Codex transport.
+    var isClaudeCode: Bool { params["claudeCode"].boolean }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -312,6 +315,7 @@ struct IslandCodexApprovalRequest: Equatable {
                 switch d.text {
                 case "accept": label = .init("允许一次", "Allow once"); positive = true
                 case "acceptForSession": label = .init("本会话允许", "Allow for session"); positive = true
+                case "acceptAlways": label = .init("始终允许", "Always allow"); positive = true
                 case "decline": label = .init("拒绝", "Decline"); positive = false
                 case "cancel": label = .init("取消本次", "Cancel"); positive = false
                 default:

@@ -747,7 +747,9 @@ final class IslandLiveStore {
             else { wait.requestIdentities = identities; sourceWait = wait }
         }
         mutating func invalidateResponses(except epoch: UInt64? = nil) {
-            for i in requests.indices where requests[i].desktopIdentity == nil && (epoch == nil || requests[i].rpcEpoch != epoch) {
+            // Claude Code is answered over its own Hook connection.
+            for i in requests.indices where requests[i].desktopIdentity == nil && (epoch == nil || requests[i].rpcEpoch != epoch)
+                && requests[i].value.protocolRequest?.isClaudeCode != true {
                 requests[i].value.canRespond = false
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
@@ -1072,7 +1074,7 @@ final class IslandLiveStore {
                     elapsedSeconds: child.status == .unknown ? nil : child.startedAt.map { max(0, Int(now.timeIntervalSince($0))) })
                 return .init(id: child.identity.sessionHash, title: title, status: status, visualState: child.status.visualState,
                              model: metadata.modelTitle, duration: metadata.durationTitle, detail: child.progress,
-                             avatar: child.identity.avatar)
+                             avatar: provider(for: parent) == .codex ? child.identity.avatar : nil, provider: provider(for: parent))
             }
     }
 
@@ -1132,8 +1134,45 @@ final class IslandLiveStore {
     private var pendingLocalContent: [CodexLocalPublicContent] = []
     var responseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
+    var claudeResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
+    var claudeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
+    private var providers: [String: IslandAgentProvider] = [:]
+    func setProvider(_ provider: IslandAgentProvider, for key: String) {
+        guard providers[key] != provider else { return }
+        providers[key] = provider
+        if providers.count > 512, let stale = providers.keys.first(where: { key in !tasks.contains { $0.key == key } }) {
+            providers.removeValue(forKey: stale)
+        }
+    }
+    func provider(for key: String) -> IslandAgentProvider { providers[key] ?? .codex }
 
-    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    /// Claude Code permission prompts have no Codex transport. The Hook keeps
+    /// its connection open; closing it, a tool result or the turn end retires it.
+    func observeClaudeRequest(_ wire: IslandCodexApprovalRequest, sessionKey: String, turnKey: String,
+                              callHash: String?, interactive: Bool) {
+        guard wire.isClaudeCode, let i = tasks.firstIndex(where: { $0.key == sessionKey }),
+              tasks[i].turnKey == turnKey, !tasks[i].terminal else { return }
+        let canRespond = interactive && claudeRespond != nil && claudeResponseCapability?(wire) == true
+            && (wire.kind != .questions || wire.supportedQuestions)
+        let title = [wire.questions.first?.title ?? "", wire.params["message"].text, wire.params["reason"].text]
+            .first { !$0.isEmpty }
+        let question = title.map { IslandDetailText($0) }
+            ?? .init("Claude Code 请求你的处理", "Claude Code requests your input")
+        tasks[i].requestLifecycle.observe(.init(key: "claude:" + wire.key, value: .init(question: question,
+            impact: canRespond ? .init("处理后同步至 Claude Code。", "Send this response to Claude Code.")
+                : .init("请在运行 Claude Code 的终端处理。", "Handle this request in the Claude Code terminal."),
+            protocolRequest: wire, canRespond: canRespond), callHash: callHash, rpcEpoch: 0,
+            mode: wire.kind == .questions ? .synchronous : nil))
+        tasks[i].observerReminderDismissed = false
+        onChange?()
+    }
+    func resolveClaudeRequest(sessionKey: String, rpcID: IslandApprovalJSON) {
+        guard let i = tasks.firstIndex(where: { $0.key == sessionKey }),
+              tasks[i].requestLifecycle.resolveRPC(rpcID, epoch: 0) else { return }
+        onChange?()
+    }
+
+    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); providers.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -1879,7 +1918,7 @@ final class IslandLiveStore {
               let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.id == requestID }),
               tasks[i].requestLifecycle.requests[j].value.canRespond, tasks[i].requestLifecycle.requests[j].value.phase.canSubmit,
               let wire = tasks[i].requestLifecycle.requests[j].value.protocolRequest,
-              !wire.observationOnly, responseCapability?(wire) == true else { return }
+              !wire.observationOnly, capability(for: wire) else { return }
         let turn = tasks[i].turnKey
         let epoch = connectionEpoch
         let handle = wire.desktopHandle
@@ -1899,7 +1938,8 @@ final class IslandLiveStore {
             }
             return
         }
-        guard case .reply(let result) = decision, wire.permits(result), let respond else { return }
+        guard case .reply(let result) = decision, wire.permits(result),
+              let respond = wire.isClaudeCode ? claudeRespond : self.respond else { return }
         claimConfirmation(taskID: id, requestID: requestID)
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
@@ -1913,11 +1953,11 @@ final class IslandLiveStore {
                     guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
                           tasks[i].requestLifecycle.requests[j].value.protocolRequest?.desktopHandle == handle,
                           desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return nil }
-                } else if epoch != connectionEpoch { return nil }
+                } else if !wire.isClaudeCode, epoch != connectionEpoch { return nil }
                 return (i, j)
             }
             guard let (i, j) = currentRequest() else { return }
-            guard responseCapability?(wire) == true else {
+            guard capability(for: wire) else {
                 tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
                 tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?(); return
             }
@@ -1931,6 +1971,9 @@ final class IslandLiveStore {
                 tasks[i].requestLifecycle.requests[j].value.canRespond = false; onChange?()
             }
         }
+    }
+    private func capability(for wire: IslandCodexApprovalRequest) -> Bool {
+        (wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
     }
     private func advanceProgress(at now: Date) {
         for i in tasks.indices {
@@ -1974,8 +2017,10 @@ final class IslandLiveStore {
                     || (pending.isGeneric && task.requestLifecycle.canHideObserverReminder)
             }
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
-            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount)
-            let title = privacy ? (english ? "Codex task" : "Codex 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
+            let provider = self.provider(for: task.key)
+            request?.provider = provider
+            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider)
+            let title = privacy ? provider.displayName + (english ? " task" : " 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
             let status: String
             if synchronizing { status = english ? "Syncing" : "同步中" }
             else if task.status == .cancelled { status = english ? "Interrupted" : "已中断" }
@@ -1996,7 +2041,7 @@ final class IslandLiveStore {
                     ? status + " · " + (request?.question.value(english) ?? "") : operation),
                 tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tokens" },
                 accessibilityLabel: "\(title), \(status)")
-            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty)
+            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty, provider: provider)
         }
         let connectionCopy = AppCopy(language: english ? .english : .simplifiedChinese)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),

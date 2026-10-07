@@ -1802,9 +1802,11 @@ struct EstimatedCostChartModel: Equatable {
             to: normalizedEnd
         ) ?? normalizedEnd
         var activityByDay: [Date: Int64] = [:]
+        var pricedCosts: [Date: Double?] = [:]
         for value in activity {
             let day = Self.utcCalendar.startOfDay(for: value.date)
             activityByDay[day] = value.tokens
+            if value.modelPriced { pricedCosts[day] = .some(value.estimatedCost) }
         }
 
         var resolvedDays: [Day] = []
@@ -1816,7 +1818,7 @@ struct EstimatedCostChartModel: Equatable {
                 Day(
                     date: date,
                     tokens: tokens,
-                    estimatedCost: tokens.flatMap(Self.estimatedCost)
+                    estimatedCost: pricedCosts[date] ?? tokens.flatMap(Self.estimatedCost)
                 )
             )
             guard let nextDate = Self.utcCalendar.date(

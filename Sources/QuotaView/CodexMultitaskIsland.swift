@@ -365,6 +365,7 @@ struct CodexMultitaskRenderTask: Equatable {
     let renderState: CodexActivityRenderState
     var playbackEnabled = true
     var hasPendingRequest = false
+    var provider: IslandAgentProvider = .codex
     var title: String { renderState.windowTitle }
     var color: NSColor {
         renderState.visualState == .completed ? .systemGreen : renderState.visualState.activityAccentColor
@@ -426,6 +427,7 @@ struct CodexMultitaskDisplay: Equatable {
     var weeklyRemainingPercent: Int? = nil
     var quotaResetsAt: Date? = nil
     var usageSnapshot: CurrentCodexPresentation? = nil
+    var claudeUsage: IslandClaudeUsage? = nil
     var usageState: IslandUsagePresentation.State = .loading
     var usageOptions = IslandUsageOptions()
     var automaticPopupEnabled = true

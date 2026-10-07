@@ -144,8 +144,12 @@ private struct IslandPageHeightKey: PreferenceKey {
 }
 
 @MainActor
-private enum IslandProviderIcon {
+enum IslandProviderIcon {
     static let image = Bundle.main.url(forResource: "CodexProviderIcon", withExtension: "png").flatMap { NSImage(contentsOf: $0) }
+    // No official Claude mark is bundled; a system symbol stands in.
+    static let claudeImage = NSImage(systemSymbolName: "asterisk", accessibilityDescription: "Claude Code")?
+        .withSymbolConfiguration(.init(pointSize: 12, weight: .semibold).applying(.init(paletteColors: [.white])))
+    static func image(for provider: IslandAgentProvider) -> NSImage? { provider == .codex ? image : claudeImage }
 }
 
 // Geometry uses NSScreen's public safe/auxiliary regions, not model-specific sizes.
@@ -271,6 +275,11 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var showsUsage = false
     @Published private(set) var usageHeight: CGFloat = 500
     @Published private(set) var showsReset = false
+    /// Usage page source; Claude Code applies only while its usage exists.
+    @Published var usageProvider: IslandAgentProvider = .codex
+    var effectiveUsageProvider: IslandAgentProvider {
+        usageProvider == .claudeCode && display?.claudeUsage != nil ? .claudeCode : .codex
+    }
     @Published private(set) var resetHeight: CGFloat = 434
     @Published private(set) var resetTransitionInFlight = false
     @Published private(set) var resetTransitionSerial: UInt64 = 0
@@ -809,7 +818,7 @@ private struct IslandOperationLine: View {
                                         statusTitle: renderState.statusTitle, completed: completed)
         HStack(spacing: 5) {
             IslandScrollingText(text: copy.status,
-                font: .monospacedSystemFont(ofSize: IslandVibeLayout.operationFont, weight: .medium),
+                font: .systemFont(ofSize: IslandVibeLayout.operationFont, weight: .medium),
                 color: NSColor(IslandBoardStyle.statusColor(renderState.visualState)),
                 visible: visible, reduceMotion: reduceMotion, shimmer: running)
                 .fixedSize()
@@ -817,7 +826,7 @@ private struct IslandOperationLine: View {
                 Text("·").font(.system(size: IslandVibeLayout.operationFont))
                     .foregroundStyle(IslandBoardStyle.muted).fixedSize()
                 IslandScrollingText(text: copy.detail,
-                    font: .monospacedSystemFont(ofSize: IslandVibeLayout.operationFont, weight: .medium),
+                    font: .systemFont(ofSize: IslandVibeLayout.operationFont, weight: .medium),
                     color: IslandTextPalette.detail,
                     visible: visible, reduceMotion: reduceMotion, shimmer: running)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
@@ -873,7 +882,7 @@ struct IslandSubagentStrip: View {
                 spacer(14, image: image)
                 append(" ")
             }
-            append(child.title, color: .white, weight: .medium)
+            append(child.title, color: IslandTextPalette.detail, weight: .medium)
             if !child.model.isEmpty { append(" (" + child.model + ")") }
             append(" " + child.status + " · " + child.duration)
         }
@@ -883,10 +892,10 @@ struct IslandSubagentStrip: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
-                if let icon = IslandProviderIcon.image {
+                if let icon = IslandProviderIcon.image(for: children.first?.provider ?? .codex) {
                     Image(nsImage: icon).resizable().scaledToFit().frame(width: 14, height: 14)
                 }
-                (Text(copy.islandSubagentGroupName + " (") + Text("\(children.count)").foregroundColor(.white) + Text(")"))
+                (Text(copy.islandSubagentGroupName(children.first?.provider ?? .codex) + " (") + Text("\(children.count)").foregroundColor(.white) + Text(")"))
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
             }.fixedSize(horizontal: true, vertical: false)
             IslandAttributedScrollingText(text: Self.activityText(children), font: .systemFont(ofSize: 11),
@@ -963,12 +972,17 @@ struct IslandTaskCard: View {
     var hovered = false
     var showsArchiveButton = false
     var cardWidth: CGFloat = 656
+    // Settings can illustrate the same content on a taller surface without
+    // stretching text, icons or the effect. Live cards retain their own height.
+    var minimumCardHeight: CGFloat = 0
     private var appearance: IslandTaskCardAppearance {
         .init(visualState: task.renderState.visualState, selected: selected, hovered: hovered)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
         HStack(spacing: IslandVibeLayout.contentGap) {
+            // The selected card uses the progress effect instead of an orb.
+            // Remove its icon column too, as required by the task card layout.
             if !selected {
                 IslandActivityOrb(visualState: task.renderState.visualState, playback: playback)
                     .frame(width: IslandVibeLayout.orbDiameter, height: IslandVibeLayout.orbDiameter)
@@ -982,20 +996,18 @@ struct IslandTaskCard: View {
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading).accessibilityHint(task.title)
                     if let metadata, !metadata.modelTitle.isEmpty, !metadata.usesExtraLine {
                         Text(metadata.modelTitle).lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                            .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
                             .accessibilityHint(metadata.fullModelTitle)
+                        // Model titles already contain "·"; a hairline separates the duration group.
+                        Rectangle().fill(Color(white: 0.24)).frame(width: 1, height: 9).accessibilityHidden(true)
                     }
                     if let metadata {
-                        Text(metadata.durationTitle).monospacedDigit()
-                            .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
+                        Text(metadata.durationTitle).monospacedDigit().fixedSize()
                     }
                     if !showsArchiveButton {
-                        if let icon = IslandProviderIcon.image {
+                        if let icon = IslandProviderIcon.image(for: task.provider) {
                             Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
-                                .opacity(0.72).accessibilityLabel("Codex")
-                        } else { Text("Codex").foregroundStyle(IslandBoardStyle.muted) }
+                                .opacity(0.72).accessibilityLabel(task.provider.displayName)
+                        } else { Text(task.provider.displayName).foregroundStyle(IslandBoardStyle.muted) }
                     }
                 }.padding(.trailing, showsArchiveButton ? 28 : 0)
                     .font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
@@ -1015,7 +1027,7 @@ struct IslandTaskCard: View {
                 .foregroundStyle(IslandBoardStyle.muted).fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(metadata.fullModelTitle)
         }
-        }.padding(.leading, 10).padding(.trailing, 8).frame(height: metadata?.cardHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
+        }.padding(.leading, 10).padding(.trailing, 8).frame(height: max(minimumCardHeight, metadata?.cardHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight))
             .background {
                 if selected {
                     IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
@@ -1067,7 +1079,7 @@ private struct IslandBoardTaskRow: View {
         }.buttonStyle(.plain)
             .overlay(alignment: .topTrailing) {
                 // Sibling hit target: archive must never also select/open the card.
-                IslandTaskArchiveButton(english: english, showsArchiveIcon: hovered, action: onArchive)
+                IslandTaskArchiveButton(english: english, showsArchiveIcon: hovered, provider: task.provider, action: onArchive)
                     .padding(.top, 6).padding(.trailing, 8)
             }
             .accessibilityValue(selected ? (english ? "Details open" : "详情已展开") : "")
@@ -1079,16 +1091,17 @@ private struct IslandBoardTaskRow: View {
 struct IslandTaskArchiveButton: View {
     let english: Bool
     var showsArchiveIcon = true
+    var provider: IslandAgentProvider = .codex
     let action: () -> Void
     @State private var hovered = false
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     var body: some View {
         Button(action: action) {
             Group {
-                if showsArchiveIcon || IslandProviderIcon.image == nil {
+                if showsArchiveIcon || IslandProviderIcon.image(for: provider) == nil {
                     Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
-                } else if let icon = IslandProviderIcon.image {
+                } else if let icon = IslandProviderIcon.image(for: provider) {
                     Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16).opacity(0.72)
                 }
             }.frame(width: 24, height: 24).contentShape(RoundedRectangle(cornerRadius: 6))
@@ -1229,15 +1242,19 @@ struct IslandBoardView: View {
                 privacy: state.display?.privacyMode == true,
                 playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
-                utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight)
+                utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight,
+                claudeUsage: state.display?.claudeUsage, provider: $state.usageProvider)
                 .frame(width: state.expandedWidth, height: min(state.usageHeight, state.maximumPageHeight), alignment: .top)
                 .opacity(state.showsReset ? 0 : 1)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.22), value: state.showsReset)
                 .allowsHitTesting(!state.showsReset && !state.resetTransitionInFlight)
                 .accessibilityHidden(state.showsReset)
-            IslandResetPage(data: .init(snapshot: state.display?.privacyMode == true ? nil : state.display?.usageSnapshot),
-                usageState: state.display?.usageState ?? .loading, english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
-                hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight)
+            IslandResetPage(data: .init(snapshot: state.display?.privacyMode == true ? nil
+                    : state.effectiveUsageProvider == .claudeCode ? state.display?.claudeUsage?.presentation : state.display?.usageSnapshot),
+                usageState: state.effectiveUsageProvider == .claudeCode ? .current : state.display?.usageState ?? .loading,
+                english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
+                hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight,
+                provider: state.effectiveUsageProvider)
                 .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
                 .opacity(state.showsReset ? 1 : 0)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.24), value: state.showsReset)
@@ -1249,7 +1266,8 @@ struct IslandBoardView: View {
                     if let source = anchors[.usage], let destination = anchors[.reset] {
                         IslandResetTicketFlightView(serial: state.resetTransitionSerial, toReset: state.showsReset,
                             active: state.resetTransitionInFlight && !state.compact && state.display?.visible != false,
-                            source: proxy[source], destination: proxy[destination], reduceMotion: state.reduceMotion)
+                            source: proxy[source], destination: proxy[destination], reduceMotion: state.reduceMotion,
+                            provider: state.effectiveUsageProvider)
                             .allowsHitTesting(false).accessibilityHidden(true)
                     }
                 }
@@ -1359,7 +1377,7 @@ struct IslandBoardView: View {
     }
     private var compactText: some View {
         IslandScrollingText(text: state.compactTaskText,
-            font: .monospacedSystemFont(ofSize: 12, weight: .semibold),
+            font: .systemFont(ofSize: 12, weight: .semibold),
             visible: state.playback && state.compact, reduceMotion: state.reduceMotion)
     }
     private var compact: some View {
@@ -1423,7 +1441,7 @@ struct IslandBoardView: View {
         }.fixedSize()
     }
     private var footerStatus: String {
-        state.tasks.isEmpty ? state.summary : state.statusCounts.map { "\($0.count) \($0.title)" }.joined(separator: " ")
+        state.tasks.isEmpty ? state.summary : state.statusCounts.map { "\($0.count) \($0.title)" }.joined(separator: " · ")
     }
     private func taskGroup(_ task: CodexMultitaskRenderTask, residentTaskIDs: Set<Int>) -> some View {
         VStack(spacing: IslandVibeLayout.rowSpacing) {
@@ -1782,9 +1800,24 @@ final class IslandBoardController {
 // Usage stays inside the notch; charts reuse the menu's quota/cost data contracts.
 // The pointer tracks the fixed 53.677 × 32 pt plane, never the transformed
 // face. SwiftUI interpolates only the small visual layers; layout stays fixed.
+/// Card faces for each provider. Claude has no bundled brand mark; a system
+/// symbol stands in on a QuotaView-designed clay face.
+enum IslandResetTicketArtwork {
+    static let claudeMarkColor = NSColor(red: 1, green: 0.957, blue: 0.925, alpha: 1)
+    static func faceName(_ provider: IslandAgentProvider) -> String {
+        provider == .codex ? "IslandResetTicket" : "IslandClaudeResetTicket"
+    }
+    @MainActor static let claudeMark: NSImage? = NSImage(systemSymbolName: "asterisk", accessibilityDescription: nil)?
+        .withSymbolConfiguration(.init(pointSize: 48, weight: .bold).applying(.init(paletteColors: [claudeMarkColor])))
+    @MainActor static func mark(_ provider: IslandAgentProvider) -> NSImage? {
+        provider == .codex ? NSImage(named: "IslandResetMark") : claudeMark
+    }
+}
+
 struct IslandResetTicket: View {
     let playbackEnabled: Bool
     var size = CGSize(width: 53.6774, height: 32)
+    var provider: IslandAgentProvider = .codex
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt = CGSize.zero
     @State private var hovered = false
@@ -1793,12 +1826,19 @@ struct IslandResetTicket: View {
     var body: some View {
         ZStack {
             ZStack {
-                Image("IslandResetTicket").resizable().scaledToFit()
+                Image(IslandResetTicketArtwork.faceName(provider)).resizable().scaledToFit()
                 RadialGradient(colors: [.white.opacity(hovered ? 0.28 : 0), .clear],
                     center: UnitPoint(x: 0.5 + motion.width * 0.25, y: 0.5 + motion.height * 0.25),
                     startRadius: 0, endRadius: 42 * scale)
                     .clipShape(RoundedRectangle(cornerRadius: 2.3 * scale))
-                Image("IslandResetMark").resizable().scaledToFit().frame(width: 12.0973 * scale, height: 12.0805 * scale)
+                Group {
+                    if provider == .codex {
+                        Image("IslandResetMark").resizable().scaledToFit()
+                    } else {
+                        Image(systemName: "asterisk").resizable().scaledToFit().fontWeight(.bold)
+                            .foregroundStyle(Color(nsColor: IslandResetTicketArtwork.claudeMarkColor))
+                    }
+                }.frame(width: 12.0973 * scale, height: 12.0805 * scale)
                     .offset(x: motion.width * 0.9 * scale, y: motion.height * 0.6 * scale)
                 IslandResetTicketSweep(active: playbackEnabled)
                     .allowsHitTesting(false).accessibilityHidden(true)
@@ -1964,6 +2004,20 @@ struct IslandUsageBento: View {
     let utilities: IslandUtilityActions
     var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
+    var claudeUsage: IslandClaudeUsage? = nil
+    /// Owned by the board so the reset page follows the selected source.
+    var provider: Binding<IslandAgentProvider> = .constant(.codex)
+    private var showsClaude: Bool { provider.wrappedValue == .claudeCode && claudeUsage != nil }
+    private var current: CurrentCodexPresentation? { showsClaude ? claudeUsage?.presentation : snapshot }
+    private var activeUsageState: IslandUsagePresentation.State { showsClaude ? .current : usageState }
+    private var activeOptions: IslandUsageOptions {
+        guard showsClaude else { return options }
+        // Claude Code has no Spark quota; its quota cards stay even while
+        // windows are unknown, so both sources share one page layout.
+        var value = options
+        value.spark = false
+        return value
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var resetHovered = false
     @State private var selectedDay: Date?
@@ -1976,7 +2030,7 @@ struct IslandUsageBento: View {
     private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
-    private var chart: EstimatedCostChartModel { .init(activity: snapshot?.tokenActivity ?? [], endingAt: Date()) }
+    private var chart: EstimatedCostChartModel { .init(activity: current?.tokenActivity ?? [], endingAt: Date()) }
     private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
     private func surface<Content: View>(highlightBottom: Bool = false, contentInset: CGFloat = 14, @ViewBuilder content: () -> Content) -> some View {
         content().padding(contentInset).frame(maxWidth: .infinity, alignment: .leading)
@@ -2020,67 +2074,89 @@ struct IslandUsageBento: View {
             pageContent
         } footer: {
                 IslandChromeFooter {
-                    if let date = snapshot?.lastUpdatedAt {
+                    if let date = current?.lastUpdatedAt {
                         Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
                     } else { Text(text("等待数据", "Waiting for data")) }
                 } trailing: { utilities }
         }.foregroundStyle(.white)
-            .onChange(of: options.cost) { _, visible in if !visible { selectedDay = nil; hoveredCost = nil } }
-            .onChange(of: options.activity) { _, visible in if !visible { selectedActivity = nil; hoveredActivity = nil } }
+            .onChange(of: activeOptions.cost) { _, visible in if !visible { selectedDay = nil; hoveredCost = nil } }
+            .onChange(of: activeOptions.activity) { _, visible in if !visible { selectedActivity = nil; hoveredActivity = nil } }
     }
     private var pageContent: some View {
         VStack(spacing: 10) {
-                if privacy || snapshot == nil {
+                if claudeUsage != nil && !privacy { providerSwitch }
+                if privacy || current == nil {
                     card(text("用量数据", "Usage data")) {
-                        Text(privacy ? text("隐私模式已开启", "Privacy mode is on") : usageState.message(copy: copy))
+                        Text(privacy ? text("隐私模式已开启", "Privacy mode is on") : activeUsageState.message(copy: copy))
                             .font(.system(size: 14, weight: .medium))
                         Text(privacy ? text("可在设置中关闭隐私模式。", "Turn off privacy mode in Settings.") : text("稍后刷新以重新获取。", "Refresh to try again.")).font(.system(size: 11)).foregroundStyle(secondary)
                     }
                 } else {
-                    if usageState.isStale {
-                        Text(copy.text("显示上次数据", "Showing previous data") + " · " + usageState.message(copy: copy))
+                    if activeUsageState.isStale {
+                        Text(copy.text("显示上次数据", "Showing previous data") + " · " + activeUsageState.message(copy: copy))
                             .font(.system(size: 10)).foregroundStyle(secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                     }
                     HStack(alignment: .top, spacing: 10) {
                         VStack(spacing: 10) {
-                            if options.quota {
-                                if let windows = snapshot?.quotaWindows, !windows.isEmpty {
+                            if activeOptions.quota {
+                                if showsClaude, let claude = claudeUsage {
+                                    HStack(spacing: 10) {
+                                        claudeQuotaCard(claude.fiveHour, title: text("5 小时额度", "5-hour quota"), state: claude.quotaState)
+                                        claudeQuotaCard(claude.sevenDay, title: text("每周额度", "Weekly quota"), state: claude.quotaState)
+                                    }
+                                } else if let windows = current?.quotaWindows, !windows.isEmpty {
                                     ForEach(windows) { window in quotaCard(window) }
                                 } else { quotaCard(nil) }
                             }
-                            if options.spark, let spark = snapshot?.sparkQuota {
+                            if activeOptions.spark, let spark = current?.sparkQuota {
                                 card(text("Spark 周额度", "Spark weekly quota")) {
                                     Text("\(spark.remainingPercent)%").font(AstaSans.semiBold(21)).monospacedDigit()
                                 }
                             }
-                            if options.hasTokenMetrics {
+                            if activeOptions.hasTokenMetrics {
                                 HStack(spacing: 10) {
-                                    if options.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(snapshot?.recentDailyTokens)) }
-                                    if options.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
-                                    if options.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(snapshot?.lifetimeTokens)) }
+                                    if activeOptions.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(current?.recentDailyTokens)) }
+                                    if activeOptions.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
+                                    if activeOptions.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(current?.lifetimeTokens)) }
                                 }
                             }
-                            if !options.quota && !options.hasTokenMetrics && !(options.spark && snapshot?.sparkQuota != nil) {
+                            if !activeOptions.quota && !activeOptions.hasTokenMetrics && !(activeOptions.spark && current?.sparkQuota != nil) {
                                 // The account surface retains its natural size when every left card is hidden.
                                 accountCard
                             }
                         }.frame(maxWidth: .infinity)
 
                         // Match the left stack naturally without a second height-measurement loop.
-                        if options.quota || options.hasTokenMetrics || (options.spark && snapshot?.sparkQuota != nil) {
+                        if activeOptions.quota || activeOptions.hasTokenMetrics || (activeOptions.spark && current?.sparkQuota != nil) {
                             Color.clear.frame(width: 204).overlay { accountCard }
                         }
                     }.fixedSize(horizontal: false, vertical: true)
                     // Elevate at the sibling-card boundary: a chart-local zIndex cannot
                     // place its tooltip above a different card's surface.
-                    if options.cost { costCard.zIndex(hoveredCost == nil ? 0 : 1) }
-                    if options.activity { activityCard.zIndex(hoveredActivity == nil ? 0 : 1) }
+                    if activeOptions.cost { costCard.zIndex(hoveredCost == nil ? 0 : 1) }
+                    if activeOptions.activity { activityCard.zIndex(hoveredActivity == nil ? 0 : 1) }
                 }
         }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
     }
+    private var providerSwitch: some View {
+        HStack(spacing: 2) {
+            ForEach([IslandAgentProvider.codex, .claudeCode], id: \.self) { value in
+                let selected = (showsClaude ? IslandAgentProvider.claudeCode : .codex) == value
+                Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
+                    Text(value.displayName).font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 10).frame(height: 22)
+                        .foregroundStyle(selected ? .white : secondary)
+                        .background(selected ? Color(white: 0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
+                }.buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+            Spacer(minLength: 0)
+        }.padding(.horizontal, 4)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(text("用量来源", "Usage source"))
+    }
     private func quotaCard(_ window: CodexQuotaWindowPresentation?) -> some View {
-        let percent = window?.remainingPercent ?? snapshot?.remainingPercent
         let title: String
         switch window?.windowDurationMinutes {
         case 300: title = text("5 小时额度", "5-hour quota")
@@ -2088,19 +2164,46 @@ struct IslandUsageBento: View {
         case .some(let minutes): title = text("\(minutes)分钟额度", "\(minutes)-minute quota")
         case .none: title = text("额度剩余", "Quota remaining")
         }
-        return surface {
+        return quotaSurface(title: title, percent: window?.remainingPercent ?? current?.remainingPercent,
+                            status: quotaCountdown(window?.resetsAt ?? current?.resetsAt))
+    }
+    /// Unknown Claude windows keep the card and say why the value is missing.
+    private func claudeQuotaCard(_ window: CodexQuotaWindowPresentation?, title: String,
+                                 state: IslandClaudeUsage.QuotaState) -> some View {
+        let status: String
+        let help: String?
+        switch (window, state) {
+        case (.some(let window), _): status = quotaCountdown(window.resetsAt); help = nil
+        case (nil, .off):
+            status = text("未开启", "Off")
+            help = text("在设置 › 连接 › Claude Code 中开启“读取官方用量窗口”。", "Turn on “Read official usage windows” in Settings › Connections › Claude Code.")
+        case (nil, _):
+            status = text("等待刷新", "Waiting")
+            help = text("Claude Code 刷新状态栏后显示。", "Appears after Claude Code refreshes its status line.")
+        }
+        return quotaSurface(title: title, percent: window?.remainingPercent, status: status)
+            .help(help ?? "")
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(help ?? "")
+    }
+    private func quotaSurface(title: String, percent: Int?, status: String) -> some View {
+        surface {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     heading(title)
                     Spacer(minLength: 4)
-                    Text(quotaCountdown(window?.resetsAt ?? snapshot?.resetsAt)).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                    Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                        .lineLimit(1).minimumScaleFactor(0.85)
                 }
                 VStack(spacing: 9) {
                     HStack(alignment: .lastTextBaseline) {
                         Text(percent.map { "\($0)%" } ?? "—").font(AstaSans.semiBold(21)).tracking(-0.21)
+                        if percent != nil {
+                            Text(text("剩余", "left")).font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                        }
                         Spacer()
                         Text(percent.map { text("已使用 \(100 - min(100, max(0, $0)))%", "\(100 - min(100, max(0, $0)))% Used") } ?? "—")
-                            .font(AstaSans.regular(10.5))
+                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
                     }
                     GeometryReader { proxy in
                         let fraction = CGFloat(min(100, max(0, percent ?? 0))) / 100
@@ -2122,32 +2225,36 @@ struct IslandUsageBento: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 10) {
                 heading(text("账户", "Account"))
-                Text(snapshot.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
+                Text(showsClaude ? (claudeUsage?.planName ?? "Claude Code") : current.flatMap { OpenAIPlanDisplayName.resolve($0.planType) } ?? "—")
                     .font(.system(size: 16, weight: .semibold))
                 Spacer(minLength: 10)
-                if options.credits {
+                if activeOptions.credits {
                 HStack {
-                    Text(text("积分余额", "Credit balance")).foregroundStyle(secondary)
+                    Text(showsClaude ? text("额外用量", "Extra usage") : text("积分余额", "Credit balance")).foregroundStyle(secondary)
                     Spacer()
-                    Text(snapshot?.creditBalance ?? "—")
+                    Text(showsClaude ? claudeExtraUsage : current?.creditBalance ?? "—")
                 }.font(.system(size: 10))
                 }
                 }.padding(.horizontal, 14).padding(.top, 14)
-                    .padding(.bottom, options.reset ? 10 : 14)
-                if options.reset {
+                    .padding(.bottom, activeOptions.reset ? 10 : 14)
+                if activeOptions.reset {
                 Rectangle().fill(Color(white: 0.21)).frame(height: 0.5)
                     .padding(.horizontal, 14)
                 Button(action: onReset) {
                     HStack {
-                        IslandResetTicket(playbackEnabled: playbackEnabled).opacity(hidesTicket ? 0 : 1)
+                        IslandResetTicket(playbackEnabled: playbackEnabled, provider: showsClaude ? .claudeCode : .codex).opacity(hidesTicket ? 0 : 1)
                             .anchorPreference(key: IslandResetTicketAnchors.self, value: .bounds) { [.usage: $0] }
                             .accessibilityHidden(true)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 7) {
                             Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
-                            Text(IslandResetPageData(snapshot: snapshot).credits.map {
-                                $0 == 0 ? copy.text("0次 · 暂无可用", "0 left · unavailable") : copy.text("\($0)次", "\($0) left")
-                            } ?? "—")
+                            if showsClaude {
+                                Text(IslandResetPage.claudeResetCommand).font(.system(size: 10, weight: .medium, design: .monospaced))
+                            } else {
+                                Text(IslandResetPageData(snapshot: current).credits.map {
+                                    $0 == 0 ? copy.text("0次 · 暂无可用", "0 left · unavailable") : copy.text("\($0)次", "\($0) left")
+                                } ?? "—")
+                            }
                         }.font(.system(size: 10))
                     }
                     // The label owns all space beneath the divider, including
@@ -2156,8 +2263,10 @@ struct IslandUsageBento: View {
                     .frame(maxWidth: .infinity).contentShape(Rectangle())
                 }.buttonStyle(IslandResetTicketButtonStyle())
                     .onHover { resetHovered = $0 && !hidesTicket }
-                    .accessibilityLabel(copy.text("打开额度重置", "Open quota reset"))
-                    .accessibilityHint(IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
+                    .accessibilityLabel(showsClaude ? copy.text("打开 Claude 额度重置说明", "Open Claude quota reset")
+                        : copy.text("打开额度重置", "Open quota reset"))
+                    .accessibilityHint(showsClaude ? copy.text("在 Claude Code 中运行 /limit-reset 使用重置", "Run /limit-reset in Claude Code to use a reset")
+                        : IslandResetPageData(snapshot: current).creditAvailability == .empty
                         ? copy.text("无可用重置卡，点击查看", "No reset credits; open for details")
                         : copy.text("额度重置演示", "Quota reset preview"))
                 }
@@ -2165,6 +2274,13 @@ struct IslandUsageBento: View {
         }
         .onChange(of: hidesTicket) { _, hidden in if hidden { resetHovered = false } }
         .onDisappear { resetHovered = false }
+    }
+    private var claudeExtraUsage: String {
+        switch claudeUsage?.extraUsageEnabled {
+        case true?: return claudeUsage?.extraUsagePercent.map { text("已用 \($0)%", "\($0)% used") } ?? text("已开启", "On")
+        case false?: return text("未开启", "Off")
+        case nil: return "—"
+        }
     }
     private func metric(_ title: String, value: String) -> some View {
         surface {
@@ -2193,7 +2309,7 @@ struct IslandUsageBento: View {
                     Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
                     Text(money(selectedCost != nil ? selectedCost?.estimatedCost : chart.latestCost))
-                        .font(AstaSans.semiBold(21)).tracking(-0.21).monospacedDigit()
+                        .font(AstaSans.semiBold(17)).tracking(-0.17).monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Text(text("估算值 · 非账单", "Estimate · not a bill"))
                         .font(.system(size: 10)).foregroundStyle(secondary).lineLimit(1).minimumScaleFactor(0.8)
@@ -2241,7 +2357,7 @@ struct IslandUsageBento: View {
             }
     }
     private var activityCard: some View {
-        let grid = IslandActivityHeatmap(activity: snapshot?.tokenActivity ?? [], endingAt: Date(), mode: activityMode, lifetimeTokens: snapshot?.lifetimeTokens)
+        let grid = IslandActivityHeatmap(activity: current?.tokenActivity ?? [], endingAt: Date(), mode: activityMode, lifetimeTokens: current?.lifetimeTokens)
         return surface {
             VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 4) {

@@ -53,6 +53,7 @@
 		B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* CodexActivityRuntime.swift */; };
 		B10000000000000000000028 /* CodexActivityIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIsland.swift */; };
 		B10000000000000000000029 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* main.swift */; };
+		C1A0DE000000000000000002 /* ClaudeCodeHookMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A0DE000000000000000001 /* ClaudeCodeHookMode.swift */; };
 		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		B1000000000000000000002B /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000030 /* AppUpdateController.swift */; };
 		B1000000000000000000002C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000001 /* Sparkle */; };
@@ -82,6 +83,11 @@
 		B07300000000000000000006 /* IslandPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000006 /* IslandPresentationModels.swift */; };
 		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
 		B07300000000000000000008 /* IslandSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000008 /* IslandSession.swift */; };
+		B2AA26A2AB20474F17057C4A /* ClaudeCodeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */; };
+		354528488112B0F1B3C6AC88 /* ClaudeCodeRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */; };
+		7DDA0E9B06AA13280259185D /* ClaudeCodeApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */; };
+		523231D07E2001C0EC71AA1C /* ClaudeCodeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */; };
+		7BAC727FCD13404E2C8C907B /* ClaudeCodeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */; };
 		B07300000000000000000009 /* IslandTaskDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000009 /* IslandTaskDetail.swift */; };
 		B07500000000000000000031 /* IslandMarkdownResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000031 /* IslandMarkdownResult.swift */; };
 		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
@@ -91,6 +97,10 @@
 		B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */; };
 		B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000011 /* CodexDesktopIPCClient.swift */; };
 		B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000012 /* CodexDesktopRequestProjection.swift */; };
+		F8CFDE9DBF8AB09BDC1C0436 /* ClaudeCodeSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */; };
+		8465EE7F8E52F8799C024713 /* ClaudeCodeUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0A2A3B4D5BF182FDB3B4A6 /* ClaudeCodeUsage.swift */; };
+		8389AE5F5B3CC1FAD5B1167D /* ClaudeCodeTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = C583BA1490B044ED1DF07864 /* ClaudeCodeTranscript.swift */; };
+		916489B01D97822C2A04FCF0 /* ClaudeCodePricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -212,6 +222,7 @@
 		F1000000000000000000002B /* CodexActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityModels.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* CodexActivityRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityRuntime.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* CodexActivityIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIsland.swift; sourceTree = "<group>"; };
+		C1A0DE000000000000000001 /* ClaudeCodeHookMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHookMode.swift; sourceTree = "<group>"; };
 		F1000000000000000000002E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F1000000000000000000002F /* QuotaViewActivityHook */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = QuotaViewActivityHook; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000030 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
@@ -241,6 +252,11 @@
 		F07300000000000000000006 /* IslandPresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPresentationModels.swift; sourceTree = "<group>"; };
 		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
 		F07300000000000000000008 /* IslandSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandSession.swift; sourceTree = "<group>"; };
+		66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeSettingsView.swift; sourceTree = "<group>"; };
+		CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeRuntime.swift; sourceTree = "<group>"; };
+		567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeApproval.swift; sourceTree = "<group>"; };
+		246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeInstaller.swift; sourceTree = "<group>"; };
+		56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeBridge.swift; sourceTree = "<group>"; };
 		F07300000000000000000009 /* IslandTaskDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskDetail.swift; sourceTree = "<group>"; };
 		F07500000000000000000031 /* IslandMarkdownResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandMarkdownResult.swift; sourceTree = "<group>"; };
 		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
@@ -250,6 +266,10 @@
 		F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Resources/QuotaViewFeedbackQQ.jpg; sourceTree = "<group>"; };
 		F07300000000000000000011 /* CodexDesktopIPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopIPCClient.swift; sourceTree = "<group>"; };
 		F07300000000000000000012 /* CodexDesktopRequestProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopRequestProjection.swift; sourceTree = "<group>"; };
+		D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeSupportTests.swift; sourceTree = "<group>"; };
+		7C0A2A3B4D5BF182FDB3B4A6 /* ClaudeCodeUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeUsage.swift; sourceTree = "<group>"; };
+		C583BA1490B044ED1DF07864 /* ClaudeCodeTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeTranscript.swift; sourceTree = "<group>"; };
+		40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodePricing.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -329,6 +349,11 @@
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07500000000000000000031 /* IslandMarkdownResult.swift */,
 				F07300000000000000000008 /* IslandSession.swift */,
+				66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */,
+				CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */,
+				567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */,
+				246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */,
+				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
 				F07300000000000000000007 /* IslandScrollingText.swift */,
 				F07300000000000000000006 /* IslandPresentationModels.swift */,
 				F07300000000000000000005 /* IslandLiveStore.swift */,
@@ -371,6 +396,9 @@
 		G10000000000000000000004 /* QuotaViewCore */ = {
 			isa = PBXGroup;
 			children = (
+				7C0A2A3B4D5BF182FDB3B4A6 /* ClaudeCodeUsage.swift */,
+				C583BA1490B044ED1DF07864 /* ClaudeCodeTranscript.swift */,
+				40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */,
 				F0730000000000000000000B /* CodexLocalPublicContent.swift */,
 				F10000000000000000000037 /* CodexLocalRolloutActivityClient.swift */,
 				F48800000000000000000011 /* CodexLocalRolloutDiscovery.swift */,
@@ -418,6 +446,7 @@
 		G1000000000000000000000C /* QuotaViewActivityHook */ = {
 			isa = PBXGroup;
 			children = (
+				C1A0DE000000000000000001 /* ClaudeCodeHookMode.swift */,
 				F1000000000000000000002E /* main.swift */,
 			);
 			path = QuotaViewActivityHook;
@@ -434,6 +463,7 @@
 		G10000000000000000000005 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */,
 				F10000000000000000000007 /* CodexAppServerClientTests.swift */,
 				F10000000000000000000008 /* CodexModelsTests.swift */,
 				F1000000000000000000001F /* ArchitectureTests.swift */,
@@ -708,6 +738,11 @@
 				B07300000000000000000009 /* IslandTaskDetail.swift in Sources */,
 				B07500000000000000000031 /* IslandMarkdownResult.swift in Sources */,
 				B07300000000000000000008 /* IslandSession.swift in Sources */,
+				B2AA26A2AB20474F17057C4A /* ClaudeCodeSettingsView.swift in Sources */,
+				354528488112B0F1B3C6AC88 /* ClaudeCodeRuntime.swift in Sources */,
+				7DDA0E9B06AA13280259185D /* ClaudeCodeApproval.swift in Sources */,
+				523231D07E2001C0EC71AA1C /* ClaudeCodeInstaller.swift in Sources */,
+				7BAC727FCD13404E2C8C907B /* ClaudeCodeBridge.swift in Sources */,
 				B07300000000000000000007 /* IslandScrollingText.swift in Sources */,
 				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,
 				B07300000000000000000005 /* IslandLiveStore.swift in Sources */,
@@ -750,6 +785,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8465EE7F8E52F8799C024713 /* ClaudeCodeUsage.swift in Sources */,
+				8389AE5F5B3CC1FAD5B1167D /* ClaudeCodeTranscript.swift in Sources */,
+				916489B01D97822C2A04FCF0 /* ClaudeCodePricing.swift in Sources */,
 				B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */,
 				B10000000000000000000033 /* CodexLocalRolloutActivityClient.swift in Sources */,
 				B48800000000000000000011 /* CodexLocalRolloutDiscovery.swift in Sources */,
@@ -779,6 +817,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8CFDE9DBF8AB09BDC1C0436 /* ClaudeCodeSupportTests.swift in Sources */,
 				B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */,
 				B1000000000000000000000A /* CodexModelsTests.swift in Sources */,
 				B1000000000000000000001B /* ArchitectureTests.swift in Sources */,
@@ -799,6 +838,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A0DE000000000000000002 /* ClaudeCodeHookMode.swift in Sources */,
 				B10000000000000000000029 /* main.swift in Sources */,
 				B10000000000000000000030 /* PlanProgressParser.swift in Sources */,
 			);

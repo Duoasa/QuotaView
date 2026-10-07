@@ -78,7 +78,7 @@ final class QuotaViewSettingsWindowController {
             SettingsWindowMetrics.applyOuterShape(to: window)
             window.minSize = NSSize(width: 780, height: 560)
             window.setContentSize(
-                NSSize(width: 872, height: 637)
+                SettingsWindowMetrics.defaultContentSize
             )
             window.isReleasedWhenClosed = false
             window.center()
@@ -833,7 +833,7 @@ final class MenuBarPanelController: NSObject {
             SettingsWindowMetrics.applyOuterShape(to: window)
             window.minSize = NSSize(width: 780, height: 560)
             window.setContentSize(
-                NSSize(width: 872, height: 637)
+                SettingsWindowMetrics.defaultContentSize
             )
             window.isReleasedWhenClosed = false
             window.center()

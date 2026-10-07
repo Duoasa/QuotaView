@@ -4,6 +4,10 @@ import QuotaViewCore
 struct DailyTokenActivity: Equatable, Sendable, Identifiable {
     let date: Date
     let tokens: Int64
+    /// Model-priced estimate when the source knows each token's model; nil
+    /// there means an unpriced model, never the generic token-rate estimate.
+    var modelPriced = false
+    var estimatedCost: Double? = nil
 
     var id: Date { date }
 }

@@ -160,6 +160,10 @@ struct IslandTaskDetailView: View {
     private var failure: Color { Color(red: 0.95, green: 0.43, blue: 0.42) }
     private var accent: Color { metrics.mode == .approval ? amber : (metrics.mode == .failure ? failure : .white) }
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private var agent: String { data.provider.displayName }
+    private var sourceName: (String, String) {
+        data.provider == .claudeCode ? ("Claude Code 会话记录", "the Claude Code transcript") : (" Codex ", "Codex")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -167,7 +171,7 @@ struct IslandTaskDetailView: View {
                 Image(systemName: metrics.mode.symbol).font(.system(size: 12))
                 Text(metrics.mode.title(data: data, english: english)).font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Text(metrics.mode == .completion ? "Codex" : text("Codex 公开内容", "Codex public content"))
+                Text(metrics.mode == .completion ? agent : text("\(agent) 公开内容", "\(agent) public content"))
                     .font(.system(size: 10)).foregroundStyle(muted)
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
@@ -190,11 +194,11 @@ struct IslandTaskDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: layout.height)
                 if data.finalResponse?.publicItem?.sourceTruncated == true {
-                    Text(text("回答超出本地缓存，请在 Codex 查看后续内容", "Answer exceeds the local cache; continue in Codex"))
+                    Text(text("回答超出本地缓存，请在\(sourceName.0)查看后续内容", "Answer exceeds the local cache; continue in \(sourceName.1)"))
                         .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
                 }
             } else {
-                Text(text("最终回答尚未同步，请在 Codex 查看", "Final answer has not synced; view it in Codex"))
+                Text(text("最终回答尚未同步，请在\(sourceName.0)查看", "Final answer has not synced; view it in \(sourceName.1)"))
                     .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 32)
             }
         }
@@ -210,8 +214,8 @@ struct IslandTaskDetailView: View {
                 event(item, index: index, historical: false)
             }
             if data.removedEntryCount > 0 {
-                Button { if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) } } label: {
-                    Text(text("已加载部分记录，完整内容在 Codex 查看", "Partial history loaded; see full content in Codex"))
+                Button { if data.provider == .codex, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) } } label: {
+                    Text(text("已加载部分记录，完整内容在\(sourceName.0)查看", "Partial history loaded; see full content in \(sourceName.1)"))
                         .font(.system(size: 11)).foregroundStyle(secondary).frame(height: 32)
                 }.buttonStyle(.plain)
             }
@@ -292,7 +296,7 @@ struct IslandTaskDetailView: View {
                 }
             }
             if item.entry.publicItem?.sourceTruncated == true {
-                Text(text("本地缓存已截断，请在 Codex 查看完整原文", "Local cache truncated; see the full source in Codex"))
+                Text(text("本地缓存已截断，请在\(sourceName.0)查看完整原文", "Local cache truncated; see the full source in \(sourceName.1)"))
                     .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
             }
         }.padding(.horizontal, item.code ? IslandTaskDetailMetrics.entryPadding : 0)
@@ -301,7 +305,7 @@ struct IslandTaskDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(item.code ? Color(red: 0.075, green: 0.075, blue: 0.075) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(item.code ? Color.white.opacity(0.08) : Color.clear, lineWidth: 1))
-            .accessibilityHint(item.entry.publicItem.map { "Codex · \($0.sourceID)" } ?? text("Codex 状态", "Codex status"))
+            .accessibilityHint(item.entry.publicItem.map { "\(agent) · \($0.sourceID)" } ?? text("\(agent) 状态", "\(agent) status"))
     }
 
 }

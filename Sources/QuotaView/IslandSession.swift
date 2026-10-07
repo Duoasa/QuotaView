@@ -27,6 +27,14 @@ final class IslandSession {
     private var lockObservations: [NSObjectProtocol] = []
     private var privacy = false
     private var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+    var claudeUsage: IslandClaudeUsage? {
+        didSet {
+            guard claudeUsage != oldValue, stateRefresh == nil else { return }
+            let work = DispatchWorkItem { [weak self] in self?.stateRefresh = nil; self?.refresh() }
+            stateRefresh = work
+            DispatchQueue.main.async(execute: work)
+        }
+    }
     init() {
         board.onSelect = { [weak self] in self?.model.select($0) }
         board.state.onArchive = { [weak self] in self?.model.archiveFromIsland($0) }
@@ -101,6 +109,7 @@ final class IslandSession {
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot
+        display.claudeUsage = privacy ? nil : claudeUsage
         display.usageState = usageState
         display.usageOptions = usageOptions
         display.automaticPopupEnabled = automaticPopupEnabled

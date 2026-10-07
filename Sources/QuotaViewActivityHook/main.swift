@@ -526,6 +526,10 @@ private func appendDiagnostic(
     }
 }
 
+if ClaudeCodeHookMode.handles(Array(CommandLine.arguments.dropFirst())) {
+    exit(0)
+}
+
 guard let arguments = Arguments(Array(CommandLine.arguments.dropFirst())) else {
     exit(0)
 }

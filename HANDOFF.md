@@ -1,6 +1,83 @@
 # QuotaView Handoff
 
+## 当前开发版：0.7.7 Build 2 · 2026-10-07 17:25
+
+- 源码仍基于发行 `v0.7.7-build.1`，工作区 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`，分支 `codex/0.7.7-build1-development`。Claude 适配及其他既有本地修改保留；审计分支未并入。
+- 恢复卡片动效互斥：选中卡片移除 AI 球及图标空列，仅呈现进度/状态特效；未选中保留球。任务列表与审批头卡共用规则。设置预览同样移除重复球形元素。
+- 17:25 跟进：去掉顶部“演示”标题；灵动岛示意卡片由 656 × 60 调为 520 × 88 pt，保持字形与特效比例；用量改为 520 × 244 pt 的简化布局关系图，仅保留模块标题、额度条、成本柱图和活动点阵。默认窗口 872 × 760 pt，所有入口共用尺寸。
+- 图片消失根因：继续切换 Xcode Products 路径编译时，旧运行包被构建系统清理。运行包已完整复制到独立 `.build/DevelopmentRuntime/QuotaView.app`，后续编译不能指向此运行目录；退出进程后再替换此包。设置图标直接读取包内 AppIcon.icns。
+- 17:15 用户修正预览要求：标题和说明移入下方设置区，黑色上方仅保留导航与居中可视化。灵动岛使用局部示例任务复用真实卡片和特效；用量使用局部示例额度/账户/日活动复用完整 Bento 排版，成本/活动开关实时控制模块。示例与真实任务、账户和审批通道隔离。用量按窗口高度等比缩放，其他页面重新分配视觉宽度。
+- 顶部导航保留深灰胶囊背景；Codex/Claude 综合“连接”页保留各自原设置与真实摘要，摘要改为并排展示。QQ 缩略图与放大图共用原图有效二维码和留白视口。
+- 16:51 跟进：黑色背景显式使用 Rectangle，底部无圆角、与下方菜单直线衔接；窗口外轮廓圆角保留。
+- 设置导航与可视化合为通栏黑色顶部，移除内缩大卡片；上方固定、下方菜单独立滚动。页头和选项统一 744 pt 最大宽度 / 32 pt 安全内距；标题/说明位于下方，使用系统语义色；通用可视化简化嵌套卡片。设置项保留。
+- 按用户要求 Build +1：App、Widget 与兼容 Info 同步为 0.7.7 / 显示 Build 2 / 内部 58，开发身份不变。公开发行仍为 Build 1；未发布、未推送。
+- Debug arm64 开发编译通过，当前运行 `.build/DevelopmentRuntime/QuotaView.app`，PID 49617；旧开发进程 45792 已正常退出。实际加载的新 App debug dylib 和 Core 路径已核对；正式安装及 Widget 保持。
+- 差异/空白检查通过；未执行测试或视觉自动验收，实际显示与交互待用户验收。构建沿用已有非阻断并发兼容警告，未进行正式打包、Developer ID 签名或公证。
+- 本轮修改前副本、局部 diff、编译、资源哈希和运行证据：`.build/settings-proportion-20261007/`。用户已明确授权推送当前版本源码并合并 main；准备状态见后续更新。
+- 17:15 历史修改前副本、局部源码 diff、编译日志和实际加载库哈希：`.build/settings-demo-20261007/`。
+- 17:02 历史修改前副本、源码 diff 与编译/运行证据：`.build/settings-connections-20261007/`。首次编译因复用图标的 private 可见性失败，改为共享图标入口后编译通过；原路由夹具期望同步，未执行测试。
+- 圆角跟进的源码副本、构建与运行证据：`.build/settings-square-header-20261007/`。版本仍为 0.7.7 Build 2 / 内部 58，未测试、未推送，视觉待用户验收。
+- 本轮修改前副本、局部源码 diff、构建日志、PID 与加载库哈希：`.build/ui-layout-build2-20261007/`。布局规则已同步 [界面约束](docs/design/QUOTAVIEW_UI_RULES.md) 与 [生产交互规则](docs/design/quotaview-island-production-interaction-review-2026-09-30.md)。
+
+下方为历史记录，旧“当前”不覆盖本节。
+
+## Claude 适配迁入与首次运行记录 · 2026-10-07 14:14
+
+- 工作区：`/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；分支 `codex/0.7.7-build1-development`，HEAD 仍为 `3866177cfa19db734d657ef505a4dc72c3338fba`（`v0.7.7-build.1`）。
+- 用户明确要求仅把 Claude 适配并入发行基线，排除上一批审计改动。迁入来源为 `.claude/worktrees/quotaview-claude-code-support-8908d4` 在 `dc49a3e` 之后的未提交增量；没有合并该分支历史或审计源码。
+- 已迁入 Claude Hook/helper、独立审批连接、会话/子 Agent 投影、用量与成本、设置页、切换入口和重置说明资源。保留本地设置页顶部导航/状态页头与卡片排版修改；设置新增 Claude 连接页。
+- 基线的请求生命周期、渲染模型和成本模型继续留在原文件；仅加入 Claude 必需字段/分发。Claude 的通道路径单独实现，不迁入审计分支的 Codex 通道改造。
+- 迁入时修正：设置修订重试成功前保留原状态栏备份；socket 启动失败保留失败状态；适配基线审批 ID/标题 API；更新适配附带夹具中已过时的用量字段和固定时钟。
+- 迁入阶段检查：源码差异/工程引用审查、补丁空白检查、Xcode 工程 plist 核验通过；arm64/macOS 14 的 Core、WidgetContract、HookSupport、Hook 与 App 编译器检查通过，迁入的 Claude 测试文件仅做类型检查且通过。随后用户明确要求开启新版，Debug arm64 最小开发编译成功。未执行测试；真实审批及混合会话体验仍由用户验收。
+- 当前运行：2026-10-07 14:14（Asia/Shanghai）已启动本工作区 `.build/Development075Build3/Build/Products/Debug/QuotaView.app`，PID 14296；旧 Opus 开发进程 84585 已正常退出。新包身份 `com.quotaview.development073`，0.7.7 / 显示 Build 1 / 内部 57。仅进行无签名 Debug arm64 开发编译与启动，未打包、发布或替换 `/Applications` 正式安装；原正式 Widget 进程保持。
+- 本轮保持未提交、未推送，版本仍为 0.7.7 / Build 1 / 内部 57。公开发布、Feed 和主分支均未更改。后续按此工作区继续开发，不能从审计 main 直接 pull/merge。
+- 迁入前文件、来源增量、清单与编译器日志保存在 `.build/claude-integration-20261007/`；此次应用编译与运行证据为该目录的 `development-build.log` / `development-runtime.json`。编译含非阻断 Swift 6 并发兼容警告，当前 Swift 5 模式编译成功。功能规格见 [Claude Code 适配](docs/specs/claude-code-support.md)。
+
+下方旧“当前”描述为对应日期的历史快照，不覆盖本节。
+
+## 历史回退记录：0.7.7 Build 1 发行版 · 2026-10-06 17:39
+
+用户测试审计开发版后反馈大量问题，并明确要求运行包和源码都回到最新公开发行版，
+后续开发继续基于 **0.7.7 Build 1**。当前工作区仍为
+`/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`，分支为
+`codex/0.7.7-build1-development`；HEAD 为发布 tag `v0.7.7-build.1` 的提交
+`3866177cfa19db734d657ef505a4dc72c3338fba`。生产源码、测试、构建配置与该 tag 一致，
+仅本文件、SDD 注册表和版本历史保留发布后的事实及此次回退记录。
+
+当前运行包是 `/Applications/QuotaView.app` 的公开0.7.7 Build1，PID50321。
+上一批审计源码和开发包未通过用户实际验收，不作为后续开发基线；现有审计Debug包
+与本分支不匹配，不得直接恢复运行。后续用户要求运行源码改动时，按最小开发编译规则处理。
+公开版本完整证据见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+恢复点：分支 `codex/archive/0.7.7-audit-before-rollback-20261006-173911` 保存原HEAD
+`de3705d53e76d5f83e5c3fbd62c98aebd96733d6`；三份未提交交接文档保存在stash
+`9633d7cf989f5a70eef7d03b1b87b592b9507337`，并备份于
+`.build/source-rollback-20261006-173911/`。61份未跟踪用户文件与开发产物保留。
+本次为本地源码基线切换，未提交、推送或修改远程main。后续只在用户明确要求时推送。
+下方为历史发布/开发记录，旧“当前”“下一步”不覆盖本节。
+
 公开稳定版与回滚资产：[VERSION_HISTORY.md#当前最新版本](VERSION_HISTORY.md#当前最新版本)。
+
+## 0.7.7 Build1 基线上的界面整理（仅源码）· 2026-10-07
+
+用户要求按项目风格优化展示方式，且不得自行去掉任何信息。仅修改 `Sources/QuotaView/IslandConceptBoard.swift`：
+任务卡活动行/摘要与收起态标题由等宽字体改为系统比例字体（中英文混排不再被拉散）；选中卡片保留 Orb 槽位，所有卡片标题同一左边缘；
+模型与时长去掉底色小胶囊，改为纯文字加 1pt 细分隔线；子 agent 名称由白色改为 detail 灰，不再压过父任务标题；底栏状态计数以“ · ”分隔；
+用量页额度数值后加“剩余 / left”，“已使用”改为次级色；成本卡右侧“最近一天”金额 21→17pt，突出 30 天合计。信息项全部保留。
+
+05:21 用户要求重点改设置页（“太简陋”）。仅改 `Sources/QuotaView/SettingsView.swift` 展示层，不新增、不移除任何设置项或信息：
+每页页头增加系统 Callout 说明，页头图标改为 38pt 原生绘制（替代 scaleEffect 放大）；设置行支持左侧 22pt 彩色圆角图标（与侧栏同款，系统语义色），分隔线对齐行标题；
+Codex 自动连接图标颜色随实际连接状态（绿/红/灰）；用量页加“可选模块”分组与固定显示说明；反馈行改用同款彩色图标，GitHub 行尾为外链箭头。原文件与 diff：`.build/ui-polish-20261007/SettingsView.swift.orig`、`settings-changes.diff`。
+
+05:28 用户开启 computer use 并要求“不要被现在的设计语言束缚”继续改设置页（QuotaView 为 LSUIElement 开发路径应用，computer use 无法授权截图）。第三轮仅改 `SettingsView.swift`：
+左侧玻璃侧栏改为窗口顶部居中的黑色“灵动岛”胶囊导航（三组分隔；放得下时全部显示文字，窄窗只展开当前页文字、其余图标+Tooltip；左右方向键切换）；
+页头改为纯黑舞台（Asta Sans 标题 + 说明 + 页面实时状态可视化）：通用=当前语言与外观；灵动岛=用生产特效渲染器的迷你岛，隐私模糊内容、显示弹出时长；
+用量=用量页模块图，可点按切换两个可选模块；Codex 连接=Codex→QuotaView 的 App Server / Hook 两条通道按真实状态着色；代理=请求路径（随草稿实时变化）与测试状态；
+反馈=群二维码缩略（点开原图）与群号；关于=图标、名称、版本（原关于页身份块移入舞台，未删除）。下方所有原控件保留。舞台色取自灵动岛：纯黑、#202020 线、完成绿/待确认琥珀/失败红。
+UI 规则文档中设置侧栏相关条款未改，待用户验收后再同步规格。第三轮改前副本：`.build/ui-polish-20261007/SettingsView.swift.round2-before`。
+
+本环境无法编译（无 macOS 工具链）。用户要求以“opus”后缀运行开发版：已备 `.build/ui-polish-20261007/build-run-opus.sh`（Debug arm64、CODE_SIGNING_ALLOWED=NO、沿用 Development075Build3 目录，仅在产物 Info.plist 将显示构建号设为 `1-opus`，源码版本身份不变），由用户在终端执行；执行结果写入同目录 development-build.log / development-runtime.json。未测试。原文件、diff 与应用脚本在 `.build/ui-polish-20261007/`。
+未提交、推送；视觉与交互由用户验收。
 
 ## 0.7.7 Build 1 已发布 · 2026-10-06
 

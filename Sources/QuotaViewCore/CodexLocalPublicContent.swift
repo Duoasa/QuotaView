@@ -166,3 +166,10 @@ public enum CodexLocalAsyncReplyContent {
         return result
     }
 }
+
+public extension CodexLocalPublicContent {
+    /// Already privacy-filtered content from a non-Codex source, such as a Claude Code transcript.
+    init(publicSessionHash sessionHash: String, turnHash: String, data: Data, occurredAt: Date) {
+        self.init(sessionHash: sessionHash, turnHash: turnHash, data: data, occurredAt: occurredAt)
+    }
+}
