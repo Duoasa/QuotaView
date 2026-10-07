@@ -1,7 +1,4 @@
 import CryptoKit
-#if canImport(QuotaViewActivityHookSupport)
-import QuotaViewActivityHookSupport
-#endif
 import Foundation
 
 public enum CodexActivityHookEvent: String, Codable, CaseIterable, Sendable {
@@ -563,16 +560,50 @@ public enum CodexActivityReducer {
 
 public enum CodexActivityPrivacy {
     public static func hashIdentifier(_ identifier: String) -> String {
-        CodexActivityPrivacyRules.hashIdentifier(identifier)
+        let digest = SHA256.hash(data: Data(identifier.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     public static func workspaceName(from path: String?) -> String? {
-        CodexActivityPrivacyRules.workspaceName(from: path)
+        guard let path, !path.isEmpty else { return nil }
+        let name = URL(fileURLWithPath: path)
+            .standardizedFileURL
+            .lastPathComponent
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : String(name.prefix(80))
     }
 
-    public static func toolCategory(for canonicalName: String?) -> CodexActivityToolCategory? {
-        CodexActivityPrivacyRules.toolCategoryRawValue(for: canonicalName)
-            .flatMap(CodexActivityToolCategory.init(rawValue:))
+    public static func toolCategory(
+        for canonicalName: String?
+    ) -> CodexActivityToolCategory? {
+        guard let canonicalName, !canonicalName.isEmpty else {
+            return nil
+        }
+
+        if canonicalName == "Bash" || canonicalName == "exec_command" {
+            return .shell
+        }
+        if ["apply_patch", "Edit", "Write"].contains(canonicalName) {
+            return .fileEdit
+        }
+        if canonicalName == "Agent"
+            || canonicalName == "spawn_agent"
+            || canonicalName.contains("subagent")
+        {
+            return .subagent
+        }
+        if ["create_goal", "get_goal", "update_goal"].contains(
+            canonicalName
+        ) || canonicalName.hasSuffix("__create_goal")
+            || canonicalName.hasSuffix("__get_goal")
+            || canonicalName.hasSuffix("__update_goal")
+        {
+            return .goal
+        }
+        if canonicalName.hasPrefix("mcp__") {
+            return .mcp
+        }
+        return .localTool
     }
 }
 

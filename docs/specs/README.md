@@ -1,6 +1,18 @@
 # QuotaView SDD 注册表
 
-> 2026-10-06审计整合：35项源码修复及定向反例/隔离验证已实施，本地整合验证/开发交付完成，源码PR/main CI继续按门禁核对。公开稳定版不变；逐ID证据与边界见[审计修复记录](../audits/quotaview-audit-repair-2026-10-06.md)，实际运行包见Handoff。
+> 2026-10-07 17:25 Build 2：示意比例收紧，去掉顶部“演示”，用量简化为实际模块布局图；默认窗口 872 × 760。修正开发运行包被 Xcode 清理导致的图片缺失，独立运行包 PID 49617，资源和加载路径已核对；未执行本地测试。用户已授权推送并合并本版源码，[PR #84](https://github.com/Duoasa/QuotaView/pull/84) 显式撤回旧审计改动后加入当前版本；CI/合并进度见 PR 和 [Handoff](../../HANDOFF.md)。
+
+> 2026-10-07 17:15 Build 2：标题/描述移入下方设置区；上方灵动岛与用量改为生产组件 + 局部示例数据的完整 demo，跟随相关选项，取代真实任务预览及抽象模块条。Debug arm64 编译通过并运行 PID 45792；未执行测试、未推送，视觉待用户验收。见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+
+> 2026-10-07 17:02 Build 2 设置跟进：导航背景、综合连接页、真实任务卡片缩放预览、QQ 二维码有效区域已接入。开发编译通过并运行 PID 41080；未执行测试、未推送，视觉与交互待用户验收。见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+
+> 2026-10-07 16:51 Build 2 显示跟进：设置顶部黑色区域改为显式矩形背景，底部与菜单直线衔接。开发编译通过，当前 PID 28433；版本不变，视觉待用户验收，见 [Handoff](../../HANDOFF.md)。
+
+> 2026-10-07 14:23 当前开发版：0.7.7 Build 2 / 内部 58，继续基于公开 Build 1 + Claude 适配。恢复选中卡片球/进度动效互斥，设置顶部通栏黑色可视化与下方菜单分区。Debug arm64 编译通过并运行 PID 19665；未执行测试，视觉与交互待用户验收。保持本地、未发布；见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+
+> 2026-10-07 14:14 迁入记录：`v0.7.7-build.1` 基线 + 既有界面整理 + Claude Code 适配。只迁入 Claude 未提交增量，排除审计分支历史/重构；按用户要求完成 Debug arm64 开发编译并启动本工作区合入版（PID 14296），旧 Opus 开发进程已退出。真实交互待用户验收。本轮合入保持本地，细节见 [Handoff](../../HANDOFF.md) 与 [Claude 规格](claude-code-support.md)。下方较早运行包状态属于历史记录。
+
+> 2026-10-06 17:39 当前开发基线：用户要求源码和运行包回退到0.7.7 Build1发行版，后续开发均从 `v0.7.7-build.1` / `3866177cfa19db734d657ef505a4dc72c3338fba` 开始，分支 `codex/0.7.7-build1-development`。上一批审计开发版实际验收未通过，已停用并保留恢复点。当前运行 `/Applications/QuotaView.app` 的公开版；源码、运行与恢复记录见[Handoff](../../HANDOFF.md)。后续历史交付记录不覆盖此基线。
 
 > 2026-10-06：0.7.7 Build1（内部57）已合入main并发布GitHub Stable / Latest；源码PR/main CI、签名公证与回下载通过，appcast与Pages部署成功、线上旧版公钥验证通过；中英文README和英文Release简述同步。开发版PID50354已运行，线上Feed核验及完整证据见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
@@ -30,7 +42,7 @@
 
 | Spec ID | 文档 | 状态 | 当前结论 |
 |---|---|---|---|
-| `QV-FIX-AUDIT-20261006-001` | [35项审计修复](../audits/quotaview-audit-repair-2026-10-06.md) | `Accepted / Verifying` | 生产状态投影、请求内容版本/选择、传输所有权与预算、恢复切片、模块/资源/CI及封存脚本修订；native746项零失败、6跳过及最后定向检查通过，开发包已运行；GitHub当前提交检查另记，不等于发布或视觉验收 |
+| `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 已选择性迁入 0.7.7 Build 1 本地开发源码；保留本地 UI，排除审计分支改造。源码静态检查与 Debug arm64 开发编译通过，已运行合入版；未执行测试，真实交互待用户验收 |
 | `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Released` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，随0.7.5 Build3正式发布，视觉全矩阵不由构建推断 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | Build7/内部56本地已交付Hook有界历史/floor、notice去重、完整owner pending聚合结算及异步本地退场；真实RPC只依精确native结算，工具事件仅撤弱观察。30秒无人接管、草稿接管、发送/未知后3秒交回及持久4096项退场账本保留。Universal构建、190输入/4哈希、同Team签名与加载/活动通道核对通过，首次本地交付无本地测试；源码CI/main见PR #77；CI恢复源码未重新编译或替换安装，真实交互待用户验收，原生minimize精确同步及问题组关闭仍未实现 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 2026-10-05两个临时任务来源已确认，现场读取均准确匹配；旧Hook宿主与原生线程身份假设导致漏分流。以独一原生记忆turn绑定真实Hook生命周期，迟到身份仅撤回同turn别名卡，保留并行父任务；记忆复用既有底栏AI球，不按名称过滤。Build3候选124条冒烟通过；Build4/内部53已交付记忆修复，Build6包含UI修订，当前Build7/内部56延续这些逻辑并含等待与本地退场修复；本轮Universal构建、190项输入/4哈希、签名及实际Core加载核对通过，未重跑记忆冒烟；未公开发布，活动通道和视觉验收见Handoff。 |

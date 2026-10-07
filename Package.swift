@@ -33,7 +33,6 @@ let package = Package(
     targets: [
         .target(
             name: "QuotaViewCore",
-            dependencies: ["QuotaViewActivityHookSupport"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(

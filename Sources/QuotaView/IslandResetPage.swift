@@ -56,7 +56,11 @@ struct IslandResetPage: View {
     let utilities: IslandUtilityActions
     var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
+    var provider: IslandAgentProvider = .codex
     @State private var previewed = false
+    @State private var copiedCommand = false
+    private var isClaude: Bool { provider == .claudeCode }
+    static let claudeResetCommand = "/limit-reset"
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private let secondary = Color(white: 0.68)
 
@@ -65,13 +69,17 @@ struct IslandResetPage: View {
             VStack(spacing: 10) {
             VStack(spacing: 16) {
                 VStack(spacing: 12) {
-                    IslandResetTicket(playbackEnabled: playbackEnabled, size: IslandResetTicketFlight.cardSize)
+                    IslandResetTicket(playbackEnabled: playbackEnabled, size: IslandResetTicketFlight.cardSize, provider: provider)
                         .opacity(hidesTicket ? 0 : 1)
                         .anchorPreference(key: IslandResetTicketAnchors.self, value: .bounds) { [.reset: $0] }
                         .accessibilityHidden(true)
                     HStack(spacing: 4) {
                         Text(copy.text("额度重置", "Quota reset")).foregroundStyle(secondary)
-                        Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
+                        if isClaude {
+                            Text(Self.claudeResetCommand).font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        } else {
+                            Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
+                        }
                     }.font(AstaSans.semiBold(15)).tracking(-0.15)
                 }.padding(.vertical, 12).frame(maxWidth: .infinity)
 
@@ -88,6 +96,13 @@ struct IslandResetPage: View {
                 }.font(AstaSans.regular(11))
 
                 VStack(alignment: .leading, spacing: 8) {
+                    if isClaude {
+                        Text(copy.text("在 Claude Code 中使用重置", "Use resets in Claude Code"))
+                            .font(AstaSans.semiBold(11)).foregroundStyle(.white)
+                        warning(copy.text("运行 /limit-reset 查看剩余次数与使用期限。", "Run /limit-reset to see resets left and their deadline."))
+                        warning(copy.text("每次重置立即恢复额度，每周重置日保持不变。", "Each reset refills your limits now; your weekly reset day stays the same."))
+                        warning(copy.text("QuotaView 只读取本机数据，不会替你使用重置。", "QuotaView reads local data only and never uses a reset for you."))
+                    } else {
                     switch data.creditAvailability {
                     case .empty:
                         Text(copy.text("暂无可用重置卡", "No reset credits available"))
@@ -106,11 +121,26 @@ struct IslandResetPage: View {
                         warning(copy.text("立即重置符合条件的 Codex 用量周期。", "Eligible Codex usage cycles reset immediately."))
                         warning(copy.text("重置后无法撤销。", "A reset cannot be undone."))
                     }
+                    }
                 }.font(AstaSans.regular(11)).lineSpacing(3).padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
                     .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
 
+                if isClaude {
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(Self.claudeResetCommand, forType: .string)
+                        copiedCommand = true
+                    } label: {
+                        Text(copiedCommand ? copy.text("已复制，到 Claude Code 中粘贴运行", "Copied — paste it in Claude Code")
+                            : copy.text("复制 /limit-reset", "Copy /limit-reset"))
+                            .font(AstaSans.semiBold(13))
+                            .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
+                    }.buttonStyle(IslandApprovalActionStyle(primary: false))
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHint(copy.text("复制命令，不会使用重置", "Copies the command; no reset is used"))
+                } else {
                 Button {
                     guard data.canPreview else { return }
                     previewed = true
@@ -124,9 +154,11 @@ struct IslandResetPage: View {
                     .accessibilityHint(data.canPreview
                         ? copy.text("仅演示，次数与真实额度不变", "Preview only; real credits and quota stay unchanged")
                         : copy.text("刷新数据或返回用量", "Refresh or return to usage"))
+                }
             }
 
-            Text(data.caption(previewed: previewed, copy: copy))
+            Text(isClaude ? copy.text("重置次数与期限只在 Claude Code 中显示。", "Resets left and deadlines are shown only in Claude Code.")
+                 : data.caption(previewed: previewed, copy: copy))
                 .font(AstaSans.regular(10.5)).lineSpacing(2).foregroundStyle(secondary)
                 .fixedSize(horizontal: false, vertical: true)
             }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
@@ -139,6 +171,7 @@ struct IslandResetPage: View {
         }.foregroundStyle(.white)
             .accessibilityElement(children: .contain)
             .onChange(of: data.credits) { _, _ in previewed = false }
+            .onChange(of: provider) { _, _ in previewed = false; copiedCommand = false }
     }
     private func warning(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 5) {
@@ -189,6 +222,9 @@ final class IslandResetTicketFlightHost: NSView {
     private let card = CALayer()
     private let face = CALayer()
     private let mark = CALayer()
+    var provider: IslandAgentProvider = .codex {
+        didSet { if provider != oldValue { applyArtwork() } }
+    }
     private static let animationKey = "island.reset-ticket.flight"
     private var serial: UInt64?
     private var movingToReset = false
@@ -211,9 +247,7 @@ final class IslandResetTicketFlightHost: NSView {
         face.frame = card.bounds
         mark.bounds = CGRect(x: 0, y: 0, width: 45.3649, height: 45.302)
         mark.position = CGPoint(x: card.bounds.midX, y: card.bounds.midY)
-        var faceRect = face.bounds, markRect = mark.bounds
-        face.contents = NSImage(named: "IslandResetTicket")?.cgImage(forProposedRect: &faceRect, context: nil, hints: nil)
-        mark.contents = NSImage(named: "IslandResetMark")?.cgImage(forProposedRect: &markRect, context: nil, hints: nil)
+        applyArtwork()
         face.contentsGravity = .resizeAspect; mark.contentsGravity = .resizeAspect
         face.contentsScale = 2; mark.contentsScale = 2
         card.shadowColor = NSColor.black.cgColor; card.shadowOpacity = 0.2
@@ -222,6 +256,12 @@ final class IslandResetTicketFlightHost: NSView {
         card.isHidden = true
     }
     required init?(coder: NSCoder) { nil }
+    private func applyArtwork() {
+        var faceRect = face.bounds, markRect = mark.bounds
+        face.contents = NSImage(named: IslandResetTicketArtwork.faceName(provider))?
+            .cgImage(forProposedRect: &faceRect, context: nil, hints: nil)
+        mark.contents = IslandResetTicketArtwork.mark(provider)?.cgImage(forProposedRect: &markRect, context: nil, hints: nil)
+    }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); if window == nil { stop() } }
     func configure(serial: UInt64, toReset: Bool, active: Bool, source: CGRect, destination: CGRect, reduceMotion: Bool) {
@@ -282,8 +322,10 @@ struct IslandResetTicketFlightView: NSViewRepresentable {
     let source: CGRect
     let destination: CGRect
     let reduceMotion: Bool
+    var provider: IslandAgentProvider = .codex
     func makeNSView(context: Context) -> IslandResetTicketFlightHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandResetTicketFlightHost, context: Context) {
+        view.provider = provider
         view.configure(serial: serial, toReset: toReset, active: active, source: source, destination: destination, reduceMotion: reduceMotion)
     }
     static func dismantleNSView(_ view: IslandResetTicketFlightHost, coordinator: ()) { view.stop() }

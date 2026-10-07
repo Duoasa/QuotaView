@@ -43,8 +43,6 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
     )
     private var source: DispatchSourceRead?
     private var descriptor: Int32 = -1
-    private var lockDescriptor: Int32 = -1
-    private var socketIdentity: (device: dev_t, inode: ino_t)?
     private var handler: CodexActivityDeliveryHandler?
 
     init(
@@ -60,11 +58,7 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
     func start(
         handler: @escaping CodexActivityDeliveryHandler
     ) throws {
-        try queue.sync { try startOnQueue(handler: handler) }
-    }
-
-    private func startOnQueue(handler: @escaping CodexActivityDeliveryHandler) throws {
-        stopOnQueue()
+        stop()
         self.handler = handler
 
         let fileManager = FileManager.default
@@ -72,23 +66,17 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
             at: socketURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let lock = Darwin.open(socketURL.path + ".lock", O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, S_IRUSR | S_IWUSR)
-        guard lock >= 0 else { throw BridgeError.bindFailed }
-        guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { Darwin.close(lock); throw BridgeError.bindFailed }
-        lockDescriptor = lock
         unlink(socketURL.path)
 
         let pathBytes = Array(socketURL.path.utf8CString)
         var address = sockaddr_un()
         guard pathBytes.count <= MemoryLayout.size(ofValue: address.sun_path)
         else {
-            releaseLock()
             throw BridgeError.socketPathTooLong
         }
 
         let listener = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard listener >= 0 else {
-            releaseLock()
             throw BridgeError.socketCreationFailed
         }
         descriptor = listener
@@ -117,17 +105,14 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
         guard bindResult == 0 else {
             Darwin.close(listener)
             descriptor = -1
-            releaseLock()
             throw BridgeError.bindFailed
         }
 
         chmod(socketURL.path, S_IRUSR | S_IWUSR)
-        var bound = stat()
-        if lstat(socketURL.path, &bound) == 0 { socketIdentity = (bound.st_dev, bound.st_ino) }
         guard Darwin.listen(listener, 16) == 0 else {
             Darwin.close(listener)
             descriptor = -1
-            removeOwnedSocket(); releaseLock()
+            unlink(socketURL.path)
             throw BridgeError.listenFailed
         }
 
@@ -146,10 +131,6 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
     }
 
     func stop() {
-        queue.sync { stopOnQueue() }
-    }
-
-    private func stopOnQueue() {
         let wasListening = descriptor >= 0
         source?.cancel()
         source = nil
@@ -157,18 +138,8 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
             Darwin.close(descriptor)
             descriptor = -1
         }
-        if wasListening { removeOwnedSocket() }
-        releaseLock()
+        if wasListening { unlink(socketURL.path) }
         handler = nil
-    }
-    private func removeOwnedSocket() {
-        var current = stat()
-        if let socketIdentity, lstat(socketURL.path, &current) == 0,
-           current.st_dev == socketIdentity.device, current.st_ino == socketIdentity.inode { unlink(socketURL.path) }
-        socketIdentity = nil
-    }
-    private func releaseLock() {
-        if lockDescriptor >= 0 { _ = flock(lockDescriptor, LOCK_UN); Darwin.close(lockDescriptor); lockDescriptor = -1 }
     }
 
     private func acceptAvailableConnections() {
@@ -434,21 +405,20 @@ final class CodexActivityFileBridge: @unchecked Sendable {
                       CodexActivityBridgeEnvelope.self,
                       from: data
                   ),
-                  !envelope.authenticationToken.isEmpty
+                  authenticationTokensMatch(
+                      envelope.authenticationToken,
+                      authenticationToken
+                  ),
+                  authenticationTokensMatch(
+                      envelope.installationIdentifier,
+                      installationIdentifier
+                  ),
+                  abs(envelope.activity.occurredAt.timeIntervalSinceNow)
+                    <= Self.staleEventAge
             else {
                 unlink(url.path)
                 startupReplayFileNames.remove(fileName)
                 continue
-            }
-            // Another instance's valid queued event is not ours to drain.
-            guard authenticationTokensMatch(envelope.authenticationToken, authenticationToken) else { continue }
-            // A prior installation carrying this instance's token is stale,
-            // unlike a valid event owned by a different instance.
-            guard authenticationTokensMatch(envelope.installationIdentifier, installationIdentifier) else {
-                unlink(url.path); startupReplayFileNames.remove(fileName); continue
-            }
-            guard abs(envelope.activity.occurredAt.timeIntervalSinceNow) <= Self.staleEventAge else {
-                unlink(url.path); startupReplayFileNames.remove(fileName); continue
             }
             let source: CodexActivityDeliverySource =
                 startupReplayFileNames.contains(fileName)
@@ -563,7 +533,7 @@ enum CodexActivityDiagnostics {
     static var logURL: URL {
         URL(
             fileURLWithPath:
-                "/tmp/\(CodexActivityChannelIdentity.current.identifier).codex-activity-\(getuid())",
+                "/tmp/\(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "com.quotaview.development073" : "com.quotaview").codex-activity-\(getuid())",
             isDirectory: true
         )
         .appendingPathComponent("diagnostics.log")

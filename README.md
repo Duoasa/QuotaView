@@ -128,7 +128,7 @@ The main app target disables App Sandbox to communicate with the locally install
 
 - macOS 14 or later
 - ChatGPT/Codex installed and signed in
-- Building from source requires Xcode 26+ with the macOS 26 SDK and Swift 6; the runtime minimum remains macOS 14
+- Swift 6 or Xcode 16+ only when building from source
 - Current stable support is focused on Codex
 - Multiple local sessions and their subagents are shown together; available confirmation actions depend on the current session connection
 - Cost values are local estimates, not billing records
@@ -152,16 +152,19 @@ Run the read-only quota probe:
 swift run QuotaViewProbe
 ```
 
-Run the app during development from the shared **QuotaView** scheme in `QuotaView.xcodeproj`, using **My Mac**. SwiftPM supports the test suite and probe; `swift run QuotaView` is not a supported app launch path because it does not produce the Xcode app bundle, font resources, widget, or development identity.
+Run the app during development:
+
+```bash
+swift run QuotaView
+```
 
 Or build the Universal app and ZIP:
 
 ```bash
 chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
+open dist/QuotaView.app
 ```
-
-A sealed release unit is written to `dist/<release-name>/` with `QuotaView.app`, the ZIP, and its manifest. Use the printed app path. An existing identity is never overwritten.
 
 The build script prefers a Developer ID Application identity, then an Apple Development identity. If neither is available, it falls back to an ad-hoc signature suitable for local testing. Only a Developer ID Application build can use the notarization path:
 

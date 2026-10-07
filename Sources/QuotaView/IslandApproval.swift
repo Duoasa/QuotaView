@@ -36,6 +36,7 @@ enum IslandApprovalDecisionChoices {
             switch decision.text {
             case "accept": return .init(action: action, title: .init("仅一次", "Once"), detail: .init("下次仍需确认", "Ask again next time"))
             case "acceptForSession": return .init(action: action, title: .init("本会话", "This session"), detail: .init("本次批准在会话内有效", "This approval lasts for the session"))
+            case "acceptAlways": return .init(action: action, title: .init("始终允许", "Always"), detail: .init("写入 Claude Code 权限规则", "Saves a Claude Code permission rule"))
             default:
                 if let rule = decision["acceptWithExecpolicyAmendment"].object {
                     let prefix = rule["execpolicy_amendment"]?.array.map(\.text).joined(separator: " ") ?? ""
@@ -370,7 +371,7 @@ struct IslandApprovalView: View {
                 .padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             actionBar.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             IslandChromeFooter {
-                Text("Codex · " + (request.canRespond ? text("可处理", "Interactive") : text("仅查看", "Read-only")))
+                Text(request.provider.displayName + " · " + (request.canRespond ? text("可处理", "Interactive") : text("仅查看", "Read-only")))
                     .lineLimit(1)
             } trailing: {
                 Text(footerStatus).lineLimit(1).truncationMode(.tail)
@@ -383,7 +384,7 @@ struct IslandApprovalView: View {
     private var actionBar: some View {
         IslandApprovalActionLayout {
             if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
-                specialButton(text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
                 if showsLocalDismiss { localDismissButton }
             } else if wire?.kind == .questions {
                 if wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
@@ -393,7 +394,7 @@ struct IslandApprovalView: View {
                         Text(text("跳过", "Skip")).font(.system(size: 13, weight: .semibold))
                             .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
                     }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!questionInteraction.canSkip)
-                        .help(text("跳过这些问题并通知 Codex", "Skip these questions and notify Codex"))
+                        .help(text("跳过这些问题并通知 \(agentName)", "Skip these questions and notify \(agentName)"))
                 }
                 if let action = primaryAction { actionButton(action, primary: true) }
             } else {
@@ -402,10 +403,10 @@ struct IslandApprovalView: View {
             if wire?.kind == .mcpURL && !draft.openedURL {
                 specialButton(text("打开授权页面", "Open authorization page"), icon: "arrow.up.right", enabled: wire?.url != nil) { draft.openedURL = true }
             } else if wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) {
-                specialButton(text("在 Codex 中验证", "Verify in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isClaude ? text("在终端验证", "Verify in terminal") : text("在 Codex 中验证", "Verify in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
             } else if let action = primaryAction { actionButton(action, primary: true) }
             else if firstNegative == nil {
-                specialButton(text("在 Codex 中处理", "Continue in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isClaude ? text("在终端处理", "Continue in terminal") : text("在 Codex 中处理", "Continue in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
             }
             if showsLocalDismiss { localDismissButton }
             }
@@ -420,7 +421,7 @@ struct IslandApprovalView: View {
             Text(text("隐藏此提醒", "Hide reminder")).font(.system(size: 13, weight: .semibold))
                 .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
         }.buttonStyle(IslandApprovalActionStyle(primary: false)).disabled(!canDismissLocally)
-            .help(text("仅隐藏灵动岛提醒，请在 Codex 继续处理", "Hide this island reminder; continue in Codex"))
+            .help(text("仅隐藏灵动岛提醒，请在\(handlerName)继续处理", "Hide this island reminder; continue in \(handlerNameEnglish)"))
     }
 
     var requestContent: some View {
@@ -433,7 +434,7 @@ struct IslandApprovalView: View {
                 reduceMotion: reduceMotion, hovered: taskHeaderHovered, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
                 .overlay(alignment: .topTrailing) {
                     if let onArchive {
-                        IslandTaskArchiveButton(english: english, showsArchiveIcon: taskHeaderHovered, action: onArchive)
+                        IslandTaskArchiveButton(english: english, showsArchiveIcon: taskHeaderHovered, provider: task.provider, action: onArchive)
                             .padding(.top, 6).padding(.trailing, 8)
                     }
                 }
@@ -666,13 +667,12 @@ struct IslandApprovalView: View {
         if !codexJumpMessage.isEmpty { return codexJumpMessage }
         switch request.phase {
         case .submitting: return submittingTitle
-        case .sent: return text("已发送，等待 Codex 确认", "Sent, awaiting Codex confirmation")
-        case .resultUnknown: return text("结果未确认，请在 Codex 核对", "Result unconfirmed; check in Codex")
+        case .sent: return text("已发送，等待 \(agentName) 确认", "Sent, awaiting \(agentName) confirmation")
+        case .resultUnknown: return text("结果未确认，请在\(handlerName)核对", "Result unconfirmed; check in \(handlerNameEnglish)")
         case .resolved: return text("请求已处理", "Request resolved")
         default: break
         }
-        if request.contentRevised { return text("请求已更新，请重新选择", "Request updated; choose again") }
-        if !request.canRespond { return text("请在 Codex 处理", "Handle this request in Codex") }
+        if !request.canRespond { return text("请在\(handlerName)处理", "Handle this request in \(handlerNameEnglish)") }
         guard let wire else { return text("等待选择", "Awaiting a choice") }
         switch wire.kind {
         case .questions:
@@ -685,7 +685,7 @@ struct IslandApprovalView: View {
             if wire.isApprovalOnlyForm { return text("批准后继续", "Resumes after approval") }
             return draft.result(for: wire) == nil ? text("请填写必填项并检查格式", "Complete required fields in the requested format") : text("参数已就绪", "Ready to submit")
         case .mcpURL: return draft.openedURL ? text("完成授权后继续", "Continue when authorization is complete") : text("请打开授权页面", "Open the authorization page")
-        case .nativeOnly: return text("请在 Codex 处理", "Continue in Codex")
+        case .nativeOnly: return text("请在\(handlerName)处理", "Continue in \(handlerNameEnglish)")
         default: return text("确认后继续", "Resumes after approval")
         }
     }
@@ -770,7 +770,15 @@ struct IslandApprovalView: View {
         if wire == nil { onDecision(request.id, action.affirmative ? .allowOnce : .reject) }
         else { onDecision(request.id, .reply(action.result)) }
     }
+    private var isClaude: Bool { request.provider == .claudeCode }
+    private var agentName: String { request.provider.displayName }
+    private var handlerName: String { isClaude ? "运行 Claude Code 的终端" : " Codex " }
+    private var handlerNameEnglish: String { isClaude ? "the Claude Code terminal" : "Codex" }
     private func openCodex() {
+        if isClaude {
+            // Claude Code may run in any terminal or IDE; QuotaView cannot identify its window.
+            codexJumpMessage = text("请切换到运行 Claude Code 的终端处理", "Switch to the terminal running Claude Code"); return
+        }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex") else {
             codexJumpMessage = text("未找到 Codex，请手动打开对应任务", "Codex not found; open the task manually"); return
         }

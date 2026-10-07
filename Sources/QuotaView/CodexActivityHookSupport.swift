@@ -293,7 +293,7 @@ struct CodexActivityHookInstaller: Sendable {
         helperURL: URL? = nil,
         installedHelperURL: URL? = nil,
         configurationURL: URL? = nil,
-        channelIdentifier: String = CodexActivityChannelIdentity.current.identifier
+        channelIdentifier: String = Bundle.main.bundleIdentifier ?? "com.quotaview"
     ) {
         self.socketURL = socketURL
         self.authenticationToken = authenticationToken

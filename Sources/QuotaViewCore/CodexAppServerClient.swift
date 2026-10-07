@@ -121,11 +121,6 @@ public actor CodexAppServerClient {
     private var pending: [Int: PendingRequest] = [:]
     private var nextRequestID = 1
     private var connectionGeneration: UInt64 = 0
-    private var initialization: (generation: UInt64, task: Task<Void, Error>)?
-    private var initializationJoinObserver: (@Sendable () -> Void)?
-    func setInitializationJoinObserver(_ observer: (@Sendable () -> Void)?) { initializationJoinObserver = observer }
-    private var outputReader: CodexBoundedInputReader?
-    private var errorReader: CodexBoundedInputReader?
     private var initialized = false
     private var lastStandardError = ""
     private var activityNotificationHandler:
@@ -173,7 +168,6 @@ public actor CodexAppServerClient {
         includeUsage: Bool = true
     ) async throws -> CodexProviderPayload {
         try await connectIfNeeded()
-        let generation = connectionGeneration
 
         guard includeUsage else {
             let rateLimits: AccountRateLimitsResponse
@@ -182,7 +176,7 @@ public actor CodexAppServerClient {
                     method: "account/rateLimits/read"
                 )
             } catch {
-                stopFailedGeneration(generation, error: error)
+                stop()
                 throw error
             }
             return CodexProviderPayload(
@@ -204,7 +198,7 @@ public actor CodexAppServerClient {
         do {
             resolvedRateLimits = try await rateLimits
         } catch {
-            stopFailedGeneration(generation, error: error)
+            stop()
             throw error
         }
         let resolvedUsage = await optionalUsage
@@ -224,7 +218,6 @@ public actor CodexAppServerClient {
         matchingSessionHash sessionHash: String
     ) async throws -> String? {
         try await connectIfNeeded()
-        let generation = connectionGeneration
 
         let response: ThreadListResponse
         do {
@@ -232,9 +225,8 @@ public actor CodexAppServerClient {
                 includeAllSourceKinds: true
             )
         } catch let error as ClientError {
-            guard generation == connectionGeneration, !Task.isCancelled else { throw ClientError.cancelled }
             guard case .server = error else {
-                stopFailedGeneration(generation, error: error)
+                stop()
                 throw error
             }
             do {
@@ -242,15 +234,14 @@ public actor CodexAppServerClient {
                     includeAllSourceKinds: false
                 )
             } catch {
-                stopFailedGeneration(generation, error: error)
+                stop()
                 throw error
             }
         } catch {
-            stopFailedGeneration(generation, error: error)
+            stop()
             throw error
         }
 
-        guard generation == connectionGeneration, !Task.isCancelled else { throw ClientError.cancelled }
         return response.data.first {
             $0.matches(sessionHash: sessionHash)
         }?.privacySafeDisplayName
@@ -441,10 +432,6 @@ public actor CodexAppServerClient {
 
     public func stop() {
         connectionGeneration &+= 1
-        initialization?.task.cancel()
-        initialization = nil
-        outputReader?.close(); outputReader = nil
-        errorReader?.close(); errorReader = nil
         socksBridge?.stop()
         socksBridge = nil
         outputTask?.cancel()
@@ -463,37 +450,13 @@ public actor CodexAppServerClient {
         failAllPending(with: ClientError.connectionClosed)
     }
 
-    private func stopFailedGeneration(_ generation: UInt64, error: Error) {
-        guard generation == connectionGeneration, !(error is CancellationError),
-              (error as? ClientError) != .cancelled else { return }
-        stop()
-    }
-
     private func connectIfNeeded() async throws {
         if initialized, process?.isRunning == true {
             return
         }
 
-        try Task.checkCancellation()
-        if let flight = initialization {
-            initializationJoinObserver?()
-            try await flight.task.value
-            try Task.checkCancellation()
-            guard flight.generation == connectionGeneration, initialized else { throw ClientError.cancelled }
-            return
-        }
         stop()
-        let generation = connectionGeneration
-        let task = Task { try await self.initializeConnection(generation: generation) }
-        initialization = (generation, task)
-        defer { if initialization?.generation == generation { initialization = nil } }
-        try await task.value
-        try Task.checkCancellation()
-        guard generation == connectionGeneration, initialized else { throw ClientError.cancelled }
-    }
 
-    private func initializeConnection(generation: UInt64) async throws {
-        guard generation == connectionGeneration, !Task.isCancelled else { throw ClientError.cancelled }
         guard let executablePath else {
             throw ClientError.executableNotFound
         }
@@ -507,6 +470,7 @@ public actor CodexAppServerClient {
         process.arguments = ["app-server"]
         var effectiveProxy = proxyConfiguration
         if proxyConfiguration.isEnabled, proxyConfiguration.scheme == .socks5 {
+            let generation = connectionGeneration
             let bridge = SOCKS5HTTPBridge()
             socksBridge = bridge
             do {
@@ -539,17 +503,16 @@ public actor CodexAppServerClient {
         let connectionGeneration = self.connectionGeneration
 
         let outputHandle = standardOutput.fileHandleForReading
-        let outputReader = CodexBoundedInputReader(handle: outputHandle)
-        self.outputReader = outputReader
+        let outputStream = Self.dataStream(from: outputHandle)
         let outputClient = self
         let maximumLineBytes = self.maximumLineBytes
         outputTask = Task.detached(priority: .utility) {
             do {
                 try await Self.readLines(
-                    from: outputReader,
+                    from: outputStream,
                     maximumLineBytes: maximumLineBytes
                 ) { line in
-                    await outputClient.handleOutputLine(line, generation: connectionGeneration)
+                    await outputClient.handleOutputLine(line)
                 }
                 await outputClient.handleConnectionClosed(
                     generation: connectionGeneration
@@ -562,21 +525,14 @@ public actor CodexAppServerClient {
         }
 
         let errorHandle = standardError.fileHandleForReading
-        let errorReader = CodexBoundedInputReader(handle: errorHandle)
-        self.errorReader = errorReader
+        let errorStream = Self.dataStream(from: errorHandle)
         let errorClient = self
         errorTask = Task.detached(priority: .utility) {
-            do {
-                try await Self.readLines(
-                    from: errorReader,
-                    maximumLineBytes: maximumLineBytes
-                ) { line in
-                    await errorClient.recordStandardError(line, generation: connectionGeneration)
-                }
-            } catch {
-                // An oversized stderr line is also a failed transport. Do not
-                // silently leave the process/pending requests looking healthy.
-                await errorClient.handleOversizedOutput(generation: connectionGeneration)
+            try? await Self.readLines(
+                from: errorStream,
+                maximumLineBytes: maximumLineBytes
+            ) { line in
+                await errorClient.recordStandardError(line)
             }
         }
 
@@ -601,14 +557,13 @@ public actor CodexAppServerClient {
                 includeNullParams: false,
                 timeoutNanoseconds: startupTimeoutNanoseconds
             )
-            guard generation == self.connectionGeneration, !Task.isCancelled else { throw ClientError.cancelled }
             try sendNotification(method: "initialized", params: [:])
             initialized = true
         } catch {
             let detail = lastStandardError.isEmpty
                 ? error.localizedDescription
                 : lastStandardError
-            if generation == self.connectionGeneration { stop() }
+            stop()
             throw ClientError.launchFailed(detail)
         }
     }
@@ -662,7 +617,6 @@ public actor CodexAppServerClient {
         includeNullParams: Bool,
         timeoutNanoseconds: UInt64?
     ) async throws -> Data {
-        try Task.checkCancellation()
         guard process?.isRunning == true, inputHandle != nil else {
             throw ClientError.connectionClosed
         }
@@ -734,8 +688,7 @@ public actor CodexAppServerClient {
         }
     }
 
-    private func handleOutputLine(_ line: String, generation: UInt64) async {
-        guard generation == connectionGeneration else { return }
+    private func handleOutputLine(_ line: String) async {
         guard
             let data = line.data(using: .utf8),
             let object = try? JSONSerialization.jsonObject(with: data),
@@ -800,8 +753,8 @@ public actor CodexAppServerClient {
         )
     }
 
-    private func recordStandardError(_ line: String, generation: UInt64) {
-        guard generation == connectionGeneration, !line.isEmpty else { return }
+    private func recordStandardError(_ line: String) {
+        guard !line.isEmpty else { return }
         lastStandardError = String(line.prefix(4_096))
     }
 
@@ -837,21 +790,39 @@ public actor CodexAppServerClient {
         }
     }
 
+    private nonisolated static func dataStream(
+        from handle: FileHandle
+    ) -> AsyncStream<Data> {
+        AsyncStream { continuation in
+            handle.readabilityHandler = { readableHandle in
+                let data = readableHandle.availableData
+
+                if data.isEmpty {
+                    readableHandle.readabilityHandler = nil
+                    continuation.finish()
+                } else {
+                    continuation.yield(data)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                handle.readabilityHandler = nil
+            }
+        }
+    }
+
     private enum LineReadError: Error {
         case lineTooLarge
     }
 
     private nonisolated static func readLines(
-        from reader: CodexBoundedInputReader,
+        from stream: AsyncStream<Data>,
         maximumLineBytes: Int,
         onLine: @escaping @Sendable (String) async -> Void
     ) async throws {
         var buffer = Data()
 
-        defer { reader.close() }
-        for await chunk in reader.chunks {
-            defer { reader.acknowledgeRead() }
-            try Task.checkCancellation()
+        for await chunk in stream {
             buffer.append(chunk)
 
             if buffer.count > maximumLineBytes,

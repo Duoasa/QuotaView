@@ -3,23 +3,6 @@ import Combine
 import Darwin
 import Foundation
 import QuotaViewCore
-// Unknown/unbundled launches must never share the stable app's writable bridge.
-struct CodexActivityChannelIdentity {
-    let identifier: String
-    let supportDirectory: String
-    let permitsAutomaticHook: Bool
-    init(bundleIdentifier: String?) {
-        switch bundleIdentifier {
-        case "com.quotaview": identifier = "com.quotaview"; supportDirectory = "QuotaView"; permitsAutomaticHook = true
-        case "com.quotaview.development073": identifier = "com.quotaview.development073"; supportDirectory = "QuotaView-073-Development"; permitsAutomaticHook = true
-        default:
-            let suffix = String(CodexActivityPrivacy.hashIdentifier(bundleIdentifier ?? "unbundled").prefix(12))
-            identifier = "com.quotaview.isolated." + suffix; supportDirectory = "QuotaView-Isolated-" + suffix; permitsAutomaticHook = false
-        }
-    }
-    static var current: Self { .init(bundleIdentifier: Bundle.main.bundleIdentifier) }
-    var defaults: UserDefaults { permitsAutomaticHook ? .standard : UserDefaults(suiteName: identifier)! }
-}
 
 @MainActor
 final class CodexActivityRuntime: ObservableObject {
@@ -66,6 +49,7 @@ final class CodexActivityRuntime: ObservableObject {
     private var bridgeRunStartedAt = Date()
     private var configurationClient: CodexAppServerClient?
     let liveIsland = IslandSession()
+    private(set) lazy var claudeCode = ClaudeCodeRuntime(preferences: preferences, island: liveIsland, defaults: defaults)
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
     private var desktopIPCClient: CodexDesktopIPCClient
@@ -103,7 +87,7 @@ final class CodexActivityRuntime: ObservableObject {
     init(
         preferences: AppPreferences,
         quotaStatusStore: CodexStatusStore? = nil,
-        defaults: UserDefaults = CodexActivityChannelIdentity.current.defaults,
+        defaults: UserDefaults = .standard,
         hookInstaller: CodexActivityHookInstaller? = nil,
         hookEnvironmentInspector: CodexActivityEnvironmentInspector? = nil,
         defaultDataDirectory: URL = CodexLocalRolloutActivityClient.Configuration.live().codexHomeURL,
@@ -113,7 +97,7 @@ final class CodexActivityRuntime: ObservableObject {
     ) {
         self.preferences = preferences
         self.defaults = defaults
-        self.automaticHookSetupEnabled = automaticHookSetupEnabled && (hookInstaller != nil || CodexActivityChannelIdentity.current.permitsAutomaticHook)
+        self.automaticHookSetupEnabled = automaticHookSetupEnabled
         usesInjectedEnvironmentInspector = hookEnvironmentInspector != nil
         self.defaultDataDirectory = defaultDataDirectory
         let root = defaults.string(forKey: Self.dataDirectoryKey).map { URL(fileURLWithPath: $0) }
@@ -184,8 +168,9 @@ final class CodexActivityRuntime: ObservableObject {
             if active { self?.followDesktopThread(identity.threadID, source: .localRollout) }
             else { self?.withdrawDesktopFollow(identity.threadID, source: .localRollout) }
         }
-        Self.connectPublicContentProjection(store: store, model: liveIsland.model) { [weak self] envelope in
-            self?.followDesktopThread(in: envelope)
+        store.publicMessageDidReceive = { [weak self] data in
+            self?.liveIsland.model.receive(data)
+            self?.followDesktopThread(in: data)
         }
         store.desktopProjectionDidReceive = { [weak self] projection, snapshot in
             guard let self, isRunning, !isChangingDataDirectory,
@@ -209,7 +194,7 @@ final class CodexActivityRuntime: ObservableObject {
         liveIsland.model.nativeRequestSettlementDidReceive = { [weak self] settlement in
             self?.store.receiveRequestSettlement(settlement)
         }
-        Self.connectActivityProjection(store: store, model: liveIsland.model)
+        store.admittedActivityDidReceive = { [weak self] event in self?.liveIsland.model.receiveLegacy(event) }
         store.hookExecutionDidRebind = { [weak self] session, turn in
             self?.liveIsland.model.withdrawHookExecution(session: session, turn: turn)
         }
@@ -339,6 +324,7 @@ final class CodexActivityRuntime: ObservableObject {
             ? .listening
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
+        claudeCode.start()
     }
 
     private func startDesktopObservation() {
@@ -426,8 +412,8 @@ final class CodexActivityRuntime: ObservableObject {
         render()
     }
 
-    private func followDesktopThread(in envelope: [String: Any]) {
-        guard isRunning, !isChangingDataDirectory,
+    private func followDesktopThread(in data: Data) {
+        guard isRunning, !isChangingDataDirectory, let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let params = envelope["params"] as? [String: Any],
               let threadID = params["threadId"] as? String ?? (params["thread"] as? [String: Any])?["id"] as? String,
               !threadID.isEmpty else { return }
@@ -685,6 +671,7 @@ final class CodexActivityRuntime: ObservableObject {
 
     func stop() async {
         isRunning = false
+        claudeCode.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()
@@ -1003,17 +990,6 @@ final class CodexActivityRuntime: ObservableObject {
         set { liveIsland.board.state.onOpenSettings = newValue }
     }
 
-    static func connectActivityProjection(store: CodexActivityStore, model: IslandLiveStore) {
-        store.islandActivityProjectionDidReceive = { [weak model] projection in model?.receiveAdmittedActivity(projection) }
-    }
-
-    static func connectPublicContentProjection(store: CodexActivityStore, model: IslandLiveStore,
-                                              onThreadObserved: (([String: Any]) -> Void)? = nil) {
-        store.decodedPublicMessageDidReceive = { [weak model] envelope, byteCount in
-            model?.receive(envelope: envelope, byteCount: byteCount, usesAdmittedProgress: true)
-            onThreadObserved?(envelope)
-        }
-    }
     private func render() {
         guard isRunning else { return }
         // The primary interface stays available for the application's lifetime.
@@ -1052,14 +1028,14 @@ final class CodexActivityRuntime: ObservableObject {
             in: .userDomainMask
         ).first ?? FileManager.default.temporaryDirectory
         return base
-            .appendingPathComponent(CodexActivityChannelIdentity.current.supportDirectory, isDirectory: true)
+            .appendingPathComponent(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "QuotaView-073-Development" : "QuotaView", isDirectory: true)
             .appendingPathComponent("codex-activity.sock")
     }
 
     private static func defaultQueueURL() -> URL {
         URL(
             fileURLWithPath:
-                "/tmp/\(CodexActivityChannelIdentity.current.identifier).codex-activity-\(getuid())",
+                "/tmp/\(Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "com.quotaview.development073" : "com.quotaview").codex-activity-\(getuid())",
             isDirectory: true
         )
     }

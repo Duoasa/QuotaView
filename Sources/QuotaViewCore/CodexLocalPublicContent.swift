@@ -1,28 +1,6 @@
 import Foundation
 import CoreFoundation
 
-/// One transient JSON decode and timestamp parse feeds both lifecycle and the
-/// privacy-filtered public projection. Raw envelopes are never retained in replay.
-struct CodexLocalRolloutEnvelope {
-    let line: Data
-    let object: [String: Any]
-    let payload: [String: Any]
-    let type: String
-    let timestamp: Date?
-
-    init?(_ line: Data) {
-        guard !line.isEmpty, line.count <= CodexLocalRolloutLineDecoder.maximumLineBytes,
-              let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any],
-              let payload = object["payload"] as? [String: Any], let type = object["type"] as? String else { return nil }
-        self.line = line; self.object = object; self.payload = payload; self.type = type
-        if let raw = object["timestamp"] as? String {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            timestamp = formatter.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
-        } else { timestamp = nil }
-    }
-}
-
 /// Public rollout material only. Ordinary user prompts and private reasoning never cross this boundary.
 /// Accepted native question replies carry only identity and question hashes for settlement.
 public struct CodexLocalPublicContent: Sendable {
@@ -30,19 +8,12 @@ public struct CodexLocalPublicContent: Sendable {
     public let turnHash: String
     public let data: Data
     public let occurredAt: Date
-    // Scalar projection tags avoid decoding our own sanitized JSON for replay.
-    var projectionKind: String? = nil
-    var projectionCallID: String? = nil
 
     static func decode(_ line: Data, sessionHash: String, activeTurnHash: String?, asynchronousQuestionCallIDs: Set<String> = []) -> Self? {
-        guard let envelope = CodexLocalRolloutEnvelope(line) else { return nil }
-        return decode(envelope, sessionHash: sessionHash, activeTurnHash: activeTurnHash,
-                      asynchronousQuestionCallIDs: asynchronousQuestionCallIDs)
-    }
-
-    static func decode(_ envelope: CodexLocalRolloutEnvelope, sessionHash: String, activeTurnHash: String?, asynchronousQuestionCallIDs: Set<String> = []) -> Self? {
-        guard let activeTurnHash else { return nil }
-        let type = envelope.type, payload = envelope.payload
+        guard let activeTurnHash, line.count <= 1_048_576,
+              let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+              let type = object["type"] as? String,
+              let payload = object["payload"] as? [String: Any] else { return nil }
         var clean: [String: Any]
         if type == "turn_context" {
             guard let turn = payload["turn_id"] as? String,
@@ -86,11 +57,13 @@ public struct CodexLocalPublicContent: Sendable {
             default: return nil
             }
         } else { return nil }
-        let date = envelope.timestamp ?? .distantPast
-        if clean["id"] == nil { clean["id"] = CodexActivityPrivacy.hashIdentifier(String(decoding: envelope.line, as: UTF8.self)) }
+        let date = (object["timestamp"] as? String).flatMap {
+            let format = ISO8601DateFormatter(); format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return format.date(from: $0) ?? ISO8601DateFormatter().date(from: $0)
+        } ?? .distantPast
+        if clean["id"] == nil { clean["id"] = CodexActivityPrivacy.hashIdentifier(String(decoding: line, as: UTF8.self)) }
         guard let data = try? JSONSerialization.data(withJSONObject: clean, options: [.sortedKeys]) else { return nil }
-        return .init(sessionHash: sessionHash, turnHash: activeTurnHash, data: data, occurredAt: date,
-                     projectionKind: clean["type"] as? String, projectionCallID: clean["id"] as? String)
+        return .init(sessionHash: sessionHash, turnHash: activeTurnHash, data: data, occurredAt: date)
     }
 }
 
@@ -191,5 +164,12 @@ public enum CodexLocalAsyncReplyContent {
             result.append(["questionItemHash": id, "questionHash": CodexActivityPrivacy.hashIdentifier(question)])
         }
         return result
+    }
+}
+
+public extension CodexLocalPublicContent {
+    /// Already privacy-filtered content from a non-Codex source, such as a Claude Code transcript.
+    init(publicSessionHash sessionHash: String, turnHash: String, data: Data, occurredAt: Date) {
+        self.init(sessionHash: sessionHash, turnHash: turnHash, data: data, occurredAt: occurredAt)
     }
 }

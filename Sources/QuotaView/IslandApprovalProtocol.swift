@@ -79,10 +79,6 @@ struct IslandApprovalField: Identifiable, Equatable {
         return choice.text.isEmpty ? choice.pretty : choice.text
     }
     var supported: Bool {
-        // External backtracking regexes have no enforceable computation budget.
-        // Preserve their constraint through Codex's UI instead of evaluating
-        // them on MainActor or silently ignoring them when approving a form.
-        if schema["pattern"] != .null { return false }
         if ["allOf", "anyOf", "$ref", "not", "if", "then", "else"].contains(where: { schema[$0] != .null }) { return false }
         if schema["oneOf"] != .null && (schema["type"].text != "string"
             || schema["oneOf"].array.isEmpty || schema["oneOf"].array.contains(where: { $0["const"].text.isEmpty })) { return false }
@@ -119,7 +115,6 @@ struct IslandCodexApprovalRequest: Equatable {
     }
     let raw: Data
     let envelope: IslandApprovalJSON
-    let rpcIdentity: CodexDesktopIPCRequestID
     /// A public rollout projection has no RPC owner and can never send a reply.
     private(set) var localObservation: LocalObservation?
     /// An opaque capability minted by the Desktop owner stream, never decoded
@@ -134,6 +129,9 @@ struct IslandCodexApprovalRequest: Equatable {
         method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
     }
     var observationOnly: Bool { localObservation != nil }
+    /// Built by QuotaView from a Claude Code PermissionRequest Hook; answered
+    /// over that Hook's own connection, never through a Codex transport.
+    var isClaudeCode: Bool { params["claudeCode"].boolean }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -147,28 +145,6 @@ struct IslandCodexApprovalRequest: Equatable {
     var threadID: String { params["threadId"].text }
     var turnID: String { params["turnId"].text }
     var method: String { envelope["method"].text }
-    var answerContent: IslandApprovalJSON {
-        let common: Set<String> = ["threadId", "turnId", "itemId", "reason"]
-        let fields: Set<String>
-        switch kind {
-        case .command, .terminalInput, .network:
-            fields = common.union(["command", "cwd", "kind", "commandActions", "availableDecisions",
-                "proposedExecpolicyAmendment", "proposedNetworkPolicyAmendment", "proposedNetworkPolicyAmendments",
-                "networkApprovalContext", "additionalPermissions"])
-        case .fileChange: fields = common.union(["grantRoot", "availableDecisions"])
-        case .permissions: fields = common.union(["environmentId", "cwd", "permissions"])
-        case .questions: fields = common.union(["questions", "autoResolutionMs"])
-        case .mcpForm, .mcpURL:
-            fields = common.union(["serverName", "mode", "message", "description", "requestedSchema", "url", "elicitationId", "_meta"])
-        case .nativeOnly: fields = Set(params.object?.keys.map { $0 } ?? [])
-        }
-        // Owner projection removes unrelated fields from observed envelopes.
-        // Gaining its response handle is not an answer-content revision.
-        let content = IslandApprovalJSON.object((params.object ?? [:]).filter { fields.contains($0.key) })
-        let context: IslandApprovalJSON = [.fileChange, .questions, .mcpForm, .mcpURL].contains(kind)
-            ? contextItem ?? .null : .null
-        return .object(["method": .string(method), "params": content, "context": context])
-    }
     var kind: Kind {
         switch method {
         case "item/commandExecution/requestApproval":
@@ -187,8 +163,8 @@ struct IslandCodexApprovalRequest: Equatable {
         guard data.count <= 1_048_576 else { throw CocoaError(.fileReadTooLarge) }
         let v = try JSONDecoder().decode(IslandApprovalJSON.self, from: data)
         guard v.object != nil, v["params"].object != nil, !v["params"]["threadId"].text.isEmpty,
-              let identity = CodexSharedMessageIdentity.rpcID(messageData: data) else { throw CocoaError(.fileReadCorruptFile) }
-        raw = data; envelope = v; rpcIdentity = identity
+              v["id"].text.count > 0 || v["id"].number != nil else { throw CocoaError(.fileReadCorruptFile) }
+        raw = data; envelope = v
         localObservation = ["local/tool/requestUserInput", "local/tool/requestUserInputAsync"].contains(v["method"].text)
             ? .init(sessionHash: v["params"]["threadId"].text, turnHash: v["params"]["turnId"].text,
                 callID: v["id"].text, mode: v["method"].text == "local/tool/requestUserInputAsync" ? .asynchronous : .synchronous)
@@ -218,16 +194,6 @@ struct IslandCodexApprovalRequest: Equatable {
     init(desktopAsyncQuestion question: CodexDesktopProjectedAsyncQuestion, conversationID: String) throws {
         let data = try question.asyncRequestEnvelopeData(conversationID: conversationID)
         self = try Self(data: data)
-    }
-    var titleText: IslandDetailText {
-        for title in [questions.first?.title ?? "", params["message"].text, params["reason"].text] where !title.isEmpty { return .init(title) }
-        return .init("Codex 请求你的处理", "Codex requests your input")
-    }
-    var detailText: IslandDetailText {
-        if kind == .fileChange, contextItem?["changes"].array.isEmpty != false, params["grantRoot"].text.isEmpty {
-            return .init("Codex 未提供文件差异，请在 Codex 中审阅后批准。", "Codex has not supplied the file diff. Review it in Codex before approving.")
-        }
-        return .init(detail)
     }
     var detail: String {
         switch kind {
@@ -299,19 +265,16 @@ struct IslandCodexApprovalRequest: Equatable {
             result.append(.init(id: "network", title: "Network", value: p["network"], group: "network"))
         }
         for group in ["read", "write"] {
-            for value in p["fileSystem"][group].array {
-                result.append(.init(id: permissionID(group, value), title: "\(group) · \(value.text)", value: value, group: group))
+            for (i, value) in p["fileSystem"][group].array.enumerated() {
+                result.append(.init(id: "\(group)-\(i)", title: "\(group) · \(value.text)", value: value, group: group))
             }
         }
-        for value in p["fileSystem"]["entries"].array {
+        for (i, value) in p["fileSystem"]["entries"].array.enumerated() {
             let path = value["path"]
             let title = path["path"].text.isEmpty ? (path["pattern"].text.isEmpty ? path["value"].pretty : path["pattern"].text) : path["path"].text
-            result.append(.init(id: permissionID("entries", value), title: value["access"].text + " · " + title, value: value, group: "entries"))
+            result.append(.init(id: "entry-\(i)", title: value["access"].text + " · " + title, value: value, group: "entries"))
         }
         return result
-    }
-    private func permissionID(_ group: String, _ value: IslandApprovalJSON) -> String {
-        group + ":" + CodexActivityPrivacy.hashIdentifier(value.pretty)
     }
     var url: URL? {
         guard let url = URL(string: params["url"].text), ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
@@ -352,6 +315,7 @@ struct IslandCodexApprovalRequest: Equatable {
                 switch d.text {
                 case "accept": label = .init("允许一次", "Allow once"); positive = true
                 case "acceptForSession": label = .init("本会话允许", "Allow for session"); positive = true
+                case "acceptAlways": label = .init("始终允许", "Always allow"); positive = true
                 case "decline": label = .init("拒绝", "Decline"); positive = false
                 case "cancel": label = .init("取消本次", "Cancel"); positive = false
                 default:
@@ -500,6 +464,7 @@ struct IslandApprovalDraft: Equatable {
                     if field.required && raw.isEmpty { return nil }
                     if let min = field.schema["minLength"].number, Double(raw.count) < min { return nil }
                     if let max = field.schema["maxLength"].number, Double(raw.count) > max { return nil }
+                    if !field.schema["pattern"].text.isEmpty, raw.range(of: field.schema["pattern"].text, options: .regularExpression) == nil { return nil }
                     switch field.schema["format"].text {
                     case "email":
                         guard raw.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil else { return nil }

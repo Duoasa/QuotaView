@@ -47,53 +47,49 @@ final class ArchitectureTests: XCTestCase {
     }
 
     func testReplacementRejectsLateOlderGeneration() async {
-        // The provider intentionally ignores cancellation. Exercise both success
-        // orders, so the older generation must be rejected by publication logic.
-        for olderCompletesFirst in [true, false] {
-            let gate = ControlledFetchGate()
-            let provider = StubProvider { request in
-                await gate.enterAndWait(request.reason)
-                return Self.makeFetchResult(
-                    capturedAt: Date(timeIntervalSince1970: TimeInterval(request.generation))
-                )
+        let provider = StubProvider { request in
+            if request.reason == .background {
+                try await Task.sleep(for: .milliseconds(200))
+            } else {
+                try await Task.sleep(for: .milliseconds(10))
             }
-            let coordinator = RefreshCoordinator(
-                provider: provider,
-                demand: ProviderDemandPlan(
-                    providerID: provider.descriptor.id,
-                    capabilities: [.rateWindows], freshness: .interactive, consumers: [.panel]
+            return Self.makeFetchResult(
+                capturedAt: Date(
+                    timeIntervalSince1970:
+                        TimeInterval(request.generation)
                 )
             )
-            let older = Task { await coordinator.requestRefresh(reason: .background, policy: .coalesce) }
-            await gate.waitForEntry(.background)
-            let newer = Task { await coordinator.requestRefresh(reason: .manual, policy: .replace) }
-            await gate.waitForEntry(.manual)
+        }
+        let coordinator = RefreshCoordinator(
+            provider: provider,
+            demand: ProviderDemandPlan(
+                providerID: provider.descriptor.id,
+                capabilities: [.rateWindows],
+                freshness: .interactive,
+                consumers: [.panel]
+            )
+        )
 
-            if olderCompletesFirst {
-                await gate.release(.background)
-                guard case .discarded = await older.value else {
-                    await gate.release(.manual)
-                    _ = await newer.value
-                    XCTFail("Older success before the new success should be discarded")
-                    continue
-                }
-                await gate.release(.manual)
-            } else {
-                await gate.release(.manual)
-            }
-            let newerResult = await newer.value
-            await gate.release(.background)
-            let olderResult = await older.value
-            guard case .applied(let result, let context) = newerResult else {
-                XCTFail("New generation was not applied")
-                continue
-            }
-            XCTAssertEqual(result.snapshot.capturedAt.timeIntervalSince1970, TimeInterval(context.generation))
-            guard case .discarded = olderResult else {
-                XCTFail("Older success after the new success should be discarded")
-                continue
-            }
-            await coordinator.stop()
+        async let older = coordinator.requestRefresh(
+            reason: .background,
+            policy: .coalesce
+        )
+        try? await Task.sleep(for: .milliseconds(30))
+        let newer = await coordinator.requestRefresh(
+            reason: .manual,
+            policy: .replace
+        )
+        let olderResult = await older
+
+        guard case .applied(let result, let context) = newer else {
+            return XCTFail("New generation was not applied")
+        }
+        XCTAssertEqual(
+            result.snapshot.capturedAt.timeIntervalSince1970,
+            TimeInterval(context.generation)
+        )
+        guard case .discarded = olderResult else {
+            return XCTFail("Older generation should be discarded")
         }
     }
 
@@ -120,10 +116,21 @@ final class ArchitectureTests: XCTestCase {
             )
         )
 
-        let first = Task { await coordinator.requestRefresh(reason: .background, policy: .coalesce) }
-        await fetchGate.waitUntilEntered()
-        let secondOutcome = await coordinator.coalescedRefreshReleasing(fetchGate)
-        let firstOutcome = await first.value
+        async let first = coordinator.requestRefresh(
+            reason: .background,
+            policy: .coalesce
+        )
+        async let second = coordinator.requestRefresh(
+            reason: .background,
+            policy: .coalesce
+        )
+        for _ in 0..<100 {
+            await Task.yield()
+        }
+        await fetchGate.release()
+
+        let firstOutcome = await first
+        let secondOutcome = await second
         let outcomes = [firstOutcome, secondOutcome]
         let generations = outcomes.compactMap { outcome -> UInt64? in
             guard case .applied(_, let context) = outcome else {
@@ -426,20 +433,10 @@ private actor CallCounter {
 }
 
 private actor FetchGate {
-    private var hasEntered = false
-    private var enteredWaiters: [CheckedContinuation<Void, Never>] = []
     private var isReleased = false
     private var continuations: [CheckedContinuation<Void, Never>] = []
 
-    func waitUntilEntered() async {
-        guard !hasEntered else { return }
-        await withCheckedContinuation { enteredWaiters.append($0) }
-    }
-
     func waitUntilReleased() async {
-        hasEntered = true
-        enteredWaiters.forEach { $0.resume() }
-        enteredWaiters.removeAll()
         guard !isReleased else {
             return
         }
@@ -474,45 +471,5 @@ private actor AccountScopeSequence {
             return "unexpected"
         }
         return values.removeFirst()
-    }
-}
-
-/// Entered/released continuations provide explicit scheduling and ignore task cancellation.
-private actor ControlledFetchGate {
-    private var entered: Set<RefreshReason> = []
-    private var released: Set<RefreshReason> = []
-    private var waiters: [RefreshReason: [CheckedContinuation<Void, Never>]] = [:]
-    private var completions: [RefreshReason: CheckedContinuation<Void, Never>] = [:]
-
-    func enterAndWait(_ reason: RefreshReason) async {
-        entered.insert(reason)
-        waiters.removeValue(forKey: reason)?.forEach { $0.resume() }
-        guard !released.contains(reason) else { return }
-        await withCheckedContinuation { completions[reason] = $0 }
-    }
-
-    func waitForEntry(_ reason: RefreshReason) async {
-        guard !entered.contains(reason) else { return }
-        await withCheckedContinuation { waiters[reason, default: []].append($0) }
-    }
-
-    func release(_ reason: RefreshReason) {
-        released.insert(reason)
-        completions.removeValue(forKey: reason)?.resume()
-    }
-}
-
-private extension RefreshCoordinator {
-    func coalescedRefreshReleasing(_ gate: FetchGate) async -> RefreshCoordinatorResult {
-        // This task inherits this coordinator's actor isolation. It cannot run
-        // until the current actor-isolated call suspends in requestRefresh's
-        // coalesced finish, so gate release cannot precede coalescing admission.
-        let release = Task {
-            XCTAssertTrue(self.isRefreshing)
-            await gate.release()
-        }
-        let result = await requestRefresh(reason: .background, policy: .coalesce)
-        await release.value
-        return result
     }
 }

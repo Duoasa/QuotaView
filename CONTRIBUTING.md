@@ -45,7 +45,7 @@ entering the stable single-task Island.
 Requirements:
 
 - macOS 14 or later
-- Xcode 26+ with the macOS 26 SDK and Swift 6 (the runtime minimum remains macOS 14)
+- Swift 6 or Xcode 16+
 - ChatGPT/Codex installed and signed in for live App Server testing
 
 Clone and verify the project:
@@ -56,9 +56,11 @@ cd QuotaView
 swift test
 ```
 
-Run the app from the shared **QuotaView** scheme in `QuotaView.xcodeproj` using **My Mac**. SwiftPM is the test/probe entry point; `swift run QuotaView` does not assemble the required Xcode app bundle and is not a supported app launch path.
+Run the app:
 
-Native test graph: the shared Xcode scheme includes the same source test inventory as SwiftPM, with FutureContracts, WidgetContract and HookSupport modules. CI compiles that hosted graph without launching the app, then compiles the actual App/Widget/Hook Release graph without signing. `AuditBuildGraphTests` guards source and resource membership. Only a later authorized native Test run verifies execution and packaged resources.
+```bash
+swift run QuotaView
+```
 
 Run the read-only account probe:
 

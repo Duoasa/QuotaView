@@ -92,6 +92,7 @@ struct IslandSubagentPresentation: Equatable, Identifiable {
     let duration: String
     let detail: String
     var avatar: CodexActivitySubagentAvatar? = nil
+    var provider: IslandAgentProvider = .codex
 }
 
 extension AppCopy {
@@ -99,6 +100,9 @@ extension AppCopy {
     var islandSubagentStatusUnavailable: String { text("状态待更新", "Status unavailable") }
     var islandSubagentInterrupted: String { text("已中断", "Interrupted") }
     var islandSubagentGroupName: String { text("Codex子agent", "Codex agents") }
+    func islandSubagentGroupName(_ provider: IslandAgentProvider) -> String {
+        provider == .codex ? islandSubagentGroupName : text("Claude Code 子 Agent", "Claude Code agents")
+    }
     func islandSubagentGroupTitle(count: Int) -> String {
         "\(islandSubagentGroupName) (\(count))"
     }
@@ -139,6 +143,10 @@ struct CodexPublicTraceItem: Equatable {
     var status: String?; var output: String?; var sourceTruncated = false; var exitCode: Int?
     var messagePhase: String? = nil
 }
+enum IslandAgentProvider: String, Equatable, Sendable {
+    case codex, claudeCode
+    var displayName: String { self == .codex ? "Codex" : "Claude Code" }
+}
 enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }
 struct IslandConfirmation: Identifiable, Equatable {
     enum Phase: Equatable {
@@ -152,11 +160,12 @@ struct IslandConfirmation: Identifiable, Equatable {
     var canRespond = false; var queueIndex = 1; var queueCount = 1
     // Local presentation handoff, never an approval or an answer.
     var canDismissLocally = false
-    var contentRevised = false
+    var provider: IslandAgentProvider = .codex
 }
 struct IslandTaskDetailData: Equatable {
     var entries: [IslandTraceEntry]; var confirmation: IslandConfirmation?; var status: IslandTaskStatus
     var removedEntryCount = 0
+    var provider: IslandAgentProvider = .codex
     var visibleEntries: [IslandTraceEntry] { entries }
     // Older native protocols omit phase. Use their last assistant message only
     // when no explicit final exists; a known commentary/tool is never a result.

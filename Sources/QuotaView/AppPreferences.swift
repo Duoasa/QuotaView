@@ -249,6 +249,17 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(codexIslandPrivacy, forKey: "island.privacyMode") }
     }
 
+    // Claude Code writes the user's ~/.claude/settings.json, so it is opt-in.
+    @Published var claudeCodeEnabled: Bool {
+        didSet { defaults.set(claudeCodeEnabled, forKey: "claudeCode.enabled") }
+    }
+    @Published var claudeCodeInteractiveApprovals: Bool {
+        didSet { defaults.set(claudeCodeInteractiveApprovals, forKey: "claudeCode.interactiveApprovals") }
+    }
+    @Published var claudeCodeStatusLineEnabled: Bool {
+        didSet { defaults.set(claudeCodeStatusLineEnabled, forKey: "claudeCode.statusLineEnabled") }
+    }
+
     @Published var codexActivityIslandEnabled: Bool {
         didSet {
             defaults.set(
@@ -484,6 +495,9 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
+        claudeCodeEnabled = defaults.bool(forKey: "claudeCode.enabled")
+        claudeCodeInteractiveApprovals = defaults.storedBool(forKey: "claudeCode.interactiveApprovals", defaultValue: true)
+        claudeCodeStatusLineEnabled = defaults.bool(forKey: "claudeCode.statusLineEnabled")
         codexActivityIslandEnabled = defaults.storedBool(
             forKey: Key.codexActivityIslandEnabled,
             defaultValue: true
