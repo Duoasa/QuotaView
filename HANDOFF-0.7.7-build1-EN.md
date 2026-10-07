@@ -20,7 +20,7 @@ Settings now keep page titles/descriptions in the lower options section. The bla
 
 A subsequent 35-item audit implementation passed automated checks but produced many bugs during the owner's testing. The owner rejected that development build and requested both runtime and local source rollback.
 
-Remote `main` still contains that later implementation (`dc49a3e`); the rollback was local. **Do not pull or merge remote `main`, reapply the audit changes, or launch the old audit Debug bundle by default.** A recovery branch and stash are documented at the top of [HANDOFF.md](HANDOFF.md).
+[PR #84](https://github.com/Duoasa/QuotaView/pull/84) explicitly reverts the rejected audit commits before integrating this Build 2 source. Check the PR for merge/CI status. Do not reapply the old audit snapshot (`dc49a3e`) or run its old Debug bundle. Recovery information remains in [HANDOFF.md](HANDOFF.md).
 
 ## Start here
 
@@ -36,4 +36,4 @@ Claude integration: `ClaudeCodeRuntime.swift`, `ClaudeCodeBridge.swift`, `Claude
 - Keep checks focused on necessary smoke tests and benchmarks. The owner performs visual and interaction acceptance.
 - Preserve native approval ownership. macOS system permission dialogs are handled in macOS. Quota reset remains demonstration-only.
 
-Next: continue locally from the merged source and collect owner acceptance of real interactions. The owner requested a new development build: unsigned Debug arm64 compilation succeeded and the merged app is running. No tests, release packaging, signing, or push were performed. Build log and runtime evidence: `.build/settings-proportion-20261007/development-build.log` and `development-runtime.json`.
+Next: continue locally from the merged source and collect owner acceptance of real interactions. The owner requested a new development build: unsigned Debug arm64 compilation succeeded and the merged app is running. No local tests, release packaging or signing were performed. Source is pushed in PR #84; baseline CI runs remotely. Build log and runtime evidence: `.build/settings-proportion-20261007/development-build.log` and `development-runtime.json`.

@@ -10,10 +10,10 @@
 - 顶部导航保留深灰胶囊背景；Codex/Claude 综合“连接”页保留各自原设置与真实摘要，摘要改为并排展示。QQ 缩略图与放大图共用原图有效二维码和留白视口。
 - 16:51 跟进：黑色背景显式使用 Rectangle，底部无圆角、与下方菜单直线衔接；窗口外轮廓圆角保留。
 - 设置导航与可视化合为通栏黑色顶部，移除内缩大卡片；上方固定、下方菜单独立滚动。页头和选项统一 744 pt 最大宽度 / 32 pt 安全内距；标题/说明位于下方，使用系统语义色；通用可视化简化嵌套卡片。设置项保留。
-- 按用户要求 Build +1：App、Widget 与兼容 Info 同步为 0.7.7 / 显示 Build 2 / 内部 58，开发身份不变。公开发行仍为 Build 1；未发布、未推送。
+- 按用户要求 Build +1：App、Widget 与兼容 Info 同步为 0.7.7 / 显示 Build 2 / 内部 58，开发身份不变。公开发行仍为 Build 1；本次只同步源码，不发布新包或 appcast。
 - Debug arm64 开发编译通过，当前运行 `.build/DevelopmentRuntime/QuotaView.app`，PID 49617；旧开发进程 45792 已正常退出。实际加载的新 App debug dylib 和 Core 路径已核对；正式安装及 Widget 保持。
 - 差异/空白检查通过；未执行测试或视觉自动验收，实际显示与交互待用户验收。构建沿用已有非阻断并发兼容警告，未进行正式打包、Developer ID 签名或公证。
-- 本轮修改前副本、局部 diff、编译、资源哈希和运行证据：`.build/settings-proportion-20261007/`。用户已明确授权推送当前版本源码并合并 main；准备状态见后续更新。
+- 本轮修改前副本、局部 diff、编译、资源哈希和运行证据：`.build/settings-proportion-20261007/`。用户已授权推送并合并；[PR #84](https://github.com/Duoasa/QuotaView/pull/84) 在 `codex/0.7.7-build2-claude-settings` 中显式撤回旧审计提交，再加入当前 Claude/UI 源码。发布工作区 `.codex/worktrees/build2-claude-settings/widget`；当前主开发目录及其未提交用户文件保留。合并与 CI 状态以 PR 为准。
 - 17:15 历史修改前副本、局部源码 diff、编译日志和实际加载库哈希：`.build/settings-demo-20261007/`。
 - 17:02 历史修改前副本、源码 diff 与编译/运行证据：`.build/settings-connections-20261007/`。首次编译因复用图标的 private 可见性失败，改为共享图标入口后编译通过；原路由夹具期望同步，未执行测试。
 - 圆角跟进的源码副本、构建与运行证据：`.build/settings-square-header-20261007/`。版本仍为 0.7.7 Build 2 / 内部 58，未测试、未推送，视觉待用户验收。
