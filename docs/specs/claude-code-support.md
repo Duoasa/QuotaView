@@ -45,7 +45,7 @@ Socket 协议：请求 `{authenticationToken, eventID, kind: hook|statusLine, aw
    `claudeRespond` 应答。Codex App Server 断线（`invalidateResponses`）和 Codex 连接纪元
    不影响 Claude 请求。
 3. 灵动岛无法作答的请求（多选、截断输入、关闭审批开关）立即放行 Hook，不让 Claude Code
-   等待只读请求。Helper 断开、对应工具结果、回合结束或中断都会撤下请求。
+   等待只读请求。一般 helper 断开、对应工具结果、回合结束或中断撤下请求；关闭审批主动交回终端时保留只读提醒，直到真实结果或终态。
 4. 中途接入只回放会话记录最近 1 MiB 中最后一次真实提问之后的记录；更早回合的回答、
    中断标记不进入当前卡片。标题顺序：custom-title > 首条用户提问 > 工作目录。
 5. 用量按 `message.id + requestId` 跨文件去重；某天含无公开单价模型时该天成本为空，
@@ -58,6 +58,13 @@ Socket 协议：请求 `{authenticationToken, eventID, kind: hook|statusLine, aw
 设置页状态：已停用 / 配置中 / 已配置（等待新会话）/ 已连接（本次运行收到事件）/ 需要处理
 （写入失败、helper 缺失、socket 失败，可重试）。App 未运行时 helper 连接失败即静默退出，
 Claude Code 行为不变；状态栏 helper 仍转发原状态栏输出。
+
+## 生命周期与审批开关修订 · 2026-10-08
+
+- 停止后再次启动重建监听；取消未开始的配置任务，已经开始的文件事务串行完成，旧修订结果不能覆盖新状态；取消用量刷新后禁止迟到回写。
+- 停用清理失败显示失败与重试，完成清理才显示已停用；重新启动按当前关闭配置移除本通道遗留项。
+- 关闭审批立即撤销应答能力，无决定释放挂起 helper 并保留只读终端提醒；旧 route 的迟到请求同样回退，再次开启不重新接管旧请求；真实工具结果/终态清理提醒。
+- 本轮 19 项隔离冒烟、0 失败，Debug arm64 编译通过并已更新开发包；真实 Claude 会话与多个 PermissionRequest Hook 并存仍待用户验收。当前运行与证据见 [Handoff](../../HANDOFF.md)。
 
 ## 原适配工作区验证记录（迁入前，2026-10-07）
 

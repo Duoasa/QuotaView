@@ -64,7 +64,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         let sessionKey: String
         let toolUseID: String
         let rpcID: IslandApprovalJSON
-        let awaitsDecision: Bool
+        var awaitsDecision: Bool
         let toolInput: [String: Any]
         let suggestions: [Any]
     }
@@ -80,6 +80,7 @@ final class ClaudeCodeRuntime: ObservableObject {
     private var usageTimer: Timer?
     private var usageTask: Task<Void, Never>?
     private var configurationTask: Task<Void, Never>?
+    private var configurationRevision = UUID()
     private var preferenceCancellable: AnyCancellable?
     private var appliedConfiguration: (enabled: Bool, configuration: ClaudeCodeInstaller.Configuration)?
     private var bridgeRunning = false
@@ -100,7 +101,9 @@ final class ClaudeCodeRuntime: ObservableObject {
         bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
         scanner = ClaudeCodeUsageScanner(projectsURL: installer.projectsURL)
         island.model.claudeResponseCapability = { [weak self] wire in
-            guard let self, bridgeRunning, let id = ClaudeCodeApproval.eventID(of: wire) else { return false }
+            guard let self, bridgeRunning, preferences.claudeCodeEnabled,
+                  preferences.claudeCodeInteractiveApprovals,
+                  let id = ClaudeCodeApproval.eventID(of: wire) else { return false }
             return approvals[id]?.awaitsDecision == true
         }
         island.model.claudeRespond = { [weak self] wire, result in
@@ -121,9 +124,11 @@ final class ClaudeCodeRuntime: ObservableObject {
     func stop() {
         isRunning = false
         preferenceCancellable = nil
+        configurationRevision = UUID()
+        appliedConfiguration = nil
+        configurationTask?.cancel()
         stopBridge()
-        usageTimer?.invalidate(); usageTimer = nil
-        usageTask?.cancel(); configurationTask?.cancel()
+        status = .disabled
     }
 
     // MARK: Configuration
@@ -136,28 +141,39 @@ final class ClaudeCodeRuntime: ObservableObject {
         guard isRunning else { return }
         let enabled = preferences.claudeCodeEnabled
         let configuration = desiredConfiguration
+        if !configuration.interactiveApprovals { returnApprovalsToTerminal() }
         if !force, let applied = appliedConfiguration, applied.enabled == enabled, applied.configuration == configuration { return }
         let wasEnabled = appliedConfiguration?.enabled ?? false
         appliedConfiguration = (enabled, configuration)
+        let revision = UUID()
+        configurationRevision = revision
         let installer = installer
         if enabled {
             startBridge()
             guard bridgeRunning else { appliedConfiguration = nil; return }
-            status = .configuring
         } else {
             stopBridge()
         }
+        status = .configuring
         let previous = configurationTask
         configurationTask = Task { [weak self] in
             await previous?.value
+            // Finish an in-flight file transaction before the next one, but do
+            // not start queued work after stop or publish an obsolete result.
+            guard let self, !Task.isCancelled, isRunning, configurationRevision == revision else { return }
             let result: Result<ClaudeCodeInstaller.State, Error> = await Task.detached(priority: .utility) {
                 do {
                     if enabled { try installer.install(configuration) }
-                    else if wasEnabled || force { try installer.uninstall() }
+                    else {
+                        let state = installer.state()
+                        if wasEnabled || force || state.hasOwnedHooks || state.statusLineInstalled {
+                            try installer.uninstall()
+                        }
+                    }
                     return .success(installer.state())
                 } catch { return .failure(error) }
             }.value
-            guard let self, isRunning, appliedConfiguration?.enabled == enabled else { return }
+            guard !Task.isCancelled, isRunning, configurationRevision == revision else { return }
             switch result {
             case .success(let state):
                 installerState = state
@@ -167,7 +183,7 @@ final class ClaudeCodeRuntime: ObservableObject {
                 } else { status = .disabled }
             case .failure(let error):
                 installerState = installer.state()
-                status = enabled ? .failed(error.localizedDescription) : .disabled
+                status = .failed(error.localizedDescription)
             }
             if enabled { refreshUsage(); loadRateLimitSnapshot() }
         }
@@ -201,6 +217,7 @@ final class ClaudeCodeRuntime: ObservableObject {
     private func stopBridge() {
         bridge.stop()
         bridgeRunning = false
+        usageTask?.cancel(); usageTask = nil
         tailTimer?.invalidate(); tailTimer = nil
         usageTimer?.invalidate(); usageTimer = nil
         for approval in approvals.values {
@@ -216,7 +233,7 @@ final class ClaudeCodeRuntime: ObservableObject {
     // MARK: Ingress
 
     private func receive(_ message: ClaudeCodeBridgeMessage) {
-        guard isRunning, bridgeRunning,
+        guard isRunning, bridgeRunning, preferences.claudeCodeEnabled,
               let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any] else {
             if message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
             return
@@ -525,7 +542,8 @@ final class ClaudeCodeRuntime: ObservableObject {
             return
         }
         // Never hold Claude Code's Hook for a request the island cannot answer.
-        let interactive = message.awaitsDecision && complete && (wire.kind != .questions || wire.supportedQuestions)
+        let interactive = preferences.claudeCodeInteractiveApprovals && message.awaitsDecision
+            && complete && (wire.kind != .questions || wire.supportedQuestions)
         if message.awaitsDecision && !interactive { bridge.resolve(eventID: message.eventID, decision: nil) }
         approvals[message.eventID] = Approval(eventID: message.eventID, sessionKey: session.key, toolUseID: toolUseID,
             rpcID: wire.rpcID, awaitsDecision: interactive, toolInput: input, suggestions: suggestions)
@@ -535,7 +553,8 @@ final class ClaudeCodeRuntime: ObservableObject {
     }
 
     private func respond(_ wire: IslandCodexApprovalRequest, result: IslandApprovalJSON) throws {
-        guard bridgeRunning, let eventID = ClaudeCodeApproval.eventID(of: wire),
+        guard bridgeRunning, preferences.claudeCodeEnabled, preferences.claudeCodeInteractiveApprovals,
+              let eventID = ClaudeCodeApproval.eventID(of: wire),
               let approval = approvals[eventID], approval.awaitsDecision,
               let decision = ClaudeCodeApproval.decision(for: wire, result: result,
                   toolInput: approval.toolInput, suggestions: approval.suggestions) else {
@@ -544,6 +563,15 @@ final class ClaudeCodeRuntime: ObservableObject {
         approvals.removeValue(forKey: eventID)
         bridge.resolve(eventID: eventID, decision: decision)
         island.model.resolveClaudeRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+    }
+
+    private func returnApprovalsToTerminal() {
+        for (eventID, var approval) in approvals where approval.awaitsDecision {
+            approval.awaitsDecision = false
+            approvals[eventID] = approval
+            bridge.resolve(eventID: eventID, decision: nil)
+            island.model.returnClaudeRequestToTerminal(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+        }
     }
 
     private func helperDisconnected(_ eventID: String) {
@@ -578,8 +606,9 @@ final class ClaudeCodeRuntime: ObservableObject {
         let profileURL = installer.globalConfigURL
         usageTask = Task { [weak self] in
             let summary = await scanner.scan()
+            guard !Task.isCancelled else { return }
             let profile = await Task.detached(priority: .utility) { ClaudeCodeAccountProfile.read(from: profileURL) }.value
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             usageTask = nil
             guard bridgeRunning else { return }
             usage = summary

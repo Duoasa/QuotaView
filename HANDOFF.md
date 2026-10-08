@@ -1,5 +1,21 @@
 # QuotaView Handoff
 
+## 当前开发版：0.7.7 Build 2 · 2026-10-08
+
+- 当前源码以已合入 main 的 `afdcf1d`（PR #84）为基础，保留用户接受的 Build 1 基线及 Claude/设置集成；本次不恢复旧审计改动。当前工作区与开发身份保持。
+- 字体改为直接加载并校验包内 Asta Sans，SwiftUI/AppKit 共用字体对象；失败时回退系统字体。Codex 双额度窗口改为横向排列，单窗口占满左侧额度行。
+- hover 复用成本和日/周/累计活动模型，仅在数据、累计值或 UTC 日期变化时更新；卡片描边移入背景，保留相邻卡片层级提升。
+- Claude 修复停止后重连、配置修订隔离、停用失败重试及取消刷新后的迟到结果；关闭审批立即撤销应答能力，挂起和迟到 helper 无决定交回终端，保留只读提醒。
+- 2026-10-08 16:32（Asia/Shanghai）运行核验：`.build/DevelopmentRuntime/QuotaView.app`，PID 86018；版本 0.7.7 / Build 2 / 内部 58，`com.quotaview.development073`。202 项构建输入一致，完整包及实际 App/Core 加载路径匹配；正式安装保持原样。
+- 已有检查：Claude 19 项隔离冒烟、hover 模型 39 项冒烟、定向 Swift 类型检查及 Debug arm64 增量编译通过。371 天合成历史的模型访问基准中位数 `44.62 → 0.019 ms`，不含 SwiftUI 绘制，不表示实际帧率。真实视觉与交互仍待用户验收。
+- 证据目录：`.build/claude-followup-20261008/`、`.build/usage-hover-20261008/`、`.build/quota-horizontal-20261008/`。最近回退包：`.build/runtime-package-backups/quota-horizontal-20261008-163147/QuotaView.app`。
+- 此次只同步开发源码；公开稳定版仍为 0.7.7 Build 1，未发布 Build 2 或修改 appcast。公开事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+- 合入前 CI 暴露 Claude 接受连接继承非阻塞标志，首批 JSON 尚未到达时可能提前断开；补充为有界阻塞读取，现有连接夹具增加 50 ms 发送间隔和断管保护。该补充尚未进入上方 PID 86018 运行包。
+- 隔离 Python 服务的冷启动等待放宽至 15 秒，并让等待失败报告调用位置；应用连接/请求时限及数据恢复断言不变。首轮 CI 失败记录与后续检查见 PR #85，不将原本地通过结果代替新提交 CI。
+
+下方为历史阶段记录，旧“当前”描述不覆盖本节。
+
 ## 当前开发版：0.7.7 Build 2 · 2026-10-07 17:25
 
 - 源码仍基于发行 `v0.7.7-build.1`，工作区 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`，分支 `codex/0.7.7-build1-development`。Claude 适配及其他既有本地修改保留；审计分支未并入。

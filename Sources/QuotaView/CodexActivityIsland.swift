@@ -3814,11 +3814,10 @@ private func activityFont(
     size: CGFloat,
     fallbackWeight: NSFont.Weight
 ) -> NSFont {
-    NSFont(name: name, size: size)
-        ?? NSFont.systemFont(
-            ofSize: size,
-            weight: fallbackWeight
-        )
+    if let font = AstaSansFontRegistrar.font(named: name, size: size) {
+        return font as NSFont
+    }
+    return NSFont.systemFont(ofSize: size, weight: fallbackWeight)
 }
 
 // Live-island adapter; consumes observed task state without mock injection.

@@ -2025,13 +2025,17 @@ struct IslandUsageBento: View {
     @State private var hoveredActivity: Int?
     @State private var selectedActivity: Date?
     @State private var activityMode: IslandActivityHeatmap.Mode = .daily
+    @StateObject private var chartCache = IslandUsageChartCache()
     private let secondary = Color(white: 0.68)
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
-    private var chart: EstimatedCostChartModel { .init(activity: current?.tokenActivity ?? [], endingAt: Date()) }
-    private var selectedCost: EstimatedCostChartModel.Day? { chart.days.first { $0.date == selectedDay } }
+    private var charts: IslandUsageChartCache.Models {
+        chartCache.models(activity: current?.tokenActivity ?? [],
+                          lifetimeTokens: current?.lifetimeTokens, endingAt: Date())
+    }
+    private var chart: EstimatedCostChartModel { charts.cost }
     private func surface<Content: View>(highlightBottom: Bool = false, contentInset: CGFloat = 14, @ViewBuilder content: () -> Content) -> some View {
         content().padding(contentInset).frame(maxWidth: .infinity, alignment: .leading)
             .background {
@@ -2048,11 +2052,13 @@ struct IslandUsageBento: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .transition(.opacity)
                     }
+                    // The tooltip is part of content and can cross this edge. Keep
+                    // the card's border behind it, not in an outer content overlay.
+                    RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5)
                 }
                 .allowsHitTesting(false)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: highlightBottom)
             }
-            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5).allowsHitTesting(false) }
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
@@ -2106,7 +2112,9 @@ struct IslandUsageBento: View {
                                         claudeQuotaCard(claude.sevenDay, title: text("每周额度", "Weekly quota"), state: claude.quotaState)
                                     }
                                 } else if let windows = current?.quotaWindows, !windows.isEmpty {
-                                    ForEach(windows) { window in quotaCard(window) }
+                                    HStack(spacing: 10) {
+                                        ForEach(windows) { window in quotaCard(window) }
+                                    }
                                 } else { quotaCard(nil) }
                             }
                             if activeOptions.spark, let spark = current?.sparkQuota {
@@ -2296,7 +2304,9 @@ struct IslandUsageBento: View {
     }
     private var costSummaryWidth: CGFloat { max(1, (contentWidth - 28 - costPlotWidth - 28) / 2) }
     private var costCard: some View {
-        surface {
+        let chart = self.chart
+        let selectedCost = chart.days.first { $0.date == selectedDay }
+        return surface {
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     heading(text("成本估算", "Cost estimate"))
@@ -2304,7 +2314,7 @@ struct IslandUsageBento: View {
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Text(text("最近 30 天", "Last 30 days")).font(.system(size: 10)).foregroundStyle(secondary)
                 }.frame(width: costSummaryWidth, alignment: .leading)
-                Color.clear.frame(width: costPlotWidth).overlay { costChart.padding(.top, 14) }.zIndex(10)
+                Color.clear.frame(width: costPlotWidth).overlay { costChart(chart).padding(.top, 14) }.zIndex(10)
                 VStack(alignment: .trailing, spacing: 10) {
                     Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
@@ -2317,7 +2327,7 @@ struct IslandUsageBento: View {
             }.fixedSize(horizontal: false, vertical: true)
         }
     }
-    private var costChart: some View {
+    private func costChart(_ chart: EstimatedCostChartModel) -> some View {
             GeometryReader { proxy in
             HStack(alignment: .bottom, spacing: IslandActivityHeatmap.gap) {
                 ForEach(chart.days) { day in
@@ -2325,7 +2335,7 @@ struct IslandUsageBento: View {
                         RoundedRectangle(cornerRadius: min(2, chartCellWidth / 4))
                             .fill(selectedDay == day.date || hoveredCost == day.date
                                 ? Color.white
-                                : costBarColor(day.estimatedCost))
+                                : costBarColor(day.estimatedCost, maximum: chart.maximumCost))
                             .overlay {
                                 if selectedDay == day.date || hoveredCost == day.date {
                                     RoundedRectangle(cornerRadius: min(2, chartCellWidth / 4)).strokeBorder(.white, lineWidth: 1)
@@ -2334,8 +2344,9 @@ struct IslandUsageBento: View {
                             .frame(width: chartCellWidth, height: max(3, proxy.size.height * (day.estimatedCost ?? 0) / max(0.001, chart.maximumCost)))
                             .frame(height: proxy.size.height, alignment: .bottom).contentShape(Rectangle())
                     }.buttonStyle(.plain).onHover { inside in
-                        if inside { hoveredCost = day.date }
-                        else if hoveredCost == day.date { hoveredCost = nil }
+                        if inside {
+                            if hoveredCost != day.date { hoveredCost = day.date }
+                        } else if hoveredCost == day.date { hoveredCost = nil }
                     }.accessibilityLabel(day.date.formatted(date: .abbreviated, time: .omitted) + ": " + money(day.estimatedCost))
                 }
             }.overlay(alignment: .topLeading) {
@@ -2357,7 +2368,7 @@ struct IslandUsageBento: View {
             }
     }
     private var activityCard: some View {
-        let grid = IslandActivityHeatmap(activity: current?.tokenActivity ?? [], endingAt: Date(), mode: activityMode, lifetimeTokens: current?.lifetimeTokens)
+        let grid = charts.activity(mode: activityMode)
         return surface {
             VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 4) {
@@ -2393,8 +2404,9 @@ struct IslandUsageBento: View {
                                             .overlay { if activityMode == .daily && (cell.date == selectedActivity || hoveredActivity == index) { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
                                     }.buttonStyle(.plain).disabled(cell.future)
                                         .onHover { inside in
-                                            if inside && !cell.future { hoveredActivity = index }
-                                            else if hoveredActivity == index { hoveredActivity = nil }
+                                            if inside && !cell.future {
+                                                if hoveredActivity != index { hoveredActivity = index }
+                                            } else if hoveredActivity == index { hoveredActivity = nil }
                                         }
                                         .opacity(cell.future ? 0 : 1)
                                         .accessibilityLabel(cell.date.formatted(date: .abbreviated, time: .omitted) + ": " + tokens(cell.tokens))
@@ -2453,9 +2465,9 @@ struct IslandUsageBento: View {
         else { label = value.formatted() }
         return label + text(" 个 Token", " tokens")
     }
-    private func costBarColor(_ value: Double?) -> Color {
+    private func costBarColor(_ value: Double?, maximum: Double) -> Color {
         guard let value, value > 0 else { return Color(white: 0.18) }
-        let level = value / max(0.001, chart.maximumCost)
+        let level = value / max(0.001, maximum)
         return Color(white: level < 0.25 ? 0.35 : level < 0.5 ? 0.48 : level < 0.75 ? 0.62 : 0.76)
     }
     private func heatColor(_ value: Int64?, maximum: Int64) -> Color {
@@ -2472,6 +2484,51 @@ struct IslandUsageBento: View {
         case .weekly: text("每周", "Weekly")
         case .cumulative: text("累计", "Cumulative")
         }
+    }
+}
+
+/// One data generation per visible usage page. Hover/selection never invalidates
+/// the models; real data, provider totals and UTC day changes do. No published
+/// state is needed: the owning view is already invalidated by those inputs.
+final class IslandUsageChartCache: ObservableObject {
+    private struct Key: Equatable {
+        let activity: [DailyTokenActivity]
+        let lifetimeTokens: Int64?
+        let utcDay: Double
+    }
+
+    struct Models {
+        let cost: EstimatedCostChartModel
+        let daily: IslandActivityHeatmap
+        let weekly: IslandActivityHeatmap
+        let cumulative: IslandActivityHeatmap
+
+        func activity(mode: IslandActivityHeatmap.Mode) -> IslandActivityHeatmap {
+            switch mode {
+            case .daily: daily
+            case .weekly: weekly
+            case .cumulative: cumulative
+            }
+        }
+    }
+
+    private var cachedKey: Key?
+    private var cachedModels: Models?
+
+    func models(activity: [DailyTokenActivity], lifetimeTokens: Int64?, endingAt: Date) -> Models {
+        let key = Key(activity: activity, lifetimeTokens: lifetimeTokens,
+                      utcDay: floor(endingAt.timeIntervalSince1970 / 86_400))
+        if key == cachedKey, let cachedModels { return cachedModels }
+
+        let models = Models(
+            cost: .init(activity: activity, endingAt: endingAt),
+            daily: .init(activity: activity, endingAt: endingAt, mode: .daily, lifetimeTokens: lifetimeTokens),
+            weekly: .init(activity: activity, endingAt: endingAt, mode: .weekly, lifetimeTokens: lifetimeTokens),
+            cumulative: .init(activity: activity, endingAt: endingAt, mode: .cumulative, lifetimeTokens: lifetimeTokens)
+        )
+        cachedKey = key
+        cachedModels = models
+        return models
     }
 }
 

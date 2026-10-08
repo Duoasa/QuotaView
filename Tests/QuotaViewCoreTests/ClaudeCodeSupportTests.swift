@@ -364,6 +364,10 @@ final class ClaudeCodeSupportTests: XCTestCase {
 
         func connect() throws -> Int32 {
             let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+            XCTAssertGreaterThanOrEqual(descriptor, 0)
+            var noSigPipe: Int32 = 1
+            XCTAssertEqual(setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe,
+                                     socklen_t(MemoryLayout<Int32>.size)), 0)
             var address = sockaddr_un(); address.sun_family = sa_family_t(AF_UNIX)
             _ = withUnsafeMutableBytes(of: &address.sun_path) { buffer in
                 socket.path.utf8CString.withUnsafeBytes { buffer.copyMemory(from: $0) }
@@ -374,11 +378,14 @@ final class ClaudeCodeSupportTests: XCTestCase {
             XCTAssertEqual(result, 0)
             var timeout = timeval(tv_sec: 2, tv_usec: 0)
             setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+            // The helper can be scheduled after accept. It must not be closed
+            // just because the first JSON bytes are not immediately available.
+            Thread.sleep(forTimeInterval: 0.05)
             return descriptor
         }
         func send(_ descriptor: Int32, _ object: [String: Any]) {
             var data = try! JSONSerialization.data(withJSONObject: object); data.append(0x0A)
-            _ = data.withUnsafeBytes { Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }
+            XCTAssertEqual(data.withUnsafeBytes { Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }, data.count)
         }
         func readLine(_ descriptor: Int32) -> [String: Any]? {
             var data = Data(); var byte: UInt8 = 0
@@ -411,20 +418,155 @@ final class ClaudeCodeSupportTests: XCTestCase {
 }
 
 extension ClaudeCodeSupportTests {
+    @MainActor
+    private func runtimeFixture() throws -> (AppPreferences, ClaudeCodeRuntime, ClaudeCodeInstaller, URL, IslandSession) {
+        let suite = "QuotaView.ClaudeLifecycle.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.claudeCodeEnabled = true
+        let helper = temporary.appendingPathComponent("bundle/QuotaViewActivityHook")
+        try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("#!/bin/sh\n".utf8).write(to: helper)
+        chmod(helper.path, 0o755)
+        let socket = URL(fileURLWithPath: "/tmp/qv-cl-\(UUID().uuidString.prefix(8)).sock")
+        let installer = ClaudeCodeInstaller(socketURL: socket, authenticationToken: "tok",
+            configurationDirectory: temporary.appendingPathComponent("claude"),
+            supportDirectory: temporary.appendingPathComponent("support"), helperURL: helper, environment: [:])
+        let island = IslandSession()
+        let runtime = ClaudeCodeRuntime(preferences: preferences, island: island, defaults: defaults, installer: installer)
+        addTeardownBlock {
+            await MainActor.run { runtime.stop(); island.stop() }
+            UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite)
+            unlink(socket.path + ".lock")
+        }
+        return (preferences, runtime, installer, socket, island)
+    }
+
+    @MainActor
+    private func waitForRuntime(_ condition: () -> Bool) async throws {
+        for _ in 0..<100 {
+            if condition() { return }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertTrue(condition(), "Claude runtime did not reach the expected state")
+    }
+
+    @MainActor
+    func testRuntimeRestartsConnectionWithUnchangedPreferences() async throws {
+        let (_, runtime, _, socket, _) = try runtimeFixture()
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        runtime.stop()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: socket.path))
+        runtime.start()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: socket.path), "restart must recreate the listener")
+        let reply = Self.send(["authenticationToken": "tok", "eventID": "after-restart", "kind": "hook",
+            "payload": ["hook_event_name": "SessionStart", "session_id": "restarted"]], to: socket)
+        XCTAssertEqual(reply?["accepted"] as? Bool, true)
+        try await waitForRuntime { runtime.status == .connected }
+    }
+
+    @MainActor
+    func testRuntimeStopCancelsQueuedConfiguration() async throws {
+        let (_, runtime, installer, _, _) = try runtimeFixture()
+        runtime.start()
+        runtime.stop()
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: installer.settingsURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: installer.routeURL.path))
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        XCTAssertTrue(installer.state().hooksInstalled)
+    }
+
+    @MainActor
+    func testRuntimeReportsFailedDisableAndRetriesCleanup() async throws {
+        let (preferences, runtime, installer, _, _) = try runtimeFixture()
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        let configured = try Data(contentsOf: installer.settingsURL)
+        let invalid = Data("{concurrent edit".utf8)
+        try invalid.write(to: installer.settingsURL)
+        preferences.claudeCodeEnabled = false
+        try await waitForRuntime { if case .failed = runtime.status { return true }; return false }
+        XCTAssertEqual(try Data(contentsOf: installer.settingsURL), invalid)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: installer.routeURL.path))
+
+        try configured.write(to: installer.settingsURL)
+        runtime.retry()
+        try await waitForRuntime { runtime.status == .disabled }
+        XCTAssertFalse(installer.state().hasOwnedHooks)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: installer.routeURL.path))
+    }
+
+    @MainActor
+    func testRuntimeDisablingApprovalsReturnsHeldAndLateRequestsToTerminal() async throws {
+        let (preferences, runtime, _, socket, island) = try runtimeFixture()
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        func permission(_ id: String) -> [String: Any] {
+            ["authenticationToken": "tok", "eventID": id, "kind": "hook", "awaitDecision": true,
+             "payload": ["hook_event_name": "PermissionRequest", "session_id": "approval-session",
+                         "tool_name": "Bash", "tool_use_id": id, "tool_input": ["command": "pwd"]]]
+        }
+        let (held, reply) = try XCTUnwrap(Self.openRequest(permission("held"), to: socket))
+        defer { Darwin.close(held) }
+        XCTAssertEqual(reply?["pending"] as? Bool, true)
+        try await waitForRuntime { island.model.tasks.first?.requests.first?.value.canRespond == true }
+        let wire = try XCTUnwrap(island.model.tasks.first?.requests.first?.value.protocolRequest)
+        preferences.claudeCodeInteractiveApprovals = false
+        XCTAssertFalse(island.model.claudeResponseCapability?(wire) ?? true, "the current preference revokes response immediately")
+        try await waitForRuntime { island.model.tasks.first?.requests.first?.value.canRespond == false }
+        var byte: UInt8 = 0
+        XCTAssertEqual(Darwin.recv(held, &byte, 1, 0), 0, "held helper receives EOF without an allow/deny decision")
+
+        // A helper that read the old route before the toggle can still arrive asking to wait.
+        let (late, lateReply) = try XCTUnwrap(Self.openRequest(permission("late"), to: socket))
+        defer { Darwin.close(late) }
+        XCTAssertEqual(lateReply?["pending"] as? Bool, true)
+        try await waitForRuntime { island.model.tasks.first?.requests.count == 2 }
+        XCTAssertEqual(Darwin.recv(late, &byte, 1, 0), 0)
+        XCTAssertTrue(island.model.tasks.first?.requests.allSatisfy { !$0.value.canRespond } == true)
+        preferences.claudeCodeInteractiveApprovals = true
+        XCTAssertFalse(island.model.claudeResponseCapability?(wire) ?? true, "re-enabling cannot reacquire a returned helper")
+        do {
+            try await island.model.claudeRespond?(wire, .object(["decision": .string("accept")]))
+            XCTFail("a returned request must reject a stale response")
+        } catch { }
+        for id in ["held", "late"] {
+            _ = Self.send(["authenticationToken": "tok", "eventID": "finished-" + id, "kind": "hook",
+                "payload": ["hook_event_name": "PostToolUse", "session_id": "approval-session",
+                            "tool_name": "Bash", "tool_use_id": id]], to: socket)
+        }
+        try await waitForRuntime { island.model.tasks.first?.requests.isEmpty == true }
+    }
+
     private static func send(_ object: [String: Any], to socket: URL) -> [String: Any]? {
+        guard let (descriptor, reply) = openRequest(object, to: socket) else { return nil }
+        Darwin.close(descriptor)
+        return reply
+    }
+
+    private static func openRequest(_ object: [String: Any], to socket: URL) -> (Int32, [String: Any]?)? {
         let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        defer { Darwin.close(descriptor) }
+        guard descriptor >= 0 else { return nil }
+        var noSigPipe: Int32 = 1
+        setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+        var timeout = timeval(tv_sec: 2, tv_usec: 0)
+        setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         var address = sockaddr_un(); address.sun_family = sa_family_t(AF_UNIX)
         _ = withUnsafeMutableBytes(of: &address.sun_path) { buffer in socket.path.utf8CString.withUnsafeBytes { buffer.copyMemory(from: $0) } }
         let connected = withUnsafePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
         }
-        guard connected == 0 else { return nil }
+        guard connected == 0 else { Darwin.close(descriptor); return nil }
         var data = try! JSONSerialization.data(withJSONObject: object); data.append(0x0A)
-        _ = data.withUnsafeBytes { Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }
+        guard data.withUnsafeBytes({ Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }) == data.count else {
+            Darwin.close(descriptor); return nil
+        }
         var reply = Data(); var byte: UInt8 = 0
         while Darwin.recv(descriptor, &byte, 1, 0) == 1, byte != 0x0A { reply.append(byte) }
-        return (try? JSONSerialization.jsonObject(with: reply)) as? [String: Any]
+        return (descriptor, (try? JSONSerialization.jsonObject(with: reply)) as? [String: Any])
     }
 
     @MainActor

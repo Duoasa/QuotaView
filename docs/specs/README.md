@@ -1,5 +1,7 @@
 # QuotaView SDD 注册表
 
+> 2026-10-08 开发源码修订：字体容错、用量 hover/描边与 Codex 双额度横排，以及 Claude 生命周期/审批开关修复已进入本地开发包；本次按用户要求同步源码并合入 main。当前运行与检查边界见 [Handoff](../../HANDOFF.md)，规则见[界面约束](../design/QUOTAVIEW_UI_RULES.md#用量布局hover-与字体可靠性--2026-10-08)及 [Claude 规格](claude-code-support.md#生命周期与审批开关修订--2026-10-08)。不代表发布新版本或视觉验收通过。
+
 > 2026-10-07 17:25 Build 2：示意比例收紧，去掉顶部“演示”，用量简化为实际模块布局图；默认窗口 872 × 760。修正开发运行包被 Xcode 清理导致的图片缺失，独立运行包 PID 49617，资源和加载路径已核对；未执行本地测试。用户已授权推送并合并本版源码，[PR #84](https://github.com/Duoasa/QuotaView/pull/84) 显式撤回旧审计改动后加入当前版本；CI/合并进度见 PR 和 [Handoff](../../HANDOFF.md)。
 
 > 2026-10-07 17:15 Build 2：标题/描述移入下方设置区；上方灵动岛与用量改为生产组件 + 局部示例数据的完整 demo，跟随相关选项，取代真实任务预览及抽象模块条。Debug arm64 编译通过并运行 PID 45792；未执行测试、未推送，视觉待用户验收。见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
