@@ -31,6 +31,7 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     private var isPreparingTermination = false
 
     override init() {
+        AstaSansFontRegistrar.registerBundledFonts()
         let preferences = AppPreferences()
         if Bundle.main.bundleIdentifier == "com.quotaview.development073",
            UserDefaults.standard.object(forKey: "development073.initialized") == nil {
@@ -51,7 +52,6 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(
         _ notification: Notification
     ) {
-        AstaSansFontRegistrar.registerBundledFonts()
         // The controller admits only the official, trusted Release identity.
         // Debug and isolated development builds remain inactive.
         updateController.start()

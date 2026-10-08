@@ -1172,6 +1172,19 @@ final class IslandLiveStore {
         onChange?()
     }
 
+    /// Returning the helper to Claude Code revokes local answers, but the
+    /// underlying permission still waits in the terminal until a real event settles it.
+    func returnClaudeRequestToTerminal(sessionKey: String, rpcID: IslandApprovalJSON) {
+        guard let i = tasks.firstIndex(where: { $0.key == sessionKey }),
+              let request = tasks[i].requestLifecycle.requests.firstIndex(where: {
+                  $0.value.protocolRequest?.isClaudeCode == true && $0.value.protocolRequest?.rpcID == rpcID
+              }) else { return }
+        tasks[i].requestLifecycle.requests[request].value.canRespond = false
+        tasks[i].requestLifecycle.requests[request].value.impact = .init(
+            "请在运行 Claude Code 的终端处理。", "Handle this request in the Claude Code terminal.")
+        onChange?()
+    }
+
     func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); providers.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
