@@ -55,7 +55,8 @@ let package = Package(
                 .copy("Resources/CodexActivityRippleGlowShader.txt"),
                 .copy("Resources/CodexProviderIcon.png"),
                 .copy("Resources/CodexAgentAvatars"),
-                .copy("Resources/QuotaViewFeedbackQQ.jpg")
+                .copy("Resources/QuotaViewFeedbackQQ.jpg"),
+                .process("Resources/SettingsIslandPreview.xcassets")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

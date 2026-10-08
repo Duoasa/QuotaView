@@ -1,5 +1,20 @@
 # QuotaView Handoff
 
+## 当前开发更新：灵动岛静态预览与完成展示 · 2026-10-08
+
+### 工作区与版本定位
+
+- 开发工作区 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget`；分支 `codex/0.7.7-build1-development`。本轮基于已合入 main 的 PR #85 / `0216fd4`，保留公开 Build 1 基线及已接受的 Claude/设置集成。
+- 任务全部成功完成时，收起态显示真实剩余额度与完成摘要；存在运行任务时，新完成提示展示 3 秒后切回运行任务，展开列表的手动选择独立。完成球保持慢速流动，继续服从离屏、禁播与 Reduce Motion。
+- 灵动岛设置页采用 Figma 静态壁纸、刘海轮廓与特效图片。预览 760 × 212 pt、岛内容 510 × 150.4 pt、任务卡 462 × 60 pt；最新底部圆角保留原始 SVG。中英文固定示例字段完整，图内工具不执行真实操作，不运行 Metal 或真实任务观察。
+- 移除晶钻前沿，保留状态烟雾、量子噪点、液态涌浪；旧偏好回退量子噪点，其他效果 shader 索引保持 0、2、3。细节见[设置接入记录](docs/design/quotaview-settings-island-figma-20261008.md)。
+- 2026-10-08 18:24（上海）开发运行核验：`.build/DevelopmentRuntime/QuotaView.app`，PID 49703；0.7.7 / 显示 Build 2 / 内部 58，`com.quotaview.development073`。217 项构建输入、7 个预览资产、完整包与实际 App/Core 加载路径匹配。正式安装保持原样。
+- Debug arm64 增量编译通过；未新增或运行本地测试、未自动化视觉验收。同步既有测试中的三效果和完成摘要期望；本轮 PR/main CI 结果以 GitHub 对应提交为准。视觉与真实交互仍由用户验收。
+- 证据：`.build/compact-completion-20261008/`、`.build/island-preview-proportions-20261008/`；旧运行包备份 `.build/runtime-package-backups/settings-proportions-20261008-182408/QuotaView.app`。
+- 本次只推送源码并合并 main；公开稳定版仍为 0.7.7 Build 1。另一批文档整理、归档及未跟踪原型保留本地，本次未纳入。
+
+下方为历史阶段记录；旧运行状态与旧实现描述不覆盖本节。
+
 ## 当前开发版：0.7.7 Build 2 · 2026-10-08
 
 - 当前源码以已合入 main 的 `afdcf1d`（PR #84）为基础，保留用户接受的 Build 1 基线及 Claude/设置集成；本次不恢复旧审计改动。当前工作区与开发身份保持。

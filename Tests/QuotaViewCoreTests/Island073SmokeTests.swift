@@ -118,7 +118,7 @@ final class Island073SmokeTests: XCTestCase {
     }
 
     @MainActor
-    func testCompactTextAlwaysIncludesStatusAndFallbackTask() {
+    func testCompactTextIncludesStatusOrCompletedSummary() {
         let model = IslandLiveStore(); start(model, "compact", "one", at: Date())
         let board = IslandBoardState()
         var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
@@ -128,12 +128,12 @@ final class Island073SmokeTests: XCTestCase {
                 accessibilityLabel: "测试任务"))]
             display.state.selectedID = 1
             board.update(display, reduceMotion: true)
-            XCTAssertEqual(board.compactTaskText, "状态 · 测试任务")
+            XCTAssertEqual(board.compactTaskText, state == .completed ? board.summary : "状态 · 测试任务")
             display.state.tasks = [.init(id: 1, renderState: .init(visualState: state,
                 approximateProgressFraction: nil, windowTitle: "Test task", statusTitle: "Status", operation: "Status · Public update",
                 accessibilityLabel: "Test task"))]
             board.update(display, reduceMotion: true)
-            XCTAssertEqual(board.compactTaskText, "Status · Public update")
+            XCTAssertEqual(board.compactTaskText, state == .completed ? board.summary : "Status · Public update")
         }
         display.state.tasks = []; board.update(display, reduceMotion: true)
         XCTAssertFalse(board.compactTaskText.isEmpty)

@@ -1111,44 +1111,6 @@ float activityStateSmokeHorizontalOpacity(
     );
 }
 
-float activityProgressDiamondDensity(
-    float2 uv,
-    float aspect,
-    float front,
-    float time,
-    float pulse,
-    float turbulence
-) {
-    float rows = 7.5;
-    float columns = max(rows * aspect, 1.0);
-    float2 coordinate = float2(uv.x * columns, uv.y * rows);
-    float column = floor(coordinate.x);
-    coordinate.y += fmod(column, 2.0) * 0.5;
-    float2 cell = floor(coordinate);
-    float2 local = fract(coordinate) - 0.5;
-    float distanceToDiamond = abs(local.x) + abs(local.y);
-    float core = 1.0 - smoothstep(0.28, 0.47, distanceToDiamond);
-    float bloom = exp(-max(distanceToDiamond - 0.25, 0.0) * 9.5);
-    float seed = activityStateSmokeHash(cell + 17.0);
-    float centerX = (cell.x + 0.5) / columns;
-    float stagger = (seed - 0.5) * (0.028 + turbulence * 0.018);
-    float shimmer =
-        sin(time * 2.8 + seed * 6.2831853) * (0.004 + pulse * 0.005);
-    float activated = 1.0 - smoothstep(
-        front - 0.018,
-        front + 0.032,
-        centerX + stagger + shimmer
-    );
-    float edgeFocus = exp(-abs(centerX - front) * 15.0);
-    return clamp(
-        (core + bloom * (0.12 + edgeFocus * 0.20))
-            * activated
-            * (0.72 + edgeFocus * 0.28),
-        0.0,
-        1.0
-    );
-}
-
 float activityProgressDropDensity(
     float2 pixel,
     float2 resolution,
@@ -1601,16 +1563,7 @@ float4 activityStateSmokeSample(VertexOut in, ActivityStateSmokeUniforms u) {
         * plumeWisps
         * (0.14 + u.diffusion * 0.66);
     density = clamp(max(density, terminalDiffusion), 0.0, 1.0);
-    if (u.effectStyle > 0.5 && u.effectStyle < 1.5) {
-        density = activityProgressDiamondDensity(
-            uv,
-            aspect,
-            completionFront,
-            u.fieldTime,
-            u.pulse,
-            u.turbulence
-        );
-    } else if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
+    if (u.effectStyle >= 1.5 && u.effectStyle < 2.5) {
         density = activityQuantumMotionDensity(pixel, resolution, completionFront, u);
     } else if (u.effectStyle >= 2.5) {
         density = activityProgressSloshDensity(

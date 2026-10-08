@@ -70,7 +70,6 @@ final class AppPreferences: ObservableObject {
 
     enum CodexActivityProgressEffect: String, CaseIterable, Identifiable {
         case stateSmoke
-        case diamondFront
         case dropField
         case sloshFlow
 
@@ -79,7 +78,6 @@ final class AppPreferences: ObservableObject {
         var shaderIndex: Float {
             switch self {
             case .stateSmoke: 0
-            case .diamondFront: 1
             case .dropField: 2
             case .sloshFlow: 3
             }
@@ -92,8 +90,6 @@ final class AppPreferences: ObservableObject {
             switch self {
             case .stateSmoke:
                 ("状态烟雾", "State Smoke")
-            case .diamondFront:
-                ("晶钻前沿", "Diamond Front")
             case .dropField:
                 ("量子噪点", "Quantum Noise")
             case .sloshFlow:
@@ -512,6 +508,8 @@ final class AppPreferences: ObservableObject {
             defaults.storedInt(forKey: Key.codexActivityAutomaticPopupDuration,
                 defaultValue: CodexActivityAutomaticPopupTiming.defaultDuration)
         )
+        // Retired effect values (including diamondFront) use the current default
+        // and are persisted below, so the removed effect cannot remain active.
         codexActivityProgressEffect = CodexActivityProgressEffect(
             rawValue: defaults.string(
                 forKey: Key.codexActivityProgressEffect

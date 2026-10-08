@@ -128,12 +128,13 @@ struct SettingsView: View {
                     settingsStage(for: selection ?? .general, availableHeight: geometry.size.height)
                 }
                 .frame(maxWidth: .infinity)
-                // Keep the section boundary square, independent of the window's container shape.
-                .background(Color.black, in: Rectangle())
-                .environment(\.colorScheme, .dark)
+                .background(selection == .island ? Color(nsColor: .windowBackgroundColor) : Color.black,
+                            in: Rectangle())
                 .overlay(alignment: .bottom) {
-                    Rectangle().fill(Color(white: 0.125)).frame(height: 1)
-                        .accessibilityHidden(true)
+                    if selection != .island {
+                        Rectangle().fill(Color(white: 0.125)).frame(height: 1)
+                            .accessibilityHidden(true)
+                    }
                 }
                 settingsDetail(for: selection ?? .general)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -177,8 +178,7 @@ struct SettingsView: View {
         }
     }
 
-    // Navigation shares the full-width black visualization header. Narrow
-    // windows retain every destination and expand only the current label.
+    // Narrow windows retain every destination and expand only the current label.
     private static let navigationGroups: [[IslandSettingsPage]] = [
         [.general, .island, .usage], [.connections, .proxy, .feedback], [.about]
     ]
@@ -212,8 +212,10 @@ struct SettingsView: View {
             }
         }
         .padding(4)
-        .background(Color(white: 0.10), in: Capsule(style: .continuous))
-        .overlay(Capsule(style: .continuous).strokeBorder(Color(white: 0.16), lineWidth: 1))
+        .background(selection == .island ? Color.white.opacity(0.10) : Color(white: 0.10),
+                    in: Capsule(style: .continuous))
+        .overlay(Capsule(style: .continuous)
+            .strokeBorder(selection == .island ? Color.white.opacity(0.16) : Color(white: 0.16), lineWidth: 1))
         .fixedSize()
         .environment(\.colorScheme, .dark)
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86), value: selection)
@@ -305,12 +307,15 @@ struct SettingsView: View {
         .accessibilityAddTraits(.isHeader)
     }
 
-    // The black header is reserved for visuals. Keep enough room below it for
-    // the page heading and controls, even at the minimum window height.
+    // Keep enough room below the visual for controls at the minimum window height.
     private func settingsStage(for page: IslandSettingsPage, availableHeight: CGFloat) -> some View {
-        let height: CGFloat = page == .usage ? min(320, max(210, availableHeight * 0.42)) : 160
+        let height: CGFloat = switch page {
+        case .island: 212
+        case .usage: min(320, max(210, availableHeight * 0.42))
+        default: 160
+        }
         let width: CGFloat = switch page {
-        case .island: 560
+        case .island: 760
         case .usage: 680
         case .connections: 580
         case .general: 440
@@ -318,6 +323,7 @@ struct SettingsView: View {
         case .feedback, .about: 400
         }
         return settingsStageVisual(for: page)
+            .environment(\.colorScheme, .dark)
             .frame(maxWidth: width)
             .frame(height: height)
             .padding(.horizontal, SettingsWindowMetrics.contentInset)
@@ -412,26 +418,9 @@ struct SettingsView: View {
         }
     }
 
-    // Isolated sample data drives the same card and usage layouts as the island.
+    // This illustration responds only to preferences, never live tasks or timers.
     private var islandStageVisual: some View {
-        let effect = preferences.codexActivityProgressEffect
-        let duration = preferences.codexActivityAutomaticPopupDuration
-        return VStack(spacing: 14) {
-            SettingsIslandCardPreview(preferences: preferences)
-                .frame(height: 88)
-            HStack(spacing: 8) {
-                settingsStageChip(symbol: "sparkles",
-                    text: copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                settingsStageChip(
-                    symbol: preferences.codexActivityAutomaticPopupEnabled ? "macwindow.badge.plus" : "hand.tap",
-                    text: preferences.codexActivityAutomaticPopupEnabled
-                        ? copy.text("自动弹出 \(duration) 秒", "Opens for \(duration) s")
-                        : copy.text("不自动弹出", "No automatic popups"))
-                if preferences.codexIslandPrivacy {
-                    settingsStageChip(symbol: "eye.slash", text: copy.text("隐私模式", "Privacy"))
-                }
-            }
-        }
+        SettingsIslandPreview(preferences: preferences)
     }
 
     private var usageStageVisual: some View {
@@ -695,6 +684,17 @@ struct SettingsView: View {
                         isOn: $preferences.codexIslandPrivacy)
                 }
             }
+            settingsSection(copy.text("任务特效", "Task effects")) {
+                LazyVGrid(columns: Array(repeating: .init(.flexible()), count: AppPreferences.CodexActivityProgressEffect.allCases.count), spacing: 8) {
+                    ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
+                        Button { preferences.codexActivityProgressEffect = effect } label: {
+                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                        }.buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: preferences.codexActivityProgressEffect == effect))
+                            .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                            .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
+                    }
+                }
+            }
             settingsSection(copy.text("自动展开", "Automatic opening")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("自动弹出", "Automatic popups"),
@@ -711,17 +711,6 @@ struct SettingsView: View {
                                 ($0, copy.text("\($0) 秒", "\($0) s"))
                             })
                             .disabled(!preferences.codexActivityAutomaticPopupEnabled)
-                    }
-                }
-            }
-            settingsSection(copy.text("任务特效", "Task effects")) {
-                LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 4), spacing: 8) {
-                    ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
-                        Button { preferences.codexActivityProgressEffect = effect } label: {
-                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                        }.buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: preferences.codexActivityProgressEffect == effect))
-                            .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                            .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
                     }
                 }
             }
@@ -1354,42 +1343,148 @@ private struct SettingsFeedbackQRCodeImage: View {
     }
 }
 
-/// Permanent settings illustration: no task store, observer or request handles.
-private struct SettingsIslandCardPreview: View {
-    @ObservedObject var preferences: AppPreferences
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var visible = false
-    private let nativeWidth: CGFloat = 520
-    private var english: Bool { preferences.resolvedLanguage == .english }
-    private var copy: AppCopy { preferences.copy }
-    private var task: CodexMultitaskRenderTask {
-        let title = preferences.codexIslandPrivacy ? copy.text("Codex 任务", "Codex task")
-            : copy.text("整理项目资料", "Organize project notes")
-        let status = copy.text("工作中", "Working")
-        return .init(id: 0, renderState: .init(visualState: .working,
-            approximateProgressFraction: 0.58, windowTitle: title, statusTitle: status,
-            operation: preferences.codexIslandPrivacy ? ""
-                : copy.text("汇总文档，准备更新说明", "Summarizing documents and preparing release notes"),
-            tokenUsageTitle: "128K tokens", accessibilityLabel: title + ", " + status))
+/// Bundled Figma snapshots replace the settings page's live shader previews.
+private enum SettingsIslandPreviewAssets {
+    static var bundle: Bundle {
+        #if SWIFT_PACKAGE
+        Bundle.module
+        #else
+        Bundle.main
+        #endif
     }
-    private let metadata = IslandSessionMetadata(modelName: "6 Sol", reasoningEffort: "High", elapsedSeconds: 120)
+
+    static func image(_ name: String) -> Image {
+        Image("SettingsIslandPreview" + name, bundle: bundle)
+    }
+
+    static func effectName(_ effect: AppPreferences.CodexActivityProgressEffect) -> String {
+        switch effect {
+        case .stateSmoke: "StateSmoke"
+        case .dropField: "QuantumNoise"
+        case .sloshFlow: "LiquidWave"
+        }
+    }
+}
+
+/// Permanent, static settings illustration. It has no task store, renderer,
+/// timers or request handles; its controls are decorative, not live buttons.
+private struct SettingsIslandPreview: View {
+    @ObservedObject var preferences: AppPreferences
+    private var copy: AppCopy { preferences.copy }
+    private let secondary = Color(white: 133.0 / 255)
 
     var body: some View {
         GeometryReader { geometry in
-            let scale = min(1, geometry.size.width / nativeWidth)
-            let height: CGFloat = 88
-            IslandTaskCard(progressEffect: preferences.codexActivityProgressEffect,
-                task: task, selected: true, metadata: metadata, english: english,
-                playback: visible && !reduceMotion, effectVisible: visible,
-                reduceMotion: reduceMotion, cardWidth: nativeWidth, minimumCardHeight: height)
-                .frame(width: nativeWidth, height: height)
-                .scaleEffect(scale)
-                .frame(width: nativeWidth * scale, height: height * scale)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
+            ZStack(alignment: .top) {
+                SettingsIslandPreviewAssets.image("Wallpaper")
+                    .resizable().scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+                VStack(spacing: 0) {
+                    header
+                    taskCard.padding(.horizontal, 24).padding(.vertical, 12)
+                    footer
+                }
+                .frame(width: 510, height: 150.4, alignment: .top)
+                .background(alignment: .top) {
+                    // The 150 pt silhouette's SVG includes its original shadow margins.
+                    SettingsIslandPreviewAssets.image("Notch")
+                        .frame(width: 530, height: 171).offset(y: -7.5)
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
         }
-        .onAppear { visible = true }
-        .onDisappear { visible = false }
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(copy.text("灵动岛外观预览", "Island appearance preview"))
+        .accessibilityValue(copy.text(preferences.codexActivityProgressEffect.displayName.simplifiedChinese,
+                                      preferences.codexActivityProgressEffect.displayName.english))
+        .transaction { $0.animation = nil }
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 4.8) {
+                SettingsIslandPreviewAssets.image("QuotaRing").frame(width: 11.2, height: 11.2)
+                Text(copy.text("46% · 4 天", "46% · 4 d"))
+                    .font(.system(size: 9.6, weight: .medium)).foregroundStyle(.white).fixedSize()
+            }
+            .padding(.leading, 6.4).frame(height: 22.4)
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                icon("pin")
+                icon("chevron.up")
+            }
+            .frame(height: 28, alignment: .top)
+        }
+        .padding(.horizontal, 20).frame(height: 36)
+    }
+
+    private var taskCard: some View {
+        VStack(spacing: 5) {
+            HStack(spacing: 6) {
+                Text(copy.text("整理项目资料", "Organize project notes"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .fixedSize()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("6 Sol · High").font(.system(size: 10, weight: .semibold)).fixedSize()
+                Rectangle().fill(Color(white: 61.0 / 255)).frame(width: 1, height: 9)
+                Text("2m").font(.system(size: 10, weight: .semibold)).fixedSize()
+                Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
+                    .frame(width: 16, height: 16, alignment: .topLeading)
+            }
+            .frame(height: 16)
+            HStack(spacing: 8) {
+                Text(copy.text("工作中", "Working"))
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(Color(white: 0.93)).fixedSize()
+                Text("·").foregroundStyle(Color(white: 0.60))
+                Text(copy.text("汇总文档，准备更新说明", "Summarizing notes for release"))
+                    .foregroundStyle(Color(white: 0.80))
+                    .fixedSize()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("128K tokens")
+                    .font(.system(size: 10, weight: .medium)).fixedSize()
+            }
+            .font(.system(size: 11)).frame(height: 14)
+        }
+        .lineLimit(1)
+        .foregroundStyle(secondary)
+        .padding(.leading, 10).padding(.trailing, 8)
+        .frame(height: 60)
+        .background {
+            GeometryReader { geometry in
+                let name = preferences.codexActivityProgressEffect == .dropField ? "QuantumCard"
+                    : SettingsIslandPreviewAssets.effectName(preferences.codexActivityProgressEffect)
+                SettingsIslandPreviewAssets.image(name).resizable().scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(white: 0.125), lineWidth: 1))
+    }
+
+    private var footer: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(copy.text("1 个会话", "1 session")).fixedSize()
+                .padding(.leading, 6.4).frame(height: 22.4)
+            Spacer(minLength: 0)
+            HStack(spacing: 6.4) {
+                Text(copy.text("1 工作中", "1 working")).fixedSize()
+                icon("arrow.clockwise")
+                icon("gearshape")
+            }
+            .frame(width: 310.4, height: 22.4, alignment: .trailing)
+        }
+        .font(.system(size: 9.6, weight: .medium)).foregroundStyle(secondary)
+        .padding(.horizontal, 20).padding(.vertical, 4)
+    }
+
+    private func icon(_ name: String) -> some View {
+        Image(systemName: name).font(.system(size: 9.6, weight: .medium))
+            .foregroundStyle(secondary).frame(width: 22.4, height: 22.4)
     }
 }
 
@@ -1738,26 +1833,6 @@ private struct SettingsTrafficLightHost: NSViewRepresentable {
     }
 }
 
-private struct CodexActivityProgressEffectPreview: NSViewRepresentable {
-    let effect: AppPreferences.CodexActivityProgressEffect
-    let reduceMotion: Bool
-
-    func makeNSView(
-        context: Context
-    ) -> CodexActivityStateSmokePreviewHostView {
-        let view = CodexActivityStateSmokePreviewHostView(effect: effect)
-        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
-        return view
-    }
-
-    func updateNSView(
-        _ view: CodexActivityStateSmokePreviewHostView,
-        context: Context
-    ) {
-        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
-    }
-}
-
 private struct CodexActivityPreviewOptionButtonStyle: ButtonStyle {
     let isSelected: Bool
     let isHovered: Bool
@@ -2051,7 +2126,8 @@ private struct SettingsEffectOptionStyle: ButtonStyle {
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         VStack(spacing: 8) {
-            CodexActivityProgressEffectPreview(effect: effect, reduceMotion: reduceMotion)
+            SettingsIslandPreviewAssets.image(SettingsIslandPreviewAssets.effectName(effect))
+                .resizable().scaledToFill()
                 .frame(height: SettingsEffectPreviewMetrics.height)
                 .clipShape(RoundedRectangle(cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius, style: .continuous))
                 .padding(SettingsEffectPreviewMetrics.inset)
