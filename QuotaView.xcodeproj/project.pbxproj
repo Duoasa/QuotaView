@@ -95,6 +95,7 @@
 		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
 		B07400000000000000000001 /* CodexAgentAvatars in Resources */ = {isa = PBXBuildFile; fileRef = F07400000000000000000001 /* CodexAgentAvatars */; };
 		B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */; };
+		B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F07700000000000000000010 /* SettingsIslandPreview.xcassets */; };
 		B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000011 /* CodexDesktopIPCClient.swift */; };
 		B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000012 /* CodexDesktopRequestProjection.swift */; };
 		F8CFDE9DBF8AB09BDC1C0436 /* ClaudeCodeSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */; };
@@ -264,6 +265,7 @@
 		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
 		F07400000000000000000001 /* CodexAgentAvatars */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/CodexAgentAvatars; sourceTree = "<group>"; };
 		F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Resources/QuotaViewFeedbackQQ.jpg; sourceTree = "<group>"; };
+		F07700000000000000000010 /* SettingsIslandPreview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/SettingsIslandPreview.xcassets; sourceTree = "<group>"; };
 		F07300000000000000000011 /* CodexDesktopIPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopIPCClient.swift; sourceTree = "<group>"; };
 		F07300000000000000000012 /* CodexDesktopRequestProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopRequestProjection.swift; sourceTree = "<group>"; };
 		D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeSupportTests.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 				F0730000000000000000000C /* CodexProviderIcon.png */,
 				F07400000000000000000001 /* CodexAgentAvatars */,
 				F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */,
+				F07700000000000000000010 /* SettingsIslandPreview.xcassets */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07500000000000000000031 /* IslandMarkdownResult.swift */,
@@ -690,6 +693,7 @@
 				B0730000000000000000000C /* CodexProviderIcon.png in Resources */,
 				B07400000000000000000001 /* CodexAgentAvatars in Resources */,
 				B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */,
+				B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,

@@ -228,7 +228,7 @@ private extension CodexActivityVisualState {
                 accent: RippleGlowRGBA(0.36, 0.95, 0.65),
                 upperHighlight: RippleGlowRGBA(0.54, 1.00, 0.79),
                 highlight: RippleGlowRGBA(0.90, 1.00, 0.95),
-                speed: 0.36,
+                speed: 0.12,
                 warp: 1.8,
                 ridgeAmount: 0.30,
                 sharpness: 1.8,

@@ -344,6 +344,9 @@ final class IslandBoardState: ObservableObject {
     static func isRunning(_ task: CodexMultitaskRenderTask) -> Bool {
         [.working, .thinking, .compactingContext].contains(task.renderState.visualState)
     }
+    static func playsOrb(_ task: CodexMultitaskRenderTask) -> Bool {
+        task.playbackEnabled && (isRunning(task) || task.renderState.visualState == .completed)
+    }
     var attentionCount: Int { tasks.filter(Self.needsAttention).count }
     var runningCount: Int { tasks.filter(Self.isRunning).count }
     var completedCount: Int { tasks.filter { $0.renderState.visualState == .completed }.count }
@@ -442,28 +445,50 @@ final class IslandBoardState: ObservableObject {
     var surfaceWidth: CGFloat { compact ? min(geometry.compactWidth, expandedWidth) : (showsReset ? resetWidth : expandedWidth) }
     var height: CGFloat { compact ? geometry.bandHeight : expandedHeight }
     var focusedTask: CodexMultitaskRenderTask? {
-        tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
+        let selected = tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
+        // Compact focus follows activity without changing the task or detail
+        // the user selected in the expanded list.
+        guard compact else { return selected }
+        if let selected, Self.needsAttention(selected) { return selected }
+        if let attention = tasks.first(where: Self.needsAttention) { return attention }
+        if let completed = compactCompletionTask { return completed }
+        if let selected, Self.isRunning(selected) { return selected }
+        return tasks.first(where: Self.isRunning) ?? selected
     }
-    var showsCompactQuota: Bool { focusedTask == nil }
-    @Published private(set) var showsCompletionQuota = false
+    var showsCompactQuota: Bool {
+        tasks.isEmpty || tasks.allSatisfy {
+            $0.renderState.visualState == .completed && !Self.needsAttention($0)
+        }
+    }
     @Published private(set) var showsCompletedStatistic = false
-    private var completionQuotaPending = false
-    private var completionQuotaClose: DispatchWorkItem?
+    private struct CompactCompletion: Equatable {
+        let id: Int
+        let identity: CodexActivityTaskIdentity?
+    }
+    @Published private var compactCompletion: CompactCompletion?
+    private var compactCompletionTask: CodexMultitaskRenderTask? {
+        guard let compactCompletion, runningCount > 0 else { return nil }
+        return tasks.first {
+            $0.id == compactCompletion.id && $0.renderState.taskIdentity == compactCompletion.identity
+                && $0.renderState.visualState == .completed && !Self.needsAttention($0)
+        }
+    }
+    private var completionFocusClose: DispatchWorkItem?
     private var statisticRotation: DispatchWorkItem?
-    private var completionQuotaSerial: UInt64 = 0
+    private var completionFocusSerial: UInt64 = 0
     private var statisticSerial: UInt64 = 0
-    private func noteCompletion() {
+    private func noteCompletion(_ task: CodexMultitaskRenderTask) {
         // A burst is one presentation, extended by each new completion. Never
         // queue one animation per task or replay completions from initial sync.
-        completionQuotaPending = true
-        cancelCompletionQuota()
+        cancelCompletionFocus()
+        compactCompletion = CompactCompletion(id: task.id, identity: task.renderState.taskIdentity)
         showsCompletedStatistic = true
         cancelStatisticRotation()
         reconcileCompactSignals()
     }
-    private func cancelCompletionQuota() {
-        completionQuotaClose?.cancel(); completionQuotaClose = nil
-        completionQuotaSerial &+= 1
+    private func cancelCompletionFocus() {
+        completionFocusClose?.cancel(); completionFocusClose = nil
+        completionFocusSerial &+= 1
     }
     private func cancelStatisticRotation() {
         statisticRotation?.cancel(); statisticRotation = nil
@@ -471,28 +496,29 @@ final class IslandBoardState: ObservableObject {
     }
     private func reconcileCompactSignals() {
         guard display?.visible == true, !tasks.isEmpty else {
-            cancelCompletionQuota(); cancelStatisticRotation()
-            completionQuotaPending = false
-            if showsCompletionQuota { showsCompletionQuota = false }
+            cancelCompletionFocus(); cancelStatisticRotation()
+            if compactCompletion != nil { compactCompletion = nil }
             if showsCompletedStatistic { showsCompletedStatistic = false }
             return
         }
+        // A new turn, removal, pending request, or the last running task ending
+        // invalidates the receipt immediately, even while the island is open.
+        if compactCompletion != nil && (compactCompletionTask == nil || attentionCount > 0) {
+            cancelCompletionFocus(); compactCompletion = nil
+        }
         guard compact else {
-            // Automatic completion previews also last three seconds. Defer the
-            // orb replacement until the compact island is actually visible.
-            cancelCompletionQuota(); cancelStatisticRotation()
-            if showsCompletionQuota { showsCompletionQuota = false }
+            // Count the receipt only while the compact island is visible.
+            // Expanded/manual details keep their own selection and timing.
+            cancelCompletionFocus(); cancelStatisticRotation()
             return
         }
-        if completionQuotaPending, completionQuotaClose == nil {
-            showsCompletionQuota = true
-            let serial = completionQuotaSerial
+        if compactCompletion != nil, completionFocusClose == nil {
+            let serial = completionFocusSerial
             let work = DispatchWorkItem { [weak self] in
-                guard let self, serial == completionQuotaSerial else { return }
-                completionQuotaClose = nil; completionQuotaPending = false
-                showsCompletionQuota = false
+                guard let self, serial == completionFocusSerial else { return }
+                completionFocusClose = nil; compactCompletion = nil
             }
-            completionQuotaClose = work
+            completionFocusClose = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
         }
         guard completedCount > 0 else {
@@ -511,6 +537,7 @@ final class IslandBoardState: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
     }
     var compactTaskText: String {
+        if showsCompactQuota { return summary }
         guard let task = focusedTask else { return summary }
         let render = task.renderState
         let copy = IslandOperationText(operation: render.operation,
@@ -662,13 +689,13 @@ final class IslandBoardState: ObservableObject {
         }
         if attentionOnly && attentionCount == 0 { attentionOnly = false }
         if let detailID, !visibleTasks.contains(where: { $0.id == detailID }) { self.detailID = nil }
-        let newCompletion = previous?.visible == true && value.visible && tasks.contains { task in
+        let newCompletion = previous?.visible == true && value.visible ? tasks.first { task in
             guard task.renderState.visualState == .completed,
                   let old = previous?.state.tasks.first(where: { $0.id == task.id }) else { return false }
             return old.renderState.visualState != .completed
                 || old.renderState.taskIdentity != task.renderState.taskIdentity
-        }
-        if newCompletion { noteCompletion() }
+        } : nil
+        if let newCompletion { noteCompletion(newCompletion) }
         else { reconcileCompactSignals() }
         // Selection synchronously publishes the model in production. Avoid a
         // second layout pass before that selected model reaches the board.
@@ -1353,12 +1380,11 @@ struct IslandBoardView: View {
         else { compactActivitySymbol }
     }
     @ViewBuilder private var compactActivitySymbol: some View {
-        if state.showsCompletionQuota { compactQuotaPercent.frame(minWidth: 30) }
-        else { compactOrb }
+        compactOrb
     }
     private var compactOrb: some View {
         IslandSmallActivityOrb(visualState: state.focusedTask?.renderState.visualState ?? .standby,
-            playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.isRunning) == true)
+            playback: state.playback && state.compact && state.focusedTask.map(IslandBoardState.playsOrb) == true)
             .frame(width: 30).accessibilityHidden(true)
     }
     private var compactStatistics: some View {
@@ -1449,7 +1475,7 @@ struct IslandBoardView: View {
                 IslandBoardTaskRow(progressEffect: state.display?.effect ?? .dropField, task: task, selected: (state.detailID ?? state.focusedTask?.id) == task.id,
                     metadata: state.display?.sessionMetadata[task.id], english: state.english,
                     playback: state.playback && !state.compact && visibleElements.contains(.task(task.id))
-                        && task.playbackEnabled && (IslandBoardState.isRunning(task) || task.renderState.visualState == .completed),
+                        && IslandBoardState.playsOrb(task),
                     effectVisible: state.display?.visible == true && state.display?.playbackEnabled == true
                         && !state.compact && visibleElements.contains(.task(task.id)) && task.playbackEnabled,
                     reduceMotion: state.reduceMotion,

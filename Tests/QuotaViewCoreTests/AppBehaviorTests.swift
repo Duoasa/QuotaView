@@ -544,11 +544,6 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertTrue(
             activityStateSmokeShaderSource.contains(
-                "activityProgressDiamondDensity"
-            )
-        )
-        XCTAssertTrue(
-            activityStateSmokeShaderSource.contains(
                 "activityProgressDropDensity"
             )
         )
@@ -2111,13 +2106,13 @@ final class AppBehaviorTests: XCTestCase {
             savedPreferences.codexActivityProgressEffect,
             .sloshFlow
         )
-        savedPreferences.codexActivityProgressEffect = .diamondFront
+        savedPreferences.codexActivityProgressEffect = .stateSmoke
         XCTAssertEqual(
             savedDefaults.string(
                 forKey: "preferences.codexActivity.progressEffect"
             ),
             AppPreferences.CodexActivityProgressEffect
-                .diamondFront.rawValue
+                .stateSmoke.rawValue
         )
         XCTAssertEqual(
             savedPreferences.codexActivityScreenPlacement,
@@ -2230,16 +2225,16 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testProgressEffectPreferenceUsesStableFourCaseContract() {
+    func testProgressEffectPreferenceUsesStableThreeCaseContract() {
         XCTAssertEqual(
             AppPreferences.CodexActivityProgressEffect.allCases,
-            [.stateSmoke, .diamondFront, .dropField, .sloshFlow]
+            [.stateSmoke, .dropField, .sloshFlow]
         )
         XCTAssertEqual(
             AppPreferences.CodexActivityProgressEffect.allCases.map(
                 \.shaderIndex
             ),
-            [0, 1, 2, 3]
+            [0, 2, 3]
         )
         XCTAssertEqual(
             AppPreferences.CodexActivityProgressEffect.dropField.rawValue,
@@ -3797,7 +3792,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(
             CodexActivityStateSmokeContract
-                .completionHighlightIntensity(for: .diamondFront),
+                .completionHighlightIntensity(for: .stateSmoke),
             0.14,
             accuracy: 0.0001
         )
