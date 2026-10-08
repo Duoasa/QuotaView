@@ -146,6 +146,13 @@ final class ClaudeCodeBridge: @unchecked Sendable {
         while listener >= 0 {
             let connection = Darwin.accept(listener, nil, nil)
             guard connection >= 0 else { return }
+            // Darwin accept inherits O_NONBLOCK from the listener. readLine
+            // needs the bounded receive timeout while the helper sends its JSON.
+            let flags = fcntl(connection, F_GETFL)
+            guard flags >= 0, fcntl(connection, F_SETFL, flags & ~O_NONBLOCK) == 0 else {
+                Darwin.close(connection)
+                continue
+            }
             var noSigPipe: Int32 = 1
             setsockopt(connection, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
             var timeout = timeval(tv_sec: 1, tv_usec: 0)

@@ -260,7 +260,8 @@ final class ActivityIngressBoundaryTests: XCTestCase {
         server.arguments = [script.path, socket.path, log.path, unsupportedCurrentTurn ? "unsupported" : "supported", String(old.timeIntervalSince1970)]
         server.standardInput = FileHandle.nullDevice; server.standardOutput = FileHandle.nullDevice; server.standardError = FileHandle.nullDevice
         try server.run()
-        try await waitUntil { FileManager.default.fileExists(atPath: socket.path) }
+        // Cold Python startup on CI is outside the app's connection deadline.
+        try await waitUntil(timeout: 15) { FileManager.default.fileExists(atPath: socket.path) }
         let shared = CodexSharedAppServerActivityClient(configuration: .init(isEnabled: true, socketURL: socket,
             executablePath: nil, startupTimeoutSeconds: 2, requestTimeoutSeconds: 1))
         let store = makeStore(shared: shared, root: root, localEnabled: true), island = IslandLiveStore(); wire(store, island)
@@ -287,10 +288,11 @@ final class ActivityIngressBoundaryTests: XCTestCase {
         XCTAssertFalse(requests.contains { ($0["params"] as? [String: Any])?["includeTurns"] as? Bool == true })
         await store.stop()
     }
-    private func waitUntil(_ condition: () -> Bool) async throws {
-        let deadline = Date().addingTimeInterval(5)
+    private func waitUntil(timeout: TimeInterval = 5, file: StaticString = #filePath,
+                           line: UInt = #line, _ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
         while !condition(), Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
-        XCTAssertTrue(condition(), "Timed out waiting for isolated ingress fixture")
+        XCTAssertTrue(condition(), "Timed out waiting for isolated ingress fixture", file: file, line: line)
     }
     private static let serverScript = #"""
 import socket, sys, json, struct, hashlib, base64

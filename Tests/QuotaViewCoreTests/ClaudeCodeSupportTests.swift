@@ -364,6 +364,10 @@ final class ClaudeCodeSupportTests: XCTestCase {
 
         func connect() throws -> Int32 {
             let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+            XCTAssertGreaterThanOrEqual(descriptor, 0)
+            var noSigPipe: Int32 = 1
+            XCTAssertEqual(setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe,
+                                     socklen_t(MemoryLayout<Int32>.size)), 0)
             var address = sockaddr_un(); address.sun_family = sa_family_t(AF_UNIX)
             _ = withUnsafeMutableBytes(of: &address.sun_path) { buffer in
                 socket.path.utf8CString.withUnsafeBytes { buffer.copyMemory(from: $0) }
@@ -374,11 +378,14 @@ final class ClaudeCodeSupportTests: XCTestCase {
             XCTAssertEqual(result, 0)
             var timeout = timeval(tv_sec: 2, tv_usec: 0)
             setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+            // The helper can be scheduled after accept. It must not be closed
+            // just because the first JSON bytes are not immediately available.
+            Thread.sleep(forTimeInterval: 0.05)
             return descriptor
         }
         func send(_ descriptor: Int32, _ object: [String: Any]) {
             var data = try! JSONSerialization.data(withJSONObject: object); data.append(0x0A)
-            _ = data.withUnsafeBytes { Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }
+            XCTAssertEqual(data.withUnsafeBytes { Darwin.send(descriptor, $0.baseAddress, $0.count, 0) }, data.count)
         }
         func readLine(_ descriptor: Int32) -> [String: Any]? {
             var data = Data(); var byte: UInt8 = 0
