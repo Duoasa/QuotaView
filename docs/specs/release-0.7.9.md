@@ -1,13 +1,13 @@
 # QuotaView 0.7.9 发布
 
-Spec ID：`QV-RELEASE-079-001` · 状态：`Authorized / Preparing`
+Spec ID：`QV-RELEASE-079-001` · 状态：`Released / User Acceptance Pending`
 
 ## 身份与授权
 
 - 用户于 2026-10-09 明确要求 0.7.9 发布前测试、打包、签名、公证、GitHub 合并 main 和 appcast。
 - 本次身份：`0.7.9 / 显示 Build 1 / Sparkle 内部 59`；tag `v0.7.9-build.1`；资产 `QuotaView-v0.7.9-build.1.zip`。
 - 用户确认沿用仍可恢复的 Sparkle 加密离线备份；要求等新封面到位再正式发布，随后提供 `4.jpg`。原图已保存为 `Resources/QuotaView-0.7.9-Cover.jpg`，用于双语 README 和英文 Release。
-- Stable / Latest 与 appcast 均已授权；在产物、公证、公开回下载与 Feed 检查完成前不记为已发布。
+- Stable / Latest 与 appcast 已完成发布及公开核验；完整不可变资产事实见版本历史。
 - 上一稳定版 `v0.7.7-build.1` 保留不变；完整回滚事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 ## 范围
@@ -27,3 +27,9 @@ Spec ID：`QV-RELEASE-079-001` · 状态：`Authorized / Preparing`
 - 深浅色、中英文、键盘/Escape/外部点击、Reduce Motion、Increase Contrast、VoiceOver、带刘海实机，以及 DSH/Kimi 真实会话端到端交互仍由用户验收；本轮自动化不替代视觉或全设备结论。
 
 本地原始证据：`dist/verification/0.7.9-build1-release/`；开发运行证据：`.build/079-development-runtime-20261009/`。
+
+## 发布完成
+
+最终源码、打包输入及 PR/main CI 已核对；700 项本地完整测试无跳过/失败，CI 700 项中 6 个本机条件按设计跳过；44 项确认契约通过。两处发布前回归已修复。最终 Universal 包的签名、公证/Staple、Gatekeeper、解压启动、实际加载、公开 ZIP 字节与线上 Feed 签名均通过；Feed 保留 0.7.7/0.7.5 回滚项。
+
+开发运行包已更新至最终 DSH 修复源码（18:54 / PID 42476）。[版本历史](../../VERSION_HISTORY.md#当前最新版本)保存发布 tag、提交、Release URL、资产大小/哈希、EdDSA、公证 ID 和 CI/Pages 链接；本规格不复制这些事实。

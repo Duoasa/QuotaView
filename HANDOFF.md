@@ -1,10 +1,12 @@
 # QuotaView Handoff
 
-## 当前发布任务：0.7.9 Build 1（2026-10-09）
+## 当前发布：0.7.9 Build 1（2026-10-09，已完成）
 
-当前开发身份为 `0.7.9 / 显示 Build 1 / 内部 59`，仍使用 `com.quotaview.development073`；18:44 已更新 `.build/DevelopmentRuntime/QuotaView.app`，PID 33365，源码与运行包匹配。此前 0.7.7 Build 2 的运行条目是历史证据。
+**公开稳定版：0.7.9 Build 1 / 内部 59**，源码经 [PR #88](https://github.com/Duoasa/QuotaView/pull/88) 合并 main，GitHub Stable / Latest 与签名 appcast 已发布且公开回下载核验通过。完整 tag、资产、哈希、签名、公证、Feed 和 CI 证据只保存在[版本历史](VERSION_HISTORY.md#当前最新版本)；回滚入口 `v0.7.7-build.1`。
 
-用户已授权正式签名、公证、GitHub Stable / Latest 与 appcast；新封面已收到。发布尚在进行，当前公开稳定版仍为 `v0.7.7-build.1`。测试、产物与完成状态以[0.7.9 发布规格](docs/specs/release-0.7.9.md)及[版本历史](VERSION_HISTORY.md#当前最新版本)为准。独立历史文档整理和原型继续保留在本地。
+开发包仍为 `.build/DevelopmentRuntime/QuotaView.app` / `com.quotaview.development073`，18:54 已更新 `0.7.9 / 1 / 59`，PID 42476；包含 DSH ACK 延迟修复，234 项输入、13 项资源及加载路径匹配。正式安装保持独立，旧版运行记录仅作历史参考。
+
+发布前最终 700 项本地测试无跳过/失败；44 项确认契约及 DSH/Kimi 隔离事件夹具通过。新封面和精简双语 README/英文 Release 已更新。视觉与真实客户端交互仍由用户验收，详见[发布规格](docs/specs/release-0.7.9.md)。独立历史文档整理和原型继续保留在本地。
 
 ## 当前开发更新：灵动岛静态预览与完成展示 · 2026-10-08
 
