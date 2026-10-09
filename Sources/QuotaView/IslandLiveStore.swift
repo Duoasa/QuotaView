@@ -1137,6 +1137,17 @@ final class IslandLiveStore {
     var claudeResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var claudeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     private var providers: [String: IslandAgentProvider] = [:]
+    private var disabledProviders = Set<IslandAgentProvider>()
+    func setProviderEnabled(_ provider: IslandAgentProvider, enabled: Bool) {
+        if enabled { disabledProviders.remove(provider); return }
+        guard disabledProviders.insert(provider).inserted else { return }
+        let removed = Set(tasks.filter { self.provider(for: $0.key) == provider }.map(\.id))
+        tasks.removeAll { removed.contains($0.id) }
+        if removed.contains(selectedID) { selectedID = tasks.first?.id ?? 0 }
+        if let preservedID, removed.contains(preservedID) { self.preservedID = nil }
+        onChange?()
+    }
+
     func setProvider(_ provider: IslandAgentProvider, for key: String) {
         guard providers[key] != provider else { return }
         providers[key] = provider
@@ -1299,6 +1310,7 @@ final class IslandLiveStore {
         onChange?()
     }
     private func index(_ key: String, admit: Bool) -> Int? {
+        guard !disabledProviders.contains(provider(for: key)) else { return nil }
         guard presentationKind(for: key) != .memoryConsolidation, presentationKind(for: key) != .internalTask, presentationKind(for: key) != .subagent else { return nil }
         if let i = tasks.firstIndex(where: { $0.key == key }) { return i }
         guard admit else { return nil }
@@ -1480,7 +1492,7 @@ final class IslandLiveStore {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                     let detail = args?["cmd"] as? String ?? args?["code"] as? String ?? args?["command"] as? String ?? body
                     let label = name.split(separator: ".").last.map(String.init) ?? name
-                    let description = label + " · " + String(detail.replacingOccurrences(of: "\n", with: " ").prefix(240))
+                    let description = detail.isEmpty ? label : label + " · " + String(detail.replacingOccurrences(of: "\n", with: " ").prefix(240))
                     tasks[i].activeItems[id] = description; tasks[i].activityStatus = .working; tasks[i].operation = description
                 }
             }
@@ -2032,6 +2044,10 @@ final class IslandLiveStore {
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
             let provider = self.provider(for: task.key)
             request?.provider = provider
+            if provider == .dsh || provider == .kimiCode {
+                request?.canRespond = false
+                request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
+            }
             details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider)
             let title = privacy ? provider.displayName + (english ? " task" : " 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
             let status: String

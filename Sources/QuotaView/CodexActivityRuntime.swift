@@ -50,6 +50,8 @@ final class CodexActivityRuntime: ObservableObject {
     private var configurationClient: CodexAppServerClient?
     let liveIsland = IslandSession()
     private(set) lazy var claudeCode = ClaudeCodeRuntime(preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var dsh = NativeAgentRuntime(provider: .dsh, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var kimiCode = NativeAgentRuntime(provider: .kimiCode, preferences: preferences, island: liveIsland, defaults: defaults)
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
     private var desktopIPCClient: CodexDesktopIPCClient
@@ -178,11 +180,11 @@ final class CodexActivityRuntime: ObservableObject {
             liveIsland.model.receiveDesktopProjection(projection, snapshot: snapshot)
         }
         liveIsland.model.responseCapability = { [weak self] wire in
-            guard let self, isRunning, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
+            guard let self, isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
             return handle.conversationID == wire.threadID && handle.turnID == wire.turnID
         }
         liveIsland.model.respond = { [weak self] wire, result in
-            guard let self, isRunning, !isChangingDataDirectory, let handle = wire.desktopHandle else {
+            guard let self, isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else {
                 throw CodexDesktopIPCError.staleRequest
             }
             _ = try await self.desktopIPCClient.submit(handle: handle, result: result.data)
@@ -281,7 +283,6 @@ final class CodexActivityRuntime: ObservableObject {
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        startDesktopObservation()
         nativeHookTrusted = false
         currentRunDeliveredInstallation = nil
         bridgeRunStartedAt = Date()
@@ -325,6 +326,7 @@ final class CodexActivityRuntime: ObservableObject {
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
         claudeCode.start()
+        dsh.start(); kimiCode.start()
     }
 
     private func startDesktopObservation() {
@@ -334,7 +336,7 @@ final class CodexActivityRuntime: ObservableObject {
         let client = desktopIPCClient
         desktopObservationTask?.cancel()
         desktopObservationTask = Task { [weak self] in
-            guard let self, isRunning, desktopRunGeneration == run else { return }
+            guard let self, isRunning, preferences.codexIntegrationEnabled, desktopRunGeneration == run else { return }
             await client.start(snapshotHandler: { [weak self] snapshot in
                 guard let self else { return }
                 await self.receiveDesktopSnapshot(snapshot, run: run)
@@ -354,7 +356,7 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     private func receiveDesktopSnapshot(_ snapshot: CodexDesktopConversationSnapshot, run: UInt64) async {
-        guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run,
+        guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, desktopRunGeneration == run,
               desktopFollowedThreads.contains(snapshot.conversationID) else { return }
         let projection: CodexDesktopInteractionProjection
         do {
@@ -438,7 +440,7 @@ final class CodexActivityRuntime: ObservableObject {
                   desktopFollowedThreads.contains(threadID) else { return }
             do { try await client.follow(conversationID: threadID, hostID: "local") }
             catch {
-                guard isRunning, !isChangingDataDirectory, desktopRunGeneration == run,
+                guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, desktopRunGeneration == run,
                       desktopFollowedThreads.contains(threadID) else { return }
                 recordDesktopDiagnostic(threadID, outcome: "follow_pending", details: "reason=\(Self.desktopDiagnosticError(error))")
             }
@@ -672,6 +674,7 @@ final class CodexActivityRuntime: ObservableObject {
     func stop() async {
         isRunning = false
         claudeCode.stop()
+        dsh.stop(); kimiCode.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()
@@ -905,7 +908,7 @@ final class CodexActivityRuntime: ObservableObject {
     func receiveCompatibilityActivity(_ delivery: CodexActivityDelivery) async -> Bool {
         // Retry while launch inspection is pending; acknowledge and discard after
         // removal so cached Codex handlers cannot reactivate the optional channel.
-        guard compatibilityHookAdmissionEnabled,
+        guard preferences.codexIntegrationEnabled, compatibilityHookAdmissionEnabled,
               !isChangingDataDirectory, hookOperation != .removing else { return true }
         guard hasCompatibilityHook else { return ![.inspecting, .installing].contains(hookOperation) }
         let eventGeneration = hookEventGeneration
@@ -995,14 +998,24 @@ final class CodexActivityRuntime: ObservableObject {
         // The primary interface stays available for the application's lifetime.
         // Retired menu-bar/standalone-island visibility preferences do not hide it.
         let enabled = true
-        if observationsEnabled != enabled {
-            observationsEnabled = enabled
+        let observesCodex = preferences.codexIntegrationEnabled
+        liveIsland.model.setProviderEnabled(.codex, enabled: observesCodex)
+        liveIsland.model.setProviderEnabled(.claudeCode, enabled: preferences.claudeCodeEnabled)
+        if observationsEnabled != observesCodex {
+            observationsEnabled = observesCodex
             let previous = observationTask
             observationTask = Task { [weak self] in
                 await previous?.value
-                guard let self, isRunning, observationsEnabled == enabled else { return }
-                if enabled { store.startNativeActivityNotifications() }
-                else { await store.stop() }
+                guard let self, isRunning, observationsEnabled == observesCodex else { return }
+                if observesCodex {
+                    store.startNativeActivityNotifications()
+                    startDesktopObservation()
+                } else {
+                    desktopRunGeneration &+= 1
+                    desktopObservationTask?.cancel()
+                    await desktopIPCClient.stop()
+                    await store.stop()
+                }
             }
         }
         store.setMultitaskEnabled(enabled)

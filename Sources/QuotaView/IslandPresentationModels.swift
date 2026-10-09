@@ -101,7 +101,7 @@ extension AppCopy {
     var islandSubagentInterrupted: String { text("已中断", "Interrupted") }
     var islandSubagentGroupName: String { text("Codex子agent", "Codex agents") }
     func islandSubagentGroupName(_ provider: IslandAgentProvider) -> String {
-        provider == .codex ? islandSubagentGroupName : text("Claude Code 子 Agent", "Claude Code agents")
+        provider == .codex ? islandSubagentGroupName : text("\(provider.displayName) 子 Agent", "\(provider.displayName) agents")
     }
     func islandSubagentGroupTitle(count: Int) -> String {
         "\(islandSubagentGroupName) (\(count))"
@@ -144,8 +144,10 @@ struct CodexPublicTraceItem: Equatable {
     var messagePhase: String? = nil
 }
 enum IslandAgentProvider: String, Equatable, Sendable {
-    case codex, claudeCode
-    var displayName: String { self == .codex ? "Codex" : "Claude Code" }
+    case codex, claudeCode, dsh, kimiCode
+    var displayName: String {
+        switch self { case .codex: "Codex"; case .claudeCode: "Claude Code"; case .dsh: "DSH"; case .kimiCode: "Kimi Code" }
+    }
 }
 enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }
 struct IslandConfirmation: Identifiable, Equatable {

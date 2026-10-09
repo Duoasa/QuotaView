@@ -56,6 +56,7 @@ let package = Package(
                 .copy("Resources/CodexProviderIcon.png"),
                 .copy("Resources/CodexAgentAvatars"),
                 .copy("Resources/QuotaViewFeedbackQQ.jpg"),
+                .process("Resources/ProviderIcons.xcassets"),
                 .process("Resources/SettingsIslandPreview.xcassets")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
