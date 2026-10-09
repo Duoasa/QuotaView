@@ -1,5 +1,11 @@
 # QuotaView Handoff
 
+## 当前发布任务：0.7.9 Build 1（2026-10-09）
+
+当前开发身份为 `0.7.9 / 显示 Build 1 / 内部 59`，仍使用 `com.quotaview.development073`；18:44 已更新 `.build/DevelopmentRuntime/QuotaView.app`，PID 33365，源码与运行包匹配。此前 0.7.7 Build 2 的运行条目是历史证据。
+
+用户已授权正式签名、公证、GitHub Stable / Latest 与 appcast；新封面已收到。发布尚在进行，当前公开稳定版仍为 `v0.7.7-build.1`。测试、产物与完成状态以[0.7.9 发布规格](docs/specs/release-0.7.9.md)及[版本历史](VERSION_HISTORY.md#当前最新版本)为准。独立历史文档整理和原型继续保留在本地。
+
 ## 当前开发更新：灵动岛静态预览与完成展示 · 2026-10-08
 
 ### 工作区与版本定位

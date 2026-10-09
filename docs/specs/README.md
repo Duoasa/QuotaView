@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 当前发布：0.7.9 Build 1
+
+[0.7.9 发布规格](release-0.7.9.md) · `Authorized / Preparing`。版本身份 `0.7.9 / 1 / 59`，GitHub Stable / Latest 与 appcast 已获用户授权；新封面已收到，产物检查与发布进行中。新增规格：[展开宽度](island-expanded-width.md)、[实时预览](settings-live-effect-preview.md)。公开状态以[版本历史](../../VERSION_HISTORY.md#当前最新版本)为准。
+
 > 2026-10-08 当前开发更新：灵动岛设置采用 [Figma 静态预览](../design/quotaview-settings-island-figma-20261008.md)，最新比例、底部圆角及完整固定示例已进入开发包；移除晶钻前沿，保留三种效果。完成后百分比、收起态 3 秒完成提示后跟随运行任务、完成球慢速运动同步更新。规格见[界面规则](../design/QUOTAVIEW_UI_RULES.md#灵动岛设置与完成展示更新--2026-10-08)，源码与运行证据见 [Handoff](../../HANDOFF.md)。本轮获准推送与合并，CI 以对应 GitHub 提交为准；视觉与交互待用户验收。下方较早实现与运行状态属于历史记录。
 
 > 2026-10-08 开发源码修订：字体容错、用量 hover/描边与 Codex 双额度横排，以及 Claude 生命周期/审批开关修复已进入本地开发包；本次按用户要求同步源码并合入 main。当前运行与检查边界见 [Handoff](../../HANDOFF.md)，规则见[界面约束](../design/QUOTAVIEW_UI_RULES.md#用量布局hover-与字体可靠性--2026-10-08)及 [Claude 规格](claude-code-support.md#生命周期与审批开关修订--2026-10-08)。不代表发布新版本或视觉验收通过。

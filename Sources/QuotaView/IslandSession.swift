@@ -21,6 +21,7 @@ final class IslandSession {
     private var usageOptions = IslandUsageOptions()
     private var automaticPopupEnabled = true
     private var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
+    private var expandedWidth = AppPreferences.IslandExpandedWidth.defaultValue
     private var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     private var locked = false
     private var observations: [NSObjectProtocol] = []
@@ -66,11 +67,12 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
         self.backgroundMemorySnapshots = backgroundMemorySnapshots
         self.usageOptions = usageOptions
         self.automaticPopupEnabled = automaticPopupEnabled
         self.automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.normalizedDuration(automaticPopupDuration)
+        self.expandedWidth = AppPreferences.IslandExpandedWidth.normalized(expandedWidth)
         self.progressEffect = progressEffect
         self.usageSnapshot = usageSnapshot
         self.usageState = usageState
@@ -114,6 +116,7 @@ final class IslandSession {
         display.usageOptions = usageOptions
         display.automaticPopupEnabled = automaticPopupEnabled
         display.automaticPopupDuration = automaticPopupDuration
+        display.expandedWidth = expandedWidth
         display.effect = progressEffect
         display.backgroundMemorySnapshots = backgroundMemorySnapshots
         board.update(model: display,

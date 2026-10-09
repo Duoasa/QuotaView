@@ -1032,6 +1032,7 @@ final class CodexActivityRuntime: ObservableObject {
             usageOptions: .init(preferences: preferences), progressEffect: preferences.codexActivityProgressEffect,
             automaticPopupEnabled: preferences.codexActivityAutomaticPopupEnabled,
             automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration,
+            expandedWidth: preferences.codexIslandExpandedWidth,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots)
     }
 

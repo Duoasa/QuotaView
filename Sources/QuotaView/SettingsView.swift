@@ -336,7 +336,10 @@ struct SettingsView: View {
 
     // This illustration responds only to preferences, never live tasks or timers.
     private var islandStageVisual: some View {
-        SettingsIslandPreview(preferences: preferences)
+        let geometry = activityRuntime.liveIsland.board.state.geometry
+        return SettingsIslandPreview(preferences: preferences,
+            expandedWidth: geometry.expandedWidth(preferred: preferences.codexIslandExpandedWidth),
+            maximumExpandedWidth: geometry.maximumExpandedWidth)
     }
 
     // Both providers remain visible at a glance; their settings stay independent.
@@ -414,19 +417,25 @@ struct SettingsView: View {
     }
 
     private func proxyStageConnector(segment: Int) -> some View {
-        HStack(spacing: 3) {
-            Capsule().fill(Color.white.opacity(0.30)).frame(height: 1)
+        HStack(spacing: 0) {
+            Rectangle().fill(.white).frame(width: 4.5, height: 4.5)
+                .rotationEffect(.degrees(45)).frame(width: 6.4, height: 8)
+            SettingsProxyDashedLine()
+                .stroke(.white.opacity(0.95), style: StrokeStyle(lineWidth: 1.2, dash: [3, 2]))
+                .frame(height: 12)
                 .overlay {
                     SettingsProxyFlow(isActive: proxyStageFlowActive,
                                       isTesting: store.proxyTestState == .testing,
                                       segment: segment, reduceMotion: reduceMotion)
-                        .frame(height: 10)
+                        .frame(height: 12)
+                        .mask(SettingsProxyDashedLine()
+                            .stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [3, 2])))
                 }
-            Image(systemName: "chevron.right")
-                .font(.system(size: 8, weight: .medium)).foregroundStyle(Color.white.opacity(0.7))
+            Image(systemName: "arrowtriangle.right.fill")
+                .font(.system(size: 8, weight: .regular)).foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity).frame(height: 52)
-        .shadow(color: SettingsIllustrationPalette.shadow, radius: 2, y: 1)
+        .shadow(color: .black.opacity(0.55), radius: 1, y: 0.5)
         .accessibilityHidden(true)
     }
 
@@ -625,6 +634,15 @@ struct SettingsView: View {
             .accessibilityValue(appearanceSelection.wrappedValue == value ? copy.text("已选择", "Selected") : "")
     }
 
+    private var islandWidthRange: ClosedRange<Double> {
+        let geometry = activityRuntime.liveIsland.board.state.geometry
+        let upper = min(AppPreferences.IslandExpandedWidth.range.upperBound, Double(geometry.maximumExpandedWidth))
+        return min(upper, Double(geometry.minimumExpandedWidth))...upper
+    }
+    private var islandWidthSelection: Binding<Double> {
+        Binding(get: { min(islandWidthRange.upperBound, max(islandWidthRange.lowerBound, preferences.codexIslandExpandedWidth)) },
+                set: { preferences.codexIslandExpandedWidth = AppPreferences.IslandExpandedWidth.normalized($0) })
+    }
     private var islandSettings: some View {
         VStack(alignment: .leading, spacing: 24) {
             settingsSection(copy.text("显示", "Display")) {
@@ -633,6 +651,20 @@ struct SettingsView: View {
                         subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
                         symbol: "eye.slash.fill", color: .systemGray,
                         isOn: $preferences.codexIslandPrivacy)
+                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+                    NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
+                        subtitle: copy.text("仅调整任务列表与用量页，刘海两侧自动保留安全空间。", "Task list and usage only. Space around the camera notch stays clear."),
+                        symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
+                        HStack(spacing: 12) {
+                            Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
+                                .controlSize(.small).frame(width: 150)
+                                .disabled(islandWidthRange.lowerBound == islandWidthRange.upperBound)
+                                .accessibilityLabel(copy.text("展开宽度", "Expanded width"))
+                                .accessibilityValue("\(Int(islandWidthSelection.wrappedValue)) pt")
+                            Text("\(Int(islandWidthSelection.wrappedValue)) pt")
+                                .font(.callout.monospacedDigit()).frame(width: 52, alignment: .trailing)
+                        }
+                    }
                 }
             }
             settingsSection(copy.text("任务特效", "Task effects")) {
@@ -1275,12 +1307,38 @@ private struct SettingsDesktopPreview<Content: View>: View {
     }
 }
 
-/// Permanent, static settings illustration. It has no task store, renderer,
-/// timers or request handles; its controls are decorative, not live buttons.
+/// Small real shader preview; SwiftUI only updates on preferences/visibility changes.
+private struct SettingsLiveEffectPreview: NSViewRepresentable {
+    let effect: AppPreferences.CodexActivityProgressEffect
+    var cornerRadius: CGFloat = 10
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeNSView(context: Context) -> CodexActivityStateSmokePreviewHostView {
+        CodexActivityStateSmokePreviewHostView(effect: effect)
+    }
+    func updateNSView(_ view: CodexActivityStateSmokePreviewHostView, context: Context) {
+        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: cornerRadius)
+        if !view.isRendererAvailable {
+            view.setFallbackImage(SettingsIslandPreviewAssets.bundle.image(forResource:
+                "SettingsIslandPreview" + SettingsIslandPreviewAssets.effectName(effect)))
+        }
+    }
+    static func dismantleNSView(_ view: CodexActivityStateSmokePreviewHostView, coordinator: ()) {
+        view.stop()
+    }
+}
+
+/// Settings illustration with a real effect layer and fixed example content.
+/// It has no task store, lifecycle timers or request handles.
 private struct SettingsIslandPreview: View {
     @ObservedObject var preferences: AppPreferences
+    let expandedWidth: CGFloat
+    let maximumExpandedWidth: CGFloat
     private var copy: AppCopy { preferences.copy }
     private let secondary = Color(white: 133.0 / 255)
+    // Map the effective production width to the existing 510 pt illustration.
+    // Reflow its content rather than scaling text, icons or the desktop backdrop.
+    private var islandWidth: CGFloat { 510 * min(1, expandedWidth / max(1, maximumExpandedWidth)) }
     private var taskTitle: String {
         preferences.codexIslandPrivacy ? copy.text("Codex 任务", "Codex task")
             : copy.text("整理项目资料", "Organize project notes")
@@ -1295,7 +1353,8 @@ private struct SettingsIslandPreview: View {
         let privacy = preferences.codexIslandPrivacy
             ? copy.text("隐私模式已开启", "Privacy mode is on")
             : copy.text("隐私模式已关闭", "Privacy mode is off")
-        return copy.text(effect.simplifiedChinese, effect.english) + ", " + privacy
+        let width = copy.text("展开宽度 \(Int(expandedWidth)) pt", "Expanded width \(Int(expandedWidth)) pt")
+        return [copy.text(effect.simplifiedChinese, effect.english), privacy, width].joined(separator: ", ")
     }
 
     var body: some View {
@@ -1310,11 +1369,13 @@ private struct SettingsIslandPreview: View {
                     taskCard.padding(.horizontal, 24).padding(.vertical, 12)
                     footer
                 }
-                .frame(width: 510, height: 150.4, alignment: .top)
+                .frame(width: islandWidth, height: 150.4, alignment: .top)
                 .background(alignment: .top) {
-                    // The 150 pt silhouette's SVG includes its original shadow margins.
+                    // Stretch only the middle so both corners and shadow margins
+                    // retain the original silhouette as the island gets narrower.
                     SettingsIslandPreviewAssets.image("Notch")
-                        .frame(width: 530, height: 171).offset(y: -7.5)
+                        .resizable(capInsets: EdgeInsets(top: 0, leading: 44, bottom: 0, trailing: 44), resizingMode: .stretch)
+                        .frame(width: islandWidth + 20, height: 171).offset(y: -7.5)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
@@ -1379,10 +1440,9 @@ private struct SettingsIslandPreview: View {
         .frame(height: 60)
         .background {
             GeometryReader { geometry in
-                let name = preferences.codexActivityProgressEffect == .dropField ? "QuantumCard"
-                    : SettingsIslandPreviewAssets.effectName(preferences.codexActivityProgressEffect)
-                SettingsIslandPreviewAssets.image(name).resizable().scaledToFill()
+                SettingsLiveEffectPreview(effect: preferences.codexActivityProgressEffect)
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                    .background(Color(red: 0.065, green: 0.052, blue: 0.080))
                     .clipped()
             }
         }
@@ -1400,7 +1460,7 @@ private struct SettingsIslandPreview: View {
                 icon("arrow.clockwise")
                 icon("gearshape")
             }
-            .frame(width: 310.4, height: 22.4, alignment: .trailing)
+            .frame(height: 22.4, alignment: .trailing)
         }
         .font(.system(size: 9.6, weight: .medium)).foregroundStyle(secondary)
         .padding(.horizontal, 20).padding(.vertical, 4)
@@ -1477,7 +1537,16 @@ private struct SettingsProxyIconSurface: ViewModifier {
     }
 }
 
-/// Decorative route flow runs slowly and speeds up during an actual test.
+private struct SettingsProxyDashedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        }
+    }
+}
+
+/// Decorative route flow follows the dashed path; actual tests run faster.
 /// Two compositor layers share a clock; no per-frame settings updates or polling.
 private struct SettingsProxyFlow: NSViewRepresentable {
     let isActive: Bool
@@ -1496,7 +1565,7 @@ private struct SettingsProxyFlow: NSViewRepresentable {
     final class FlowView: NSView {
         private let packet = CAGradientLayer()
         private var enabled = false
-        private var duration: CFTimeInterval = 4.8
+        private var duration: CFTimeInterval = 2.4
         private var segment = 0
         private var renderedSize = CGSize.zero
         private static let animationKey = "settings.proxy.flow"
@@ -1509,7 +1578,7 @@ private struct SettingsProxyFlow: NSViewRepresentable {
                              NSColor.white.cgColor, NSColor.white.withAlphaComponent(0).cgColor]
             packet.startPoint = CGPoint(x: 0, y: 0.5)
             packet.endPoint = CGPoint(x: 1, y: 0.5)
-            packet.cornerRadius = 1
+            packet.cornerRadius = 1.25
             packet.shadowColor = NSColor.white.cgColor
             packet.shadowOpacity = 0.6
             packet.shadowRadius = 2
@@ -1538,7 +1607,7 @@ private struct SettingsProxyFlow: NSViewRepresentable {
         @objc private func visibilityChanged(_ notification: Notification) { updateAnimation() }
 
         func configure(enabled: Bool, isTesting: Bool, segment: Int) {
-            let nextDuration = isTesting ? 1.6 : 4.8
+            let nextDuration = isTesting ? 1.2 : 2.4
             if duration != nextDuration || self.segment != segment {
                 duration = nextDuration
                 self.segment = segment
@@ -1554,8 +1623,8 @@ private struct SettingsProxyFlow: NSViewRepresentable {
                 renderedSize = bounds.size
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
-                packet.bounds = CGRect(x: 0, y: 0, width: 28, height: 2)
-                packet.position = CGPoint(x: -14, y: bounds.midY)
+                packet.bounds = CGRect(x: 0, y: 0, width: 36, height: 2.5)
+                packet.position = CGPoint(x: -18, y: bounds.midY)
                 CATransaction.commit()
                 packet.removeAnimation(forKey: Self.animationKey)
             }
@@ -1576,7 +1645,7 @@ private struct SettingsProxyFlow: NSViewRepresentable {
             }
             guard packet.animation(forKey: Self.animationKey) == nil else { return }
             let motion = CAKeyframeAnimation(keyPath: "position.x")
-            motion.values = [-14, bounds.width + 14, bounds.width + 14]
+            motion.values = [-18, bounds.width + 18, bounds.width + 18]
             motion.keyTimes = [0, 0.45, 1]
             let fade = CAKeyframeAnimation(keyPath: "opacity")
             fade.values = [0, 1, 1, 0, 0]
@@ -2063,9 +2132,9 @@ private struct SettingsEffectOptionStyle: ButtonStyle {
             // The grid owns the viewport width; an aspect-fill image must not
             // enlarge that width when the preview height changes.
             GeometryReader { geometry in
-                SettingsIslandPreviewAssets.image(SettingsIslandPreviewAssets.effectName(effect))
-                    .resizable().scaledToFill()
+                SettingsLiveEffectPreview(effect: effect, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                    .background(Color(red: 0.065, green: 0.052, blue: 0.080))
                     .clipped()
             }
                 .frame(height: SettingsEffectPreviewMetrics.height)

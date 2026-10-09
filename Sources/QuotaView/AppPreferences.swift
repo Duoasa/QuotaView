@@ -114,6 +114,14 @@ final class AppPreferences: ObservableObject {
         }
     }
 
+    enum IslandExpandedWidth {
+        static let range = 560.0...680.0
+        static let defaultValue = range.upperBound
+        static func normalized(_ value: Double) -> Double {
+            value.isFinite ? min(range.upperBound, max(range.lowerBound, value)) : defaultValue
+        }
+    }
+
     enum CodexActivityTiming {
         static let compactDelayRange = 5...60
         static let hiddenDelayAfterCompactRange = 5...120
@@ -243,6 +251,10 @@ final class AppPreferences: ObservableObject {
 
     @Published var codexIslandPrivacy: Bool {
         didSet { defaults.set(codexIslandPrivacy, forKey: "island.privacyMode") }
+    }
+
+    @Published var codexIslandExpandedWidth: Double {
+        didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
     }
 
     // Claude Code writes the user's ~/.claude/settings.json, so it is opt-in.
@@ -500,6 +512,8 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
+        codexIslandExpandedWidth = IslandExpandedWidth.normalized(
+            (defaults.object(forKey: "island.expandedWidth") as? NSNumber)?.doubleValue ?? IslandExpandedWidth.defaultValue)
         codexIntegrationEnabled = defaults.storedBool(forKey: "integrations.codex.enabled", defaultValue: true)
         dshEnabled = defaults.bool(forKey: "integrations.dsh.enabled")
         kimiCodeEnabled = defaults.bool(forKey: "integrations.kimiCode.enabled")

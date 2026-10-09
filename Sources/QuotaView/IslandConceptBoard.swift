@@ -185,6 +185,18 @@ struct IslandNotchGeometry: Equatable {
     let isSimulated: Bool
     var hasCamera: Bool { cameraWidth > 0 }
     var compactWidth: CGFloat { hasCamera && !isSimulated ? cameraWidth + 280 : IslandVibeLayout.compactWidth }
+    var maximumExpandedWidth: CGFloat {
+        min(max(IslandVibeLayout.expandedWidth, compactWidth + 64), screenFrame.width - 48)
+    }
+    var minimumExpandedWidth: CGFloat {
+        // 144 pt of usable toolbar space on each side, plus insets and camera clearance.
+        min(maximumExpandedWidth, max(CGFloat(AppPreferences.IslandExpandedWidth.range.lowerBound), cameraWidth + 360))
+    }
+    func expandedWidth(preferred: Double) -> CGFloat {
+        let requested = AppPreferences.IslandExpandedWidth.normalized(preferred)
+        if requested == AppPreferences.IslandExpandedWidth.defaultValue { return maximumExpandedWidth }
+        return min(maximumExpandedWidth, max(minimumExpandedWidth, CGFloat(requested)))
+    }
     var maximumExpandedHeight: CGFloat { max(0, screenFrame.maxY - usableBottomY - IslandVibeLayout.screenBottomClearance) }
     init(frame: CGRect, safeTop: CGFloat = 0, left: CGRect? = nil, right: CGRect? = nil, simulated: Bool = false, visibleFrame: CGRect? = nil) {
         screenFrame = frame
@@ -307,7 +319,7 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var resetTransitionInFlight = false
     @Published private(set) var resetTransitionSerial: UInt64 = 0
     private var resetTransitionFinish: DispatchWorkItem?
-    var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), expandedWidth) }
+    var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), maximumExpandedWidth) }
     var maximumPageHeight: CGFloat { max(IslandChromeMetrics.footerHeight + 10, geometry.maximumExpandedHeight - headerHeight) }
     var expandedCanvasHeight: CGFloat {
         showsUsage ? headerHeight + min(max(usageHeight, resetHeight), maximumPageHeight) : expandedHeight
@@ -390,12 +402,18 @@ final class IslandBoardState: ObservableObject {
     var compact: Bool { presentation == .resting }
     var playback: Bool { display?.visible == true && display?.playbackEnabled == true && !reduceMotion }
     // The list has a bounded viewport; 128 tasks do not create a 128-row window.
-    var expandedWidth: CGFloat { min(max(IslandVibeLayout.expandedWidth, geometry.compactWidth + 64), geometry.screenFrame.width - 48) }
+    var maximumExpandedWidth: CGFloat { geometry.maximumExpandedWidth }
+    var compactWidth: CGFloat { min(geometry.compactWidth, maximumExpandedWidth) }
+    var expandedWidth: CGFloat {
+        // Approval has its own layout contract; only the task list and usage respond.
+        if approval != nil { return maximumExpandedWidth }
+        return geometry.expandedWidth(preferred: display?.expandedWidth ?? AppPreferences.IslandExpandedWidth.defaultValue)
+    }
     var headerHeight: CGFloat { max(IslandVibeLayout.headerHeight, geometry.bandHeight) }
     var maximumApprovalViewportHeight: CGFloat {
         max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
     }
-    var compactSideWidth: CGFloat { max(0, (min(geometry.compactWidth, expandedWidth) - 40 - geometry.cameraWidth - 16) / 2) }
+    var compactSideWidth: CGFloat { max(0, (compactWidth - 40 - geometry.cameraWidth - 16) / 2) }
     var headerSideWidth: CGFloat { max(0, (surfaceWidth - IslandChromeMetrics.horizontalInset * 2 - geometry.cameraWidth - 16) / 2) }
     private struct CardGeometryKey: Hashable { let model: String; let effort: String; let width: CGFloat }
     private var cardGeometryCache: [CardGeometryKey: CGFloat] = [:]
@@ -465,7 +483,7 @@ final class IslandBoardState: ObservableObject {
         if let approval { return headerHeight + approvalMetrics(request: approval.request).height }
         return headerHeight + listHeight + IslandVibeLayout.footerHeight
     }
-    var surfaceWidth: CGFloat { compact ? min(geometry.compactWidth, expandedWidth) : (showsReset ? resetWidth : expandedWidth) }
+    var surfaceWidth: CGFloat { compact ? compactWidth : (showsReset ? resetWidth : expandedWidth) }
     var height: CGFloat { compact ? geometry.bandHeight : expandedHeight }
     var focusedTask: CodexMultitaskRenderTask? {
         let selected = tasks.first { $0.id == display?.state.selectedID } ?? tasks.first
@@ -1576,9 +1594,9 @@ final class IslandNotchSurface: NSView {
                              width: state.surfaceWidth, height: state.height)
         let changed = targetRect != newRect || lastCompact != state.compact || content.frame != bounds
         let radius: CGFloat = state.compact ? 13 : 24
-        let compactFrame = CGRect(x: (bounds.width - min(state.geometry.compactWidth, state.expandedWidth)) / 2,
+        let compactFrame = CGRect(x: (bounds.width - state.compactWidth) / 2,
                                   y: bounds.height - state.geometry.bandHeight,
-                                  width: min(state.geometry.compactWidth, state.expandedWidth), height: state.geometry.bandHeight)
+                                  width: state.compactWidth, height: state.geometry.bandHeight)
         let expandedFrame = CGRect(x: (bounds.width - state.expandedWidth) / 2,
                                    y: bounds.height - state.expandedCanvasHeight,
                                    width: state.expandedWidth, height: state.expandedCanvasHeight)
@@ -1771,7 +1789,7 @@ final class IslandBoardController {
         let area = state.geometry.screenFrame
         // Reserve the usable display height once, allowing confirmation content
         // to grow without resizing the native window on each request or animation frame.
-        let width = state.expandedWidth + IslandVibeLayout.outerEffectInset * 2
+        let width = state.maximumExpandedWidth + IslandVibeLayout.outerEffectInset * 2
         let height = min(area.height, state.geometry.maximumExpandedHeight + IslandVibeLayout.screenBottomClearance)
         // Anchor to the actual display edge, never the menu-bar-excluding visibleFrame.
         let next = CGRect(x: state.geometry.centerX - width / 2, y: area.maxY - height, width: width, height: height)
@@ -2045,6 +2063,96 @@ private struct IslandResetTicketButtonStyle: ButtonStyle {
     }
 }
 
+private struct IslandChartHoverAnchor: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? { nil }
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
+// Keep native scrolling/hit areas; only the visible horizontal rail is slimmer.
+private final class IslandChartScroller: NSScroller {
+    override class var isCompatibleWithOverlayScrollers: Bool { false }
+    override func draw(_ dirtyRect: NSRect) {
+        let slot = rect(for: .knobSlot)
+        NSColor(white: 0.13, alpha: 1).setFill()
+        NSBezierPath(roundedRect: CGRect(x: slot.minX, y: bounds.midY - 1.5,
+            width: slot.width, height: 3), xRadius: 1.5, yRadius: 1.5).fill()
+        let knob = rect(for: .knob)
+        NSColor(white: 0.48, alpha: 1).setFill()
+        NSBezierPath(roundedRect: CGRect(x: knob.minX, y: bounds.midY - 2,
+            width: knob.width, height: 4), xRadius: 2, yRadius: 2).fill()
+    }
+}
+
+private struct IslandChartScrollStyle: NSViewRepresentable {
+    final class Probe: NSView {
+        private weak var scroll: NSScrollView?
+        private var original: NSScroller?
+        private var rail: IslandChartScroller?
+        private var originalStyle: NSScroller.Style = .legacy
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); attach() }
+        override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); attach() }
+        override func layout() { super.layout(); attach() }
+        func attach() {
+            guard let found = enclosingScrollView, found !== scroll else { return }
+            detach()
+            scroll = found
+            original = found.horizontalScroller
+            originalStyle = found.scrollerStyle
+            let rail = IslandChartScroller(frame: CGRect(x: 0, y: 0, width: 100, height: 12))
+            rail.controlSize = .small
+            rail.target = original?.target
+            rail.action = original?.action
+            self.rail = rail
+            found.scrollerStyle = .legacy
+            found.horizontalScroller = rail
+        }
+        func detach() {
+            if let scroll, scroll.horizontalScroller === rail {
+                scroll.horizontalScroller = original
+                scroll.scrollerStyle = originalStyle
+            }
+            scroll = nil; original = nil; rail = nil
+        }
+    }
+    func makeNSView(context: Context) -> Probe { Probe() }
+    func updateNSView(_ view: Probe, context: Context) { view.attach() }
+    static func dismantleNSView(_ view: Probe, coordinator: ()) { view.detach() }
+}
+
+/// Preserve readable marks and put the newest column at the trailing edge.
+/// Data-value refreshes do not disturb a user who is browsing older history.
+private struct IslandRecentChartScroll<Content: View>: View {
+    let plotWidth: CGFloat
+    let viewportWidth: CGFloat
+    let plotHeight: CGFloat
+    let resetID: String
+    @ViewBuilder let content: () -> Content
+    private var overflows: Bool { plotWidth > viewportWidth + 0.5 }
+
+    var body: some View {
+        Group {
+            if overflows {
+                ScrollViewReader { scroll in
+                    ScrollView(.horizontal) {
+                        content().frame(width: plotWidth, height: plotHeight)
+                            .background(IslandChartScrollStyle()).id("recent-chart")
+                    }
+                    .defaultScrollAnchor(.trailing)
+                    .scrollIndicators(.visible)
+                    .onAppear { scroll.scrollTo("recent-chart", anchor: .trailing) }
+                    .onChange(of: resetID) { _, _ in scroll.scrollTo("recent-chart", anchor: .trailing) }
+                    .onChange(of: viewportWidth) { _, _ in scroll.scrollTo("recent-chart", anchor: .trailing) }
+                }
+            } else {
+                content().frame(width: plotWidth, height: plotHeight)
+            }
+        }
+        .frame(width: viewportWidth, height: plotHeight + (overflows ? 14 : 0), alignment: .trailing)
+    }
+}
+
 struct IslandUsageBento: View {
     let snapshot: CurrentCodexPresentation?
     let usageState: IslandUsagePresentation.State
@@ -2141,6 +2249,8 @@ struct IslandUsageBento: View {
         }.foregroundStyle(.white)
             .onChange(of: activeOptions.cost) { _, visible in if !visible { selectedDay = nil; hoveredCost = nil } }
             .onChange(of: activeOptions.activity) { _, visible in if !visible { selectedActivity = nil; hoveredActivity = nil } }
+            .onChange(of: contentWidth) { _, _ in hoveredCost = nil; hoveredActivity = nil }
+            .onDisappear { hoveredCost = nil; hoveredActivity = nil }
     }
     private var pageContent: some View {
         VStack(spacing: 10) {
@@ -2191,7 +2301,7 @@ struct IslandUsageBento: View {
 
                         // Match the left stack naturally without a second height-measurement loop.
                         if activeOptions.quota || activeOptions.hasTokenMetrics || (activeOptions.spark && current?.sparkQuota != nil) {
-                            Color.clear.frame(width: 204).overlay { accountCard }
+                            Color.clear.frame(width: min(204, max(168, contentWidth * 0.327))).overlay { accountCard }
                         }
                     }.fixedSize(horizontal: false, vertical: true)
                     // Elevate at the sibling-card boundary: a chart-local zIndex cannot
@@ -2262,21 +2372,34 @@ struct IslandUsageBento: View {
     private func quotaSurface(title: String, percent: Int?, status: String) -> some View {
         surface {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    heading(title)
-                    Spacer(minLength: 4)
-                    Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
-                        .lineLimit(1).minimumScaleFactor(0.85)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        heading(title).fixedSize()
+                        Spacer(minLength: 4)
+                        Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        heading(title)
+                        Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 VStack(spacing: 9) {
-                    HStack(alignment: .lastTextBaseline) {
-                        Text(percent.map { "\($0)%" } ?? "—").font(AstaSans.semiBold(21)).tracking(-0.21)
-                        if percent != nil {
-                            Text(text("剩余", "left")).font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .lastTextBaseline) {
+                            quotaPercent(percent)
+                            if percent != nil {
+                                Text(text("剩余", "left")).font(AstaSans.regular(10.5)).foregroundStyle(secondary).fixedSize()
+                            }
+                            Spacer(minLength: 4)
+                            quotaUsed(percent)
                         }
-                        Spacer()
-                        Text(percent.map { text("已使用 \(100 - min(100, max(0, $0)))%", "\(100 - min(100, max(0, $0)))% Used") } ?? "—")
-                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                        HStack(alignment: .lastTextBaseline) {
+                            quotaPercent(percent)
+                            Spacer(minLength: 4)
+                            quotaUsed(percent)
+                        }
+                        VStack(alignment: .leading, spacing: 4) { quotaPercent(percent); quotaUsed(percent) }
                     }
                     GeometryReader { proxy in
                         let fraction = CGFloat(min(100, max(0, percent ?? 0))) / 100
@@ -2292,6 +2415,13 @@ struct IslandUsageBento: View {
                 }
             }
         }
+    }
+    private func quotaPercent(_ percent: Int?) -> some View {
+        Text(percent.map { "\($0)%" } ?? "—").font(AstaSans.semiBold(21)).tracking(-0.21).fixedSize()
+    }
+    private func quotaUsed(_ percent: Int?) -> some View {
+        Text(percent.map { text("已使用 \(100 - min(100, max(0, $0)))%", "\(100 - min(100, max(0, $0)))% Used") } ?? "—")
+            .font(AstaSans.regular(10.5)).foregroundStyle(secondary).fixedSize()
     }
     private var accountCard: some View {
         surface(highlightBottom: resetHovered && !hidesTicket, contentInset: 0) {
@@ -2363,11 +2493,14 @@ struct IslandUsageBento: View {
             }
         }
     }
-    private var chartCellWidth: CGFloat { IslandActivityHeatmap.cellSize(width: contentWidth - 28) }
+    private var chartCellWidth: CGFloat { max(8, IslandActivityHeatmap.cellSize(width: contentWidth - 28)) }
     private var costPlotWidth: CGFloat {
         CGFloat(chart.days.count) * chartCellWidth + CGFloat(max(0, chart.days.count - 1)) * IslandActivityHeatmap.gap
     }
-    private var costSummaryWidth: CGFloat { max(1, (contentWidth - 28 - costPlotWidth - 28) / 2) }
+    private var costPlotViewportWidth: CGFloat { min(costPlotWidth, max(104, contentWidth - 28 - 208 - 28)) }
+    private var costSummaryWidth: CGFloat { max(1, (contentWidth - 28 - costPlotViewportWidth - 28) / 2) }
+    private var activityPlotWidth: CGFloat { max(contentWidth - 28, 53 * 10 + 52 * IslandActivityHeatmap.gap) }
+    private var recentChartID: String { "\(showsClaude)-\(chart.days.last?.date.timeIntervalSinceReferenceDate ?? 0)" }
     private var costCard: some View {
         let chart = self.chart
         let selectedCost = chart.days.first { $0.date == selectedDay }
@@ -2379,7 +2512,20 @@ struct IslandUsageBento: View {
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Text(text("最近 30 天", "Last 30 days")).font(.system(size: 10)).foregroundStyle(secondary)
                 }.frame(width: costSummaryWidth, alignment: .leading)
-                Color.clear.frame(width: costPlotWidth).overlay { costChart(chart).padding(.top, 14) }.zIndex(10)
+                IslandRecentChartScroll(plotWidth: costPlotWidth, viewportWidth: costPlotViewportWidth,
+                                        plotHeight: 58, resetID: recentChartID) {
+                    costChart(chart)
+                }
+                .overlayPreferenceValue(IslandChartHoverAnchor.self) { anchor in
+                    if let day = chart.days.first(where: { $0.date == hoveredCost }) {
+                        chartTooltip(anchor: anchor, height: 78) {
+                            Text(day.date.formatted(.dateTime.year().month().day()))
+                            Text(money(day.estimatedCost) + text(" · 估算值", " · estimated"))
+                            Text(tokens(day.tokens) + " Tokens")
+                        }
+                    }
+                }
+                .padding(.top, 14).zIndex(10)
                 VStack(alignment: .trailing, spacing: 10) {
                     Text(selectedCost.map { $0.date.formatted(.dateTime.month().day()) } ?? text("最近一天", "Latest day"))
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
@@ -2413,21 +2559,7 @@ struct IslandUsageBento: View {
                             if hoveredCost != day.date { hoveredCost = day.date }
                         } else if hoveredCost == day.date { hoveredCost = nil }
                     }.accessibilityLabel(day.date.formatted(date: .abbreviated, time: .omitted) + ": " + money(day.estimatedCost))
-                }
-            }.overlay(alignment: .topLeading) {
-                if let index = chart.days.firstIndex(where: { $0.date == hoveredCost }) {
-                    let day = chart.days[index]
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(day.date.formatted(.dateTime.year().month().day()))
-                        Text(money(day.estimatedCost) + text(" · 估算值", " · estimated"))
-                        Text(tokens(day.tokens) + " Tokens")
-                    }.font(.system(size: 11)).foregroundStyle(.white)
-                        .padding(.horizontal, 11).padding(.vertical, 8).frame(width: 214, alignment: .leading)
-                        .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
-                        .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
-                        .offset(x: min(max(0, CGFloat(index) * (chartCellWidth + IslandActivityHeatmap.gap) + chartCellWidth / 2 - 107), max(0, proxy.size.width - 214)), y: -78)
-                        .allowsHitTesting(false)
+                    .anchorPreference(key: IslandChartHoverAnchor.self, value: .bounds) { hoveredCost == day.date ? $0 : nil }
                 }
             }.zIndex(10)
             }
@@ -2451,8 +2583,10 @@ struct IslandUsageBento: View {
                     }.buttonStyle(.plain)
                 }
             }
-            GeometryReader { proxy in
-                let size = IslandActivityHeatmap.cellSize(width: proxy.size.width)
+            IslandRecentChartScroll(plotWidth: activityPlotWidth, viewportWidth: contentWidth - 28,
+                                    plotHeight: IslandActivityHeatmap.chartHeight(width: activityPlotWidth),
+                                    resetID: recentChartID + "-\(activityMode)") {
+                let size = IslandActivityHeatmap.cellSize(width: activityPlotWidth)
                 let gap = IslandActivityHeatmap.gap
                 let pitch = size + gap
                 VStack(alignment: .leading, spacing: 8) {
@@ -2475,6 +2609,9 @@ struct IslandUsageBento: View {
                                         }
                                         .opacity(cell.future ? 0 : 1)
                                         .accessibilityLabel(cell.date.formatted(date: .abbreviated, time: .omitted) + ": " + tokens(cell.tokens))
+                                        .anchorPreference(key: IslandChartHoverAnchor.self, value: .bounds) {
+                                            hoveredActivity == index && (activityMode == .daily || row == 0) ? $0 : nil
+                                        }
                                 }
                             }
                         }
@@ -2483,32 +2620,44 @@ struct IslandUsageBento: View {
                         ForEach(grid.months, id: \.column) { month in
                             Text(month.date.formatted(english ? .dateTime.month(.abbreviated) : .dateTime.month()))
                                 .font(.system(size: 9)).foregroundStyle(secondary)
-                                .fixedSize().offset(x: min(CGFloat(month.column) * pitch, max(0, proxy.size.width - 25)))
+                                .fixedSize().offset(x: min(CGFloat(month.column) * pitch, max(0, activityPlotWidth - 25)))
                         }
                     }.frame(height: 13)
                 }
-                .overlay(alignment: .topLeading) {
-                    if let index = hoveredActivity, grid.cells.indices.contains(index) {
-                        let cell = grid.cells[index]
-                        let column = activityMode == .daily ? index / 7 : index
-                        let row = activityMode == .daily ? index % 7 : 0
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(activityDate(cell.date))
-                            Text(activityTokens(cell.tokens))
-                        }.font(.system(size: 11)).foregroundStyle(.white)
-                            .padding(.horizontal, 11).padding(.vertical, 8)
-                            .frame(width: 214, alignment: .leading)
-                            .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
-                            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
-                            .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
-                            .offset(x: min(max(0, CGFloat(column) * pitch + size / 2 - 107), max(0, proxy.size.width - 214)),
-                                    y: CGFloat(row) * pitch - 58)
-                            .allowsHitTesting(false)
+            }
+            .overlayPreferenceValue(IslandChartHoverAnchor.self) { anchor in
+                if let index = hoveredActivity, grid.cells.indices.contains(index) {
+                    let cell = grid.cells[index]
+                    chartTooltip(anchor: anchor, height: 58) {
+                        Text(activityDate(cell.date))
+                        Text(activityTokens(cell.tokens))
                     }
-                }.zIndex(10)
-            }.frame(height: IslandActivityHeatmap.chartHeight(width: contentWidth - 28))
+                }
+            }.zIndex(10)
             }
         }
+    }
+    private func chartTooltip<Content: View>(anchor: Anchor<CGRect>?, height: CGFloat,
+                                            @ViewBuilder content: @escaping () -> Content) -> some View {
+        GeometryReader { proxy in
+            if let anchor {
+                let rect = proxy[anchor]
+                let width = min(214, proxy.size.width)
+                // Resolve after the scroll view: the tooltip stays in the visible
+                // viewport and cannot be cut off by the plot's clipping layer.
+                if rect.maxX > 0 && rect.minX < proxy.size.width {
+                    VStack(alignment: .leading, spacing: 3, content: content)
+                        .font(.system(size: 11)).foregroundStyle(.white)
+                        .padding(.horizontal, 11).padding(.vertical, 8)
+                        .frame(width: width, alignment: .leading)
+                        .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.23), lineWidth: 1) }
+                        .shadow(color: .black.opacity(0.25), radius: 5, y: 2)
+                        .offset(x: min(max(0, rect.midX - width / 2), max(0, proxy.size.width - width)),
+                                y: rect.minY - height)
+                }
+            }
+        }.allowsHitTesting(false)
     }
     private func activityDate(_ date: Date) -> String {
         let formatter = DateFormatter()
