@@ -145,11 +145,34 @@ private struct IslandPageHeightKey: PreferenceKey {
 
 @MainActor
 enum IslandProviderIcon {
-    static let image = Bundle.main.url(forResource: "CodexProviderIcon", withExtension: "png").flatMap { NSImage(contentsOf: $0) }
-    // No official Claude mark is bundled; a system symbol stands in.
-    static let claudeImage = NSImage(systemSymbolName: "asterisk", accessibilityDescription: "Claude Code")?
-        .withSymbolConfiguration(.init(pointSize: 12, weight: .semibold).applying(.init(paletteColors: [.white])))
-    static func image(for provider: IslandAgentProvider) -> NSImage? { provider == .codex ? image : claudeImage }
+    private static var bundle: Bundle {
+        #if SWIFT_PACKAGE
+        Bundle.module
+        #else
+        Bundle.main
+        #endif
+    }
+    static let image = bundle.url(forResource: "CodexProviderIcon", withExtension: "png").flatMap { NSImage(contentsOf: $0) }
+    static let codexMark = bundle.image(forResource: NSImage.Name("CodexProviderMark"))
+    static let claudeImage = bundle.image(forResource: NSImage.Name("ClaudeProviderIcon"))
+    private static let dshBrandMark = bundle.image(forResource: NSImage.Name("DSHProviderMark"))
+    private static let kimiApplicationIcon = bundle.image(forResource: NSImage.Name("KimiCodeProviderIcon"))
+    static func settingsMark(for provider: IslandAgentProvider) -> NSImage? {
+        switch provider {
+        case .codex: image
+        case .claudeCode: claudeImage
+        case .dsh: dshBrandMark
+        case .kimiCode: kimiApplicationIcon
+        }
+    }
+    static let dshImage = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "DSH")
+    static let kimiImage = NSImage(systemSymbolName: "k.circle.fill", accessibilityDescription: "Kimi Code")
+    static func image(for provider: IslandAgentProvider) -> NSImage? {
+        switch provider { case .codex: image; case .claudeCode: claudeImage; case .dsh: dshImage; case .kimiCode: kimiImage }
+    }
+    static func unframedImage(for provider: IslandAgentProvider) -> NSImage? {
+        provider == .codex ? codexMark : image(for: provider)
+    }
 }
 
 // Geometry uses NSScreen's public safe/auxiliary regions, not model-specific sizes.
@@ -1826,15 +1849,21 @@ final class IslandBoardController {
 // Usage stays inside the notch; charts reuse the menu's quota/cost data contracts.
 // The pointer tracks the fixed 53.677 × 32 pt plane, never the transformed
 // face. SwiftUI interpolates only the small visual layers; layout stays fixed.
-/// Card faces for each provider. Claude has no bundled brand mark; a system
-/// symbol stands in on a QuotaView-designed clay face.
+/// Provider marks sit on QuotaView-designed card faces. The Claude silhouette
+/// is shared with task/usage icons and tinted cream on its clay face.
 enum IslandResetTicketArtwork {
     static let claudeMarkColor = NSColor(red: 1, green: 0.957, blue: 0.925, alpha: 1)
     static func faceName(_ provider: IslandAgentProvider) -> String {
         provider == .codex ? "IslandResetTicket" : "IslandClaudeResetTicket"
     }
-    @MainActor static let claudeMark: NSImage? = NSImage(systemSymbolName: "asterisk", accessibilityDescription: nil)?
-        .withSymbolConfiguration(.init(pointSize: 48, weight: .bold).applying(.init(paletteColors: [claudeMarkColor])))
+    @MainActor static let claudeMark: NSImage? = IslandProviderIcon.claudeImage.map { source in
+        NSImage(size: source.size, flipped: false) { rect in
+            source.draw(in: rect)
+            claudeMarkColor.setFill()
+            rect.fill(using: .sourceIn)
+            return true
+        }
+    }
     @MainActor static func mark(_ provider: IslandAgentProvider) -> NSImage? {
         provider == .codex ? NSImage(named: "IslandResetMark") : claudeMark
     }
@@ -1860,9 +1889,8 @@ struct IslandResetTicket: View {
                 Group {
                     if provider == .codex {
                         Image("IslandResetMark").resizable().scaledToFit()
-                    } else {
-                        Image(systemName: "asterisk").resizable().scaledToFit().fontWeight(.bold)
-                            .foregroundStyle(Color(nsColor: IslandResetTicketArtwork.claudeMarkColor))
+                    } else if let mark = IslandResetTicketArtwork.claudeMark {
+                        Image(nsImage: mark).resizable().scaledToFit()
                     }
                 }.frame(width: 12.0973 * scale, height: 12.0805 * scale)
                     .offset(x: motion.width * 0.9 * scale, y: motion.height * 0.6 * scale)
@@ -2174,20 +2202,31 @@ struct IslandUsageBento: View {
         }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
     }
     private var providerSwitch: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 6) {
             ForEach([IslandAgentProvider.codex, .claudeCode], id: \.self) { value in
                 let selected = (showsClaude ? IslandAgentProvider.claudeCode : .codex) == value
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
-                    Text(value.displayName).font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 10).frame(height: 22)
+                    HStack(spacing: 6) {
+                        if let icon = IslandProviderIcon.unframedImage(for: value) {
+                            Image(nsImage: icon).resizable().scaledToFit()
+                                .frame(width: 14, height: 14)
+                                .opacity(selected ? 1 : 0.72)
+                                .accessibilityHidden(true)
+                        }
+                        Text(value.displayName).font(IslandChromeMetrics.font).lineLimit(1)
+                    }
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(.horizontal, IslandChromeMetrics.labelInset)
+                        .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
-                        .background(selected ? Color(white: 0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(selected ? Color(white: 0.16) : .clear, in: Capsule())
+                        .contentShape(Capsule())
                 }.buttonStyle(.plain)
+                    .accessibilityLabel(value.displayName)
                     .accessibilityAddTraits(selected ? .isSelected : [])
             }
             Spacer(minLength: 0)
-        }.padding(.horizontal, 4)
-            .accessibilityElement(children: .contain)
+        }.accessibilityElement(children: .contain)
             .accessibilityLabel(text("用量来源", "Usage source"))
     }
     private func quotaCard(_ window: CodexQuotaWindowPresentation?) -> some View {

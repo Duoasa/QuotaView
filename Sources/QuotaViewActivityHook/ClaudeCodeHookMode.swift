@@ -15,13 +15,15 @@ import Foundation
 enum ClaudeCodeHookMode {
     static func handles(_ arguments: [String]) -> Bool {
         guard let mode = arguments.first,
-              mode == "--claude-code" || mode == "--claude-statusline" else { return false }
+              mode == "--claude-code" || mode == "--claude-statusline" || mode == "--agent-hook" else { return false }
         guard arguments.count == 3, arguments[1] == "--configuration",
               let route = ClaudeCodeRoute.read(from: arguments[2]) else {
             // A broken route must never block Claude Code.
             return true
         }
-        if mode == "--claude-code" {
+        if mode == "--agent-hook" {
+            NativeAgentHookForwarder.run(route: route)
+        } else if mode == "--claude-code" {
             ClaudeCodeHookForwarder(route: route).run()
         } else {
             ClaudeCodeStatusLineForwarder(route: route).run()
@@ -400,5 +402,27 @@ struct ClaudeCodeStatusLineForwarder {
             }
         }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// Kimi's hooks are observation-only here: never print a permission decision.
+enum NativeAgentHookForwarder {
+    static func run(route: ClaudeCodeRoute) {
+        guard let data = ClaudeCodeHookIO.readStandardInput(maximumBytes: 1_048_576),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let event = object["hook_event_name"] as? String,
+              let session = object["session_id"] as? String, !session.isEmpty, session.utf8.count <= 256 else { return }
+        var payload: [String: Any] = ["hook_event_name": event, "session_id": session]
+        for key in ["turn_id", "prompt_id", "tool_name", "tool_use_id", "tool_call_id", "model", "session_title", "agent_id", "source", "reason"] {
+            if let value = object[key] as? String { payload[key] = String(value.prefix(256)) }
+        }
+        let eventID = UUID().uuidString
+        let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": eventID,
+            "kind": "hook", "awaitDecision": false, "payload": payload]
+        guard var line = try? JSONSerialization.data(withJSONObject: envelope) else { return }
+        line.append(0x0A)
+        let client = ClaudeCodeSocketClient()
+        guard client.connect(path: route.socketPath, timeout: 0.25), client.send(line, timeout: 0.25) else { return }
+        _ = client.readLine(until: Date().addingTimeInterval(0.25))
     }
 }

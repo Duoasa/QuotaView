@@ -1,0 +1,15 @@
+{
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "images": [
+    {
+      "filename": "CompactNotch.svg",
+      "idiom": "universal"
+    }
+  ],
+  "properties": {
+    "preserves-vector-representation": true
+  }
+}

@@ -162,7 +162,11 @@ struct IslandTaskDetailView: View {
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private var agent: String { data.provider.displayName }
     private var sourceName: (String, String) {
-        data.provider == .claudeCode ? ("Claude Code 会话记录", "the Claude Code transcript") : (" Codex ", "Codex")
+        switch data.provider {
+        case .codex: (" Codex ", "Codex")
+        case .claudeCode: ("Claude Code 会话记录", "the Claude Code transcript")
+        case .dsh, .kimiCode: (data.provider.displayName, data.provider.displayName)
+        }
     }
 
     var body: some View {
@@ -198,7 +202,9 @@ struct IslandTaskDetailView: View {
                         .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
                 }
             } else {
-                Text(text("最终回答尚未同步，请在\(sourceName.0)查看", "Final answer has not synced; view it in \(sourceName.1)"))
+                Text(data.provider == .dsh || data.provider == .kimiCode
+                    ? text("任务已完成，请在 \(agent) 查看完整回答", "Task completed. View the full answer in \(agent)")
+                    : text("最终回答尚未同步，请在\(sourceName.0)查看", "Final answer has not synced; view it in \(sourceName.1)"))
                     .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 32)
             }
         }

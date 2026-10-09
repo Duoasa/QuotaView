@@ -96,12 +96,17 @@
 		B07400000000000000000001 /* CodexAgentAvatars in Resources */ = {isa = PBXBuildFile; fileRef = F07400000000000000000001 /* CodexAgentAvatars */; };
 		B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */; };
 		B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F07700000000000000000010 /* SettingsIslandPreview.xcassets */; };
+		B07700000000000000000011 /* ProviderIcons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F07700000000000000000011 /* ProviderIcons.xcassets */; };
 		B07300000000000000000011 /* CodexDesktopIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000011 /* CodexDesktopIPCClient.swift */; };
 		B07300000000000000000012 /* CodexDesktopRequestProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000012 /* CodexDesktopRequestProjection.swift */; };
 		F8CFDE9DBF8AB09BDC1C0436 /* ClaudeCodeSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */; };
 		8465EE7F8E52F8799C024713 /* ClaudeCodeUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0A2A3B4D5BF182FDB3B4A6 /* ClaudeCodeUsage.swift */; };
 		8389AE5F5B3CC1FAD5B1167D /* ClaudeCodeTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = C583BA1490B044ED1DF07864 /* ClaudeCodeTranscript.swift */; };
 		916489B01D97822C2A04FCF0 /* ClaudeCodePricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */; };
+		A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */; };
+		8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */; };
+		10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */; };
+		097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -266,12 +271,17 @@
 		F07400000000000000000001 /* CodexAgentAvatars */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/CodexAgentAvatars; sourceTree = "<group>"; };
 		F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Resources/QuotaViewFeedbackQQ.jpg; sourceTree = "<group>"; };
 		F07700000000000000000010 /* SettingsIslandPreview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/SettingsIslandPreview.xcassets; sourceTree = "<group>"; };
+		F07700000000000000000011 /* ProviderIcons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/ProviderIcons.xcassets; sourceTree = "<group>"; };
 		F07300000000000000000011 /* CodexDesktopIPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopIPCClient.swift; sourceTree = "<group>"; };
 		F07300000000000000000012 /* CodexDesktopRequestProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopRequestProjection.swift; sourceTree = "<group>"; };
 		D82FCD3B84F496710A7CD589 /* ClaudeCodeSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeSupportTests.swift; sourceTree = "<group>"; };
 		7C0A2A3B4D5BF182FDB3B4A6 /* ClaudeCodeUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeUsage.swift; sourceTree = "<group>"; };
 		C583BA1490B044ED1DF07864 /* ClaudeCodeTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeTranscript.swift; sourceTree = "<group>"; };
 		40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodePricing.swift; sourceTree = "<group>"; };
+		EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentInstaller.swift; sourceTree = "<group>"; };
+		545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentDSHPlugin.swift; sourceTree = "<group>"; };
+		CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentRuntime.swift; sourceTree = "<group>"; };
+		53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIntegrationSettings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -348,12 +358,17 @@
 				F07400000000000000000001 /* CodexAgentAvatars */,
 				F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */,
 				F07700000000000000000010 /* SettingsIslandPreview.xcassets */,
+				F07700000000000000000011 /* ProviderIcons.xcassets */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07500000000000000000031 /* IslandMarkdownResult.swift */,
 				F07300000000000000000008 /* IslandSession.swift */,
 				66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */,
 				CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */,
+				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
+				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
+				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
+				EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */,
 				567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */,
 				246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */,
 				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
@@ -694,6 +709,7 @@
 				B07400000000000000000001 /* CodexAgentAvatars in Resources */,
 				B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */,
 				B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */,
+				B07700000000000000000011 /* ProviderIcons.xcassets in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,
@@ -744,6 +760,10 @@
 				B07300000000000000000008 /* IslandSession.swift in Sources */,
 				B2AA26A2AB20474F17057C4A /* ClaudeCodeSettingsView.swift in Sources */,
 				354528488112B0F1B3C6AC88 /* ClaudeCodeRuntime.swift in Sources */,
+				097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */,
+				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
+				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
+				A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */,
 				7DDA0E9B06AA13280259185D /* ClaudeCodeApproval.swift in Sources */,
 				523231D07E2001C0EC71AA1C /* ClaudeCodeInstaller.swift in Sources */,
 				7BAC727FCD13404E2C8C907B /* ClaudeCodeBridge.swift in Sources */,
