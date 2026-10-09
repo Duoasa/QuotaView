@@ -9,7 +9,42 @@
 
 ## 当前最新版本
 
-> 当前推荐版本为 GitHub Stable / Latest 0.7.7 Build 1；开发入口见 [HANDOFF.md](HANDOFF.md)。自动更新部署与线上核验状态见下表。
+> 当前推荐版本为 GitHub Stable / Latest **0.7.9 Build 1**，已纳入签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+| 项目 | 当前值 |
+|---|---|
+| 最新推荐版本 | `0.7.9 (Build 1)`；Sparkle 内部 Build `59` |
+| Git tag / 发布提交 | `v0.7.9-build.1` / `c1e21dc00ef1f2f5a6ad96ec5bbc4ce93fd22cb6`；[PR #88](https://github.com/Duoasa/QuotaView/pull/88) 合并 main |
+| GitHub Release | [QuotaView 0.7.9 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.9-build.1)；2026-10-09 Stable / Latest，非 Draft / Pre-release |
+| Release 资产 | `QuotaView-v0.7.9-build.1.zip`；`24,836,378 bytes`；唯一 tag 与文件名，不覆盖旧版资产 |
+| SHA-256 | `63d76fcfcac015cb5ef6690a4f0a2af6481a48804c477ac17d8a13fc3b5bcd6a` |
+| 最低系统 / 架构 | macOS 14 / Universal `arm64 + x86_64`；App、Widget、Core、Hook、Sparkle |
+| 正式身份 | App `com.quotaview.menubar`；Widget `com.quotaview.menubar.widget`；App Group `BUUH229D5Q.com.quotaview.shared` |
+| 签名 | Developer ID `Chenchen Xu (BUUH229D5Q)`；证书 `E52D0A9C7C377AF77C484155CC0CFCFB27D949D3`；Hardened Runtime |
+| 公证 | Apple Accepted / Staple；Submission `3461e321-6eef-44af-8dc5-011782a61a52`；Gatekeeper accepted |
+| 自动更新 Feed | [Stable appcast](https://duoasa.github.io/QuotaView/appcast.xml)；内部序号 `59 → 57 → 52`；gh-pages `12fe6f98748b2748bb091d29ac6779750b4dba6d` |
+| Feed SHA-256 / 部署 | `9154f20b648fbf3174ad3e75881316e54ae276f099156652f8be5b3f864e2dbd`；[Pages](https://github.com/Duoasa/QuotaView/actions/runs/37921673088) 成功，线上字节匹配 |
+| EdDSA | `ogBa7F4GS1fR8ATVRpEADGc99jA7szv2n9SSVMWQg24J1AScQ0XEiVV9HB5dBWUCLIVDKOUZBwSXDyFi8mw6Dg==`；ZIP 与线上签名 Feed 使用 0.7.7 内置公钥独立验证 |
+| 源码 CI | [PR](https://github.com/Duoasa/QuotaView/actions/runs/37920526449) 与 [main](https://github.com/Duoasa/QuotaView/actions/runs/37921102280) 成功；各 700 项、6 个本机条件跳过、0 失败，另有 44 项隔离确认契约通过 |
+| 本地完整测试 | 最终 700 项、0 跳过、0 失败；包含本机 Codex Hook、HTTP/SOCKS5 和 20 + 100 秒真实收起时序 |
+| 接入夹具 / 基准 | DSH 两命名空间 24 事件、Kimi 11 事件、敏感字段过滤、只读权限提醒和不安全 route 拒绝通过；任务展示 P95 5.40 ms，最大 5.97 ms |
+| 产物验证 | 237 项构建输入与发布提交一致；版本、双架构、图标、13 项新增资源、签名、公证、Staple、Gatekeeper、解压后 15 秒启动和实际动态库加载通过 |
+| 公开验证 | GitHub 公开回下载 ZIP 与本地公证资产逐字节一致；线上 Feed 签名通过；历史 57/52 条目内容保留，仅 XML 尾部空白变化 |
+| 回滚基线 | [0.7.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1) / `3866177cfa19db734d657ef505a4dc72c3338fba`，SHA-256 `38087c6eaae9b1ff4d77efab662133d856b85432d7170a0bc6d101b3f068f5ee`；旧 tag、资产及历史签名保留 |
+
+### 0.7.9 更新与验证边界
+
+- 支持 Codex、Claude Code、DSH、Kimi Code，含 DSH 定制客户端的多目录接入；统一连接列表和真实品牌图标。
+- 增加展开宽度、刘海安全适配、三种实时特效预览，完善隐私、自动弹出及用量模块等个性化选项。
+- 窄宽用量图表支持横向滚动与最近数据定位，优化 hover、任务切换、设置排版及代理可视化。
+- 发布前测试修复预览 Metal 子视图圆角裁切与 DSH 未消费 ACK 造成的事件队列延迟。首次公证候选已作废保留在本地证据目录，未公开；以上事实仅对应最终资产。
+- 双语 README 和英文 Release 使用用户新封面，README 移除 0.7.5 之前的旧版本介绍；历史发行记录继续保留。
+- 视觉/实际交互仍由用户验收。自动化不代表 Intel 实机、全部刘海机型、辅助功能完整矩阵或真实 DSH/Kimi 会话端到端验收。DSH/Kimi 权限在原客户端处理，无账户额度/历史成本面板。
+- 证据：`dist/verification/0.7.9-build1-release/`；[发布规格](docs/specs/release-0.7.9.md)。
+
+## 0.7.7 Build 1（上一稳定版与回滚）
+
+> 以下为 0.7.7 Build 1 的历史发布事实；当前推荐版本见上方。
 
 | 项目 | 当前值 |
 |---|---|

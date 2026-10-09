@@ -76,6 +76,8 @@ DSH 和 Kimi Code 的权限请求在原客户端确认。可用字段取决于 A
 2. 在**设置 → 连接**中启用需要的 Agent。
 3. Codex 自动发现本地任务。配置 Hook 或 DSH 插件后，按设置提示新建会话或重启对应客户端。
 
+正式包已使用 Developer ID 签名、通过 Apple 公证并完成 Staple。
+
 需要 **macOS 14 或更高版本**。Universal 应用同时支持 Apple 芯片与 Intel Mac；各 Agent 客户端需要单独安装和配置。
 
 应用更新使用 Stable 通道，自动检查可选，安装更新需要确认。
@@ -97,7 +99,7 @@ swift test
 swift run QuotaView
 ```
 
-使用 Swift 6 或兼容的 Xcode 工具链。需要完整 App 与小组件时，打开 `QuotaView.xcodeproj`，选择 **QuotaView** Scheme 和 **My Mac** 后运行。
+使用 Swift 6 或兼容的 Xcode 工具链；DSH 插件测试还需要 Node.js。需要完整 App 与小组件时，打开 `QuotaView.xcodeproj`，选择 **QuotaView** Scheme 和 **My Mac** 后运行。
 
 分发包由 `scripts/build-app.sh` 构建。Developer ID 签名与公证需要自己的签名身份、公证配置，以及可恢复的 Sparkle 更新密钥加密备份，详见[发布流程](docs/workflow/RELEASE.md)。
 

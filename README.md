@@ -76,6 +76,8 @@ DSH and Kimi Code permissions are confirmed in the original client. Available fi
 2. Open **Settings → Connections** and enable the agents you use.
 3. Codex tasks are discovered locally. After configuring Hooks or a DSH plugin, start a new session or restart the relevant client as indicated in settings.
 
+The release is signed with Developer ID, notarized by Apple, and stapled.
+
 Requires **macOS 14 or later**. The Universal app supports Apple silicon and Intel Macs. Agent clients must be installed and configured separately.
 
 Updates use the Stable channel. Automatic checks are optional; installing an update requires confirmation.
@@ -97,7 +99,7 @@ swift test
 swift run QuotaView
 ```
 
-Use Swift 6 or a compatible Xcode toolchain. For the full app and widget, open `QuotaView.xcodeproj`, select **QuotaView** and **My Mac**, then run.
+Use Swift 6 or a compatible Xcode toolchain, plus Node.js for the DSH plugin tests. For the full app and widget, open `QuotaView.xcodeproj`, select **QuotaView** and **My Mac**, then run.
 
 Distribution packaging uses `scripts/build-app.sh`. Developer ID signing and notarization require your own signing identity, notary profile, and a recoverable encrypted backup of the Sparkle update key. See the [release workflow](docs/workflow/RELEASE.md).
 
