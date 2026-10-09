@@ -2116,64 +2116,114 @@ final class ActivityStateSmokeMetalView: MTKView {
     }
 }
 
+/// Settings-only renderer: bounded resolution and frame rate, no task lifecycle.
 final class CodexActivityStateSmokePreviewHostView: NSView {
     private let smokeView = ActivityStateSmokeMetalView(frame: .zero)
+    private var fallbackView: NSImageView?
     private var previewCornerRadius: CGFloat = 4
-
+    private var requestedPlayback = false
+    private var lastPlayback = false
+    var isRendererAvailable: Bool { smokeView.isRendererAvailable }
     override var isOpaque: Bool { false }
 
-    init(
-        frame frameRect: NSRect,
-        effect: AppPreferences.CodexActivityProgressEffect
-    ) {
+    init(frame frameRect: NSRect, effect: AppPreferences.CodexActivityProgressEffect) {
         super.init(frame: frameRect)
         wantsLayer = true
+        layer?.masksToBounds = true
         addSubview(smokeView)
-        smokeView.preferredFramesPerSecond = 30
+        smokeView.setPlaybackEnabled(false)
+        smokeView.preferredFramesPerSecond = 24
+        smokeView.autoResizeDrawable = false
         smokeView.setState(CodexActivityStateSmokeContract.previewState)
         smokeView.setEffect(effect)
-        smokeView.setApproximateProgress(
-            CodexActivityStateSmokeContract.previewProgressFraction
-        )
+        smokeView.setApproximateProgress(CodexActivityStateSmokeContract.previewProgressFraction)
+        smokeView.restoreProgressPosition(CodexActivityStateSmokeContract.previewProgressFraction)
     }
 
-    convenience init(
-        effect: AppPreferences.CodexActivityProgressEffect
-    ) {
+    convenience init(effect: AppPreferences.CodexActivityProgressEffect) {
         self.init(frame: .zero, effect: effect)
     }
-
     @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    deinit { NotificationCenter.default.removeObserver(self) }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        smokeView.setPlaybackEnabled(window != nil)
+        NotificationCenter.default.removeObserver(self)
+        if let window {
+            for name in [NSWindow.didChangeOcclusionStateNotification,
+                         NSWindow.didMiniaturizeNotification, NSWindow.didDeminiaturizeNotification] {
+                NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged), name: name, object: window)
+            }
+            for name in [NSApplication.didHideNotification, NSApplication.didUnhideNotification] {
+                NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged), name: name, object: NSApp)
+            }
+            var ancestor = superview
+            while let view = ancestor {
+                if let clip = view as? NSClipView {
+                    clip.postsBoundsChangedNotifications = true
+                    NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged),
+                        name: NSView.boundsDidChangeNotification, object: clip)
+                }
+                ancestor = view.superview
+            }
+        }
+        synchronizePlayback()
     }
+    override func viewDidHide() { super.viewDidHide(); synchronizePlayback() }
+    override func viewDidUnhide() { super.viewDidUnhide(); synchronizePlayback() }
+    @objc private func visibilityChanged(_ notification: Notification) { synchronizePlayback() }
 
     override func layout() {
         super.layout()
-        smokeView.frame = bounds
+        if smokeView.frame != bounds { smokeView.frame = bounds }
+        // One pixel per point is sufficient for these small decorative previews;
+        // production task effects retain their independent rendering budget.
+        let size = CGSize(width: max(1, ceil(bounds.width)), height: max(1, ceil(bounds.height)))
+        if smokeView.drawableSize != size {
+            smokeView.drawableSize = size
+            smokeView.redrawIfPaused()
+        }
+        fallbackView?.frame = bounds
+        synchronizePlayback()
+    }
+
+    private func synchronizePlayback() {
+        let visible = requestedPlayback && window?.occlusionState.contains(.visible) == true
+            && window?.isMiniaturized == false && !NSApp.isHidden && !isHiddenOrHasHiddenAncestor
+            && !visibleRect.isEmpty && bounds.width > 0 && bounds.height > 0
+        guard visible != lastPlayback else { return }
+        lastPlayback = visible
+        smokeView.setPlaybackEnabled(visible)
+    }
+
+    func update(effect: AppPreferences.CodexActivityProgressEffect, reduceMotion: Bool,
+                cornerRadius: CGFloat = 4, playbackEnabled: Bool = true) {
+        requestedPlayback = playbackEnabled
+        if previewCornerRadius != cornerRadius {
+            previewCornerRadius = max(0, cornerRadius)
+        }
+        layer?.cornerRadius = previewCornerRadius
+        layer?.cornerCurve = .continuous
+        // Clip the Metal surface itself as well as the fallback host so both
+        // rendering paths retain the same inset corners.
         smokeView.layer?.cornerRadius = previewCornerRadius
         smokeView.layer?.cornerCurve = .continuous
         smokeView.layer?.masksToBounds = true
-        smokeView.redrawIfPaused()
-    }
-
-    func update(
-        effect: AppPreferences.CodexActivityProgressEffect,
-        reduceMotion: Bool,
-        cornerRadius: CGFloat = 4
-    ) {
-        previewCornerRadius = max(0, cornerRadius)
-        needsLayout = true
         smokeView.setEffect(effect)
         smokeView.setReduceMotion(reduceMotion)
-        smokeView.setApproximateProgress(
-            CodexActivityStateSmokeContract.previewProgressFraction
-        )
-        smokeView.setPlaybackEnabled(window != nil)
+        synchronizePlayback()
     }
+    func setFallbackImage(_ image: NSImage?) {
+        guard !isRendererAvailable else { return }
+        if fallbackView == nil {
+            let view = NSImageView(frame: bounds)
+            view.imageScaling = .scaleAxesIndependently
+            addSubview(view)
+            fallbackView = view
+        }
+        fallbackView?.image = image
+    }
+    func stop() { requestedPlayback = false; synchronizePlayback() }
 }
