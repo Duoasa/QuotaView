@@ -22,7 +22,8 @@ Spec ID：`QV-RELEASE-079-001` · 状态：`Authorized / Preparing`
 - 新增 4 项隔离冒烟：宽度默认值/持久化/非法值、物理刘海与屏幕边界、页面与独立尺寸、三种实时预览的帧率/分辨率/离屏停播，全部通过。
 - Native Question Bridge 44 项隔离契约检查通过，真实动作数 0。任务展示基准 P95 5.59 ms、最大 6.16 ms；该值不是 GPU 或真实交互耗时。
 - 开发包已于 18:44 更新并启动，PID 33365；234 项输入、13 个资源、完整包与动态库加载路径匹配，实际版本 `0.7.9 / 1 / 59`。
-- 正在补跑显式启用的本机 Codex Hook / HTTP / SOCKS5 临时夹具以及 120 秒自动收起时序。产物和 CI 结果完成后补记。
+- 显式启用所有本机夹具后，699 项通过、无跳过，覆盖 Codex Hook、HTTP/SOCKS5 与 20 + 100 秒真实收起时序。
+- 补充 DSH/Kimi 接入夹具发现 DSH 未消费 ACK 导致事件队列逐条等待 750 ms 超时；加入 socket.resume() 并新增自动回归测试。修复后 24 个 DSH 事件、两份客户端命名空间、11 个 Kimi 事件及隐私/无审批输出检查通过。首次公证候选包被替代，不发布；以修复后的重新构建、完整测试和最新 CI 为准。
 - 深浅色、中英文、键盘/Escape/外部点击、Reduce Motion、Increase Contrast、VoiceOver、带刘海实机，以及 DSH/Kimi 真实会话端到端交互仍由用户验收；本轮自动化不替代视觉或全设备结论。
 
 本地原始证据：`dist/verification/0.7.9-build1-release/`；开发运行证据：`.build/079-development-runtime-20261009/`。

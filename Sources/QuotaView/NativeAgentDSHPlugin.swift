@@ -36,6 +36,9 @@ export function apply(ctx, config = {}) {
       if (Buffer.byteLength(data) > 16384) return;
       await new Promise(resolve => {
         const socket = connect({path: route.socketPath}, () => socket.end(data + '\n'));
+        // Drain the observation acknowledgement so EOF closes the socket now,
+        // rather than serializing every queued event behind the 750 ms timeout.
+        socket.resume();
         socket.on('error', () => socket.destroy());
         socket.on('close', resolve);
         socket.setTimeout(750, () => socket.destroy());
