@@ -212,6 +212,7 @@ final class CodexActivityStore: ObservableObject {
     private var desktopPublicEpoch: UInt64?
     private var closedDesktopPublicEpoch: UInt64?
     private struct DesktopAdmission {
+        let streamGeneration: UInt64
         let owner: String
         let epoch: UInt64
         let revision: Int64
@@ -688,7 +689,8 @@ final class CodexActivityStore: ObservableObject {
         guard kind == .user, resolvedKind == .user else { return false }
         let turnHash = CodexActivityPrivacy.hashIdentifier(turnID)
         if let prior = desktopReceiptReservations[session]?.admission, prior.epoch == epoch,
-           prior.owner == desktop.ownerClientID, desktop.revision <= prior.revision { return false }
+           (desktop.streamGeneration < prior.streamGeneration ||
+            (desktop.streamGeneration == prior.streamGeneration && prior.owner == desktop.ownerClientID && desktop.revision <= prior.revision)) { return false }
         if desktopPublicEpoch != epoch {
             desktopPublicEpoch = epoch
             desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
@@ -696,7 +698,7 @@ final class CodexActivityStore: ObservableObject {
         let active = projection.status == "inProgress"
         guard active || ["completed", "interrupted", "failed"].contains(projection.status) else { return false }
         let receiptID = UUID()
-        desktopReceiptReservations[session] = (receiptID, .init(owner: desktop.ownerClientID, epoch: epoch,
+        desktopReceiptReservations[session] = (receiptID, .init(streamGeneration: desktop.streamGeneration, owner: desktop.ownerClientID, epoch: epoch,
                                                                revision: desktop.revision, turnHash: turnHash))
         let isCurrentReceipt: () -> Bool = { [weak self] in
             guard let self else { return false }
@@ -716,7 +718,7 @@ final class CodexActivityStore: ObservableObject {
               taskRegistry.permitsPublicAttachment(session: session, turn: turnHash,
                 source: .appServer, occurredAt: now, permitsTerminal: !active),
               let identity = taskRegistry.currentIdentity(for: session), identity.turnHash == turnHash else { return false }
-        desktopAdmissions[session] = .init(owner: desktop.ownerClientID, epoch: epoch,
+        desktopAdmissions[session] = .init(streamGeneration: desktop.streamGeneration, owner: desktop.ownerClientID, epoch: epoch,
                                           revision: desktop.revision, turnHash: turnHash)
         if active {
             // A positively identified Desktop current turn can release buffered
@@ -1339,19 +1341,21 @@ final class CodexActivityStore: ObservableObject {
         // A terminal snapshot cannot establish another task or consume receipt capacity.
         if !active, taskRegistry.backgroundIdentity(for: session)?.turnHash != turnHash { return false }
         if let prior = desktopMemoryAdmissions[session], prior.epoch == epoch,
-           prior.owner == desktop.ownerClientID, desktop.revision <= prior.revision { return false }
+           (desktop.streamGeneration < prior.streamGeneration ||
+            (desktop.streamGeneration == prior.streamGeneration && prior.owner == desktop.ownerClientID && desktop.revision <= prior.revision)) { return false }
         if desktopPublicEpoch != epoch {
             desktopPublicEpoch = epoch
             desktopAdmissions.removeAll(); desktopReceiptReservations.removeAll(); desktopWaitEvidence.removeAll()
             desktopMemoryAdmissions.removeAll()
         }
-        let receipt = DesktopAdmission(owner: desktop.ownerClientID, epoch: epoch,
+        let receipt = DesktopAdmission(streamGeneration: desktop.streamGeneration, owner: desktop.ownerClientID, epoch: epoch,
                                        revision: desktop.revision, turnHash: turnHash)
         desktopMemoryAdmissions[session] = receipt
         boundDesktopMemoryAdmissions(keeping: session)
         var accepted = false
         defer {
-            if !accepted, desktopMemoryAdmissions[session]?.revision == receipt.revision,
+            if !accepted, desktopMemoryAdmissions[session]?.streamGeneration == receipt.streamGeneration,
+               desktopMemoryAdmissions[session]?.revision == receipt.revision,
                desktopMemoryAdmissions[session]?.owner == receipt.owner,
                desktopMemoryAdmissions[session]?.epoch == receipt.epoch {
                 desktopMemoryAdmissions.removeValue(forKey: session)
@@ -1361,6 +1365,7 @@ final class CodexActivityStore: ObservableObject {
             guard let self else { return false }
             return nativeGeneration == run && desktopPublicEpoch == epoch
                 && (closedDesktopPublicEpoch.map { epoch > $0 } ?? true)
+                && desktopMemoryAdmissions[session]?.streamGeneration == desktop.streamGeneration
                 && desktopMemoryAdmissions[session]?.revision == desktop.revision
                 && desktopMemoryAdmissions[session]?.owner == desktop.ownerClientID
         }
