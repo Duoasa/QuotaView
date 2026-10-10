@@ -875,7 +875,7 @@ final class IslandLiveStore {
     private var nativeConnectionEpoch: UInt64?
     private var desktopConnected = false
     private var desktopConnectionEpoch: UInt64?
-    private struct DesktopScope { let owner: String; let epoch: UInt64; let revision: Int64 }
+    private struct DesktopScope { let owner: String; let epoch: UInt64; let streamGeneration: UInt64; let revision: Int64 }
     private var desktopScopes: [String: DesktopScope] = [:]
     private var priorTurnKeys: [String: Set<String>] = [:]
     private var metadata: [String: [String: Any]] = [:]
@@ -1238,10 +1238,11 @@ final class IslandLiveStore {
         let key = CodexActivityPrivacy.hashIdentifier(snapshot.conversationID)
         guard let i = tasks.firstIndex(where: { $0.key == key }), tasks[i].turnKey == CodexActivityPrivacy.hashIdentifier(turn) else { return }
         if let prior = desktopScopes[key], prior.epoch == snapshot.connectionEpoch {
-            guard prior.owner != snapshot.ownerClientID || snapshot.revision > prior.revision else { return }
-            if prior.owner != snapshot.ownerClientID { tasks[i].requestLifecycle.invalidateDesktopResponses() }
+            guard snapshot.streamGeneration >= prior.streamGeneration else { return }
+            guard snapshot.streamGeneration > prior.streamGeneration || prior.owner != snapshot.ownerClientID || snapshot.revision > prior.revision else { return }
+            if snapshot.streamGeneration != prior.streamGeneration || prior.owner != snapshot.ownerClientID { tasks[i].requestLifecycle.invalidateDesktopResponses() }
         }
-        desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, revision: snapshot.revision)
+        desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, streamGeneration: snapshot.streamGeneration, revision: snapshot.revision)
         tasks[i].threadID = snapshot.conversationID
         applyTitle(projection.title, source: .explicitName, at: i)
         guard !tasks[i].terminal, projection.status == "inProgress" else { onChange?(); return }

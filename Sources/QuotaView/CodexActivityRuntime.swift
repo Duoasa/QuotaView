@@ -358,6 +358,13 @@ final class CodexActivityRuntime: ObservableObject {
     private func receiveDesktopSnapshot(_ snapshot: CodexDesktopConversationSnapshot, run: UInt64) async {
         guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, desktopRunGeneration == run,
               desktopFollowedThreads.contains(snapshot.conversationID) else { return }
+        guard await desktopIPCClient.isCurrent(snapshot), isRunning,
+              desktopRunGeneration == run, !isChangingDataDirectory,
+              desktopFollowedThreads.contains(snapshot.conversationID) else {
+            recordDesktopDiagnostic(snapshot.conversationID, outcome: "stale_stream",
+                details: "epoch=\(snapshot.connectionEpoch) stream=\(snapshot.streamGeneration) revision=\(snapshot.revision)")
+            return
+        }
         let projection: CodexDesktopInteractionProjection
         do {
             projection = try snapshot.interactionProjection ?? CodexDesktopRequestProjector.project(
@@ -382,7 +389,7 @@ final class CodexActivityRuntime: ObservableObject {
         let session = CodexActivityPrivacy.hashIdentifier(snapshot.conversationID)
         let lifecycle = liveIsland.model.tasks.first { $0.key == session }?
             .requestLifecycle.desktopDiagnosticSummary(at: Date()) ?? "task_absent=true"
-        let details = "epoch=\(snapshot.connectionEpoch) status=\(status) source_kind=\(projection.sourceKind.rawValue) authoritative=\(projection.pendingRequestsAreAuthoritative) owner_input=\(snapshot.supportsUntrustedAppInput) handles=\(snapshot.requests.count) actionable=\(actionable) native_wait=\(wait) \(lifecycle)"
+        let details = "epoch=\(snapshot.connectionEpoch) stream=\(snapshot.streamGeneration) revision=\(snapshot.revision) status=\(status) source_kind=\(projection.sourceKind.rawValue) authoritative=\(projection.pendingRequestsAreAuthoritative) owner_input=\(snapshot.supportsUntrustedAppInput) handles=\(snapshot.requests.count) actionable=\(actionable) native_wait=\(wait) \(lifecycle)"
         recordDesktopDiagnostic(snapshot.conversationID, outcome: admitted ? "snapshot_admitted" : "snapshot_rejected", details: details)
         if admitted, ["completed", "interrupted", "failed"].contains(projection.status) {
             stopFollowingDesktopThread(snapshot.conversationID)

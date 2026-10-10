@@ -56,6 +56,8 @@ public struct CodexDesktopIPCRequestHandle: Equatable, Sendable {
 }
 
 public struct CodexDesktopConversationSnapshot: Sendable {
+    /// Locally minted ledger lifetime; revisions are comparable only within it.
+    public let streamGeneration: UInt64
     public let conversationID: String
     public let hostID: String
     public let ownerClientID: String
@@ -75,20 +77,20 @@ public struct CodexDesktopConversationSnapshot: Sendable {
     public var interactionProjection: CodexDesktopInteractionProjection? = nil
 
     init(conversationID: String, hostID: String, ownerClientID: String, connectionEpoch: UInt64,
-         revision: Int64, conversationState: Data, supportsUntrustedAppInput: Bool,
+         revision: Int64, streamGeneration: UInt64 = 0, conversationState: Data, supportsUntrustedAppInput: Bool,
          requests: [CodexDesktopIPCRequestHandle], interactionProjection: CodexDesktopInteractionProjection? = nil) {
         self.conversationID = conversationID; self.hostID = hostID; self.ownerClientID = ownerClientID
-        self.connectionEpoch = connectionEpoch; self.revision = revision
+        self.connectionEpoch = connectionEpoch; self.revision = revision; self.streamGeneration = streamGeneration
         stateData = conversationState; decodedState = nil; conversationStateByteCount = conversationState.count
         self.supportsUntrustedAppInput = supportsUntrustedAppInput; self.requests = requests
         self.interactionProjection = interactionProjection
     }
 
     fileprivate init(conversationID: String, hostID: String, ownerClientID: String, connectionEpoch: UInt64,
-                     revision: Int64, state: DesktopIPCJSON, byteCount: Int, supportsUntrustedAppInput: Bool,
+                     revision: Int64, streamGeneration: UInt64, state: DesktopIPCJSON, byteCount: Int, supportsUntrustedAppInput: Bool,
                      requests: [CodexDesktopIPCRequestHandle], interactionProjection: CodexDesktopInteractionProjection) {
         self.conversationID = conversationID; self.hostID = hostID; self.ownerClientID = ownerClientID
-        self.connectionEpoch = connectionEpoch; self.revision = revision
+        self.connectionEpoch = connectionEpoch; self.revision = revision; self.streamGeneration = streamGeneration
         stateData = nil; decodedState = state; conversationStateByteCount = byteCount
         self.supportsUntrustedAppInput = supportsUntrustedAppInput; self.requests = requests
         self.interactionProjection = interactionProjection
@@ -183,6 +185,7 @@ public actor CodexDesktopIPCClient {
     private struct FollowKey: Hashable { let conversationID: String; let hostID: String }
     private struct Owner { let clientID: String; let supportsInput: Bool }
     private struct Ledger {
+        let streamGeneration: UInt64
         var owner: Owner
         var revision: Int64
         var state: DesktopIPCJSON
@@ -236,10 +239,11 @@ public actor CodexDesktopIPCClient {
     private var deadlineFrame: UInt64?
     private var pending: [String: Pending] = [:]
     private var follows: Set<FollowKey> = []
-    private var followingInFlight: Set<FollowKey> = []
+    private var followingInFlight: [FollowKey: UUID] = [:]
     private var followRecoveries: [FollowKey: FollowRecovery] = [:]
     private var owners: [FollowKey: Owner] = [:]
     private var ledger: [FollowKey: Ledger] = [:]
+    private var nextStreamGeneration: UInt64 = 0
     private var attempted: Set<AttemptIdentity> = []
     private var snapshotWaiters: [FollowKey: [UUID: SnapshotWaiter]] = [:]
     private var snapshotHandler: (@Sendable (CodexDesktopConversationSnapshot) async -> Void)?
@@ -301,11 +305,21 @@ public actor CodexDesktopIPCClient {
     public func unfollow(conversationID: String, hostID: String = "local") async {
         let key = FollowKey(conversationID: conversationID, hostID: hostID)
         follows.remove(key); resourceBlockedFollows.remove(key); followRecoveries.removeValue(forKey: key)?.task.cancel()
+        followingInFlight.removeValue(forKey: key)
         owners.removeValue(forKey: key); removeLedger(key)
         if initialized {
             try? broadcast(method: "thread-stream-following-changed", version: 1,
                            params: ["conversationId": .string(conversationID), "hostId": .string(hostID), "following": .bool(false)])
         }
+    }
+    /// Recheck callbacks queued across an unfollow/reconnect before UI admission.
+    public func isCurrent(_ snapshot: CodexDesktopConversationSnapshot) -> Bool {
+        let key = FollowKey(conversationID: snapshot.conversationID, hostID: snapshot.hostID)
+        guard initialized, follows.contains(key), snapshot.connectionEpoch == epoch,
+              let current = ledger[key] else { return false }
+        return current.streamGeneration == snapshot.streamGeneration
+            && current.owner.clientID == snapshot.ownerClientID
+            && current.revision == snapshot.revision
     }
     public func submit(handle: CodexDesktopIPCRequestHandle, result: Data) async throws -> CodexDesktopIPCSubmissionResult {
         let key = FollowKey(conversationID: handle.conversationID, hostID: "local")
@@ -443,15 +457,15 @@ public actor CodexDesktopIPCClient {
         await stateHandler?(.connected)
     }
     private func establishFollow(_ key: FollowKey, candidateOwner: String? = nil) async throws {
-        guard initialized, follows.contains(key), !resourceBlockedFollows.contains(key), !followingInFlight.contains(key) else { return }
+        guard initialized, follows.contains(key), !resourceBlockedFollows.contains(key), followingInFlight[key] == nil else { return }
         if candidateOwner == nil, owners[key] != nil { return }
-        followingInFlight.insert(key); let run = epoch
-        defer { if run == epoch { followingInFlight.remove(key) } }
+        let attempt = UUID(); followingInFlight[key] = attempt; let run = epoch
+        defer { if followingInFlight[key] == attempt { followingInFlight.removeValue(forKey: key) } }
         let response = try await requestEnvelope(method: "thread-owner-discovery", version: 1,
                                                  targetOwner: candidateOwner,
                                                  params: ["conversationId": .string(key.conversationID), "hostId": .string(key.hostID)])
         let message = try DesktopIPCJSON.decode(response, limit: configuration.maximumFrameBytes)
-        guard run == epoch, initialized, follows.contains(key), !resourceBlockedFollows.contains(key), !Task.isCancelled,
+        guard run == epoch, followingInFlight[key] == attempt, initialized, follows.contains(key), !resourceBlockedFollows.contains(key), !Task.isCancelled,
               let ownerID = message["handledByClientId"]?.string, !ownerID.isEmpty,
               candidateOwner == nil || ownerID == candidateOwner else { throw CodexDesktopIPCError.peerMismatch }
         let owner = Owner(clientID: ownerID, supportsInput: message["result"]?["supportsUntrustedAppInput"]?.bool == true)
@@ -718,12 +732,15 @@ public actor CodexDesktopIPCClient {
             let live = Set(handles.map(AttemptIdentity.init))
             attempted = attempted.filter { $0.conversationID != conversation || $0.ownerClientID != source || live.contains($0) }
         }
-        ledger[key] = .init(owner: owner, revision: revision, state: state, stateByteCount: stateByteCount, handles: handles)
+        let streamGeneration: UInt64
+        if let existing = ledger[key] { streamGeneration = existing.streamGeneration }
+        else { nextStreamGeneration += 1; streamGeneration = nextStreamGeneration }
+        ledger[key] = .init(streamGeneration: streamGeneration, owner: owner, revision: revision, state: state, stateByteCount: stateByteCount, handles: handles)
         if change["type"]?.string == "snapshot", let waiters = snapshotWaiters.removeValue(forKey: key) {
             for waiter in waiters.values { waiter.timer.cancel(); waiter.continuation.resume() }
         }
         await snapshotHandler?(.init(conversationID: conversation, hostID: host, ownerClientID: source,
-                                     connectionEpoch: run, revision: revision, state: state, byteCount: stateByteCount,
+                                     connectionEpoch: run, revision: revision, streamGeneration: streamGeneration, state: state, byteCount: stateByteCount,
                                      supportsUntrustedAppInput: owner.supportsInput && host == "local" && projection.pendingRequestsAreAuthoritative,
                                      requests: handles, interactionProjection: projection))
     }

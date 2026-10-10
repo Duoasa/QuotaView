@@ -88,3 +88,11 @@ Owner 尚未就绪或首次 discovery 超时，follow 意图在连接内以 250 
 开发身份保持 0.7.3 / 显示 Build 1 / 内部 49 / `com.quotaview.development073`。本轮源码、已运行开发包和公开 main/Release/appcast 分别记录，不把历史 PR #67 合并误作本功能已推送。
 
 源码提交 `5461059bedb918dc74f344feac2fe7b852020153` 已推送 [PR #68](https://github.com/Duoasa/QuotaView/pull/68)，用户已授权 CI 通过后合并 main。GitHub 完整 Swift CI 与最终合并状态以该 PR 为准；本地不重复完整回归。
+
+## 状态流生命周期修复（2026-10-10，本地开发）
+
+IPC ledger 每次重建分配单调递增的本地 `streamGeneration`，经快照传至 Store 和 Island。原生 revision 只在同一代次内比较；较新代次可以从较低 revision 建立基准，较旧代次即使 revision 更大也拒绝。同一代次的重复或回退快照仍拒绝。Runtime 在准入前向 IPC actor 核对快照是否仍属于当前 ledger；异步分类恢复继续受 receipt 身份保护。
+
+Unfollow 撤销正在进行的 owner discovery 尝试，旧响应不能覆盖新尝试。旧 ledger 句柄继续由 nonce 校验拒绝；不清除提交去重身份来重发未知结果。诊断增加 streamGeneration / revision，不记录请求正文。
+
+新增 `DesktopResubscriptionSmokeTests` 以真实适配器生成的隔离句柄覆盖异步问题和 command approval：旧 revision 100 后重新订阅 revision 1 可以操作，旧代次 999、同代次 0 及重复快照不能误结算新请求；旧句柄不能提交。两轮 95 项不同针对性测试通过，Debug arm64 开发包已启动；实际用户交互待验收。原截图缺少序号日志，不能断定这就是当次唯一原因。原生问题框关闭边界不变。
