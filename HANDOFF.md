@@ -1,5 +1,17 @@
 # QuotaView Handoff
 
+## 当前开发身份：0.7.9 Build 2（2026-10-10）
+
+用户要求 Build +1，App、Widget 和兼容 Info.plist 已同步为显示 Build 2 / 内部 60。包含下方确认订阅同步修复。11:29（上海）增量编译并启动开发包，PID 19261；234 项输入、13 项资产、完整包及加载路径匹配。证据 `.build/079-build2-runtime-20261010/`。正式安装仍为 Build 1，未推送或发布，Build 2 未获 appcast 准入。仅版本身份变化，未重复功能测试。
+
+## 当前开发修复：Codex 确认订阅同步（2026-10-10）
+
+- 本地源码在 0.7.9 基线上修复状态流重建后旧 revision 阻挡新请求的问题；每个 ledger 生命周期具有独立 streamGeneration，同代次保持序号校验，旧代次快照与旧句柄不能恢复操作能力。延迟 owner discovery 也按独立尝试身份撤销。
+- 异步问题及真实审批的隔离复现已转为回归测试，包含序号降低、迟到快照、重复快照和旧句柄失效。两轮共 95 项不同针对性测试通过（63 + 34，重叠 2 项）；未向真实任务提交回答。
+- 11:10（上海）已更新并启动开发包，PID 13771；身份仍为 `com.quotaview.development073` / 0.7.9 / 显示 Build 1 / 内部 59。234 项生产输入、13 项资产、完整包及实际加载路径匹配。正式版主进程已退出，正式安装文件未变；新修复未推送或发布，真实交互待用户验收。
+- 证据：`.build/confirmation-stream-runtime-20261010-verified/`；前两次替换因退出确认失败自动回退，最终记录与回退包以该目录 `runtime-result.json` 为准。
+- 下方公开发布及旧运行记录保留；当前开发源码和运行包已领先发布 tag。
+
 ## 当前发布：0.7.9 Build 1（2026-10-09，已完成）
 
 **公开稳定版：0.7.9 Build 1 / 内部 59**，源码经 [PR #88](https://github.com/Duoasa/QuotaView/pull/88) 合并 main，GitHub Stable / Latest 与签名 appcast 已发布且公开回下载核验通过。完整 tag、资产、哈希、签名、公证、Feed 和 CI 证据只保存在[版本历史](VERSION_HISTORY.md#当前最新版本)；回滚入口 `v0.7.7-build.1`。
