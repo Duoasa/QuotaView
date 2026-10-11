@@ -12,15 +12,33 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum UsageCapsuleTone: String, CaseIterable, Identifiable {
+        case dark, light
+        var id: String { rawValue }
+    }
+
     enum IslandGlassDegree {
         static let defaultValue = 0.45
         static func normalized(_ value: Double) -> Double {
             value.isFinite ? min(0.8, max(0.2, value)) : defaultValue
         }
-        static func stops(_ value: Double) -> [Double] {
+        struct ShadeStop {
+            let location: Double
+            let opacity: Double
+        }
+        static func shadeStops(_ value: Double) -> [ShadeStop] {
             let blackEnd = 1 - normalized(value)
-            let fadeEnd = min(1, blackEnd + 0.25 * min(1, blackEnd / 0.55))
-            return [0, blackEnd, (blackEnd + fadeEnd) / 2, fadeEnd, 1]
+            // Leave the lower 30% of the glass region free of black shading.
+            // Keep the eased endpoints so the shorter fade has no hard band.
+            let fadeEnd = blackEnd + (1 - blackEnd) * 0.7
+            return [.init(location: 0, opacity: 1)] + (0...16).map { index in
+                let t = Double(index) / 16
+                let eased = t * t * t * (t * (t * 6 - 15) + 10)
+                return .init(location: blackEnd + (fadeEnd - blackEnd) * t, opacity: 1 - eased)
+            } + [.init(location: 1, opacity: 0)]
+        }
+        static func gradientStops(_ value: Double) -> [Gradient.Stop] {
+            shadeStops(value).map { .init(color: .black.opacity($0.opacity), location: $0.location) }
         }
     }
 
@@ -273,6 +291,10 @@ final class AppPreferences: ObservableObject {
 
     @Published var codexIslandExpandedWidth: Double {
         didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
+    }
+
+    @Published var islandUsageCapsuleTone: UsageCapsuleTone {
+        didSet { defaults.set(islandUsageCapsuleTone.rawValue, forKey: "island.usageCapsuleTone") }
     }
 
     @Published var islandFloatingUsageEnabled: Bool {
@@ -541,6 +563,7 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
+        islandUsageCapsuleTone = UsageCapsuleTone(rawValue: defaults.string(forKey: "island.usageCapsuleTone") ?? "") ?? .dark
         islandFloatingUsageEnabled = defaults.object(forKey: "island.floatingUsageEnabled") as? Bool ?? true
         islandGlassDegree = IslandGlassDegree.normalized((defaults.object(forKey: "island.glassDegree") as? Double) ?? IslandGlassDegree.defaultValue)
         islandMaterial = IslandMaterial(rawValue: defaults.string(forKey: "island.material") ?? "") ?? .liquidGlass

@@ -601,6 +601,18 @@ struct SettingsView: View {
                         symbol: "chart.pie.fill", color: .systemGreen,
                         isOn: $preferences.islandFloatingUsageEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+                    NativeSettingsRow(title: copy.text("胶囊配色", "Capsule appearance"),
+                        subtitle: copy.text("深色为染色玻璃，浅色为无着色的清透玻璃。", "Dark uses tinted glass; Light uses clear, untinted glass."),
+                        symbol: "circle.lefthalf.filled", symbolColor: .secondary) {
+                        Picker(copy.text("胶囊配色", "Capsule appearance"), selection: $preferences.islandUsageCapsuleTone) {
+                            Text(copy.text("深色", "Dark")).tag(AppPreferences.UsageCapsuleTone.dark)
+                            Text(copy.text("浅色", "Light")).tag(AppPreferences.UsageCapsuleTone.light)
+                        }
+                        .pickerStyle(.segmented).labelsHidden()
+                        .fixedSize(horizontal: true, vertical: false)
+                        .disabled(!preferences.islandFloatingUsageEnabled)
+                    }
+                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     preferenceToggle(copy.text("隐私模式", "Privacy mode"),
                         subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
                         symbol: "eye.slash.fill", color: .systemGray,
@@ -1375,7 +1387,7 @@ private struct SettingsIslandPreview: View {
                         .init(id: CodexDomainCatalog.secondaryRateWindowID, usedPercent: 54, remainingPercent: 46,
                               windowDurationMinutes: 10080, resetsAt: Date(timeIntervalSince1970: 4 * 86400))
                     ], current: true, english: preferences.resolvedLanguage == .english,
-                       now: Date(timeIntervalSince1970: 0), clearSurface: true)
+                       now: Date(timeIntervalSince1970: 0), tone: preferences.islandUsageCapsuleTone)
                     .padding(.top, previewHeight + 8)
                 }
             }
@@ -1400,12 +1412,8 @@ private struct SettingsIslandPreview: View {
                 } else {
                     shape.fill(.regularMaterial)
                 }
-                let stops = AppPreferences.IslandGlassDegree.stops(preferences.islandGlassDegree)
-                LinearGradient(stops: [.init(color: .black, location: stops[0]),
-                    .init(color: .black, location: stops[1]),
-                    .init(color: .black.opacity(0.45), location: stops[2]),
-                    .init(color: .clear, location: stops[3]),
-                    .init(color: .clear, location: stops[4])], startPoint: .top, endPoint: .bottom)
+                let stops = AppPreferences.IslandGlassDegree.gradientStops(preferences.islandGlassDegree)
+                LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom)
                     .clipShape(shape)
             }
         }

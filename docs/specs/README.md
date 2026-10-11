@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 当前候选：0.8.1 Build 1
+
+0.8.1 / 1 / 内部 61；授权源码合入与本地签名封装。继承灵动岛玻璃与悬浮胶囊规格，公开 Release/appcast 未准入。交付状态见 [Handoff](../../HANDOFF.md)。
+
 [悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete，开发版已更新，视觉待用户验收。
 
 ## 当前发布：0.7.9 Build 1

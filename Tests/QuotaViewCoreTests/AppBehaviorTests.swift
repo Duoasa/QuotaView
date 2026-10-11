@@ -25,6 +25,45 @@ private extension NSView {
 }
 
 final class AppBehaviorTests: XCTestCase {
+    @MainActor
+    func testUsageCapsuleTonePersistsIndependentlyFromVisibility() {
+        let name = "QuotaView.CapsuleToneTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let preferences = AppPreferences(defaults: defaults)
+        XCTAssertEqual(preferences.islandUsageCapsuleTone, .dark)
+        preferences.islandUsageCapsuleTone = .light
+        preferences.islandFloatingUsageEnabled = false
+        let restored = AppPreferences(defaults: defaults)
+        XCTAssertEqual(restored.islandUsageCapsuleTone, .light)
+        XCTAssertFalse(restored.islandFloatingUsageEnabled)
+        defaults.set("unknown", forKey: "island.usageCapsuleTone")
+        XCTAssertEqual(AppPreferences(defaults: defaults).islandUsageCapsuleTone, .dark)
+    }
+
+    @MainActor
+    func testIslandGlassShadeLeavesClearFooterAcrossSliderRange() {
+        for level in [0.2, 0.45, 0.8] {
+            let stops = AppPreferences.IslandGlassDegree.shadeStops(level)
+            XCTAssertEqual(stops[1].location, 1 - level, accuracy: 0.00001)
+            XCTAssertEqual(stops.first?.opacity, 1)
+            XCTAssertEqual(stops.last?.location, 1)
+            XCTAssertEqual(stops.last?.opacity, 0)
+            for (left, right) in zip(stops, stops.dropFirst()) {
+                XCTAssertLessThan(left.location, right.location)
+                XCTAssertGreaterThanOrEqual(left.opacity, right.opacity)
+            }
+            XCTAssertGreaterThan(stops[2].opacity, 0.99)
+            XCTAssertEqual(stops[stops.count - 2].opacity, 0)
+            XCTAssertEqual(stops[stops.count - 2].location, 1 - level * 0.3, accuracy: 0.00001)
+            XCTAssertLessThan(stops[stops.count - 3].opacity, 0.01)
+            XCTAssertEqual(stops[9].opacity, 0.5, accuracy: 0.00001)
+        }
+        XCTAssertEqual(AppPreferences.IslandGlassDegree.normalized(-1), 0.2)
+        XCTAssertEqual(AppPreferences.IslandGlassDegree.normalized(2), 0.8)
+        XCTAssertEqual(AppPreferences.IslandGlassDegree.normalized(.nan), 0.45)
+    }
+
     func testFloatingQuotaPeriodsUseDurationInsteadOfPrimaryPosition() {
         let week = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
             usedPercent: 25, remainingPercent: 75, windowDurationMinutes: 10080, resetsAt: nil)

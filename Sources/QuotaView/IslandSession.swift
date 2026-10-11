@@ -22,6 +22,7 @@ final class IslandSession {
     private var automaticPopupEnabled = true
     private var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
     private var expandedWidth = AppPreferences.IslandExpandedWidth.defaultValue
+    private var islandUsageCapsuleTone: AppPreferences.UsageCapsuleTone = .dark
     private var islandFloatingUsageEnabled = true
     private var islandGlassDegree = AppPreferences.IslandGlassDegree.defaultValue
     private var islandMaterial: AppPreferences.IslandMaterial = .liquidGlass
@@ -70,12 +71,13 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, islandUsageCapsuleTone: AppPreferences.UsageCapsuleTone = .dark, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
         self.backgroundMemorySnapshots = backgroundMemorySnapshots
         self.usageOptions = usageOptions
         self.automaticPopupEnabled = automaticPopupEnabled
         self.automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.normalizedDuration(automaticPopupDuration)
         self.expandedWidth = AppPreferences.IslandExpandedWidth.normalized(expandedWidth)
+        self.islandUsageCapsuleTone = islandUsageCapsuleTone
         self.islandFloatingUsageEnabled = islandFloatingUsageEnabled
         self.islandGlassDegree = islandGlassDegree
         self.islandMaterial = islandMaterial
@@ -123,6 +125,7 @@ final class IslandSession {
         display.automaticPopupEnabled = automaticPopupEnabled
         display.automaticPopupDuration = automaticPopupDuration
         display.expandedWidth = expandedWidth
+        display.islandUsageCapsuleTone = islandUsageCapsuleTone
         display.islandFloatingUsageEnabled = islandFloatingUsageEnabled
         display.islandGlassDegree = islandGlassDegree
         display.islandMaterial = islandMaterial
