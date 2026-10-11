@@ -11,11 +11,11 @@
 原 Figma 文件 UI2 右侧新增四张可编辑产品图，使用虚拟数据，不改变生产账户或任务：
 
 - [三状态任务页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=198-337)：思考中、工作中、待确认。
-- [用量页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-401)：双周期额度、账户、Tokens、成本及活动热图。
+- [用量页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-401)：Codex / Claude Code 来源切换、双周期额度、账户、Tokens、成本及活动热图。
 - [审批页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-402)：完整命令、理由、范围与操作按钮。
 - [重置卡页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-403)：2 次虚拟重置、须知、红色按钮与演示说明。
 
-尺寸、文字与轮廓按源码映射，按钮 24 pt / 图标 10 pt；玻璃使用 Figma 原生 GLASS 效果，其光学呈现不等同于 macOS 合成器。AI 球使用真实 Metal 静态渲染；待确认卡按当前源码隐藏噪点并显示赤金色呼吸光静态帧，重置卡为原始 SVG，文字/布局可编辑，未嵌入整页截图。四页导出检查完成；最终产品图视觉由用户验收。节点与本地渲染材料见 `.build/081-figma-assets/`。
+尺寸、文字与轮廓按源码映射，按钮 24 pt / 图标 10 pt；玻璃使用 Figma 原生 GLASS 效果，其光学呈现不等同于 macOS 合成器。AI 球及进度特效使用真实 Metal 静态渲染；按用户产品图要求，选中工作卡和待确认卡均展示进度特效，待确认保留赤金色光晕（生产当前会隐藏待确认噪点，此处仅为画板展示覆盖，不改应用）。重置卡为原始 SVG，文字/布局可编辑，未嵌入整页截图。四页导出检查完成；最终产品图视觉由用户验收。节点与本地渲染材料见 `.build/081-figma-assets/`。
 
 ## 胶囊配色切换右对齐（2026-10-11 22:34）
 
