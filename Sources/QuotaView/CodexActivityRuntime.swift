@@ -1043,6 +1043,7 @@ final class CodexActivityRuntime: ObservableObject {
             islandMaterial: preferences.islandMaterial,
             islandGlassDegree: preferences.islandGlassDegree,
             islandFloatingUsageEnabled: preferences.islandFloatingUsageEnabled,
+            islandUsageCapsuleTone: preferences.islandUsageCapsuleTone,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots)
     }
 

@@ -1714,7 +1714,8 @@ private struct IslandFloatingUsageCapsule: View {
             if state.showsFloatingUsage {
                 IslandUsageCapsuleContent(windows: state.display?.usageSnapshot?.quotaWindows ?? [],
                     current: state.display?.usageState.isCurrent == true,
-                    english: state.english, now: state.floatingUsageNow)
+                    english: state.english, now: state.floatingUsageNow,
+                    tone: state.display?.islandUsageCapsuleTone ?? .dark)
                 .position(x: geometry.value.rect.midX, y: geometry.value.rect.maxY + 24)
             }
         }
@@ -1731,19 +1732,23 @@ struct IslandUsageCapsuleContent: View {
     let current: Bool
     let english: Bool
     let now: Date
-    var clearSurface = false
+    var tone: AppPreferences.UsageCapsuleTone = .dark
+    private var ink: Color { .white }
+    private var tint: Color { tone == .dark ? .black.opacity(0.55) : .clear }
+    private var solid: Color { Color(white: 0.12) }
 
     var body: some View {
         let periods = IslandFloatingQuotaPeriods.windows(windows)
         HStack(spacing: 12) {
             ForEach(periods.indices, id: \.self) { index in
-                if index > 0 { Capsule().fill(.white.opacity(0.2)).frame(width: 1, height: 12) }
+                if index > 0 { Capsule().fill(ink.opacity(0.22)).frame(width: 1, height: 12) }
                 period(periods[index], short: periods.count == 2 && index == 0)
             }
         }
-        .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
+        .font(.system(size: 12, weight: .medium)).foregroundStyle(ink)
         .padding(.horizontal, 12).frame(height: 32).fixedSize()
-        .islandGlass(Capsule(), tint: clearSurface ? .clear : .white.opacity(0.05), clearSurface: clearSurface)
+        .islandGlass(Capsule(), tint: tint, solidTint: solid, clearSurface: true)
+        .environment(\.colorScheme, .dark)
         .environment(\.islandLiquidGlassEnabled, true)
     }
 
@@ -1758,7 +1763,7 @@ struct IslandUsageCapsuleContent: View {
             Text(title)
             Text(value).monospacedDigit()
             Text(window?.resetsAt != nil && current ? copy.text("\(countdown)重置", "Resets in \(countdown)") : copy.text("重置时间 —", "Reset —"))
-                .foregroundStyle(.white.opacity(0.7)).monospacedDigit()
+                .foregroundStyle(ink.opacity(0.78)).monospacedDigit()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(copy.text("\(title)，剩余 \(value)，\(countdown)后重置", "\(title), \(value) remaining, resets in \(countdown)"))
@@ -1771,7 +1776,7 @@ private struct IslandExpandedGlassBackdrop: View {
     var body: some View {
         let value = geometry.value
         let shape = IslandNotchShape(bottomRadius: value.radius)
-        let stops = AppPreferences.IslandGlassDegree.stops(geometry.degree)
+        let stops = AppPreferences.IslandGlassDegree.gradientStops(geometry.degree)
         ZStack(alignment: .topLeading) {
             Color.clear
             Color.clear
@@ -1779,13 +1784,7 @@ private struct IslandExpandedGlassBackdrop: View {
                 .modifier(IslandNativeBackdropMaterial(shape: shape))
                 .overlay {
                     // Only the shade is clipped. Native glass owns its contour.
-                    LinearGradient(stops: [
-                        .init(color: .black, location: stops[0]),
-                        .init(color: .black, location: stops[1]),
-                        .init(color: .black.opacity(0.45), location: stops[2]),
-                        .init(color: .clear, location: stops[3]),
-                        .init(color: .clear, location: stops[4])
-                    ], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom)
                     .clipShape(shape)
                 }
                 .overlay { shape.fill(.black).opacity(value.compact ? 1 : 0) }
@@ -1956,7 +1955,9 @@ final class IslandNotchSurface: NSView {
             duration: animated && !confirmationGlow.isHidden ? duration : nil)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         shell.path = path; shell.shadowPath = path; clipping.path = maskPath
-        shell.shadowOpacity = state.compact ? 0.10 : 0.26
+        // The classic shadowPath paints a full dark silhouette beneath clear glass.
+        // Native glass already supplies its own depth; avoid doubling that backing.
+        shell.shadowOpacity = usesGlass ? 0 : (state.compact ? 0.10 : 0.26)
         shell.shadowRadius = state.compact ? 5 : 10
         CATransaction.commit()
         if animated, let oldPath, let oldMask {
