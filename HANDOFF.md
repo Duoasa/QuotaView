@@ -15,7 +15,7 @@
 - [审批页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-402)：完整命令、理由、范围与操作按钮。
 - [重置卡页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-403)：2 次虚拟重置、须知、红色按钮与演示说明。
 
-尺寸、文字与轮廓按源码映射，按钮 24 pt / 图标 10 pt；玻璃使用 Figma 原生 GLASS 效果，其光学呈现不等同于 macOS 合成器。AI 球及量子噪点使用真实 Metal 静态渲染，重置卡为原始 SVG，文字/布局可编辑，未嵌入整页截图。四页导出检查完成；最终产品图视觉由用户验收。节点与本地渲染材料见 `.build/081-figma-assets/`。
+尺寸、文字与轮廓按源码映射，按钮 24 pt / 图标 10 pt；玻璃使用 Figma 原生 GLASS 效果，其光学呈现不等同于 macOS 合成器。AI 球使用真实 Metal 静态渲染；待确认卡按当前源码隐藏噪点并显示赤金色呼吸光静态帧，重置卡为原始 SVG，文字/布局可编辑，未嵌入整页截图。四页导出检查完成；最终产品图视觉由用户验收。节点与本地渲染材料见 `.build/081-figma-assets/`。
 
 ## 胶囊配色切换右对齐（2026-10-11 22:34）
 
