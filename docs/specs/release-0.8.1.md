@@ -1,6 +1,6 @@
 # QuotaView 0.8.1 Build 2
 
-状态：Accepted / Verifying。精确身份 `0.8.1 / Build 2 / 内部 62`，tag `v0.8.1-build.2`，ZIP `QuotaView-v0.8.1-build.2.zip`。
+状态：Released / User Acceptance Pending。精确身份 `0.8.1 / Build 2 / 内部 62`，tag `v0.8.1-build.2`，ZIP `QuotaView-v0.8.1-build.2.zip`。
 
 用户已明确要求重新封装最新开发版、合入 main、发布 GitHub 与 appcast，此授权包含完整签名、公证、不可变资产和自动更新发布链路。前一稳定版 `v0.7.9-build.1` 保留；不发布本地 Build 1。
 
@@ -9,3 +9,5 @@
 发布检查：完整 Swift 测试、原生审批契约、PR/main CI；Universal 架构、版本及资源、Developer ID、公证/Staple、解压启动与加载路径；GitHub 回下载哈希、EdDSA、公开 appcast 与更新目标。未将构建或 CI 通过扩大为实机全矩阵视觉验收。
 
 本地证据 `dist/verification/0.8.1-build2-release/`；最终不可变事实记录于 [版本历史](../../VERSION_HISTORY.md#当前最新版本)，当前运行包见 [Handoff](../../HANDOFF.md)。
+
+源码 PR #94 与 main CI 已通过，正式包已发布 Stable / Latest 并推送签名 appcast。公开回下载哈希与签名验证通过；原始发布证据见版本历史与本地记录。

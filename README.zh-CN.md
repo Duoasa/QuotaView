@@ -140,5 +140,5 @@ swift run QuotaView
 **QQ 反馈群：1108649282**
 
 <p align="center">
-  <img src="Resources/QuotaView-QQ-Feedback-Community.jpg" alt="QuotaView QQ 反馈群二维码" width="280">
+  <img src="Resources/QuotaView-QQ-Feedback-QR.png" alt="QuotaView QQ 反馈群二维码" width="280">
 </p>

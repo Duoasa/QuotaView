@@ -2,11 +2,12 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.8.1 Build 2 发布准备
+## 0.8.1 Build 2 已发布
 
-用户明确授权以最新开发版发布 0.8.1 Build 2，并合入 main、发布 GitHub 与 appcast。身份 0.8.1 / 显示 2 / 内部 62；继承 Build 1 并包含设置紧凑化。中英文 README 使用用户提供的七张产品图，按功能配图，口号“液态玻璃，现在重新回归”。正式发布前保持 0.7.9 Build 1 为稳定回滚基线。
+[0.8.1 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2) 已发布 GitHub Stable / Latest，源码经 PR #94 合入 main；PR/main CI 均通过。用户已授权并推送签名 appcast，完整版本、哈希、公证与回滚事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。前一稳定版 `v0.7.9-build.1` 保留。
 
-开发运行包已更新 PID 58221，234 输入/13 资产及包/加载路径一致，正式安装未改。发布证据存于 `dist/verification/0.8.1-build2-release/`，规格见 [0.8.1 发布](docs/specs/release-0.8.1.md)。发布与 appcast 待本轮产物验证完成后执行，视觉验收仍由用户负责。
+本轮包含最新设置紧凑化、中英文 README 七张功能配图、设置页同款纯 QQ 二维码及多 Agent About。开发运行包 PID 58221，身份 0.8.1 / Build 2 / 内部 62，正式安装未替换。发布证据 `dist/verification/0.8.1-build2-release/`；公开回下载与本地签名公证 ZIP 一致，解压启动通过，视觉/实际交互最终由用户验收。
+
 
 ## 设置窗口与元素紧凑化（2026-10-11 23:32）
 

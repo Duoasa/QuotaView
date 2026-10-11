@@ -140,5 +140,5 @@ Open source under the [MIT license](LICENSE).
 **QQ feedback group: 1108649282**
 
 <p align="center">
-  <img src="Resources/QuotaView-QQ-Feedback-Community.jpg" alt="QuotaView QQ feedback group QR code" width="280">
+  <img src="Resources/QuotaView-QQ-Feedback-QR.png" alt="QuotaView QQ feedback group QR code" width="280">
 </p>
