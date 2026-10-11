@@ -72,8 +72,8 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
 
     @MainActor
     func testOpeningLowerTaskDetailPreservesViewportWithoutAutomaticSelectionScroll() {
-        XCTAssertEqual(collapsed.contentHeight, 356)
-        XCTAssertEqual(expanded.contentHeight, 464)
+        XCTAssertEqual(collapsed.contentHeight, 366)
+        XCTAssertEqual(expanded.contentHeight, 474)
         let fixture = Fixture(layout: collapsed, viewport: 288, offset: 68)
         fixture.link.prepareLayoutChange()
         fixture.configure(expanded, viewport: 396)
@@ -91,7 +91,7 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
         fixture.configure(collapsed, viewport: 288)
         fixture.resizeDocument(collapsed)
         // Reproduce AppKit's temporary clamp while the old 396 pt viewport
-        // is taller than the new 356 pt document.
+        // is taller than the new 366 pt document.
         fixture.move(to: 0)
         fixture.probe.layout()
         XCTAssertEqual(fixture.offset, 0, accuracy: 0.01,
@@ -267,8 +267,8 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
         fixture.resizeDocument(after)
         fixture.link.finishLayoutChange()
         fixture.finishLayout()
-        XCTAssertEqual(fixture.offset, 80, accuracy: 0.01)
-        XCTAssertEqual(fixture.visibility.last?.residentTaskIDs, after.residentTaskIDs(offset: 80, viewport: 200))
+        XCTAssertEqual(fixture.offset, 82, accuracy: 0.01)
+        XCTAssertEqual(fixture.visibility.last?.residentTaskIDs, after.residentTaskIDs(offset: 82, viewport: 200))
     }
 
     @MainActor
@@ -306,8 +306,8 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
     func testTaskAnchorMovesWithDetailAboveInsteadOfKeepingObsoletePixelOffset() {
         let before = IslandTaskListLayout(taskIDs: Array(1...10), detailID: 2, detailHeight: 100)
         let after = IslandTaskListLayout(taskIDs: Array(1...10), detailID: nil)
-        // Row 5 starts at 392 before removal and 284 afterward. Keep the
-        // same task and 10 pt within its row, rather than the old 402 pt.
+        // Row 5 starts at 400 before removal and 292 afterward. Keep the
+        // same task and 2 pt within its row, rather than the old 402 pt.
         let fixture = Fixture(layout: before, viewport: 200, offset: 402)
         fixture.link.prepareLayoutChange()
         fixture.configure(after, viewport: 200)
@@ -326,7 +326,7 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
         fixture.configure(after, viewport: 200)
         fixture.resizeDocument(after)
         fixture.finishLayout()
-        XCTAssertEqual(fixture.offset, 80, accuracy: 0.01,
+        XCTAssertEqual(fixture.offset, 82, accuracy: 0.01,
             "When the anchored detail disappears, show its owning card rather than an unrelated later task")
     }
 
@@ -339,10 +339,10 @@ final class IslandScrollRestorationSmokeTests: XCTestCase {
         let rail = IslandTaskScrollRail(frame: NSRect(x: 0, y: 0, width: 14, height: 288))
         rail.doubleValue = 0.25
         fixture.probe.scrollFromRail(rail)
-        XCTAssertEqual(fixture.offset, 44, accuracy: 0.01)
+        XCTAssertEqual(fixture.offset, 46.5, accuracy: 0.01)
         fixture.resizeDocument(collapsed)
         fixture.finishLayout()
-        XCTAssertEqual(fixture.offset, 44, accuracy: 0.01,
+        XCTAssertEqual(fixture.offset, 46.5, accuracy: 0.01,
             "The independent rail must own the offset after interaction, just like a native gesture")
     }
 
