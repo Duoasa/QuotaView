@@ -25,6 +25,17 @@ private extension NSView {
 }
 
 final class AppBehaviorTests: XCTestCase {
+    func testFloatingQuotaPeriodsUseDurationInsteadOfPrimaryPosition() {
+        let week = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
+            usedPercent: 25, remainingPercent: 75, windowDurationMinutes: 10080, resetsAt: nil)
+        let short = CodexQuotaWindowPresentation(id: CodexDomainCatalog.secondaryRateWindowID,
+            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 300, resetsAt: nil)
+        XCTAssertEqual(IslandFloatingQuotaPeriods.windows([week]), [week])
+        XCTAssertEqual(IslandFloatingQuotaPeriods.windows([week, short]), [short, week])
+        XCTAssertEqual(IslandFloatingQuotaPeriods.windows([short]), [short, nil])
+        XCTAssertEqual(IslandFloatingQuotaPeriods.windows([]), [nil])
+    }
+
     @MainActor
     func testMenuBarSingleWindowTextUsesRealWindow() {
         let now = Date(timeIntervalSince1970: 1000)
@@ -367,7 +378,7 @@ final class AppBehaviorTests: XCTestCase {
     func testRippleGlowProductionContractAndRendererResource() throws {
         XCTAssertEqual(
             CodexActivityRippleGlowContract.uniformFloatCount,
-            128
+            132
         )
         XCTAssertEqual(
             CodexActivityRippleGlowContract.sphereRadius,

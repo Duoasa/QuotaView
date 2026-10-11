@@ -275,6 +275,10 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
     }
 
+    @Published var islandFloatingUsageEnabled: Bool {
+        didSet { defaults.set(islandFloatingUsageEnabled, forKey: "island.floatingUsageEnabled") }
+    }
+
     @Published var islandGlassDegree: Double {
         didSet { defaults.set(IslandGlassDegree.normalized(islandGlassDegree), forKey: "island.glassDegree") }
     }
@@ -537,6 +541,7 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
+        islandFloatingUsageEnabled = defaults.object(forKey: "island.floatingUsageEnabled") as? Bool ?? true
         islandGlassDegree = IslandGlassDegree.normalized((defaults.object(forKey: "island.glassDegree") as? Double) ?? IslandGlassDegree.defaultValue)
         islandMaterial = IslandMaterial(rawValue: defaults.string(forKey: "island.material") ?? "") ?? .liquidGlass
         codexIslandExpandedWidth = IslandExpandedWidth.normalized(
