@@ -2,7 +2,7 @@
 
 ## 当前候选：0.8.1 Build 1
 
-0.8.1 / 1 / 内部 61；授权源码合入与本地签名封装。继承灵动岛玻璃与悬浮胶囊规格，公开 Release/appcast 未准入。交付状态见 [Handoff](../../HANDOFF.md)。
+0.8.1 / 1 / 内部 61；源码已合入 main，本地通用签名包已公证、Staple 并通过解压启动冒烟。继承灵动岛玻璃与悬浮胶囊规格，公开 Release/appcast 未准入。交付状态见 [Handoff](../../HANDOFF.md)。
 
 [悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete，开发版已更新，视觉待用户验收。
 
