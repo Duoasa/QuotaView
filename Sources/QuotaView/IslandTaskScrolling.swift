@@ -1,6 +1,20 @@
 import AppKit
 import SwiftUI
 
+// Use the system's glass-aware scroll edge treatment. A custom alpha mask on
+// this scroll view would flatten every native glass card beneath it.
+struct IslandSoftScrollEdges: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content
+                .scrollEdgeEffectStyle(.soft, for: .vertical)
+                .scrollEdgeEffectHidden(false, for: .vertical)
+        } else {
+            content
+        }
+    }
+}
+
 enum IslandListElement: Hashable {
     case task(Int)
     case detail(Int)
@@ -18,6 +32,7 @@ struct IslandTaskListLayout: Equatable {
     let detailID: Int?
     var detailHeight: CGFloat = IslandVibeLayout.minimumDetailHeight
     var rowHeights: [Int: CGFloat] = [:]
+    var continuousEdges = false
 
     struct Anchor {
         let element: IslandListElement
@@ -67,6 +82,30 @@ struct IslandTaskListLayout: Equatable {
         return nil
     }
 
+    // Fade only an element crossing the viewport boundary. Complete cards,
+    // list padding and inter-card gaps never activate an edge overlay.
+    func edgeFadeDepths(offset: CGFloat, viewport: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
+        var top: CGFloat = 0, bottom: CGFloat = 0
+        let edgeDepth = IslandVibeLayout.listVerticalInset
+        let end = offset + viewport
+        var cursor = IslandVibeLayout.listVerticalInset
+        func visit(_ height: CGFloat) {
+            let lower = cursor + height
+            if cursor < offset && lower > offset {
+                top = min(edgeDepth, lower - offset, offset - cursor)
+            }
+            if cursor < end && lower > end {
+                bottom = min(edgeDepth, end - cursor, lower - end)
+            }
+            cursor = lower + IslandVibeLayout.rowSpacing
+        }
+        for id in taskIDs {
+            visit(rowHeights[id] ?? IslandVibeLayout.rowHeight)
+            if id == detailID { visit(detailHeight) }
+        }
+        return (max(0, top), max(0, bottom))
+    }
+
     func visibleElements(offset: CGFloat, viewport: CGFloat) -> Set<IslandListElement> {
         var result: Set<IslandListElement> = []
         var cursor: CGFloat = IslandVibeLayout.listVerticalInset
@@ -94,34 +133,48 @@ struct IslandTaskListLayout: Equatable {
 }
 
 // The rail is an independent sibling of ScrollView, never its managed scroller.
-// Progress moves CALayers directly; no scroll-offset state is published to SwiftUI.
+// Rail and top edge move CALayers directly; only bottom card-mask modifiers observe the fade boundary.
 @MainActor
-final class IslandTaskScrollLink {
+final class IslandTaskScrollLink: ObservableObject {
     struct Metrics: Equatable {
         var offset: CGFloat = 0
         var viewport: CGFloat = 0
         var content: CGFloat = 0
         var visible = false
+        var topFade: CGFloat = 0
+        var bottomFade: CGFloat = 0
         var maximum: CGFloat { max(0, content - viewport) }
         var fraction: Double { maximum > 0 ? Double(min(1, max(0, offset / maximum))) : 0 }
     }
     private weak var probe: IslandTaskScrollProbe?
     private weak var rail: IslandTaskScrollRail?
+    private weak var edges: IslandTaskEdgeView?
+    struct BottomFade: Equatable {
+        var boundary: CGFloat = 0
+        var depth: CGFloat = 0
+    }
+    @Published private(set) var bottomFade = BottomFade()
     private var metrics = Metrics()
     func attach(_ probe: IslandTaskScrollProbe) { self.probe = probe }
+    func attach(_ edges: IslandTaskEdgeView) { self.edges = edges; edges.update(metrics) }
+    func detach(_ edges: IslandTaskEdgeView) { if self.edges === edges { self.edges = nil } }
     func attach(_ rail: IslandTaskScrollRail) {
         self.rail = rail; rail.link = self; rail.update(metrics)
     }
     func detach(_ probe: IslandTaskScrollProbe) {
         guard self.probe === probe else { return }
-        self.probe = nil; metrics.visible = false; rail?.update(metrics)
+        self.probe = nil; metrics.visible = false; rail?.update(metrics); edges?.update(metrics)
+        bottomFade = BottomFade()
     }
     func detach(_ rail: IslandTaskScrollRail) {
         if self.rail === rail { self.rail = nil }
     }
     func update(_ metrics: Metrics) {
         guard self.metrics != metrics else { return }
-        self.metrics = metrics; rail?.update(metrics)
+        self.metrics = metrics; rail?.update(metrics); edges?.update(metrics)
+        let next = metrics.visible && metrics.bottomFade > 0
+            ? BottomFade(boundary: metrics.offset + metrics.viewport, depth: metrics.bottomFade) : BottomFade()
+        if bottomFade != next { bottomFade = next }
     }
     func move(_ rail: IslandTaskScrollRail) { probe?.scrollFromRail(rail) }
     func prepareLayoutChange() { probe?.prepareLayoutChange() }
@@ -314,9 +367,14 @@ final class IslandTaskScrollProbe: NSView {
     }
     private func updateRail() {
         guard pendingAnchor == nil, let scroll, let document = scroll.documentView else { return }
+        let offset = scroll.contentView.bounds.minY
+        let remaining = max(0, document.frame.height - scroll.contentView.bounds.height - offset)
+        let fades = listLayout.continuousEdges
+            ? (top: min(12, max(0, offset)), bottom: min(12, remaining))
+            : listLayout.edgeFadeDepths(offset: offset, viewport: scroll.contentView.bounds.height)
         scrollLink?.update(.init(offset: scroll.contentView.bounds.minY,
                                 viewport: scroll.contentView.bounds.height, content: document.frame.height,
-                                visible: active))
+                                visible: active, topFade: fades.top, bottomFade: fades.bottom))
     }
     func prepareLayoutChange() {
         guard active, let clip = scroll?.contentView else { return }
@@ -413,4 +471,97 @@ struct IslandTaskScrollConfiguration: NSViewRepresentable {
         view.configure(layout: layout, active: active, onVisibilityChange: onVisibilityChange, link: link, viewportHeight: viewportHeight)
     }
     static func dismantleNSView(_ view: IslandTaskScrollProbe, coordinator: ()) { view.detach() }
+}
+
+// An independent overlay preserves the native glass sampling of all card hosts.
+// Only the narrow, already-clipped card fragment is shaded; no ancestor alpha mask.
+@MainActor
+final class IslandTaskEdgeView: NSView {
+    private let topEdge = CAGradientLayer()
+    private var metrics = IslandTaskScrollLink.Metrics()
+    override var isFlipped: Bool { true }
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        for edge in [topEdge] {
+            edge.locations = [0, 0.25, 1]
+            edge.startPoint = CGPoint(x: 0.5, y: 0)
+            edge.endPoint = CGPoint(x: 0.5, y: 1)
+            layer?.addSublayer(edge)
+        }
+        topEdge.colors = [NSColor.black.cgColor, NSColor.black.withAlphaComponent(0.8).cgColor, NSColor.clear.cgColor]
+    }
+    required init?(coder: NSCoder) { nil }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    func update(_ metrics: IslandTaskScrollLink.Metrics) { self.metrics = metrics; needsLayout = true }
+    override func layout() {
+        super.layout()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        topEdge.isHidden = !metrics.visible || metrics.topFade <= 0
+        topEdge.frame = CGRect(x: 0, y: 0, width: bounds.width, height: metrics.topFade)
+        CATransaction.commit()
+    }
+}
+
+struct IslandTaskEdgeOverlay: NSViewRepresentable {
+    let link: IslandTaskScrollLink
+    func makeNSView(context: Context) -> IslandTaskEdgeView {
+        let view = IslandTaskEdgeView(frame: .zero); link.attach(view); return view
+    }
+    func updateNSView(_ view: IslandTaskEdgeView, context: Context) { link.attach(view) }
+}
+
+// Only the card crossing the bottom edge enters a compositing mask. Complete
+// cards keep their original native glass hierarchy, and the island backdrop
+// remains outside this mask so it shows through the transparent fragment.
+struct IslandCardBottomFade: ViewModifier {
+    @ObservedObject var link: IslandTaskScrollLink
+    let origin: CGFloat
+    let height: CGFloat
+    @ViewBuilder func body(content: Content) -> some View {
+        let edge = link.bottomFade
+        let localBoundary = edge.boundary - origin
+        if edge.depth > 0 && localBoundary > 0 && localBoundary < height {
+            let end = min(1, localBoundary / height)
+            let start = max(0, (localBoundary - edge.depth) / height)
+            content.mask {
+                LinearGradient(stops: [
+                    .init(color: .white, location: 0),
+                    .init(color: .white, location: start),
+                    .init(color: .clear, location: end),
+                    .init(color: .clear, location: 1)
+                ], startPoint: .top, endPoint: .bottom)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private struct IslandApprovalScrollLinkKey: EnvironmentKey {
+    static let defaultValue: IslandTaskScrollLink? = nil
+}
+extension EnvironmentValues {
+    var approvalScrollLink: IslandTaskScrollLink? {
+        get { self[IslandApprovalScrollLinkKey.self] }
+        set { self[IslandApprovalScrollLinkKey.self] = newValue }
+    }
+}
+// Measure in stationary document coordinates; only the crossing element receives a mask.
+struct IslandApprovalElementFade: ViewModifier {
+    @Environment(\.approvalScrollLink) private var link
+    @State private var rect = CGRect.zero
+    func body(content: Content) -> some View {
+        Group {
+            if let link {
+                content.modifier(IslandCardBottomFade(link: link, origin: rect.minY, height: rect.height))
+                    .background {
+                        GeometryReader { proxy in
+                            let next = proxy.frame(in: .named("approvalDocument"))
+                            Color.clear.onAppear { rect = next }.onChange(of: next) { _, value in rect = value }
+                        }
+                    }
+            } else { content }
+        }
+    }
 }

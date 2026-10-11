@@ -39,9 +39,9 @@ enum IslandApprovalAppearance {
     static let surface = Color(white: 0.055)
     static let raised = Color(white: 0.085)
     static let border = Color(white: 0.13)
-    static let secondary = Color(white: 0.68)
-    static let muted = Color(white: 0.47)
-    static let radius: CGFloat = 10
+    static let secondary = Color(white: 0.84)
+    static let muted = Color(white: 0.67)
+    static let radius: CGFloat = IslandVibeLayout.rowRadius
 }
 
 struct IslandApprovalSelectionStyle: ButtonStyle {
@@ -56,12 +56,14 @@ struct IslandApprovalSelectionStyle: ButtonStyle {
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(Color(white: configuration.isPressed && enabled ? 0.16 : selected ? 0.12 : hovered && enabled ? 0.085 : 0.045),
-                    in: RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius))
-                .overlay(RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius)
-                    .strokeBorder(Color(white: selected ? 0.48 : hovered && enabled ? 0.24 : 0.13), lineWidth: 1))
-                .contentShape(RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius))
+                .islandGlass(RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius, style: .continuous),
+                    tint: selected ? .white.opacity(0.12) : .black.opacity(0.28))
+                .overlay(RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius, style: .continuous)
+                    .strokeBorder(.white.opacity(selected ? 0.45 : 0), lineWidth: 1).allowsHitTesting(false))
+                .brightness(configuration.isPressed && enabled ? -0.08 : hovered && enabled ? 0.04 : 0)
+                .contentShape(RoundedRectangle(cornerRadius: IslandApprovalAppearance.radius, style: .continuous))
                 .onHover { hovered = $0 }
+                .modifier(IslandApprovalElementFade())
         }
     }
 }
@@ -84,10 +86,10 @@ struct IslandApprovalInput: View {
         }.font(.system(size: 12)).foregroundStyle(.white).padding(.horizontal, 12)
             .frame(height: IslandApprovalMetrics.inputHeight)
             .background(selected == nil ? IslandApprovalAppearance.surface : IslandApprovalAppearance.raised,
-                in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8)
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(focused || selected == true ? Color(white: 0.5) : IslandApprovalAppearance.border, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .onTapGesture { guard enabled else { return }; onSelect?(); focused = true }
             .onChange(of: focused) { _, value in
                 guard enabled else { focused = false; return }
@@ -257,14 +259,14 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
             Spacer(minLength: 8)
             if !trailing.isEmpty { Text(trailing).font(.system(size: 10)).foregroundStyle(muted) }
-        }.frame(height: 24)
+        }.frame(height: 24).modifier(IslandApprovalElementFade())
     }
     private func note(_ value: String, code: Bool = false) -> some View {
         Text(value).font(.system(size: code ? 11 : 12, design: code ? .monospaced : .default))
             .foregroundStyle(secondary).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: IslandApprovalTypedMetrics.text(value, width: width, code: code), alignment: .topLeading)
-            .textSelection(.enabled)
+            .textSelection(.enabled).modifier(IslandApprovalElementFade())
     }
     private var reasonNote: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -275,7 +277,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                     .frame(height: IslandApprovalTypedMetrics.text(reason, width: width - 22), alignment: .topLeading)
             }
-        }
+        }.modifier(IslandApprovalElementFade())
     }
     private func codePanel(_ label: String, value: String, caption: String, trailing: String = "") -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -309,7 +311,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     Button(t("复制完整内容", "Copy full text")) {
                         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
                     }
-                }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(.plain)
+                }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(IslandUtilityButtonStyle())
                     .frame(height: 24).padding(.horizontal, 12).padding(.bottom, 8)
             }
             if !caption.isEmpty {
@@ -323,15 +325,14 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                 }.padding(.horizontal, 12).padding(.vertical, 10)
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
-            .background(IslandApprovalAppearance.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+            .islandGlass(IslandVibeLayout.rowShape, tint: .black.opacity(0.28), solidTint: IslandApprovalAppearance.surface)
+            .modifier(IslandApprovalElementFade())
             .onChange(of: value) { _, _ in showsCompleteCode = false }
     }
     private func destination(icon: String, name: String, subtitle: String, badge: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon).font(.system(size: 18, weight: .regular)).foregroundStyle(secondary)
-                .frame(width: 40, height: 40).background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 10))
+                .frame(width: 40, height: 40).background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 Text(name).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
@@ -341,11 +342,11 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     .frame(height: IslandTaskTextMetrics.height(subtitle, width: width - 180), alignment: .topLeading)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Text(badge).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
-                .frame(width: 88).padding(.vertical, 5).background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 5))
+                .frame(width: 88).padding(.vertical, 5).background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
         }.padding(.horizontal, 14).frame(maxWidth: .infinity)
             .frame(height: IslandApprovalTypedMetrics.destinationHeight(name: name, subtitle: subtitle, width: width))
-            .background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+            .background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
     }
     private func step(_ number: Int, title: String, subtitle: String, complete: Bool) -> some View {
         HStack(spacing: 10) {
@@ -357,7 +358,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             }
             Spacer(minLength: 0)
         }.padding(12).frame(maxWidth: .infinity).frame(height: 64)
-            .background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10))
+            .background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
     private var argumentsPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -377,8 +378,8 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     .frame(height: max(IslandApprovalTypedMetrics.text(argument.0, width: 112, code: true),
                         IslandApprovalTypedMetrics.text(argument.1, width: width - 152, code: true)) + 20)
             }
-        }.background(IslandApprovalAppearance.surface).clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+        }.background(IslandApprovalAppearance.surface).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
     }
     private func diffPanel(_ change: IslandApprovalJSON) -> some View {
         let lines = IslandApprovalTypedMetrics.diffText(change).components(separatedBy: "\n")
@@ -411,38 +412,37 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     .background(added ? Color(red: 0.045, green: 0.10, blue: 0.065)
                         : removed ? Color(red: 0.11, green: 0.06, blue: 0.06) : Color.clear)
             }
-        }.padding(.bottom, 8).background(IslandApprovalAppearance.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+        }.padding(.bottom, 8)
+            .islandGlass(IslandVibeLayout.rowShape, tint: .black.opacity(0.28), solidTint: IslandApprovalAppearance.surface)
+            .modifier(IslandApprovalElementFade())
     }
 }
 
 struct IslandApprovalActionStyle: ButtonStyle {
     let primary: Bool
     var destructive = false
+    var emphasized = false
     func makeBody(configuration: Configuration) -> some View {
-        Surface(configuration: configuration, primary: primary, destructive: destructive)
+        Surface(configuration: configuration, primary: primary, destructive: destructive, emphasized: emphasized)
     }
     private struct Surface: View {
         let configuration: Configuration
         let primary: Bool
         let destructive: Bool
+        let emphasized: Bool
         @Environment(\.isEnabled) private var enabled
         @State private var hovered = false
-        private var fill: Color {
-            if enabled && destructive {
-                return configuration.isPressed ? Color(red: 0.58, green: 0.16, blue: 0.17)
-                    : hovered ? Color(red: 0.76, green: 0.22, blue: 0.23) : Color(red: 0.68, green: 0.18, blue: 0.19)
-            }
-            return Color(white: enabled && primary ? (configuration.isPressed ? 0.78 : hovered ? 0.90 : 1)
-                : configuration.isPressed ? 0.16 : hovered && enabled ? 0.13 : 0.085)
-        }
         var body: some View {
             configuration.label
-                .foregroundStyle(enabled ? (primary ? Color.black : Color.white) : IslandApprovalAppearance.muted)
-                .background(fill, in: RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(enabled && (primary || destructive) ? Color.clear : IslandApprovalAppearance.border, lineWidth: 1))
-                .contentShape(RoundedRectangle(cornerRadius: 10)).onHover { hovered = $0 }
+                .foregroundStyle(enabled ? (primary && !destructive ? Color(white: 0.10) : Color.white) : IslandApprovalAppearance.muted)
+                .islandGlass(RoundedRectangle(cornerRadius: 10, style: .continuous),
+                    tint: enabled && destructive ? (emphasized ? Color(red: 0.68, green: 0.10, blue: 0.12).opacity(0.78) : Color.red.opacity(0.22))
+                        : enabled && primary ? Color.white.opacity(0.90) : Color.white.opacity(0.04),
+                    solidTint: enabled && destructive ? Color(red: 0.68, green: 0.18, blue: 0.19)
+                        : enabled && primary ? Color(white: 0.94) : Color(white: 0.14),
+                    clearSurface: !(enabled && ((primary && !destructive) || (destructive && emphasized))))
+                .brightness(configuration.isPressed && enabled ? -0.08 : hovered && enabled ? 0.04 : 0)
+                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous)).onHover { hovered = $0 }
         }
     }
 }

@@ -3,11 +3,12 @@ import QuotaViewCore
 import SwiftUI
 
 enum SettingsWindowMetrics {
-    static let defaultContentSize = NSSize(width: 872, height: 760)
-    static let minimumContentSize = NSSize(width: 780, height: 560)
+    static let defaultContentSize = NSSize(width: 1040, height: 760)
+    static let minimumContentSize = NSSize(width: 920, height: 600)
     static let outerCornerRadius: CGFloat = 36
     static let contentMaxWidth: CGFloat = 744
-    static let contentInset: CGFloat = 32
+    static let contentInset: CGFloat = 24
+    static let sidebarWidth: CGFloat = 200
     static let sidebarInset: CGFloat = 16
     static let fallbackSidebarCornerRadius: CGFloat =
         outerCornerRadius - sidebarInset
@@ -64,8 +65,8 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
     }
     func subtitle(_ copy: AppCopy) -> String {
         switch self {
-        case .general: copy.text("语言、设置窗口外观与应用控制。", "Language, settings appearance and app controls.")
-        case .island: copy.text("灵动岛的隐私、自动弹出与任务特效。", "Privacy, automatic popups and task effects for the island.")
+        case .general: copy.text("语言与应用控制。", "Language and app controls.")
+        case .island: copy.text("材质、隐私、任务特效与自动展开。", "Material, privacy, task effects and automatic opening.")
         case .usage: copy.text("选择用量页显示的可选模块。", "Choose the optional modules on the usage page.")
         case .connections: copy.text("管理 Codex、Claude Code、DSH 和 Kimi Code 的任务接入。", "Manage task integrations for Codex, Claude Code, DSH and Kimi Code.")
         case .proxy: copy.text("查询额度与用量时使用的网络代理。", "The network proxy used for quota and usage queries.")
@@ -120,18 +121,15 @@ struct SettingsView: View {
             Color(nsColor: .windowBackgroundColor)
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    settingsTopBar
-                        .zIndex(1)
-                    settingsStage(for: selection ?? .general)
-                }
-                .frame(maxWidth: .infinity)
-                .background(Color(nsColor: .windowBackgroundColor))
+            HStack(spacing: 0) {
+                settingsSidebar
+                    .frame(width: SettingsWindowMetrics.sidebarWidth)
+                Divider()
                 settingsDetail(for: selection ?? .general)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .environment(\.colorScheme, .dark)
         .tint(Color(nsColor: .controlAccentColor))
         .buttonStyle(SettingsActionButtonStyle())
         .frame(
@@ -169,80 +167,64 @@ struct SettingsView: View {
         }
     }
 
-    // Narrow windows retain every destination and expand only the current label.
     private static let navigationGroups: [[IslandSettingsPage]] = [
-        [.general, .island, .usage], [.connections, .proxy, .feedback], [.about]
+        [.general, .island, .usage], [.connections, .proxy], [.feedback, .about]
     ]
 
-    private var settingsTopBar: some View {
-        ViewThatFits(in: .horizontal) {
-            settingsNavigationPill(showsAllLabels: true)
-            settingsNavigationPill(showsAllLabels: false)
-        }
-        .padding(.horizontal, 96)
-        .frame(maxWidth: .infinity)
-        .frame(height: 60)
-        .overlay(alignment: .topLeading) {
+    private var settingsSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
             SettingsTrafficLightHost()
                 .frame(width: 84, height: 44)
                 .padding(.leading, 8)
                 .padding(.top, 9)
-        }
-    }
-
-    private func settingsNavigationPill(showsAllLabels: Bool) -> some View {
-        HStack(spacing: 2) {
-            ForEach(Array(Self.navigationGroups.enumerated()), id: \.offset) { index, group in
-                if index > 0 {
-                    Capsule().fill(Color.primary.opacity(0.16)).frame(width: 1, height: 14)
-                        .padding(.horizontal, 5).accessibilityHidden(true)
-                }
-                ForEach(group) { page in
-                    settingsNavigationItem(page, showsLabel: showsAllLabels || selection == page)
-                }
+            Text(copy.text("设置", "Settings"))
+                .font(.title3.weight(.semibold))
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+            ScrollView {
+                VStack(spacing: 4) {
+                    ForEach(Array(Self.navigationGroups.enumerated()), id: \.offset) { index, group in
+                        if index > 0 { Divider().padding(.vertical, 8).padding(.horizontal, 8) }
+                        ForEach(group) { page in settingsNavigationItem(page) }
+                    }
+                }.padding(.horizontal, 10).padding(.bottom, 16)
             }
+            .scrollIndicators(.hidden)
         }
-        .padding(4)
-        .background(Color.primary.opacity(0.10), in: Capsule(style: .continuous))
-        .overlay(Capsule(style: .continuous)
-            .strokeBorder(Color.primary.opacity(0.16), lineWidth: 1))
-        .fixedSize()
-        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86), value: selection)
+        .frame(maxHeight: .infinity, alignment: .top)
+        // Fill the divider edge squarely; only the window owns the outer corners.
+        .background(.regularMaterial, in: Rectangle())
     }
 
-    private func settingsNavigationItem(_ page: IslandSettingsPage, showsLabel: Bool) -> some View {
+    private func settingsNavigationItem(_ page: IslandSettingsPage) -> some View {
         let selected = selection == page
         return Button { selection = page; focusedPage = page } label: {
-            HStack(spacing: 6) {
-                Image(systemName: page.symbol)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(selected ? Color.white : Color.secondary)
-                    .frame(width: 15, height: 15)
-                if showsLabel {
-                    Text(page.title(copy))
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundStyle(selected ? Color.white : Color.secondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
+            HStack(spacing: 10) {
+                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
+                Text(page.title(copy))
+                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, showsLabel ? 11 : 8)
-            .frame(height: 28)
+            .padding(.horizontal, 8)
+            .frame(height: 38)
             .background {
                 if selected {
-                    Capsule(style: .continuous)
-                        .fill(colorScheme == .dark ? Color.white.opacity(0.13) : Color.black.opacity(0.70))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08))
                 }
             }
-            .contentShape(Capsule(style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(SettingsIslandNavigationButtonStyle())
+        .buttonStyle(.plain)
         .focused($focusedPage, equals: page)
         .help(page.title(copy))
         .accessibilityLabel(page.title(copy))
         .accessibilityValue(selected ? copy.text("已选择", "Selected") : "")
-        .onKeyPress(.rightArrow) { navigateSettings(from: page, offset: 1) }
-        .onKeyPress(.leftArrow) { navigateSettings(from: page, offset: -1) }
+        .onKeyPress(.downArrow) { navigateSettings(from: page, offset: 1) }
+        .onKeyPress(.upArrow) { navigateSettings(from: page, offset: -1) }
     }
 
     private func navigateSettings(from page: IslandSettingsPage, offset: Int) -> KeyPress.Result {
@@ -259,6 +241,7 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 settingsPageHeading(for: page)
+                settingsStage(for: page)
                 switch page {
                 case .general: generalSettings
                 case .island: islandSettings
@@ -271,8 +254,8 @@ struct SettingsView: View {
             }
             .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth, alignment: .topLeading)
             .padding(.horizontal, SettingsWindowMetrics.contentInset)
-            .padding(.top, 24)
-            .padding(.bottom, 36)
+            .padding(.top, 32)
+            .padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -306,9 +289,6 @@ struct SettingsView: View {
                 .environment(\.colorScheme, .dark)
                 .frame(maxWidth: 760)
                 .frame(height: height)
-                .padding(.horizontal, SettingsWindowMetrics.contentInset)
-                .padding(.top, 12)
-                .padding(.bottom, 20)
                 .frame(maxWidth: .infinity)
         }
     }
@@ -602,38 +582,6 @@ struct SettingsView: View {
         }
     }
 
-    private var appearanceSelection: Binding<String> {
-        .init(get: { preferences.followsSystemAppearance ? "system" : preferences.customAppearance.rawValue },
-              set: { value in
-                  preferences.followsSystemAppearance = value == "system"
-                  if let mode = AppPreferences.AppearanceMode(rawValue: value) { preferences.customAppearance = mode }
-              })
-    }
-
-    private var appearanceSettings: some View {
-        NativeSettingsCard {
-            HStack(spacing: 12) {
-                appearanceOption("system", copy.text("跟随系统", "System"))
-                appearanceOption("light", copy.text("浅色", "Light"))
-                appearanceOption("dark", copy.text("深色", "Dark"))
-            }.padding(18)
-            NativeSettingsDivider()
-            NativeSettingsNote(text: appearanceSummary)
-        }
-    }
-
-    private func appearanceOption(_ value: String, _ title: String) -> some View {
-        Button { appearanceSelection.wrappedValue = value } label: {
-            VStack(spacing: 9) {
-                SettingsAppearancePreview(mode: value)
-                    .frame(width: value == "system" ? nil : 120, height: 70)
-                Text(title).font(.system(size: 13, weight: .medium))
-            }.frame(maxWidth: .infinity)
-        }.buttonStyle(SettingsVisualOptionStyle(selected: appearanceSelection.wrappedValue == value))
-            .accessibilityLabel(title)
-            .accessibilityValue(appearanceSelection.wrappedValue == value ? copy.text("已选择", "Selected") : "")
-    }
-
     private var islandWidthRange: ClosedRange<Double> {
         let geometry = activityRuntime.liveIsland.board.state.geometry
         let upper = min(AppPreferences.IslandExpandedWidth.range.upperBound, Double(geometry.maximumExpandedWidth))
@@ -645,6 +593,7 @@ struct SettingsView: View {
     }
     private var islandSettings: some View {
         VStack(alignment: .leading, spacing: 24) {
+            islandMaterialSettings
             settingsSection(copy.text("显示", "Display")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("隐私模式", "Privacy mode"),
@@ -884,7 +833,6 @@ struct SettingsView: View {
     private var generalSettings: some View {
         VStack(alignment: .leading, spacing: 22) {
             settingsSection(copy.text("语言", "Language")) { languageSettings }
-            settingsSection(copy.text("设置窗口外观", "Settings appearance")) { appearanceSettings }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
                 Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 14, weight: .medium))
@@ -893,6 +841,62 @@ struct SettingsView: View {
             }
             .buttonStyle(SettingsQuitRowStyle())
         }
+    }
+
+    private var islandMaterialSettings: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            settingsSection(copy.text("灵动岛材质", "Island material")) {
+                NativeSettingsCard {
+                    islandMaterialOption(.liquidGlass,
+                        title: copy.text("液态玻璃", "Liquid Glass"),
+                        subtitle: copy.text("通透材质、自然高光与深色玻璃卡片。", "Translucent surfaces, natural highlights and dark glass cards."),
+                        symbol: "drop.fill")
+                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+                    islandMaterialOption(.classic,
+                        title: copy.text("经典纯色", "Classic solid"),
+                        subtitle: copy.text("关闭背景、卡片与按钮的玻璃材质。遇到卡顿时可切换至此。", "Turn off glass on the background, cards and buttons. Choose this if glass feels slow."),
+                        symbol: "rectangle.fill")
+                }
+                if preferences.islandMaterial == .liquidGlass {
+                    NativeSettingsCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(copy.text("玻璃程度", "Glass amount")).font(.headline)
+                            Slider(value: $preferences.islandGlassDegree, in: 0.2...0.8)
+                                .accessibilityLabel(copy.text("玻璃程度", "Glass amount"))
+                                .accessibilityValue(copy.text("黑色区域 \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%", "Black area \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%"))
+                            HStack {
+                                Text(copy.text("黑色", "Black"))
+                                Spacer()
+                                Text(copy.text("玻璃", "Glass"))
+                            }.font(.caption).foregroundStyle(.secondary)
+                        }.padding(16)
+                    }
+                }
+                NativeSettingsNote(text: copy.text("立即生效，并记住你的选择。任务特效保持当前设置。", "Applies immediately and remembers your choice. Task effects keep their current setting."))
+                if #unavailable(macOS 26.0) {
+                    NativeSettingsNote(text: copy.text("原生液态玻璃需要 macOS 26 或更新版本；当前系统使用半透明材质。", "Native Liquid Glass requires macOS 26 or later; this system uses translucent material."))
+                }
+            }
+        }
+    }
+
+    private func islandMaterialOption(_ mode: AppPreferences.IslandMaterial, title: String,
+                                      subtitle: String, symbol: String) -> some View {
+        Button { preferences.islandMaterial = mode } label: {
+            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol, symbolColor: .secondary) {
+                Image(systemName: preferences.islandMaterial == mode ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(preferences.islandMaterial == mode ? Color.primary : Color.secondary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityHint(subtitle)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(preferences.islandMaterial == mode ? copy.text("已选择", "Selected") : copy.text("未选择", "Not selected"))
     }
 
     private var feedbackSettings: some View {
@@ -1070,26 +1074,6 @@ struct SettingsView: View {
                 .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor))
                 .controlSize(.small)
         }
-    }
-
-    private var appearanceSummary: String {
-        if preferences.followsSystemAppearance {
-            let current = colorScheme == .dark
-                ? copy.text("深色", "Dark")
-                : copy.text("浅色", "Light")
-            return copy.text(
-                "跟随系统：\(current)",
-                "System appearance: \(current.lowercased())"
-            )
-        }
-
-        let selected = preferences.customAppearance == .dark
-            ? copy.text("深色", "dark")
-            : copy.text("浅色", "light")
-        return copy.text(
-            "设置窗口使用\(selected)模式。",
-            "Settings use the \(selected) appearance."
-        )
     }
 
     private var languageSummary: String {
@@ -1284,6 +1268,10 @@ private enum SettingsIslandPreviewAssets {
     }
 }
 
+private enum SettingsPreviewContour {
+    static var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 20, style: .continuous) }
+}
+
 /// A bounded, static desktop surface shared by the settings illustrations.
 private struct SettingsDesktopPreview<Content: View>: View {
     var alignment: Alignment = .center
@@ -1295,29 +1283,26 @@ private struct SettingsDesktopPreview<Content: View>: View {
                 SettingsIslandPreviewAssets.image("Wallpaper")
                     .resizable().scaledToFill()
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipped()
+                    .clipShape(SettingsPreviewContour.shape)
                     .accessibilityHidden(true)
                     .allowsHitTesting(false)
                 content()
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: alignment)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .contentShape(SettingsPreviewContour.shape)
         }
     }
 }
 
-/// Small real shader preview; SwiftUI only updates on preferences/visibility changes.
+// The single live card preview reuses the bounded 24 fps renderer; option tiles stay images.
 private struct SettingsLiveEffectPreview: NSViewRepresentable {
     let effect: AppPreferences.CodexActivityProgressEffect
-    var cornerRadius: CGFloat = 10
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     func makeNSView(context: Context) -> CodexActivityStateSmokePreviewHostView {
         CodexActivityStateSmokePreviewHostView(effect: effect)
     }
     func updateNSView(_ view: CodexActivityStateSmokePreviewHostView, context: Context) {
-        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: cornerRadius)
+        view.update(effect: effect, reduceMotion: reduceMotion, cornerRadius: IslandVibeLayout.rowRadius)
         if !view.isRendererAvailable {
             view.setFallbackImage(SettingsIslandPreviewAssets.bundle.image(forResource:
                 "SettingsIslandPreview" + SettingsIslandPreviewAssets.effectName(effect)))
@@ -1328,7 +1313,7 @@ private struct SettingsLiveEffectPreview: NSViewRepresentable {
     }
 }
 
-/// Settings illustration with a real effect layer and fixed example content.
+/// Settings illustration with native materials, image wallpaper and one live task effect.
 /// It has no task store, lifecycle timers or request handles.
 private struct SettingsIslandPreview: View {
     @ObservedObject var preferences: AppPreferences
@@ -1336,6 +1321,7 @@ private struct SettingsIslandPreview: View {
     let maximumExpandedWidth: CGFloat
     private var copy: AppCopy { preferences.copy }
     private let secondary = Color(white: 133.0 / 255)
+    private var previewHeight: CGFloat { IslandVibeLayout.headerHeight + IslandVibeLayout.rowHeight + IslandVibeLayout.listVerticalInset * 2 + IslandChromeMetrics.footerHeight }
     // Map the effective production width to the existing 510 pt illustration.
     // Reflow its content rather than scaling text, icons or the desktop backdrop.
     private var islandWidth: CGFloat { 510 * min(1, expandedWidth / max(1, maximumExpandedWidth)) }
@@ -1363,24 +1349,22 @@ private struct SettingsIslandPreview: View {
                 SettingsIslandPreviewAssets.image("Wallpaper")
                     .resizable().scaledToFill()
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipped()
+                    .clipShape(SettingsPreviewContour.shape)
                 VStack(spacing: 0) {
                     header
-                    taskCard.padding(.horizontal, 24).padding(.vertical, 12)
+                    taskCard.padding(.horizontal, IslandVibeLayout.listInset).padding(.vertical, IslandVibeLayout.listVerticalInset)
                     footer
                 }
-                .frame(width: islandWidth, height: 150.4, alignment: .top)
+                .frame(width: islandWidth, height: previewHeight, alignment: .top)
                 .background(alignment: .top) {
-                    // Stretch only the middle so both corners and shadow margins
-                    // retain the original silhouette as the island gets narrower.
-                    SettingsIslandPreviewAssets.image("Notch")
-                        .resizable(capInsets: EdgeInsets(top: 0, leading: 44, bottom: 0, trailing: 44), resizingMode: .stretch)
-                        .frame(width: islandWidth + 20, height: 171).offset(y: -7.5)
+                    // Share the toolbar/card height budget so the footer stays inside the shell.
+                    previewBackdrop
+                        .frame(width: islandWidth, height: previewHeight)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
         }
+        .environment(\.islandLiquidGlassEnabled, preferences.islandMaterial == .liquidGlass)
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(copy.text("灵动岛外观预览", "Island appearance preview"))
@@ -1388,26 +1372,50 @@ private struct SettingsIslandPreview: View {
         .transaction { $0.animation = nil }
     }
 
+    @ViewBuilder private var previewBackdrop: some View {
+        let shape = IslandNotchShape(bottomRadius: 24)
+        if preferences.islandMaterial == .classic {
+            shape.fill(.black)
+        } else {
+            ZStack {
+                if #available(macOS 26.0, *) {
+                    Color.clear.glassEffect(.clear, in: shape)
+                } else {
+                    shape.fill(.regularMaterial)
+                }
+                let stops = AppPreferences.IslandGlassDegree.stops(preferences.islandGlassDegree)
+                LinearGradient(stops: [.init(color: .black, location: stops[0]),
+                    .init(color: .black, location: stops[1]),
+                    .init(color: .black.opacity(0.45), location: stops[2]),
+                    .init(color: .clear, location: stops[3]),
+                    .init(color: .clear, location: stops[4])], startPoint: .top, endPoint: .bottom)
+                    .clipShape(shape)
+            }
+        }
+    }
+
     private var header: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 4.8) {
-                SettingsIslandPreviewAssets.image("QuotaRing").frame(width: 11.2, height: 11.2)
+            HStack(spacing: 6) {
+                SettingsIslandPreviewAssets.image("QuotaRing").frame(width: IslandChromeMetrics.quotaRingDiameter, height: IslandChromeMetrics.quotaRingDiameter)
                 Text(copy.text("46% · 4 天", "46% · 4 d"))
-                    .font(.system(size: 9.6, weight: .medium)).foregroundStyle(.white).fixedSize()
+                    .font(IslandChromeMetrics.font).foregroundStyle(.white).fixedSize()
             }
-            .padding(.leading, 6.4).frame(height: 22.4)
+            .padding(.leading, IslandChromeMetrics.quotaRingLeadingInset)
+            .padding(.trailing, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize)
+            .islandGlass(Capsule(), tint: .white.opacity(0.04), clearSurface: true)
             Spacer(minLength: 0)
             HStack(spacing: 8) {
                 icon("pin")
                 icon("chevron.up")
             }
-            .frame(height: 28, alignment: .top)
+            .frame(height: IslandChromeMetrics.buttonSize)
         }
-        .padding(.horizontal, 20).frame(height: 36)
+        .padding(.horizontal, IslandChromeMetrics.horizontalInset).frame(height: IslandVibeLayout.headerHeight)
     }
 
     private var taskCard: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: IslandVibeLayout.lineGap) {
             HStack(spacing: 6) {
                 Text(taskTitle)
                     .font(.system(size: 13, weight: .semibold))
@@ -1420,7 +1428,7 @@ private struct SettingsIslandPreview: View {
                 Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                     .frame(width: 16, height: 16, alignment: .topLeading)
             }
-            .frame(height: 16)
+            .frame(height: IslandVibeLayout.textRowHeight)
             HStack(spacing: 8) {
                 Text(copy.text("工作中", "Working"))
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(Color(white: 0.93)).fixedSize()
@@ -1432,43 +1440,42 @@ private struct SettingsIslandPreview: View {
                 Text("128K tokens")
                     .font(.system(size: 10, weight: .medium)).fixedSize()
             }
-            .font(.system(size: 11)).frame(height: 14)
+            .font(.system(size: 11)).frame(height: IslandVibeLayout.textRowHeight)
         }
         .lineLimit(1)
         .foregroundStyle(secondary)
-        .padding(.leading, 10).padding(.trailing, 8)
-        .frame(height: 60)
+        .padding(IslandVibeLayout.contentInset)
+        .frame(height: IslandVibeLayout.rowHeight)
         .background {
             GeometryReader { geometry in
                 SettingsLiveEffectPreview(effect: preferences.codexActivityProgressEffect)
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .background(Color(red: 0.065, green: 0.052, blue: 0.080))
-                    .clipped()
+                    .clipShape(IslandVibeLayout.rowShape)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(white: 0.125), lineWidth: 1))
+        .islandGlass(IslandVibeLayout.rowShape, tint: .black.opacity(0.42), solidTint: Color(white: 0.055))
     }
 
     private var footer: some View {
-        HStack(alignment: .top, spacing: 0) {
+        HStack(alignment: .center, spacing: 8) {
             Text(copy.text("1 个会话", "1 session")).fixedSize()
-                .padding(.leading, 6.4).frame(height: 22.4)
+                .padding(.leading, IslandChromeMetrics.labelInset)
             Spacer(minLength: 0)
-            HStack(spacing: 6.4) {
-                Text(copy.text("1 工作中", "1 working")).fixedSize()
-                icon("arrow.clockwise")
-                icon("gearshape")
-            }
-            .frame(height: 22.4, alignment: .trailing)
+            Text(copy.text("1 工作中", "1 working")).fixedSize()
+            icon("arrow.clockwise")
+            icon("gearshape")
         }
-        .font(.system(size: 9.6, weight: .medium)).foregroundStyle(secondary)
-        .padding(.horizontal, 20).padding(.vertical, 4)
+        .font(IslandChromeMetrics.font).foregroundStyle(.white.opacity(0.86))
+        .frame(height: IslandChromeMetrics.buttonSize)
+        .padding(.horizontal, IslandChromeMetrics.horizontalInset)
+        .padding(.bottom, IslandChromeMetrics.bottomInset)
     }
 
     private func icon(_ name: String) -> some View {
-        Image(systemName: name).font(.system(size: 9.6, weight: .medium))
-            .foregroundStyle(secondary).frame(width: 22.4, height: 22.4)
+        Image(systemName: name).font(IslandChromeMetrics.iconFont)
+            .foregroundStyle(.white)
+            .frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize)
+            .islandGlass(Circle(), tint: .white.opacity(0.04), clearSurface: true)
     }
 }
 
@@ -1497,8 +1504,8 @@ struct SettingsConnectionSummary: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .background(Color(white: 0.05).opacity(0.77), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 0.16), lineWidth: 1))
+        .background(Color(white: 0.05).opacity(0.77), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color(white: 0.16), lineWidth: 1))
         .help([provider.displayName, status, detail].joined(separator: " · "))
         .accessibilityElement(children: .combine)
     }
@@ -1758,6 +1765,7 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
         guard let window = view.window else { return }
 
         window.styleMask.insert(.fullSizeContentView)
+        window.appearance = NSAppearance(named: .darkAqua)
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.titlebarSeparatorStyle = .none
@@ -2046,8 +2054,8 @@ private struct SettingsActionButtonStyle: ButtonStyle {
             .foregroundStyle(color)
             .padding(.horizontal, 12).padding(.vertical, 6)
             .background(color.opacity(configuration.isPressed ? 0.15 : hovered ? 0.10 : 0.06),
-                        in: RoundedRectangle(cornerRadius: 8))
-            .contentShape(RoundedRectangle(cornerRadius: 8)).opacity(enabled ? 1 : 0.4)
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous)).opacity(enabled ? 1 : 0.4)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = enabled && $0 }
             .onChange(of: enabled) { _, value in if !value { hovered = false } }
@@ -2061,16 +2069,16 @@ private struct SettingsNavigationButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.foregroundStyle(.primary)
             .background(Color.primary.opacity(configuration.isPressed ? 0.13 : selected ? 0.10 : hovered ? 0.05 : 0),
-                        in: RoundedRectangle(cornerRadius: 10))
-            .contentShape(RoundedRectangle(cornerRadius: 10)).onHover { hovered = $0 }
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous)).onHover { hovered = $0 }
             .onDisappear { hovered = false }
     }
 }
 
 enum SettingsEffectPreviewMetrics {
-    static let outerCornerRadius: CGFloat = 12
+    static let previewCornerRadius = IslandVibeLayout.rowRadius
     static let inset: CGFloat = 8
-    static let previewCornerRadius = outerCornerRadius - inset
+    static let outerCornerRadius = previewCornerRadius + inset
     static let height: CGFloat = 56
 }
 
@@ -2132,7 +2140,8 @@ private struct SettingsEffectOptionStyle: ButtonStyle {
             // The grid owns the viewport width; an aspect-fill image must not
             // enlarge that width when the preview height changes.
             GeometryReader { geometry in
-                SettingsLiveEffectPreview(effect: effect, cornerRadius: SettingsEffectPreviewMetrics.previewCornerRadius)
+                SettingsIslandPreviewAssets.image(SettingsIslandPreviewAssets.effectName(effect))
+                    .resizable().scaledToFill()
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .background(Color(red: 0.065, green: 0.052, blue: 0.080))
                     .clipped()
@@ -2170,36 +2179,6 @@ private struct SettingsVisualOptionStyle: ButtonStyle {
             }.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }.onDisappear { hovered = false }
-    }
-}
-
-// A schematic of the settings window; shapes communicate appearance without sample account data.
-private struct SettingsAppearancePreview: View {
-    let mode: String
-    var body: some View {
-        HStack(spacing: 4) {
-            if mode != "dark" { window(dark: false) }
-            if mode != "light" { window(dark: true) }
-        }.accessibilityHidden(true)
-    }
-    private func window(dark: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 3) {
-                ForEach([NSColor.systemRed, .systemOrange, .systemGreen], id: \.self) { color in
-                    Circle().fill(Color(nsColor: color)).frame(width: 4, height: 4)
-                }
-            }
-            HStack(spacing: 5) {
-                RoundedRectangle(cornerRadius: 3).fill(Color(nsColor: .systemPurple).opacity(0.25)).frame(width: 20)
-                VStack(spacing: 4) {
-                    ForEach(0..<3) { _ in
-                        RoundedRectangle(cornerRadius: 2).fill((dark ? Color.white : .black).opacity(0.10))
-                    }
-                }
-            }
-        }.padding(7).frame(maxWidth: .infinity)
-            .background(dark ? Color(white: 0.15) : Color(white: 0.94), in: RoundedRectangle(cornerRadius: 6))
-            .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5) }
     }
 }
 

@@ -1,0 +1,1648 @@
+{
+  "date": "2026-10-08",
+  "deleted_items": 225,
+  "deleted_allocated_bytes": 27114999808,
+  "unremoved_items": [
+    "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/.build/arm64-apple-macosx",
+    "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/.build/arm64-apple-macosx",
+    "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/.build/arm64-apple-macosx",
+    "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/.build/arm64-apple-macosx"
+  ],
+  "empty_local_output_folders_removed": 60,
+  "size_basis": "Sum of allocated bytes reported by du before deletion; APFS sharing/snapshots mean this is not a measurement of physical disk space reclaimed.",
+  "items": [
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/apple/SDKStatCaches.noindex",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/apple/ModuleCache.noindex",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/apple/CompilationCache.noindex",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/xcode-release-build6",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 17731584,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 56549376,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.build/xcode-release-availability-fix",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 17735680,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/dist/CodexPulse.previous.20260726013629.app",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 684032,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/dist/CodexPulse.previous.20260726015159.app",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 679936,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/dist/CodexPulse.previous.20260726015404.app",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 708608,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/dist/CodexPulse.app",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 712704,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.xcode-derived",
+      "workspace": "/Users/sukduoasa/Documents/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 18919424,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/claude-followup-20261008/previous-runtime/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 56016896,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/ui-swift/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 493268992,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/native-namespace-final.xcresult",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old binary test-result bundle; text/json evidence retained",
+      "allocated_bytes": 139264,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/native-tests.xcresult",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old binary test-result bundle; text/json evidence retained",
+      "allocated_bytes": 123293696,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/NativeTestGraph",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 493645824,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/baseline-swift/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 399302656,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/audit-20261006/native-tests-final.xcresult",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old binary test-result bundle; text/json evidence retained",
+      "allocated_bytes": 7368704,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-usage-fit-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44179456,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/question-flow-previous-20261002-185502.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 48836608,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-cost-center-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44761088,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-before-completion-progress.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43241472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-token-b-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44818432,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073QuestionCapability",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 392196096,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-memory-hook-identity-20261005/runtime/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53612544,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-memory-hook-identity-20261005/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53379072,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-usage-bento-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43290624,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-list-insets-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43360256,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-remove-quota-footer-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43356160,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-card-switch-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43245568,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-glow-clip-pin-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43315200,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-short-reset-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43290624,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-weekly-quota-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43270144,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073QuestionFlow",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 390565888,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T212127Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 51060736,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T204312Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 50917376,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T201904Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 50610176,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T112903Z/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49520640,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T185012Z/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49844224,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/standby-build5-20261005T114428Z/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53612544,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/memory-build4-20261005T111719Z/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53633024,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/standby-build6-20261005T120100Z/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53719040,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/confirmation-build7-20261005T130323Z/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53694464,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T214657Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 51060736,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T210801Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 51027968,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T222531Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 51945472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T205614Z/original/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 50954240,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T125330Z/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49532928,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/20261003T110345Z/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49209344,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-steady-outline-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43315200,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073ResetEntryTypography",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 394108928,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-cost-safe-inset-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44781568,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-stable-rollback-extracted/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 37621760,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-standby-card-style-20261005/runtime/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53719040,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Distribution075Build2",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 763367424,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Distribution075Build3",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 765751296,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-tooltip-layer-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44810240,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/question-capability-previous-20261002-214626.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49115136,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073Desktop",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 388194304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-compact-center-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44806144,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-cost-blue-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44761088,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/native-hook-smoke/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 178196480,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/question-presentation-previous-20261003-061056.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49201152,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-completed-label-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43315200,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073AgentStrip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 393666560,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-appcast-negative-fixtures/wrong-version/staging/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 8192,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-appcast-negative-fixtures/wrong-public-key/staging/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 8192,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-appcast-negative-fixtures/unsigned-stable/staging/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 8192,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-appcast-negative-fixtures/development-identity/staging/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 8192,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-compact-status-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44806144,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-completed-pulse-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43315200,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-executing-label-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43290624,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-completion-card-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43241472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-cost-highlight-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44761088,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-glow-ownership-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43360256,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development075Build2",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 499441664,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development075",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 396075008,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073BackgroundMemory",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 391065600,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Validation075Universal",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 655654912,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073AgentStripAlignment",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 396091392,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-confirmation-lifecycle-20261005/runtime/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 54026240,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-standby-solid-border-20261005/runtime/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53694464,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 535789568,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073QuestionPresentation",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 389259264,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073InteractionFixes",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 400527360,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-auto-preview-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44785664,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-reference-footer-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43331584,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-codex-heatmap-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44265472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-chart-rhythm-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44818432,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-preserve-scroll-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43384832,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/pending-confirmation-review/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 390971392,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073SmallOrbCardBorder",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 395292672,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073InformationContract",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 393043968,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development073ScrollRestoration",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 387903488,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/question-capability-previous-20261002-211333.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 49012736,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-no-hover-tooltip-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43294720,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-readable-operation-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 43290624,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-cost-gray-fill-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44773376,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Distribution075MemoryBuild4",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 675913728,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/073-figma-layout-previous.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 44658688,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/development-0.7.3/QuotaView 0.7.3 Development.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 52342784,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 54345728,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/verification/0.7.5-build3-release/local/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53633024,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/verification/0.7.7-build1-release/local/QuotaView.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 54345728,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView.previous.20261006013919.app",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 53633024,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.claude/worktrees/hello-b70850/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.claude/worktrees/hello-b70850",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 481243136,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.claude/worktrees/quotaview-claude-code-support-8908d4/.build/ClaudeCodeDev",
+      "workspace": "/Users/sukduoasa/Documents/widget/.claude/worktrees/quotaview-claude-code-support-8908d4",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 521388032,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.claude/worktrees/quotaview-claude-code-support-8908d4/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.claude/worktrees/quotaview-claude-code-support-8908d4",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 500908032,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.2-demo1/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.2-demo1",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/private/tmp/qv-cr-8C3B839D.sock",
+      "workspace": null,
+      "reason": "orphan isolated Claude smoke fixture",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/private/tmp/qv-cr-8C3B839D.sock.lock",
+      "workspace": null,
+      "reason": "orphan isolated Claude smoke fixture",
+      "allocated_bytes": 0,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 24211456,
+      "result": "failed",
+      "error": "Command '['python3', '-c', 'import pathlib,shutil,sys; p=pathlib.Path(sys.argv[1]); shutil.rmtree(p) if p.is_dir() else p.unlink()', '/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/.build/arm64-apple-macosx']' timed out after 30 seconds",
+      "followup": "Deletion timed out at 30 seconds; moving to Trash also timed out at 5 seconds. Remaining contents left in place; not counted as deleted."
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/dist/QuotaView.previous.20260823042234.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33570816,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/dist/QuotaView.previous.20260823035828.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33038336,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33845248,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/dist/QuotaView.previous.20260823023920.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33038336,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1/dist/QuotaView.previous.20260826183044.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.3.6-build.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33574912,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 29581312,
+      "result": "failed",
+      "error": "Command '['python3', '-c', 'import pathlib,shutil,sys; p=pathlib.Path(sys.argv[1]); shutil.rmtree(p) if p.is_dir() else p.unlink()', '/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/.build/arm64-apple-macosx']' timed out after 30 seconds",
+      "followup": "Deletion timed out at 30 seconds; moving to Trash also timed out at 5 seconds. Remaining contents left in place; not counted as deleted."
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830023912.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830003619.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829211107.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830011815.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34328576,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829213511.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830021455.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34344960,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829234154.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830004204.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830012659.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34344960,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829204725.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34312192,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830022413.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829234656.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830030313.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34451456,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830023231.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830003056.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34422784,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829205648.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830005218.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829043514.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34271232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829042150.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34271232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829035643.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34152448,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830013321.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34344960,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829024413.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33992704,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829203149.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34308096,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829031209.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 33992704,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34451456,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829033836.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34168832,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830014045.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34344960,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829235226.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829213037.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829041646.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34168832,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829202856.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34291712,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829212058.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830010232.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830001459.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830030525.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34451456,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829043222.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34271232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829034914.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34152448,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830025600.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830002134.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829201901.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34291712,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830011029.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34328576,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830005925.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260830023048.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34406400,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829201521.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34271232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829215422.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829032811.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34168832,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829210215.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0/dist/QuotaView.previous.20260829233433.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.0",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34402304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 27742208,
+      "result": "failed",
+      "error": "Command '['python3', '-c', 'import pathlib,shutil,sys; p=pathlib.Path(sys.argv[1]); shutil.rmtree(p) if p.is_dir() else p.unlink()', '/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/.build/arm64-apple-macosx']' timed out after 30 seconds",
+      "followup": "Deletion timed out at 30 seconds; moving to Trash also timed out at 5 seconds. Remaining contents left in place; not counted as deleted."
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830184005.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34938880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830172733.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35069952,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830163415.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34758656,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830171200.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35049472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830174810.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35074048,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830050421.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34775040,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34942976,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830183115.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34938880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830185758.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 34938880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2/dist/QuotaView.previous.20260830165026.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.2",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35049472,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 29945856,
+      "result": "failed",
+      "error": "Command '['python3', '-c', 'import pathlib,shutil,sys; p=pathlib.Path(sys.argv[1]); shutil.rmtree(p) if p.is_dir() else p.unlink()', '/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/.build/arm64-apple-macosx']' timed out after 30 seconds",
+      "followup": "Deletion timed out at 30 seconds; moving to Trash also timed out at 5 seconds. Remaining contents left in place; not counted as deleted."
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904020740.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35807232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904004805.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35319808,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904030436.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35831808,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260903215630.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35631104,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904023629.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35786752,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904014246.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35725312,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35835904,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260904022100.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35807232,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260903224035.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35237888,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260903210419.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35160064,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260903221851.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35196928,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4/dist/QuotaView.previous.20260903214209.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.4",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35598336,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 300683264,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6/dist/QuotaView.previous.20260906150418.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36052992,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36089856,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6/dist/QuotaView.previous.20260905165931.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 35868672,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 301252608,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1/.build/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 658968576,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1/dist/Quotaview-kimi.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6-preview.1",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36962304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 301666304,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView.previous.20260911211958.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36855808,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView.previous.20260910231730.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36855808,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36945920,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView.previous.20260908144642.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 36630528,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/.build/DerivedData-0.4.8",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 686059520,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/.build/Build12Development",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 665944064,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/.build/arm64-apple-macosx",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old compiler/index cache",
+      "allocated_bytes": 531578880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/QuotaView.previous.20260918092703.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 37617664,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/development/build12-run-nnppnawo/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 28721152,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 37621760,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build2/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 671555584,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build5/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 672067584,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build4/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 672026624,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build3/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 671580160,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build6/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 681918464,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build1/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 670965760,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8/dist/verification/0.5.2-build7/DerivedData",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.8",
+      "reason": "old Xcode DerivedData",
+      "allocated_bytes": 670101504,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/QuotaView.previous.20260928180647.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 37617664,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/QuotaView.app",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix",
+      "reason": "obsolete generated app bundle",
+      "allocated_bytes": 37621760,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-stable-rollback-0.5.1-build13.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "0dd106920245881abdecb33e768275eb00f6158272fb7de128ac438800fd4f35",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/QuotaView-v0.5.1-build.13.zip",
+      "allocated_bytes": 13946880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/verification/0.5.1-build13-release/feed/QuotaView-v0.5.1-build.13.zip",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "0dd106920245881abdecb33e768275eb00f6158272fb7de128ac438800fd4f35",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/QuotaView-v0.5.1-build.13.zip",
+      "allocated_bytes": 13946880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/verification/0.5.1-build13-release/download/QuotaView-v0.5.1-build.13.zip",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "0dd106920245881abdecb33e768275eb00f6158272fb7de128ac438800fd4f35",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.5.1-codex-path-fix/dist/QuotaView-v0.5.1-build.13.zip",
+      "allocated_bytes": 13946880,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/077-appcast/QuotaView-v0.7.7-build.1.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "38087c6eaae9b1ff4d77efab662133d856b85432d7170a0bc6d101b3f068f5ee",
+      "retained_copy": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView-v0.7.7-build.1.zip",
+      "allocated_bytes": 20754432,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/verification/0.7.7-build1-release/public-download.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "38087c6eaae9b1ff4d77efab662133d856b85432d7170a0bc6d101b3f068f5ee",
+      "retained_copy": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView-v0.7.7-build.1.zip",
+      "allocated_bytes": 20754432,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/verification/0.7.5-build3-release/public-download.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "fd696fc6bdf1b4f637dc417d45018696993e3c8a55e528b0f34f3d2abaa968fd",
+      "retained_copy": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView-v0.7.5-build.3.zip",
+      "allocated_bytes": 20516864,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/075-appcast-preparation/updates/QuotaView-v0.7.5-build.3.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "fd696fc6bdf1b4f637dc417d45018696993e3c8a55e528b0f34f3d2abaa968fd",
+      "retained_copy": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView-v0.7.5-build.3.zip",
+      "allocated_bytes": 20516864,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/verification/0.7.5-build3-release/draft-download/QuotaView-v0.7.5-build.3.zip",
+      "workspace": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "fd696fc6bdf1b4f637dc417d45018696993e3c8a55e528b0f34f3d2abaa968fd",
+      "retained_copy": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/dist/QuotaView-v0.7.5-build.3.zip",
+      "allocated_bytes": 20516864,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/verification/build3/rollback/QuotaView-v0.4.6-build.2.zip",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "5037b6318284364edd6ae7e26d4a1c4409b9ed182a425047af2af8f751f4f916",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.6/dist/QuotaView-v0.4.6-build.2.zip",
+      "allocated_bytes": 13488128,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/verification/build3/feed-input/QuotaView-v0.4.7-build.3.zip",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "8fcfc1aea49578d8d19a7377dbd47e992169207675b75a190df667dc551c5c59",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView-v0.4.7-build.3.zip",
+      "allocated_bytes": 13770752,
+      "result": "deleted"
+    },
+    {
+      "path": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/verification/build3/withdrawn-build2/QuotaView-v0.4.7-build.2.zip",
+      "workspace": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7",
+      "reason": "byte-identical duplicate archive",
+      "sha256": "de828160dc89fd7990959944ed3a1695936d0d080d472eb3e8c908c2ba8e6a8e",
+      "retained_copy": "/Users/sukduoasa/Documents/widget/.worktrees/QuotaView-0.4.7/dist/QuotaView-v0.4.7-build.2.zip",
+      "allocated_bytes": 13672448,
+      "result": "deleted"
+    },
+    {
+      "path": "/var/folders/zy/l0cfwlkd1gd9bnc1yh71bn0r0000gn/T/qv-claude-5D5AAF3D-4E06-4437-A4FA-71D8699CE423",
+      "workspace": null,
+      "reason": "orphan isolated Claude smoke fixture",
+      "allocated_bytes": 24576,
+      "result": "deleted"
+    }
+  ]
+}

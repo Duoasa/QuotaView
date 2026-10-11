@@ -1,5 +1,7 @@
 # QuotaView 0.4.5 灵动岛悬停透明
 
+> 历史起源规格：下方布局、版本和阶段验证属于所标日期。当前主入口/设置以[现行界面规范](QUOTAVIEW_UI_RULES.md)为准，运行与未完成项见 [Handoff](../../HANDOFF.md)。历史待办不重新触发旧 UI 或发布操作。
+
 > Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012`
 >
 > 状态：`Accepted / Verifying`（原固定透明度已发布，本次可配置扩展未发布）

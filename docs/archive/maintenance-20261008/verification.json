@@ -1,0 +1,16 @@
+{
+  "source_files_unchanged": 186,
+  "protected_files_unchanged": 431,
+  "existing_code_diff_unchanged": true,
+  "archived_markdown_hashes_verified": 111,
+  "development_pid": 41350,
+  "formal_widget_pid": 873,
+  "current_runtime_load_path_unchanged": true,
+  "public_version_history_unchanged": true,
+  "new_tests_or_builds": false,
+  "entry_and_legacy_code_diffs_unchanged": true,
+  "markdown_files_checked": 98,
+  "broken_local_markdown_links": 0,
+  "diff_check": "passed in active, entry and legacy-entry workspaces",
+  "temporary_mutation_scripts_removed": true
+}

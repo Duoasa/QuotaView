@@ -153,13 +153,14 @@ final class IslandSubagentProgressSmokeTests: XCTestCase {
         var metadata = IslandSessionMetadata(modelName: "6.1 Sol", reasoningEffort: "Ultra", elapsedSeconds: 2,
                                              subagents: Array(repeating: child, count: 3))
         let row = metadata.taskGroupHeight(width: 600)
-        XCTAssertEqual(metadata.cardHeight(width: 600), IslandVibeLayout.rowHeight, "Children never resize the card or its Metal canvas")
+        XCTAssertEqual(metadata.primaryContentHeight(width: 600), IslandVibeLayout.rowHeight)
+        XCTAssertEqual(metadata.cardHeight(width: 600), row, "Children share the complete parent card surface")
         XCTAssertEqual(row, IslandVibeLayout.rowHeight + 28)
         let layout = IslandTaskListLayout(taskIDs: [1, 2], detailID: nil, rowHeights: [1: row])
         XCTAssertTrue(layout.visibleElements(offset: row - 1, viewport: 20).contains(.task(1)))
         metadata.subagents = Array(repeating: child, count: 100)
-        XCTAssertEqual(metadata.cardHeight(width: 320), IslandVibeLayout.rowHeight)
-        XCTAssertEqual(metadata.taskGroupHeight(width: 320), row, "Overflow stays in a single separate row")
+        XCTAssertEqual(metadata.cardHeight(width: 320), row)
+        XCTAssertEqual(metadata.taskGroupHeight(width: 320), row, "Overflow stays in a single internal row")
         XCTAssertEqual(metadata.subagents.count, 100, "The horizontal strip includes every admitted agent")
     }
 

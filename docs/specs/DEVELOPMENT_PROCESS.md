@@ -68,6 +68,3 @@
   README 和渠道记录。普通文档维护不打包、不改产品版本。
 - PR 说明问题、范围、Spec/Requirement 或无影响理由、验证和实际待验收项；
   无关的权限、发布和验收矩阵无需逐条填写。
-
-本轮参考 [OpenAI Astra 文章](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
-的按需上下文与明确完成条件建议；产品约束和授权仍由本项目与用户决定。

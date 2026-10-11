@@ -1,0 +1,557 @@
+{
+  "active/HANDOFF-0.7.7-build1-EN.md": {
+    "sha256": "1f643829547ca305cae7f7f2a95a00b158673c72f022bbf1822eb5022d6932b3",
+    "lines": 39,
+    "bytes": 3805
+  },
+  "active/HANDOFF-CONTINUE-2026-10-01.md": {
+    "sha256": "c3f71907cf0aa106fb14c5f8a4ebd4cb2c9b6fb5cdf0d6e4ffd4bed1472ee2fa",
+    "lines": 207,
+    "bytes": 40745
+  },
+  "active/HANDOFF-NEXT-SESSION-2026-09-27.md": {
+    "sha256": "03be1844fd50ebe4bb8a149d83a8c194b1e89c5cba387c8b9ed07d0e3c2273dc",
+    "lines": 543,
+    "bytes": 73231
+  },
+  "active/README.md": {
+    "sha256": "acf82c6875e5de332f82605e21f97579ea4d8838c2d958484c60dbb43e376463",
+    "lines": 252,
+    "bytes": 13550
+  },
+  "active/VERSION_HISTORY.md": {
+    "sha256": "6a7dbb51efcc66dfec198f5a3f9dacda5bf83d87e3cb1e65e70924da5b4c73e0",
+    "lines": 1239,
+    "bytes": 75917
+  },
+  "active/CONTRIBUTING.md": {
+    "sha256": "5a94618dc29deadefa5943ac91516f9ef6546ec6c3d43ee9da2e54f95eee7605",
+    "lines": 143,
+    "bytes": 6132
+  },
+  "active/README.zh-CN.md": {
+    "sha256": "3fd599903d84bf52267274e85f27c3e72b1d50be7f1c9f58ad794a6be996c94b",
+    "lines": 251,
+    "bytes": 12698
+  },
+  "active/AGENTS.md": {
+    "sha256": "7e6b23ce0d48128e9c9317ddb552e0d37be81ba868a9ffa8569da39632587375",
+    "lines": 96,
+    "bytes": 7488
+  },
+  "active/design-qa.md": {
+    "sha256": "9c7ec08b2ba5117168a30c2bcc7f49fd4128bb623670c97e52629c793895b911",
+    "lines": 62,
+    "bytes": 5477
+  },
+  "active/HANDOFF.md": {
+    "sha256": "30cb276371ad841fe8b0d2312069b7cf889326d7dc64845a9cb5cebddaba1bd5",
+    "lines": 1732,
+    "bytes": 260597
+  },
+  "active/docs/design/quotaview-token-activity.md": {
+    "sha256": "8e2318cf0ea08c0ac253be0a1e012901cf94609c59cb6dab1b16839c3f445b4d",
+    "lines": 57,
+    "bytes": 3092
+  },
+  "active/docs/design/quotaview-codex-activity-island-size-0.4.0.md": {
+    "sha256": "968a7dd28fd99b554951b4ad2596b3ae27b531ee538f1e694e7c99f184de7d37",
+    "lines": 147,
+    "bytes": 7825
+  },
+  "active/docs/design/codex-native-question-closure-contract-2026-10-03.md": {
+    "sha256": "897098729ae4778aec5621e5c41700cbdbef76a8de8782c128f008682746b2bf",
+    "lines": 109,
+    "bytes": 15845
+  },
+  "active/docs/design/quotaview-codex-plan-compatibility-0.4.4.md": {
+    "sha256": "d71c061a83abdaba8ce34fb4b6277352532f954dcde2741bd3b88a0393d79059",
+    "lines": 118,
+    "bytes": 7764
+  },
+  "active/docs/design/quotaview-codex-activity-island-state-smoke-0.4.0.md": {
+    "sha256": "b8d260933c7830dda6a45646c19396a75d5040a75e741a6e7c33d3d49cdce7c7",
+    "lines": 287,
+    "bytes": 25265
+  },
+  "active/docs/design/quotaview-quota-windows-0.3.6-build.3.md": {
+    "sha256": "93e38269c2e01611a9ec0d471360854bd20142d999b09e42a19a3449806d42f9",
+    "lines": 83,
+    "bytes": 4160
+  },
+  "active/docs/design/quotaview-activity-island-hover-transparency-0.4.5.md": {
+    "sha256": "d4fd12ca4c74e52d36afae0d3b7fcba28af8cdfc61cb42bae62ea17eb7b9dafb",
+    "lines": 100,
+    "bytes": 12514
+  },
+  "active/docs/design/quotaview-effect-longevity.md": {
+    "sha256": "95d3dde6352cde9e6fa09c557c89a4a561bac0a2060d9d67cd9f41ddff0bc8fa",
+    "lines": 69,
+    "bytes": 4914
+  },
+  "active/docs/design/quotaview-quantum-motion-console.md": {
+    "sha256": "4f18211492e996f2954cf7016d2a81841432ea762a27431f57a4fffd7a978f58",
+    "lines": 205,
+    "bytes": 13542
+  },
+  "active/docs/design/quotaview-activity-island-confirmation-reminder-0.4.5.md": {
+    "sha256": "a6e87c2eb2a7f51d42c48a75ee054ec9b28543e7de66acacbf691a856af57d33",
+    "lines": 58,
+    "bytes": 3778
+  },
+  "active/docs/design/quotaview-0.4.3-release.md": {
+    "sha256": "e1a470dca5c2c5003399f1e0b67b92cd515c72f5744426d9d51feb3ddee59d72",
+    "lines": 60,
+    "bytes": 3312
+  },
+  "active/docs/design/quotaview-widgetkit-solution.md": {
+    "sha256": "3ed6e9b9ee91c91d3e2a3f0335ec8c3701359fe78844d461b90d466e432f9dbe",
+    "lines": 89,
+    "bytes": 4444
+  },
+  "active/docs/design/quotaview-core-refactor-0.2.0-report.md": {
+    "sha256": "0294d51e237ac6a9d217062dac0b5e83e71c95bdd4af709a54e1035f13a3441f",
+    "lines": 38,
+    "bytes": 1888
+  },
+  "active/docs/design/quotaview-0.7.3-development-delivery-2026-10-01.md": {
+    "sha256": "17a319a0d588ef30aebe6eb3183cc50376b0877ab90fa5ca4fbeffae8b450858",
+    "lines": 301,
+    "bytes": 58232
+  },
+  "active/docs/design/quotaview-activity-logic-audit-0.4.6.md": {
+    "sha256": "e6452cdb1461f81b60c8c59d4e48dce41bdb0203fe2db72895c6de20e6482f2c",
+    "lines": 169,
+    "bytes": 12668
+  },
+  "active/docs/design/quotaview-island-production-interaction-review-2026-09-30.md": {
+    "sha256": "10800c5c896d9e5830cb38d025eeef7babda48c212aeb16541a1b5fcead5d22a",
+    "lines": 995,
+    "bytes": 111137
+  },
+  "active/docs/design/quotaview-progress-effects-0.4.2.md": {
+    "sha256": "acc77d6f18845f5249d2e010df54873d5a8dc42b5025665a3ac8d13031a7d2e0",
+    "lines": 142,
+    "bytes": 10335
+  },
+  "active/docs/design/quotaview-0.4.0-development.md": {
+    "sha256": "bbbeea23d97f6e18cf46a8934c5471570e54fb2cd4c6c3cab8d333beb209ee9a",
+    "lines": 151,
+    "bytes": 7194
+  },
+  "active/docs/design/quotaview-0.4.1-release.md": {
+    "sha256": "387ff92de48fe75bf7947a7fb8b3039837c3eed97a85e50326e94ba255cbd843",
+    "lines": 78,
+    "bytes": 4460
+  },
+  "active/docs/design/QUOTAVIEW_UI_RULES.md": {
+    "sha256": "7533c25dfe0a794451f144cf1e9af071b484f45b3654c5bc5bec27ce433dde38",
+    "lines": 445,
+    "bytes": 31209
+  },
+  "active/docs/design/quotaview-usage-overview-0.3.4.md": {
+    "sha256": "551faf119d7b55f4efb0bd31ddc28d9723fb7d270df8cb3c0157a7666e506a4b",
+    "lines": 71,
+    "bytes": 3885
+  },
+  "active/docs/design/quotaview-core-architecture-evolution.md": {
+    "sha256": "4c281ed29a836ca2e370ec30dd197284ebcbf4ba9954289258f59456b67fe6ec",
+    "lines": 64,
+    "bytes": 3202
+  },
+  "active/docs/design/quotaview-island-multitask-next.md": {
+    "sha256": "6de0adf678a486902f44871798d2b3fd958fe8c70428a910f601f93b22ab72c8",
+    "lines": 1097,
+    "bytes": 121280
+  },
+  "active/docs/design/quotaview-feedback-settings-0.7.5.md": {
+    "sha256": "88f48fd9b45ab1664616264364c2af223a059379deecadf364b7813940b9b912",
+    "lines": 32,
+    "bytes": 2171
+  },
+  "active/docs/design/quotaview-island-text-console.md": {
+    "sha256": "78775d530eb4e33fc755c8db095bf8208147225fa4623988dc46c2a1f6f15f95",
+    "lines": 57,
+    "bytes": 4446
+  },
+  "active/docs/design/quotaview-codex-activity-island-multitask.md": {
+    "sha256": "a3abc2b1e05b40bdc230ff383846289af5acb9f4d1235d4d2bfa17fa044639f7",
+    "lines": 43,
+    "bytes": 2048
+  },
+  "active/docs/design/quotaview-question-lifecycle-review-2026-10-03.md": {
+    "sha256": "030fbf27307ab43c98dc13cf42ab68432a6930fbc44eec93c927ea1c5e03294e",
+    "lines": 49,
+    "bytes": 8598
+  },
+  "active/docs/design/quotaview-codex-token-compatibility-0.4.6.md": {
+    "sha256": "ca33c221f69f7d14e7005c06a3e416792e1e1314f4c0721d1ec44bdaf1270abd",
+    "lines": 82,
+    "bytes": 6227
+  },
+  "active/docs/design/quotaview-0.4.2-release.md": {
+    "sha256": "f7e2e8304f9802e858a8ab37c757db65e2a31ca371e239a41f784af485bb292c",
+    "lines": 68,
+    "bytes": 3901
+  },
+  "active/docs/design/quotaview-island-motion-0.5.0.md": {
+    "sha256": "ef99dbe41f138404157b034a542838ee602f156283f45069abdb4cc9bca72f2f",
+    "lines": 102,
+    "bytes": 9387
+  },
+  "active/docs/design/quotaview-connection-audit-0.4.8.md": {
+    "sha256": "f1e5d52f4e488fd8dd7ab273bb7dd5bf039c6eabb0570fcab3ea8f015f880aff",
+    "lines": 79,
+    "bytes": 7100
+  },
+  "active/docs/design/quotaview-activity-island-turn-token-usage-0.4.5.md": {
+    "sha256": "497747ede5f32ce7171e8fdc5c988d8b0935e2c7cafc6d31204f3dd06f60ee9e",
+    "lines": 126,
+    "bytes": 9698
+  },
+  "active/docs/design/quotaview-codex-first-connection-0.4.8.md": {
+    "sha256": "9907d94d51939c04fcec3d1e704aa5ce9a84cdd2a69548aeee2193ae06f5c0d4",
+    "lines": 162,
+    "bytes": 11801
+  },
+  "active/docs/design/quotaview-codex-socket-autoconnect-0.4.5.md": {
+    "sha256": "b83a19013ffc8d45735d0a6b1409fbe96145b47d724389a6142740291ce754b1",
+    "lines": 128,
+    "bytes": 8596
+  },
+  "active/docs/design/quotaview-activity-refactor-verification-0.4.6.md": {
+    "sha256": "5f8d12bb81fe14cd0bff6e5c6081f459300ae7920c51c25414c8246b0cd4a27b",
+    "lines": 101,
+    "bytes": 7077
+  },
+  "active/docs/design/quotaview-hook-request-module-review-2026-10-02.md": {
+    "sha256": "8a9c9bf976abbd50806cb910885248dbe66ca911b003d24abb6c09830a444a5c",
+    "lines": 60,
+    "bytes": 6450
+  },
+  "active/docs/design/quotaview-proxy-settings-0.4.7.md": {
+    "sha256": "d4f3b19162ac8b3801a7cea1acc9c38bf072668b36c86fdf30f1da50723ccfcf",
+    "lines": 104,
+    "bytes": 9159
+  },
+  "active/docs/design/quotaview-codex-activity-island-0.3.6.md": {
+    "sha256": "cc113c30f490134b0ff55d110a47092c59314f3a26f86e4caf0544e2574c7784",
+    "lines": 134,
+    "bytes": 8136
+  },
+  "active/docs/design/quotaview-app-updates-0.3.5.md": {
+    "sha256": "2ddddfef095567cb1fc570ccbe60625723c93b801deb5b9bd289606de03b3a21",
+    "lines": 112,
+    "bytes": 7263
+  },
+  "active/docs/design/quotaview-quantum-noise-effect-correction.md": {
+    "sha256": "8fa2335bcc6f345ad053027621e1d49525c91107afd8e072d0e8e0b82513b619",
+    "lines": 106,
+    "bytes": 7582
+  },
+  "active/docs/design/quotaview-0.4.5-release.md": {
+    "sha256": "2f1919bb61d727c7143e7a14f0df0f5130bd4c853ee47b099d1f79eb7a119f48",
+    "lines": 70,
+    "bytes": 3936
+  },
+  "active/docs/design/quotaview-menu-quota-0.5.1.md": {
+    "sha256": "ed0b3f6bf072029df4b4da058caafec861f880c0332b4edf7831d9df59f723ec",
+    "lines": 157,
+    "bytes": 10287
+  },
+  "active/docs/design/quotaview-activity-island-lifecycle-continuity-0.4.2.md": {
+    "sha256": "094e2baad6003490c042d194af31deb8ddccdf610d4d05c408a17b24fd173f53",
+    "lines": 110,
+    "bytes": 8115
+  },
+  "active/docs/design/quotaview-background-memory-2026-10-03.md": {
+    "sha256": "e85551c89d57b651b6908de16a286eab35851b36a4191581e0e809e16bdc04b4",
+    "lines": 62,
+    "bytes": 11829
+  },
+  "active/docs/releases/QuotaView-0.4.5-build.1.md": {
+    "sha256": "0865c76f40694bca2f995466c0236c1b958480f0fd4209796a1b10045fe1cb41",
+    "lines": 31,
+    "bytes": 1652
+  },
+  "active/docs/releases/QuotaView-0.3.6-build.2.md": {
+    "sha256": "e85af303c446f1c824f160e584514dcb693131dd7d7a7537268e5c1e213e8b19",
+    "lines": 65,
+    "bytes": 3360
+  },
+  "active/docs/releases/QuotaView-0.4.6-build.2.md": {
+    "sha256": "361c1ea80fe560251fc4557eeef2ac7d82c50eb375ed2bc3b6aa94349d8a4fc6",
+    "lines": 17,
+    "bytes": 1265
+  },
+  "active/docs/releases/QuotaView-0.5.1-build.9.md": {
+    "sha256": "fbda94f9d55580f24b8dda3adf3bd8a69b8f7fe9eec8968b00771147d520829c",
+    "lines": 8,
+    "bytes": 513
+  },
+  "active/docs/releases/QuotaView-0.3.7-build.1.md": {
+    "sha256": "51e541e600d2e67b53007a24e7c55865ec4efc0a8591dc59418cd1c5b1521d3c",
+    "lines": 36,
+    "bytes": 2054
+  },
+  "active/docs/releases/QuotaView-0.4.2-build.1.md": {
+    "sha256": "93a32889302221757585eadc4319e863bb8b1928e8d1d1439bee85aeaf0d3bd7",
+    "lines": 27,
+    "bytes": 1483
+  },
+  "active/docs/releases/QuotaView-0.4.7-preview.1.md": {
+    "sha256": "d029aba430d0136bd60eb56ae91f9764f02ae4f836dfb4d108c4154f068830f0",
+    "lines": 46,
+    "bytes": 3605
+  },
+  "active/docs/releases/QuotaView-0.4.1-build.1.md": {
+    "sha256": "13c9f98fb1a3668cd392ca582abcfa11a8c41baf09bf6e619db4a21807f34b9a",
+    "lines": 52,
+    "bytes": 3077
+  },
+  "active/docs/releases/QuotaView-0.4.7-build.3.md": {
+    "sha256": "dff9e51f8ef1f9159fcea13e1aaaf222304617a771275aacfc782ec1aa7c1df8",
+    "lines": 34,
+    "bytes": 3192
+  },
+  "active/docs/releases/QuotaView-0.5.1-build.13.md": {
+    "sha256": "745bd7f0fa045ab38883403c7bd920d4e9d4169e8b4a6028f5cc6fdaa59b25ef",
+    "lines": 7,
+    "bytes": 482
+  },
+  "active/docs/releases/QuotaView-0.4.7-build.2.md": {
+    "sha256": "a893c8a655f7a0fea6954276e5e1ac524bbaf8d38c730e0813b241a274ed08d4",
+    "lines": 38,
+    "bytes": 2817
+  },
+  "active/docs/releases/QuotaView-0.4.3-build.1.md": {
+    "sha256": "2d5f237efad6ce378fbcc66c9a15ea2e024ea53915074f4d6a3dcabb159770fb",
+    "lines": 22,
+    "bytes": 988
+  },
+  "active/docs/releases/QuotaView-0.4.6-build.1.md": {
+    "sha256": "0906db2b3a1d719b4c12aa1870fef217e1642f0b294c1a6a2439da7991113c93",
+    "lines": 5,
+    "bytes": 332
+  },
+  "active/docs/archive/handoff-2026-09-12.md": {
+    "sha256": "0a6a312191f6b9116b943279ddd74b468c278bd24bc9fe0d29ea98e7a9f1b451",
+    "lines": 365,
+    "bytes": 29447
+  },
+  "active/docs/specs/codex-island-information-contract.md": {
+    "sha256": "91e37e38b63266077ccc0159658df31a1cfc372550b48e549b95599c2e371c0f",
+    "lines": 183,
+    "bytes": 32018
+  },
+  "active/docs/specs/codex-desktop-confirmation-sync.md": {
+    "sha256": "17c5da0442a7bb5160f466729293c4395e52c3213045ba58f01afd2129651009",
+    "lines": 90,
+    "bytes": 16227
+  },
+  "active/docs/specs/DEVELOPMENT_PROCESS.md": {
+    "sha256": "fa73754dcd2c82d4fd816ba5a492fe49efdf581570710839bea19acf6add16f6",
+    "lines": 73,
+    "bytes": 5003
+  },
+  "active/docs/specs/README.md": {
+    "sha256": "4211b4fbbfdaf797d7389beec0f52319a6f5d4dab9e69573adb18355940cf247",
+    "lines": 111,
+    "bytes": 22961
+  },
+  "active/docs/specs/claude-code-support.md": {
+    "sha256": "802f64998eedae84d5eda7f376dcaed7163ecc673438bbfad7995a245e51a8cf",
+    "lines": 118,
+    "bytes": 9922
+  },
+  "active/docs/specs/PROGRESS_EFFECT_ADAPTATION.md": {
+    "sha256": "7dc4d804c09f376726c082e3fb93b32decfaf90798481e75bb47c39ef2e3237e",
+    "lines": 124,
+    "bytes": 5997
+  },
+  "active/docs/workflow/VALIDATION.md": {
+    "sha256": "6c87c3933ea90ad87753ee8442322f3a7a65ba7a0bbdef1d2eb1a0eb5d1edfad",
+    "lines": 63,
+    "bytes": 4559
+  },
+  "active/docs/workflow/RELEASE.md": {
+    "sha256": "e38c54bbdaebb1f0ad35b8ea44ce300061fd45170f89d149386cb414321ad488",
+    "lines": 125,
+    "bytes": 8163
+  },
+  "active/Prototypes/IslandTextConsole/README.md": {
+    "sha256": "20092e15659c6fa31c94b0c444d32713ecf3cea151a28f67ac2cded076c040f9",
+    "lines": 85,
+    "bytes": 7693
+  },
+  "active/Prototypes/IslandTextConsole/AGENTS.md": {
+    "sha256": "990d999839f8da2674820359f6898dd8e678fc885f1e85bdbb9aabd9d01d1b5a",
+    "lines": 17,
+    "bytes": 1641
+  },
+  "active/Prototypes/MultitaskIslandConsole/README.md": {
+    "sha256": "dd773d42f298ef827b5b1f887d44bc34199863bc143a7bc21396d2056b41905a",
+    "lines": 388,
+    "bytes": 59945
+  },
+  "active/Prototypes/MultitaskIslandConsole/AGENTS.md": {
+    "sha256": "a73963ecf564fe98294f13861f317292af00f8d5ae2720d1799b7753920d02a0",
+    "lines": 79,
+    "bytes": 15120
+  },
+  "active/Prototypes/MultitaskIslandConsole/References/vibe-layout-measurements.md": {
+    "sha256": "436b74f9a7fba88fbf2289f2cc345418f560d31d8b6e6e6a1a7b4eb9c5d6fbe7",
+    "lines": 27,
+    "bytes": 2550
+  },
+  "active/Prototypes/MultitaskIslandConsole/References/scroll-implementation-audit-2026-09-29.md": {
+    "sha256": "776a8548a1aca6238ef9d929b7d1cee4688059dff6841ee9c1325ba9e2620561",
+    "lines": 36,
+    "bytes": 4335
+  },
+  "active/Prototypes/MultitaskIslandConsole/References/codex-public-detail-content-2026-09-30.md": {
+    "sha256": "17f74c8d8532cc2bc4326ad0b8053dc43e885d2ef02ac366778461beaa646c7f",
+    "lines": 15,
+    "bytes": 1558
+  },
+  "active/Prototypes/MultitaskIslandConsole/References/vibe-web-20260930/README.md": {
+    "sha256": "dc6383af85682c99df047a7beeeb886d1ed55d87eb0c678e3baed4d39fdc0d05",
+    "lines": 16,
+    "bytes": 2497
+  },
+  "active/Prototypes/MultitaskIslandConsole/Resources/README.md": {
+    "sha256": "b2ca005df6a8cbb8881041e0be539c94fa0274988228a0b554b4d8dcabf7ee01",
+    "lines": 3,
+    "bytes": 352
+  },
+  "active/Prototypes/MultitaskIslandConsole/Frozen/2026-09-30-3s-sync-noise65/README.md": {
+    "sha256": "3bd149244b0cc5c1383a7ee3b1325d1a5e77d761e84fd2121ca5238967651617",
+    "lines": 41,
+    "bytes": 2887
+  },
+  "active/Prototypes/MultitaskIslandConsole/FocusValidation/README.md": {
+    "sha256": "cfde9069687529b3b88d3932e8fe0055cf9c808dc7ad0345f16f8bf5a2ab1dda",
+    "lines": 22,
+    "bytes": 1316
+  },
+  "active/Prototypes/CodexActivityOrbVisualDemo/README.md": {
+    "sha256": "76f347d1492808b43c5c12ad0a81da6dbed7228810b0eb62c2b9a17f106c0678",
+    "lines": 49,
+    "bytes": 2162
+  },
+  "active/Prototypes/CodexActivityMultiTaskDemo/README.md": {
+    "sha256": "3c57969e85f9b7d0dd6f92d652ada12d3ec98d7da7a02157e3fe907328acd258",
+    "lines": 107,
+    "bytes": 6517
+  },
+  "active/Prototypes/CodexActivityMultiTaskDemo/design-qa.md": {
+    "sha256": "f3de4b038e7e00815464bb9117f99f803c4f3a197976eb2cde207b5fb274fc03",
+    "lines": 252,
+    "bytes": 15546
+  },
+  "active/Prototypes/NativeQuestionBridgeContract/README.md": {
+    "sha256": "ce4033545a6fa853c1b4a0bfec345e8c5472ab85aa61f646fa10b19b104f2c12",
+    "lines": 46,
+    "bytes": 6360
+  },
+  "entry/README.md": {
+    "sha256": "7093e6635cf693ea5e6f49ffd8e6dc4a691968645ad7d467e6e4ea120b4a4e9d",
+    "lines": 13,
+    "bytes": 807
+  },
+  "entry/VERSION_HISTORY.md": {
+    "sha256": "c7fb15da62dcc3b30cf0f57eed86145a2ffbf3deefba483683d831f61a25347b",
+    "lines": 15,
+    "bytes": 755
+  },
+  "entry/CONTRIBUTING.md": {
+    "sha256": "1bffb0dd4fda42d978a26e5043ca72241da02f0b515820a8a6d33f8bfe82dac3",
+    "lines": 105,
+    "bytes": 3663
+  },
+  "entry/README.zh-CN.md": {
+    "sha256": "abf94a93245dc1da2b0da454ab4761b20e287843f6e6464f9b641bfcbe9a3924",
+    "lines": 12,
+    "bytes": 733
+  },
+  "entry/AGENTS.md": {
+    "sha256": "5d2e8dc3f5c75778c2a87a40db33f2791f6048b869033461337aa1038aea8f01",
+    "lines": 22,
+    "bytes": 1617
+  },
+  "entry/design-qa.md": {
+    "sha256": "2c705d8ae13908229cf49cfecab0cd9fe8a0f70743301723b5b68ccd960abf60",
+    "lines": 341,
+    "bytes": 19512
+  },
+  "entry/HANDOFF.md": {
+    "sha256": "8c87e24f3eaf3b58fab1634186c60ddc4c6d2e09bad3812a6af63cd1544ba812",
+    "lines": 20,
+    "bytes": 1000
+  },
+  "entry/docs/design/quotaview-widgetkit-solution.md": {
+    "sha256": "5e7ed411c06be7c7a9ca6cfeddc2fcd77d9a95e5e63504a1c522b4f5f0e0eb6b",
+    "lines": 1198,
+    "bytes": 36333
+  },
+  "entry/docs/design/quotaview-core-refactor-0.2.0-report.md": {
+    "sha256": "cb55ad0a5c83ebcd60c124180148acc155539e1b86423de07828b0e4d13703b6",
+    "lines": 147,
+    "bytes": 6086
+  },
+  "entry/docs/design/quotaview-core-architecture-evolution.md": {
+    "sha256": "e59cbf1fd96a330e5e312efc54cf4dddc3949772378222fd24a2093d15d35857",
+    "lines": 1625,
+    "bytes": 50031
+  },
+  "entry/docs/design/quotaview-codex-activity-widget-product.md": {
+    "sha256": "3a4d5855a1782d0bcd6cf759270bce9f68503a6681ce0497d28b68a536385c74",
+    "lines": 329,
+    "bytes": 15834
+  },
+  "entry/docs/design/quotaview-menu-panel-ui-stability.md": {
+    "sha256": "b74a0637574bb61368eaba8b8eec87496867e36cec591fbb9ec5f68b7f586953",
+    "lines": 402,
+    "bytes": 18543
+  },
+  "entry/docs/archive/root-handoff-2026-08-10.md": {
+    "sha256": "32abbed5b7a9f10104d73faca658e6d761736d5feedf1f7c32da15eeff57bca5",
+    "lines": 557,
+    "bytes": 25425
+  },
+  "entry/docs/archive/root-readme-en-2026-08-10.md": {
+    "sha256": "1005a34d1bf40ab31a2e75c313258ebcb1cc9cc346602ca386b47402e4ce9582",
+    "lines": 270,
+    "bytes": 11614
+  },
+  "entry/docs/archive/root-readme-zh-2026-08-10.md": {
+    "sha256": "1450239582721f014c7679558640310871a3c9493a6a32095d8bf47d36fe571b",
+    "lines": 263,
+    "bytes": 11094
+  },
+  "entry/docs/archive/root-version-history-2026-08-10.md": {
+    "sha256": "3ad548e89ecd976c79efcc60190bacbc18698ebc7d1eec7cce6c224ec64c2a7f",
+    "lines": 405,
+    "bytes": 16744
+  },
+  "entry/docs/archive/root-checkout-rules.md": {
+    "sha256": "24e962f17cd0e29ff3bc79cc0fdf26c529b5fe875d569c271c60d6c9f5a3e9ad",
+    "lines": 544,
+    "bytes": 27145
+  },
+  "entry/docs/reference/codexbar-macos-design-reference.md": {
+    "sha256": "0e8d46223a9d80bca8f6185421151401b3db112ab3a5a6d19e86155e9a3ee737",
+    "lines": 1898,
+    "bytes": 65981
+  },
+  "entry/Prototypes/CodexActivityMetalDemo/README.md": {
+    "sha256": "1e55a882650d09e3ba00d91adac8eaf84888c16229ea638128b599645f3ab828",
+    "lines": 55,
+    "bytes": 2529
+  },
+  "legacy-entry/HANDOFF.md": {
+    "sha256": "ead4d5c546d29468c96d07b0109807b6dc4b9d393b6c84328b9da5ff5358f349",
+    "lines": 1081,
+    "bytes": 116429
+  }
+}

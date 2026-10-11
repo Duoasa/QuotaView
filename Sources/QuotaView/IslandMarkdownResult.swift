@@ -8,9 +8,23 @@ final class IslandMarkdownResultLayout {
     let height: CGFloat
     let width: CGFloat
 
-    init(source: String, width: CGFloat) {
+    convenience init(source: String, width: CGFloat) {
+        self.init(text: Self.render(source), width: width)
+    }
+
+    convenience init(plainText: String, width: CGFloat) {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 2
+        paragraph.lineBreakMode = .byWordWrapping
+        self.init(text: NSAttributedString(string: plainText, attributes: [
+            .font: NSFont.systemFont(ofSize: IslandTaskDetailMetrics.bodyFont),
+            .foregroundColor: IslandTextPalette.secondary, .paragraphStyle: paragraph
+        ]), width: width)
+    }
+
+    private init(text: NSAttributedString, width: CGFloat) {
         self.width = max(40, width)
-        text = Self.render(source)
+        self.text = text
         let storage = NSTextStorage(attributedString: text)
         let manager = NSLayoutManager()
         let container = NSTextContainer(size: NSSize(width: self.width, height: .greatestFiniteMagnitude))
@@ -43,10 +57,10 @@ final class IslandMarkdownResultLayout {
             }?.identity
             let listItem = intents.first { if case .listItem = $0.kind { return true }; return false }
             let paragraph = NSMutableParagraphStyle()
-            paragraph.lineSpacing = 3
-            paragraph.paragraphSpacing = 10
+            paragraph.lineSpacing = 2
+            paragraph.paragraphSpacing = 6
             paragraph.lineBreakMode = .byWordWrapping
-            var size: CGFloat = 13
+            var size: CGFloat = IslandTaskDetailMetrics.bodyFont
             var heading = false
             var quote = false
             var bold = run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true
@@ -54,7 +68,7 @@ final class IslandMarkdownResultLayout {
             var prefix = ""
             for intent in intents {
                 switch intent.kind {
-                case .header(let level): size = level == 1 ? 18 : (level == 2 ? 16 : 14); bold = true; heading = true
+                case .header(let level): size = level == 1 ? 16 : (level == 2 ? 14 : 13); bold = true; heading = true
                 case .codeBlock: code = true
                 case .blockQuote: quote = true; paragraph.headIndent += 12; paragraph.firstLineHeadIndent += 12
                 case .listItem(let ordinal):
@@ -67,7 +81,7 @@ final class IslandMarkdownResultLayout {
             if block != previousBlock {
                 if result.length > 0 {
                     result.append(NSAttributedString(string: row != nil && row == previousRow ? "\t" : "\n",
-                        attributes: [.font: NSFont.systemFont(ofSize: 13), .paragraphStyle: paragraph]))
+                        attributes: [.font: NSFont.systemFont(ofSize: IslandTaskDetailMetrics.bodyFont), .paragraphStyle: paragraph]))
                 }
                 if listItem?.identity == previousListItem { prefix = "" }
                 previousBlock = block; previousRow = row; previousListItem = listItem?.identity
@@ -79,9 +93,11 @@ final class IslandMarkdownResultLayout {
             }
             // Opaque tones keep prose quieter than the result title, while
             // preserving the emphasis and headings in Codex's actual answer.
-            let tone: CGFloat = heading ? 0.92 : (bold ? 0.85 : (quote ? 0.56 : 0.70))
+            let color = heading ? NSColor(white: 0.92, alpha: 1)
+                : (bold ? NSColor(white: 0.85, alpha: 1)
+                    : (quote ? NSColor(white: 0.56, alpha: 1) : IslandTextPalette.secondary))
             var attributes: [NSAttributedString.Key: Any] = [
-                .font: font, .foregroundColor: NSColor(white: tone, alpha: 1), .paragraphStyle: paragraph
+                .font: font, .foregroundColor: color, .paragraphStyle: paragraph
             ]
             if code { attributes[.backgroundColor] = NSColor(white: 0.10, alpha: 1) }
             if run.inlinePresentationIntent?.contains(.strikethrough) == true {
@@ -92,6 +108,15 @@ final class IslandMarkdownResultLayout {
                 attributes[.foregroundColor] = NSColor.systemBlue
             }
             result.append(NSAttributedString(string: prefix + String(parsed[run.range].characters), attributes: attributes))
+        }
+        // Paragraph spacing separates blocks; it must not reserve blank space
+        // below the last line and force a short answer into the two-row card.
+        if result.length > 0,
+           let style = result.attribute(.paragraphStyle, at: result.length - 1, effectiveRange: nil) as? NSParagraphStyle,
+           let trailing = style.mutableCopy() as? NSMutableParagraphStyle {
+            trailing.paragraphSpacing = 0
+            let range = (result.string as NSString).paragraphRange(for: NSRange(location: result.length - 1, length: 0))
+            result.addAttribute(.paragraphStyle, value: trailing, range: range)
         }
         return result
     }
