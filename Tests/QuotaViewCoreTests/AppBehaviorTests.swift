@@ -178,7 +178,7 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(
             controlFrame.maxX,
-            hostingView.bounds.maxX - 18,
+            hostingView.bounds.maxX - 12,
             accuracy: 1
         )
     }

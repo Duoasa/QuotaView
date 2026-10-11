@@ -2,9 +2,32 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.8.1 Build 1 候选交付
+## 0.8.1 Build 2 发布准备
 
-用户授权将当前版本定为 0.8.1，打包并先推送源码合入 main。版本身份为 0.8.1 / 显示 Build 1 / 内部 61，App、Widget、兼容 Info 同步；开发数据身份保持隔离。本批包含黑色至玻璃平滑过渡、清透区域优化、用量胶囊深浅染色及右对齐设置。公开 Release 与 appcast 尚未授权，当前稳定回滚仍为 v0.7.9-build.1（c1e21dc00ef1f2f5a6ad96ec5bbc4ce93fd22cb6）。Debug arm64 已编译并更新开发运行包，PID 94359，版本身份与加载路径一致，正式安装未改；本地 Swift 测试及审批契约 44 项通过。构建、GitHub 与本地封装证据见 `dist/verification/0.8.1-build1-package/`；视觉由用户验收。
+用户明确授权以最新开发版发布 0.8.1 Build 2，并合入 main、发布 GitHub 与 appcast。身份 0.8.1 / 显示 2 / 内部 62；继承 Build 1 并包含设置紧凑化。中英文 README 使用用户提供的七张产品图，按功能配图，口号“液态玻璃，现在重新回归”。正式发布前保持 0.7.9 Build 1 为稳定回滚基线。
+
+开发运行包已更新 PID 58221，234 输入/13 资产及包/加载路径一致，正式安装未改。发布证据存于 `dist/verification/0.8.1-build2-release/`，规格见 [0.8.1 发布](docs/specs/release-0.8.1.md)。发布与 appcast 待本轮产物验证完成后执行，视觉验收仍由用户负责。
+
+## 设置窗口与元素紧凑化（2026-10-11 23:32）
+
+按用户与 macOS 系统设置对比反馈，将默认窗口由 1040×760 调整为 780×680 pt，最小 740×560；侧栏 180、外圆角 24、内容最大 560、水平内距 20。导航图标 20、行高 32，页标题 18；设置行标题/说明 13/11、最小行高 44、内距 12×8，原生控件 small。分组间距、预览高度（灵动岛 210，代理/关于 132）及效果选项高度 44 同步收紧。保留自动换行、滚动和用户放大窗口的能力。
+
+Debug arm64 编译通过，开发包已更新重启 PID 47007，0.8.1 Build 1 / 内部 61；234 输入、13 资产、包/备份及实际加载路径一致，正式安装未改。效果卡圆角/裁切定向冒烟 1 项通过。证据 `.build/settings-compact-20261011/`；测试 `/private/tmp/qv-settings-compact-test.log`。实际视觉由用户检查。此轮仅本地修改，尚未纳入下方已封装 ZIP，未提交/推送/重新打包。
+
+## 0.8.1 Build 1 本地封装与产品图交付
+
+版本为 **0.8.1 / 显示 Build 1 / 内部 61**。源码 `ff9906d9b39e76c8c2db386992a1124dedfb832b` 已经 [PR #93](https://github.com/Duoasa/QuotaView/pull/93) 合入 main `c0773493ab6a1f9f57d949f56948584ec7dc9bb5`；PR CI 38148405962、main CI 38148718069 均成功。本批包含黑色至玻璃平滑过渡、清透区域优化、用量胶囊深浅染色及右对齐设置。705 项本地 Swift 测试执行、6 跳过、0 失败；原生审批契约 44 项通过、真实动作 0。
+
+本地包：`dist/QuotaView-v0.8.1-build.1.zip`，25,022,141 bytes；SHA-256 `45430481515fb67ca2f191850f1e2bd173a8b9ce70bec16a70ea6c5579b222ca`。Universal arm64 + x86_64，Developer ID Chenchen Xu (BUUH229D5Q)，Apple 公证 Accepted / Staple（`e8cf1733-980e-42ea-8977-b726039f13c9`）。解压包签名、架构、166 个源输入冻结一致性以及 15 秒启动/实际动态库路径检查通过；核验进程已退出。证据 `dist/verification/0.8.1-build1-package/`。开发运行包 PID 94359 保留，正式安装未改。未发布新的 GitHub Release 或 appcast；公开稳定版仍为 v0.7.9-build.1。
+
+原 Figma 文件 UI2 右侧新增四张可编辑产品图，使用虚拟数据，不改变生产账户或任务：
+
+- [三状态任务页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=198-337)：思考中、工作中、待确认。
+- [用量页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-401)：Codex / Claude Code 来源切换、双周期额度、账户、Tokens、成本及活动热图。
+- [审批页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-402)：完整命令、理由、范围与操作按钮。
+- [重置卡页](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=205-403)：2 次虚拟重置、须知、红色按钮与演示说明。
+
+尺寸、文字与轮廓按源码映射，按钮 24 pt / 图标 10 pt；玻璃使用 Figma 原生 GLASS 效果，其光学呈现不等同于 macOS 合成器。AI 球及进度特效使用真实 Metal 静态渲染；按用户产品图要求，选中工作卡和待确认卡均展示进度特效，待确认保留赤金色光晕（生产当前会隐藏待确认噪点，此处仅为画板展示覆盖，不改应用）。重置卡为原始 SVG，文字/布局可编辑，未嵌入整页截图。四页导出检查完成；最终产品图视觉由用户验收。节点与本地渲染材料见 `.build/081-figma-assets/`。
 
 ## 胶囊配色切换右对齐（2026-10-11 22:34）
 

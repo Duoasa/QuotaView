@@ -259,7 +259,7 @@ final class Island073SmokeTests: XCTestCase {
         let inner = SettingsEffectPreviewMetrics.previewCornerRadius
         XCTAssertEqual(outer, inner + inset)
         // The settings previews were enlarged to 56 pt; retain the corner and clipping checks.
-        XCTAssertEqual(SettingsEffectPreviewMetrics.height, 56)
+        XCTAssertEqual(SettingsEffectPreviewMetrics.height, 44)
         let host = CodexActivityStateSmokePreviewHostView(effect: .stateSmoke)
         host.frame = .init(x: 0, y: 0, width: 112, height: SettingsEffectPreviewMetrics.height)
         host.update(effect: .stateSmoke, reduceMotion: true, cornerRadius: inner)

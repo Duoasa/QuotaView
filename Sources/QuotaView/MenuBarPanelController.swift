@@ -76,7 +76,7 @@ final class QuotaViewSettingsWindowController {
             window.toolbar = nil
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
-            window.minSize = NSSize(width: 780, height: 560)
+            window.minSize = SettingsWindowMetrics.minimumContentSize
             window.setContentSize(
                 SettingsWindowMetrics.defaultContentSize
             )
@@ -831,7 +831,7 @@ final class MenuBarPanelController: NSObject {
             window.toolbar = nil
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
-            window.minSize = NSSize(width: 780, height: 560)
+            window.minSize = SettingsWindowMetrics.minimumContentSize
             window.setContentSize(
                 SettingsWindowMetrics.defaultContentSize
             )
