@@ -3,12 +3,12 @@ import QuotaViewCore
 import SwiftUI
 
 enum SettingsWindowMetrics {
-    static let defaultContentSize = NSSize(width: 1040, height: 760)
-    static let minimumContentSize = NSSize(width: 920, height: 600)
-    static let outerCornerRadius: CGFloat = 36
-    static let contentMaxWidth: CGFloat = 744
-    static let contentInset: CGFloat = 24
-    static let sidebarWidth: CGFloat = 200
+    static let defaultContentSize = NSSize(width: 780, height: 680)
+    static let minimumContentSize = NSSize(width: 740, height: 560)
+    static let outerCornerRadius: CGFloat = 24
+    static let contentMaxWidth: CGFloat = 560
+    static let contentInset: CGFloat = 20
+    static let sidebarWidth: CGFloat = 180
     static let sidebarInset: CGFloat = 16
     static let fallbackSidebarCornerRadius: CGFloat =
         outerCornerRadius - sidebarInset
@@ -201,7 +201,7 @@ struct SettingsView: View {
         let selected = selection == page
         return Button { selection = page; focusedPage = page } label: {
             HStack(spacing: 10) {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
+                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 20)
                 Text(page.title(copy))
                     .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     .foregroundStyle(.primary)
@@ -209,7 +209,7 @@ struct SettingsView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8)
-            .frame(height: 38)
+            .frame(height: 32)
             .background {
                 if selected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -239,7 +239,7 @@ struct SettingsView: View {
         for page: IslandSettingsPage
     ) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 18) {
                 settingsPageHeading(for: page)
                 settingsStage(for: page)
                 switch page {
@@ -254,8 +254,8 @@ struct SettingsView: View {
             }
             .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth, alignment: .topLeading)
             .padding(.horizontal, SettingsWindowMetrics.contentInset)
-            .padding(.top, 32)
-            .padding(.bottom, 32)
+            .padding(.top, 20)
+            .padding(.bottom, 20)
             .frame(maxWidth: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -267,9 +267,9 @@ struct SettingsView: View {
     private func settingsPageHeading(for page: IslandSettingsPage) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 10) {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 28)
+                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
                 Text(page.title(copy))
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.primary)
             }
             Text(page.subtitle(copy))
@@ -284,10 +284,10 @@ struct SettingsView: View {
     private func settingsStage(for page: IslandSettingsPage) -> some View {
         // Only these pages need a separate illustration above their controls.
         if page == .island || page == .proxy || page == .about {
-            let height: CGFloat = page == .island ? 256 : 160
+            let height: CGFloat = page == .island ? 210 : 132
             settingsStageVisual(for: page)
                 .environment(\.colorScheme, .dark)
-                .frame(maxWidth: 760)
+                .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth)
                 .frame(height: height)
                 .frame(maxWidth: .infinity)
         }
@@ -592,7 +592,7 @@ struct SettingsView: View {
                 set: { preferences.codexIslandExpandedWidth = AppPreferences.IslandExpandedWidth.normalized($0) })
     }
     private var islandSettings: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 18) {
             islandMaterialSettings
             settingsSection(copy.text("显示", "Display")) {
                 NativeSettingsCard {
@@ -839,7 +839,7 @@ struct SettingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                         .accessibilityHidden(true)
                 }
-                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary)
+                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
                     .accessibilityAddTraits(.isHeader)
             }
             .padding(.leading, 10)
@@ -848,7 +848,7 @@ struct SettingsView: View {
     }
 
     private var generalSettings: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 16) {
             settingsSection(copy.text("语言", "Language")) { languageSettings }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
                 Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
@@ -861,7 +861,7 @@ struct SettingsView: View {
     }
 
     private var islandMaterialSettings: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 16) {
             settingsSection(copy.text("灵动岛材质", "Island material")) {
                 NativeSettingsCard {
                     islandMaterialOption(.liquidGlass,
@@ -902,7 +902,7 @@ struct SettingsView: View {
         Button { preferences.islandMaterial = mode } label: {
             NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol, symbolColor: .secondary) {
                 Image(systemName: preferences.islandMaterial == mode ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
+                    .font(.system(size: 16))
                     .foregroundStyle(preferences.islandMaterial == mode ? Color.primary : Color.secondary)
                     .accessibilityHidden(true)
             }
@@ -981,7 +981,7 @@ struct SettingsView: View {
     }
 
     private var aboutSettings: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 16) {
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
@@ -2009,7 +2009,7 @@ private struct SettingsSidebarIcon: View {
     let symbol: String
     let color: Color
     // 22 pt is the sidebar/row size; inset and radius keep the same proportions at any size.
-    var size: CGFloat = 22
+    var size: CGFloat = 20
     @Environment(\.colorSchemeContrast) private var contrast
 
     private var inset: CGFloat { (size * 3 / 22).rounded() }
@@ -2104,7 +2104,7 @@ enum SettingsEffectPreviewMetrics {
     static let previewCornerRadius = IslandVibeLayout.rowRadius
     static let inset: CGFloat = 8
     static let outerCornerRadius = previewCornerRadius + inset
-    static let height: CGFloat = 56
+    static let height: CGFloat = 44
 }
 
 private struct SettingsQuitRowStyle: ButtonStyle {
@@ -2291,7 +2291,7 @@ struct NativeSettingsRow<Control: View>: View {
         subtitle: String? = nil,
         symbol: String? = nil,
         symbolColor: Color = Color(nsColor: .systemGray),
-        horizontalPadding: CGFloat = 18,
+        horizontalPadding: CGFloat = 12,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
@@ -2303,19 +2303,19 @@ struct NativeSettingsRow<Control: View>: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 18) {
+        HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .center, spacing: NativeSettingsDivider.iconGap) {
             if let symbol {
                 SettingsSidebarIcon(symbol: symbol, color: symbolColor)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.primary)
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2323,12 +2323,12 @@ struct NativeSettingsRow<Control: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            control
+            control.controlSize(.small)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, horizontalPadding)
-        .padding(.vertical, 11)
-        .frame(maxWidth: .infinity, minHeight: 52)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .contentShape(Rectangle())
     }
 }
@@ -2363,10 +2363,10 @@ struct NativeSettingsSegmentedPicker<
 }
 
 struct NativeSettingsDivider: View {
-    static let iconGap: CGFloat = 12
-    // Row padding + 22 pt icon + gap: the divider starts under the row title.
-    static let iconLeading: CGFloat = 18 + 22 + iconGap
-    var leading: CGFloat = 18
+    static let iconGap: CGFloat = 8
+    // Row padding + 20 pt icon + gap: the divider starts under the row title.
+    static let iconLeading: CGFloat = 12 + 20 + iconGap
+    var leading: CGFloat = 12
     var body: some View {
         Divider()
             .padding(.leading, leading)
