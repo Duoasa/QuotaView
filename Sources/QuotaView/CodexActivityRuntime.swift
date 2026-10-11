@@ -1042,6 +1042,7 @@ final class CodexActivityRuntime: ObservableObject {
             expandedWidth: preferences.codexIslandExpandedWidth,
             islandMaterial: preferences.islandMaterial,
             islandGlassDegree: preferences.islandGlassDegree,
+            islandFloatingUsageEnabled: preferences.islandFloatingUsageEnabled,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots)
     }
 

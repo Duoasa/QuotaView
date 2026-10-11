@@ -398,7 +398,12 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var resetTransitionSerial: UInt64 = 0
     private var resetTransitionStartTimeout: DispatchWorkItem?
     var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), maximumExpandedWidth) }
-    var maximumPageHeight: CGFloat { max(IslandChromeMetrics.footerHeight + 10, geometry.maximumExpandedHeight - headerHeight) }
+    @Published private(set) var floatingUsageNow = Date()
+    var showsFloatingUsage: Bool {
+        display?.islandFloatingUsageEnabled == true && display?.privacyMode != true
+    }
+    var availableIslandHeight: CGFloat { max(0, geometry.maximumExpandedHeight - (showsFloatingUsage ? 44 : 0)) }
+    var maximumPageHeight: CGFloat { max(IslandChromeMetrics.footerHeight + 10, availableIslandHeight - headerHeight) }
     var expandedCanvasHeight: CGFloat {
         showsUsage ? headerHeight + min(max(usageHeight, resetHeight), maximumPageHeight) : expandedHeight
     }
@@ -496,7 +501,7 @@ final class IslandBoardState: ObservableObject {
     }
     var headerHeight: CGFloat { max(IslandVibeLayout.headerHeight, geometry.bandHeight) }
     var maximumApprovalViewportHeight: CGFloat {
-        max(0, geometry.maximumExpandedHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
+        max(0, availableIslandHeight - headerHeight - IslandApprovalMetrics.fixedHeight)
     }
     var compactSideWidth: CGFloat { max(0, (compactWidth - 40 - geometry.cameraWidth - 16) / 2) }
     var headerSideWidth: CGFloat { max(0, (surfaceWidth - IslandChromeMetrics.horizontalInset * 2 - geometry.cameraWidth - 16) / 2) }
@@ -519,7 +524,7 @@ final class IslandBoardState: ObservableObject {
     var listHeight: CGFloat {
         let rows = visibleTasks.isEmpty ? IslandVibeLayout.rowPitch : visibleTasks.prefix(4).reduce(0) { $0 + rowHeight($1) + IslandVibeLayout.rowSpacing }
         let detail = inlineDetail == nil ? 0 : detailHeight + IslandVibeLayout.rowSpacing
-        return min(rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing, max(60, geometry.maximumExpandedHeight - headerHeight - IslandVibeLayout.footerHeight))
+        return min(rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing, max(60, availableIslandHeight - headerHeight - IslandVibeLayout.footerHeight))
     }
     func detailData(for task: CodexMultitaskRenderTask) -> IslandTaskDetailData {
         display?.taskDetails[task.id] ?? .init(entries: [], confirmation: nil, status: .unknown)
@@ -534,7 +539,7 @@ final class IslandBoardState: ObservableObject {
         let width = expandedWidth - IslandVibeLayout.listInset * 2
         let rows = visibleTasks.reduce(CGFloat(0)) { $0 + measuredCardHeight(display?.sessionMetadata[$1.id], width: width) + IslandVibeLayout.rowSpacing }
         let detail = inlineDetail == nil ? 0 : unrailedDetailHeight + IslandVibeLayout.rowSpacing
-        return rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing > geometry.maximumExpandedHeight - headerHeight - IslandVibeLayout.footerHeight
+        return rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing > availableIslandHeight - headerHeight - IslandVibeLayout.footerHeight
     }
     func approvalMetrics(request: IslandConfirmation) -> IslandApprovalMetrics {
         let width = expandedWidth - IslandVibeLayout.listInset * 2
@@ -740,6 +745,10 @@ final class IslandBoardState: ObservableObject {
     }
     func update(_ incoming: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
         let value = incoming
+        if value.islandFloatingUsageEnabled && !value.privacyMode,
+           Int(now.timeIntervalSince1970 / 60) != Int(floatingUsageNow.timeIntervalSince1970 / 60) {
+            floatingUsageNow = now
+        }
         let previous = display
         let hadAttention = attentionCount > 0
         let wasCompact = display?.state.compact == true
@@ -1686,6 +1695,76 @@ private final class IslandGlassGeometry: ObservableObject {
 
 }
 
+/// Uses the existing snapshot and session clock; never issues a quota request.
+struct IslandFloatingQuotaPeriods {
+    static func windows(_ windows: [CodexQuotaWindowPresentation]) -> [CodexQuotaWindowPresentation?] {
+        let short = windows.first { $0.windowDurationMinutes == 300 }
+        let week = windows.first { $0.windowDurationMinutes == 10080 }
+        return short.map { [$0, week] } ?? [week]
+    }
+}
+
+private struct IslandFloatingUsageCapsule: View {
+    @ObservedObject var state: IslandBoardState
+    @ObservedObject var geometry: IslandGlassGeometry
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            if state.showsFloatingUsage {
+                IslandUsageCapsuleContent(windows: state.display?.usageSnapshot?.quotaWindows ?? [],
+                    current: state.display?.usageState.isCurrent == true,
+                    english: state.english, now: state.floatingUsageNow)
+                .position(x: geometry.value.rect.midX, y: geometry.value.rect.maxY + 24)
+            }
+        }
+        .id(geometry.generation)
+        .environment(\.colorScheme, .dark)
+        .allowsHitTesting(false)
+    }
+
+}
+
+/// Shared artwork; callers supply either live usage or isolated settings illustration data.
+struct IslandUsageCapsuleContent: View {
+    let windows: [CodexQuotaWindowPresentation]
+    let current: Bool
+    let english: Bool
+    let now: Date
+    var clearSurface = false
+
+    var body: some View {
+        let periods = IslandFloatingQuotaPeriods.windows(windows)
+        HStack(spacing: 12) {
+            ForEach(periods.indices, id: \.self) { index in
+                if index > 0 { Capsule().fill(.white.opacity(0.2)).frame(width: 1, height: 12) }
+                period(periods[index], short: periods.count == 2 && index == 0)
+            }
+        }
+        .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
+        .padding(.horizontal, 12).frame(height: 32).fixedSize()
+        .islandGlass(Capsule(), tint: clearSurface ? .clear : .white.opacity(0.05), clearSurface: clearSurface)
+        .environment(\.islandLiquidGlassEnabled, true)
+    }
+
+    private func period(_ window: CodexQuotaWindowPresentation?, short: Bool) -> some View {
+        let percent = current ? window?.remainingPercent : nil
+        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let countdown = MenuBarQuotaImage.countdown(until: current ? window?.resetsAt : nil, now: now, copy: copy)
+        let title = copy.text(short ? "5小时" : "周额度", short ? "5h" : "Weekly")
+        let value = percent.map { "\(min(100, max(0, $0)))%" } ?? "—"
+        return HStack(spacing: 6) {
+            IslandQuotaRing(remainingPercent: percent)
+            Text(title)
+            Text(value).monospacedDigit()
+            Text(window?.resetsAt != nil && current ? copy.text("\(countdown)重置", "Resets in \(countdown)") : copy.text("重置时间 —", "Reset —"))
+                .foregroundStyle(.white.opacity(0.7)).monospacedDigit()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(copy.text("\(title)，剩余 \(value)，\(countdown)后重置", "\(title), \(value) remaining, resets in \(countdown)"))
+    }
+}
+
 private struct IslandExpandedGlassBackdrop: View {
     @ObservedObject var geometry: IslandGlassGeometry
 
@@ -1741,6 +1820,8 @@ final class IslandNotchSurface: NSView {
     private let glassContainer = NSView()
     private var glassMaterial: NSHostingView<IslandExpandedGlassBackdrop>?
     private var glassGeometry: IslandGlassGeometry?
+    private let floatingUsageGeometry = IslandGlassGeometry(value: .init(rect: .zero, radius: 0, compact: true), degree: 0)
+    private var floatingUsageHost: NSHostingView<IslandFloatingUsageCapsule>?
     private let content = NSView()
     private let compactHost: NSHostingView<IslandBoardView>
     private let expandedHost: NSHostingView<IslandBoardView>
@@ -1777,6 +1858,10 @@ final class IslandNotchSurface: NSView {
         addSubview(glassContainer)
         addSubview(content); content.layer?.mask = clipping
         content.addSubview(expandedHost); content.addSubview(compactHost)
+        let usageHost = NSHostingView(rootView: IslandFloatingUsageCapsule(state: state, geometry: floatingUsageGeometry))
+        usageHost.sizingOptions = []
+        floatingUsageHost = usageHost
+        addSubview(usageHost)
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -1844,6 +1929,8 @@ final class IslandNotchSurface: NSView {
         if expandedHost.frame != expandedFrame { expandedHost.frame = expandedFrame; layoutCommitCount += 1 }
         if taskScrollLink.isChangingLayout { expandedHost.layoutSubtreeIfNeeded() }
         CATransaction.commit()
+        if floatingUsageHost?.frame != bounds { floatingUsageHost?.frame = bounds }
+        floatingUsageGeometry.update(value: .init(rect: newRect, radius: radius, compact: state.compact), degree: 0, animated: animated)
         if !animated { cancelAnimations() }
         synchronizeGlassMaterial(enabled: usesGlass, rect: newRect, radius: radius,
             compact: state.compact,
@@ -1933,6 +2020,7 @@ final class IslandNotchSurface: NSView {
     func stop() {
         cancelAnimations()
         glassGeometry?.stop()
+        floatingUsageGeometry.stop()
         confirmationGlow.update(edgeEmphasis: .none, reduceMotion: true, playbackVisible: false)
     }
 }
@@ -2463,8 +2551,9 @@ struct IslandUsageBento: View {
         // Native glass owns its content, rather than elevating a separate clear
         // background above ordinary text/charts in a shared glass container.
         content().padding(contentInset).frame(maxWidth: .infinity, alignment: .leading)
-            .islandGlass(RoundedRectangle(cornerRadius: 14),
-                tint: .black.opacity(highlightBottom ? 0.14 : 0.22))
+            .islandGlass(RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: Color(white: highlightBottom ? 0.12 : 0.075).opacity(0.75),
+                solidTint: Color(white: highlightBottom ? 0.12 : 0.075))
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)

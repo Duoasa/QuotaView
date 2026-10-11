@@ -5,7 +5,7 @@ import QuotaViewCore
 import simd
 
 enum CodexActivityRippleGlowContract {
-    static let uniformFloatCount = 128
+    static let uniformFloatCount = 132
     static let sphereRadius: Float = 0.535
     static let contourDeformation: Float = 0
     static let approvedSpeedMultiplier: Float = 1.5
@@ -34,6 +34,8 @@ private enum RippleGlowUniformLayout {
     static let shellInner = 52
     static let shellMid = 56
     static let shellEdge = 60
+    static let completionAmount = 128
+    static let completionPhase = 129
 }
 
 private let rippleGlowUniformSeed: [Float] = [
@@ -86,8 +88,8 @@ private struct RippleGlowConfiguration {
     let sharpness: Float
     let exposure: Float
 
-    func uniforms() -> [Float] {
-        var result = rippleGlowUniformSeed
+    func uniforms(completed: Bool = false) -> [Float] {
+        var result = rippleGlowUniformSeed + [completed ? 1 : 0, 0, 0, 0]
         result[RippleGlowUniformLayout.speed] =
             speed
             * CodexActivityRippleGlowContract.approvedSpeedMultiplier
@@ -228,7 +230,7 @@ private extension CodexActivityVisualState {
                 accent: RippleGlowRGBA(0.36, 0.95, 0.65),
                 upperHighlight: RippleGlowRGBA(0.54, 1.00, 0.79),
                 highlight: RippleGlowRGBA(0.90, 1.00, 0.95),
-                speed: 0.12,
+                speed: 0.28,
                 warp: 1.8,
                 ridgeAmount: 0.30,
                 sharpness: 1.8,
@@ -293,8 +295,54 @@ private enum RippleGlowShaderResource {
         ) else {
             throw RippleGlowRendererError.invalidShader
         }
-        return source
+        // Keep the generated WGSL export untouched. Native completion artwork
+        // is composed here and shares the existing cached Metal pipeline.
+        return try RippleGlowCompletionShader.compose(source)
     }
+}
+
+private enum RippleGlowCompletionShader {
+    static func compose(_ source: String) throws -> String {
+        let fields = "    metal::float4 paletteStop11_;"
+        let entry = "fragment fs_mainOutput fs_main("
+        let output = "metal::float4(_e2.xyz * fit, metal::clamp(alpha, 0.0, 1.0) * fit)"
+        guard source.contains(fields), source.contains(entry), source.contains(output) else {
+            throw RippleGlowRendererError.invalidShader
+        }
+        return source.replacingOccurrences(of: fields, with: fields + "\n    metal::float4 completion;")
+            .replacingOccurrences(of: entry, with: function + "\n" + entry)
+            .replacingOccurrences(of: output, with: "metal::float4(qvCompletionLight(_e2.xyz, uv_4 / rad_3, u) * fit, metal::clamp(alpha, 0.0, 1.0) * fit)")
+    }
+
+    private static let function = #"""
+    float qvCheckSegment(metal::float2 p, metal::float2 a, metal::float2 b) {
+        metal::float2 edge = b - a;
+        float t = metal::clamp(metal::dot(p - a, edge) / metal::dot(edge, edge), 0.0, 1.0);
+        return metal::length(p - a - edge * t);
+    }
+
+    metal::float3 qvCompletionLight(metal::float3 base, metal::float2 p, constant Uniforms& u) {
+        float amount = metal::clamp(u.completion.x, 0.0, 1.0);
+        if (amount < 0.001) return base;
+        float phase = u.completion.y;
+        // Eight seconds: flowing ridge, 0.8 s fade in, 4 s hold, 1 s fade out.
+        float check = metal::smoothstep(0.25, 0.35, phase)
+            * (1.0 - metal::smoothstep(0.85, 0.975, phase)) * amount;
+        // The fullscreen vertex UV has positive Y pointing up.
+        metal::float2 joint = metal::float2(-0.12, -0.28);
+        float distance = metal::min(
+            qvCheckSegment(p, metal::float2(-0.43, 0.02), joint),
+            qvCheckSegment(p, joint, metal::float2(0.44, 0.34)));
+        float antialias = metal::max(metal::fwidth(distance), 0.008);
+        float stroke = 1.0 - metal::smoothstep(0.075 - antialias, 0.075 + antialias, distance);
+        float glow = metal::exp(-distance * distance / 0.018) * 0.24;
+        float inside = 1.0 - metal::smoothstep(0.72, 0.94, metal::length(p));
+        // Crossfade the moving ridge into a quiet green sphere interior; retain the rim.
+        metal::float3 resting = u.colorA.xyz * (0.24 + 0.14 * (p.y + 1.0));
+        metal::float3 color = metal::mix(base, resting, check * inside);
+        return metal::mix(color, u.highlightColor.xyz, metal::min(stroke * 0.94 + glow, 1.0) * check * inside);
+    }
+    """#
 }
 
 private enum RippleGlowPipeline {
@@ -378,13 +426,14 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
     private var transitionStartedAt = CACurrentMediaTime()
     private var lastFrameAt = CACurrentMediaTime()
     private var motionPhase: Float = 0
+    private var completionElapsed: Double = 0
     private var reduceMotion = false
 
     init(
         view: MTKView,
         initialState: CodexActivityVisualState
     ) throws {
-        guard rippleGlowUniformSeed.count
+        guard rippleGlowUniformSeed.count + 4
                 == RippleGlowUniformLayout.floatCount
         else {
             throw RippleGlowRendererError.invalidShader
@@ -412,7 +461,7 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
         }
         commandQueue = queue
         activeState = initialState
-        let initialUniforms = initialState.rippleGlowConfiguration.uniforms()
+        let initialUniforms = initialState.rippleGlowConfiguration.uniforms(completed: initialState == .completed)
         transitionFrom = initialUniforms
         transitionTarget = initialUniforms
         super.init()
@@ -422,7 +471,7 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
     func setState(_ state: CodexActivityVisualState, in view: MTKView) {
         guard activeState != state else { return }
         let now = CACurrentMediaTime()
-        let uniforms = state.rippleGlowConfiguration.uniforms()
+        let uniforms = state.rippleGlowConfiguration.uniforms(completed: state == .completed)
         if reduceMotion {
             transitionFrom = uniforms
             transitionTarget = uniforms
@@ -431,6 +480,7 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
             transitionTarget = uniforms
         }
         transitionStartedAt = now
+        if state == .completed { completionElapsed = 0 }
         activeState = state
         if view.isPaused {
             view.needsDisplay = true
@@ -486,6 +536,8 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
         uniforms[RippleGlowUniformLayout.sizeY] =
             Float(view.drawableSize.height)
         uniforms[RippleGlowUniformLayout.time] = motionPhase / speed
+        completionElapsed = (completionElapsed + frameDelta).truncatingRemainder(dividingBy: 8)
+        uniforms[RippleGlowUniformLayout.completionPhase] = reduceMotion ? 0.45 : Float(completionElapsed / 8)
 
         encoder.setRenderPipelineState(pipeline)
         uniforms.withUnsafeBytes { bytes in

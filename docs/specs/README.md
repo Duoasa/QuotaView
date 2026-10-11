@@ -1,5 +1,7 @@
 # QuotaView SDD 注册表
 
+[悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete，开发版已更新，视觉待用户验收。
+
 ## 当前发布：0.7.9 Build 1
 
 [0.7.9 发布规格](release-0.7.9.md) · `Released / User Acceptance Pending`。版本 `0.7.9 / 1 / 59` 已发布 GitHub Stable / Latest 与签名 appcast，最终 700 项本地测试全部通过。新增规格：[展开宽度](island-expanded-width.md)、[实时预览](settings-live-effect-preview.md)。完整发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，视觉与真实客户端交互仍待用户验收。

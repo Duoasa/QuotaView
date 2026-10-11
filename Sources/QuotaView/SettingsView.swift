@@ -284,7 +284,7 @@ struct SettingsView: View {
     private func settingsStage(for page: IslandSettingsPage) -> some View {
         // Only these pages need a separate illustration above their controls.
         if page == .island || page == .proxy || page == .about {
-            let height: CGFloat = page == .island ? 212 : 160
+            let height: CGFloat = page == .island ? 256 : 160
             settingsStageVisual(for: page)
                 .environment(\.colorScheme, .dark)
                 .frame(maxWidth: 760)
@@ -596,6 +596,11 @@ struct SettingsView: View {
             islandMaterialSettings
             settingsSection(copy.text("显示", "Display")) {
                 NativeSettingsCard {
+                    preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
+                        subtitle: copy.text("在灵动岛下方显示剩余额度和重置倒计时，宽度随周期数量自适应。", "Show remaining quota and reset countdown below the Island; width adapts to available periods."),
+                        symbol: "chart.pie.fill", color: .systemGreen,
+                        isOn: $preferences.islandFloatingUsageEnabled)
+                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     preferenceToggle(copy.text("隐私模式", "Privacy mode"),
                         subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
                         symbol: "eye.slash.fill", color: .systemGray,
@@ -1360,6 +1365,18 @@ private struct SettingsIslandPreview: View {
                     // Share the toolbar/card height budget so the footer stays inside the shell.
                     previewBackdrop
                         .frame(width: islandWidth, height: previewHeight)
+                }
+                if preferences.islandFloatingUsageEnabled && !preferences.codexIslandPrivacy {
+                    // Fixed dual-period illustration; weekly sample matches the preview header.
+                    // Never reads account data and never injects into the live island.
+                    IslandUsageCapsuleContent(windows: [
+                        .init(id: CodexDomainCatalog.primaryRateWindowID, usedPercent: 28, remainingPercent: 72,
+                              windowDurationMinutes: 300, resetsAt: Date(timeIntervalSince1970: 3 * 3600 + 20 * 60)),
+                        .init(id: CodexDomainCatalog.secondaryRateWindowID, usedPercent: 54, remainingPercent: 46,
+                              windowDurationMinutes: 10080, resetsAt: Date(timeIntervalSince1970: 4 * 86400))
+                    ], current: true, english: preferences.resolvedLanguage == .english,
+                       now: Date(timeIntervalSince1970: 0), clearSurface: true)
+                    .padding(.top, previewHeight + 8)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
