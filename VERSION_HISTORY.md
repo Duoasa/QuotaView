@@ -9,7 +9,31 @@
 
 ## 当前最新版本
 
-> 当前推荐版本为 GitHub Stable / Latest **0.7.9 Build 1**，已纳入签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> GitHub Stable / Latest **0.8.1 Build 2**；用户已明确授权并推送签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.8.1 / Build 2 / 内部 62` |
+| Tag / 发布提交 | `v0.8.1-build.2` / `87460e8689444f62c767f8607f3bf4f2f321a1b8`；[PR #94](https://github.com/Duoasa/QuotaView/pull/94) |
+| GitHub Release | [QuotaView 0.8.1 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)，Stable / Latest，非 Draft / Pre-release |
+| 资产 | `QuotaView-v0.8.1-build.2.zip`，25,021,571 bytes |
+| SHA-256 | `c9bfe7c65b3c2559f40ba7ffc6c22e93b0833fee6e8a145548beaaa61112b268` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`2f6d2dd9-2c0f-46d8-9c5b-175b41bd90ea` |
+| 产物验证 | 168 个冻结输入与源提交一致；签名、Gatekeeper、资源、解压启动 15 秒及实际动态库路径通过；公开回下载与本地 ZIP 逐字节一致 |
+| 本地 / CI | 705 项测试，6 跳过，0 失败；审批契约 44 项通过；PR CI 38153723991、main CI 38154379704 均成功 |
+| appcast | `https://duoasa.github.io/QuotaView/appcast.xml`；gh-pages `aa4fd8374e93f2db68f907d90200916c1ae14c55`，更新序列 62 / 59 / 57，保留项下载 URL、长度及签名不变 |
+| EdDSA | `zbTG4zHAkQ8LzYwYwlkyKzJo9iTX2NWDIghhWNSCtwzW5qlr+xWGrx0cFSlYC2GVvjpLbGiR/H8EVpR4+/jcCw==` |
+| 回滚 | [v0.7.9-build.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.9-build.1) / `c1e21dc00ef1f2f5a6ad96ec5bbc4ce93fd22cb6`；原始公开 ZIP 已再次回下载核对，完整事实保留在下节 |
+
+本版包含液态玻璃与经典材质、悬浮双周期用量胶囊及深浅配色、任务/审批/重置卡布局、完成态 AI 球、紧凑左右分栏设置与 Codex 确认流重新订阅修复。中英文 README 使用七张新版产品图及设置页同款纯二维码；GitHub About 突出多 Agent 灵动岛。
+
+用户明确授权当前 Build 2 的公开发布和自动更新。真实额度重置保持演示；未将自动化检查扩展为 Intel 实机、多屏、辅助功能及长期运行的完整验收。正式安装未替换，开发版保持独立身份。证据 `dist/verification/0.8.1-build2-release/`。
+
+## 0.7.9 Build 1（上一稳定版）
+
+> 历史稳定版，0.8.1 Build 2 的回滚基线。以下保留当时发布事实。
 
 | 项目 | 当前值 |
 |---|---|

@@ -1,16 +1,10 @@
 # QuotaView SDD 注册表
 
-2026-10-11 设置窗口与元素紧凑化已更新本地开发版，视觉待用户检查；尺寸见[设置窗口规范](../design/QUOTAVIEW_UI_RULES.md#设置窗口)，此修订未纳入现有 0.8.1 ZIP。
+## 当前发布：0.8.1 Build 2
 
-## 当前候选：0.8.1 Build 2
+[0.8.1 发布规格](release-0.8.1.md) · `Released / User Acceptance Pending`。版本 `0.8.1 / 2 / 62` 已发布 GitHub Stable / Latest 并推送签名 appcast，包含最新设置紧凑化。完整发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行状态见 [Handoff](../../HANDOFF.md)。真实额度重置保持演示；视觉与实际交互由用户验收。
 
-[0.8.1 发布规格](release-0.8.1.md) · 0.8.1 / 2 / 内部 62；用户已明确授权 GitHub Stable 与 appcast，正式构建和渠道验证进行中。最新设置紧凑化包含在此候选。
-
-[悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete，开发版已更新，视觉待用户验收。
-
-## 当前发布：0.7.9 Build 1
-
-[0.7.9 发布规格](release-0.7.9.md) · `Released / User Acceptance Pending`。版本 `0.7.9 / 1 / 59` 已发布 GitHub Stable / Latest 与签名 appcast，最终 700 项本地测试全部通过。新增规格：[展开宽度](island-expanded-width.md)、[实时预览](settings-live-effect-preview.md)。完整发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，视觉与真实客户端交互仍待用户验收。
+[悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete。设置尺寸见[设置窗口规范](../design/QUOTAVIEW_UI_RULES.md#设置窗口)。前一稳定版 [0.7.9](release-0.7.9.md) 保留为回滚基线。
 
 文档编号：`QV-SDD-INDEX-001` · 状态：`Accepted` · 整理：2026-10-08。
 
