@@ -12,11 +12,10 @@ Claude Code 全功能支持。本规格记录目标、边界与证据；实现�
   AskUserQuestion 单选问题可直接回答）；任何失败回落到终端原生确认。
 - 用量页可在 Codex / Claude Code 间切换：官方 5 小时 / 每周窗口（状态栏，可选）与本机
   会话记录统计的每日 Token、按模型公开单价估算的成本。
-- 设置新增「Claude Code 连接」页：启用开关、灵动岛审批开关、官方用量窗口开关。
+- 综合「连接 / Connections」页内独立 Claude 分组：启用、岛上审批、官方用量窗口开关；与 Codex 状态分别维护。
 
 ## 非目标
 
-- 不内置 Claude 官方标识（卡片用 SF Symbol `asterisk` 占位）。
 - 不定位或激活运行 Claude Code 的终端窗口；只提示用户切回终端。
 - 多选 AskUserQuestion、被截断的工具输入不在灵动岛作答，只显示只读提醒。
 - 不改变 Codex 的任何连接、审批或用量行为。
@@ -55,49 +54,29 @@ Socket 协议：请求 `{authenticationToken, eventID, kind: hook|statusLine, aw
 
 ## 状态与失败语义
 
-设置页状态：已停用 / 配置中 / 已配置（等待新会话）/ 已连接（本次运行收到事件）/ 需要处理
+设置页状态：已停用 / 配置中 / 等待会话（已配置，等待新会话）/ 已连接（本次运行收到事件）/ 需要处理
 （写入失败、helper 缺失、socket 失败，可重试）。App 未运行时 helper 连接失败即静默退出，
 Claude Code 行为不变；状态栏 helper 仍转发原状态栏输出。
 
-## 生命周期与审批开关修订 · 2026-10-08
+## 连接设置布局（2026-10-09）
 
-- 停止后再次启动重建监听；取消未开始的配置任务，已经开始的文件事务串行完成，旧修订结果不能覆盖新状态；取消用量刷新后禁止迟到回写。
-- 停用清理失败显示失败与重试，完成清理才显示已停用；重新启动按当前关闭配置移除本通道遗留项。
-- 关闭审批立即撤销应答能力，无决定释放挂起 helper 并保留只读终端提醒；旧 route 的迟到请求同样回退，再次开启不重新接管旧请求；真实工具结果/终态清理提醒。
-- 本轮 19 项隔离冒烟、0 失败，Debug arm64 编译通过并已更新开发包；真实 Claude 会话与多个 PermissionRequest Hook 并存仍待用户验收。当前运行与证据见 [Handoff](../../HANDOFF.md)。
+- Codex 设置参考 Claude 的简洁行布局：连接状态、目录、相关功能控件，共用状态与“连接详情”组件；不改变两者运行时能力或配置行为。
+- Claude 保留启用、岛上审批与官方用量读取开关、设置文件入口。错误与重试直接放在连接行，停用清理失败时仍能重试；等待会话不会显示为已连接。
+- 套餐、额度、30 天 Tokens 和成本从连接页移除，由原有用量页显示；连接页不再计算这些统计。Hook 配置说明默认折叠，实际授权与故障处理操作保持可见。
+- Claude 图标已采用官网原始矢量资源，不再使用系统星号；资源与共用规则见[图标记录](../design/quotaview-provider-icons.md)。
+- 本轮运行与构建证据见 [Handoff](../../HANDOFF.md)，视觉与交互由用户验收。
 
-## 原适配工作区验证记录（迁入前，2026-10-07）
+## 生命周期与开关
 
-- Helper：SwiftPM 与 Xcode `QuotaViewActivityHook` 构建通过；模拟 socket 冒烟确认普通事件
-  静默转发、PermissionRequest 输出 `hookSpecificOutput.decision`、状态栏写快照并转发、
-  权限不安全/缺失的 route 静默退出。
-- 协议核对：本机 Claude Code 2.1.292 二进制包含所用事件名与字段；`rate_limits.*.used_percentage`
-  / `resets_at`（秒）、PermissionRequest 决定 schema（deny 需 message）与 AskUserQuestion
-  `answers`（问题文本 → 答案）与实现一致。
-- 真实数据只读探针：本机 `~/.claude/projects` 1,146 行解码，3 个模型均有单价，扫描 0.75 秒。
-- 新增 `ClaudeCodeSupportTests` 15 项（单价、解码、tail、扫描去重、状态栏、安装/恢复、
-  无效设置拒写、审批映射与决定、Claude/Codex 传输隔离、只读请求、bridge 持有/应答/断开、
-  Runtime 端到端）；SwiftPM 全量见 Handoff；Xcode Debug arm64 构建通过。
-- 未完成：真实 Claude Code 会话中的灵动岛显示、岛上审批与状态栏刷新的人工验收；
-  与其他同时注册 PermissionRequest Hook 的工具并存时的先后行为未验证。
+- 接受 helper 连接后清除从监听 socket 继承的非阻塞标志，以已有收发超时完成有界 JSON 读取；不能把首批数据尚未到达误判为连接关闭。此修复已随 PR #85 合入 main，并于 2026-10-08 17:05 进入开发运行包；源码/运行证据见 Handoff。
+- runtime 停止后重启重新建立监听；取消未开始的配置任务，已经开始的文件事务串行完成；旧修订结果不覆盖新状态。取消用量刷新后禁止迟到回写。
+- 停用清理失败显示“需要处理”与重试；完成清理才显示已停用。重新启动时按当前关闭配置移除本通道遗留项。
+- 关闭审批立即撤销应答能力、无决定释放已挂起 helper，保留只读终端提醒；旧 route 迟到请求同样回退。重新开启不接管旧请求，真实工具结果/终态负责清理提醒。
 
-## 发行基线迁入（2026-10-07）
+## 当前验证与待办
 
-用户要求以 0.7.7 Build 1 为基线，只迁入 Claude 适配；既有设置/卡片界面修改保留。
-原工作区依赖审计分支，此处已移除这些依赖：
+2026-10-08 在现有 Build 2 基准上完成上述局部修复：19 项隔离冒烟、0 失败；Debug arm64 增量编译和 201 项输入核对通过，已按用户授权替换开发运行包。当前路径、版本与证据只在 [Handoff](../../HANDOFF.md) 维护。
 
-- `RequestLifecycle` 保持在 `IslandLiveStore.swift`，只增加 Claude 独立应答能力与 Codex 断线隔离。
-- 渲染 provider/用量字段加入 `CodexMultitaskIsland.swift`，模型价格加入 `QuotaViewFigmaMenu.swift` 中的既有成本模型。
-- 请求 ID 使用发行基线的 `IslandApprovalJSON`，Claude 标题在适配入口生成；不迁入审计版请求语义改写。
-- Claude 通道目录由 `ClaudeCodeChannel` 独立解析，已安装 Claude helper 的 stable/dev 路径不变；Codex 通道维持发行基线。
-- 设置页适配当前顶部导航与状态页头，保留所有原设置项。
-- 原状态栏备份只在设置写入成功后删除，修订冲突重试不会丢失恢复内容；socket 失败不会再被“已配置”覆盖。
+仍需用户验收真实 Claude 会话、岛上审批与状态栏刷新，以及与其他 PermissionRequest Hook 并存的行为。隔离测试没有修改真实 Claude 配置或代答真实审批。
 
-上方旧验证结果只属于原适配工作区，不能作为此合并候选的验证结果。
-迁入阶段源码/工程引用、补丁空白与 plist 核验通过；Core、WidgetContract、HookSupport、Hook、App 的 arm64/macOS 14 编译器检查通过。迁入测试文件仅做类型检查且通过，该阶段未执行测试、链接/构建应用或修改真实 Claude 配置。
-
-随后用户明确要求开启新版：2026-10-07 14:14（Asia/Shanghai）Debug arm64 最小开发编译成功，已启动本工作区 `.build/Development075Build3/Build/Products/Debug/QuotaView.app`（PID 14296），旧 Opus 开发进程 84585 正常退出。版本仍为 0.7.7 / Build 1 / 内部 57；身份 `com.quotaview.development073`。未执行测试、发布打包或签名，未手动调整连接设置；本地合入源码未推送。编译日志与运行证据见 `.build/claude-integration-20261007/development-build.log` / `development-runtime.json`。启动存活只证明应用已运行，真实 Claude/Codex 交互仍由用户验收。
-
-## 设置页合并 · 2026-10-07
-
-Codex 与 Claude Code 合并为一个“连接 / Connections”导航入口；页头各自显示实时状态，下方按服务分组复用完整设置。Claude 运行时仍单独观察，禁用、失败与等待事件状态独立，不合并开关或修改连接/审批机制。开发运行与验收记录见 Handoff。
+迁入前的构建、协议探针、15 项原测试，以及迁入后早期未执行测试的记录均属于各自阶段，见[清理前快照](../archive/maintenance-20261008/README.md)；不得覆盖本节的当前结论。

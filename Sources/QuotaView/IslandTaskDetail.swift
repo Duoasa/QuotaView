@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 // Completion presents the original assistant answer; live progress retains its
-// bounded trace and optional tool history.
+// latest public progress and tool activity.
 struct IslandTaskDetailSelection {
     let focus: [IslandTraceEntry]
     let history: [IslandTraceEntry]
@@ -52,7 +52,7 @@ enum IslandTaskDetailMode: Equatable {
     func title(data: IslandTaskDetailData, english: Bool) -> String {
         switch self {
         case .progress: data.status == .compacting ? (english ? "Context compaction" : "上下文压缩")
-            : (english ? "Progress and execution" : "公开进展与执行")
+            : (english ? "Progress" : "任务进展")
         case .approval: english ? "Needs confirmation" : "待确认"
         case .completion: data.status == .cancelled ? (english ? "Operation cancelled" : "操作已取消")
             : (english ? "Result" : "完成结果")
@@ -70,6 +70,7 @@ struct IslandTracePresentation {
     let expanded: Bool
     var code: Bool { entry.publicItem?.category != nil && entry.publicItem?.category != .message }
     var compactCommand: Bool { entry.publicItem?.category == .command && !expanded }
+    var showsHeader: Bool { code || canExpand }
     init(entry: IslandTraceEntry, english: Bool, expanded: Bool, revealOutput: Bool = true) {
         self.entry = entry; self.expanded = expanded
         let original = entry.text.value(english)
@@ -79,7 +80,7 @@ struct IslandTracePresentation {
         }
         let shortPrimary = entry.publicItem?.category == .fileChange ? preview(original, lines: 5, characters: 500)
             : (entry.publicItem?.category == .command ? preview(original, lines: 2, characters: 120)
-                : preview(original, lines: 4, characters: 220))
+                : original)
         let shortOutput = revealOutput && entry.publicItem?.category != .command ? originalOutput.map { preview($0, lines: 3, characters: 480) } : nil
         canExpand = entry.publicItem?.category == .command || shortPrimary != original || shortOutput != originalOutput
         primary = expanded ? original : shortPrimary
@@ -87,62 +88,80 @@ struct IslandTracePresentation {
     }
 }
 
-// Shared, cached outside this view: native rail and visibility use these exact
-// content heights. No nested scroll container or per-frame text measurement.
+// Cache text geometry once per content/width change. The outer task list uses
+// the bounded card height; only the detail body scrolls through longer content.
 struct IslandTaskDetailMetrics {
-    static let padding: CGFloat = 14
-    static let horizontalPadding: CGFloat = 16
-    static let headerHeight: CGFloat = 28
-    static let gap: CGFloat = 8
-    static let entryGap: CGFloat = 12
-    static let entryPadding: CGFloat = 10
-    static let eventHeader: CGFloat = 22
-    static let historyHeader: CGFloat = 28
+    static let padding: CGFloat = IslandVibeLayout.contentInset
+    static let horizontalPadding: CGFloat = IslandVibeLayout.contentInset
+    static let headerHeight: CGFloat = 24
+    static let bodyGap: CGFloat = 6
+    static let bodyFont: CGFloat = 12
+    static let scrollGutter: CGFloat = 12
+    static let gap: CGFloat = 4
+    static let entryGap: CGFloat = 6
+    static let entryPadding: CGFloat = 6
+    static let eventHeader: CGFloat = 18
     let mode: IslandTaskDetailMode
     let focusCount: Int
-    let historyCount: Int
-    let showsHistory: Bool
     let presentations: [IslandTracePresentation]
     let entryHeights: [CGFloat]
     let primaryHeights: [CGFloat]
+    let proseLayouts: [IslandMarkdownResultLayout?]
     let outputHeights: [CGFloat]
     let result: IslandMarkdownResultLayout?
+    let cardWidth: CGFloat
+    let contentWidth: CGFloat
+    let bodyHeight: CGFloat
     let height: CGFloat
+    var viewportHeight: CGFloat { height - Self.padding * 2 - Self.headerHeight - Self.bodyGap }
+    var overflows: Bool { bodyHeight > viewportHeight }
 
-    init(data: IslandTaskDetailData, width: CGFloat, english: Bool, expandedEntries: Set<UUID> = [], showsHistory: Bool = false) {
+    init(data: IslandTaskDetailData, width: CGFloat, english: Bool, expandedEntries: Set<UUID> = []) {
         mode = .init(data: data)
-        self.showsHistory = showsHistory && mode != .completion
+        cardWidth = width
         let selection = IslandTaskDetailSelection(data: data)
         focusCount = data.confirmation == nil ? selection.focus.count : 0
-        historyCount = data.confirmation == nil ? selection.history.count : 0
-        let usable = max(80, width - Self.horizontalPadding * 2)
+        let usable = max(80, width - Self.horizontalPadding * 2 - Self.scrollGutter)
+        contentWidth = usable
         result = mode == .completion ? data.finalResponse.map {
             IslandMarkdownResultLayout(source: $0.text.value(english), width: usable)
         } : nil
-        let entries = data.confirmation == nil && mode != .completion ? selection.focus + (showsHistory ? selection.history : []) : []
+        let entries = data.confirmation == nil && mode != .completion ? selection.focus : []
         let items = entries.map { IslandTracePresentation(entry: $0, english: english,
             expanded: expandedEntries.contains($0.id), revealOutput: !data.running) }
         presentations = items
-        let primary = items.map { item in
+        let prose = items.map { item -> IslandMarkdownResultLayout? in
+            item.code ? nil : IslandMarkdownResultLayout(plainText: item.primary, width: usable)
+        }
+        proseLayouts = prose
+        let primary = items.indices.map { index in
+            let item = items[index]
+            if let layout = prose[index] { return layout.height }
             let width = max(40, usable - (item.code ? Self.entryPadding * 2 : 0))
-            let full = IslandTaskTextMetrics.height(item.primary, size: item.code ? 11 : 13, code: item.code, width: width)
+            let full = IslandTaskTextMetrics.height(item.primary, size: item.code ? 11 : Self.bodyFont, code: item.code, width: width)
             return item.compactCommand ? min(full, IslandTaskTextMetrics.height("Ag\nAg", size: 11, code: true, width: width)) : full
         }
         let outputs = items.map { $0.output.map { IslandTaskTextMetrics.height($0, code: true, width: max(40, usable - Self.entryPadding * 2)) } ?? 0 }
         primaryHeights = primary; outputHeights = outputs
         entryHeights = items.indices.map { index in
             let item = items[index]
-            return (item.code ? Self.entryPadding * 2 : 4) + Self.eventHeader + Self.gap + primary[index]
+            return (item.code ? Self.entryPadding * 2 : 0) + (item.showsHeader ? Self.eventHeader + Self.gap : 0) + primary[index]
                 + (item.output != nil ? Self.gap + 16 + 4 + outputs[index] : 0)
                 + (item.entry.publicItem?.sourceTruncated == true ? Self.gap + 18 : 0)
         }
-        let historyFooter = historyCount == 0 ? 0 : Self.entryGap + Self.historyHeader
-        let historySection = showsHistory && historyCount > 0 ? Self.entryGap + 18 : 0
-        let cacheNotice: CGFloat = data.removedEntryCount > 0 ? Self.entryGap + 32 : 0
-        let body = mode == .completion ? (result?.height ?? 32) + (data.finalResponse?.publicItem?.sourceTruncated == true ? 30 : 0)
-            : cacheNotice + (entryHeights.isEmpty ? 32 : entryHeights.reduce(0, +)
-            + CGFloat(entryHeights.count - 1) * Self.entryGap + historyFooter + historySection)
-        height = max(IslandVibeLayout.minimumDetailHeight, Self.padding * 2 + Self.headerHeight + 12 + body)
+        var sections: [CGFloat] = []
+        if mode == .completion {
+            sections.append(result?.height ?? 20)
+            if result != nil, data.finalResponse?.publicItem?.sourceTruncated == true { sections.append(18) }
+        } else {
+            if items.isEmpty { sections.append(20) }
+            sections.append(contentsOf: entryHeights.prefix(focusCount))
+
+        }
+        bodyHeight = sections.reduce(0, +) + CGFloat(max(0, sections.count - 1)) * Self.entryGap
+        let naturalHeight = Self.padding * 2 + Self.headerHeight + Self.bodyGap + bodyHeight
+        height = min(IslandVibeLayout.maximumDetailViewportHeight,
+            max(IslandVibeLayout.minimumDetailHeight, naturalHeight))
     }
 
 }
@@ -153,7 +172,6 @@ struct IslandTaskDetailView: View {
     let english: Bool
     let onClose: () -> Void
     var onDisclosure: (UUID) -> Void = { _ in }
-    var onHistory: () -> Void = {}
     private var muted: Color { Color(nsColor: IslandTextPalette.muted) }
     private var secondary: Color { Color(nsColor: IslandTextPalette.secondary) }
     private var amber: Color { Color(red: 1, green: 0.76, blue: 0.44) }
@@ -170,42 +188,57 @@ struct IslandTaskDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.bodyGap) {
             HStack(spacing: 8) {
                 Image(systemName: metrics.mode.symbol).font(.system(size: 12))
                 Text(metrics.mode.title(data: data, english: english)).font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Text(metrics.mode == .completion ? agent : text("\(agent) 公开内容", "\(agent) public content"))
-                    .font(.system(size: 10)).foregroundStyle(muted)
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(secondary).frame(width: 28, height: 28).contentShape(Rectangle())
+                        .foregroundStyle(secondary).frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityHint(text("关闭详情", "Close details"))
                     .accessibilityLabel(text("关闭详情", "Close details"))
             }.foregroundStyle(accent).frame(height: IslandTaskDetailMetrics.headerHeight)
-            if metrics.mode == .completion { result } else { progress }
+            ScrollView(.vertical) {
+                Group {
+                    if metrics.mode == .completion { result } else { progress }
+                }
+                .frame(width: metrics.contentWidth, alignment: .leading)
+                .frame(height: metrics.bodyHeight, alignment: .topLeading)
+                .padding(.trailing, IslandTaskDetailMetrics.scrollGutter)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(IslandDetailScrollConfiguration())
+            }
+            .scrollIndicators(metrics.overflows ? .visible : .hidden)
+            .modifier(IslandSoftScrollEdges())
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDisabled(!metrics.overflows)
+            .frame(width: metrics.cardWidth - IslandTaskDetailMetrics.horizontalPadding * 2,
+                height: metrics.viewportHeight)
+            .accessibilityLabel(text("详情内容", "Detail content"))
         }.padding(.horizontal, IslandTaskDetailMetrics.horizontalPadding)
             .padding(.vertical, IslandTaskDetailMetrics.padding)
-            .frame(height: metrics.height, alignment: .top)
-            .background(Color(red: 0.035, green: 0.035, blue: 0.035), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(white: 24.0 / 255.0), lineWidth: 1))
+            .frame(width: metrics.cardWidth, height: metrics.height, alignment: .top)
+            // Keep the glass outside the clipped body scroll view so its native
+            // contour and highlights remain a single, complete card surface.
+            .islandGlass(IslandVibeLayout.rowShape, tint: .black.opacity(0.42), solidTint: Color(white: 0.055))
     }
 
     private var result: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.entryGap) {
             if let layout = metrics.result {
                 IslandMarkdownResultView(layout: layout)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: layout.height)
                 if data.finalResponse?.publicItem?.sourceTruncated == true {
                     Text(text("回答超出本地缓存，请在\(sourceName.0)查看后续内容", "Answer exceeds the local cache; continue in \(sourceName.1)"))
-                        .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
+                        .font(.system(size: 10)).foregroundStyle(muted).lineLimit(1).truncationMode(.middle).frame(height: 18)
                 }
             } else {
                 Text(data.provider == .dsh || data.provider == .kimiCode
                     ? text("任务已完成，请在 \(agent) 查看完整回答", "Task completed. View the full answer in \(agent)")
                     : text("最终回答尚未同步，请在\(sourceName.0)查看", "Final answer has not synced; view it in \(sourceName.1)"))
-                    .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 32)
+                    .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 20)
             }
         }
     }
@@ -214,85 +247,61 @@ struct IslandTaskDetailView: View {
         VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.entryGap) {
             if metrics.presentations.isEmpty {
                 Text(text("暂无可公开的进展内容", "No public progress content available"))
-                    .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 32)
+                    .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 20)
             }
             ForEach(Array(metrics.presentations.prefix(metrics.focusCount).enumerated()), id: \.element.entry.id) { index, item in
                 event(item, index: index, historical: false)
             }
-            if data.removedEntryCount > 0 {
-                Button { if data.provider == .codex, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) } } label: {
-                    Text(text("已加载部分记录，完整内容在\(sourceName.0)查看", "Partial history loaded; see full content in \(sourceName.1)"))
-                        .font(.system(size: 11)).foregroundStyle(secondary).frame(height: 32)
-                }.buttonStyle(.plain)
-            }
-            if metrics.historyCount > 0 {
-                historyControl
-                if metrics.showsHistory {
-                    Text(text("较早记录", "Earlier activity")).font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(muted).frame(height: 18)
-                    ForEach(Array(metrics.presentations.dropFirst(metrics.focusCount).enumerated()), id: \.element.entry.id) { offset, item in
-                        event(item, index: offset + metrics.focusCount, historical: true)
-                    }
-                }
-            }
         }
-    }
-    private var historyControl: some View {
-        Button(action: onHistory) {
-            HStack {
-                Image(systemName: "list.bullet").font(.system(size: 10))
-                Text(metrics.showsHistory ? text("收起较早记录", "Hide earlier activity") : text("查看较早记录", "Earlier activity"))
-                Text("\(metrics.historyCount)").monospacedDigit().foregroundStyle(muted)
-                Spacer()
-                Image(systemName: metrics.showsHistory ? "chevron.up" : "chevron.down").font(.system(size: 9, weight: .semibold))
-            }.font(.system(size: 11)).foregroundStyle(secondary)
-                .padding(.horizontal, 10).frame(height: IslandTaskDetailMetrics.historyHeader)
-                .background(Color(red: 0.09, green: 0.09, blue: 0.09), in: RoundedRectangle(cornerRadius: 6))
-                .contentShape(RoundedRectangle(cornerRadius: 6))
-        }.buttonStyle(.plain)
     }
     private func eventTitle(_ item: IslandTracePresentation, historical: Bool) -> String {
         guard let source = item.entry.publicItem else { return text("公开事件", "Public event") }
         switch source.category {
         case .message: return historical ? text("进度消息", "Progress message") : text("最近进展", "Latest update")
-        case .command: return text("命令执行", "Command")
+        case .command: return text("命令", "Command")
         case .fileChange: return text("文件修改", "File changes")
         }
     }
     private func event(_ item: IslandTracePresentation, index: Int, historical: Bool) -> some View {
         VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.gap) {
-            HStack(spacing: 6) {
-                if item.code {
-                    Image(systemName: item.entry.publicItem?.category == .fileChange ? "doc.text" : "terminal")
-                        .font(.system(size: 10))
-                }
-                Text(eventTitle(item, historical: historical)).font(.system(size: 10, weight: .medium))
-                Spacer(minLength: 8)
-                if let source = item.entry.publicItem, item.code {
-                    if let exit = source.exitCode {
-                        Text("exit \(exit)").font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(exit == 0 ? muted : failure)
-                    } else {
-                        Text(source.status == "completed" ? text("已完成", "Completed")
-                            : (source.status == "failed" ? text("失败", "Failed") : (source.status ?? "—")))
-                            .font(.system(size: 10)).foregroundStyle(source.status == "failed" ? failure : muted)
+            if item.showsHeader {
+                HStack(spacing: 6) {
+                    if item.code {
+                        Image(systemName: item.entry.publicItem?.category == .fileChange ? "doc.text" : "terminal")
+                            .font(.system(size: 10))
                     }
-                }
-                if item.canExpand {
-                    Button { onDisclosure(item.entry.id) } label: {
-                        HStack(spacing: 4) {
-                            Text(item.expanded ? text("收起", "Collapse") : text("查看原文", "Source"))
-                            Image(systemName: item.expanded ? "chevron.up" : "chevron.down")
-                        }.font(.system(size: 10)).foregroundStyle(secondary)
-                            .padding(.horizontal, 6).frame(height: 22).contentShape(Rectangle())
-                    }.buttonStyle(.plain)
-                }
-            }.foregroundStyle(muted).frame(height: IslandTaskDetailMetrics.eventHeader)
-            Text(item.primary).font(.system(size: item.code ? 11 : 13, design: item.code ? .monospaced : .default))
-                .lineLimit(item.compactCommand ? 2 : nil).truncationMode(.tail)
-                .lineSpacing(2).foregroundStyle(Color.white).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.primaryHeights[index], alignment: .topLeading)
-                .textSelection(.enabled)
+                    Text(eventTitle(item, historical: historical)).font(.system(size: 10, weight: .medium))
+                    Spacer(minLength: 8)
+                    if let source = item.entry.publicItem, item.code {
+                        if let exit = source.exitCode, exit != 0 {
+                            Text("exit \(exit)").font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(failure)
+                        } else if let status = source.status, status != "completed" {
+                            Text(status == "failed" ? text("失败", "Failed") : status)
+                                .font(.system(size: 10)).foregroundStyle(source.status == "failed" ? failure : muted)
+                        }
+                    }
+                    if item.canExpand {
+                        Button { onDisclosure(item.entry.id) } label: {
+                            HStack(spacing: 4) {
+                                Text(item.expanded ? text("收起", "Collapse") : text("查看原文", "Source"))
+                                Image(systemName: item.expanded ? "chevron.up" : "chevron.down")
+                            }.font(.system(size: 10)).foregroundStyle(secondary)
+                                .padding(.horizontal, 6).frame(height: IslandTaskDetailMetrics.eventHeader).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                    }
+                }.foregroundStyle(muted).frame(height: IslandTaskDetailMetrics.eventHeader)
+            }
+            if let layout = metrics.proseLayouts[index] {
+                IslandMarkdownResultView(layout: layout)
+                    .frame(width: layout.width, height: layout.height, alignment: .topLeading)
+            } else {
+                Text(item.primary).font(.system(size: item.code ? 11 : IslandTaskDetailMetrics.bodyFont, design: item.code ? .monospaced : .default))
+                    .lineLimit(item.compactCommand ? 2 : nil).truncationMode(.tail)
+                    .lineSpacing(2).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.primaryHeights[index], alignment: .topLeading)
+                    .textSelection(.enabled)
+            }
             if let output = item.output {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(text("输出", "Output")).font(.system(size: 10)).foregroundStyle(muted).frame(height: 16)
@@ -303,10 +312,10 @@ struct IslandTaskDetailView: View {
             }
             if item.entry.publicItem?.sourceTruncated == true {
                 Text(text("本地缓存已截断，请在\(sourceName.0)查看完整原文", "Local cache truncated; see the full source in \(sourceName.1)"))
-                    .font(.system(size: 10)).foregroundStyle(muted).frame(height: 18)
+                    .font(.system(size: 10)).foregroundStyle(muted).lineLimit(1).truncationMode(.middle).frame(height: 18)
             }
         }.padding(.horizontal, item.code ? IslandTaskDetailMetrics.entryPadding : 0)
-            .padding(.vertical, item.code ? IslandTaskDetailMetrics.entryPadding : 2)
+            .padding(.vertical, item.code ? IslandTaskDetailMetrics.entryPadding : 0)
             .frame(height: metrics.entryHeights[index], alignment: .top)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(item.code ? Color(red: 0.075, green: 0.075, blue: 0.075) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
@@ -314,4 +323,22 @@ struct IslandTaskDetailView: View {
             .accessibilityHint(item.entry.publicItem.map { "\(agent) · \($0.sourceID)" } ?? text("\(agent) 状态", "\(agent) status"))
     }
 
+}
+
+// A user's "always show scroll bars" preference can select a legacy scroller
+// that takes layout width. Keep this compact, explicitly sized viewport on the
+// overlay style so revealing its rail cannot widen the card or the task list.
+private struct IslandDetailScrollConfiguration: NSViewRepresentable {
+    func makeNSView(context: Context) -> IslandDetailScrollProbe { IslandDetailScrollProbe() }
+    func updateNSView(_ view: IslandDetailScrollProbe, context: Context) { view.configure() }
+}
+
+private final class IslandDetailScrollProbe: NSView {
+    override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); configure() }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); configure() }
+    override func layout() { super.layout(); configure() }
+    func configure() {
+        guard let scroll = enclosingScrollView else { return }
+        if scroll.scrollerStyle != .overlay { scroll.scrollerStyle = .overlay }
+    }
 }

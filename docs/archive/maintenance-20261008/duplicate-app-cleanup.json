@@ -1,0 +1,51 @@
+{
+  "deleted": [
+    "/Users/sukduoasa/Applications/QuotaView PR57 Dev f967c005.app",
+    "/Users/sukduoasa/Documents/Codex/2026-09-30/task/preview/QuotaView PR57 Dev.app",
+    "/Users/sukduoasa/Documents/Codex/2026-09-30/task/DerivedData-PR57/Build/Products/Debug/QuotaView.app",
+    "/Users/sukduoasa/Library/Developer/Xcode/Archives/2026-08-09/QuotaView 2026-8-9, 00.43.xcarchive"
+  ],
+  "removed_allocated_mib": 182.84375,
+  "kept": [
+    {
+      "path": "/Applications/QuotaView.app",
+      "version": "0.7.7",
+      "build": "57",
+      "executable_hashes_unchanged": true
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/DevelopmentRuntime/QuotaView.app",
+      "version": "0.7.7",
+      "build": "58",
+      "executable_hashes_unchanged": true
+    }
+  ],
+  "app_search_results": [
+    "/Applications/QuotaView.app"
+  ],
+  "remaining_registrations": [
+    {
+      "path": "/Applications/QuotaView.app",
+      "identifier": "com.quotaview.menubar",
+      "exists": true
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/DevelopmentRuntime/QuotaView.app",
+      "identifier": "com.quotaview.development073",
+      "exists": true
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/runtime-package-backups/claude-followup-20261008-095749/QuotaView.app",
+      "identifier": "com.quotaview.development073",
+      "exists": true
+    },
+    {
+      "path": "/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/Development075Build3/Build/Products/DebugBuild2SettingsProportion/QuotaView.app",
+      "identifier": "com.quotaview.development073",
+      "exists": true
+    }
+  ],
+  "stale_registrations_removed": 188,
+  "processes": "873 /Applications/QuotaView.app/Contents/PlugIns/QuotaViewWidgetExtension.appex/Contents/MacOS/QuotaViewWidgetExtension\n41350 /Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/DevelopmentRuntime/QuotaView.app/Contents/MacOS/QuotaView",
+  "verification_passed": true
+}

@@ -1,5 +1,7 @@
 # 0.7.5 设置反馈入口
 
+> 历史起源规格：下方布局、版本和阶段验证属于所标日期。当前主入口/设置以[现行界面规范](QUOTAVIEW_UI_RULES.md)为准，运行与未完成项见 [Handoff](../../HANDOFF.md)。历史待办不重新触发旧 UI 或发布操作。
+
 Spec ID：`QV-PRODUCT-FEEDBACK-001` · `Accepted / Released` · 2026-10-04
 
 用户要求在正式推出前提供独立的 Bug 反馈入口，并先验收运行效果。随后明确批准

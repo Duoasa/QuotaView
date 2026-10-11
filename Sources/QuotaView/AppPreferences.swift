@@ -6,6 +6,24 @@ import SwiftUI
 
 @MainActor
 final class AppPreferences: ObservableObject {
+    enum IslandMaterial: String, CaseIterable, Identifiable {
+        case liquidGlass
+        case classic
+        var id: String { rawValue }
+    }
+
+    enum IslandGlassDegree {
+        static let defaultValue = 0.45
+        static func normalized(_ value: Double) -> Double {
+            value.isFinite ? min(0.8, max(0.2, value)) : defaultValue
+        }
+        static func stops(_ value: Double) -> [Double] {
+            let blackEnd = 1 - normalized(value)
+            let fadeEnd = min(1, blackEnd + 0.25 * min(1, blackEnd / 0.55))
+            return [0, blackEnd, (blackEnd + fadeEnd) / 2, fadeEnd, 1]
+        }
+    }
+
     enum AppearanceMode: String, CaseIterable, Identifiable {
         case light
         case dark
@@ -255,6 +273,13 @@ final class AppPreferences: ObservableObject {
 
     @Published var codexIslandExpandedWidth: Double {
         didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
+    }
+
+    @Published var islandGlassDegree: Double {
+        didSet { defaults.set(IslandGlassDegree.normalized(islandGlassDegree), forKey: "island.glassDegree") }
+    }
+    @Published var islandMaterial: IslandMaterial {
+        didSet { defaults.set(islandMaterial.rawValue, forKey: "island.material") }
     }
 
     // Claude Code writes the user's ~/.claude/settings.json, so it is opt-in.
@@ -512,6 +537,8 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
+        islandGlassDegree = IslandGlassDegree.normalized((defaults.object(forKey: "island.glassDegree") as? Double) ?? IslandGlassDegree.defaultValue)
+        islandMaterial = IslandMaterial(rawValue: defaults.string(forKey: "island.material") ?? "") ?? .liquidGlass
         codexIslandExpandedWidth = IslandExpandedWidth.normalized(
             (defaults.object(forKey: "island.expandedWidth") as? NSNumber)?.doubleValue ?? IslandExpandedWidth.defaultValue)
         codexIntegrationEnabled = defaults.storedBool(forKey: "integrations.codex.enabled", defaultValue: true)

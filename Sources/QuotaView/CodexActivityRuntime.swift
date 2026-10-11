@@ -1040,6 +1040,8 @@ final class CodexActivityRuntime: ObservableObject {
             automaticPopupEnabled: preferences.codexActivityAutomaticPopupEnabled,
             automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration,
             expandedWidth: preferences.codexIslandExpandedWidth,
+            islandMaterial: preferences.islandMaterial,
+            islandGlassDegree: preferences.islandGlassDegree,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots)
     }
 

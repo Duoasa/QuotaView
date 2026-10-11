@@ -433,6 +433,8 @@ struct CodexMultitaskDisplay: Equatable {
     var automaticPopupEnabled = true
     var automaticPopupDuration = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration
     var expandedWidth = AppPreferences.IslandExpandedWidth.defaultValue
+    var islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue
+    var islandMaterial: AppPreferences.IslandMaterial = .liquidGlass
     var sessionMetadata: [Int: IslandSessionMetadata] = [:]
     var taskDetails: [Int: IslandTaskDetailData] = [:]
     var connectionTitle: String = ""

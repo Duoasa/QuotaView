@@ -78,7 +78,8 @@ struct IslandApprovalMetrics {
     static let buttonHeight: CGFloat = 42
     static let inputHeight: CGFloat = 36
     static let footerHeight: CGFloat = IslandChromeMetrics.footerHeight
-    static var fixedHeight: CGFloat { gap + 1 + gap + buttonHeight + 8 + footerHeight }
+    static let actionFooterGap: CGFloat = 20
+    static var fixedHeight: CGFloat { gap + buttonHeight + actionFooterGap + footerHeight }
     let maximumViewportHeight: CGFloat
     let questionHeight: CGFloat
     let impactHeight: CGFloat
@@ -185,7 +186,7 @@ struct IslandApprovalQuestionHeading: View {
                 Text(String(format: "%02d", number)).font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(IslandApprovalAppearance.secondary)
                     .frame(width: IslandApprovalMetrics.questionNumberSize, height: IslandApprovalMetrics.questionNumberSize)
-                    .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 6))
+                    .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 Text(question.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(width: IslandApprovalMetrics.questionTextWidth(width), alignment: .leading)
@@ -351,15 +352,24 @@ struct IslandApprovalView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(.vertical) {
-                requestContent.padding(.leading, IslandVibeLayout.listInset)
+                requestContent
+                    .environment(\.approvalScrollLink, scrollLink)
+                    .coordinateSpace(name: "approvalDocument")
+                    .padding(.leading, IslandVibeLayout.listInset)
                     .padding(.trailing, metrics.showsRail ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset)
                     .padding(.bottom, IslandVibeLayout.rowSpacing)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: metrics.contentHeight, alignment: .top)
                     .background(IslandTaskScrollConfiguration(layout: .init(taskIDs: [task.id], detailID: nil,
-                        rowHeights: [task.id: metadata?.taskGroupHeight(width: metrics.contentWidth) ?? IslandVibeLayout.rowHeight]),
+                        rowHeights: [task.id: metadata?.taskGroupHeight(width: metrics.contentWidth) ?? IslandVibeLayout.rowHeight], continuousEdges: true),
                         active: visible, onVisibilityChange: { headerVisible = $0.visible.contains(.task(task.id)) }, link: scrollLink))
             }.scrollIndicators(.never).frame(height: metrics.viewportHeight)
+                .overlay {
+                    IslandTaskEdgeOverlay(link: scrollLink)
+                        .padding(.leading, IslandVibeLayout.listInset)
+                        .padding(.trailing, metrics.showsRail ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
                 .overlay(alignment: .trailing) {
                     if metrics.showsRail {
                         IslandTaskScrollRailView(link: scrollLink, label: text("请求内容滚动条", "Request scrollbar"))
@@ -367,8 +377,6 @@ struct IslandApprovalView: View {
                             .padding(.trailing, IslandVibeLayout.scrollRailTrailingInset).padding(.bottom, IslandVibeLayout.rowSpacing)
                     }
                 }
-            Rectangle().fill(IslandApprovalAppearance.border).frame(height: 1)
-                .padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             actionBar.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, IslandApprovalMetrics.gap)
             IslandChromeFooter {
                 Text(request.provider.displayName + " · " + (request.canRespond ? text("可处理", "Interactive") : text("仅查看", "Read-only")))
@@ -376,7 +384,7 @@ struct IslandApprovalView: View {
             } trailing: {
                 Text(footerStatus).lineLimit(1).truncationMode(.tail)
                 if let utilities { utilities }
-            }.padding(.top, 8)
+            }.padding(.top, IslandApprovalMetrics.actionFooterGap)
         }.frame(height: metrics.height, alignment: .top)
             .preferredColorScheme(.dark)
     }
@@ -426,20 +434,20 @@ struct IslandApprovalView: View {
 
     var requestContent: some View {
         VStack(alignment: .leading, spacing: IslandApprovalMetrics.gap) {
-            IslandTaskCardStack(children: metadata?.subagents ?? [], english: english,
-                visible: visible && headerVisible && playbackEnabled, reduceMotion: reduceMotion,
-                appearance: .init(visualState: task.renderState.visualState, selected: true, hovered: taskHeaderHovered)) {
             IslandTaskCard(progressEffect: progressEffect, task: task, selected: true, metadata: metadata, english: english,
                 playback: false, effectVisible: visible && headerVisible && playbackEnabled && task.playbackEnabled,
-                reduceMotion: reduceMotion, hovered: taskHeaderHovered, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
-                .overlay(alignment: .topTrailing) {
+                reduceMotion: reduceMotion, subagentsVisible: visible && headerVisible && playbackEnabled,
+                hovered: taskHeaderHovered, showsArchiveButton: onArchive != nil, cardWidth: metrics.contentWidth)
+                .overlay(alignment: Alignment(horizontal: .trailing, vertical: .islandTaskHeader)) {
                     if let onArchive {
                         IslandTaskArchiveButton(english: english, showsArchiveIcon: taskHeaderHovered, provider: task.provider, action: onArchive)
-                            .padding(.top, 6).padding(.trailing, 8)
+                            .padding(.trailing, IslandVibeLayout.contentInset)
+                            .alignmentGuide(.islandTaskHeader) { $0[VerticalAlignment.center] }
                     }
                 }
-            }.contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
+                .contentShape(IslandVibeLayout.rowShape)
                 .onHover { taskHeaderHovered = $0 }
+                .modifier(IslandApprovalElementFade())
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
                     openedURL: draft.openedURL, handoffMessage: codexJumpMessage,
@@ -459,7 +467,7 @@ struct IslandApprovalView: View {
                         .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.impactHeight, alignment: .topLeading)
                         .textSelection(.enabled)
                 }.padding(IslandApprovalMetrics.inset).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(red: 0.075, green: 0.075, blue: 0.075), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color(red: 0.075, green: 0.075, blue: 0.075), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             }
             if let wire, metrics.decisionsHeight > 0 { decisionChoices(wire) }
@@ -470,7 +478,7 @@ struct IslandApprovalView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }.font(.system(size: 11)).foregroundStyle(Color(red: 0.95, green: 0.43, blue: 0.42))
                     .padding(12).frame(height: metrics.failureHeight, alignment: .topLeading)
-                    .background(Color(red: 0.12, green: 0.065, blue: 0.065), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color(red: 0.12, green: 0.065, blue: 0.065), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
     }
@@ -549,8 +557,8 @@ struct IslandApprovalView: View {
                             if index > 0 { Rectangle().fill(IslandApprovalAppearance.border).frame(height: 1).padding(.horizontal, 12) }
                         }
                     }
-                }.background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+                }.background(IslandApprovalAppearance.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
             }
         default: EmptyView()
         }
@@ -600,8 +608,8 @@ struct IslandApprovalView: View {
                             Spacer()
                             Image(systemName: "chevron.down").font(.system(size: 9)).foregroundStyle(secondary)
                         }.padding(.horizontal, 12).frame(height: IslandApprovalMetrics.inputHeight)
-                            .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
+                            .background(IslandApprovalAppearance.raised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(IslandApprovalAppearance.border, lineWidth: 1))
                     }.menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel(field.title)
                 } else {
                     IslandApprovalInput(placeholder: text("请输入", "Enter value"), secret: false, value: valueBinding(field.id))

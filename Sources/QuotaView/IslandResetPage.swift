@@ -62,7 +62,7 @@ struct IslandResetPage: View {
     private var isClaude: Bool { provider == .claudeCode }
     static let claudeResetCommand = "/limit-reset"
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
-    private let secondary = Color(white: 0.68)
+    private let secondary = Color(white: 0.84)
 
     var body: some View {
         IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
@@ -148,7 +148,7 @@ struct IslandResetPage: View {
                     Text(data.actionTitle(previewed: previewed, copy: copy))
                         .font(AstaSans.semiBold(13))
                         .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true))
+                }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true))
                     .frame(maxWidth: .infinity).disabled(!data.canPreview)
                     .accessibilityLabel(data.canPreview ? copy.text("额度重置演示", "Quota reset preview") : data.actionTitle(previewed: false, copy: copy))
                     .accessibilityHint(data.canPreview
@@ -217,6 +217,16 @@ enum IslandResetTicketFlight {
     }
 }
 
+private final class IslandResetTicketFlightObserver: NSObject, CAAnimationDelegate {
+    let onStart: () -> Void
+    let onStop: () -> Void
+    init(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {
+        self.onStart = onStart; self.onStop = onStop
+    }
+    func animationDidStart(_ anim: CAAnimation) { onStart() }
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) { onStop() }
+}
+
 final class IslandResetTicketFlightHost: NSView {
     override var isFlipped: Bool { true }
     private let card = CALayer()
@@ -226,6 +236,16 @@ final class IslandResetTicketFlightHost: NSView {
         didSet { if provider != oldValue { applyArtwork() } }
     }
     private static let animationKey = "island.reset-ticket.flight"
+    private struct Request {
+        let serial: UInt64
+        let toReset: Bool
+        let source: CGRect
+        let destination: CGRect
+    }
+    private var pendingRequest: Request?
+    private var animationGeneration: UInt64 = 0
+    var onStart: (UInt64) -> Void = { _ in }
+    var onCompletion: (UInt64) -> Void = { _ in }
     private var serial: UInt64?
     private var movingToReset = false
     private var startedAt: CFTimeInterval = 0
@@ -263,9 +283,27 @@ final class IslandResetTicketFlightHost: NSView {
         mark.contents = IslandResetTicketArtwork.mark(provider)?.cgImage(forProposedRect: &markRect, context: nil, hints: nil)
     }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
-    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); if window == nil { stop() } }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { stop() }
+        else { needsLayout = true }
+    }
+    override func layout() {
+        super.layout()
+        startIfReady()
+    }
     func configure(serial: UInt64, toReset: Bool, active: Bool, source: CGRect, destination: CGRect, reduceMotion: Bool) {
-        guard active, !reduceMotion, window != nil, Self.valid(source), Self.valid(destination) else { stop(); return }
+        guard active, !reduceMotion else { stop(); return }
+        pendingRequest = Request(serial: serial, toReset: toReset, source: source, destination: destination)
+        startIfReady()
+    }
+    private func startIfReady() {
+        // updateNSView can precede window attachment and the first layout. Keep
+        // the request until those arrive instead of silently dropping its start.
+        guard let request = pendingRequest, window != nil, Self.valid(bounds),
+              Self.valid(request.source), Self.valid(request.destination) else { return }
+        let serial = request.serial, toReset = request.toReset
+        let source = request.source, destination = request.destination
         guard self.serial != serial else { return }
         let reversing = flightAnimation != nil && movingToReset != toReset
         let now = CACurrentMediaTime()
@@ -275,6 +313,8 @@ final class IslandResetTicketFlightHost: NSView {
         let oldTransform = card.presentation()?.transform
         if !reversing { self.source = source; self.destination = destination }
         self.serial = serial; movingToReset = toReset
+        animationGeneration &+= 1
+        let generation = animationGeneration
         startedAt = now; flightDuration = IslandResetTicketFlight.duration
         startProgress = from; endProgress = to
         let steps = 60
@@ -298,8 +338,25 @@ final class IslandResetTicketFlightHost: NSView {
         let animation = CAAnimationGroup()
         position.duration = flightDuration; transform.duration = flightDuration
         animation.animations = [position, transform]; animation.duration = flightDuration
-        animation.beginTime = card.convertTime(now, from: nil)
+        // Let the compositor assign the start at transaction commit. Using the
+        // pre-layout wall clock would consume early frames while glass settles.
+        animation.beginTime = 0
         animation.isRemovedOnCompletion = false; animation.fillMode = .forwards
+        animation.delegate = IslandResetTicketFlightObserver(onStart: { [weak self] in
+            let beganAt = CACurrentMediaTime()
+            // Deliver outside SwiftUI's update/layout transaction. Generation
+            // guards discard callbacks from a replaced or reversed flight.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.animationGeneration == generation, self.serial == serial else { return }
+                self.startedAt = beganAt
+                self.onStart(serial)
+            }
+        }, onStop: { [weak self] in
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.animationGeneration == generation, self.serial == serial else { return }
+                self.onCompletion(serial)
+            }
+        })
         card.add(animation, forKey: Self.animationKey)
     }
     private func currentProgress(at now: CFTimeInterval) -> CGFloat {
@@ -311,8 +368,13 @@ final class IslandResetTicketFlightHost: NSView {
         rect.origin.x.isFinite && rect.origin.y.isFinite && rect.width.isFinite && rect.height.isFinite && rect.width > 0 && rect.height > 0
     }
     func stop() {
+        let stoppedSerial = pendingRequest?.serial ?? serial
+        let completion = onCompletion
+        pendingRequest = nil; animationGeneration &+= 1
         serial = nil; card.removeAnimation(forKey: Self.animationKey)
         CATransaction.begin(); CATransaction.setDisableActions(true); card.isHidden = true; CATransaction.commit()
+        // A dismantled/hidden host must also restore the page's static ticket.
+        if let stoppedSerial { DispatchQueue.main.async { completion(stoppedSerial) } }
     }
 }
 struct IslandResetTicketFlightView: NSViewRepresentable {
@@ -323,9 +385,12 @@ struct IslandResetTicketFlightView: NSViewRepresentable {
     let destination: CGRect
     let reduceMotion: Bool
     var provider: IslandAgentProvider = .codex
+    var onStart: (UInt64) -> Void = { _ in }
+    var onCompletion: (UInt64) -> Void = { _ in }
     func makeNSView(context: Context) -> IslandResetTicketFlightHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandResetTicketFlightHost, context: Context) {
         view.provider = provider
+        view.onStart = onStart; view.onCompletion = onCompletion
         view.configure(serial: serial, toReset: toReset, active: active, source: source, destination: destination, reduceMotion: reduceMotion)
     }
     static func dismantleNSView(_ view: IslandResetTicketFlightHost, coordinator: ()) { view.stop() }

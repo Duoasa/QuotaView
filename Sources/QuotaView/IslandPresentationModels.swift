@@ -63,16 +63,17 @@ struct IslandSessionMetadata: Equatable {
     var usesExtraLine: Bool {
         (modelTitle as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .semibold)]).width > 190
     }
-    // Child activity is a separate single row after the card. It never expands
-    // the card's Metal canvas, even when every admitted child overflows the row.
-    var subagentGroupHeight: CGFloat { subagents.isEmpty ? 0 : 28 }
+    // Child activity occupies one bounded third row inside the same card.
+    // Admitting more children changes horizontal content, never the row height.
+    var subagentGroupHeight: CGFloat { subagents.isEmpty ? 0 : IslandVibeLayout.subagentRowHeight }
     var subagentRowHeight: CGFloat { subagentGroupHeight }
-    func taskGroupHeight(width: CGFloat) -> CGFloat { cardHeight(width: width) + subagentRowHeight }
-    func cardHeight(width: CGFloat) -> CGFloat {
+    func taskGroupHeight(width: CGFloat) -> CGFloat { cardHeight(width: width) }
+    func cardHeight(width: CGFloat) -> CGFloat { primaryContentHeight(width: width) + subagentRowHeight }
+    func primaryContentHeight(width: CGFloat) -> CGFloat {
         guard usesExtraLine else { return IslandVibeLayout.rowHeight }
-        let rect = (modelTitle as NSString).boundingRect(with: .init(width: max(80, width - 20), height: 10000),
+        let rect = (modelTitle as NSString).boundingRect(with: .init(width: max(80, width - IslandVibeLayout.contentInset * 2), height: 10000),
             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: NSFont.systemFont(ofSize: 10, weight: .semibold)])
-        return IslandVibeLayout.rowHeight + ceil(rect.height) + 6
+        return IslandVibeLayout.rowHeight + ceil(rect.height) + IslandVibeLayout.lineGap
     }
     var durationTitle: String {
         guard let elapsedSeconds else { return "—" }; let seconds = max(0, elapsedSeconds)

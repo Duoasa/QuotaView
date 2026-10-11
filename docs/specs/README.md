@@ -4,97 +4,94 @@
 
 [0.7.9 发布规格](release-0.7.9.md) · `Released / User Acceptance Pending`。版本 `0.7.9 / 1 / 59` 已发布 GitHub Stable / Latest 与签名 appcast，最终 700 项本地测试全部通过。新增规格：[展开宽度](island-expanded-width.md)、[实时预览](settings-live-effect-preview.md)。完整发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，视觉与真实客户端交互仍待用户验收。
 
-> 2026-10-08 当前开发更新：灵动岛设置采用 [Figma 静态预览](../design/quotaview-settings-island-figma-20261008.md)，最新比例、底部圆角及完整固定示例已进入开发包；移除晶钻前沿，保留三种效果。完成后百分比、收起态 3 秒完成提示后跟随运行任务、完成球慢速运动同步更新。规格见[界面规则](../design/QUOTAVIEW_UI_RULES.md#灵动岛设置与完成展示更新--2026-10-08)，源码与运行证据见 [Handoff](../../HANDOFF.md)。本轮获准推送与合并，CI 以对应 GitHub 提交为准；视觉与交互待用户验收。下方较早实现与运行状态属于历史记录。
+文档编号：`QV-SDD-INDEX-001` · 状态：`Accepted` · 整理：2026-10-08。
 
-> 2026-10-08 开发源码修订：字体容错、用量 hover/描边与 Codex 双额度横排，以及 Claude 生命周期/审批开关修复已进入本地开发包；本次按用户要求同步源码并合入 main。当前运行与检查边界见 [Handoff](../../HANDOFF.md)，规则见[界面约束](../design/QUOTAVIEW_UI_RULES.md#用量布局hover-与字体可靠性--2026-10-08)及 [Claude 规格](claude-code-support.md#生命周期与审批开关修订--2026-10-08)。不代表发布新版本或视觉验收通过。
+当前源码与运行包只在 [Handoff](../../HANDOFF.md#工作区与版本定位) 维护；公开版本在[版本历史](../../VERSION_HISTORY.md#当前最新版本)维护。本表不复制 PID、构建流水或完整测试计数。
 
-> 2026-10-07 17:25 Build 2：示意比例收紧，去掉顶部“演示”，用量简化为实际模块布局图；默认窗口 872 × 760。修正开发运行包被 Xcode 清理导致的图片缺失，独立运行包 PID 49617，资源和加载路径已核对；未执行本地测试。用户已授权推送并合并本版源码，[PR #84](https://github.com/Duoasa/QuotaView/pull/84) 显式撤回旧审计改动后加入当前版本；CI/合并进度见 PR 和 [Handoff](../../HANDOFF.md)。
+字体容错、用量 hover 与额度窗口横排遵循[界面规范](../design/QUOTAVIEW_UI_RULES.md#用量重置与共用工具区)；本次开发包交付及待验收边界见 [Handoff](../../HANDOFF.md)。
+完成后百分比、收起态完成提示 3 秒后跟随运行任务、完成球慢速运动遵循[灵动岛与卡片规则](../design/QUOTAVIEW_UI_RULES.md#灵动岛与卡片)；2026-10-08 已通过定向类型检查，按用户“更新包”授权完成增量构建并进入开发运行包；本轮源码已由 [PR #86](https://github.com/Duoasa/QuotaView/pull/86) 合入 main，交互待用户验收。
 
-> 2026-10-07 17:15 Build 2：标题/描述移入下方设置区；上方灵动岛与用量改为生产组件 + 局部示例数据的完整 demo，跟随相关选项，取代真实任务预览及抽象模块条。Debug arm64 编译通过并运行 PID 45792；未执行测试、未推送，视觉待用户验收。见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+灵动岛设置页按 [Figma 165:17](https://www.figma.com/design/hS0Dwc9S9EJGEbkkplxH4v/QuotaView?node-id=165-17) 接入桌面壁纸与紧凑静态预览；按后续用户修订移除晶钻前沿并迁移旧偏好，保留三种效果。最新比例、底部圆角和完整固定示例已进入开发包并随 PR #86 合入 main；尺寸、资源及不运行真实岛的边界见[设置窗口规则](../design/QUOTAVIEW_UI_RULES.md#设置窗口)，本地编译/运行状态见 Handoff，视觉等待用户验收。
 
-> 2026-10-07 17:02 Build 2 设置跟进：导航背景、综合连接页、真实任务卡片缩放预览、QQ 二维码有效区域已接入。开发编译通过并运行 PID 41080；未执行测试、未推送，视觉与交互待用户验收。见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+2026-10-09 隐私预览修复：恢复设置隐私开关与静态示例的联动；通用任务名和“内容已隐藏”代替任务内容，关闭后恢复完整示例。源码定向类型检查通过，已按用户“启动替换”授权进入开发运行包；尚未推送，详情见 Handoff。
 
-> 2026-10-07 16:51 Build 2 显示跟进：设置顶部黑色区域改为显式矩形背景，底部与菜单直线衔接。开发编译通过，当前 PID 28433；版本不变，视觉待用户验收，见 [Handoff](../../HANDOFF.md)。
+2026-10-09 用量标签与 Claude 图标：来源标签增加对应图标，Claude 系统星号替换为官网原始矢量标志，任务卡、子任务与重置卡同步复用。见[图标记录](../design/quotaview-provider-icons.md)；源码和资源检查通过，已按用户“启动替换”授权进入开发运行包；尚未推送。
 
-> 2026-10-07 14:23 当前开发版：0.7.7 Build 2 / 内部 58，继续基于公开 Build 1 + Claude 适配。恢复选中卡片球/进度动效互斥，设置顶部通栏黑色可视化与下方菜单分区。Debug arm64 编译通过并运行 PID 19665；未执行测试，视觉与交互待用户验收。保持本地、未发布；见 [Handoff](../../HANDOFF.md) 与 [界面规则](../design/QUOTAVIEW_UI_RULES.md)。
+2026-10-09 用量来源标签后续修订：两个标志统一无底框，选中态改为与用量按钮同高的 28 pt 胶囊；图文内距和字号共用工具栏参数。类型与资源检查通过，已按用户“运行”授权于 09:03 进入开发运行包；视觉待用户验收。
 
-> 2026-10-07 14:14 迁入记录：`v0.7.7-build.1` 基线 + 既有界面整理 + Claude Code 适配。只迁入 Claude 未提交增量，排除审计分支历史/重构；按用户要求完成 Debug arm64 开发编译并启动本工作区合入版（PID 14296），旧 Opus 开发进程已退出。真实交互待用户验收。本轮合入保持本地，细节见 [Handoff](../../HANDOFF.md) 与 [Claude 规格](claude-code-support.md)。下方较早运行包状态属于历史记录。
+<a id="当前规格"></a>
 
-> 2026-10-06 17:39 当前开发基线：用户要求源码和运行包回退到0.7.7 Build1发行版，后续开发均从 `v0.7.7-build.1` / `3866177cfa19db734d657ef505a4dc72c3338fba` 开始，分支 `codex/0.7.7-build1-development`。上一批审计开发版实际验收未通过，已停用并保留恢复点。当前运行 `/Applications/QuotaView.app` 的公开版；源码、运行与恢复记录见[Handoff](../../HANDOFF.md)。后续历史交付记录不覆盖此基线。
+2026-10-09 连接页整理：Codex 采用 Claude 的简洁设置行，连接详情统一折叠，错误与授权入口保持可见；移除套餐、额度、Tokens 和成本统计，保留实际连接控制。见[Claude 规格](claude-code-support.md#连接设置布局2026-10-09)与[界面规范](../design/QUOTAVIEW_UI_RULES.md#设置窗口)，本地构建/运行状态见 Handoff。
 
-> 2026-10-06：0.7.7 Build1（内部57）已合入main并发布GitHub Stable / Latest；源码PR/main CI、签名公证与回下载通过，appcast与Pages部署成功、线上旧版公钥验证通过；中英文README和英文Release简述同步。开发版PID50354已运行，线上Feed核验及完整证据见[Handoff](../../HANDOFF.md)与[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
+2026-10-09 设置微调：三种任务特效图片视口加高至 56 pt，连接页分组标题增加 22 pt 圆角图标。首个加高包经用户截图发现横向溢出，已补充独立列宽约束与裁切，重新编译并进入开发包，视觉待复验。规则见[设置窗口](../design/QUOTAVIEW_UI_RULES.md#设置窗口)；本地源码与运行包状态见 Handoff。
 
-> 2026-10-06 01:17现场：审批在订阅超时约87秒后自行恢复；进程采样定位每次patch全历史编码/解码阻塞IPC reader。修订为复用JSON树投影、变化子树容量记账，并按用户要求取消完成批次自动清理。当前开发运行与验收见[Handoff](../../HANDOFF.md)，详见[信息契约](codex-island-information-contract.md#2026-10-06-审批详情延迟与数据通道修订)。
+2026-10-09 其他设置页新样式：按 UI2 的通用、用量和连接画板调整窗口、导航与静态壁纸预览；保留当前实际菜单内容，沿用三项效果与连接控制。资源及尺寸见[接入记录](../design/quotaview-settings-style-20261009.md)，构建与运行状态见 Handoff，视觉待用户验收。
 
-> 2026-10-06 00:55复测：对照发行版与Vibe参考，定位真实Hook不含waitReason导致审批观察始终未绑定；在事件语义入口补齐PermissionRequest缺省approval，保留提问类型与原生能力校验。完成数为0时停止右侧统计轮播。开发编译/运行和真实验收状态见[Handoff](../../HANDOFF.md)；修订详见[信息契约](codex-island-information-contract.md#2026-10-06-hook审批类型修正)。前轮64/72/128MiB预算、actor投影与记忆文案/固定压缩球修改保持本地。
+同日用户后续修订：用量显示与 Bug 反馈移除顶部可视化；代理与关于保留壁纸视口，去掉摘要外层黑色面板；导航选中图标和文字统一白色。已完成增量编译并进入当前开发运行包，视觉待验收；当前规则见[设置窗口](../design/QUOTAVIEW_UI_RULES.md#设置窗口)。用户已持续授权每次应用改动后更新运行开发版，见 [AGENTS.md](../../AGENTS.md#验收与开发工具) 和[验证规则](../workflow/VALIDATION.md)。
 
-> 2026-10-05 23:16 后续修订：完成正文灰度/字重分层、摘要 Markdown 解码、完成后剩余用量提示 3 秒与统计轮播；修订 Desktop IPC 分片读取停滞计时，普通确认继续沿用原生 owner 应答能力，macOS 权限只作系统弹窗提示。开发运行与 GitHub 集成以 [Handoff](../../HANDOFF.md) 顶部记录为准；视觉及真实应答仍由用户验收。
+同日代理与关于可视化优化：用户否定首轮大色块与偏左布局后，代理改为等宽节点、小面积玻璃底托与顺序流光；关于移除版本色块，按图文固有宽度居中。尺寸和动画/性能边界见[设置窗口](../design/QUOTAVIEW_UI_RULES.md#设置窗口)，当前源码及运行状态见 [Handoff](../../HANDOFF.md)。实际观感待用户验收。
 
-> 文档编号：`QV-SDD-INDEX-001`
->
-> 状态：`Accepted`
->
-> 最近同步：2026-10-06。公开稳定版：[0.7.7 Build 1](../../VERSION_HISTORY.md#当前最新版本)，内部57；GitHub Stable / Latest与appcast发布事实见版本历史。下方0.7.5条目为历史交付，不代表当前进程。
->
-> 已发布源码：[PR #75](https://github.com/Duoasa/QuotaView/pull/75) 已合并 main；长会话恢复、设置反馈、正式发行配置和中英文产品文档已交付。其PR/main CI各663项、6跳过、0失败，签名公证、公开回下载及线上Feed验签通过。开发基准HEAD `f881356`；此前本地Build6/内部55包含记忆Hook身份、待机百分比与纯色描边修订。Build3记忆候选124条冒烟、Build4记忆修复交付、Build5历史UI交付和Build6构建/签名/190项输入核对分别见Handoff；这些历史结果不作为本轮Build7重复验证。
->
-> 当前本地已交付：0.7.5/Build7/内部56观察等待恢复与原生异步问题本地退场；App PID62058、Widget PID62064。首轮编译失败日志保留，修正后Universal构建、190项生产输入/4项安装二进制哈希、同Team Developer ID签名、旧新权限声明及实际加载/活动通道核对通过；首次本地交付未新增或运行本地测试，真实交互待用户验收。30秒无人接管及发送/结果未知后3秒退场只管理本地展示；同thread/turn/question哈希持久账本有界4096项，不能证明原生缩略或已回答/关闭。源码与对应CI/main集成见 [PR #77](https://github.com/Duoasa/QuotaView/pull/77)；CI恢复修订尚未重新编译或替换安装，上述产物证据不包含后续源码；不发布Release/appcast。证据与边界见[信息契约](codex-island-information-contract.md#观察等待与本地提醒退场--2026-10-05)、[原生关闭合同](../design/codex-native-question-closure-contract-2026-10-03.md#2026-10-05-本地退场增量)及Handoff。
->
-> 2026-10-05 新增源码：完成详情直接渲染 Codex 最终回答与可点击链接；有界摘要、重复刷新抑制、扫光/Metal 时钟连续修订。见[信息契约](codex-island-information-contract.md#完成回答与刷新成本--2026-10-05)及[效果契约](PROGRESS_EFFECT_ADAPTATION.md#8-2026-10-05-刷新与动画连续性修订)。用户随后授权运行，Debug arm64 增量开发编译通过，开发主 PID43098 已替换旧正式主进程；实际效果待用户验收，GitHub 合入状态见 Handoff。
->
-> 开发入口与当前本地运行包见 [Handoff](../../HANDOFF.md#工作区与版本定位)。源码发布与规格完整验收分别记录；原生异步提问组关闭、真实 Intel 和完整客户端更新安装仍保留验收边界。
+2026-10-09 源码合入：[PR #87](https://github.com/Duoasa/QuotaView/pull/87) 已将当前设置、品牌图标及 DSH / Kimi 接入合并至 main `4dd1e50`；PR 提交 `736d397` 与合并提交的 CI 均通过。首轮 CI 中过时的 32 pt 高度断言已同步为用户要求的 56 pt，保留圆角和裁切检查。该次合并时的开发运行包输入与 main 匹配；后续本地功能与当前包以 Handoff 为准，独立历史文档整理和原型保留本地，未发布正式包。
 
-本文件只负责规格发现和状态定位，不复制 Requirement、实现或完整发布证据。
+## 当前跨版本规格
 
-## 当前规格
-
-| Spec ID | 文档 | 状态 | 当前结论 |
+| Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 已选择性迁入 0.7.7 Build 1 本地开发源码；保留本地 UI，排除审计分支改造。源码静态检查与 Debug arm64 开发编译通过，已运行合入版；未执行测试，真实交互待用户验收 |
-| `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Released` | 独立Bug反馈页，QQ群原图二维码sheet与GitHub Issues跳转；标题副标题移除、退出常驻边框；4项冒烟、开发/正式身份构建与资源核对通过，随0.7.5 Build3正式发布，视觉全矩阵不由构建推断 |
-| `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | Build7/内部56本地已交付Hook有界历史/floor、notice去重、完整owner pending聚合结算及异步本地退场；真实RPC只依精确native结算，工具事件仅撤弱观察。30秒无人接管、草稿接管、发送/未知后3秒交回及持久4096项退场账本保留。Universal构建、190输入/4哈希、同Team签名与加载/活动通道核对通过，首次本地交付无本地测试；源码CI/main见PR #77；CI恢复源码未重新编译或替换安装，真实交互待用户验收，原生minimize精确同步及问题组关闭仍未实现 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 2026-10-05两个临时任务来源已确认，现场读取均准确匹配；旧Hook宿主与原生线程身份假设导致漏分流。以独一原生记忆turn绑定真实Hook生命周期，迟到身份仅撤回同turn别名卡，保留并行父任务；记忆复用既有底栏AI球，不按名称过滤。Build3候选124条冒烟通过；Build4/内部53已交付记忆修复，Build6包含UI修订，当前Build7/内部56延续这些逻辑并含等待与本地退场修复；本轮Universal构建、190项输入/4哈希、签名及实际Core加载核对通过，未重跑记忆冒烟；未公开发布，活动通道和视觉验收见Handoff。 |
+| `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
+| `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |
+| `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与 DSH / Kimi Code 接入](agent-integrations.md) | `Accepted / Verifying` | DSH 多目录兼容与会话命名空间已进入 14:26 开发包；编译与配置核对通过，真实多客户端联动待验收。 |
+| `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 生命周期和审批开关修复已在开发包运行；19 项冒烟通过，真实交互待验收。 |
+| `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 来源、轮次、等待结算与本地退场；原生问题组关闭仍未完成。 |
+| `QV-ISLAND-EXPANDED-GLASS-001` | [展开态玻璃](island-expanded-glass.md) | `Accepted / Verifying` | 外观页持久化玻璃/经典纯色切换；55%–80% 渐变、连续曲率任务卡与无框图标；依据 DroppyKit 修正祖先遮罩，完整 Droppy 16.0.1 源码不可得，视觉/性能仍待验收。 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 依据原生来源和精确轮次识别记忆，独立底栏展示；真实场景待持续验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 当前 owner 回传、草稿与资源边界；本地 0.7.9 Build 2 已修复重订阅序号重置，真实交互待验收；ACK 不等于原生界面关闭。 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 用户授权独立 0.7.3 并采用推荐默认值；冻结开发台保留。真实活动、公开内容、十类请求与生命周期已实施；正常新建聊天分类已修复，每卡片可本地按轮次归档，跨重启保留，新轮重新显示。具备已证明 Desktop owner 能力的请求可原地回应，详见新同步规格；Figma 重置使用页和双向 3D 卡片过渡已接入；入口整块分割线下方含留白为热区，使用账户底部渐变高光；重置页Asta Sans标题15pt、正文11pt、按钮13pt、辅助10.5pt，35项相关冒烟和运行包核对通过，进出共用起步至缓动落位节奏，卡面高光 2 秒；0 次空态、未知次数和刷新恢复已补齐，重置仅演示；主入口迁移至刘海，设置/刷新统一工具区与六页彩色设置已接入；基础用量固定显示，仅成本/活动可调，自动弹出和 1–10 秒停留时间可调，四项特效采用紧凑同心预览；底部关于管理版本/更新，通用页退出带确认；四页上下栏字号、间距与 hover 统一。内联详情布局同步恢复锚点、显示前提交，预热目标卡片并保留中间可见集与轨道，用户滚动优先；纯授权采用“批准”。请求视口最多 440 pt，命令默认 8 行/2048 字符，长选项两行缩略，完整查看/复制保留原始回传。本轮 239 项相关冒烟、开发构建和包核对通过；动态子任务高度与公开进展已统一，已更新运行包，此前增量源码已随0.7.5 Build3发布；2026-10-05 Build6本地交付待机“就绪”及仅百分比，普通/选中或hover描边为不透明纯色#181818/#202020，主卡与子agent背板一致，构建签名和实际连接核验通过；视觉/交互验收范围见Handoff。 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [下一版压缩状态与多任务](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 2026-09-30 独立开发台固定为 2026-09-30-3s-sync-noise65；原包与 129 项构建输入已存档，3 秒同相、外围可全灭/噪点 65% 下限。停止 UI 迭代，未迁入生产；历史实现与验证见原规格，实际效果由用户验收。 |
-| `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` | Build 9 单周期 14 pt Regular 基线下移 1.5 pt，双周期保留单色横条；GitHub / Stable appcast 已发布，视觉仍由用户持续验收 |
-| `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` | Build 3 已合并 main，GitHub / appcast 正式发布；240 项回归、4 项 AppKit、Universal、签名公证和公开回下载通过。纯黑底色与审计修复保留 Build 2 正常动效 |
-| `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Released` | 随 0.5.0 Build 3 正式发布；5 项 GPU / 时钟检查随完整 240 项回归通过。真实长时间 / Intel 验收待补 |
-| `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` | [链路审计](../design/quotaview-connection-audit-0.4.8.md)完成；221 项测试零失败（2 跳过）、Universal/永久开发台及 PR/main CI 通过；Developer ID、公证、公开包和 Feed 验证通过，已发布；完整实机/视觉矩阵仍待验收；Build 13 内置 CLI 路径修复已发布 GitHub，249 项 CI（2 跳过）与正式产物验证通过，appcast 已发布并验证 |
-| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 单岛手动开发台源码随 Build 3 合并 main；共用生产动效与渲染器，57 项来源一致、4 项 AppKit 通过；不单独发布开发台二进制 |
-| `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` | Build 3 修复文字显示、代理菜单对齐和设置图标，已合并 main 并发布到 GitHub / appcast；旧 Build 2 转为草稿 |
-| `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` | 用户已验收当前效果；177 项本地及 CI 测试、Universal、签名、公证、回下载与线上 appcast 验证完成；0.4.6 Build 2 已发布 |
-| `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` | [链路审计](../design/quotaview-activity-logic-audit-0.4.6.md)的 9 个场景已修复；[重构验证](../design/quotaview-activity-refactor-verification-0.4.6.md)本地及 CI 166 项测试通过，用户已确认真实五步视觉；正式签名、公证、Latest 与 appcast 已验证 |
-| `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` | 130 项测试、Universal Developer ID、公证/Staple、GitHub Latest、回下载验证与 Stable appcast 在线 EdDSA 均已完成 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014` | [0.4.5 灵动岛等待确认提醒](../design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` | 等待确认满 10 秒显示静态黄色描边和四周光晕；已随 0.4.5 发布 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013` | [0.4.5 灵动岛本次任务 Token](../design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` | 原功能随 0.4.5 发布；0.4.7 Build 3 已修复共用文字边界和完成百分号，用户已通过控制台手动检查，参见规格第 6 节 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012` | [灵动岛悬停透明](../design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Verifying` | 原固定透明度已发布；现扩展为0–100%悬停可见度、默认20%、即时保存与单项恢复默认；已整合上游Build13，255项回归（2跳过、0失败）及Universal无签名构建通过。待PR审查和实机验收，未发布 |
-| `QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011` | [0.4.5 Codex 本地任务流自动连接](../design/quotaview-codex-socket-autoconnect-0.4.5.md) | `Accepted / Released` | 只读本地任务流主通道、共享 Socket/Hook 回退及量子噪点单一灵动岛已随 0.4.5 发布 |
-| `QV-RELEASE-0.4.3-001` | [0.4.3 Build 1 发布](../design/quotaview-0.4.3-release.md) | `Accepted / Released` | 104 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009` | [量子噪点效果修正](../design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Released` | 连续相位、压缩上下文可见性、闪灭、文字层级与完成反馈已随 0.4.3 发布；完整视觉矩阵仍待验收 |
-| `QV-RELEASE-0.4.2-001` | [0.4.2 Build 1 发布](../design/quotaview-0.4.2-release.md) | `Accepted / Released` | 103 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线 EdDSA 均已完成 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-LIFECYCLE-008` | [0.4.2 任务连续性修正](../design/quotaview-activity-island-lifecycle-continuity-0.4.2.md) | `Accepted / Released` | 实时事件不再因局部步骤结束而误隐藏或提前完成；完成态只接受真实 `Stop`，已随 0.4.2 发布 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-PROGRESS-EFFECTS-007` | [0.4.2 进度条效果库](../design/quotaview-progress-effects-0.4.2.md) | `Accepted / Released` | 四种真实预览、状态配色适配、平滑进度与三个新增效果的完成高亮已随 0.4.2 发布 |
-| `QV-RELEASE-0.4.1-001` | [0.4.1 发布](../design/quotaview-0.4.1-release.md) | `Accepted / Released` | 93 项测试、Universal、Developer ID、公证/Staple、GitHub Latest、回下载启动与 Stable appcast 在线签名核验均已完成 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | [进度条灵动岛](../design/quotaview-codex-activity-island-state-smoke-0.4.0.md) | `Accepted / Released` | `exec` 计划计数、4 秒 1%识别窗口、单步骤回退、完成高光分层与结束事件收敛已随 0.4.1 Build 1 发布 |
-| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` | 0.4.1 的 AI 球尺寸能力保留为发布历史；0.4.5 已移除 AI 球及其展开尺寸选择器 |
-| `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` | 已随 0.3.7 Build 1 发布并进入 Stable appcast |
-| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` | “锁定到 Codex 屏幕”已随 0.3.7 Build 1 发布；多任务实验不在稳定范围 |
-| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` | 0.7.5 Build3/内部52已发布GitHub与签名Stable Feed；正式身份、Developer ID、公证/Staple、公开回下载与旧版公钥验证通过；真实 N → N+1 安装操作待记录 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 生产多任务、请求与归档；详情一/两格、内部滚动和紧凑排版，子 Agent 纳入父卡第三行，实际效果待用户验收。 |
 
-## 已替代的当前迭代规格
+## 保留的独立开发台
 
-| Spec ID | 文档 | 状态 | 结论 |
+| Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-PRODUCT-ACTIVITY-ISLAND-CODEX-PLAN-010` | [0.4.4 Codex 多步计划兼容](../design/quotaview-codex-plan-compatibility-0.4.4.md) | `Accepted / Superseded` | 0.4.4 未发布；原生计划与共享桥成果已进入 0.4.5 自动发现候选 |
-| `QV-RELEASE-0.4.0-001` | [0.4.0 大版本开发](../design/quotaview-0.4.0-development.md) | `Superseded / Released` | 0.4.0 保留为开发身份记录，不发布；成果已由 0.4.1 Build 1 正式发布 |
+| `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-002` | [多任务探索与固定开发台](../design/quotaview-island-multitask-next.md) | `Accepted / Verifying` | 固定开发台 2026-09-30-3s-sync-noise65；生产后续由 PRODUCTION-003 接续。 |
+| `QV-PROTOTYPE-ISLAND-TEXT-018` | [灵动岛内容控制台](../design/quotaview-island-text-console.md) | `Accepted / Released` | 永久内容开发工具；保留手动控制和生产隔离。 |
 
-当前版本与下一步见 [Handoff](../../HANDOFF.md)，不可变发布事实见
-[Version History](../../VERSION_HISTORY.md#当前最新版本)。
+## 历史发布与继承规格
 
-## 按需规格与历史参考
+版本号表示规格起源；状态保留既有交付记录，不表示当前整套体验已验收。被新入口替代的设置、布局和历史待办以当前生产规格为准。
 
-| Spec ID | 文档 | 读取条件 |
+| Spec ID | 文档 | 原交付状态 |
+|---|---|---|
+| `QV-PRODUCT-FEEDBACK-001` | [0.7.5 设置反馈入口](../design/quotaview-feedback-settings-0.7.5.md) | `Accepted / Released` |
+| `QV-PRODUCT-MENU-QUOTA-022` | [0.5.1 菜单栏额度快捷显示](../design/quotaview-menu-quota-0.5.1.md) | `Accepted / Released` |
+| `QV-PRODUCT-ISLAND-MOTION-021` | [0.5.0 灵动岛动画接入](../design/quotaview-island-motion-0.5.0.md) | `Accepted / Released` |
+| `QV-FIX-EFFECT-LONGEVITY-020` | [特效长时间稳定性](../design/quotaview-effect-longevity.md) | `Accepted / Released` |
+| `QV-FIX-CODEX-FIRST-CONNECTION-019` | [0.4.8 首次连接引导](../design/quotaview-codex-first-connection-0.4.8.md) | `Accepted / Released` |
+| `QV-PRODUCT-PROXY-017` | [0.4.7 自定义代理](../design/quotaview-proxy-settings-0.4.7.md) | `Accepted / Released` |
+| `QV-PROTOTYPE-QUANTUM-MOTION-016` | [量子噪点动效与控制台](../design/quotaview-quantum-motion-console.md) | `Accepted / Released` |
+| `QV-FIX-CODEX-TOKEN-COMPATIBILITY-015` | [0.4.6 Token 兼容修复](../design/quotaview-codex-token-compatibility-0.4.6.md) | `Accepted / Released` |
+| `QV-RELEASE-0.4.5-001` | [0.4.5 Build 1 发布](../design/quotaview-0.4.5-release.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-CONFIRMATION-REMINDER-014` | [0.4.5 灵动岛等待确认提醒](../design/quotaview-activity-island-confirmation-reminder-0.4.5.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-TURN-TOKENS-013` | [0.4.5 灵动岛本次任务 Token](../design/quotaview-activity-island-turn-token-usage-0.4.5.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-HOVER-TRANSPARENCY-012` | [灵动岛悬停透明](../design/quotaview-activity-island-hover-transparency-0.4.5.md) | `Accepted / Verifying` |
+| `QV-PRODUCT-CODEX-SOCKET-AUTOCONNECT-011` | [0.4.5 Codex 本地任务流自动连接](../design/quotaview-codex-socket-autoconnect-0.4.5.md) | `Accepted / Released` |
+| `QV-RELEASE-0.4.3-001` | [0.4.3 Build 1 发布](../design/quotaview-0.4.3-release.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-QUANTUM-NOISE-009` | [量子噪点效果修正](../design/quotaview-quantum-noise-effect-correction.md) | `Accepted / Released` |
+| `QV-RELEASE-0.4.2-001` | [0.4.2 Build 1 发布](../design/quotaview-0.4.2-release.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-LIFECYCLE-008` | [0.4.2 任务连续性修正](../design/quotaview-activity-island-lifecycle-continuity-0.4.2.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-PROGRESS-EFFECTS-007` | [0.4.2 进度条效果库](../design/quotaview-progress-effects-0.4.2.md) | `Accepted / Released` |
+| `QV-RELEASE-0.4.1-001` | [0.4.1 发布](../design/quotaview-0.4.1-release.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-STATE-SMOKE-006` | [进度条灵动岛](../design/quotaview-codex-activity-island-state-smoke-0.4.0.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-SIZE-005` | [灵动岛展开尺寸](../design/quotaview-codex-activity-island-size-0.4.0.md) | `Superseded / Released` |
+| `QV-PRODUCT-QUOTA-WINDOWS-003` | [多周期额度展示](../design/quotaview-quota-windows-0.3.6-build.3.md) | `Accepted / Released` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-004` | [稳定单任务灵动岛](../design/quotaview-codex-activity-island-0.3.6.md) | `Accepted / Released` |
+| `QV-PRODUCT-APP-UPDATES-003` | [应用检查与更新](../design/quotaview-app-updates-0.3.5.md) | `Accepted / Verifying` |
+| `QV-PRODUCT-ACTIVITY-ISLAND-CODEX-PLAN-010` | [0.4.4 Codex 多步计划兼容](../design/quotaview-codex-plan-compatibility-0.4.4.md) | `Accepted / Superseded` |
+| `QV-RELEASE-0.4.0-001` | [0.4.0 大版本开发](../design/quotaview-0.4.0-development.md) | `Superseded / Released` |
+
+## 按需参考
+
+以下条目原为参考路由，第三列是阅读条件，不是交付状态。
+
+| ID | 文档 | 何时阅读 |
 |---|---|---|
 | `QV-PRODUCT-ACTIVITY-ISLAND-MULTITASK-001` | [0.3.2 多任务 Preview](../design/quotaview-codex-activity-island-multitask.md) | 仅研究公开 Preview；不能静默迁入稳定版 |
 | `QV-PRODUCT-TOKEN-ACTIVITY-001` | [Token 活动](../design/quotaview-token-activity.md) | 修改范围、网格、Tooltip 或面板收展时 |
@@ -104,14 +101,10 @@
 | `QV-EVIDENCE-CORE-0.2.0-001` | [0.2.0 重构报告](../design/quotaview-core-refactor-0.2.0-report.md) | 调查 0.2.0 架构回归时 |
 | `QV-EVIDENCE-DESIGN-QA-001` | [Design QA](../../design-qa.md) | 核对历史视觉验收结论时 |
 
-## 阅读与维护规则
+## 维护规则
 
-- 已知规格时直接阅读受影响章节；本表用于查找，不要求逐条打开。
-- 恢复开发任务查阅 Handoff 的开发最新版；核对发布身份才读版本历史当前节。
-  两者可能使用相同配置版本号，不能据此把未发布源码当作稳定版。
-- 新功能或新的架构边界注册唯一 Spec ID；现有行为修复复用其 Requirement。
-  无行为影响的文档修复注明 `Spec impact: None` 即可，不新增产品规格。
-- 状态词汇、完成条件、授权与维护规则统一见 [SDD 开发流程](DEVELOPMENT_PROCESS.md)。
-  仅在这些条件需要解释或变更时读取该流程。
-- 本次文档整理维护 `QV-SDD-PROCESS-001` / `QV-SDD-INDEX-001`，保留上表
-  既有产品交付和验收状态。历史计划不构成新任务授权。
+- 已知规格时直接读取相关章节；新功能注册唯一 ID，已有行为修复复用原编号。
+- 目标写在所属规格，当前证据写在 Handoff，发布事实写在版本历史，用户视觉结论写在 Design QA。
+- 修订既有段落，不在文件顶部持续追加互相覆盖的“最新”记录；变更过程可进入带日期的归档。
+- 授权、状态词汇与完成条件见 [SDD 流程](DEVELOPMENT_PROCESS.md)；历史计划不构成新任务授权。
+- 清理前完整文档及原状态见[快照](../archive/maintenance-20261008/README.md)。本轮仅维护文档和产物，无产品行为变更。

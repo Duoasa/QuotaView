@@ -6,6 +6,7 @@ import QuotaViewCore
 import QuotaViewWidgetContract
 #endif
 
+
 // Measured from the visible native Vibe Island reference, in logical points.
 // Shared metrics keep row layout, hit regions and the fixed canvas consistent.
 enum IslandVibeLayout {
@@ -16,11 +17,12 @@ enum IslandVibeLayout {
     static let footerHeight: CGFloat = IslandChromeMetrics.footerHeight
     static let outerEffectInset = CodexActivityIslandProgressBarGeometry.effectInset
     static let screenBottomClearance = outerEffectInset
-    static let rowHeight: CGFloat = 60
+    static let rowHeight: CGFloat = contentInset * 2 + textRowHeight * 2 + lineGap
+    static let subagentRowHeight: CGFloat = textRowHeight + contentInset
     static let rowSpacing: CGFloat = 8
     static let rowPitch: CGFloat = rowHeight + rowSpacing
-    static let minimumDetailHeight: CGFloat = 100
-    static let maximumDetailViewportHeight: CGFloat = 200
+    static let minimumDetailHeight: CGFloat = rowHeight
+    static let maximumDetailViewportHeight: CGFloat = rowHeight * 2 + rowSpacing
     static let listInset: CGFloat = 28
     static let listVerticalInset: CGFloat = 12
     static let maximumNotchLip: CGFloat = 16
@@ -30,25 +32,103 @@ enum IslandVibeLayout {
     // Equal visible spacing on both sides of the thumb, inside the notch lip.
     static let scrollRailTrailingInset = maximumNotchLip + scrollRailGap - (scrollRailWidth - scrollThumbWidth) / 2
     static let scrollingListTrailingInset = maximumNotchLip + scrollRailGap * 2 + scrollThumbWidth
-    static let rowRadius: CGFloat = 10
+    static let rowRadius: CGFloat = 16
+    static var rowShape: RoundedRectangle { RoundedRectangle(cornerRadius: rowRadius, style: .continuous) }
+    static func continuousContour(in rect: CGRect, radius: CGFloat) -> CGPath {
+        RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect).cgPath
+    }
     static let iconSlot: CGFloat = 34
     static let orbDiameter: CGFloat = 28
     static let contentGap: CGFloat = 12
-    static let lineGap: CGFloat = 5
+    static let contentInset: CGFloat = 10
+    static let textRowHeight: CGFloat = 18
+    static let lineGap: CGFloat = 6
     static let titleFont: CGFloat = 13
     static let operationFont: CGFloat = 11
     static let metadataFont: CGFloat = 10
+    static let taskActionSize: CGFloat = 24
+    static let taskActionIconSize: CGFloat = 16
+    static let taskActionOpticalInset = (taskActionSize - taskActionIconSize) / 2
 }
 
 // One optical alignment and hit region for every expanded-page toolbar.
 enum IslandChromeMetrics {
     static let horizontalInset: CGFloat = 28
     static let labelInset: CGFloat = 8
-    static let buttonSize: CGFloat = 28
+    static let buttonSize: CGFloat = 24
     static let fontSize: CGFloat = 12
+    static let iconFont = Font.system(size: 10, weight: .medium)
+    static let quotaRingDiameter: CGFloat = 12
+    static let quotaRingLineWidth: CGFloat = 2
+    static let quotaRingLeadingInset = (buttonSize - quotaRingDiameter) / 2
     static let bottomInset: CGFloat = 12
     static let footerHeight = buttonSize + bottomInset
     static let font = Font.system(size: fontSize, weight: .medium)
+}
+
+private struct IslandGlassActiveKey: EnvironmentKey {
+    static let defaultValue = true
+}
+private struct IslandLiquidGlassEnabledKey: EnvironmentKey {
+    static let defaultValue = true
+}
+extension EnvironmentValues {
+    var islandLiquidGlassEnabled: Bool {
+        get { self[IslandLiquidGlassEnabledKey.self] }
+        set { self[IslandLiquidGlassEnabledKey.self] = newValue }
+    }
+    var islandGlassActive: Bool {
+        get { self[IslandGlassActiveKey.self] }
+        set { self[IslandGlassActiveKey.self] = newValue }
+    }
+}
+
+// Shared native material: static styling, system batching, no per-frame work.
+// Applied to cards and controls; chart cells and task archive icons stay plain.
+struct IslandGlassSurface<Outline: InsettableShape>: ViewModifier {
+    let outline: Outline
+    var tint: Color = .black.opacity(0.28)
+    var solidTint: Color = Color(white: 0.14)
+    var clearSurface = false
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.islandGlassActive) private var active
+    @Environment(\.islandLiquidGlassEnabled) private var liquidGlassEnabled
+    private var usesSolidFill: Bool { reduceTransparency || !liquidGlassEnabled }
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            // Keep the content/anchor identity when a page becomes hidden.
+            // Identity disables the material without replacing the card subtree.
+            content.glassEffect(active && !usesSolidFill ? (clearSurface ? .clear.tint(tint) : .regular.tint(tint)) : .identity, in: outline)
+                .background {
+                    if active && usesSolidFill { outline.fill(solidTint) }
+                }
+                .overlay {
+                    if active && usesSolidFill {
+                        outline.strokeBorder(.white.opacity(reduceTransparency ? 0.30 : 0.12), lineWidth: 0.5).allowsHitTesting(false)
+                    }
+                }
+        } else {
+            content.background {
+                if active {
+                    if usesSolidFill { outline.fill(solidTint) }
+                    else if clearSurface { outline.fill(.ultraThinMaterial) }
+                    else { outline.fill(.regularMaterial).overlay(outline.fill(solidTint.opacity(0.85))) }
+                }
+            }
+            .overlay {
+                if active {
+                    outline.strokeBorder(.white.opacity(reduceTransparency ? 0.30 : 0.24), lineWidth: 0.5)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    func islandGlass<Outline: InsettableShape>(_ outline: Outline, tint: Color = .black.opacity(0.28), solidTint: Color = Color(white: 0.14), clearSurface: Bool = false) -> some View {
+        modifier(IslandGlassSurface(outline: outline, tint: tint, solidTint: solidTint, clearSurface: clearSurface))
+    }
 }
 
 // Center fitting titles on the island, but let overflowing titles use the
@@ -91,7 +171,7 @@ struct IslandChromeFooter<Leading: View, Trailing: View>: View {
             leading.padding(.leading, IslandChromeMetrics.labelInset)
             Spacer(minLength: 8)
             trailing
-        }.font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
+        }.font(IslandChromeMetrics.font).foregroundStyle(.white.opacity(0.86))
             .frame(height: IslandChromeMetrics.buttonSize)
             .padding(.horizontal, IslandChromeMetrics.horizontalInset)
             .padding(.bottom, IslandChromeMetrics.bottomInset)
@@ -259,12 +339,10 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var detailID: Int?
     let taskScrollLink = IslandTaskScrollLink()
     @Published private(set) var expandedTraceEntries: Set<UUID> = []
-    @Published private(set) var showingTraceHistory = false
     private struct DetailMetricsKey: Equatable {
         let data: IslandTaskDetailData
         let english: Bool
         let expanded: Set<UUID>
-        let history: Bool
     }
     // At most the normal and rail-adjusted widths; clocks and scrolling reuse
     // identical content metrics instead of repeatedly measuring source output.
@@ -318,7 +396,7 @@ final class IslandBoardState: ObservableObject {
     @Published private(set) var resetHeight: CGFloat = 434
     @Published private(set) var resetTransitionInFlight = false
     @Published private(set) var resetTransitionSerial: UInt64 = 0
-    private var resetTransitionFinish: DispatchWorkItem?
+    private var resetTransitionStartTimeout: DispatchWorkItem?
     var resetWidth: CGFloat { min(max(378, geometry.cameraWidth + 200), maximumExpandedWidth) }
     var maximumPageHeight: CGFloat { max(IslandChromeMetrics.footerHeight + 10, geometry.maximumExpandedHeight - headerHeight) }
     var expandedCanvasHeight: CGFloat {
@@ -340,23 +418,30 @@ final class IslandBoardState: ObservableObject {
         showsReset = false; beginResetTransition()
     }
     private func beginResetTransition() {
-        resetTransitionFinish?.cancel(); resetTransitionSerial &+= 1
+        resetTransitionStartTimeout?.cancel(); resetTransitionStartTimeout = nil
+        resetTransitionSerial &+= 1
         resetTransitionInFlight = !reduceMotion && display?.playbackEnabled != false
         if resetTransitionInFlight {
             let serial = resetTransitionSerial
-            let finish = DispatchWorkItem { [weak self] in self?.finishResetTransition(serial: serial) }
-            resetTransitionFinish = finish
-            DispatchQueue.main.asyncAfter(deadline: .now() + IslandResetTicketFlight.duration + 0.04, execute: finish)
+            // Only recover if no flight can start (for example a missing slot).
+            // Once Core Animation starts, its completion owns the handoff.
+            let timeout = DispatchWorkItem { [weak self] in self?.finishResetTransition(serial: serial) }
+            resetTransitionStartTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: timeout)
         }
         onChange?()
     }
+    func didStartResetTransition(serial: UInt64) {
+        guard serial == resetTransitionSerial, resetTransitionInFlight else { return }
+        resetTransitionStartTimeout?.cancel(); resetTransitionStartTimeout = nil
+    }
     func finishResetTransition(serial: UInt64) {
-        guard serial == resetTransitionSerial else { return }
-        resetTransitionFinish?.cancel(); resetTransitionFinish = nil
+        guard serial == resetTransitionSerial, resetTransitionInFlight else { return }
+        resetTransitionStartTimeout?.cancel(); resetTransitionStartTimeout = nil
         resetTransitionInFlight = false
     }
     private func clearResetPresentation() {
-        resetTransitionFinish?.cancel(); resetTransitionFinish = nil
+        resetTransitionStartTimeout?.cancel(); resetTransitionStartTimeout = nil
         resetTransitionSerial &+= 1; resetTransitionInFlight = false; showsReset = false
     }
     func updateUsageHeight(_ value: CGFloat) {
@@ -424,7 +509,7 @@ final class IslandBoardState: ObservableObject {
         if cardGeometryCache.count >= 256 { cardGeometryCache.removeAll() }
         // Cache static text geometry only. Live child membership changes the
         // group height without changing model/effort, even on the same card.
-        let height = metadata.cardHeight(width: width)
+        let height = metadata.primaryContentHeight(width: width)
         cardGeometryCache[key] = height
         return height + metadata.subagentRowHeight
     }
@@ -433,7 +518,7 @@ final class IslandBoardState: ObservableObject {
     var rowHeights: [Int: CGFloat] { Dictionary(uniqueKeysWithValues: visibleTasks.map { ($0.id, rowHeight($0)) }) }
     var listHeight: CGFloat {
         let rows = visibleTasks.isEmpty ? IslandVibeLayout.rowPitch : visibleTasks.prefix(4).reduce(0) { $0 + rowHeight($1) + IslandVibeLayout.rowSpacing }
-        let detail = inlineDetail == nil ? 0 : min(detailHeight, IslandVibeLayout.maximumDetailViewportHeight) + IslandVibeLayout.rowSpacing
+        let detail = inlineDetail == nil ? 0 : detailHeight + IslandVibeLayout.rowSpacing
         return min(rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing, max(60, geometry.maximumExpandedHeight - headerHeight - IslandVibeLayout.footerHeight))
     }
     func detailData(for task: CodexMultitaskRenderTask) -> IslandTaskDetailData {
@@ -448,7 +533,8 @@ final class IslandBoardState: ObservableObject {
         if visibleTasks.count > 4 { return true }
         let width = expandedWidth - IslandVibeLayout.listInset * 2
         let rows = visibleTasks.reduce(CGFloat(0)) { $0 + measuredCardHeight(display?.sessionMetadata[$1.id], width: width) + IslandVibeLayout.rowSpacing }
-        return approval == nil && (visibleTasks.count > 4 || unrailedDetailHeight > IslandVibeLayout.maximumDetailViewportHeight || rows + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing > geometry.maximumExpandedHeight - headerHeight - IslandVibeLayout.footerHeight)
+        let detail = inlineDetail == nil ? 0 : unrailedDetailHeight + IslandVibeLayout.rowSpacing
+        return rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing > geometry.maximumExpandedHeight - headerHeight - IslandVibeLayout.footerHeight
     }
     func approvalMetrics(request: IslandConfirmation) -> IslandApprovalMetrics {
         let width = expandedWidth - IslandVibeLayout.listInset * 2
@@ -470,9 +556,9 @@ final class IslandBoardState: ObservableObject {
             - (showsScrollRail ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset))
     }
     private func measuredDetail(for task: CodexMultitaskRenderTask, width: CGFloat) -> IslandTaskDetailMetrics {
-        let key = DetailMetricsKey(data: detailData(for: task), english: english, expanded: expandedTraceEntries, history: showingTraceHistory)
+        let key = DetailMetricsKey(data: detailData(for: task), english: english, expanded: expandedTraceEntries)
         if let cached = detailMetricsCache[width], cached.0 == key { return cached.1 }
-        let result = IslandTaskDetailMetrics(data: key.data, width: width, english: english, expandedEntries: key.expanded, showsHistory: key.history)
+        let result = IslandTaskDetailMetrics(data: key.data, width: width, english: english, expandedEntries: key.expanded)
         if detailMetricsCache[width] == nil && detailMetricsCache.count >= 2 { detailMetricsCache.removeAll() }
         detailMetricsCache[width] = (key, result)
         return result
@@ -652,7 +738,8 @@ final class IslandBoardState: ObservableObject {
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
         return quotaPercent + " · " + countdown
     }
-    func update(_ value: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
+    func update(_ incoming: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
+        let value = incoming
         let previous = display
         let hadAttention = attentionCount > 0
         let wasCompact = display?.state.compact == true
@@ -678,7 +765,7 @@ final class IslandBoardState: ObservableObject {
         let drafts = approvalDrafts.filter { requestIDs.contains($0.key) }
         if drafts != approvalDrafts { approvalDrafts = drafts }
         if let previousApprovalID, value.taskDetails[previousApprovalID]?.confirmation == nil {
-            detailID = nil; showingTraceHistory = false
+            detailID = nil
         }
         let sourceIDs = Set(value.taskDetails.values.flatMap { $0.entries.map(\.id) })
         let remaining = expandedTraceEntries.intersection(sourceIDs)
@@ -701,7 +788,7 @@ final class IslandBoardState: ObservableObject {
                    || (!newRequestIDs.isEmpty && request.queueCount > (previous?.taskDetails[task.id]?.confirmation?.queueCount ?? 0))
            }) {
             cancelAutomaticPreview(); automaticallyPresented = true; presentation = .preview
-            detailID = task.id; showingTraceHistory = false
+            detailID = task.id
             automaticSelection = task.id
         }
         if !value.visible {
@@ -749,7 +836,6 @@ final class IslandBoardState: ObservableObject {
         claimManualPresentation()
         if compact { presentation = .preview }
         detailID = detailID == id ? nil : id
-        showingTraceHistory = false
         // Selection publishes the resulting model synchronously. Avoid laying out
         // the old selection first, then repeating layout for the new selection.
         if let onSelect { onSelect(id) } else { onChange?() }
@@ -766,10 +852,8 @@ final class IslandBoardState: ObservableObject {
         if compact { preview() } else { collapse() }
     }
     func dismissDetail() { taskScrollLink.prepareLayoutChange(); detailID = nil; onChange?() }
-    func toggleTraceHistory() {
-        guard let detail, detailData(for: detail).confirmation == nil else { return }
-        taskScrollLink.prepareLayoutChange()
-        showingTraceHistory.toggle(); onChange?()
+    func archiveTask(_ id: Int) {
+        onArchive?(id)
     }
     func toggleTraceDisclosure(_ id: UUID) {
         guard let detail = inlineDetail, detailData(for: detail).visibleEntries.contains(where: { $0.id == id }) else { return }
@@ -789,9 +873,8 @@ final class IslandBoardState: ObservableObject {
 private enum IslandBoardStyle {
     static let secondary = Color(nsColor: IslandTextPalette.secondary)
     static let muted = Color(nsColor: IslandTextPalette.muted)
-    static let attention = Color(nsColor: .init(srgbRed: 0.90, green: 0.66, blue: 0.35, alpha: 1))
-    // Keep the original amber hue, with more luminance and full opacity.
-    static let confirmationHighlight = Color(nsColor: .init(srgbRed: 1, green: 0.76, blue: 0.44, alpha: 1))
+    static let attention = Color(nsColor: CodexActivityIslandConfirmationReminderContract.approvalColor)
+    static let confirmationHighlight = attention
     static let failure = Color(nsColor: .init(srgbRed: 0.95, green: 0.43, blue: 0.42, alpha: 1))
     static func statusColor(_ state: CodexActivityVisualState) -> Color {
         // Color marks a need for attention; ordinary state names use the text hierarchy.
@@ -834,11 +917,12 @@ private struct IslandQuotaRing: View {
         let fraction = CGFloat(min(100, max(0, remainingPercent ?? 0))) / 100
         let color = Color(nsColor: CodexActivityQuotaRingContract.color(for: remainingPercent))
         ZStack {
-            Circle().stroke(Color(white: 0.18), lineWidth: 2.8)
+            Circle().stroke(Color(white: 0.18), lineWidth: IslandChromeMetrics.quotaRingLineWidth)
             Circle().trim(from: 0, to: fraction)
-                .stroke(color, style: StrokeStyle(lineWidth: 2.8, lineCap: .round))
+                .stroke(color, style: StrokeStyle(lineWidth: IslandChromeMetrics.quotaRingLineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-        }.padding(1.4).frame(width: 14, height: 14).accessibilityHidden(true)
+        }.padding(IslandChromeMetrics.quotaRingLineWidth / 2)
+            .frame(width: IslandChromeMetrics.quotaRingDiameter, height: IslandChromeMetrics.quotaRingDiameter).accessibilityHidden(true)
     }
 }
 
@@ -868,9 +952,11 @@ private struct IslandQuantumProgress: NSViewRepresentable {
     let renderState: CodexActivityRenderState
     let visible: Bool
     let reduceMotion: Bool
+    let primaryContentHeight: CGFloat
     func makeNSView(context: Context) -> IslandQuantumProgressHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandQuantumProgressHost, context: Context) {
-        view.configure(renderState: renderState, visible: visible, reduceMotion: reduceMotion, progressEffect: effect)
+        view.configure(renderState: renderState, visible: visible, reduceMotion: reduceMotion,
+            progressEffect: effect, primaryContentHeight: primaryContentHeight)
     }
     static func dismantleNSView(_ view: IslandQuantumProgressHost, coordinator: ()) { view.stop() }
 }
@@ -969,7 +1055,9 @@ struct IslandSubagentStrip: View {
             IslandAttributedScrollingText(text: Self.activityText(children), font: .systemFont(ofSize: 11),
                 visible: visible, reduceMotion: reduceMotion, streamIdentity: children.map(\.id).joined(separator: "|"))
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-        }.padding(.horizontal, 10).frame(height: 28)
+        }.frame(height: IslandVibeLayout.textRowHeight)
+            .padding(.horizontal, IslandVibeLayout.contentInset)
+            .padding(.bottom, IslandVibeLayout.contentInset)
             .help(children.map { [$0.title, $0.model, $0.status, $0.duration, $0.detail].filter { !$0.isEmpty }.joined(separator: " · ") }.joined(separator: "\n"))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(copy.islandSubagentGroupTitle(count: children.count))
@@ -977,54 +1065,25 @@ struct IslandSubagentStrip: View {
     }
 }
 
-// Both surfaces use one palette so the lower card never outshines its parent.
+// One palette and material surface for the task and its child activity row.
 struct IslandTaskCardAppearance {
     let visualState: CodexActivityVisualState
-    let selected: Bool
     let hovered: Bool
-    var fill: Color { Color.white.opacity(hovered ? 0.07 : 0.045) }
-    var stroke: Color {
+    var glassTint: Color {
         if visualState == .completed {
-            return Color(red: hovered ? 0.40 : 0.29, green: hovered ? 0.59 : 0.44, blue: hovered ? 0.47 : 0.35)
+            // Tint the native material and its optical highlight together;
+            // completion is no longer represented by a painted green border.
+            return Color(red: 0.025, green: 0.055, blue: 0.035).opacity(hovered ? 0.32 : 0.42)
         }
-        let channel = (selected || hovered ? 32.0 : 24.0) / 255.0
-        return Color(.sRGB, red: channel, green: channel, blue: channel, opacity: 1)
+        return .black.opacity(hovered ? 0.32 : 0.42)
     }
 }
 
-// The child row belongs behind the parent card, with only its lower edge exposed.
-// Its independent surface and clock never become part of the card's Metal view.
-struct IslandTaskCardStack<Card: View>: View {
-    let children: [IslandSubagentPresentation]
-    let english: Bool
-    let visible: Bool
-    let reduceMotion: Bool
-    let appearance: IslandTaskCardAppearance
-    let card: Card
-    init(children: [IslandSubagentPresentation], english: Bool, visible: Bool, reduceMotion: Bool,
-         appearance: IslandTaskCardAppearance,
-         @ViewBuilder card: () -> Card) {
-        self.children = children; self.english = english; self.visible = visible
-        self.reduceMotion = reduceMotion; self.appearance = appearance; self.card = card()
-    }
-    var body: some View {
-        VStack(spacing: 0) {
-            card.zIndex(1)
-            if !children.isEmpty {
-                IslandSubagentStrip(children: children, english: english, visible: visible, reduceMotion: reduceMotion)
-                    .zIndex(0)
-            }
-        }
-        .background {
-            if !children.isEmpty {
-                RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
-                    .fill(appearance.fill)
-                    .background(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).fill(.black))
-                    .overlay(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).strokeBorder(appearance.stroke, lineWidth: 1))
-                    .allowsHitTesting(false).accessibilityHidden(true)
-            }
-        }
-    }
+private enum IslandTaskHeaderAlignment: AlignmentID {
+    static func defaultValue(in dimensions: ViewDimensions) -> CGFloat { dimensions[VerticalAlignment.center] }
+}
+extension VerticalAlignment {
+    static let islandTaskHeader = VerticalAlignment(IslandTaskHeaderAlignment.self)
 }
 
 // Shared presentation: list rows add selection, approval headers are read-only.
@@ -1037,6 +1096,7 @@ struct IslandTaskCard: View {
     let playback: Bool
     let effectVisible: Bool
     let reduceMotion: Bool
+    var subagentsVisible = false
     var hovered = false
     var showsArchiveButton = false
     var cardWidth: CGFloat = 656
@@ -1044,79 +1104,84 @@ struct IslandTaskCard: View {
     // stretching text, icons or the effect. Live cards retain their own height.
     var minimumCardHeight: CGFloat = 0
     private var appearance: IslandTaskCardAppearance {
-        .init(visualState: task.renderState.visualState, selected: selected, hovered: hovered)
+        .init(visualState: task.renderState.visualState, hovered: hovered)
+    }
+    private var primaryContentHeight: CGFloat {
+        max(minimumCardHeight, metadata?.primaryContentHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-        HStack(spacing: IslandVibeLayout.contentGap) {
-            // The selected card uses the progress effect instead of an orb.
-            // Remove its icon column too, as required by the task card layout.
-            if !selected {
-                IslandActivityOrb(visualState: task.renderState.visualState, playback: playback)
-                    .frame(width: IslandVibeLayout.orbDiameter, height: IslandVibeLayout.orbDiameter)
-                    .frame(width: IslandVibeLayout.iconSlot).accessibilityHidden(true)
-            }
+        VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: IslandVibeLayout.lineGap) {
-                HStack(spacing: 6) {
-                    IslandScrollingText(text: task.title,
-                        font: .systemFont(ofSize: IslandVibeLayout.titleFont, weight: .semibold),
-                        color: .white, visible: effectVisible, reduceMotion: reduceMotion)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading).accessibilityHint(task.title)
-                    if let metadata, !metadata.modelTitle.isEmpty, !metadata.usesExtraLine {
-                        Text(metadata.modelTitle).lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                            .accessibilityHint(metadata.fullModelTitle)
-                        // Model titles already contain "·"; a hairline separates the duration group.
-                        Rectangle().fill(Color(white: 0.24)).frame(width: 1, height: 9).accessibilityHidden(true)
+                HStack(spacing: IslandVibeLayout.contentGap) {
+                    // The selected card uses the progress effect instead of an orb.
+                    // Remove its icon column too, as required by the task card layout.
+                    if !selected && task.renderState.visualState != .completed {
+                        IslandActivityOrb(visualState: task.renderState.visualState, playback: playback)
+                            .frame(width: IslandVibeLayout.orbDiameter, height: IslandVibeLayout.orbDiameter)
+                            .frame(width: IslandVibeLayout.iconSlot).accessibilityHidden(true)
                     }
-                    if let metadata {
-                        Text(metadata.durationTitle).monospacedDigit().fixedSize()
+                    VStack(alignment: .leading, spacing: IslandVibeLayout.lineGap) {
+                        HStack(spacing: 6) {
+                            if task.renderState.visualState == .completed {
+                                IslandActivityOrb(visualState: .completed, playback: playback)
+                                    .frame(width: 18, height: 18).accessibilityHidden(true)
+                            }
+                            IslandScrollingText(text: task.title,
+                                font: .systemFont(ofSize: IslandVibeLayout.titleFont, weight: .semibold),
+                                color: .white, visible: effectVisible, reduceMotion: reduceMotion)
+                                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading).accessibilityHint(task.title)
+                            if let metadata, !metadata.modelTitle.isEmpty, !metadata.usesExtraLine {
+                                Text(metadata.modelTitle).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                    .accessibilityHint(metadata.fullModelTitle)
+                                // Model titles already contain "·"; a hairline separates the duration group.
+                                Rectangle().fill(Color(white: 0.24)).frame(width: 1, height: 9).accessibilityHidden(true)
+                            }
+                            if let metadata {
+                                Text(metadata.durationTitle).monospacedDigit().fixedSize()
+                            }
+                            if !showsArchiveButton {
+                                if let icon = IslandProviderIcon.image(for: task.provider) {
+                                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
+                                        .accessibilityLabel(task.provider.displayName)
+                                } else { Text(task.provider.displayName).foregroundStyle(IslandBoardStyle.muted) }
+                            }
+                        }.frame(height: IslandVibeLayout.textRowHeight)
+                            .padding(.trailing, showsArchiveButton ? 28 : 0)
+                            .font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
+                            .foregroundStyle(IslandBoardStyle.muted)
+                            .alignmentGuide(.islandTaskHeader) { $0[VerticalAlignment.center] }
+                        HStack(spacing: 8) {
+                            IslandOperationLine(renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
+                                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                            Text(task.renderState.tokenUsageTitle ?? "— tokens")
+                                .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
+                                .foregroundStyle(IslandBoardStyle.muted).fixedSize()
+                                .accessibilityHint(english ? "Session total" : "会话累计")
+                                .padding(.trailing, showsArchiveButton ? IslandVibeLayout.taskActionOpticalInset : 0)
+                        }.frame(height: IslandVibeLayout.textRowHeight)
                     }
-                    if !showsArchiveButton {
-                        if let icon = IslandProviderIcon.image(for: task.provider) {
-                            Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
-                                .opacity(0.72).accessibilityLabel(task.provider.displayName)
-                        } else { Text(task.provider.displayName).foregroundStyle(IslandBoardStyle.muted) }
-                    }
-                }.padding(.trailing, showsArchiveButton ? 28 : 0)
-                    .font(.system(size: IslandVibeLayout.metadataFont, weight: .semibold))
-                    .foregroundStyle(IslandBoardStyle.muted)
-                HStack(spacing: 8) {
-                    IslandOperationLine(renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                    Text(task.renderState.tokenUsageTitle ?? "— tokens")
-                        .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
-                        .foregroundStyle(IslandBoardStyle.muted).fixedSize()
-                        .accessibilityHint(english ? "Session total" : "会话累计")
+                }.frame(height: IslandVibeLayout.rowHeight - IslandVibeLayout.contentInset * 2)
+                if let metadata, metadata.usesExtraLine {
+                    Text(metadata.modelTitle).font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(IslandBoardStyle.muted).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(metadata.fullModelTitle)
                 }
+            }.frame(width: max(0, cardWidth - IslandVibeLayout.contentInset * 2))
+                .padding(IslandVibeLayout.contentInset).frame(height: primaryContentHeight)
+            if let metadata, !metadata.subagents.isEmpty {
+                IslandSubagentStrip(children: metadata.subagents, english: english,
+                    visible: subagentsVisible, reduceMotion: reduceMotion)
             }
-        }.frame(height: IslandVibeLayout.rowHeight - 8)
-        if let metadata, metadata.usesExtraLine {
-            Text(metadata.modelTitle).font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(IslandBoardStyle.muted).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(metadata.fullModelTitle)
-        }
-        }.padding(.leading, 10).padding(.trailing, 8).frame(height: max(minimumCardHeight, metadata?.cardHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight))
+        }.frame(width: cardWidth)
             .background {
                 if selected {
-                    IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
-                        .allowsHitTesting(false).accessibilityHidden(true)
-                } else {
-                    RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
-                        .fill(appearance.fill)
-                }
-            }
-            // Opaque front card conceals the full-height lower card without
-            // clipping its independent Metal effect or completion glow.
-            .background(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius).fill(.black))
-            .overlay {
-                // Selected completion already owns the single-island outline/glow.
-                if !(selected && task.renderState.visualState == .completed) {
-                    RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius)
-                        .strokeBorder(appearance.stroke, lineWidth: 1)
+                    IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible,
+                        reduceMotion: reduceMotion, primaryContentHeight: primaryContentHeight)
                         .allowsHitTesting(false).accessibilityHidden(true)
                 }
             }
-            .contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
+            .islandGlass(IslandVibeLayout.rowShape, tint: appearance.glassTint, solidTint: Color(white: 0.055))
+            .contentShape(IslandVibeLayout.rowShape)
             .accessibilityHint("\(task.title) · \(task.renderState.statusTitle)")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—"), \(metadata?.subagents.map { $0.title + ", " + $0.status }.joined(separator: "; ") ?? "")")
@@ -1138,20 +1203,19 @@ private struct IslandBoardTaskRow: View {
     let action: () -> Void
     @State private var hovered = false
     var body: some View {
-        IslandTaskCardStack(children: metadata?.subagents ?? [], english: english,
-            visible: subagentsVisible, reduceMotion: reduceMotion,
-            appearance: .init(visualState: task.renderState.visualState, selected: selected, hovered: hovered)) {
         Button(action: action) {
             IslandTaskCard(progressEffect: progressEffect, task: task, selected: selected, metadata: metadata, english: english,
-                playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion, hovered: hovered, showsArchiveButton: true, cardWidth: cardWidth)
+                playback: playback, effectVisible: effectVisible, reduceMotion: reduceMotion,
+                subagentsVisible: subagentsVisible, hovered: hovered, showsArchiveButton: true, cardWidth: cardWidth)
         }.buttonStyle(.plain)
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: Alignment(horizontal: .trailing, vertical: .islandTaskHeader)) {
                 // Sibling hit target: archive must never also select/open the card.
                 IslandTaskArchiveButton(english: english, showsArchiveIcon: hovered, provider: task.provider, action: onArchive)
-                    .padding(.top, 6).padding(.trailing, 8)
+                    .padding(.trailing, IslandVibeLayout.contentInset)
+                    .alignmentGuide(.islandTaskHeader) { $0[VerticalAlignment.center] }
             }
             .accessibilityValue(selected ? (english ? "Details open" : "详情已展开") : "")
-        }.contentShape(RoundedRectangle(cornerRadius: IslandVibeLayout.rowRadius))
+            .contentShape(IslandVibeLayout.rowShape)
             .onHover { hovered = $0 }
     }
 }
@@ -1170,9 +1234,9 @@ struct IslandTaskArchiveButton: View {
                     Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
                 } else if let icon = IslandProviderIcon.image(for: provider) {
-                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16).opacity(0.72)
+                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
                 }
-            }.frame(width: 24, height: 24).contentShape(RoundedRectangle(cornerRadius: 6))
+            }.frame(width: IslandVibeLayout.taskActionSize, height: IslandVibeLayout.taskActionSize).contentShape(RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(IslandArchiveButtonStyle(hovered: hovered))
             .onHover { hovered = $0 }
             .accessibilityLabel(copy.islandArchiveTask)
@@ -1182,8 +1246,9 @@ struct IslandTaskArchiveButton: View {
 private struct IslandArchiveButtonStyle: ButtonStyle {
     let hovered: Bool
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.background(Color.white.opacity(configuration.isPressed ? 0.16 : (hovered ? 0.10 : 0)),
-            in: RoundedRectangle(cornerRadius: 6))
+        configuration.label
+            .opacity(configuration.isPressed ? 0.65 : 1)
+            .brightness(configuration.isPressed ? -0.08 : hovered ? 0.06 : 0)
     }
 }
 
@@ -1244,7 +1309,15 @@ struct IslandBoardView: View {
                                         layout: layout,
                                         active: !state.compact && state.display?.visible == true,
                                             onVisibilityChange: { visibility = $0 }, link: scrollLink, viewportHeight: state.listHeight))
-                            }.scrollIndicators(.never).frame(height: state.listHeight)
+                            }.scrollIndicators(.never)
+                            .frame(height: state.listHeight)
+                            .overlay {
+                                IslandTaskEdgeOverlay(link: scrollLink)
+                                    .padding(.leading, IslandVibeLayout.listInset)
+                                    .padding(.trailing, state.showsScrollRail
+                                        ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset)
+                                    .allowsHitTesting(false).accessibilityHidden(true)
+                            }
                             .overlay(alignment: .trailing) {
                                 if state.showsScrollRail {
                                     IslandTaskScrollRailView(link: scrollLink, label: state.text("任务滚动条", "Task scrollbar"))
@@ -1284,6 +1357,8 @@ struct IslandBoardView: View {
                 }
             }
         }
+        .environment(\.islandGlassActive, !state.compact)
+        .environment(\.islandLiquidGlassEnabled, state.display?.islandMaterial != .classic)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .top) {
             if state.geometry.isSimulated {
@@ -1313,6 +1388,7 @@ struct IslandBoardView: View {
                 utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight,
                 claudeUsage: state.display?.claudeUsage, provider: $state.usageProvider)
                 .frame(width: state.expandedWidth, height: min(state.usageHeight, state.maximumPageHeight), alignment: .top)
+                .environment(\.islandGlassActive, !state.compact && !state.showsReset)
                 .opacity(state.showsReset ? 0 : 1)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.22), value: state.showsReset)
                 .allowsHitTesting(!state.showsReset && !state.resetTransitionInFlight)
@@ -1324,6 +1400,7 @@ struct IslandBoardView: View {
                 hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight,
                 provider: state.effectiveUsageProvider)
                 .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
+                .environment(\.islandGlassActive, !state.compact && state.showsReset)
                 .opacity(state.showsReset ? 1 : 0)
                 .animation(state.reduceMotion ? nil : .easeOut(duration: 0.24), value: state.showsReset)
                 .allowsHitTesting(state.showsReset && !state.resetTransitionInFlight)
@@ -1331,13 +1408,15 @@ struct IslandBoardView: View {
         }.frame(width: state.expandedWidth, height: min(max(state.usageHeight, state.resetHeight), state.maximumPageHeight), alignment: .top)
             .overlayPreferenceValue(IslandResetTicketAnchors.self) { anchors in
                 GeometryReader { proxy in
-                    if let source = anchors[.usage], let destination = anchors[.reset] {
-                        IslandResetTicketFlightView(serial: state.resetTransitionSerial, toReset: state.showsReset,
-                            active: state.resetTransitionInFlight && !state.compact && state.display?.visible != false,
-                            source: proxy[source], destination: proxy[destination], reduceMotion: state.reduceMotion,
-                            provider: state.effectiveUsageProvider)
-                            .allowsHitTesting(false).accessibilityHidden(true)
-                    }
+                    // Keep the host mounted even while preferences are settling.
+                    IslandResetTicketFlightView(serial: state.resetTransitionSerial, toReset: state.showsReset,
+                        active: state.resetTransitionInFlight && !state.compact && state.display?.visible != false,
+                        source: anchors[.usage].map { proxy[$0] } ?? .zero,
+                        destination: anchors[.reset].map { proxy[$0] } ?? .zero,
+                        reduceMotion: state.reduceMotion, provider: state.effectiveUsageProvider,
+                        onStart: state.didStartResetTransition, onCompletion: state.finishResetTransition)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .allowsHitTesting(false).accessibilityHidden(true)
                 }
             }
     }
@@ -1346,7 +1425,7 @@ struct IslandBoardView: View {
             HStack(spacing: 6) {
                 if state.showsUsage {
                     Button { state.showsReset ? state.closeReset() : state.closeUsage() } label: {
-                        Label(state.showsReset ? state.text("返回", "Back") : state.text("返回任务", "Tasks"), systemImage: "chevron.left")
+                        Label { Text(state.showsReset ? state.text("返回", "Back") : state.text("返回任务", "Tasks")) } icon: { Image(systemName: "chevron.left").font(IslandChromeMetrics.iconFont) }
                             .font(IslandChromeMetrics.font).foregroundStyle(.white)
                             .padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
                     }.buttonStyle(IslandUtilityButtonStyle())
@@ -1359,7 +1438,8 @@ struct IslandBoardView: View {
                         .foregroundStyle(IslandBoardStyle.confirmationHighlight)
                 } else {
                     Button { state.openUsage() } label: {
-                        quotaSummary.padding(.horizontal, IslandChromeMetrics.labelInset)
+                        quotaSummary.padding(.leading, IslandChromeMetrics.quotaRingLeadingInset)
+                            .padding(.trailing, IslandChromeMetrics.labelInset)
                             .frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
                     }.buttonStyle(IslandUtilityButtonStyle()).accessibilityLabel(state.text("查看用量统计", "View usage"))
                 }
@@ -1378,7 +1458,7 @@ struct IslandBoardView: View {
                     }
                     Button { state.dismissDetail() } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
+                            Image(systemName: "chevron.left").font(IslandChromeMetrics.iconFont)
                             Text(state.text("返回列表", "Back to sessions")).font(IslandChromeMetrics.font)
                         }.padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
                     }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("返回列表，请求保持待确认", "Return to sessions; keep the request pending"))
@@ -1392,12 +1472,12 @@ struct IslandBoardView: View {
                             .accessibilityValue(state.attentionOnly ? state.text("已筛选", "Filtered") : state.text("全部会话", "All sessions"))
                     }
                     Button { state.presentation == .pinned ? state.collapse() : state.pin() } label: {
-                        Image(systemName: state.presentation == .pinned ? "pin.fill" : "pin")
-                            .frame(width: 28, height: 28).contentShape(Rectangle())
+                        Image(systemName: state.presentation == .pinned ? "pin.fill" : "pin").font(IslandChromeMetrics.iconFont)
+                            .frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize).contentShape(Rectangle())
                     }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("固定展开；再次点击收起", "Pin open; click again to collapse"))
                 }
                 Button { state.collapse() } label: {
-                    Image(systemName: "chevron.up").frame(width: 28, height: 28).contentShape(Rectangle())
+                    Image(systemName: "chevron.up").font(IslandChromeMetrics.iconFont).frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize).contentShape(Rectangle())
                 }.buttonStyle(IslandUtilityButtonStyle()).accessibilityHint(state.text("收起灵动岛", "Collapse island"))
             }.font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
                 .frame(width: state.geometry.hasCamera ? state.headerSideWidth : nil)
@@ -1511,7 +1591,10 @@ struct IslandBoardView: View {
         state.tasks.isEmpty ? state.summary : state.statusCounts.map { "\($0.count) \($0.title)" }.joined(separator: " · ")
     }
     private func taskGroup(_ task: CodexMultitaskRenderTask, residentTaskIDs: Set<Int>) -> some View {
-        VStack(spacing: IslandVibeLayout.rowSpacing) {
+        let layout = IslandTaskListLayout(taskIDs: state.visibleTasks.map(\.id),
+            detailID: state.inlineDetail?.id, detailHeight: state.detailHeight, rowHeights: state.rowHeights)
+        let origin = layout.offset(for: .init(element: .task(task.id), inset: 0)) ?? 0
+        return VStack(spacing: IslandVibeLayout.rowSpacing) {
             if residentTaskIDs.contains(task.id) {
                 IslandBoardTaskRow(progressEffect: state.display?.effect ?? .dropField, task: task, selected: (state.detailID ?? state.focusedTask?.id) == task.id,
                     metadata: state.display?.sessionMetadata[task.id], english: state.english,
@@ -1521,10 +1604,16 @@ struct IslandBoardView: View {
                         && !state.compact && visibleElements.contains(.task(task.id)) && task.playbackEnabled,
                     reduceMotion: state.reduceMotion,
                     subagentsVisible: state.playback && !state.compact && visibleElements.contains(.task(task.id)), cardWidth: state.rowWidth,
-                    onArchive: { state.onArchive?(task.id) }) { state.select(task.id) }
+                    onArchive: { state.archiveTask(task.id) }) { state.select(task.id) }
+                    .modifier(IslandCardBottomFade(link: scrollLink, origin: origin, height: state.rowHeight(task)))
             } else { Color.clear.frame(height: state.rowHeight(task)) }
             if state.inlineDetail?.id == task.id {
-                if residentTaskIDs.contains(task.id) { detailView(task) }
+                if residentTaskIDs.contains(task.id) {
+                    detailView(task)
+                        .modifier(IslandCardBottomFade(link: scrollLink,
+                            origin: origin + state.rowHeight(task) + IslandVibeLayout.rowSpacing,
+                            height: state.detailHeight))
+                }
                 else { Color.clear.frame(height: state.detailHeight) }
             }
         }.frame(height: state.rowHeight(task) + (state.inlineDetail?.id == task.id ? state.detailHeight + IslandVibeLayout.rowSpacing : 0))
@@ -1532,19 +1621,126 @@ struct IslandBoardView: View {
     private func detailView(_ task: CodexMultitaskRenderTask) -> some View {
         IslandTaskDetailView(data: state.detailData(for: task), metrics: state.detailMetrics(for: task), english: state.english,
             onClose: { state.dismissDetail() },
-            onDisclosure: { state.toggleTraceDisclosure($0) },
-            onHistory: { state.toggleTraceHistory() })
+            onDisclosure: { state.toggleTraceDisclosure($0) })
     }
 }
 
-/// Fixed native window + compositor-only path animation. No per-frame SwiftUI
-/// resizing, view snapshots, display timer, or spring-driven window frame writes.
+private enum IslandSurfaceMotion {
+    static let duration: Double = 0.38
+    static let contentDuration: Double = 0.23
+    static var animation: Animation { .timingCurve(0.22, 1, 0.36, 1, duration: duration) }
+    static var timingFunction: CAMediaTimingFunction {
+        CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+    }
+}
+
+// Only this lightweight backdrop tree animates its layout. Task/approval content
+// and the native window keep their final frames throughout a transition.
+@MainActor
+private final class IslandGlassGeometry: ObservableObject {
+    struct Value: Equatable {
+        var rect: CGRect
+        var radius: CGFloat
+        var compact: Bool
+    }
+    @Published private(set) var value: Value
+    @Published private(set) var degree: Double
+    @Published private(set) var generation = 0
+    private var animationDeadline: CFTimeInterval = 0
+
+    init(value: Value, degree: Double) {
+        self.value = value
+        self.degree = degree
+    }
+
+    func update(value: Value, degree: Double, animated: Bool) {
+        if self.degree != degree { self.degree = degree }
+        if animated {
+            guard self.value != value else { return }
+            // Stable identity lets SwiftUI retarget from the current interpolated
+            // geometry, including an immediate reversal before the first ends.
+            animationDeadline = CACurrentMediaTime() + IslandSurfaceMotion.duration
+            withAnimation(IslandSurfaceMotion.animation) { self.value = value }
+        } else {
+            let wasAnimating = animationDeadline > CACurrentMediaTime()
+            guard self.value != value || wasAnimating else { return }
+            animationDeadline = 0
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                self.value = value
+                // Snap only when motion is explicitly disabled or the window
+                // geometry changes; normal page changes never reset identity.
+                if wasAnimating { generation &+= 1 }
+            }
+        }
+    }
+
+    func stop() {
+        guard animationDeadline > CACurrentMediaTime() else { return }
+        animationDeadline = 0
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { generation &+= 1 }
+    }
+
+}
+
+private struct IslandExpandedGlassBackdrop: View {
+    @ObservedObject var geometry: IslandGlassGeometry
+
+    var body: some View {
+        let value = geometry.value
+        let shape = IslandNotchShape(bottomRadius: value.radius)
+        let stops = AppPreferences.IslandGlassDegree.stops(geometry.degree)
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            Color.clear
+                .frame(width: value.rect.width, height: value.rect.height)
+                .modifier(IslandNativeBackdropMaterial(shape: shape))
+                .overlay {
+                    // Only the shade is clipped. Native glass owns its contour.
+                    LinearGradient(stops: [
+                        .init(color: .black, location: stops[0]),
+                        .init(color: .black, location: stops[1]),
+                        .init(color: .black.opacity(0.45), location: stops[2]),
+                        .init(color: .clear, location: stops[3]),
+                        .init(color: .clear, location: stops[4])
+                    ], startPoint: .top, endPoint: .bottom)
+                    .clipShape(shape)
+                }
+                .overlay { shape.fill(.black).opacity(value.compact ? 1 : 0) }
+                .position(x: value.rect.midX, y: value.rect.midY)
+        }
+        .id(geometry.generation)
+        .environment(\.colorScheme, .dark)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct IslandNativeBackdropMaterial: ViewModifier {
+    var shape: IslandNotchShape
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.glassEffect(.clear, in: shape)
+        } else {
+            content.background(.regularMaterial, in: shape)
+        }
+    }
+}
+
+/// Fixed window and content frames; a small native backdrop tree owns geometry
+/// interpolation, while the classic shell keeps its existing path animation.
 @MainActor
 final class IslandNotchSurface: NSView {
     override var isFlipped: Bool { true }
     let confirmationGlow = ActivityIslandCompletionGlowView(frame: .zero)
     private let shell = CAShapeLayer()
     private let clipping = CAShapeLayer()
+    private let glassContainer = NSView()
+    private var glassMaterial: NSHostingView<IslandExpandedGlassBackdrop>?
+    private var glassGeometry: IslandGlassGeometry?
     private let content = NSView()
     private let compactHost: NSHostingView<IslandBoardView>
     private let expandedHost: NSHostingView<IslandBoardView>
@@ -1567,15 +1763,46 @@ final class IslandNotchSurface: NSView {
         shell.shadowColor = NSColor.black.cgColor
         shell.shadowOpacity = 0.26; shell.shadowRadius = 10
         shell.shadowOffset = CGSize(width: 0, height: 4)
-        // Outside the content mask and behind the opaque shell: the original
-        // yellow glow follows the whole island without tinting its contents.
+        // Restore the full reminder fill; attenuate its parent so the pulse
+        // cannot animate the original full brightness back in.
+        confirmationGlow.drawsOnlyEdge = false
+        confirmationGlow.alphaValue = 0.28
         addSubview(confirmationGlow)
         confirmationGlow.layer?.zPosition = -1
         layer?.addSublayer(shell)
+        // One native backdrop for the whole expanded island. No snapshots,
+        // private filters or display links. Cards own their separate content.
+        glassContainer.wantsLayer = true
+        glassContainer.appearance = NSAppearance(named: .darkAqua)
+        addSubview(glassContainer)
         addSubview(content); content.layer?.mask = clipping
         content.addSubview(expandedHost); content.addSubview(compactHost)
     }
     required init?(coder: NSCoder) { fatalError() }
+
+    private func synchronizeGlassMaterial(enabled: Bool, rect: CGRect, radius: CGFloat,
+                                          compact: Bool, degree: Double, animated: Bool) {
+        guard enabled else {
+            glassMaterial?.removeFromSuperview()
+            glassMaterial = nil
+            glassGeometry = nil
+            return
+        }
+        let value = IslandGlassGeometry.Value(rect: rect, radius: radius, compact: compact)
+        if let glassMaterial, let glassGeometry {
+            if glassMaterial.frame != glassContainer.bounds { glassMaterial.frame = glassContainer.bounds }
+            glassGeometry.update(value: value, degree: degree, animated: animated)
+        } else {
+            let geometry = IslandGlassGeometry(value: value, degree: degree)
+            let host = NSHostingView(rootView: IslandExpandedGlassBackdrop(geometry: geometry))
+            host.sizingOptions = []
+            host.frame = glassContainer.bounds
+            glassGeometry = geometry
+            glassMaterial = host
+            glassContainer.addSubview(host)
+            host.layoutSubtreeIfNeeded()
+        }
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -1592,7 +1819,10 @@ final class IslandNotchSurface: NSView {
     func update(state: IslandBoardState, animated: Bool) {
         let newRect = CGRect(x: (bounds.width - state.surfaceWidth) / 2, y: 0,
                              width: state.surfaceWidth, height: state.height)
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        let usesGlass = state.display?.islandMaterial != .classic && !reduceTransparency
         let changed = targetRect != newRect || lastCompact != state.compact || content.frame != bounds
+            || glassContainer.isHidden == usesGlass
         let radius: CGFloat = state.compact ? 13 : 24
         let compactFrame = CGRect(x: (bounds.width - state.compactWidth) / 2,
                                   y: bounds.height - state.geometry.bandHeight,
@@ -1604,11 +1834,21 @@ final class IslandNotchSurface: NSView {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         if confirmationGlow.frame != bounds { confirmationGlow.frame = bounds }
         if content.frame != bounds { content.frame = bounds }
+        if glassContainer.frame != bounds { glassContainer.frame = bounds }
+        glassContainer.isHidden = !usesGlass
+        // The native material owns each card's outline. Do not flatten these
+        // backdrop-sampling descendants through the whole-island mask either.
+        content.layer?.mask = usesGlass ? nil : clipping
+        shell.fillColor = usesGlass ? NSColor.clear.cgColor : NSColor.black.cgColor
         if compactHost.frame != compactFrame { compactHost.frame = compactFrame; layoutCommitCount += 1 }
         if expandedHost.frame != expandedFrame { expandedHost.frame = expandedFrame; layoutCommitCount += 1 }
         if taskScrollLink.isChangingLayout { expandedHost.layoutSubtreeIfNeeded() }
         CATransaction.commit()
         if !animated { cancelAnimations() }
+        synchronizeGlassMaterial(enabled: usesGlass, rect: newRect, radius: radius,
+            compact: state.compact,
+            degree: state.display?.islandGlassDegree ?? AppPreferences.IslandGlassDegree.defaultValue,
+            animated: animated)
         confirmationGlow.update(
             edgeEmphasis: state.tasks.contains { IslandBoardState.needsAttention($0) }
                 ? .confirmationReminder : .none,
@@ -1622,7 +1862,7 @@ final class IslandNotchSurface: NSView {
         var mirror = CGAffineTransform(translationX: 0, y: bounds.height).scaledBy(x: 1, y: -1)
         let maskPath = path.copy(using: &mirror)!
         let oldMask = clipping.presentation()?.path ?? clipping.path
-        let duration = state.compact ? 0.25 : 0.38
+        let duration = IslandSurfaceMotion.duration
         let sourceInset = CodexActivityIslandCompletionGlowGeometry.sourceInset
         let glowPath = shapePath(rect: newRect.insetBy(dx: sourceInset, dy: sourceInset), radius: radius - sourceInset)
         confirmationGlow.setIslandContour(glowPath.copy(using: &mirror)!,
@@ -1639,8 +1879,8 @@ final class IslandNotchSurface: NSView {
             animate(layer: clipping, key: "path", from: oldMask, to: maskPath, duration: duration)
         }
         if lastCompact != state.compact {
-            setContent(compactHost, visible: state.compact, animated: animated, opening: state.compact)
-            setContent(expandedHost, visible: !state.compact, animated: animated, opening: !state.compact)
+            setContent(compactHost, visible: state.compact, animated: animated)
+            setContent(expandedHost, visible: !state.compact, animated: animated)
         }
         targetRect = newRect; lastCompact = state.compact
         compactHost.setAccessibilityHidden(!state.compact)
@@ -1653,10 +1893,10 @@ final class IslandNotchSurface: NSView {
     private func animate(layer: CALayer, key: String, from: Any, to: Any, duration: Double) {
         let animation = CABasicAnimation(keyPath: key)
         animation.fromValue = from; animation.toValue = to; animation.duration = duration
-        animation.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+        animation.timingFunction = IslandSurfaceMotion.timingFunction
         layer.add(animation, forKey: key)
     }
-    private func setContent(_ host: NSView, visible: Bool, animated: Bool, opening: Bool) {
+    private func setContent(_ host: NSView, visible: Bool, animated: Bool) {
         guard let layer = host.layer else { return }
         let previous = layer.presentation()?.opacity ?? layer.opacity
         let oldTransform = layer.presentation()?.transform ?? layer.transform
@@ -1665,9 +1905,9 @@ final class IslandNotchSurface: NSView {
         layer.transform = visible ? CATransform3DIdentity : CATransform3DMakeTranslation(0, 5, 0)
         CATransaction.commit()
         if animated {
-            animate(layer: layer, key: "opacity", from: previous, to: layer.opacity, duration: visible ? 0.23 : 0.10)
+            animate(layer: layer, key: "opacity", from: previous, to: layer.opacity, duration: IslandSurfaceMotion.contentDuration)
             animate(layer: layer, key: "transform", from: NSValue(caTransform3D: oldTransform),
-                    to: NSValue(caTransform3D: layer.transform), duration: opening ? 0.32 : 0.16)
+                    to: NSValue(caTransform3D: layer.transform), duration: IslandSurfaceMotion.duration)
         }
     }
     func containsSurfacePoint(_ point: CGPoint) -> Bool {
@@ -1692,12 +1932,29 @@ final class IslandNotchSurface: NSView {
     }
     func stop() {
         cancelAnimations()
+        glassGeometry?.stop()
         confirmationGlow.update(edgeEmphasis: .none, reduceMotion: true, playbackVisible: false)
     }
 }
 
 private final class IslandNotchPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+
+    // AppKit compatibility hooks, NOT public SDK API; approved 2026-10-11.
+    // Keep only this island's material active, including its first hover open.
+    // Actual key status, first responder and event routing remain untouched.
+    // These constant appearance queries are safe off the main thread too.
+    @objc(hasKeyAppearance)
+    private nonisolated func islandKeyAppearance() -> Bool { true }
+
+    @objc(_hasKeyAppearance)
+    private nonisolated func islandInternalKeyAppearance() -> Bool { true }
+
+    @objc(_hasActiveAppearance)
+    private nonisolated func islandActiveAppearance() -> Bool { true }
+
+    @objc(_hasActiveAppearanceIgnoringKeyFocus)
+    private nonisolated func islandActiveAppearanceIgnoringKeyFocus() -> Bool { true }
 }
 
 @MainActor
@@ -1819,7 +2076,7 @@ final class IslandBoardController {
                 transitionHitUpdate = nil; trackPointer()
             }
             transitionHitUpdate = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.40, execute: work)
+            DispatchQueue.main.asyncAfter(deadline: .now() + IslandSurfaceMotion.duration + 0.02, execute: work)
         }
     }
     private func containsPointer() -> Bool {
@@ -2018,32 +2275,36 @@ struct IslandUtilityActions: View {
             } label: {
                 Group {
                     if state.isRefreshingUsage { ProgressView().controlSize(.mini).tint(IslandBoardStyle.muted) }
-                    else { Image(systemName: "arrow.clockwise") }
-                }.frame(width: 28, height: 28).contentShape(Rectangle())
+                    else { Image(systemName: "arrow.clockwise").font(IslandChromeMetrics.iconFont) }
+                }.frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize).contentShape(Rectangle())
             }
             .disabled(state.isRefreshingUsage || state.onRefreshUsage == nil)
             .accessibilityLabel(state.isRefreshingUsage ? state.text("刷新中", "Refreshing") : state.text("刷新用量", "Refresh usage"))
             .help(state.text("刷新用量", "Refresh usage"))
             Button { state.onOpenSettings?() } label: {
-                Image(systemName: "gearshape").frame(width: 28, height: 28).contentShape(Rectangle())
+                Image(systemName: "gearshape").font(IslandChromeMetrics.iconFont).frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize).contentShape(Rectangle())
             }
             .disabled(state.onOpenSettings == nil)
             .accessibilityLabel(state.text("设置", "Settings"))
             .help(state.text("打开 QuotaView 设置", "Open QuotaView settings"))
         }
         .font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
-        .buttonStyle(IslandUtilityButtonStyle())
+        .buttonStyle(IslandUtilityButtonStyle(clearSurface: true))
         .fixedSize(horizontal: true, vertical: false)
     }
 }
-private struct IslandUtilityButtonStyle: ButtonStyle {
+struct IslandUtilityButtonStyle: ButtonStyle {
+    var clearSurface = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(Capsule())
-            .background(Color.white.opacity(isEnabled ? (configuration.isPressed ? 0.14 : (hovered ? 0.085 : 0)) : 0), in: Capsule())
+            .foregroundStyle(.white)
+            .islandGlass(Capsule(), tint: clearSurface ? .white.opacity(0.04) : .black.opacity(0.28),
+                         clearSurface: clearSurface)
+            .brightness(configuration.isPressed ? -0.08 : hovered ? 0.05 : 0)
             .opacity(isEnabled ? 1 : 0.4)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = isEnabled && $0 }
@@ -2188,7 +2449,7 @@ struct IslandUsageBento: View {
     @State private var selectedActivity: Date?
     @State private var activityMode: IslandActivityHeatmap.Mode = .daily
     @StateObject private var chartCache = IslandUsageChartCache()
-    private let secondary = Color(white: 0.68)
+    private let secondary = Color(white: 0.84)
     private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
     private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
@@ -2199,28 +2460,11 @@ struct IslandUsageBento: View {
     }
     private var chart: EstimatedCostChartModel { charts.cost }
     private func surface<Content: View>(highlightBottom: Bool = false, contentInset: CGFloat = 14, @ViewBuilder content: () -> Content) -> some View {
+        // Native glass owns its content, rather than elevating a separate clear
+        // background above ordinary text/charts in a shared glass container.
         content().padding(contentInset).frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14).fill(Color(white: 0.055))
-                    if highlightBottom {
-                        // Highlight the account surface without adding a container or changing row geometry.
-                        LinearGradient(stops: [
-                            .init(color: .white.opacity(0.12), location: 0),
-                            .init(color: .white.opacity(0.06), location: 0.25),
-                            .init(color: .clear, location: 0.5),
-                            .init(color: .clear, location: 1)
-                        ], startPoint: .bottom, endPoint: .top)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .transition(.opacity)
-                    }
-                    // The tooltip is part of content and can cross this edge. Keep
-                    // the card's border behind it, not in an outer content overlay.
-                    RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5)
-                }
-                .allowsHitTesting(false)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: highlightBottom)
-            }
+            .islandGlass(RoundedRectangle(cornerRadius: 14),
+                tint: .black.opacity(highlightBottom ? 0.14 : 0.22))
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
@@ -2329,7 +2573,7 @@ struct IslandUsageBento: View {
                         .padding(.horizontal, IslandChromeMetrics.labelInset)
                         .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
-                        .background(selected ? Color(white: 0.16) : .clear, in: Capsule())
+                        .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
                         .contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .accessibilityLabel(value.displayName)
@@ -2580,6 +2824,8 @@ struct IslandUsageBento: View {
                         Text(activityLabel(mode)).font(.system(size: 10, weight: .medium))
                             .padding(.horizontal, 8)
                             .foregroundStyle(activityMode == mode ? .white : secondary)
+                            .padding(.vertical, 4)
+                            .islandGlass(Capsule(), tint: activityMode == mode ? .white.opacity(0.20) : .black.opacity(0.28))
                     }.buttonStyle(.plain)
                 }
             }

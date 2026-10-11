@@ -182,6 +182,9 @@ enum CodexActivityIslandEdgeEmphasis: Equatable {
 }
 
 struct CodexActivityIslandConfirmationReminderContract {
+    // Match the awaiting-confirmation orb’s warm upper highlight. Keep quota
+    // warning and quantum particle palettes independent.
+    static let approvalColor = NSColor(srgbRed: 1, green: 0.56, blue: 0.12, alpha: 1)
     static let warningColor = NSColor(
         srgbRed: 1,
         green: 0.80,
@@ -2078,6 +2081,11 @@ private final class ActivityIslandSurfaceView: NSView {
         applyCornerRadius()
     }
 
+    func useTransparentBase() {
+        // Task cards supply their own native glass behind this effect host.
+        tintView.isHidden = true
+    }
+
     private func applyCornerRadius() {
         let radius = min(resolvedCornerRadius, bounds.height / 2)
         layer?.cornerRadius = radius
@@ -2155,6 +2163,14 @@ struct CodexActivityQuotaRingContract {
 
 final class ActivityIslandCompletionGlowView: NSView {
     var consoleContour: CGPath?
+    var usesContinuousCorners = false
+    var drawsOnlyEdge = false {
+        didSet {
+            guard drawsOnlyEdge != oldValue else { return }
+            applyColors()
+            needsLayout = true
+        }
+    }
     // Optional satellite styling; nil preserves the existing main-island palette
     // and completion sequence.
     var completionColor: NSColor? { didSet { applyColors() } }
@@ -2167,6 +2183,7 @@ final class ActivityIslandCompletionGlowView: NSView {
 
     private let violetGlowLayer = CAShapeLayer()
     private let cyanGlowLayer = CAShapeLayer()
+    private let edgeOnlyMask = CAShapeLayer()
     private var edgeEmphasis = CodexActivityIslandEdgeEmphasis.none
     private var reduceMotion = false
     private var playbackVisible = false
@@ -2230,16 +2247,43 @@ final class ActivityIslandCompletionGlowView: NSView {
             )
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let glowPath = consoleContour ?? CGPath(
+        let glowPath = consoleContour ?? (usesContinuousCorners
+            ? IslandVibeLayout.continuousContour(in: glowSourceRect, radius: glowSourceRadius)
+            : CGPath(
             roundedRect: glowSourceRect,
             cornerWidth: glowSourceRadius,
             cornerHeight: glowSourceRadius,
             transform: nil
-        )
+        ))
+        let shadowPath = drawsOnlyEdge
+            ? glowPath.copy(strokingWithWidth: CodexActivityIslandCompletionGlowGeometry.outlineWidth,
+                lineCap: .round, lineJoin: .round, miterLimit: 2)
+            : glowPath
         for glowLayer in [violetGlowLayer, cyanGlowLayer] {
             glowLayer.frame = bounds
             glowLayer.path = glowPath
-            glowLayer.shadowPath = glowPath
+            glowLayer.shadowPath = shadowPath
+        }
+        if drawsOnlyEdge && consoleContour == nil {
+            // Cut out the text area from the glow only, never from a glass
+            // ancestor. Keep a narrow inner rim and the existing outer bloom.
+            let rimWidth: CGFloat = 2
+            let interior = islandRect.insetBy(dx: rimWidth, dy: rimWidth)
+            let maskPath = CGMutablePath()
+            maskPath.addRect(bounds)
+            if interior.width > 0 && interior.height > 0 {
+                let radius = max(0, islandRadius - rimWidth)
+                maskPath.addPath(usesContinuousCorners
+                    ? IslandVibeLayout.continuousContour(in: interior, radius: radius)
+                    : CGPath(roundedRect: interior, cornerWidth: radius, cornerHeight: radius, transform: nil))
+            }
+            edgeOnlyMask.frame = bounds
+            edgeOnlyMask.fillColor = NSColor.black.cgColor
+            edgeOnlyMask.fillRule = .evenOdd
+            edgeOnlyMask.path = maskPath
+            layer?.mask = edgeOnlyMask
+        } else {
+            layer?.mask = nil
         }
         CATransaction.commit()
     }
@@ -2373,14 +2417,16 @@ final class ActivityIslandCompletionGlowView: NSView {
         case .confirmationReminder:
             let warning =
                 CodexActivityIslandConfirmationReminderContract
-                .warningColor
+                .approvalColor
             colors = (warning, warning)
         }
         for (layer, color) in zip(
             [violetGlowLayer, cyanGlowLayer],
             [colors.0, colors.1]
         ) {
-            layer.fillColor = color.cgColor
+            layer.fillColor = drawsOnlyEdge ? NSColor.clear.cgColor : color.cgColor
+            layer.strokeColor = drawsOnlyEdge ? color.cgColor : nil
+            layer.lineWidth = CodexActivityIslandCompletionGlowGeometry.outlineWidth
             layer.shadowColor = color.cgColor
         }
     }
@@ -2402,6 +2448,7 @@ final class ActivityIslandCompletionGlowView: NSView {
 }
 
 final class ActivityIslandCompletionOutlineView: NSView {
+    var usesContinuousCorners = false
     var completionColor: NSColor? { didSet { applyColors() } }
     var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
@@ -2464,7 +2511,9 @@ final class ActivityIslandCompletionOutlineView: NSView {
         )
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let path = CGPath(
+        let path = usesContinuousCorners
+            ? IslandVibeLayout.continuousContour(in: outlineRect, radius: outlineRadius)
+            : CGPath(
             roundedRect: outlineRect,
             cornerWidth: outlineRadius,
             cornerHeight: outlineRadius,
@@ -2554,7 +2603,7 @@ final class ActivityIslandCompletionOutlineView: NSView {
         case .confirmationReminder:
             let warning =
                 CodexActivityIslandConfirmationReminderContract
-                .warningColor
+                .approvalColor
             outlineGradientLayer.colors = [
                 warning.withAlphaComponent(0.76).cgColor,
                 warning.cgColor,
@@ -3945,6 +3994,7 @@ final class IslandQuantumProgressHost: NSView {
     private var renderState: CodexActivityRenderState?
     private var requestedVisible = false
     private var reduceMotion = false
+    private var primaryContentHeight: CGFloat?
     private var hasLaidOutEffect = false
     private(set) var effectLayoutCommitCount = 0
     var effectFrame: CGRect { effect.frame }
@@ -3960,6 +4010,10 @@ final class IslandQuantumProgressHost: NSView {
         super.init(frame: frame)
         wantsLayer = true
         addSubview(glow); addSubview(surface); addSubview(outline)
+        surface.useTransparentBase()
+        glow.drawsOnlyEdge = true
+        glow.usesContinuousCorners = true
+        outline.usesContinuousCorners = true
         surface.addSubview(effect)
         effect.setEffect(.dropField)
         effect.setPlaybackEnabled(false)
@@ -3969,7 +4023,13 @@ final class IslandQuantumProgressHost: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func layout() {
         super.layout()
-        if surface.frame != bounds { surface.frame = bounds }
+        // Child activity shares the glass card, but never enlarges the progress
+        // canvas. Keep that canvas top-aligned in AppKit's coordinate space;
+        // the independent completion outline/glow still follow the full card.
+        let height = min(bounds.height, max(0, primaryContentHeight ?? bounds.height))
+        let surfaceFrame = CGRect(x: bounds.minX, y: isFlipped ? bounds.minY : bounds.maxY - height,
+            width: bounds.width, height: height)
+        if surface.frame != surfaceFrame { surface.frame = surfaceFrame }
         surface.setCornerRadius(IslandVibeLayout.rowRadius)
         let effectGeometryChanged = effect.frame != surface.bounds
         if effectGeometryChanged {
@@ -3984,7 +4044,13 @@ final class IslandQuantumProgressHost: NSView {
         if effectGeometryChanged || !hasLaidOutEffect { effect.redrawIfPaused() }
         hasLaidOutEffect = true
     }
-    func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool, progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField) {
+    func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool,
+                   progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField,
+                   primaryContentHeight: CGFloat? = nil) {
+        if self.primaryContentHeight != primaryContentHeight {
+            self.primaryContentHeight = primaryContentHeight
+            needsLayout = true
+        }
         effect.setEffect(progressEffect)
         let newlyBound = self.renderState == nil || self.renderState?.taskIdentity != renderState.taskIdentity
         // Selecting an already completed receipt should not replay its fill.
@@ -4005,17 +4071,18 @@ final class IslandQuantumProgressHost: NSView {
     }
     private func synchronizePlayback() {
         let visible = requestedVisible && window != nil
-        effect.setPlaybackEnabled(visible)
         guard let renderState else { return }
-        IslandConfirmationPulse.update(effect.layer, animated: visible && !reduceMotion
-            && renderState.visualState == .awaitingConfirmation, minimumOpacity: 0.65)
-        let emphasis = CodexActivityIslandConfirmationReminderContract.edgeEmphasis(
+        let confirming = renderState.visualState == .awaitingConfirmation
+        effect.isHidden = confirming
+        effect.setPlaybackEnabled(visible && !confirming)
+        IslandConfirmationPulse.update(effect.layer, animated: false)
+        let emphasis: CodexActivityIslandEdgeEmphasis = confirming ? .confirmationReminder : CodexActivityIslandConfirmationReminderContract.edgeEmphasis(
             visualState: renderState.visualState,
             reminderActive: renderState.isConfirmationReminderActive,
             completionEffectAvailable: effect.isRendererAvailable)
         glow.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion, playbackVisible: visible)
         outline.update(edgeEmphasis: emphasis, reduceMotion: true, playbackVisible: visible)
-        let completionBreathing = visible && !reduceMotion && renderState.visualState == .completed
+        let completionBreathing = visible && !reduceMotion && (renderState.visualState == .completed || confirming)
         glow.updateIslandConfirmationPulse(animated: completionBreathing)
         // Keep the completion outline steady; only its outer bloom goes dark.
         IslandConfirmationPulse.update(outline.layer, animated: false)

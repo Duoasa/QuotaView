@@ -1,0 +1,152 @@
+{
+  "changed_documents": 29,
+  "before_lines": 8243,
+  "after_lines": 1531,
+  "changes": [
+    {
+      "path": "active/HANDOFF-0.7.7-build1-EN.md",
+      "before_lines": 39,
+      "after_lines": 7
+    },
+    {
+      "path": "active/HANDOFF-CONTINUE-2026-10-01.md",
+      "before_lines": 207,
+      "after_lines": 5
+    },
+    {
+      "path": "active/HANDOFF-NEXT-SESSION-2026-09-27.md",
+      "before_lines": 543,
+      "after_lines": 5
+    },
+    {
+      "path": "active/AGENTS.md",
+      "before_lines": 96,
+      "after_lines": 96
+    },
+    {
+      "path": "active/design-qa.md",
+      "before_lines": 62,
+      "after_lines": 50
+    },
+    {
+      "path": "active/HANDOFF.md",
+      "before_lines": 1732,
+      "after_lines": 53
+    },
+    {
+      "path": "active/docs/design/quotaview-activity-island-hover-transparency-0.4.5.md",
+      "before_lines": 100,
+      "after_lines": 102
+    },
+    {
+      "path": "active/docs/design/quotaview-0.7.3-development-delivery-2026-10-01.md",
+      "before_lines": 301,
+      "after_lines": 12
+    },
+    {
+      "path": "active/docs/design/quotaview-island-production-interaction-review-2026-09-30.md",
+      "before_lines": 995,
+      "after_lines": 109
+    },
+    {
+      "path": "active/docs/design/QUOTAVIEW_UI_RULES.md",
+      "before_lines": 445,
+      "after_lines": 148
+    },
+    {
+      "path": "active/docs/design/quotaview-island-multitask-next.md",
+      "before_lines": 1097,
+      "after_lines": 18
+    },
+    {
+      "path": "active/docs/design/quotaview-feedback-settings-0.7.5.md",
+      "before_lines": 32,
+      "after_lines": 34
+    },
+    {
+      "path": "active/docs/design/quotaview-codex-activity-island-0.3.6.md",
+      "before_lines": 134,
+      "after_lines": 136
+    },
+    {
+      "path": "active/docs/design/quotaview-menu-quota-0.5.1.md",
+      "before_lines": 157,
+      "after_lines": 159
+    },
+    {
+      "path": "active/docs/design/quotaview-background-memory-2026-10-03.md",
+      "before_lines": 62,
+      "after_lines": 21
+    },
+    {
+      "path": "active/docs/specs/codex-island-information-contract.md",
+      "before_lines": 183,
+      "after_lines": 101
+    },
+    {
+      "path": "active/docs/specs/codex-desktop-confirmation-sync.md",
+      "before_lines": 90,
+      "after_lines": 68
+    },
+    {
+      "path": "active/docs/specs/DEVELOPMENT_PROCESS.md",
+      "before_lines": 73,
+      "after_lines": 70
+    },
+    {
+      "path": "active/docs/specs/README.md",
+      "before_lines": 111,
+      "after_lines": 79
+    },
+    {
+      "path": "active/docs/specs/claude-code-support.md",
+      "before_lines": 118,
+      "after_lines": 74
+    },
+    {
+      "path": "active/Prototypes/MultitaskIslandConsole/README.md",
+      "before_lines": 388,
+      "after_lines": 23
+    },
+    {
+      "path": "active/Prototypes/MultitaskIslandConsole/AGENTS.md",
+      "before_lines": 79,
+      "after_lines": 36
+    },
+    {
+      "path": "active/Prototypes/MultitaskIslandConsole/References/scroll-implementation-audit-2026-09-29.md",
+      "before_lines": 36,
+      "after_lines": 36
+    },
+    {
+      "path": "entry/README.md",
+      "before_lines": 13,
+      "after_lines": 13
+    },
+    {
+      "path": "entry/VERSION_HISTORY.md",
+      "before_lines": 15,
+      "after_lines": 15
+    },
+    {
+      "path": "entry/README.zh-CN.md",
+      "before_lines": 12,
+      "after_lines": 12
+    },
+    {
+      "path": "entry/AGENTS.md",
+      "before_lines": 22,
+      "after_lines": 22
+    },
+    {
+      "path": "entry/HANDOFF.md",
+      "before_lines": 20,
+      "after_lines": 20
+    },
+    {
+      "path": "legacy-entry/HANDOFF.md",
+      "before_lines": 1081,
+      "after_lines": 7
+    }
+  ]
+}
