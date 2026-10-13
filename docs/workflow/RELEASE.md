@@ -49,8 +49,8 @@
   和替代版本，防止后续恢复问题版本；
 - 产品可见 Build Number 按 Marketing Version 独立计数：Marketing Version
   变化时重置为 `Build 1`；Marketing Version 不变时，每个后续发布构建
-  必须递增，不得复用旧发布 Build Number。常规源码迭代不自动递增版本或
-  Build，显式运行新代码的增量开发编译复用现有开发身份。每个发布构建
+  必须递增，不得复用旧发布 Build Number。2026-10-12 用户要求每批开发版应用修改也递增产品 Build
+  和内部更新序号，Marketing Version 保持不变，开发 Bundle ID 与数据身份不变。每个发布构建
   使用唯一 tag 和带 Build Number 的 ZIP；Marketing Version 是否升级由
   用户明确决定。
 - Sparkle 使用的 `CFBundleVersion` / `CURRENT_PROJECT_VERSION` 是机器可读的

@@ -4,6 +4,51 @@ import Foundation
 import QuotaViewCore
 
 @MainActor
+enum IslandScreenSelection {
+    static func identifier(_ screen: NSScreen) -> String {
+        guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+              let uuid = CGDisplayCreateUUIDFromDisplayID(number.uint32Value)?.takeRetainedValue() else { return "" }
+        return CFUUIDCreateString(nil, uuid) as String
+    }
+
+    static func resolvedID(followsFocus: Bool, fixedID: String, focusedID: String?, available: [String]) -> String? {
+        if followsFocus, let focusedID, available.contains(focusedID) { return focusedID }
+        if !followsFocus, available.contains(fixedID) { return fixedID }
+        return available.first
+    }
+
+    static func target(followsFocus: Bool, fixedID: String, previous: NSScreen?) -> NSScreen? {
+        let screens = NSScreen.screens
+        guard screens.count > 1 else { return screens.first }
+        var focused: NSScreen?
+        if followsFocus {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+                focused = previous
+            } else if let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+                      let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]],
+                      let entry = windows.first(where: {
+                          ($0[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid &&
+                          ($0[kCGWindowLayer as String] as? NSNumber)?.intValue == 0 &&
+                          (($0[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1) > 0
+                      }),
+                      let dictionary = entry[kCGWindowBounds as String] as? NSDictionary,
+                      let bounds = CGRect(dictionaryRepresentation: dictionary) {
+                let geometries = screens.compactMap { screen -> CodexActivityScreenLocator.DisplayGeometry? in
+                    guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return nil }
+                    return .init(id: id.uint32Value, bounds: CGDisplayBounds(id.uint32Value))
+                }
+                let id = CodexActivityScreenLocator.bestDisplayID(windowBounds: [bounds], displays: geometries)
+                focused = screens.first { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == id }
+            }
+            focused = focused ?? previous ?? NSScreen.main
+        }
+        let id = resolvedID(followsFocus: followsFocus, fixedID: fixedID,
+                            focusedID: focused.map(identifier), available: screens.map(identifier))
+        return screens.first { identifier($0) == id } ?? screens.first
+    }
+}
+
+@MainActor
 final class IslandSession {
     var onWake: (() -> Void)?
     let model = IslandLiveStore(archiveDefaults: .standard)
@@ -11,6 +56,8 @@ final class IslandSession {
     private var clock: Timer?
     private var contentRefresh: DispatchWorkItem?
     private var stateRefresh: DispatchWorkItem?
+    private var followsFocus = false
+    private var fixedScreenID = ""
     private var enabled = false
     private var english = false
     private var remaining: Int?
@@ -71,7 +118,9 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, islandUsageCapsuleTone: AppPreferences.UsageCapsuleTone = .dark, backgroundMemorySnapshots: [CodexActivitySnapshot] = []) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, islandUsageCapsuleTone: AppPreferences.UsageCapsuleTone = .dark, backgroundMemorySnapshots: [CodexActivitySnapshot] = [], followsFocus: Bool = false, fixedScreenID: String = "") {
+        self.followsFocus = followsFocus
+        self.fixedScreenID = fixedScreenID
         self.backgroundMemorySnapshots = backgroundMemorySnapshots
         self.usageOptions = usageOptions
         self.automaticPopupEnabled = automaticPopupEnabled
@@ -114,7 +163,7 @@ final class IslandSession {
         contentRefresh?.cancel(); contentRefresh = nil
         if (!enabled || locked) && !board.isVisible { return }
         model.preservedID = board.state.detailID
-        board.screen = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.screens.first
+        board.screen = IslandScreenSelection.target(followsFocus: followsFocus, fixedID: fixedScreenID, previous: board.screen)
         var display = model.display(english: english, remaining: remaining, enabled: enabled && !locked, privacy: privacy)
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
