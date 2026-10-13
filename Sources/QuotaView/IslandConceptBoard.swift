@@ -1066,7 +1066,7 @@ struct IslandSubagentStrip: View {
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         }.frame(height: IslandVibeLayout.textRowHeight)
             .padding(.horizontal, IslandVibeLayout.contentInset)
-            .padding(.bottom, IslandVibeLayout.contentInset)
+            .frame(height: IslandVibeLayout.subagentRowHeight, alignment: .center)
             .help(children.map { [$0.title, $0.model, $0.status, $0.duration, $0.detail].filter { !$0.isEmpty }.joined(separator: " · ") }.joined(separator: "\n"))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(copy.islandSubagentGroupTitle(count: children.count))

@@ -113,6 +113,7 @@ struct SettingsView: View {
     @State private var codexConnectionDetailsExpanded = false
     @State private var showsQuitConfirmation = false
     @State private var showsFeedbackQRCode = false
+    @State private var availableScreens = NSScreen.screens
 
     private var copy: AppCopy { preferences.copy }
 
@@ -128,6 +129,9 @@ struct SettingsView: View {
                 settingsDetail(for: selection ?? .general)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+            availableScreens = NSScreen.screens
         }
         .environment(\.colorScheme, .dark)
         .tint(Color(nsColor: .controlAccentColor))
@@ -847,9 +851,43 @@ struct SettingsView: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var screenOptions: [(String, String)] {
+        var options = [("", copy.text("主屏幕", "Main display"))]
+        options += availableScreens.enumerated().map { index, screen in
+            (IslandScreenSelection.identifier(screen), "\(index + 1) · \(screen.localizedName)")
+        }
+        if !options.contains(where: { $0.0 == preferences.islandFixedScreenID }) {
+            options.append((preferences.islandFixedScreenID, copy.text("所选屏幕未连接", "Selected display disconnected")))
+        }
+        return options
+    }
+
     private var generalSettings: some View {
         VStack(alignment: .leading, spacing: 16) {
             settingsSection(copy.text("语言", "Language")) { languageSettings }
+            settingsSection(copy.text("灵动岛显示位置", "Island display")) {
+                NativeSettingsCard {
+                    NativeSettingsRow(title: copy.text("焦点屏幕跟随", "Follow focused display"),
+                        subtitle: copy.text("跟随当前活动窗口所在的屏幕。", "Follow the display containing the active window."),
+                        symbol: "display.2", symbolColor: .blue) {
+                        Toggle("", isOn: $preferences.islandFollowsFocus).labelsHidden()
+                            .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                            .accessibilityLabel(copy.text("焦点屏幕跟随", "Follow focused display"))
+                    }
+                    if !preferences.islandFollowsFocus {
+                        NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+                        NativeSettingsRow(title: copy.text("固定屏幕", "Fixed display"),
+                            subtitle: copy.text("断开时暂回主屏，重新连接后恢复。", "Falls back to the main display until reconnected."),
+                            symbol: "display", symbolColor: .blue) {
+                            SettingsValueMenu(title: copy.text("固定屏幕", "Fixed display"),
+                                selection: $preferences.islandFixedScreenID, options: screenOptions)
+                        }
+                    }
+                }
+                if availableScreens.count < 2 {
+                    NativeSettingsNote(text: copy.text("连接多台显示器后，焦点跟随会自动生效。", "Focus following takes effect when multiple displays are connected."))
+                }
+            }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
                 Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 14, weight: .medium))

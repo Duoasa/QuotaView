@@ -110,3 +110,5 @@
 - 修订既有段落，不在文件顶部持续追加互相覆盖的“最新”记录；变更过程可进入带日期的归档。
 - 授权、状态词汇与完成条件见 [SDD 流程](DEVELOPMENT_PROCESS.md)；历史计划不构成新任务授权。
 - 清理前完整文档及原状态见[快照](../archive/maintenance-20261008/README.md)。本轮仅维护文档和产物，无产品行为变更。
+
+- [灵动岛显示位置](island-display-placement.md)：QV-PRODUCT-ISLAND-DISPLAY-001，已实现，待用户多屏验收。

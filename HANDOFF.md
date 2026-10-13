@@ -2,6 +2,18 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## 开发最新版：0.8.1 Build 5（内部 65）
+
+2026-10-12：通用设置新增灵动岛显示位置。焦点跟随使用中性滑动开关，固定屏幕复用语言 SettingsValueMenu。默认保持主屏；开启后按活动应用前台窗口所在屏幕定位，每秒复用现有刷新检查，单屏不扫描窗口。固定屏幕保存显示器 UUID，断开回主屏、重连恢复；设置列表随屏幕连接变化刷新。用量胶囊随岛体移动。
+
+Build 4 完成功能，Build 5 调整控件样式。增量 Debug arm64 构建与重启通过，PID 92879；234 输入、13 资产、运行包清单和加载路径一致。证据 `.build/screen-controls-20261012/`。实际多屏及视觉待用户验收。2026-10-13 用户授权启动当前开发版并将源码推送合并 main；本次只同步源码，不发布安装包或 appcast。
+
+## 子 Agent 居中：0.8.1 Build 3（内部 63）
+
+2026-10-12：子 Agent 的 18 pt 内容在下方 28 pt 区域内垂直居中，上下各 5 pt，卡片总高度与主区域特效不变。按用户新要求，每批开发版应用修改递增可见 Build 与内部序号；规则已同步 AGENTS 与发布规则。
+
+增量 Debug arm64 编译及运行包更新通过，PID 185；实际加载路径、源码输入、包清单与版本身份核对通过。证据 `.build/subagent-row-centering-20261012/`。视觉待用户检查。仅本地开发修改，未推送、打包或更新 appcast；公开稳定版仍为下方 Build 2。
+
 ## 0.8.1 Build 2 已发布
 
 [0.8.1 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2) 已发布 GitHub Stable / Latest，源码经 PR #94 合入 main；PR/main CI 均通过。用户已授权并推送签名 appcast，完整版本、哈希、公证与回滚事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。前一稳定版 `v0.7.9-build.1` 保留。
