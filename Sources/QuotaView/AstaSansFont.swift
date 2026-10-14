@@ -24,10 +24,15 @@ enum AstaSans {
     }
 
     private static func font(_ name: String, size: CGFloat, fallbackWeight: Font.Weight) -> Font {
-        guard let font = AstaSansFontRegistrar.font(named: name, size: size) else {
+        // WidgetKit serializes this font for a separate system renderer. An
+        // in-memory CGFont has no source URL for that process to reopen.
+        let font = Bundle.main.bundleURL.pathExtension == "appex"
+            ? AstaSansFontRegistrar.widgetFont(named: name, size: size)
+            : AstaSansFontRegistrar.font(named: name, size: size)
+        guard let font else {
             return .system(size: size, weight: fallbackWeight)
         }
-        // Keep the bundled face instead of asking SwiftUI to resolve its name again.
+        // Keep the exact bundled face, including its file descriptor in widgets.
         return Font(font)
     }
 }
@@ -38,6 +43,39 @@ enum AstaSansFontRegistrar {
     // Swift's lazy static initialization serializes loading, including early view/font
     // construction. Only successfully decoded and validated faces enter this cache.
     private static let bundledFonts: [String: CTFont] = loadBundledFonts()
+
+    private static let widgetFonts: [String: CTFont] = {
+        var fonts: [String: CTFont] = [:]
+        for name in ["AstaSans-Regular", "AstaSans-Medium", "AstaSans-SemiBold"] {
+            guard let url = Bundle.main.url(forResource: name, withExtension: "ttf", subdirectory: "Fonts"),
+                  let font = fileBackedFont(at: url, expectedName: name) else {
+                logger.error("No archiveable bundled widget font: \(name, privacy: .public); using system font")
+                continue
+            }
+            fonts[name] = font
+        }
+        return fonts
+    }()
+
+    static func widgetFont(named name: String, size: CGFloat) -> CTFont? {
+        guard let font = widgetFonts[name] else { return nil }
+        return CTFontCreateCopyWithAttributes(font, size, nil, nil)
+    }
+
+    // Retain the bundled URL in the descriptor so WidgetKit's renderer can
+    // reconstruct the font. Never resolve a same-name user-installed face.
+    static func fileBackedFont(at url: URL, expectedName: String) -> CTFont? {
+        guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor],
+              let descriptor = descriptors.first(where: {
+                  CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String == expectedName
+              }) else { return nil }
+        let font = CTFontCreateWithFontDescriptor(descriptor, 12, nil)
+        guard CTFontCopyPostScriptName(font) as String == expectedName,
+              let sourceURL = CTFontCopyAttribute(font, kCTFontURLAttribute) as? URL,
+              sourceURL.standardizedFileURL == url.standardizedFileURL,
+              hasRequiredGlyphs(font) else { return nil }
+        return font
+    }
 
     static func registerBundledFonts() {
         _ = bundledFonts

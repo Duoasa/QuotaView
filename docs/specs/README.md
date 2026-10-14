@@ -1,6 +1,10 @@
 # QuotaView SDD 注册表
 
-## 当前本地开发：0.8.2 Build 9
+## 当前本地开发：0.8.2 Build 10
+
+[Widget 字体归档兼容](../design/quotaview-widgetkit-solution.md#macos-27-字体归档兼容2026-10-15) · `Accepted / Verifying`：针对实机 NotificationCenter 的 invalidFont 解码错误，扩展改用保留随包文件 URL 的字体 descriptor，主应用字体不变。开发构建与运行包已更新，现有正式 Widget 尚未替换，系统渲染与用户视觉验收待完成。用户已授权推送合并，CI 与交付见 Handoff。
+
+## 已合入源码：0.8.2 Build 9
 
 [底部玻璃与胶囊统一外观](island-glass-appearance.md) · `Accepted / Verifying`：浅色 / 深色 / 自动三选项只在液态玻璃显示，统一底栏与胶囊；黑色渐变和深色卡片保留，设置按外观与布局、显示内容、任务特效、自动展开分组。Build 6 已修正非激活按钮前景发灰，Build 7 按用户要求统一工具图标为 11 pt Semibold，Build 8 将四处导航文案改为 12 pt Regular 并增加来源标签右内距；Build 9 移除胶囊独立染色，与岛体/预览共用 clear 玻璃；编译与开发包核对通过；前序 3 项定向冒烟通过。用户已授权推送源码并合并 main，GitHub 结果与运行状态见 [Handoff](../../HANDOFF.md)，视觉待用户验收。
 

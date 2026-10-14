@@ -87,3 +87,11 @@ Provider 只包含显示名、归一方案、主额度窗口、最多三个辅�
 
 真实共享容器、Developer ID、公证/Staple 和回下载验证已在 0.3.1 Build 2
 完成；证据见 [`VERSION_HISTORY.md`](../../VERSION_HISTORY.md#031-build-2)。
+
+## macOS 27 字体归档兼容（2026-10-15）
+
+`WIDGET-05` / `Accepted / Verifying`：WidgetKit 将视图交给独立系统进程渲染，传入字体必须保留可重建的来源信息。Widget 扩展使用随包 Asta Sans 文件的 Core Text descriptor，校验 PostScript 名、准确来源 URL 与必要字形；复制到目标字号后仍保留 URL。缺失、损坏或错误字重文件降级系统字体。主应用继续使用经过验证的内存字体，不按名字选取用户安装字体。
+
+本机 macOS 27 日志确认正式 Build 2 的时间线生成成功，而 NotificationCenter 解码 timeline 和 placeholder 报 `CodablePlatformFont.invalidFont`、继发 `badTimelineData`。旧内存字体三种字重均缺少 `kCTFontURLAttribute`；文件 descriptor 保留地址。本机证据不代表所有设备或全新安装均复现。
+
+0.8.2 Build 10 / 内部 74 已更新开发包；正式 `/Applications/QuotaView.app` 未替换。字体来源与重建检查不能证明 WidgetKit 宿主实际渲染通过；需安装含修复的扩展后，由用户检查 Small/Medium、占位/不可用/有效值、浅深色和系统桌面样式。运行与测试证据 `.build/widget-font-20261015/`，合入结果见 [Handoff](../../HANDOFF.md)。
