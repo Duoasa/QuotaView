@@ -598,43 +598,18 @@ struct SettingsView: View {
     private var islandSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
             islandMaterialSettings
-            settingsSection(copy.text("显示", "Display")) {
+            settingsSection(copy.text("显示内容", "Content")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
                         subtitle: copy.text("在灵动岛下方显示剩余额度和重置倒计时，宽度随周期数量自适应。", "Show remaining quota and reset countdown below the Island; width adapts to available periods."),
                         symbol: "chart.pie.fill", color: .systemGreen,
                         isOn: $preferences.islandFloatingUsageEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
-                    NativeSettingsRow(title: copy.text("胶囊配色", "Capsule appearance"),
-                        subtitle: copy.text("深色为染色玻璃，浅色为无着色的清透玻璃。", "Dark uses tinted glass; Light uses clear, untinted glass."),
-                        symbol: "circle.lefthalf.filled", symbolColor: .secondary) {
-                        Picker(copy.text("胶囊配色", "Capsule appearance"), selection: $preferences.islandUsageCapsuleTone) {
-                            Text(copy.text("深色", "Dark")).tag(AppPreferences.UsageCapsuleTone.dark)
-                            Text(copy.text("浅色", "Light")).tag(AppPreferences.UsageCapsuleTone.light)
-                        }
-                        .pickerStyle(.segmented).labelsHidden()
-                        .fixedSize(horizontal: true, vertical: false)
-                        .disabled(!preferences.islandFloatingUsageEnabled)
-                    }
-                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     preferenceToggle(copy.text("隐私模式", "Privacy mode"),
                         subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
                         symbol: "eye.slash.fill", color: .systemGray,
                         isOn: $preferences.codexIslandPrivacy)
-                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
-                    NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
-                        subtitle: copy.text("仅调整任务列表与用量页，刘海两侧自动保留安全空间。", "Task list and usage only. Space around the camera notch stays clear."),
-                        symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
-                        HStack(spacing: 12) {
-                            Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
-                                .controlSize(.small).frame(width: 150)
-                                .disabled(islandWidthRange.lowerBound == islandWidthRange.upperBound)
-                                .accessibilityLabel(copy.text("展开宽度", "Expanded width"))
-                                .accessibilityValue("\(Int(islandWidthSelection.wrappedValue)) pt")
-                            Text("\(Int(islandWidthSelection.wrappedValue)) pt")
-                                .font(.callout.monospacedDigit()).frame(width: 52, alignment: .trailing)
-                        }
-                    }
+
                 }
             }
             settingsSection(copy.text("任务特效", "Task effects")) {
@@ -900,7 +875,7 @@ struct SettingsView: View {
 
     private var islandMaterialSettings: some View {
         VStack(alignment: .leading, spacing: 16) {
-            settingsSection(copy.text("灵动岛材质", "Island material")) {
+            settingsSection(copy.text("外观与布局", "Appearance and layout")) {
                 NativeSettingsCard {
                     islandMaterialOption(.liquidGlass,
                         title: copy.text("液态玻璃", "Liquid Glass"),
@@ -913,6 +888,19 @@ struct SettingsView: View {
                         symbol: "rectangle.fill")
                 }
                 if preferences.islandMaterial == .liquidGlass {
+                    NativeSettingsCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(copy.text("玻璃外观", "Glass appearance")).font(.headline)
+                            HStack(alignment: .top, spacing: 14) {
+                                ForEach(AppPreferences.IslandGlassAppearance.allCases) { appearance in
+                                    glassAppearanceOption(appearance)
+                                }
+                            }
+                            Text(copy.text("底部玻璃、按钮和用量胶囊统一切换；自动跟随系统。", "Applies to the lower glass, controls and usage capsule. Auto follows macOS."))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }.padding(16)
+                    }
                     NativeSettingsCard {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(copy.text("玻璃程度", "Glass amount")).font(.headline)
@@ -927,12 +915,51 @@ struct SettingsView: View {
                         }.padding(16)
                     }
                 }
+                NativeSettingsCard {
+                    NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
+                        subtitle: copy.text("仅调整任务列表与用量页，刘海两侧自动保留安全空间。", "Task list and usage only. Space around the camera notch stays clear."),
+                        symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
+                        HStack(spacing: 12) {
+                            Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
+                                .controlSize(.small).frame(width: 150)
+                                .disabled(islandWidthRange.lowerBound == islandWidthRange.upperBound)
+                                .accessibilityLabel(copy.text("展开宽度", "Expanded width"))
+                                .accessibilityValue("\(Int(islandWidthSelection.wrappedValue)) pt")
+                            Text("\(Int(islandWidthSelection.wrappedValue)) pt")
+                                .font(.callout.monospacedDigit()).frame(width: 52, alignment: .trailing)
+                        }
+                    }
+                }
                 NativeSettingsNote(text: copy.text("立即生效，并记住你的选择。任务特效保持当前设置。", "Applies immediately and remembers your choice. Task effects keep their current setting."))
                 if #unavailable(macOS 26.0) {
                     NativeSettingsNote(text: copy.text("原生液态玻璃需要 macOS 26 或更新版本；当前系统使用半透明材质。", "Native Liquid Glass requires macOS 26 or later; this system uses translucent material."))
                 }
             }
         }
+    }
+
+    private func glassAppearanceOption(_ appearance: AppPreferences.IslandGlassAppearance) -> some View {
+        let selected = preferences.islandGlassAppearance == appearance
+        return Button { preferences.islandGlassAppearance = appearance } label: {
+            VStack(spacing: 7) {
+                SettingsGlassAppearanceThumbnail(appearance: appearance)
+                    .frame(height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .padding(4)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 3)
+                    }
+                Text(appearance.title(copy)).font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? .primary : .secondary)
+            }.frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(appearance.title(copy))
+        .accessibilityValue(selected ? copy.text("已选择", "Selected") : copy.text("未选择", "Not selected"))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func islandMaterialOption(_ mode: AppPreferences.IslandMaterial, title: String,
@@ -1368,6 +1395,71 @@ private struct SettingsLiveEffectPreview: NSViewRepresentable {
     }
 }
 
+/// Static Light / Dark / Auto illustrations, following macOS Appearance settings.
+/// Auto combines two halves of the same miniature desktop, without live windows.
+private struct SettingsGlassAppearanceThumbnail: View {
+    let appearance: AppPreferences.IslandGlassAppearance
+
+    var body: some View {
+        ZStack {
+            if appearance == .automatic {
+                desktop(dark: false).mask {
+                    HStack(spacing: 0) { Rectangle(); Color.clear }
+                }
+                desktop(dark: true).mask {
+                    HStack(spacing: 0) { Color.clear; Rectangle() }
+                }
+            } else {
+                desktop(dark: appearance == .dark)
+            }
+        }.accessibilityHidden(true)
+    }
+
+    private func desktop(dark: Bool) -> some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .topLeading) {
+                SettingsIslandPreviewAssets.image("Wallpaper")
+                    .resizable().scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                    .overlay(dark ? Color.indigo.opacity(0.35) : Color.white.opacity(0.08))
+                Rectangle().fill(dark ? Color.black.opacity(0.35) : Color.white.opacity(0.5))
+                    .frame(height: 10)
+                    .overlay(alignment: .leading) {
+                        Image(systemName: "apple.logo").font(.system(size: 7)).foregroundStyle(.white)
+                            .padding(.leading, 5)
+                    }
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(dark ? Color(white: 0.16) : Color(white: 0.94))
+                    .overlay(alignment: .top) {
+                        UnevenRoundedRectangle(topLeadingRadius: 4, topTrailingRadius: 4)
+                            .fill(Color.blue).frame(height: 8).padding(3)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(.white.opacity(0.5), lineWidth: 0.5)
+                    }
+                    .frame(width: geometry.size.width * 0.55, height: 23)
+                    .offset(x: 6, y: 15)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(dark ? Color(white: 0.055) : Color(white: 0.97))
+                    .overlay(alignment: .topLeading) {
+                        HStack(spacing: 4) {
+                            ForEach([Color.red, .yellow, .green].indices, id: \.self) { index in
+                                Circle().fill([Color.red, .yellow, .green][index]).frame(width: 6, height: 6)
+                            }
+                        }.padding(9)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(.white.opacity(dark ? 0.16 : 0.65), lineWidth: 0.5)
+                    }
+                    .frame(width: geometry.size.width * 0.76, height: 48)
+                    .offset(x: geometry.size.width * 0.25, y: 42)
+            }.clipped()
+        }
+    }
+}
+
 /// Settings illustration with native materials, image wallpaper and one live task effect.
 /// It has no task store, lifecycle timers or request handles.
 private struct SettingsIslandPreview: View {
@@ -1414,6 +1506,7 @@ private struct SettingsIslandPreview: View {
                 .background(alignment: .top) {
                     // Share the toolbar/card height budget so the footer stays inside the shell.
                     previewBackdrop
+                        .modifier(IslandGlassColorScheme())
                         .frame(width: islandWidth, height: previewHeight)
                 }
                 if preferences.islandFloatingUsageEnabled && !preferences.codexIslandPrivacy {
@@ -1425,13 +1518,15 @@ private struct SettingsIslandPreview: View {
                         .init(id: CodexDomainCatalog.secondaryRateWindowID, usedPercent: 54, remainingPercent: 46,
                               windowDurationMinutes: 10080, resetsAt: Date(timeIntervalSince1970: 4 * 86400))
                     ], current: true, english: preferences.resolvedLanguage == .english,
-                       now: Date(timeIntervalSince1970: 0), tone: preferences.islandUsageCapsuleTone)
+                       now: Date(timeIntervalSince1970: 0))
+                    .modifier(IslandGlassColorScheme())
                     .padding(.top, previewHeight + 8)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
         }
         .environment(\.islandLiquidGlassEnabled, preferences.islandMaterial == .liquidGlass)
+        .modifier(IslandGlassAppearanceContext(appearance: preferences.islandGlassAppearance, material: preferences.islandMaterial))
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(copy.text("灵动岛外观预览", "Island appearance preview"))
@@ -1528,18 +1623,20 @@ private struct SettingsIslandPreview: View {
             icon("arrow.clockwise")
             icon("gearshape")
         }
-        .font(IslandChromeMetrics.font).foregroundStyle(.white.opacity(0.86))
+        .font(IslandChromeMetrics.font).modifier(IslandGlassForeground())
         .frame(height: IslandChromeMetrics.buttonSize)
         .padding(.horizontal, IslandChromeMetrics.horizontalInset)
         .padding(.bottom, IslandChromeMetrics.bottomInset)
+        .modifier(IslandGlassColorScheme())
     }
 
     private func icon(_ name: String) -> some View {
-        Image(systemName: name).font(IslandChromeMetrics.iconFont)
-            .foregroundStyle(.white)
-            .frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize)
-            .islandGlass(Circle(), tint: .white.opacity(0.04), clearSurface: true)
+        Button {} label: {
+            Image(systemName: name).font(IslandChromeMetrics.iconFont)
+                .frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize)
+        }.buttonStyle(IslandUtilityButtonStyle(clearSurface: true))
     }
+
 }
 
 struct SettingsConnectionSummary: View {

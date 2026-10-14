@@ -12,9 +12,27 @@ final class AppPreferences: ObservableObject {
         var id: String { rawValue }
     }
 
-    enum UsageCapsuleTone: String, CaseIterable, Identifiable {
-        case dark, light
+    enum IslandGlassAppearance: String, CaseIterable, Identifiable {
+        case light, dark, automatic
         var id: String { rawValue }
+
+        func colorScheme(system: ColorScheme, material: IslandMaterial = .liquidGlass,
+                         reduceTransparency: Bool = false) -> ColorScheme {
+            guard material == .liquidGlass && !reduceTransparency else { return .dark }
+            switch self {
+            case .light: return .light
+            case .dark: return .dark
+            case .automatic: return system
+            }
+        }
+
+        func title(_ copy: AppCopy) -> String {
+            switch self {
+            case .light: return copy.text("浅色", "Light")
+            case .dark: return copy.text("深色", "Dark")
+            case .automatic: return copy.text("自动", "Auto")
+            }
+        }
     }
 
     enum IslandGlassDegree {
@@ -293,10 +311,6 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
     }
 
-    @Published var islandUsageCapsuleTone: UsageCapsuleTone {
-        didSet { defaults.set(islandUsageCapsuleTone.rawValue, forKey: "island.usageCapsuleTone") }
-    }
-
     @Published var islandFloatingUsageEnabled: Bool {
         didSet { defaults.set(islandFloatingUsageEnabled, forKey: "island.floatingUsageEnabled") }
     }
@@ -306,6 +320,9 @@ final class AppPreferences: ObservableObject {
     }
     @Published var islandMaterial: IslandMaterial {
         didSet { defaults.set(islandMaterial.rawValue, forKey: "island.material") }
+    }
+    @Published var islandGlassAppearance: IslandGlassAppearance {
+        didSet { defaults.set(islandGlassAppearance.rawValue, forKey: "island.glassAppearance") }
     }
 
     // Claude Code writes the user's ~/.claude/settings.json, so it is opt-in.
@@ -570,10 +587,10 @@ final class AppPreferences: ObservableObject {
             defaultValue: true
         )
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
-        islandUsageCapsuleTone = UsageCapsuleTone(rawValue: defaults.string(forKey: "island.usageCapsuleTone") ?? "") ?? .dark
         islandFloatingUsageEnabled = defaults.object(forKey: "island.floatingUsageEnabled") as? Bool ?? true
         islandGlassDegree = IslandGlassDegree.normalized((defaults.object(forKey: "island.glassDegree") as? Double) ?? IslandGlassDegree.defaultValue)
         islandMaterial = IslandMaterial(rawValue: defaults.string(forKey: "island.material") ?? "") ?? .liquidGlass
+        islandGlassAppearance = IslandGlassAppearance(rawValue: defaults.string(forKey: "island.glassAppearance") ?? "") ?? .dark
         codexIslandExpandedWidth = IslandExpandedWidth.normalized(
             (defaults.object(forKey: "island.expandedWidth") as? NSNumber)?.doubleValue ?? IslandExpandedWidth.defaultValue)
         codexIntegrationEnabled = defaults.storedBool(forKey: "integrations.codex.enabled", defaultValue: true)

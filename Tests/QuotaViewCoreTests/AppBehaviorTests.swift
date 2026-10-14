@@ -26,19 +26,39 @@ private extension NSView {
 
 final class AppBehaviorTests: XCTestCase {
     @MainActor
-    func testUsageCapsuleTonePersistsIndependentlyFromVisibility() {
-        let name = "QuotaView.CapsuleToneTests.\(UUID().uuidString)"
+    func testIslandGlassAppearancePersistsIndependentlyFromMaterialAndCapsuleVisibility() {
+        let name = "QuotaView.GlassAppearanceTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
         let preferences = AppPreferences(defaults: defaults)
-        XCTAssertEqual(preferences.islandUsageCapsuleTone, .dark)
-        preferences.islandUsageCapsuleTone = .light
+        XCTAssertEqual(preferences.islandGlassAppearance, .dark)
+        preferences.islandGlassAppearance = .automatic
         preferences.islandFloatingUsageEnabled = false
+        preferences.islandMaterial = .classic
         let restored = AppPreferences(defaults: defaults)
-        XCTAssertEqual(restored.islandUsageCapsuleTone, .light)
+        XCTAssertEqual(restored.islandGlassAppearance, .automatic)
         XCTAssertFalse(restored.islandFloatingUsageEnabled)
-        defaults.set("unknown", forKey: "island.usageCapsuleTone")
-        XCTAssertEqual(AppPreferences(defaults: defaults).islandUsageCapsuleTone, .dark)
+        restored.islandMaterial = .liquidGlass
+        XCTAssertEqual(restored.islandGlassAppearance, .automatic)
+        restored.islandGlassAppearance = .light
+        XCTAssertEqual(AppPreferences(defaults: defaults).islandGlassAppearance, .light)
+        defaults.set("unknown", forKey: "island.glassAppearance")
+        defaults.set("light", forKey: "island.usageCapsuleTone")
+        XCTAssertEqual(AppPreferences(defaults: defaults).islandGlassAppearance, .dark)
+        XCTAssertEqual(defaults.string(forKey: "island.usageCapsuleTone"), "light")
+    }
+
+    @MainActor
+    func testIslandGlassAppearanceFollowsSystemOnlyForAutomaticGlass() {
+        for system in [ColorScheme.light, .dark] {
+            XCTAssertEqual(AppPreferences.IslandGlassAppearance.light.colorScheme(system: system), .light)
+            XCTAssertEqual(AppPreferences.IslandGlassAppearance.dark.colorScheme(system: system), .dark)
+            XCTAssertEqual(AppPreferences.IslandGlassAppearance.automatic.colorScheme(system: system), system)
+            for appearance in AppPreferences.IslandGlassAppearance.allCases {
+                XCTAssertEqual(appearance.colorScheme(system: system, material: .classic), .dark)
+                XCTAssertEqual(appearance.colorScheme(system: system, reduceTransparency: true), .dark)
+            }
+        }
     }
 
     @MainActor

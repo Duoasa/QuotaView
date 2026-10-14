@@ -72,7 +72,14 @@ private struct IslandGlassActiveKey: EnvironmentKey {
 private struct IslandLiquidGlassEnabledKey: EnvironmentKey {
     static let defaultValue = true
 }
+private struct IslandGlassColorSchemeKey: EnvironmentKey {
+    static let defaultValue = ColorScheme.dark
+}
 extension EnvironmentValues {
+    var islandGlassColorScheme: ColorScheme {
+        get { self[IslandGlassColorSchemeKey.self] }
+        set { self[IslandGlassColorSchemeKey.self] = newValue }
+    }
     var islandLiquidGlassEnabled: Bool {
         get { self[IslandLiquidGlassEnabledKey.self] }
         set { self[IslandLiquidGlassEnabledKey.self] = newValue }
@@ -80,6 +87,51 @@ extension EnvironmentValues {
     var islandGlassActive: Bool {
         get { self[IslandGlassActiveKey.self] }
         set { self[IslandGlassActiveKey.self] = newValue }
+    }
+}
+
+/// Follow the application's system appearance, independently of the dark settings
+/// window. One public AppKit observation, with no polling or preference writes.
+@MainActor
+final class IslandSystemAppearance: ObservableObject {
+    static let shared = IslandSystemAppearance()
+    @Published private(set) var colorScheme: ColorScheme
+    private var observation: NSKeyValueObservation?
+
+    private init() {
+        colorScheme = NSApplication.shared.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
+        observation = NSApplication.shared.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                let scheme: ColorScheme = NSApplication.shared.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
+                if self?.colorScheme != scheme { self?.colorScheme = scheme }
+            }
+        }
+    }
+}
+
+struct IslandGlassAppearanceContext: ViewModifier {
+    var appearance: AppPreferences.IslandGlassAppearance
+    var material: AppPreferences.IslandMaterial
+    @ObservedObject private var system = IslandSystemAppearance.shared
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    func body(content: Content) -> some View {
+        content.environment(\.islandGlassColorScheme,
+            appearance.colorScheme(system: system.colorScheme, material: material, reduceTransparency: reduceTransparency))
+    }
+}
+
+/// Apply only to exposed glass chrome. The black gradient and cards stay dark.
+struct IslandGlassColorScheme: ViewModifier {
+    @Environment(\.islandGlassColorScheme) private var scheme
+    func body(content: Content) -> some View { content.environment(\.colorScheme, scheme) }
+}
+
+/// Explicit foreground for nonactivating panels; the scoped appearance is still
+/// resolved from the system, but foreground brightness never depends on focus.
+struct IslandGlassForeground: ViewModifier {
+    @Environment(\.islandGlassColorScheme) private var scheme
+    func body(content: Content) -> some View {
+        content.foregroundStyle((scheme == .light ? Color.black : .white).opacity(0.86))
     }
 }
 
@@ -93,12 +145,36 @@ struct IslandGlassSurface<Outline: InsettableShape>: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.islandGlassActive) private var active
     @Environment(\.islandLiquidGlassEnabled) private var liquidGlassEnabled
+    @Environment(\.self) private var environment
     private var usesSolidFill: Bool { reduceTransparency || !liquidGlassEnabled }
+    private var separatesDarkTint: Bool {
+        guard #available(macOS 27.0, *) else { return false }
+        let color = tint.resolve(in: environment)
+        // macOS 27 composites near-black native tints as an opaque-looking
+        // material. Keep light controls and semantic accent tints unchanged.
+        return color.opacity > 0 && max(color.red, color.green, color.blue) <= 0.2
+    }
+    @available(macOS 26.0, *)
+    private var material: Glass {
+        guard active && !usesSolidFill else { return .identity }
+        let glass: Glass = clearSurface ? .clear : .regular
+        // Clear glass avoids regular's pale backing under our separate dark
+        // fill. The fill supplies the charcoal tone and limited backdrop color.
+        return separatesDarkTint ? .clear : glass.tint(tint)
+    }
     @ViewBuilder func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
             // Keep the content/anchor identity when a page becomes hidden.
             // Identity disables the material without replacing the card subtree.
-            content.glassEffect(active && !usesSolidFill ? (clearSurface ? .clear.tint(tint) : .regular.tint(tint)) : .identity, in: outline)
+            content
+                .background {
+                    if active && !usesSolidFill && separatesDarkTint {
+                        // Retain the original fill strength, independently of
+                        // native tint compositing, without dimming text/icons.
+                        outline.fill(tint).allowsHitTesting(false)
+                    }
+                }
+                .glassEffect(material, in: outline)
                 .background {
                     if active && usesSolidFill { outline.fill(solidTint) }
                 }
@@ -161,6 +237,7 @@ struct IslandCompactContentLayout: Layout {
 }
 
 struct IslandChromeFooter<Leading: View, Trailing: View>: View {
+    @Environment(\.islandGlassColorScheme) private var scheme
     let leading: Leading
     let trailing: Trailing
     init(@ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing) {
@@ -171,10 +248,12 @@ struct IslandChromeFooter<Leading: View, Trailing: View>: View {
             leading.padding(.leading, IslandChromeMetrics.labelInset)
             Spacer(minLength: 8)
             trailing
-        }.font(IslandChromeMetrics.font).foregroundStyle(.white.opacity(0.86))
+        }.font(IslandChromeMetrics.font)
+            .foregroundStyle((scheme == .light ? Color.black : .white).opacity(0.86))
             .frame(height: IslandChromeMetrics.buttonSize)
             .padding(.horizontal, IslandChromeMetrics.horizontalInset)
             .padding(.bottom, IslandChromeMetrics.bottomInset)
+            .modifier(IslandGlassColorScheme())
     }
 }
 
@@ -1383,6 +1462,8 @@ struct IslandBoardView: View {
             }
         }
         .environment(\.colorScheme, .dark)
+        .modifier(IslandGlassAppearanceContext(appearance: state.display?.islandGlassAppearance ?? .dark,
+            material: state.display?.islandMaterial ?? .liquidGlass))
         .transaction { $0.animation = nil }
         .accessibilityHidden(compactContent ? !state.compact : state.compact)
     }
@@ -1714,13 +1795,15 @@ private struct IslandFloatingUsageCapsule: View {
             if state.showsFloatingUsage {
                 IslandUsageCapsuleContent(windows: state.display?.usageSnapshot?.quotaWindows ?? [],
                     current: state.display?.usageState.isCurrent == true,
-                    english: state.english, now: state.floatingUsageNow,
-                    tone: state.display?.islandUsageCapsuleTone ?? .dark)
+                    english: state.english, now: state.floatingUsageNow)
                 .position(x: geometry.value.rect.midX, y: geometry.value.rect.maxY + 24)
             }
         }
         .id(geometry.generation)
-        .environment(\.colorScheme, .dark)
+        .modifier(IslandGlassColorScheme())
+        .modifier(IslandGlassAppearanceContext(appearance: state.display?.islandGlassAppearance ?? .dark,
+            material: state.display?.islandMaterial ?? .liquidGlass))
+        .environment(\.islandLiquidGlassEnabled, state.display?.islandMaterial != .classic)
         .allowsHitTesting(false)
     }
 
@@ -1732,10 +1815,10 @@ struct IslandUsageCapsuleContent: View {
     let current: Bool
     let english: Bool
     let now: Date
-    var tone: AppPreferences.UsageCapsuleTone = .dark
-    private var ink: Color { .white }
-    private var tint: Color { tone == .dark ? .black.opacity(0.55) : .clear }
-    private var solid: Color { Color(white: 0.12) }
+    @Environment(\.colorScheme) private var colorScheme
+    private var ink: Color { colorScheme == .light ? .black : .white }
+    private var tint: Color { colorScheme == .dark ? .black.opacity(0.55) : .white.opacity(0.22) }
+    private var solid: Color { Color(white: colorScheme == .dark ? 0.12 : 0.92) }
 
     var body: some View {
         let periods = IslandFloatingQuotaPeriods.windows(windows)
@@ -1748,8 +1831,6 @@ struct IslandUsageCapsuleContent: View {
         .font(.system(size: 12, weight: .medium)).foregroundStyle(ink)
         .padding(.horizontal, 12).frame(height: 32).fixedSize()
         .islandGlass(Capsule(), tint: tint, solidTint: solid, clearSurface: true)
-        .environment(\.colorScheme, .dark)
-        .environment(\.islandLiquidGlassEnabled, true)
     }
 
     private func period(_ window: CodexQuotaWindowPresentation?, short: Bool) -> some View {
@@ -1772,6 +1853,7 @@ struct IslandUsageCapsuleContent: View {
 
 private struct IslandExpandedGlassBackdrop: View {
     @ObservedObject var geometry: IslandGlassGeometry
+    @ObservedObject var state: IslandBoardState
 
     var body: some View {
         let value = geometry.value
@@ -1791,7 +1873,9 @@ private struct IslandExpandedGlassBackdrop: View {
                 .position(x: value.rect.midX, y: value.rect.midY)
         }
         .id(geometry.generation)
-        .environment(\.colorScheme, .dark)
+        .modifier(IslandGlassColorScheme())
+        .modifier(IslandGlassAppearanceContext(appearance: state.display?.islandGlassAppearance ?? .dark,
+            material: state.display?.islandMaterial ?? .liquidGlass))
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -1813,6 +1897,7 @@ private struct IslandNativeBackdropMaterial: ViewModifier {
 @MainActor
 final class IslandNotchSurface: NSView {
     override var isFlipped: Bool { true }
+    private let state: IslandBoardState
     let confirmationGlow = ActivityIslandCompletionGlowView(frame: .zero)
     private let shell = CAShapeLayer()
     private let clipping = CAShapeLayer()
@@ -1832,6 +1917,7 @@ final class IslandNotchSurface: NSView {
 
 
     init(state: IslandBoardState) {
+        self.state = state
         taskScrollLink = state.taskScrollLink
         compactHost = NSHostingView(rootView: IslandBoardView(state: state, compactContent: true))
         expandedHost = NSHostingView(rootView: IslandBoardView(state: state, compactContent: false))
@@ -1853,7 +1939,6 @@ final class IslandNotchSurface: NSView {
         // One native backdrop for the whole expanded island. No snapshots,
         // private filters or display links. Cards own their separate content.
         glassContainer.wantsLayer = true
-        glassContainer.appearance = NSAppearance(named: .darkAqua)
         addSubview(glassContainer)
         addSubview(content); content.layer?.mask = clipping
         content.addSubview(expandedHost); content.addSubview(compactHost)
@@ -1878,7 +1963,7 @@ final class IslandNotchSurface: NSView {
             glassGeometry.update(value: value, degree: degree, animated: animated)
         } else {
             let geometry = IslandGlassGeometry(value: value, degree: degree)
-            let host = NSHostingView(rootView: IslandExpandedGlassBackdrop(geometry: geometry))
+            let host = NSHostingView(rootView: IslandExpandedGlassBackdrop(geometry: geometry, state: state))
             host.sizingOptions = []
             host.frame = glassContainer.bounds
             glassGeometry = geometry
@@ -2357,13 +2442,15 @@ private struct IslandResetTicketSweep: NSViewRepresentable {
 // Shared footer actions avoid the camera safe area and retain one order on every page.
 struct IslandUtilityActions: View {
     @ObservedObject var state: IslandBoardState
+    @Environment(\.colorScheme) private var scheme
+    private var ink: Color { scheme == .light ? .black : .white }
     var body: some View {
         HStack(spacing: 8) {
             Button {
                 Task { await state.refreshUsage() }
             } label: {
                 Group {
-                    if state.isRefreshingUsage { ProgressView().controlSize(.mini).tint(IslandBoardStyle.muted) }
+                    if state.isRefreshingUsage { ProgressView().controlSize(.mini).tint(ink) }
                     else { Image(systemName: "arrow.clockwise").font(IslandChromeMetrics.iconFont) }
                 }.frame(width: IslandChromeMetrics.buttonSize, height: IslandChromeMetrics.buttonSize).contentShape(Rectangle())
             }
@@ -2377,7 +2464,7 @@ struct IslandUtilityActions: View {
             .accessibilityLabel(state.text("设置", "Settings"))
             .help(state.text("打开 QuotaView 设置", "Open QuotaView settings"))
         }
-        .font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
+        .font(IslandChromeMetrics.font).foregroundStyle(ink)
         .buttonStyle(IslandUtilityButtonStyle(clearSurface: true))
         .fixedSize(horizontal: true, vertical: false)
     }
@@ -2386,12 +2473,15 @@ struct IslandUtilityButtonStyle: ButtonStyle {
     var clearSurface = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(Capsule())
-            .foregroundStyle(.white)
-            .islandGlass(Capsule(), tint: clearSurface ? .white.opacity(0.04) : .black.opacity(0.28),
+            // Explicit contrast avoids inactive nonactivating-panel label dimming.
+            // The black header inherits dark; only exposed chrome inherits light.
+            .foregroundStyle(colorScheme == .light ? Color.black : .white)
+            .islandGlass(Capsule(), tint: clearSurface ? .white.opacity(colorScheme == .light ? 0.22 : 0.04) : .black.opacity(0.28),
                          clearSurface: clearSurface)
             .brightness(configuration.isPressed ? -0.08 : hovered ? 0.05 : 0)
             .opacity(isEnabled ? 1 : 0.4)

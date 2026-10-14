@@ -13,7 +13,9 @@ final class CodexLocalPublicContentQuestionSmokeTests: XCTestCase {
             ]))
             XCTAssertEqual(result.count, 1)
             XCTAssertEqual(result[0]["isOther"] as? Bool, true)
-            XCTAssertEqual((result[0]["options"] as? [[String: String]])?.map { $0["label"] }, options)
+            let projectedOptions = try XCTUnwrap(result[0]["options"] as? [[String: String]])
+            let labels = try projectedOptions.map { try XCTUnwrap($0["label"]) }
+            XCTAssertEqual(labels, options)
             XCTAssertNil(result[0]["requestId"])
             XCTAssertNil(result[0]["ownerClientId"])
         }
