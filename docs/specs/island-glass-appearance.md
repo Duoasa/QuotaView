@@ -29,3 +29,5 @@ Spec ID：`QV-ISLAND-GLASS-APPEARANCE-001` · 状态：`Accepted / Verifying` ·
 运行证据 `.build/glass-appearance-20261015/`；源码推送与 CI 状态见 [Handoff](../../HANDOFF.md)。真实系统切换、不同壁纸可读性、缩略图视觉及键盘/VoiceOver 体验仍由用户验收；本次未进行自动截图或 UI 操作。公开发行仍为 0.8.2 Build 2，本轮只同步源码，不发布 Release/appcast。
 
 Build 6 跟进：用户反馈上下四个按钮图标发灰，共用 `.primary` 前景改为依据 scoped colorScheme 明确黑/白，顶部保持白色，底部和预览同步，禁用态保持。0.8.2 / Build 6 / 内部 70 已编译并启动，输入/包/加载路径核对通过，证据 `.build/glass-icon-contrast-20261015/`；视觉等待用户检查。
+
+Build 7 跟进：按用户要求，共用工具 SF Symbols 从 10 pt Medium 改为 11 pt Semibold；24 pt 按钮/命中区域与 12 pt Medium 文字保持。0.8.2 Build 7 / 内部 71 增量构建、开发包启动及输入/加载路径核对通过，证据 `.build/chrome-icons11-20261015/`。

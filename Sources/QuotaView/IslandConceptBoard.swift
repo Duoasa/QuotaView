@@ -57,7 +57,7 @@ enum IslandChromeMetrics {
     static let labelInset: CGFloat = 8
     static let buttonSize: CGFloat = 24
     static let fontSize: CGFloat = 12
-    static let iconFont = Font.system(size: 10, weight: .medium)
+    static let iconFont = Font.system(size: 11, weight: .semibold)
     static let quotaRingDiameter: CGFloat = 12
     static let quotaRingLineWidth: CGFloat = 2
     static let quotaRingLeadingInset = (buttonSize - quotaRingDiameter) / 2

@@ -2,7 +2,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.2 Build 6 / 玻璃按钮对比度
+## 当前开发：0.8.2 Build 7 / 工具图标 11 pt Semibold
+
+用户要求将上下工具图标改为 11 pt、字重增加一档。共享 `IslandChromeMetrics.iconFont` 从 10 pt Medium 改为 11 pt Semibold，顶部固定/收起、底部刷新/设置、返回箭头及设置预览同步；24 pt 按钮与 12 pt Medium 工具栏文字保持。统一玻璃外观与明确黑/白前景沿用 Build 6。
+
+2026-10-15 02:40（上海）：Debug arm64 增量构建通过，0.8.2 / Build 7 / 内部 71 开发包已更新启动 PID 52224；234 输入、13 资产、完整包/备份和实际加载路径一致，正式安装文件不变。证据 `.build/chrome-icons11-20261015/`，旧包备份 `.build/runtime-package-backups/chrome-icons11-20261015-024005/QuotaView.app`。用户视觉验收仍待完成；本轮源码已获推送/合并授权，PR/main CI 待完成，未发布 Release/appcast。
+
+## 0.8.2 Build 6 / 玻璃按钮对比度
 
 用户反馈 Build 5 上下四个按钮图标偏灰。共用样式前一轮改成 `.primary` 后受非激活窗口语义前景影响；本轮改为按已解析外观明确选择黑/白前景。顶部继承固定深色，图标保持白色；底部随浅/深切换黑/白，禁用态仍保留 0.4 opacity。底栏文字与设置预览同步显式前景，玻璃材质及统一胶囊选择保持。
 
@@ -471,10 +477,10 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
 | 分支 / 源码提交 | `codex/0.7.7-build1-development`，基线 HEAD `7613bd3`；本轮 macOS 27 深色玻璃为本地未提交修改 |
-| 开发身份 | `com.quotaview.development073`；源码 0.8.2 / 显示 Build 6 / 内部 70 |
+| 开发身份 | `com.quotaview.development073`；源码 0.8.2 / 显示 Build 7 / 内部 71 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-15 02:37（上海）PID 50130；0.8.2 Build 6 / 内部 70，234 输入与完整包/实际加载路径一致 |
-| 源码与运行包 | Build 6 统一玻璃外观与按钮前景修复已进入运行包；视觉待用户验收，当前状态和证据见顶部 |
+| 最近运行核验 | 2026-10-15 02:40（上海）PID 52224；0.8.2 Build 7 / 内部 71，234 输入与完整包/实际加载路径一致 |
+| 源码与运行包 | Build 7 统一玻璃外观、按钮前景与 11 pt Semibold 图标已进入运行包；视觉待用户验收，当前状态和证据见顶部 |
 | 公开稳定版 | 0.8.2 Build 2 / 内部 66；完整发布事实见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
