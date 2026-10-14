@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.1-build.2/QuotaView-v0.8.1-build.2.zip"><strong>下载 QuotaView v0.8.1 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.2-build.2/QuotaView-v0.8.2-build.2.zip"><strong>下载 QuotaView v0.8.2 Build 2</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -33,6 +33,10 @@
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
+
+## 0.8.2 小更新
+
+通用设置新增灵动岛显示位置：可以跟随当前活动窗口所在的屏幕，也可以固定在指定显示器。选择会自动保存，显示器断开时暂回主屏，重新连接后恢复。同时修复了子 Agent 信息在任务卡片下方偏上的问题。
 
 ## 液态玻璃，现在重新回归
 
@@ -97,7 +101,7 @@ DSH 和 Kimi Code 的权限请求在原客户端确认。可用字段取决于 A
 
 ## 快速开始
 
-1. 下载 [QuotaView 0.8.1 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)，解压并打开 `QuotaView.app`。
+1. 下载 [QuotaView 0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)，解压并打开 `QuotaView.app`。
 2. 在**设置 → 连接**中启用需要的 Agent。
 3. Codex 自动发现本地任务。配置 Hook 或 DSH 插件后，按设置提示新建会话或重启对应客户端。
 
@@ -130,7 +134,7 @@ swift run QuotaView
 
 ## 项目与反馈
 
-- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2) · [上一稳定版 0.7.9](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.9-build.1)
+- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) · [上一稳定版 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
 - [版本历史与发布证据](VERSION_HISTORY.md) · [开发交接](HANDOFF.md)
 - [设计与行为规格](docs/specs/README.md) · [贡献指南](CONTRIBUTING.md)
 - [提交问题](https://github.com/Duoasa/QuotaView/issues/new/choose)，也可从**设置 → Bug 反馈**进入。

@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.1-build.2/QuotaView-v0.8.1-build.2.zip"><strong>Download QuotaView v0.8.1 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.2-build.2/QuotaView-v0.8.2-build.2.zip"><strong>Download QuotaView v0.8.2 Build 2</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -33,6 +33,10 @@
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
+
+## What’s new in 0.8.2
+
+A small update for multi-display setups. In General settings, let the Island follow the active window or choose a fixed display. Your selection is remembered; if that display disconnects, the Island returns to the main display until it reconnects. Sub-agent activity is now centered in the lower part of its task card.
 
 ## Liquid Glass is back
 
@@ -97,7 +101,7 @@ DSH and Kimi Code permissions are confirmed in the original client. Available fi
 
 ## Get started
 
-1. Download [QuotaView 0.8.1 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2), unzip it, and open `QuotaView.app`.
+1. Download [QuotaView 0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2), unzip it, and open `QuotaView.app`.
 2. Open **Settings → Connections** and enable the agents you use.
 3. Codex tasks are discovered locally. After configuring Hooks or a DSH plugin, start a new session or restart the relevant client as indicated in settings.
 
@@ -130,7 +134,7 @@ Distribution packaging uses `scripts/build-app.sh`. Developer ID signing and not
 
 ## Project and feedback
 
-- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2) · [Previous stable 0.7.9](https://github.com/Duoasa/QuotaView/releases/tag/v0.7.9-build.1)
+- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) · [Previous stable 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
 - [Version history and release evidence](VERSION_HISTORY.md) · [Development handoff](HANDOFF.md)
 - [Design and behavior specifications](docs/specs/README.md) · [Contributing](CONTRIBUTING.md)
 - [Report an issue](https://github.com/Duoasa/QuotaView/issues/new/choose), or use **Settings → Bug Feedback**.
