@@ -2,11 +2,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.8.2 Build 2 发布准备
+## 0.8.2 Build 2 已发布
 
-用户已授权 GitHub Stable 与 appcast 发布；内部序号 66。本次小更新包含显示位置设置和子 Agent 居中修复。当前正在构建、公证与验证，尚未发布。回滚基线 v0.8.1-build.2 保留。
+[0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) 已发布 GitHub Stable / Latest，源码经 PR #97 合入 main，PR/main CI 均成功；签名 appcast 在线字节、签名与更新目标核对通过。简短 Release 与中英文 README 介绍显示位置设置和子 Agent 排版修复。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 开发最新版：0.8.1 Build 5（内部 65）
+当前开发运行包 0.8.2 / Build 2 / 内部 66，PID 8948；正式安装未替换。公开 ZIP 回下载与签名包一致，公证/Staple、解压启动通过，证据 `dist/verification/0.8.2-build2-release/`。回滚基线 v0.8.1-build.2 保留；视觉、多屏实际体验由用户验收。
+
+## 0.8.1 Build 5 开发记录（内部 65）
 
 2026-10-12：通用设置新增灵动岛显示位置。焦点跟随使用中性滑动开关，固定屏幕复用语言 SettingsValueMenu。默认保持主屏；开启后按活动应用前台窗口所在屏幕定位，每秒复用现有刷新检查，单屏不扫描窗口。固定屏幕保存显示器 UUID，断开回主屏、重连恢复；设置列表随屏幕连接变化刷新。用量胶囊随岛体移动。
 

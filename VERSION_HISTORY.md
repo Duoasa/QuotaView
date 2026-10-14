@@ -9,7 +9,32 @@
 
 ## 当前最新版本
 
-> GitHub Stable / Latest **0.8.1 Build 2**；用户已明确授权并推送签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> GitHub Stable / Latest **0.8.2 Build 2**；签名 appcast 已公开验证。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.8.2 / Build 2 / 内部 66` |
+| Tag / 发布提交 | `v0.8.2-build.2` / `d16307f4666f75b94a40cdb3933777a028d8fa8a`；[PR #97](https://github.com/Duoasa/QuotaView/pull/97)；源码 `76ebdcee4c34879cdd158cd41e7a44a4fa5d45bc` |
+| GitHub Release | [QuotaView 0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)，Stable / Latest，非 Draft / Pre-release |
+| 资产 | `QuotaView-v0.8.2-build.2.zip`，25,070,922 bytes |
+| SHA-256 | `49945e73487f40ec945e7db88ecc4c6d2ecf35c053bd60e1772be2805ebfcb4c` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`1f6a859f-cb49-45ed-96ad-3ad3f9861806` |
+| 产物验证 | 164 个冻结输入与源提交及合并提交一致；签名、Gatekeeper、资源、解压启动 15 秒及动态库路径通过；公开 ZIP 与本地包逐字节一致 |
+| 本地 / CI | 708 项测试，6 跳过，0 失败；审批契约 44 项通过；PR CI 38525045019、main CI 38525990259 均成功 |
+| appcast | `https://duoasa.github.io/QuotaView/appcast.xml`；gh-pages `c8cd275eb68d2fd2a3dbb0ef0782560687cbb3d6`，Pages 38527152078；序列 66 / 62 / 59，保留项下载 URL、长度及签名不变 |
+| Feed SHA-256 | `db9f297daab58a94efa25ad86434ab9f536f2492cc988e0664ec333190d22b32`；线上字节与签名匹配，旧版内部序号 62 下一更新为 66 |
+| EdDSA | `CS8Utg8K/FLdvhf6gNRLhxXhZ+6xvlwlFcWNFYxg/Cffub+zZrQa8OBQ8803W0U+14joafpP/8B+6CSw/lOsCQ==` |
+| 回滚 | [v0.8.1-build.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2) / `87460e8689444f62c767f8607f3bf4f2f321a1b8`；旧版 ZIP 已再次回下载核对，事实保留在下节 |
+
+本次小规模更新加入通用设置的焦点屏幕跟随和固定屏幕选择，保存显示器身份并在断开、重连时回退和恢复，同时修复子 Agent 行偏上的排版。README 中英文下载入口与更新介绍已同步，Release 使用简短英文更新说明。
+
+真实额度重置仍为演示；用户负责视觉与多屏实机验收。正式安装未替换，开发版为同版本独立身份。证据 `dist/verification/0.8.2-build2-release/`。
+
+## 0.8.1 Build 2（上一稳定版）
+
+> 历史稳定版，0.8.2 Build 2 的回滚基线。开发入口见 [HANDOFF.md](HANDOFF.md)。
 
 | 项目 | 当前值 |
 |---|---|
