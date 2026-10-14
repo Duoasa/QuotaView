@@ -1,10 +1,8 @@
 # QuotaView SDD 注册表
 
-## 当前发布：0.8.1 Build 2
+## 当前发布：0.8.2 Build 2
 
-[0.8.1 发布规格](release-0.8.1.md) · `Released / User Acceptance Pending`。版本 `0.8.1 / 2 / 62` 已发布 GitHub Stable / Latest 并推送签名 appcast，包含最新设置紧凑化。完整发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行状态见 [Handoff](../../HANDOFF.md)。真实额度重置保持演示；视觉与实际交互由用户验收。
-
-[悬浮用量胶囊](island-floating-usage.md) · `QV-ISLAND-FLOATING-USAGE-001` · Accepted / Complete。设置尺寸见[设置窗口规范](../design/QUOTAVIEW_UI_RULES.md#设置窗口)。前一稳定版 [0.7.9](release-0.7.9.md) 保留为回滚基线。
+[0.8.2 发布规格](release-0.8.2.md) · `Released / User Acceptance Pending`。版本 `0.8.2 / 2 / 66` 已发布 GitHub Stable / Latest 并推送签名 appcast。本次为显示位置设置与子 Agent 排版修复的小更新。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行状态见 [Handoff](../../HANDOFF.md)。前一稳定版 [0.8.1](release-0.8.1.md) 保留为回滚基线；实际多屏与视觉由用户验收。
 
 文档编号：`QV-SDD-INDEX-001` · 状态：`Accepted` · 整理：2026-10-08。
 
