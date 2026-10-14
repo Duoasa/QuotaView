@@ -2,13 +2,21 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.2 Build 9 / 胶囊与岛体统一玻璃
+## 当前开发：0.8.2 Build 10 / Widget 字体跨进程兼容
+
+2026-10-15：用户反馈 macOS 27 桌面小组件只剩空框。系统正在加载 `/Applications/QuotaView.app` 的正式 0.8.2 Build 2 扩展；签名核验通过，Timeline 请求成功，但 NotificationCenter 解码 timeline 和 placeholder 均报 `SwiftUI.CodablePlatformFont.Error.invalidFont`，继而 `badTimelineData` 重载循环。非账户、卡片玻璃路径问题；尚不能证明所有 macOS 27 设备/全新安装均会复现。
+
+旧 `CTFontCreateWithGraphicsFont` 的内存字体没有来源 URL。Widget 的 Asta Sans 改为从随包文件 descriptor 创建、校验 face/URL/字形，并保留文件地址；缺失/非法字体回退系统字体。主应用继续使用原直接数据加载，避免改变此前同名字体冲突修复。字号、布局、快照和字体资产不变。详见 [Widget 契约](docs/design/quotaview-widgetkit-solution.md#macos-27-字体归档兼容2026-10-15)。
+
+0.8.2 / Build 10 / 内部 74 Debug arm64 增量构建成功，03:00 开发包已启动 PID 68163；234 输入、13 资产、完整包/备份与加载路径一致，正式安装未替换。证据 `.build/widget-font-20261015/`。桌面现有正式小组件未更新，不能把本地 descriptor/构建检查当成系统跨进程渲染或用户视觉验收通过；修复在开发包，尚需更新已安装扩展后实际验收。两项定向字体测试通过，覆盖三种字重、9/12/16/32 pt、来源 URL/重建、缺失/损坏/错误字重回退。用户已授权该修复推送 GitHub 合入 main，CI 待完成，不发布 Release/appcast。
+
+## 0.8.2 Build 9 / 胶囊与岛体统一玻璃
 
 用户反馈胶囊比岛体下方明显偏暗：移除胶囊独立黑 0.55 / 白 0.22 底色，真实岛体、胶囊、设置预览共用无染色 clear 材质组件；深浅/自动仍控制外观与文字，经典/减少透明度保留实体回退。顶部黑色渐变和深色内容卡片保持。
 
 2026-10-15 02:46（上海）：Debug arm64 增量构建成功，0.8.2 / Build 9 / 内部 73 开发包已启动 PID 57632。234 输入、13 资产、完整包/备份和实际加载路径核对通过，正式安装文件未变。证据 `.build/capsule-unified-glass-20261015/`；旧包备份 `.build/runtime-package-backups/capsule-unified-glass-20261015-024643/QuotaView.app`。视觉待用户验收。
 
-本轮全部源码通过 [PR #99](https://github.com/Duoasa/QuotaView/pull/99) 集成，用户已授权合并 main，最新 PR/main CI 待完成。公开 Release / appcast 保持 0.8.2 Build 2。
+本轮源码已通过 [PR #99](https://github.com/Duoasa/QuotaView/pull/99) 合入 main `12f2c2ed1d3f268fc6fc86f12f8371d604a86fd3`，源码 `d9ee109700ac91b53c6c5815bf85938c7752d151`；PR CI 38618123882、main CI 38618820561 均成功。Build 9 的 234 输入与合并提交核对一致。公开 Release / appcast 保持 0.8.2 Build 2。
 
 ## 0.8.2 Build 8 / 文案 Regular 与来源标签留白
 
