@@ -1819,7 +1819,6 @@ struct IslandUsageCapsuleContent: View {
     let now: Date
     @Environment(\.colorScheme) private var colorScheme
     private var ink: Color { colorScheme == .light ? .black : .white }
-    private var tint: Color { colorScheme == .dark ? .black.opacity(0.55) : .white.opacity(0.22) }
     private var solid: Color { Color(white: colorScheme == .dark ? 0.12 : 0.92) }
 
     var body: some View {
@@ -1832,7 +1831,7 @@ struct IslandUsageCapsuleContent: View {
         }
         .font(.system(size: 12, weight: .medium)).foregroundStyle(ink)
         .padding(.horizontal, 12).frame(height: 32).fixedSize()
-        .islandGlass(Capsule(), tint: tint, solidTint: solid, clearSurface: true)
+        .modifier(IslandNativeBackdropMaterial(shape: Capsule(), solidTint: solid))
     }
 
     private func period(_ window: CodexQuotaWindowPresentation?, short: Bool) -> some View {
@@ -1883,10 +1882,17 @@ private struct IslandExpandedGlassBackdrop: View {
     }
 }
 
-private struct IslandNativeBackdropMaterial: ViewModifier {
-    var shape: IslandNotchShape
+/// Shared untinted material for the island shell, floating capsule and settings preview.
+struct IslandNativeBackdropMaterial<Outline: Shape>: ViewModifier {
+    var shape: Outline
+    var solidTint: Color = .black
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.islandLiquidGlassEnabled) private var liquidGlassEnabled
+
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if reduceTransparency || !liquidGlassEnabled {
+            content.background(solidTint, in: shape)
+        } else if #available(macOS 26.0, *) {
             content.glassEffect(.clear, in: shape)
         } else {
             content.background(.regularMaterial, in: shape)

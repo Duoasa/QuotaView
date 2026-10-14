@@ -1540,11 +1540,7 @@ private struct SettingsIslandPreview: View {
             shape.fill(.black)
         } else {
             ZStack {
-                if #available(macOS 26.0, *) {
-                    Color.clear.glassEffect(.clear, in: shape)
-                } else {
-                    shape.fill(.regularMaterial)
-                }
+                Color.clear.modifier(IslandNativeBackdropMaterial(shape: shape))
                 let stops = AppPreferences.IslandGlassDegree.gradientStops(preferences.islandGlassDegree)
                 LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom)
                     .clipShape(shape)

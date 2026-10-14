@@ -2,7 +2,15 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.2 Build 8 / 文案 Regular 与来源标签留白
+## 当前开发：0.8.2 Build 9 / 胶囊与岛体统一玻璃
+
+用户反馈胶囊比岛体下方明显偏暗：移除胶囊独立黑 0.55 / 白 0.22 底色，真实岛体、胶囊、设置预览共用无染色 clear 材质组件；深浅/自动仍控制外观与文字，经典/减少透明度保留实体回退。顶部黑色渐变和深色内容卡片保持。
+
+2026-10-15 02:46（上海）：Debug arm64 增量构建成功，0.8.2 / Build 9 / 内部 73 开发包已启动 PID 57632。234 输入、13 资产、完整包/备份和实际加载路径核对通过，正式安装文件未变。证据 `.build/capsule-unified-glass-20261015/`；旧包备份 `.build/runtime-package-backups/capsule-unified-glass-20261015-024643/QuotaView.app`。视觉待用户验收。
+
+本轮全部源码通过 [PR #99](https://github.com/Duoasa/QuotaView/pull/99) 集成，用户已授权合并 main，最新 PR/main CI 待完成。公开 Release / appcast 保持 0.8.2 Build 2。
+
+## 0.8.2 Build 8 / 文案 Regular 与来源标签留白
 
 按用户要求，“返回任务 / 返回”、“用量统计”、Codex 与 Claude Code 来源标签统一 12 pt Regular；来源标签右内距 8 → 12 pt，左内距保持 8 pt。工具图标沿用 11 pt Semibold、按钮 24 pt，其他工具栏文字不变。
 
