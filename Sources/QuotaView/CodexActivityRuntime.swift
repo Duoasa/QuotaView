@@ -1041,9 +1041,9 @@ final class CodexActivityRuntime: ObservableObject {
             automaticPopupDuration: preferences.codexActivityAutomaticPopupDuration,
             expandedWidth: preferences.codexIslandExpandedWidth,
             islandMaterial: preferences.islandMaterial,
+            islandGlassAppearance: preferences.islandGlassAppearance,
             islandGlassDegree: preferences.islandGlassDegree,
             islandFloatingUsageEnabled: preferences.islandFloatingUsageEnabled,
-            islandUsageCapsuleTone: preferences.islandUsageCapsuleTone,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots,
             followsFocus: preferences.islandFollowsFocus, fixedScreenID: preferences.islandFixedScreenID)
     }

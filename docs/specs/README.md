@@ -1,5 +1,13 @@
 # QuotaView SDD 注册表
 
+## 当前本地开发：0.8.2 Build 9
+
+[底部玻璃与胶囊统一外观](island-glass-appearance.md) · `Accepted / Verifying`：浅色 / 深色 / 自动三选项只在液态玻璃显示，统一底栏与胶囊；黑色渐变和深色卡片保留，设置按外观与布局、显示内容、任务特效、自动展开分组。Build 6 已修正非激活按钮前景发灰，Build 7 按用户要求统一工具图标为 11 pt Semibold，Build 8 将四处导航文案改为 12 pt Regular 并增加来源标签右内距；Build 9 移除胶囊独立染色，与岛体/预览共用 clear 玻璃；编译与开发包核对通过；前序 3 项定向冒烟通过。用户已授权推送源码并合并 main，GitHub 结果与运行状态见 [Handoff](../../HANDOFF.md)，视觉待用户验收。
+
+## 前序本地适配：macOS 27 深色玻璃
+
+`Accepted / Verifying`：按用户参考图继续调深至 0.8.2 Build 4（内部 68）。macOS 27 近黑表面采用未染色 clear 玻璃与原强度独立底色，修正 Build 3 过亮；共用于任务、用量卡片、深色胶囊及预览。macOS 26 与辅助功能回退保持原样；[调校规格](island-expanded-glass.md#macos-27-炭灰玻璃调校2026-10-15覆盖-build-3)。增量编译与开发运行包核对通过，证据见 [Handoff](../../HANDOFF.md)，视觉待用户验收。公开版本仍为下方 Build 2。
+
 ## 当前发布：0.8.2 Build 2
 
 [0.8.2 发布规格](release-0.8.2.md) · `Released / User Acceptance Pending`。版本 `0.8.2 / 2 / 66` 已发布 GitHub Stable / Latest 并推送签名 appcast。本次为显示位置设置与子 Agent 排版修复的小更新。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行状态见 [Handoff](../../HANDOFF.md)。前一稳定版 [0.8.1](release-0.8.1.md) 保留为回滚基线；实际多屏与视觉由用户验收。
@@ -42,6 +50,7 @@
 | `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与 DSH / Kimi Code 接入](agent-integrations.md) | `Accepted / Verifying` | DSH 多目录兼容与会话命名空间已进入 14:26 开发包；编译与配置核对通过，真实多客户端联动待验收。 |
 | `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 生命周期和审批开关修复已在开发包运行；19 项冒烟通过，真实交互待验收。 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 来源、轮次、等待结算与本地退场；原生问题组关闭仍未完成。 |
+| `QV-ISLAND-GLASS-APPEARANCE-001` | [底部玻璃与胶囊统一外观](island-glass-appearance.md) | `Accepted / Verifying` | 仅液态玻璃显示浅色/深色/自动三选项，底栏与胶囊统一；设置分组、自动跟随和偏好持久化，视觉待用户验收。 |
 | `QV-ISLAND-EXPANDED-GLASS-001` | [展开态玻璃](island-expanded-glass.md) | `Accepted / Verifying` | 外观页持久化玻璃/经典纯色切换；55%–80% 渐变、连续曲率任务卡与无框图标；依据 DroppyKit 修正祖先遮罩，完整 Droppy 16.0.1 源码不可得，视觉/性能仍待验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 依据原生来源和精确轮次识别记忆，独立底栏展示；真实场景待持续验收。 |
 | `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 当前 owner 回传、草稿与资源边界；本地 0.7.9 Build 2 已修复重订阅序号重置，真实交互待验收；ACK 不等于原生界面关闭。 |

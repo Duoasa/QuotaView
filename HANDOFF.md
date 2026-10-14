@@ -2,11 +2,61 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## 当前开发：0.8.2 Build 9 / 胶囊与岛体统一玻璃
+
+用户反馈胶囊比岛体下方明显偏暗：移除胶囊独立黑 0.55 / 白 0.22 底色，真实岛体、胶囊、设置预览共用无染色 clear 材质组件；深浅/自动仍控制外观与文字，经典/减少透明度保留实体回退。顶部黑色渐变和深色内容卡片保持。
+
+2026-10-15 02:46（上海）：Debug arm64 增量构建成功，0.8.2 / Build 9 / 内部 73 开发包已启动 PID 57632。234 输入、13 资产、完整包/备份和实际加载路径核对通过，正式安装文件未变。证据 `.build/capsule-unified-glass-20261015/`；旧包备份 `.build/runtime-package-backups/capsule-unified-glass-20261015-024643/QuotaView.app`。视觉待用户验收。
+
+本轮全部源码通过 [PR #99](https://github.com/Duoasa/QuotaView/pull/99) 集成，用户已授权合并 main，最新 PR/main CI 待完成。公开 Release / appcast 保持 0.8.2 Build 2。
+
+## 0.8.2 Build 8 / 文案 Regular 与来源标签留白
+
+按用户要求，“返回任务 / 返回”、“用量统计”、Codex 与 Claude Code 来源标签统一 12 pt Regular；来源标签右内距 8 → 12 pt，左内距保持 8 pt。工具图标沿用 11 pt Semibold、按钮 24 pt，其他工具栏文字不变。
+
+2026-10-15 02:43（上海）：Debug arm64 增量构建成功，0.8.2 / Build 8 / 内部 72 开发包已启动 PID 54893。234 输入、13 资产、完整包/备份、实际加载路径核对通过；正式安装文件未变。证据 `.build/usage-labels-regular-20261015/`；旧包完整备份 `.build/runtime-package-backups/usage-labels-regular-20261015-024315/QuotaView.app`。视觉待用户验收。
+
+本轮全部源码通过 [PR #99](https://github.com/Duoasa/QuotaView/pull/99) 集成，当前新增样式更新待推送及 PR/main CI；用户已授权合并 main。公开 Release / appcast 保持 0.8.2 Build 2。
+
+## 0.8.2 Build 7 / 工具图标 11 pt Semibold
+
+用户要求将上下工具图标改为 11 pt、字重增加一档。共享 `IslandChromeMetrics.iconFont` 从 10 pt Medium 改为 11 pt Semibold，顶部固定/收起、底部刷新/设置、返回箭头及设置预览同步；24 pt 按钮与 12 pt Medium 工具栏文字保持。统一玻璃外观与明确黑/白前景沿用 Build 6。
+
+2026-10-15 02:40（上海）：Debug arm64 增量构建通过，0.8.2 / Build 7 / 内部 71 开发包已更新启动 PID 52224；234 输入、13 资产、完整包/备份和实际加载路径一致，正式安装文件不变。证据 `.build/chrome-icons11-20261015/`，旧包备份 `.build/runtime-package-backups/chrome-icons11-20261015-024005/QuotaView.app`。用户视觉验收仍待完成；本轮源码已获推送/合并授权，PR/main CI 待完成，未发布 Release/appcast。
+
+## 0.8.2 Build 6 / 玻璃按钮对比度
+
+用户反馈 Build 5 上下四个按钮图标偏灰。共用样式前一轮改成 `.primary` 后受非激活窗口语义前景影响；本轮改为按已解析外观明确选择黑/白前景。顶部继承固定深色，图标保持白色；底部随浅/深切换黑/白，禁用态仍保留 0.4 opacity。底栏文字与设置预览同步显式前景，玻璃材质及统一胶囊选择保持。
+
+2026-10-15 02:37（上海）：Debug arm64 增量构建成功，0.8.2 / Build 6 / 内部 70 开发包已启动 PID 50130。234 输入、13 资产、完整运行包与备份、实际 App/Debug dylib/Core 加载路径核对通过；正式安装文件不变。证据 `.build/glass-icon-contrast-20261015/`，旧包备份 `.build/runtime-package-backups/glass-icon-contrast-20261015-023712/QuotaView.app`。前一轮偏好/解析与编译兼容冒烟 3 项通过；实际按钮观感仍由用户检查。
+
+用户已授权本轮全部源码推送并合并 main，PR/main CI 尚待完成；不发布 Release/appcast。
+
+## 0.8.2 Build 5 / 底部玻璃与胶囊统一外观
+
+2026-10-15：按用户补充，将浅色/深色/自动限定到下部玻璃、底栏文字/按钮及悬浮胶囊；黑色渐变和深色卡片保留。胶囊独立配色入口与读取移除，旧存储保留；设置重排为外观与布局、显示内容、任务特效、自动展开。三张系统风格缩略图只在液态玻璃显示，默认深色，自动使用公开 AppKit 外观观察并同步现有预览。详见[统一外观规格](docs/specs/island-glass-appearance.md)。
+
+0.8.2 / Build 5 / 内部 69 的 App、Widget 与兼容 Info.plist 同步。Debug arm64 增量构建成功，开发包已更新启动 PID 46542；234 输入、13 资产、完整包和备份、实际 App/Debug dylib/Core 加载路径核对通过，正式安装文件不变。两项偏好/解析冒烟通过；同时修正 Swift 6.4 下旧问题投影测试的 optional 推断并验证该测试，合计 3 项通过。证据 `.build/glass-appearance-20261015/`。旧包备份 `.build/runtime-package-backups/glass-appearance-20261015-023229/QuotaView.app`。实际视觉、系统切换和辅助功能体验由用户验收。
+
+用户已授权当前源码推送 GitHub、合并 main 并启动开发版；PR 与 main CI 待完成。此次不创建 Release、不修改 appcast；公开稳定版仍为 0.8.2 Build 2。
+
+## 0.8.2 Build 4 / 炭灰玻璃调校
+
+2026-10-15：用户反馈 Build 3 过亮，并提供桌面 `0.8.1/2.jpg` 作为参考。macOS 27 近黑表面改用未染色 clear 玻璃与原强度独立底色，用量卡片恢复 75% 炭灰、任务卡 42%（hover 32%）、深色胶囊 55%；不再使用 30% 强度的填充，保留原生折射、高光与原语义色。规格见[炭灰调校](docs/specs/island-expanded-glass.md#macos-27-炭灰玻璃调校2026-10-15覆盖-build-3)。App / Widget / 兼容 Info.plist 同步 0.8.2 / Build 4 / 内部 68。
+
+Debug arm64 增量构建通过，开发包已更新启动 PID 39648。234 项输入、13 个资产、完整包与备份、实际 App/Debug dylib/Core 加载路径核对通过；正式安装文件保持不变。Build 3 完整备份于 `.build/runtime-package-backups/macos27-charcoal-20261015-022310/QuotaView.app`。视觉待用户验收；证据 `.build/macos27-charcoal-20261015/`。本轮仅本地开发，未提交、推送、发布或更新 appcast。
+
+## 0.8.2 Build 3 / macOS 27 深色玻璃（已反馈过亮）
+
+2026-10-15：用户要求适配 macOS 27 并更新开发版。源码身份为 0.8.2 / Build 3 / 内部 67；App、Widget 配置与兼容 Info.plist 同步。共享玻璃组件对 macOS 27 的近黑染色改用未染色原生材质与原色 30% 强度的独立填充，覆盖用量卡片、任务卡、深色胶囊及设置预览；旧系统、非深色强调控件、经典和减少透明度回退保持。见[适配规格](docs/specs/island-expanded-glass.md#macos-27-深色玻璃兼容2026-10-15)。
+
+共享组件 Swift 5 / macOS 14 部署目标类型检查与 Debug arm64 增量构建通过。开发运行包已更新启动，PID 37335；234 项输入、13 资产、完整构建/运行包与旧包备份、实际 App/Debug dylib/Core 加载路径核对通过，正式安装 Info.plist 与可执行文件保持不变。旧开发包完整备份于 `.build/runtime-package-backups/macos27-glass-20261015-022114/QuotaView.app`。Xcode 升级后许可由用户完成确认；实际视觉待用户验收。证据 `.build/macos27-glass-20261015/`；本轮仅本地开发，未提交、推送、发布或更新 appcast。
+
 ## 0.8.2 Build 2 已发布
 
 [0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) 已发布 GitHub Stable / Latest，源码经 PR #97 合入 main，PR/main CI 均成功；签名 appcast 在线字节、签名与更新目标核对通过。简短 Release 与中英文 README 介绍显示位置设置和子 Agent 排版修复。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-当前开发运行包 0.8.2 / Build 2 / 内部 66，PID 8948；正式安装未替换。公开 ZIP 回下载与签名包一致，公证/Staple、解压启动通过，证据 `dist/verification/0.8.2-build2-release/`。回滚基线 v0.8.1-build.2 保留；视觉、多屏实际体验由用户验收。
+发布时开发运行包 0.8.2 / Build 2 / 内部 66，PID 8948；当时正式安装未替换。公开 ZIP 回下载与签名包一致，公证/Staple、解压启动通过，证据 `dist/verification/0.8.2-build2-release/`。回滚基线 v0.8.1-build.2 保留；视觉、多屏实际体验由用户验收。
 
 ## 0.8.1 Build 5 开发记录（内部 65）
 
@@ -442,13 +492,12 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.7.7-build1-development`；发布源码已由 PR #88 合并，发布 tag `v0.7.9-build.1`；当前新增本地确认同步修复，独立历史文档整理仍保留 |
-| GitHub main | 发布源码 `c1e21dc00ef1f2f5a6ad96ec5bbc4ce93fd22cb6`；PR #88 与该提交 CI 通过，后续文档提交不改变发行包 |
-| 开发身份 | `com.quotaview.development073`；0.7.9 / 显示 Build 2 / 内部 60 |
+| 分支 / 源码提交 | `codex/0.7.7-build1-development`，基线 HEAD `7613bd3`；本轮 macOS 27 深色玻璃为本地未提交修改 |
+| 开发身份 | `com.quotaview.development073`；源码 0.8.2 / 显示 Build 8 / 内部 72 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-11 15:39（上海）PID 28161；234 项输入、13 个资产、加载路径与完整包一致；系统柔和滚动边缘与完成卡绿色玻璃染色已进入运行包，效果待用户检查 |
-| 源码与运行包 | 包含当前设置、四个 Agent 接入、DSH 多目录兼容、个性化宽度、窄宽图表、实时效果预览及代理虚线动效；新增发布前圆角与 DSH ACK 修复。当前运行包增加未发布的确认订阅同步修复，独立历史文档整理和原型保留本地 |
-| 公开稳定版 | 0.7.9 Build 1 / 内部 59；GitHub Stable / Latest 与签名 appcast 已核验；回滚 0.7.7 Build 1 |
+| 最近运行核验 | 2026-10-15 02:43（上海）PID 54893；0.8.2 Build 8 / 内部 72，234 输入与完整包/实际加载路径一致 |
+| 源码与运行包 | Build 8 统一玻璃外观、11 pt Semibold 图标、12 pt Regular 导航标签与右内距调整已进入运行包；视觉待用户验收，当前状态和证据见顶部 |
+| 公开稳定版 | 0.8.2 Build 2 / 内部 66；完整发布事实见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
 正式 `/Applications/QuotaView.app` 与其 Widget 保持独立，清理未改正式安装或用户数据。
