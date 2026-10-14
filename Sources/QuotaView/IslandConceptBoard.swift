@@ -64,6 +64,8 @@ enum IslandChromeMetrics {
     static let bottomInset: CGFloat = 12
     static let footerHeight = buttonSize + bottomInset
     static let font = Font.system(size: fontSize, weight: .medium)
+    static let navigationFont = Font.system(size: fontSize, weight: .regular)
+    static let providerTrailingInset: CGFloat = 12
 }
 
 private struct IslandGlassActiveKey: EnvironmentKey {
@@ -1516,11 +1518,11 @@ struct IslandBoardView: View {
                 if state.showsUsage {
                     Button { state.showsReset ? state.closeReset() : state.closeUsage() } label: {
                         Label { Text(state.showsReset ? state.text("返回", "Back") : state.text("返回任务", "Tasks")) } icon: { Image(systemName: "chevron.left").font(IslandChromeMetrics.iconFont) }
-                            .font(IslandChromeMetrics.font).foregroundStyle(.white)
+                            .font(IslandChromeMetrics.navigationFont).foregroundStyle(.white)
                             .padding(.horizontal, IslandChromeMetrics.labelInset).frame(height: IslandChromeMetrics.buttonSize).contentShape(Capsule())
                     }.buttonStyle(IslandUtilityButtonStyle())
                     if !state.showsReset {
-                        Text(state.text("用量统计", "Usage")).font(IslandChromeMetrics.font).foregroundStyle(IslandBoardStyle.muted)
+                        Text(state.text("用量统计", "Usage")).font(IslandChromeMetrics.navigationFont).foregroundStyle(IslandBoardStyle.muted)
                     }
                 } else if state.approval != nil {
                     Circle().fill(IslandBoardStyle.confirmationHighlight).frame(width: 4, height: 4)
@@ -2747,10 +2749,11 @@ struct IslandUsageBento: View {
                                 .opacity(selected ? 1 : 0.72)
                                 .accessibilityHidden(true)
                         }
-                        Text(value.displayName).font(IslandChromeMetrics.font).lineLimit(1)
+                        Text(value.displayName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
                     }
                         .fixedSize(horizontal: true, vertical: false)
-                        .padding(.horizontal, IslandChromeMetrics.labelInset)
+                        .padding(.leading, IslandChromeMetrics.labelInset)
+                        .padding(.trailing, IslandChromeMetrics.providerTrailingInset)
                         .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
                         .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))

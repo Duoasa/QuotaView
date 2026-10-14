@@ -1,8 +1,8 @@
 # QuotaView SDD 注册表
 
-## 当前本地开发：0.8.2 Build 7
+## 当前本地开发：0.8.2 Build 8
 
-[底部玻璃与胶囊统一外观](island-glass-appearance.md) · `Accepted / Verifying`：浅色 / 深色 / 自动三选项只在液态玻璃显示，统一底栏与胶囊；黑色渐变和深色卡片保留，设置按外观与布局、显示内容、任务特效、自动展开分组。Build 6 已修正非激活按钮前景发灰，Build 7 按用户要求统一工具图标为 11 pt Semibold；编译与开发包核对通过；前序 3 项定向冒烟通过。用户已授权推送源码并合并 main，GitHub 结果与运行状态见 [Handoff](../../HANDOFF.md)，视觉待用户验收。
+[底部玻璃与胶囊统一外观](island-glass-appearance.md) · `Accepted / Verifying`：浅色 / 深色 / 自动三选项只在液态玻璃显示，统一底栏与胶囊；黑色渐变和深色卡片保留，设置按外观与布局、显示内容、任务特效、自动展开分组。Build 6 已修正非激活按钮前景发灰，Build 7 按用户要求统一工具图标为 11 pt Semibold，Build 8 将四处导航文案改为 12 pt Regular 并增加来源标签右内距；编译与开发包核对通过；前序 3 项定向冒烟通过。用户已授权推送源码并合并 main，GitHub 结果与运行状态见 [Handoff](../../HANDOFF.md)，视觉待用户验收。
 
 ## 前序本地适配：macOS 27 深色玻璃
 

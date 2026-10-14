@@ -31,3 +31,5 @@ Spec ID：`QV-ISLAND-GLASS-APPEARANCE-001` · 状态：`Accepted / Verifying` ·
 Build 6 跟进：用户反馈上下四个按钮图标发灰，共用 `.primary` 前景改为依据 scoped colorScheme 明确黑/白，顶部保持白色，底部和预览同步，禁用态保持。0.8.2 / Build 6 / 内部 70 已编译并启动，输入/包/加载路径核对通过，证据 `.build/glass-icon-contrast-20261015/`；视觉等待用户检查。
 
 Build 7 跟进：按用户要求，共用工具 SF Symbols 从 10 pt Medium 改为 11 pt Semibold；24 pt 按钮/命中区域与 12 pt Medium 文字保持。0.8.2 Build 7 / 内部 71 增量构建、开发包启动及输入/加载路径核对通过，证据 `.build/chrome-icons11-20261015/`。
+
+Build 8 跟进：返回/用量标题/Codex/Claude Code 四处导航文案改为 12 pt Regular，来源标签右内距 12 pt、左侧 8 pt。0.8.2 Build 8 / 内部 72 已完成增量构建与开发包更新，234 输入/包/加载路径核对通过，证据 `.build/usage-labels-regular-20261015/`。
