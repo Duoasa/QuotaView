@@ -140,7 +140,7 @@ Distribution packaging uses `scripts/build-app.sh`. Developer ID signing and not
 
 ## Project and feedback
 
-- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [Previous stable 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
+- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [Previous stable 0.8.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)
 - [Version history and release evidence](VERSION_HISTORY.md) · [Development handoff](HANDOFF.md)
 - [Design and behavior specifications](docs/specs/README.md) · [Contributing](CONTRIBUTING.md)
 - [Report an issue](https://github.com/Duoasa/QuotaView/issues/new/choose), or use **Settings → Bug Feedback**.

@@ -2,11 +2,11 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前候选：0.8.3 Build 1 / 已授权发布与 appcast
+## 当前发布：0.8.3 Build 1
 
-2026-10-16 用户要求基于最新开发版重新封装 0.8.3，源码合入 main、更新 README 并发布 appcast。本次固定 0.8.3 / Build 1 / 内部 75，tag `v0.8.3-build.1`，资产 `QuotaView-v0.8.3-build.1.zip`；准入已批准，执行签名、公证、Stable Release、公开回下载和签名 Feed 全链路。现有 0.8.2 Build 2 为回滚基线，发布前仍为公开稳定版。
+2026-10-16：按用户授权，最新开发代码已封装为 0.8.3 Build 1，源码经 [PR #101](https://github.com/Duoasa/QuotaView/pull/101) 合入 main；PR/main CI 通过。Universal 正式包已签名、公证、Staple，GitHub Stable / Latest 和签名 appcast 已上线，公开 ZIP、Feed 字节与内置公钥验证通过。中英文 README 已同步。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.2-build.2`。
 
-范围：Build 10 的 macOS 27 玻璃适配、底栏/胶囊统一浅深自动、设置重分组、图标文字细调与 Widget 字体归档兼容。中英文 README 与下载入口同步。0.8.3 Build 1 开发包已增量构建并启动 PID 15395，234 输入/13 资产/包与加载路径一致，正式安装文件未替换；完整测试、正式构建、CI 和发布结果待完成。证据 `dist/verification/0.8.3-build1-release/`，规格 [0.8.3 发布](docs/specs/release-0.8.3.md)。
+范围：macOS 27 玻璃兼容、底栏/胶囊统一浅深自动、设置分组、图标文字细调与 Widget 字体归档修复。开发包已更新启动，当前运行定位见下表；正式安装保持此前本机测试 Build 10，本轮未替换。小组件仅本机 Medium 场景由用户确认恢复，其他视觉/设备场景待用户验收。证据 `dist/verification/0.8.3-build1-release/`，规格 [0.8.3 发布](docs/specs/release-0.8.3.md)。
 
 ## 0.8.2 Build 10 / Widget 字体跨进程兼容
 
@@ -514,15 +514,15 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.7.7-build1-development`，基线 HEAD `7613bd3`；本轮 macOS 27 深色玻璃为本地未提交修改 |
-| 开发身份 | `com.quotaview.development073`；源码 0.8.2 / 显示 Build 8 / 内部 72 |
+| 分支 / 源码提交 | `codex/0.7.7-build1-development`（沿用历史分支名）；0.8.3 发布提交 `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`，后续文档补记不改变应用输入 |
+| 开发身份 | `com.quotaview.development073`；0.8.3 / 显示 Build 1 / 内部 75 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-15 02:43（上海）PID 54893；0.8.2 Build 8 / 内部 72，234 输入与完整包/实际加载路径一致 |
-| 源码与运行包 | Build 8 统一玻璃外观、11 pt Semibold 图标、12 pt Regular 导航标签与右内距调整已进入运行包；视觉待用户验收，当前状态和证据见顶部 |
-| 公开稳定版 | 0.8.2 Build 2 / 内部 66；完整发布事实见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 最近运行核验 | 2026-10-16 10:08（上海）PID 15395；234 输入、13 资产、完整包/备份与实际加载路径一致 |
+| 源码与运行包 | 最新玻璃、设置、字体及 Widget 修复已进入 0.8.3 运行包；视觉待用户验收 |
+| 公开稳定版 | 0.8.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 本机正式安装 | `/Applications/QuotaView.app` 保留此前授权安装的 0.8.2 Build 10；本轮发布未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
-正式 `/Applications/QuotaView.app` 与其 Widget 保持独立，清理未改正式安装或用户数据。
 
 ## 代理虚线参考样式（2026-10-09，已进入开发包）
 

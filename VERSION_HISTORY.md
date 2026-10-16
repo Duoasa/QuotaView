@@ -9,7 +9,32 @@
 
 ## 当前最新版本
 
-> GitHub Stable / Latest **0.8.2 Build 2**；签名 appcast 已公开验证。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> GitHub Stable / Latest **0.8.3 Build 1**；签名 appcast 已公开验证。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.8.3 / Build 1 / 内部 75` |
+| Tag / 发布提交 | `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`；[PR #101](https://github.com/Duoasa/QuotaView/pull/101)；源码 `5768e3c1893ab3d32a5de649197db5c29410a1b3` |
+| GitHub Release | [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，Stable / Latest，非 Draft / Pre-release |
+| 资产 | `QuotaView-v0.8.3-build.1.zip`，24,868,121 bytes |
+| SHA-256 | `69e8bf96524975321049c816eae72463f6f81cb7dd6f69363d570b217972f949` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`dec19d11-c030-4264-9b64-f95580b1fe95` |
+| 产物验证 | 244 个冻结输入与源提交及合并提交一致；签名、Gatekeeper、13 项资源、解压启动 15 秒及动态库路径通过；公开 ZIP 与本地包逐字节一致，EdDSA 用内置公钥验证 |
+| 本地 / CI | 711 项测试，6 跳过，0 失败；审批契约 44 项通过；PR CI 38838977272、main CI 38839323466 均成功 |
+| appcast | `https://duoasa.github.io/QuotaView/appcast.xml`；gh-pages `20bc8567adca4f0c16b956e7b7877b28568de2dc`，Pages 38839969009；序列 75 / 66 / 62，保留项下载 URL、长度及签名不变 |
+| Feed SHA-256 | `3e67acd1d822509013e6cb8340f9cb7706d01bbbd1e935e3e58a45a042b9d54a`；线上字节和内置公钥签名验证通过，旧版内部序号 66、74 的下一更新为 75 |
+| EdDSA | `Oqd2Kl0GQpIRR2a1m9nCLUArXNnruzEvF+F3LSFWttihKXAyb4b21UMrNBMIYZzijTWsggcqfBoJ/2RfI7M9BQ==` |
+| 回滚 | [v0.8.2-build.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) / `d16307f4666f75b94a40cdb3933777a028d8fa8a`；旧版公开 ZIP 已再次回下载核对，事实保留在下节 |
+
+本版包含 macOS 27 深色玻璃兼容、灵动岛下部与悬浮胶囊统一浅色/深色/自动外观、设置分组、图标与文字微调，以及 WidgetKit 字体跨进程归档修复。中英文 README 下载与说明、英文 Release Notes 已更新。
+
+小组件修复已由用户在本机当前 Medium 场景确认恢复；其他设备、尺寸、外观与长期运行仍由用户验收。真实额度重置保持演示。0.8.3 开发版已启动，正式安装保留此前授权的 0.8.2 Build 10，本轮未替换。证据 `dist/verification/0.8.3-build1-release/`。
+
+## 0.8.2 Build 2（上一稳定版）
+
+> 历史稳定版，0.8.3 Build 1 的回滚基线。以下保留当时发布事实。
 
 | 项目 | 当前值 |
 |---|---|

@@ -1,6 +1,6 @@
 # QuotaView 0.8.3 发布
 
-编号：QV-RELEASE-0.8.3-001 · 状态：Accepted / Verifying
+编号：QV-RELEASE-0.8.3-001 · 状态：Released / User Acceptance Pending
 
 2026-10-16 用户明确要求用最新开发代码封装 0.8.3、推送合并 main、更新 README 和 appcast。精确身份为 0.8.3 Build 1 / 内部 75，tag `v0.8.3-build.1`，资产 `QuotaView-v0.8.3-build.1.zip`。GitHub Stable/Latest 与签名自动更新准入已批准；按发布规则继续完成整条链路。
 
@@ -11,3 +11,5 @@
 回滚基线 `v0.8.2-build.2` / `d16307f4666f75b94a40cdb3933777a028d8fa8a`，25,070,922 bytes，SHA-256 `49945e73487f40ec945e7db88ecc4c6d2ecf35c053bd60e1772be2805ebfcb4c`。保持旧 tag/资产/签名不变。
 
 证据 `dist/verification/0.8.3-build1-release/`；不可变发布事实完成后进入[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行包见[Handoff](../../HANDOFF.md)。
+
+2026-10-16 发布完成：PR #101 与 main CI 通过；244 个冻结输入与源提交/合并提交一致，711 项测试（6 跳过、0 失败）和 44 项契约通过。Universal Developer ID、公证/Staple/Gatekeeper、资源与解压启动通过；GitHub Stable / Latest 资产公开回下载及 EdDSA 验证通过，签名 appcast 75 / 66 / 62 已部署，历史项与在线字节/签名/更新目标验证通过。双语 README 与开发版均更新。完整哈希、提交、CI、公证与回滚事实只在版本历史维护；视觉与跨设备验收范围不扩大。
