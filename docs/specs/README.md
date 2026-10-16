@@ -1,8 +1,12 @@
 # QuotaView SDD 注册表
 
-## 当前本地开发：0.8.2 Build 10
+## 当前发布候选：0.8.3 Build 1
 
-[Widget 字体归档兼容](../design/quotaview-widgetkit-solution.md#macos-27-字体归档兼容2026-10-15) · `Accepted / Verifying`：针对实机 NotificationCenter 的 invalidFont 解码错误，扩展改用保留随包文件 URL 的字体 descriptor，主应用字体不变。开发构建与运行包已更新，现有正式 Widget 尚未替换，系统渲染与用户视觉验收待完成。用户已授权推送合并，CI 与交付见 Handoff。
+[0.8.3 发布规格](release-0.8.3.md) · `Accepted / Verifying`：基于 Build 10，固定 0.8.3 / 1 / 75；用户已授权完整发布及 appcast，回滚基线 0.8.2 Build 2。中英文 README、源码与渠道验证见 Handoff，完成前不标记已发布。
+
+## 前序开发：0.8.2 Build 10
+
+[Widget 字体归档兼容](../design/quotaview-widgetkit-solution.md#macos-27-字体归档兼容2026-10-15) · `Accepted / Verifying`：针对实机 NotificationCenter 的 invalidFont 解码错误，扩展改用保留随包文件 URL 的字体 descriptor，主应用字体不变。开发构建与运行包已更新；用户另授权备份替换本机安装，已签名安装 Build 10，并确认桌面恢复显示。本机当前 Medium 场景已验收，其他设备/尺寸/状态仍待验证。源码经 PR #100 合入 main，CI 与交付见 Handoff。
 
 ## 已合入源码：0.8.2 Build 9
 
