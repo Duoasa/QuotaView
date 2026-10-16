@@ -95,3 +95,5 @@ Provider 只包含显示名、归一方案、主额度窗口、最多三个辅�
 本机 macOS 27 日志确认正式 Build 2 的时间线生成成功，而 NotificationCenter 解码 timeline 和 placeholder 报 `CodablePlatformFont.invalidFont`、继发 `badTimelineData`。旧内存字体三种字重均缺少 `kCTFontURLAttribute`；文件 descriptor 保留地址。本机证据不代表所有设备或全新安装均复现。
 
 0.8.2 Build 10 / 内部 74 已更新开发包；正式 `/Applications/QuotaView.app` 未替换。字体来源与重建检查不能证明 WidgetKit 宿主实际渲染通过；需安装含修复的扩展后，由用户检查 Small/Medium、占位/不可用/有效值、浅深色和系统桌面样式。运行与测试证据 `.build/widget-font-20261015/`，合入结果见 [Handoff](../../HANDOFF.md)。
+
+后续实机验收：用户授权本机签名安装 0.8.2 Build 10 后，系统重新加载对应扩展及字体，03:10:13 新时间线读取成功，用户明确“显示了”。本机 Medium 桌面恢复已确认；其他机器、Small 与不同外观/数据状态未据此宣布通过。旧安装完整备份，未公证或公开发布，签名/运行证据同上。PR #100 源码已合入 main，PR/main CI 均通过，具体提交与证据见 Handoff。

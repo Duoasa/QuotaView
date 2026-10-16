@@ -2,13 +2,27 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.2 Build 10 / Widget 字体跨进程兼容
+## 当前候选：0.8.3 Build 1 / 已授权发布与 appcast
+
+2026-10-16 用户要求基于最新开发版重新封装 0.8.3，源码合入 main、更新 README 并发布 appcast。本次固定 0.8.3 / Build 1 / 内部 75，tag `v0.8.3-build.1`，资产 `QuotaView-v0.8.3-build.1.zip`；准入已批准，执行签名、公证、Stable Release、公开回下载和签名 Feed 全链路。现有 0.8.2 Build 2 为回滚基线，发布前仍为公开稳定版。
+
+范围：Build 10 的 macOS 27 玻璃适配、底栏/胶囊统一浅深自动、设置重分组、图标文字细调与 Widget 字体归档兼容。中英文 README 与下载入口同步。0.8.3 Build 1 开发包已增量构建并启动 PID 15395，234 输入/13 资产/包与加载路径一致，正式安装文件未替换；完整测试、正式构建、CI 和发布结果待完成。证据 `dist/verification/0.8.3-build1-release/`，规格 [0.8.3 发布](docs/specs/release-0.8.3.md)。
+
+## 0.8.2 Build 10 / Widget 字体跨进程兼容
 
 2026-10-15：用户反馈 macOS 27 桌面小组件只剩空框。系统正在加载 `/Applications/QuotaView.app` 的正式 0.8.2 Build 2 扩展；签名核验通过，Timeline 请求成功，但 NotificationCenter 解码 timeline 和 placeholder 均报 `SwiftUI.CodablePlatformFont.Error.invalidFont`，继而 `badTimelineData` 重载循环。非账户、卡片玻璃路径问题；尚不能证明所有 macOS 27 设备/全新安装均会复现。
 
 旧 `CTFontCreateWithGraphicsFont` 的内存字体没有来源 URL。Widget 的 Asta Sans 改为从随包文件 descriptor 创建、校验 face/URL/字形，并保留文件地址；缺失/非法字体回退系统字体。主应用继续使用原直接数据加载，避免改变此前同名字体冲突修复。字号、布局、快照和字体资产不变。详见 [Widget 契约](docs/design/quotaview-widgetkit-solution.md#macos-27-字体归档兼容2026-10-15)。
 
-0.8.2 / Build 10 / 内部 74 Debug arm64 增量构建成功，03:00 开发包已启动 PID 68163；234 输入、13 资产、完整包/备份与加载路径一致，正式安装未替换。证据 `.build/widget-font-20261015/`。桌面现有正式小组件未更新，不能把本地 descriptor/构建检查当成系统跨进程渲染或用户视觉验收通过；修复在开发包，尚需更新已安装扩展后实际验收。两项定向字体测试通过，覆盖三种字重、9/12/16/32 pt、来源 URL/重建、缺失/损坏/错误字重回退。用户已授权该修复推送 GitHub 合入 main，CI 待完成，不发布 Release/appcast。
+0.8.2 / Build 10 / 内部 74 Debug arm64 增量构建成功，03:00 开发包已启动 PID 68163；234 输入、13 资产、完整包/备份与加载路径一致，正式安装未替换。证据 `.build/widget-font-20261015/`。最初只更新开发包，随后按用户明确授权完成本机签名安装并获“显示了”的反馈，详见下方实机交付记录。两项定向字体测试通过，覆盖三种字重、9/12/16/32 pt、来源 URL/重建、缺失/损坏/错误字重回退。修复已由 PR #100 合入 main，PR/main CI 均通过；不发布 Release/appcast。
+
+### Build 10 本机签名安装与用户验收
+
+用户随后明确授权完整备份并替换本机安装。2026-10-15 03:10：Release arm64 本机包完成 Developer ID 签名，App/Widget 同为 0.8.2 / 10 / 74，沿用正式应用身份和 App Group。完整旧包备份 `.build/runtime-package-backups/formal-before-widget-font-20261015-030910/QuotaView.app`；新包 `/Applications/QuotaView.app` 已启动 PID 76548，Widget PID 76553，实际加载新扩展和三种随包字体。开发实例已退出，避免双实例；开发运行包仍保留 Build 10。
+
+新时间线于 03:10:13 成功加载；用户明确回复“显示了”，确认本机桌面小组件恢复。这覆盖本机当前 Medium 场景，不扩展为所有 macOS 27 安装、Small、所有外观/空态的验收。源码和本机包 234 输入与 main 合并提交一致；安装/备份清单通过。未公证，未发布 Release/appcast，不把本机测试安装称为公开更新。
+
+源码已由 [PR #100](https://github.com/Duoasa/QuotaView/pull/100) 合入 main `f632288fb706b83e691000e365004f6ed9654d94`（源码 `7c3387d2f302496e6ac91bbae1be834025d1f0ab`）；PR CI 38620390253、main CI 38621030447 均成功。此段为合并后的本地交付补记。
 
 ## 0.8.2 Build 9 / 胶囊与岛体统一玻璃
 

@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.2-build.2/QuotaView-v0.8.2-build.2.zip"><strong>下载 QuotaView v0.8.2 Build 2</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 QuotaView v0.8.3 Build 1</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -34,7 +34,13 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-## 0.8.2 小更新
+## 0.8.3 更新
+
+改善 macOS 27 的液态玻璃兼容性。灵动岛下部玻璃区域与悬浮用量胶囊统一采用清透材质，支持浅色、深色和自动外观；设置项目重新分组，并优化工具图标、文字与标签间距。
+
+同时修复系统升级后桌面小组件可能因自定义字体解码失败而空白的问题，保留 Asta Sans 字体样式。
+
+## 同时包含 0.8.2 的改进
 
 通用设置新增灵动岛显示位置：可以跟随当前活动窗口所在的屏幕，也可以固定在指定显示器。选择会自动保存，显示器断开时暂回主屏，重新连接后恢复。同时修复了子 Agent 信息在任务卡片下方偏上的问题。
 
@@ -52,7 +58,7 @@ QuotaView 0.8.1 为灵动岛带来新的液态玻璃界面。任务、用量和�
 
 ### 用量，不用反复打开面板
 
-新增悬浮用量胶囊，显示剩余额度与重置倒计时。账户有 5 小时周期时，与周额度并列显示；只有周周期时，胶囊自动收窄。可选择深色染色玻璃或清透玻璃，也可以在设置里关闭。
+新增悬浮用量胶囊，显示剩余额度与重置倒计时。账户有 5 小时周期时，与周额度并列显示；只有周周期时，胶囊自动收窄。玻璃外观跟随灵动岛的浅色、深色或自动选择，显示开关可单独控制。
 
 用量页可切换 Codex 和 Claude Code，集中查看可获取的额度、Token 历史、成本估算与活动热图。成本是估算值，不是账单；各客户端提供的数据范围不同。
 
@@ -74,7 +80,7 @@ QuotaView 0.8.1 为灵动岛带来新的液态玻璃界面。任务、用量和�
 
 ### 按你的桌面来调整
 
-设置改为左右分栏，窗口、文字、图标与控件更加紧凑。灵动岛支持液态玻璃和经典纯色两种材质，黑色区域可在 20%–80% 之间调整；展开宽度、胶囊配色、隐私模式和自动展开也能单独设置。
+设置改为左右分栏，窗口、文字、图标与控件更加紧凑。灵动岛支持液态玻璃和经典纯色两种材质，黑色区域可在 20%–80% 之间调整；展开宽度、胶囊显示、隐私模式和自动展开也能单独设置。浅色、深色和自动外观的可视化选项仅在液态玻璃下显示。
 
 预览会同步显示材质和双周期胶囊。状态烟雾、量子噪点、液态涌浪三种任务特效可随时切换。
 
@@ -86,7 +92,7 @@ QuotaView 0.8.1 为灵动岛带来新的液态玻璃界面。任务、用量和�
 
 ![Agent 连接设置](Resources/0.8.1/6.jpg)
 
-产品图使用示例数据。实际额度、任务状态和可用操作以本地客户端提供的信息为准。原生液态玻璃需要 macOS 26；较早系统使用半透明材质，也可选择经典纯色。
+产品图展示 0.8.1 界面并使用示例数据，设置分组此后已有调整。实际额度、任务状态和可用操作以本地客户端提供的信息为准。原生液态玻璃需要 macOS 26；较早系统使用半透明材质，也可选择经典纯色。
 
 ## Agent 支持范围
 
@@ -101,7 +107,7 @@ DSH 和 Kimi Code 的权限请求在原客户端确认。可用字段取决于 A
 
 ## 快速开始
 
-1. 下载 [QuotaView 0.8.2 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)，解压并打开 `QuotaView.app`。
+1. 下载 [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，解压并打开 `QuotaView.app`。
 2. 在**设置 → 连接**中启用需要的 Agent。
 3. Codex 自动发现本地任务。配置 Hook 或 DSH 插件后，按设置提示新建会话或重启对应客户端。
 
@@ -134,7 +140,7 @@ swift run QuotaView
 
 ## 项目与反馈
 
-- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2) · [上一稳定版 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
+- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [上一稳定版 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
 - [版本历史与发布证据](VERSION_HISTORY.md) · [开发交接](HANDOFF.md)
 - [设计与行为规格](docs/specs/README.md) · [贡献指南](CONTRIBUTING.md)
 - [提交问题](https://github.com/Duoasa/QuotaView/issues/new/choose)，也可从**设置 → Bug 反馈**进入。
