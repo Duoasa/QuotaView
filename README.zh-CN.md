@@ -140,7 +140,7 @@ swift run QuotaView
 
 ## 项目与反馈
 
-- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [上一稳定版 0.8.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.1-build.2)
+- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [上一稳定版 0.8.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)
 - [版本历史与发布证据](VERSION_HISTORY.md) · [开发交接](HANDOFF.md)
 - [设计与行为规格](docs/specs/README.md) · [贡献指南](CONTRIBUTING.md)
 - [提交问题](https://github.com/Duoasa/QuotaView/issues/new/choose)，也可从**设置 → Bug 反馈**进入。

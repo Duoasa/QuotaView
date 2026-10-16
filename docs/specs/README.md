@@ -1,8 +1,8 @@
 # QuotaView SDD 注册表
 
-## 当前发布候选：0.8.3 Build 1
+## 当前发布：0.8.3 Build 1
 
-[0.8.3 发布规格](release-0.8.3.md) · `Accepted / Verifying`：基于 Build 10，固定 0.8.3 / 1 / 75；用户已授权完整发布及 appcast，回滚基线 0.8.2 Build 2。中英文 README、源码与渠道验证见 Handoff，完成前不标记已发布。
+[0.8.3 发布规格](release-0.8.3.md) · `Released / User Acceptance Pending`：GitHub Stable / Latest 与签名 appcast 已发布，源码 PR/main CI、公开 ZIP 与 Feed 验证通过。中英文 README 已更新，回滚基线 0.8.2 Build 2；完整发布事实见版本历史，开发运行包见 Handoff。
 
 ## 前序开发：0.8.2 Build 10
 
@@ -14,9 +14,9 @@
 
 ## 前序本地适配：macOS 27 深色玻璃
 
-`Accepted / Verifying`：按用户参考图继续调深至 0.8.2 Build 4（内部 68）。macOS 27 近黑表面采用未染色 clear 玻璃与原强度独立底色，修正 Build 3 过亮；共用于任务、用量卡片、深色胶囊及预览。macOS 26 与辅助功能回退保持原样；[调校规格](island-expanded-glass.md#macos-27-炭灰玻璃调校2026-10-15覆盖-build-3)。增量编译与开发运行包核对通过，证据见 [Handoff](../../HANDOFF.md)，视觉待用户验收。公开版本仍为下方 Build 2。
+`Accepted / Verifying`：按用户参考图继续调深至 0.8.2 Build 4（内部 68）。macOS 27 近黑表面采用未染色 clear 玻璃与原强度独立底色，修正 Build 3 过亮；共用于任务、用量卡片、深色胶囊及预览。macOS 26 与辅助功能回退保持原样；[调校规格](island-expanded-glass.md#macos-27-炭灰玻璃调校2026-10-15覆盖-build-3)。增量编译与开发运行包核对通过，证据见 [Handoff](../../HANDOFF.md)，视觉待用户验收。此适配已纳入上方 0.8.3 发布。
 
-## 当前发布：0.8.2 Build 2
+## 前序发布：0.8.2 Build 2
 
 [0.8.2 发布规格](release-0.8.2.md) · `Released / User Acceptance Pending`。版本 `0.8.2 / 2 / 66` 已发布 GitHub Stable / Latest 并推送签名 appcast。本次为显示位置设置与子 Agent 排版修复的小更新。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行状态见 [Handoff](../../HANDOFF.md)。前一稳定版 [0.8.1](release-0.8.1.md) 保留为回滚基线；实际多屏与视觉由用户验收。
 
