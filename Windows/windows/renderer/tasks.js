@@ -982,7 +982,10 @@ function IslandView() {
       style: {
         "--island-width": t.settings.islandWidth + "px",
         "--body-max-height":
-          Math.max(160, Math.min(650, window.screen.availHeight - 190)) + "px",
+          // Match the native height budget, including the capsule reservation.
+          // Header, footer, shell border and outer padding need 112 px of it.
+          Math.max(0, Math.min(650, (t.ui?.maxHeight ??
+            (window.screen.availHeight - (t.settings.showCapsule !== false ? 112 : 16))) - 112)) + "px",
       },
       onMouseEnter: () => {
         pointerInside.current = true;

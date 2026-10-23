@@ -325,7 +325,9 @@ function runApplication() {
       version: app.getVersion(),
       locale: locale(),
       update,
-      ui: { expanded, expansionReason, pinned, hovered },
+      ui: { expanded, expansionReason, pinned, hovered,
+        maxHeight: Math.max(46, display().workArea.height - (settings.showCapsule ? 112 : 16)),
+      },
       platform: {
         os: process.platform,
         glassNative: false,
