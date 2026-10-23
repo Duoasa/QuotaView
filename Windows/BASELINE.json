@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/Duoasa/QuotaView",
+  "release": "v0.7.7-build.1",
+  "release_url": "https://github.com/Duoasa/QuotaView/releases/tag/v0.7.7-build.1",
+  "commit": "3866177cfa19db734d657ef505a4dc72c3338fba",
+  "windows_stage": "local-minimum-preview",
+  "source_references": [
+    "Sources/QuotaView/IslandConceptBoard.swift",
+    "Sources/QuotaView/IslandPresentationModels.swift",
+    "Sources/QuotaViewCore/CodexLocalRolloutActivityClient.swift",
+    "docs/specs/codex-island-information-contract.md"
+  ],
+  "adapted": [
+    "IslandVibeLayout: compact width 340, expanded width 680, card height 60, gap 8, radius 10, inset 28",
+    "IslandNotchShape: continuous concave top and convex bottom Bezier silhouette",
+    "Opaque black island, status hierarchy and completed card outline",
+    "Explicit turn lifecycle, scoped token records, public assistant content filtering"
+  ]
+}

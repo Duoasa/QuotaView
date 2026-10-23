@@ -1,0 +1,16 @@
+{
+  "name": "quotaview-windows",
+  "productName": "QuotaView Windows",
+  "version": "0.8.3-win.1",
+  "description": "Windows port of QuotaView: local agent island, quota and token monitor",
+  "main": "src/main.cjs",
+  "author": "QuotaView contributors",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@iarna/toml": "2.2.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "yaml": "2.9.1"
+  }
+}

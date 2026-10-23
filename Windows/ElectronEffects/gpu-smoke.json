@@ -1,0 +1,36 @@
+{
+  "topAligned": true,
+  "windowBackgrounds": [
+    "#000000",
+    "#000000"
+  ],
+  "effects": {
+    "ok": true,
+    "renderer": "WebGL2",
+    "contexts": 1,
+    "orbPixels": true,
+    "quantumProgress": true,
+    "compacting": true,
+    "completed": true,
+    "reactOrbMounted": true,
+    "reactQuantumMounted": true,
+    "teardown": true,
+    "errors": []
+  },
+  "ok": true,
+  "version": "0.8.3-win.1.effects.2",
+  "platform": "win32",
+  "arch": "x64",
+  "packaged": true,
+  "rendererLoaded": true,
+  "views": [
+    "island",
+    "capsule",
+    "settings"
+  ],
+  "preloadBridge": true,
+  "reactMounted": true,
+  "rendererErrors": [],
+  "contextIsolation": true,
+  "nodeIntegration": false
+}

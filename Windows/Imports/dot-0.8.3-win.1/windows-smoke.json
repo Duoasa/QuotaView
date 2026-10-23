@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "version": "0.8.3-win.1",
+  "platform": "win32",
+  "arch": "x64",
+  "packaged": true,
+  "rendererLoaded": true,
+  "views": [
+    "island",
+    "capsule",
+    "settings"
+  ],
+  "preloadBridge": true,
+  "reactMounted": true,
+  "rendererErrors": [],
+  "contextIsolation": true,
+  "nodeIntegration": false
+}
