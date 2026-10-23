@@ -1,0 +1,4 @@
+QuotaView Windows reuses upstream QuotaView visual resources under the repository MIT license, Copyright (c) 2026 Duoasa. See the distributed LICENSE.
+Asta Sans font files are distributed under the SIL Open Font License. See fonts/AstaSans-OFL.txt.
+Codex, Claude, DSH, and Kimi names and provider marks identify their respective services. QuotaView is an independent project and does not imply provider endorsement.
+The Windows glass surfaces and animated effects are independent CSS approximations. They do not include Apple's proprietary Liquid Glass rendering implementation.

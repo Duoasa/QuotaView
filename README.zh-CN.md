@@ -2,7 +2,7 @@
   <img src="Resources/QuotaView-ICON.png" alt="QuotaView 图标" width="160">
 </p>
 
-<h1 align="center">QuotaView · macOS 多 Agent 灵动岛</h1>
+<h1 align="center">QuotaView · macOS 与 Windows 多 Agent 灵动岛</h1>
 
 <p align="center">
   液态玻璃，现在重新回归
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 QuotaView v0.8.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 macOS 版 · v0.8.3 Build 1</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -33,6 +33,15 @@
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
+
+## 选择平台
+
+| 平台 | 下载与源码 | 更新通道 |
+| --- | --- | --- |
+| macOS 14+ | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · 根目录 Swift 工程 | 原有 macOS Sparkle 通道 |
+| Windows x64 | [Windows 预览、完整源码与构建说明](Windows/README.md) · [.NET + WebView2 构建](https://github.com/Duoasa/QuotaView/actions/workflows/windows.yml) | 独立的签名 Windows appcast |
+
+两个平台后续均在本仓库维护。Windows 使用纯色灵动岛，保留 AI 球与量子噪点，无桌面小组件。目前 Windows 开发包通过 CI 构建产物提供，尚未在本仓库发布首个正式 Windows Release。下方截图和版本说明为 macOS 版。
 
 ## 0.8.3 更新
 

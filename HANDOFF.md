@@ -2,6 +2,14 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## Windows 统一仓库与更新通道（2026-10-23）
+
+按用户要求，完整 Windows 源码自 `Duoasa/quotaview-windows@cfc5490` 迁至 [Windows/](Windows/README.md)，后续开发、发布和问题反馈统一使用本仓库。当前开发版 `0.8.3-win.10`；新增 Windows CI、独立签名 appcast、下载取消、重启安装和文件失败回滚。macOS 生产源码、版本、Latest 与 Sparkle feed 保留。
+
+[Windows 更新规格](docs/specs/windows-channel.md)记录当前边界。[发布工具](Windows/updates/README.md)生成本地签名 candidate；公开 Windows feed 当前无准入条目，未发布 Windows Release。版本身份与用户数据分开，当前阶段不是正式更新发布。
+
+源码与原生构建、30 项更新专项及 7 项既有移植检查通过；实际 standalone ZIP 的签名、长度、SHA-256、版本与 324 个文件解压检查通过，8 项原生桥冒烟通过。本次 PR/main CI 与运行状态随后回填。用户负责视觉与真实升级体验验收。
+
 ## 当前发布：0.8.3 Build 1
 
 2026-10-16：按用户授权，最新开发代码已封装为 0.8.3 Build 1，源码经 [PR #101](https://github.com/Duoasa/QuotaView/pull/101) 合入 main；PR/main CI 通过。Universal 正式包已签名、公证、Staple，GitHub Stable / Latest 和签名 appcast 已上线，公开 ZIP、Feed 字节与内置公钥验证通过。中英文 README 已同步。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.2-build.2`。

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../../updates/public-key.pem" LogicalName="QuotaView.WindowsUpdatePublicKey" />
+    <Compile Include="../../native/WindowsUpdatePolicy.cs" Link="WindowsUpdatePolicy.cs" />
+    <Compile Include="../../native/WindowsUpdateInstaller.cs" Link="WindowsUpdateInstaller.cs" />
+  </ItemGroup>
+</Project>

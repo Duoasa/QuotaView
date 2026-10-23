@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:qv="https://quotaview.app/windows-update/v1">
+  <channel>
+    <title>QuotaView Windows</title>
+    <link>https://github.com/Duoasa/QuotaView/tree/main/Windows</link>
+    <description>Windows x64 standalone updates. Releases enter this channel only after explicit approval.</description>
+    <!-- No Windows release has been admitted to automatic updates yet. macOS uses its separate Sparkle feed. -->
+  </channel>
+</rss>

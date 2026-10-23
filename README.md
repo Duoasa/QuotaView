@@ -2,7 +2,7 @@
   <img src="Resources/QuotaView-ICON.png" alt="QuotaView icon" width="160">
 </p>
 
-<h1 align="center">QuotaView · Agent Island for macOS</h1>
+<h1 align="center">QuotaView · Agent Island for macOS &amp; Windows</h1>
 
 <p align="center">
   Liquid Glass is back.
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>Download QuotaView v0.8.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>Download for macOS · v0.8.3 Build 1</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -33,6 +33,15 @@
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
+
+## Choose your platform
+
+| Platform | Download / source | Updates |
+| --- | --- | --- |
+| macOS 14+ | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · native Swift project at the repository root | Existing macOS Sparkle channel |
+| Windows x64 | [Windows preview, build instructions and full source](Windows/README.md) · [.NET + WebView2 builds](https://github.com/Duoasa/QuotaView/actions/workflows/windows.yml) | Separate signed Windows appcast |
+
+Both editions are maintained in this repository. Windows uses a solid-color Island with AI orb and quantum-noise effects, and has no desktop widgets. Windows development builds are available as CI artifacts; the first standalone Windows release has not been published here yet. The screenshots and release notes below describe the macOS edition.
 
 ## What’s new in 0.8.3
 
