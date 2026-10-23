@@ -2,7 +2,7 @@
 
 固定地址：`https://raw.githubusercontent.com/Duoasa/QuotaView/main/Windows/updates/appcast.xml`。macOS 继续使用原 Sparkle feed 和原密钥。Windows 不读取 GitHub 全局 Latest，也不会安装 macOS ZIP。
 
-当前通道为空，表示尚未批准任何 Windows 版本进入自动更新；它不是网络错误或虚构的更新。当前开发版 `0.8.3-win.10` 尚未正式发布。仅有旧版 GitHub Releases 检查器的 Windows 包需要手动换到本版一次，之后使用此通道。
+首个正式版 [QuotaView 0.8.3-win · Windows](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10) 已发布，并以包内版本 `0.8.3-win.10` 加入此通道。公开名称为 `0.8.3-win`；包名、更新版本和 tag 保留 `.10`，使现有版本比较与签名校验兼容。仅有旧版 GitHub Releases 检查器的 Windows 包需要手动换到本版一次，之后使用此通道；已运行 `0.8.3-win.10` 时不会重复提示安装同一版本。
 
 ## 应用内行为
 
@@ -31,4 +31,4 @@ dotnet run --project ./webview2/tests/updates/Updates.Tests.csproj -c Release --
 
 私钥默认位于签名机器的 `%APPDATA%/QuotaViewBuild/windows-update-signing.dpapi`，使用 Windows DPAPI CurrentUser 加密；本仓库只有 `public-key.pem`。新克隆无需私钥即可构建和验证更新。私钥的备份与机器迁移需维护者管理，DPAPI 文件不能直接在另一 Windows 账户下使用；不要通过 Issue、聊天或 Git 传递。`-InitializeKey` 仅适用于首次建立通道，发现公钥或私钥已存在会拒绝覆盖。CI 当前不持有签名私钥。
 
-包完整性签名不等于 Authenticode 代码签名；当前开发包仍可能出现 Windows SmartScreen 提示。
+包完整性签名不等于 Authenticode 代码签名；当前 Windows 发行包仍可能出现 Windows SmartScreen 提示。

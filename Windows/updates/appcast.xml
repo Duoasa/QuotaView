@@ -3,7 +3,12 @@
   <channel>
     <title>QuotaView Windows</title>
     <link>https://github.com/Duoasa/QuotaView/tree/main/Windows</link>
-    <description>Windows x64 standalone updates. Releases enter this channel only after explicit approval.</description>
-    <!-- No Windows release has been admitted to automatic updates yet. macOS uses its separate Sparkle feed. -->
+    <description>Windows x64 standalone updates</description>
+    <item>
+      <title>QuotaView 0.8.3-win · Windows</title>
+      <link>https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10</link>
+      <pubDate>Fri, 23 Oct 2026 15:38:03 GMT</pubDate>
+      <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip" length="61037080" type="application/zip" qv:version="0.8.3-win.10" qv:os="windows" qv:arch="x64" qv:kind="standalone" qv:sha256="e2cd847a62773543aa0398cb33985dce80e48687f94b89ea3f6c9e94ddb18e8a" qv:signature="pUViYTStNf1KxRQCUBFiwagDdf747VuaVaJskAUbb/vfqTDtR6AEl9BHlmyIDTxQBW/2Z5lo1YFNLkpy8NpN3A1pvQaIlkyJj+D4NwY7Z4nhrmXEnJ85Tjsa0dSWfLI0bqZJFceWii/zO6lU+kBQPJkOKQBJ24vSqE6N+E36V4DdrglBfpTC34P9A5Mb9KVXC+nfVrdYvRt7Mlvhj12nF9bXX3X4hH14CRXavktZX24lmTdxcVvyrmS0Z6GLo6K4wbJerV4YJTNDg/4WXPwWto/Zev0xY4oOXd5zL/M18FfTVaT9611KGzEQ5iTKAxIbAPIubQgXoZRTQLq4F2rZ+G3VTqgcA2zTPu/CKcvITdsSOVBvyrTQ1ff13iTD70r54h4pkCIT9oFy9L4g/lRG05qVlO1/lb5ArB0Dg17dgP67OygqtO5JkujbETZ8+ayfO10Mip6yaLXw4rO6wsn958FsAgV22dRXbHc9Qvt+U6y9AHqg9mRZHNNZhHoUVEXc" />
+    </item>
   </channel>
 </rss>
