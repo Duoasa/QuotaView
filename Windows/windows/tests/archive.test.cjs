@@ -12,4 +12,3 @@ test("island archive persists without changing the agent and a new turn returns"
  store.restore();assert.equal(new DismissedTasks(dir).has(task),false);
  fs.unlinkSync(path.join(dir,"dismissed-tasks.json"));fs.rmdirSync(dir);
 });
-

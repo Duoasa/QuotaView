@@ -8,7 +8,7 @@
 
 [Windows 更新规格](docs/specs/windows-channel.md)记录当前边界。[发布工具](Windows/updates/README.md)生成本地签名 candidate；公开 Windows feed 当前无准入条目，未发布 Windows Release。版本身份与用户数据分开，当前阶段不是正式更新发布。
 
-源码与原生构建、30 项更新专项及 7 项既有移植检查通过；实际 standalone ZIP 的签名、长度、SHA-256、版本与 324 个文件解压检查通过，8 项原生桥冒烟通过。本次 PR/main CI 与运行状态随后回填。用户负责视觉与真实升级体验验收。
+源码与原生构建、30 项更新专项及 7 项既有移植检查通过；实际 standalone ZIP 的签名、长度、SHA-256、版本与 324 个文件解压检查通过，8 项原生桥冒烟通过。源码合入与精确提交的 CI 以 [PR #103](https://github.com/Duoasa/QuotaView/pull/103) 和 [Actions](https://github.com/Duoasa/QuotaView/actions) 为准。Windows 本机开发入口继续使用原 `webview2-migration/webview2/release/standalone/QuotaView.Native.exe`，仅更新运行目录内容以保留 Hook 路径；新源码位于 `quotaview-unified/Windows`。用户负责视觉与真实升级体验验收。
 
 ## 当前发布：0.8.3 Build 1
 

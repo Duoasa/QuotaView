@@ -1,6 +1,7 @@
 name: Windows WebView2 validation
 on:
   push:
+    branches: [main]
     paths: ["Windows/**", ".github/workflows/windows.yml"]
   pull_request:
     paths: ["Windows/**", ".github/workflows/windows.yml"]
