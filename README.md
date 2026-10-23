@@ -13,7 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="Latest release" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="macOS release" src="https://img.shields.io/badge/macOS-v0.8.3_Build_1-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows release" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -22,6 +23,8 @@
 
 <p align="center">
   <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>Download for macOS · v0.8.3 Build 1</strong></a>
+  ·
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>Download for Windows · 0.8.3-win</strong></a>
   ·
   <a href="#get-started">Get started</a>
   ·
@@ -39,9 +42,13 @@
 | Platform | Download / source | Updates |
 | --- | --- | --- |
 | macOS 14+ | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · native Swift project at the repository root | Existing macOS Sparkle channel |
-| Windows x64 | [Windows preview, build instructions and full source](Windows/README.md) · [.NET + WebView2 builds](https://github.com/Duoasa/QuotaView/actions/workflows/windows.yml) | Separate signed Windows appcast |
+| Windows x64 | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) · [.NET + WebView2 source and instructions](Windows/README.md) | Separate signed Windows appcast |
 
-Both editions are maintained in this repository. Windows uses a solid-color Island with AI orb and quantum-noise effects, and has no desktop widgets. Windows development builds are available as CI artifacts; the first standalone Windows release has not been published here yet. The screenshots and release notes below describe the macOS edition.
+### Windows is now available
+
+[QuotaView 0.8.3-win](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10) is the first stable Windows release. Because of differences in operating-system capabilities and software architecture, it is a reduced-feature adaptation of the macOS app, with further updates and improvements planned. It includes a solid-color Island, AI orb and quantum-noise effects, task status and supported approvals, and usage statistics; desktop widgets and native Liquid Glass are not included.
+
+Both editions are maintained in this repository, with platform labels in Releases and separate update channels. The Windows package/update version remains `0.8.3-win.10`. See the [Windows installation guide](Windows/README.md). The screenshots and release notes below describe the macOS edition.
 
 ## What’s new in 0.8.3
 
@@ -115,6 +122,8 @@ Product images show the 0.8.1 interface with sample data; settings have since be
 DSH and Kimi Code permissions are confirmed in the original client. Available fields depend on the agent and version; unavailable values keep their placeholders. DSH and Kimi integrations are opt-in. See the [integration contract](docs/specs/agent-integrations.md) for compatibility boundaries.
 
 ## Get started
+
+For Windows, follow the [Windows installation guide](Windows/README.md#下载与更新). The steps below are for macOS.
 
 1. Download [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1), unzip it, and open `QuotaView.app`.
 2. Open **Settings → Connections** and enable the agents you use.

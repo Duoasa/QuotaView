@@ -12,7 +12,9 @@ Windows is maintained here alongside macOS. The Windows edition uses .NET + WebV
 
 ## 下载与更新
 
-当前开发版 **0.8.3-win.10**。可在 [Windows 构建](https://github.com/Duoasa/QuotaView/actions/workflows/windows.yml) 的成功运行中下载 `quotaview-webview2-windows-x64`（GitHub 构建产物下载需要登录）。解压后运行 `QuotaView.Native.exe`，不要单独移动 EXE。正式 Windows Release 尚未发布；macOS 下载按钮不适用于 Windows。
+首个正式版 **[QuotaView 0.8.3-win · Windows](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10)** 已发布，包内与更新版本为 `0.8.3-win.10`。直接下载 [Windows x64 ZIP](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip)（61,037,080 bytes，约 58.2 MiB），完整解压后运行 `QuotaView.Native.exe`，不要单独移动 EXE。包内包含 .NET 运行时，需要系统已安装 [WebView2 Evergreen Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。
+
+受系统能力和软件架构差异影响，当前 Windows 版是在 macOS 版基础上做的功能降级适配，后续会持续更新完善。两个平台的 Release 均在本仓库发布并标明平台；macOS 包不能用于 Windows。
 
 应用内“关于 → 软件更新”使用[独立 Windows appcast](updates/appcast.xml)，支持检查、下载、校验和重启安装。下载与安装均由用户触发；不修改 macOS Sparkle 通道。发布流程、签名和备份说明见[Windows 更新说明](updates/README.md)。
 

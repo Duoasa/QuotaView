@@ -54,7 +54,9 @@ WebView2 Runtime 官方安装入口：https://developer.microsoft.com/microsoft-
 
 可执行文件加 `--approval-demo` 可手动体验 Claude 审批卡片，`--approval-demo-dir=<目录>` 指定项目根目录。正常模式不产生模拟请求。Codex 仅接通 Hook 时为只读请求；连接兼容的 Desktop owner 后支持原会话审批与问题回复。
 
-## 当前开发版 0.8.3-win.10
+## 当前正式版 0.8.3-win（包内版本 0.8.3-win.10）
+
+[首个 Windows 正式版](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10) 复用已验证的 `0.8.3-win.10` 原包，公开名称为 `0.8.3-win`。包名、tag 和更新身份保留 `.10`，首个签名条目加入独立 Windows 通道。资产、哈希及 CI 记录见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 Windows 工程迁入 `Duoasa/QuotaView/Windows`。版本身份统一来自 `version.json`；新增独立 Windows appcast、RSA-PSS/SHA-256 校验、用户触发下载与取消、重启安装及文件写入失败回滚。配置目录与安装路径保持不变。原生更新测试覆盖 30 项状态/校验/回滚场景；实际效果由用户验收。发布和签名说明见 [Windows 更新](../updates/README.md)。
 
