@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Captured on macOS. Menu bar, branding, and captions were composited; original task text is preserved. No reset credit was used.">
+  <title>QuotaView demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0d1117; color: #f0f6fc; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { max-width: 1104px; margin: 0 auto; padding: 40px 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+    h1 { font-size: clamp(24px, 4vw, 32px); line-height: 1.2; margin: 0 0 8px; }
+    p { margin: 0; color: #b1bac4; }
+    video { display: block; width: 100%; aspect-ratio: 8 / 5; border-radius: 14px; border: 1px solid #30363d; background: #000; }
+    nav { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin: 20px 0; }
+    a { color: #9acbff; text-underline-offset: 4px; }
+    a:hover { color: #d0e7ff; }
+    button { border: 1px solid #58a6ff; border-radius: 8px; padding: 10px 20px; background: #1f6feb; color: white; font: inherit; cursor: pointer; }
+    button:hover { background: #388bfd; }
+    :focus-visible { outline: 3px solid #d0e7ff; outline-offset: 4px; }
+    .caption { font-size: 13px; max-width: 80ch; }
+    #playback-error { color: #ffa198; margin-top: 12px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 600px) { main { padding: 24px 16px; } header { align-items: flex-start; } video { border-radius: 8px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>QuotaView demo</h1><p>English · 1:08</p></div>
+      <a href="../zh-CN/" lang="zh-CN">简体中文</a>
+    </header>
+    <video id="demo" controls playsinline preload="metadata" poster="poster.jpg" aria-label="QuotaView demo">
+      <source src="QuotaView-demo-en.mp4" type="video/mp4">
+      <a href="QuotaView-demo-en.mp4">Download MP4</a>
+    </video>
+    <p id="playback-error" role="status" hidden>The video could not be played. Try downloading the MP4 below.</p>
+    <nav aria-label="Video actions">
+      <button id="play-toggle" type="button" aria-controls="demo" hidden>Play video</button>
+      <a href="QuotaView-demo-en.mp4" download>Download MP4</a>
+      <a href="https://github.com/Duoasa/QuotaView/blob/main/README.md">English README</a>
+    </nav>
+    <p class="caption">Captured on macOS. Menu bar, branding, and captions were composited; original task text is preserved. No reset credit was used.</p>
+  </main>
+  <script>
+    const video = document.getElementById('demo');
+    const toggle = document.getElementById('play-toggle');
+    const error = document.getElementById('playback-error');
+    toggle.hidden = false;
+    toggle.addEventListener('click', async () => {
+      if (!video.paused) { video.pause(); return; }
+      error.hidden = true;
+      try { await video.play(); } catch (_) { error.hidden = false; }
+    });
+    video.addEventListener('play', () => { toggle.textContent = "Pause video"; });
+    video.addEventListener('pause', () => { toggle.textContent = "Play video"; });
+    video.addEventListener('ended', () => { toggle.textContent = "Replay video"; });
+    video.addEventListener('error', () => { error.hidden = false; });
+  </script>
+</body>
+</html>
