@@ -22,11 +22,11 @@
 
 ## 实机演示
 
-从收起态与多任务列表，到审批、用量和设置，约 75 秒了解 QuotaView。点击封面打开中文版 MP4。
+从收起态与多任务列表，到审批、用量和设置，约 75 秒了解 QuotaView。点击封面，在浏览器中直接播放中文版演示。
 
-[![QuotaView 中文实机演示：多 Agent 任务列表](docs/media/readme/zh-CN/01-tasks.jpg)](docs/media/readme/zh-CN/QuotaView-demo-zh-CN.mp4)
+[![QuotaView 中文实机演示：多 Agent 任务列表](docs/media/readme/zh-CN/01-tasks.jpg)](https://duoasa.github.io/QuotaView/demos/0.8.5/zh-CN/)
 
-**[▶ 中文演示 · 1:15](docs/media/readme/zh-CN/QuotaView-demo-zh-CN.mp4)** · [下载 MP4](docs/media/readme/zh-CN/QuotaView-demo-zh-CN.mp4?raw=true)
+**[▶ 中文演示 · 1:15](https://duoasa.github.io/QuotaView/demos/0.8.5/zh-CN/)** · [MP4 原视频](https://duoasa.github.io/QuotaView/demos/0.8.5/zh-CN/QuotaView-demo-zh-CN.mp4)
 
 下方配图与视频展示 macOS 版。界面来自实机采集，菜单栏、标识与字幕经过后期合成；任务原文保留原语言，未同步的结果按实机提示展示。演示没有使用重置卡。点击产品图可查看大图。
 

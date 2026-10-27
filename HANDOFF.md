@@ -2,11 +2,17 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## README 视频播放修复（2026-10-27）
+
+初版 README 将视频封面指向 GitHub 的仓库文件页，文件下载检查虽通过，该页面对约 5–6 MB MP4 显示无法预览，不能作为播放器。中英文入口现改用现有 GitHub Pages 的 `demos/0.8.5/en/` 与 `demos/0.8.5/zh-CN/`：原始 H.264 视频、JPEG 封面、原生播放控件、播放/暂停按钮、下载与语言切换；页面及视频在 `gh-pages` 分支维护。README 的 MP4 原视频链接也直接指向 Pages 媒体地址。
+
+修复验证包含真实浏览器播放、时间推进、视频解码尺寸、HTTP 视频类型与 Range 请求，不以下载成功代替播放。沿用本次 GitHub README 交付授权发布修复；不改版本、安装包或签名 appcast。证据见 `.build/readme-video-playback/`。
+
 ## README 中英文媒体整理（2026-10-27）
 
 用户提供独立中英文实机配图与演示视频。`README.zh-CN.md` 使用 13 张中文 JPEG 与约 75 秒中文 MP4，`README.md` 使用 11 张英文 JPEG 与约 68 秒英文 MP4；各自素材位于 `docs/media/readme/zh-CN/`、`en/`。保留原始媒体字节，未混用两种语言；QQ 二维码转为白底 JPEG。首页按演示、任务/审批、用量/重置、设置、支持范围与安装重新组织，旧版本逐段介绍合并为当前更新摘要。
 
-视频通过封面及 MP4 链接接入，未上传 GitHub 附件。素材说明保留真实采集/后期合成和原任务语言的边界。用户已授权本次 README、媒体与交接改动推送 GitHub 并合并 main；本次交付范围不涉及应用版本、已发布包、appcast 或开发运行包。链接、语言隔离、JPEG 格式及源文件哈希核验见 `.build/readme-media-085/`；文档变更不重建应用。
+初版视频通过仓库文件链接接入，播放入口已由上方修复改为 GitHub Pages；未上传 GitHub 附件。素材说明保留真实采集/后期合成和原任务语言的边界。用户已授权本次 README、媒体与交接改动推送 GitHub 并合并 main；本次交付范围不涉及应用版本、已发布包、appcast 或开发运行包。链接、语言隔离、JPEG 格式及源文件哈希核验见 `.build/readme-media-085/`；文档变更不重建应用。
 
 ## 当前开发与发布：0.8.5 Build 1 / Codex 手动重置
 
@@ -570,7 +576,7 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/readme-bilingual-media`；基于 0.8.5 发布记录已合入的 main `22557cd487c0b793d5cc72773864513c5e4a45ef`，本轮仅整理 README 与媒体 |
+| 分支 / 源码提交 | `codex/readme-video-playback`；基于 README 媒体已合入的 main `8534786a8c1d48463dd0180c67675d704537e0bd`，本轮修复视频播放入口 |
 | 开发身份 | `com.quotaview.development073`；0.8.5 / 显示 Build 1 / 内部 81 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-10-27 10:37（上海）PID 82509；236 输入、13 资产、完整包/备份与实际加载路径一致 |
