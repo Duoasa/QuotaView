@@ -1,0 +1,44 @@
+/* Shared GPU effects with a static fallback when WebGL is unavailable. */
+.status-orb.qv-gpu-orb {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.qv-orb-canvas,
+.qv-quantum-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.task-card .task-effect.qv-gpu-quantum {
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  opacity: 1;
+  mask-image: none;
+  background: none;
+  filter: none;
+  animation: none;
+  transition: none;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.task-card .qv-gpu-quantum::after {
+  content: none;
+}
+.task-card.status-completed {
+  animation: none;
+}
+.qv-gpu-orb.qv-effect-unavailable {
+  background: #414351;
+  border: 1px solid #777;
+}
+.qv-gpu-quantum.qv-effect-unavailable {
+  background: #16151b;
+}
+.task-card.status-compacting,
+.status-orb.status-compacting {
+  --state-rgb: 190, 204, 226;
+}

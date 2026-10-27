@@ -1,0 +1,8 @@
+{
+  "main": "/workspace/scratch/22f601fcf3ef/quotaview-windows/windows/dist/helper-build/helper.cjs",
+  "output": "/workspace/scratch/22f601fcf3ef/quotaview-windows/windows/dist/helper-build/helper.blob",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": false,
+  "execArgvExtension": "none"
+}

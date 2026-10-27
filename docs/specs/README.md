@@ -20,6 +20,10 @@
 
 [重置说明深色玻璃](island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27) · `Accepted / Verifying`：须知/空态/Claude 说明容器接入用量卡片相同的深色玻璃与辅助功能回退。增量编译、开发运行包及加载路径核对通过；视觉待用户验收，当前修改仅本地，详见 Handoff。
 
+## Windows 首个正式版：0.8.3-win
+
+[Windows 工程与独立更新通道](windows-channel.md) · `Released / User Acceptance Pending`：公开名称 `0.8.3-win · Windows`，包内和更新版本保留 `0.8.3-win.10`。原始 ZIP 已发布并公开回下载验签，首个条目加入独立 Windows appcast；中英文 README 增加上线与功能降级适配说明。macOS Release 仅补充平台名称，原更新通道不变。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实升级体验待用户验收。
+
 ## 当前发布：0.8.3 Build 1
 
 [0.8.3 发布规格](release-0.8.3.md) · `Released / User Acceptance Pending`：GitHub Stable / Latest 与签名 appcast 已发布，源码 PR/main CI、公开 ZIP 与 Feed 验证通过。中英文 README 已更新，回滚基线 0.8.2 Build 2；完整发布事实见版本历史，开发运行包见 Handoff。
@@ -73,6 +77,7 @@
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
+| `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |
 | `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与 DSH / Kimi Code 接入](agent-integrations.md) | `Accepted / Verifying` | DSH 多目录兼容与会话命名空间已进入 14:26 开发包；编译与配置核对通过，真实多客户端联动待验收。 |

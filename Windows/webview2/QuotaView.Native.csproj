@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms><ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <AssemblyName>QuotaView.Native</AssemblyName>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <ApplicationIcon>../windows/assets/icon.ico</ApplicationIcon>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <Import Project="build/Version.props" />
+  <ItemGroup>
+    <Compile Include="native/**/*.cs" />
+    <Compile Include="build/BuildIdentity.g.cs" />
+    <EmbeddedResource Include="../updates/public-key.pem" LogicalName="QuotaView.WindowsUpdatePublicKey" />
+    <Compile Include="../windows/native/QuotaViewHelper.cs" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <Content Include="build/dist/**/*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>app/dist/%(RecursiveDir)%(Filename)%(Extension)</Link></Content>
+    <Content Include="build/src/**/*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>app/src/%(RecursiveDir)%(Filename)%(Extension)</Link></Content>
+    <Content Include="build/backend.*;build/renderer-bridge.js;build/package.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>app/%(Filename)%(Extension)</Link></Content>
+  </ItemGroup>
+  <Target Name="RemoveUnusedWpfReference" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup><Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" /></ItemGroup>
+  </Target>
+</Project>

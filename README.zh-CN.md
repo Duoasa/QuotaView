@@ -2,7 +2,7 @@
   <img src="Resources/QuotaView-ICON.png" alt="QuotaView 图标" width="160">
 </p>
 
-<h1 align="center">QuotaView · macOS 多 Agent 灵动岛</h1>
+<h1 align="center">QuotaView · macOS 与 Windows 多 Agent 灵动岛</h1>
 
 <p align="center">
   液态玻璃，现在重新回归
@@ -13,7 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="最新版本" src="https://img.shields.io/github/v/release/Duoasa/QuotaView?display_name=tag"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="macOS 版本" src="https://img.shields.io/badge/macOS-v0.8.3_Build_1-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows 版本" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
@@ -21,7 +22,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 QuotaView v0.8.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 macOS 版 · v0.8.3 Build 1</strong></a>
+  ·
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>下载 Windows 版 · 0.8.3-win</strong></a>
   ·
   <a href="#快速开始">快速开始</a>
   ·
@@ -33,6 +36,19 @@
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
+
+## 选择平台
+
+| 平台 | 下载与源码 | 更新通道 |
+| --- | --- | --- |
+| macOS 14+ | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · 根目录 Swift 工程 | 原有 macOS Sparkle 通道 |
+| Windows x64 | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) · [.NET + WebView2 完整源码与说明](Windows/README.md) | 独立的签名 Windows appcast |
+
+### Windows 首个正式版上线
+
+[QuotaView 0.8.3-win](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10) 现已发布。受系统能力与软件架构差异影响，目前 Windows 版是在 macOS 版基础上做的功能降级适配，后续会持续更新完善。首版保留纯色灵动岛、AI 球与量子噪点、任务状态与支持的审批操作，以及用量统计；暂不包含桌面小组件和原生液态玻璃。
+
+两个平台后续均在本仓库维护，Release 标明所属平台，更新通道相互独立。Windows 包内与更新版本号保留为 `0.8.3-win.10`，安装方法见 [Windows 说明](Windows/README.md)。下方截图和版本说明为 macOS 版。
 
 ## 0.8.3 更新
 
@@ -106,6 +122,8 @@ QuotaView 0.8.1 为灵动岛带来新的液态玻璃界面。任务、用量和�
 DSH 和 Kimi Code 的权限请求在原客户端确认。可用字段取决于 Agent 及其版本，缺失数据保留占位符。DSH、Kimi 接入默认关闭，由用户主动开启。兼容边界见[接入规格](docs/specs/agent-integrations.md)。
 
 ## 快速开始
+
+Windows 用户请参阅 [Windows 安装说明](Windows/README.md#下载与更新)，以下步骤适用于 macOS。
 
 1. 下载 [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，解压并打开 `QuotaView.app`。
 2. 在**设置 → 连接**中启用需要的 Agent。

@@ -9,13 +9,39 @@
 
 ## 当前最新版本
 
-> GitHub Stable / Latest **0.8.3 Build 1**；签名 appcast 已公开验证。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.8.3 Build 1**（保留 GitHub Latest）；Windows 稳定版 **0.8.3-win**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+### Windows 0.8.3-win（首个正式版）
+
+2026-10-23 发布；基于原 `0.8.3-win.10`，只调整公开名称，不重打包或重写版本身份。
+
+| 项目 | 当前值 |
+|---|---|
+| 公开名称 / 包内版本 | `QuotaView 0.8.3-win · Windows` / `0.8.3-win.10`（原生 FileVersion `0.8.3.10`） |
+| Tag / 发布提交 | `v0.8.3-win.10` / `7f369597945dd8d279486f7a5a444812aae7d0f2`；源码迁移 [PR #103](https://github.com/Duoasa/QuotaView/pull/103) |
+| GitHub Release | [QuotaView 0.8.3-win · Windows](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10)，Stable，非 Draft / Pre-release，`make_latest: false` |
+| 资产 | `QuotaView-Windows-0.8.3-win.10-x64.zip`，61,037,080 bytes；资产 ID `669564333` |
+| SHA-256 | `e2cd847a62773543aa0398cb33985dce80e48687f94b89ea3f6c9e94ddb18e8a` |
+| 系统与架构 | Windows x64，.NET 10 自包含便携目录；共享系统 WebView2 Evergreen Runtime，不包含 Electron 或 Node.js 运行时 |
+| 更新签名 | 独立 RSA-3072 / PSS / SHA-256，绑定版本、平台、架构、包类型、下载地址、长度和哈希；非 Authenticode 签名 |
+| 公钥文件 SHA-256 | `Windows/updates/public-key.pem`：`714f77d76203e0b0bab96a7ecba279b77e8a5d0549bbafd53aeeac2e0da64a33` |
+| 产物验证 | 公开回下载与原包 SHA-256 一致；内置公钥验签、长度、包内版本和全部 324 个文件解压检查通过 |
+| 源码 CI | 精确发布提交的 [Windows 39977526421](https://github.com/Duoasa/QuotaView/actions/runs/39977526421) 与 [macOS 39977526026](https://github.com/Duoasa/QuotaView/actions/runs/39977526026) 均成功；包括 30 项 Windows 更新签名/校验/回滚检查及既有业务、原生、界面与打包检查 |
+| Windows appcast | `https://raw.githubusercontent.com/Duoasa/QuotaView/main/Windows/updates/appcast.xml`；首项 `0.8.3-win.10`，与 macOS Sparkle 独立 |
+| Feed SHA-256 | `da52495d68a739639f2d354dbb1fc4e68c687eea5c3d7825c48ee618ec846edf` |
+| 发布证据 | `Windows/webview2/build/release-evidence/`（本地忽略目录）；后续 feed/docs 合入与 CI 见 [Handoff](HANDOFF.md) |
+
+首版包含顶部纯色灵动岛与胶囊、悬停展开、任务归档、AI 球与量子噪点、用量统计及兼容客户端的审批和问题回复。受系统能力与软件架构差异影响，它是在 macOS 版基础上的功能降级适配，后续继续完善；不包含桌面小组件或原生液态玻璃。
+
+README 中英文已增加上线通知和平台下载入口；原有 31 个 macOS Release 的名称添加 `· macOS`，不修改其 tag、资产、说明、预发布状态或 Latest。macOS feed 保持下表原字节。Windows 当前没有更早的正式更新包；旧预览版首次手动安装，之后使用独立通道。真实升级体验由用户验收；辅助进程退出/重启的可选实机实验未执行，不能将文件回滚测试记为完整实机升级验收。
+
+### macOS 0.8.3 Build 1
 
 | 项目 | 当前值 |
 |---|---|
 | 版本身份 | `0.8.3 / Build 1 / 内部 75` |
 | Tag / 发布提交 | `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`；[PR #101](https://github.com/Duoasa/QuotaView/pull/101)；源码 `5768e3c1893ab3d32a5de649197db5c29410a1b3` |
-| GitHub Release | [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，Stable / Latest，非 Draft / Pre-release |
+| GitHub Release | [QuotaView 0.8.3 Build 1 · macOS](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，Stable / Latest，非 Draft / Pre-release |
 | 资产 | `QuotaView-v0.8.3-build.1.zip`，24,868,121 bytes |
 | SHA-256 | `69e8bf96524975321049c816eae72463f6f81cb7dd6f69363d570b217972f949` |
 | 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |

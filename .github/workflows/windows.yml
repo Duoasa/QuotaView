@@ -1,0 +1,67 @@
+name: Windows WebView2 validation
+on:
+  push:
+    branches: [main]
+    paths: ["Windows/**", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["Windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows-x64:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: Windows
+    env:
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: "--use-angle=swiftshader --enable-unsafe-swiftshader"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.402"
+      - run: npm install --global pnpm@11.25.0
+      - name: Ensure Evergreen WebView2 Runtime
+        run: |
+          $runtime = Get-ChildItem "${env:ProgramFiles(x86)}/Microsoft/EdgeWebView/Application" -Filter msedgewebview2.exe -Recurse -ErrorAction SilentlyContinue
+          if (!$runtime) {
+            $installer = Join-Path $env:TEMP 'MicrosoftEdgeWebview2Setup.exe'
+            Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer
+            $signature = Get-AuthenticodeSignature $installer
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike '*Microsoft Corporation*') { throw 'WebView2 installer signature invalid' }
+            $process = Start-Process $installer -ArgumentList '/silent','/install' -WindowStyle Hidden -PassThru -Wait
+            if ($process.ExitCode -ne 0) { throw 'WebView2 Runtime installation failed' }
+          }
+      - name: Build and test native app, UI and protocols
+        run: ./build.ps1 -Action test
+      - name: Publish standalone portable ZIP
+        run: ./build.ps1 -Action publish
+      - name: Validate packaged application
+        run: |
+          $report = Join-Path $PWD 'webview2/build/packaged-smoke.json'
+          $exe = Join-Path $PWD 'webview2/release/standalone/QuotaView.Native.exe'
+          $process = Start-Process -FilePath $exe -ArgumentList @('--smoke-test', ('"--smoke-report='+$report+'"')) -WindowStyle Hidden -PassThru
+          if (!$process.WaitForExit(60000)) { $process.Kill(); throw 'Packaged smoke timed out' }
+          if ($process.ExitCode -ne 0 -or !(Test-Path $report) -or !(Get-Content $report -Raw | ConvertFrom-Json).ok) { throw 'Packaged smoke failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quotaview-webview2-windows-x64
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            Windows/webview2/release/*.zip
+            Windows/webview2/build/*-report.json
+            Windows/webview2/build/packaged-smoke.json
+            Windows/webview2/build/tasks/*.png
+            Windows/webview2/build/usage/*.png
+            Windows/webview2/build/settings-*/*.png

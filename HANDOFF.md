@@ -32,6 +32,18 @@
 
 0.8.3 Build 2 / 内部 76 Debug arm64 增量构建成功，09:46（上海）开发包已更新并启动 PID 56501；234 输入、13 资产、完整运行包/备份与实际加载路径一致。证据 `.build/reset-notice-glass-20261027/`；旧开发包备份 `.build/runtime-package-backups/reset-notice-glass-20261027-094613/QuotaView.app`。本次仅本地开发修改；未推送、发布或替换正式安装，视觉待用户验收。
 
+## Windows 首个正式版与更新通道（2026-10-23）
+
+按用户要求，完整 Windows 源码自 `Duoasa/quotaview-windows@cfc5490` 迁至 [Windows/](Windows/README.md)，后续开发、发布和问题反馈统一使用本仓库。首个正式版 **QuotaView 0.8.3-win · Windows** 基于 `0.8.3-win.10` 发布；包内版本、ZIP 名称和 tag 保留 `.10`，使用独立签名 appcast。macOS 生产源码、版本、Latest 与 Sparkle feed 保留。
+
+[Windows 更新规格](docs/specs/windows-channel.md)记录当前边界；[发布工具](Windows/updates/README.md)生成签名条目，本轮获准加入 Windows 通道的首项为 `0.8.3-win.10`。Release 已公开，原 ZIP 回下载、哈希、签名及 324 个文件验证通过；资产与 feed 不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。中英文 README 增加 Windows 上线及系统/架构差异导致功能降级适配、后续持续完善的说明。原有 macOS Release 仅在标题补充平台，不修改资产或更新通道。
+
+本轮只发布已通过 CI 的原包并更新 feed/docs，不变更应用代码或替换正在运行的同版本目录。发布提交的 Windows CI [39977526421](https://github.com/Duoasa/QuotaView/actions/runs/39977526421)、macOS CI [39977526026](https://github.com/Duoasa/QuotaView/actions/runs/39977526026) 成功；feed/docs 合入和精确 main CI 以 [PR #104](https://github.com/Duoasa/QuotaView/pull/104) 与 [Actions](https://github.com/Duoasa/QuotaView/actions) 为准。发布证据保存在 `Windows/webview2/build/release-evidence/`。真实升级体验仍待用户验收；可选的辅助进程实机实验未执行，不扩大现有验收结论。
+
+迁移 CI 首轮复现已有的短屏 Claude 用量底栏裁切：正文高度未扣除完整胶囊预留及头尾区域。正文现按原生窗口同一高度预算计算，既有裁切断言保留。
+
+源码与原生构建、30 项更新专项及 7 项既有移植检查通过；实际 standalone ZIP 的签名、长度、SHA-256、版本与 324 个文件解压检查通过，8 项原生桥冒烟通过。源码合入与精确提交的 CI 以 [PR #103](https://github.com/Duoasa/QuotaView/pull/103) 和 [Actions](https://github.com/Duoasa/QuotaView/actions) 为准。Windows 本机开发入口继续使用原 `webview2-migration/webview2/release/standalone/QuotaView.Native.exe`，仅更新运行目录内容以保留 Hook 路径；新源码位于 `quotaview-unified/Windows`。用户负责视觉与真实升级体验验收。
+
 ## 当前发布：0.8.3 Build 1
 
 2026-10-16：按用户授权，最新开发代码已封装为 0.8.3 Build 1，源码经 [PR #101](https://github.com/Duoasa/QuotaView/pull/101) 合入 main；PR/main CI 通过。Universal 正式包已签名、公证、Staple，GitHub Stable / Latest 和签名 appcast 已上线，公开 ZIP、Feed 字节与内置公钥验证通过。中英文 README 已同步。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.2-build.2`。

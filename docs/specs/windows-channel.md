@@ -1,0 +1,15 @@
+# Windows 工程与独立更新通道
+
+Spec ID: `QV-WINDOWS-CHANNEL-001` · `Released / User Acceptance Pending`
+
+用户于 2026-10-23 授权补齐 Windows appcast 和下载安装，并将 Windows 完整工程推送至 `Duoasa/QuotaView`，后续统一在本仓库维护。
+
+同日获准将 `0.8.3-win.10` 作为首个正式版发布并进入 Windows 更新通道，公开名称 **QuotaView 0.8.3-win · Windows**；内部版本、ZIP 与 tag 保留 `.10`。中英文 README 说明 Windows 是因系统能力与软件架构差异而来的功能降级适配，后续持续完善。原有 macOS Releases 仅补充平台标题，保留原资产及通道。
+
+- R1：macOS 工程留在根目录，完整 Windows 工程在 `Windows/`，锁文件、原生源码、React、shader、测试、脚本齐全，克隆后可构建。旧 Windows 源码基线 `cfc5490`。
+- R2：Windows 使用独立 CI、`-win.N` 版本、Windows Release ZIP 和 `Windows/updates/appcast.xml`。根目录首页提供两平台入口。macOS 代码、签名 feed、版本与 Latest 不变。
+- R3：自动检查仅查询；下载、取消和重启安装为用户操作。缺失通道或网络失败显示错误；合法空通道表示没有准入版本。首个获准正式版本为 `0.8.3-win.10`，同版本不重复安装；只有旧 GitHub 检查器的预览版首次手动更新。
+- R4：固定仓库 / 平台 / 架构 / 包类型，RSA-PSS 签名绑定版本与包哈希、长度和下载 URL，包经校验后才可安装；禁止降级和 ZIP 路径越界。私钥不在 Git 或运行包中。
+- R5：先下载校验和准备辅助进程，再退出原应用；保持原安装路径、Hook 路径和用户数据。文件写入失败回滚并重启，保留日志与备份。不保证操作系统掉电时的事务原子性，不提权写入只读安装目录。
+
+验证：原生更新专项 30 项，包含签名/版本/平台/越界/损坏/锁定及回滚；迁移后原生编译和原有版本比较测试通过。实际包签名核验、平台 CI 和运行状态见 [Handoff](../../HANDOFF.md)。视觉与真实升级体验由用户验收，不把本地 fixture 记为正式发布。
