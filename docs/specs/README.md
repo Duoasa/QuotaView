@@ -1,6 +1,10 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.3 Build 6
+## 当前开发与发布准备：0.8.5 Build 1
+
+[Codex 手动额度重置](codex-quota-reset.md) · `Accepted / Verifying`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；模拟服务验证重复、未知结果、账户变化与失败分支，不消费本机真实卡。完整本地测试与开发包核对通过；[0.8.5 发布](release-0.8.5.md)已获 Stable/Latest 与 macOS appcast 全链授权，签名公证、CI 和渠道发布进行中。当前事实见 Handoff。
+
+## 前序开发：0.8.3 Build 6
 
 [重置操作区深浅适配](island-glass-appearance.md#重置操作区深浅适配2026-10-27) · `Accepted / Verifying`：Claude 复制按钮和两种来源的操作说明接入统一玻璃外观；危险重置保留白字并加强浅色红底。只作用于重置操作区，保留自动与实体回退。增量编译、开发运行包与加载路径核对通过，证据见 Handoff；视觉待用户验收。
 

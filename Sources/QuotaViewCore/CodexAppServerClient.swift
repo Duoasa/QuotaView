@@ -68,7 +68,7 @@ public enum CodexHookFeaturePreference: Equatable, Sendable {
     case absent, enabled, disabled
 }
 
-public actor CodexAppServerClient {
+public actor CodexAppServerClient: CodexResetTransport {
     public enum ClientError: LocalizedError, Equatable {
         case executableNotFound
         case launchFailed(String)
@@ -212,6 +212,27 @@ public actor CodexAppServerClient {
             capturedAt: now,
             optionalIssues: optionalIssues
         )
+    }
+
+    public func readResetAccount() async throws -> CodexResetAccountResponse {
+        try await connectIfNeeded()
+        return try await request(method: "account/read", params: ["refreshToken": false], includeNullParams: false)
+    }
+
+    public func stopResetConnection() { stop() }
+
+    public func readResetLimits() async throws -> AccountRateLimitsResponse {
+        try await connectIfNeeded()
+        return try await request(method: "account/rateLimits/read")
+    }
+
+    public func consumeResetCredit(creditID: String, idempotencyKey: String) async throws -> CodexResetOutcome {
+        struct Response: Decodable { let outcome: CodexResetOutcome }
+        guard !creditID.isEmpty, !idempotencyKey.isEmpty else { throw ClientError.invalidMessage }
+        try await connectIfNeeded()
+        let response: Response = try await request(method: "account/rateLimitResetCredit/consume",
+            params: ["creditId": creditID, "idempotencyKey": idempotencyKey], includeNullParams: false)
+        return response.outcome
     }
 
     public func fetchThreadDisplayName(

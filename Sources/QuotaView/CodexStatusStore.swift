@@ -29,6 +29,14 @@ final class CodexStatusStore: ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var demandCancellable: AnyCancellable?
     private var widgetLocaleCancellable: AnyCancellable?
+    lazy var resetController: CodexResetController = {
+        let journalURL = CodexResetController.defaultJournalURL
+        return CodexResetController(journalURL: journalURL, makeCoordinator: { [weak self] in
+            let configuration = self?.preferences?.proxyConfiguration ?? .default
+            let client = self?.proxyClientFactory(configuration) ?? CodexAppServerClient(proxyConfiguration: configuration)
+            return CodexRateLimitResetCoordinator(client: client, journalURL: journalURL)
+        }, refresh: { [weak self] in await self?.refresh() })
+    }()
 
     init(
         provider: (any UsageProviderAdapter)? = nil,
@@ -235,6 +243,7 @@ final class CodexStatusStore: ObservableObject {
     }
 
     private func replaceProxyConfiguration(_ configuration: ProxyConfiguration) {
+        resetController.cancelConfirmation()
         configurationRevision &+= 1
         let revision = configurationRevision
         // A changed connection cannot borrow a snapshot from the old provider.
@@ -315,6 +324,7 @@ final class CodexStatusStore: ObservableObject {
     }
 
     func stop() async {
+        resetController.cancelConfirmation()
         cancelProxyTest()
         configurationRevision &+= 1
         pollingTask?.cancel()

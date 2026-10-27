@@ -3,6 +3,24 @@ import XCTest
 @testable import QuotaViewCore
 
 final class CodexAppServerClientTests: XCTestCase {
+    func testResetRequestsUseOfficialWireFormatWithAnExplicitFakeProcess() async throws {
+        let fixture = try makeFakeAppServer()
+        defer { try? FileManager.default.removeItem(at: fixture.executable.deletingLastPathComponent()) }
+        let client = CodexAppServerClient(executablePath: fixture.executable.path, requestTimeoutSeconds: 2)
+        let account = try await client.readResetAccount()
+        XCTAssertEqual(account.account?.type, "chatgpt")
+        let outcome = try await client.consumeResetCredit(creditID: "fixture-credit", idempotencyKey: "fixture-operation")
+        XCTAssertEqual(outcome, .reset)
+        await client.stopResetConnection()
+        let messages = try String(contentsOf: fixture.log, encoding: .utf8).split(separator: "\n").compactMap { line -> [String: Any]? in
+            guard line.hasPrefix("received:") else { return nil }
+            return try JSONSerialization.jsonObject(with: Data(line.dropFirst(9).utf8)) as? [String: Any]
+        }
+        let request = try XCTUnwrap(messages.first { $0["method"] as? String == "account/rateLimitResetCredit/consume" })
+        XCTAssertEqual(request["params"] as? [String: String], ["creditId": "fixture-credit", "idempotencyKey": "fixture-operation"])
+        XCTAssertEqual(messages.filter { $0["method"] as? String == "account/rateLimitResetCredit/consume" }.count, 1)
+    }
+
     func testClientReadsDelayedJSONLinesFromAppServerProcess() async throws {
         let fixture = try makeFakeAppServer()
         defer {
@@ -380,6 +398,9 @@ final class CodexAppServerClientTests: XCTestCase {
             *thread*list*)
               \(threadListResponse)
               ;;
+            *rateLimitResetCredit*consume*)
+              printf '{"id":%s,"result":{"outcome":"reset"}}\\n' "$id"
+              ;;
             *rateLimits*)
               sleep 0.05
               printf '{"id":%s,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":38,"windowDurationMins":10080,"resetsAt":1785303228},"credits":{"hasCredits":false,"unlimited":false,"balance":"0"},"spendControlReached":false,"planType":"plus","rateLimitReachedType":null},"rateLimitsByLimitId":null,"rateLimitResetCredits":{"availableCount":2,"credits":[]}}}\\n' "$id"
@@ -387,6 +408,9 @@ final class CodexAppServerClientTests: XCTestCase {
             *usage*)
               sleep 0.05
               \(usageResponse)
+              ;;
+            *account*read*)
+              printf '{"id":%s,"result":{"account":{"type":"chatgpt","email":"fixture@example.test"}}}\\n' "$id"
               ;;
           esac
         done

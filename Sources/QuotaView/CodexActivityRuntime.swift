@@ -214,6 +214,7 @@ final class CodexActivityRuntime: ObservableObject {
             self?.handleAutomaticConnection(state)
         }
         if let quotaStatusStore {
+            liveIsland.board.state.resetController = quotaStatusStore.resetController
             liveIsland.board.state.onRefreshUsage = { [weak quotaStatusStore] in
                 await quotaStatusStore?.refresh()
             }
