@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="macOS release" src="https://img.shields.io/badge/macOS-v0.8.3_Build_1-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1"><img alt="macOS release" src="https://img.shields.io/badge/macOS-v0.8.5_Build_1-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows release" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>Download for macOS · v0.8.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip"><strong>Download for macOS · v0.8.5 Build 1</strong></a>
   ·
   <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>Download for Windows · 0.8.3-win</strong></a>
   ·
@@ -41,7 +41,7 @@
 
 | Platform | Download / source | Updates |
 | --- | --- | --- |
-| macOS 14+ | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · native Swift project at the repository root | Existing macOS Sparkle channel |
+| macOS 14+ | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip) · native Swift project at the repository root | Existing macOS Sparkle channel |
 | Windows x64 | [Stable download](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) · [.NET + WebView2 source and instructions](Windows/README.md) | Separate signed Windows appcast |
 
 ### Windows is now available
@@ -50,7 +50,13 @@
 
 Both editions are maintained in this repository, with platform labels in Releases and separate update channels. The Windows package/update version remains `0.8.3-win.10`. See the [Windows installation guide](Windows/README.md). The screenshots and release notes below describe the macOS edition.
 
-## What’s new in 0.8.3
+## What’s new in 0.8.5
+
+The Island now supports real Codex quota resets through the official local App Server. Check the available credit, then confirm before using it. Interrupted requests retain the same operation identifier and credit, so a manual retry cannot silently select another credit. Claude Code keeps its native command workflow.
+
+The reset page now uses matching dark glass, aligned quota text, and appearance-aware buttons and captions. Task-effect choices sit directly below their preview. Automated release checks use simulated reset services; no real reset credit was consumed during development.
+
+## Also included from 0.8.3
 
 Improved Liquid Glass compatibility on macOS 27, with Light, Dark, and Auto appearance choices for the Island’s lower glass area and floating usage capsule. Both now share the same clear material. Island settings are grouped more clearly, with refined toolbar icons and label spacing.
 
@@ -90,9 +96,9 @@ This release fixes a Codex confirmation connection issue that could stop later a
 
 ### A redesigned reset card
 
-Reset credits, available quota, and instructions share one page, with a more visible red action button. **Quota reset remains a demonstration and does not consume real reset credits.**
+Reset credits, remaining quota, and instructions share one page. **In the macOS Island, confirming a Codex reset uses one real reset credit.** The app checks the account and card again before submission; unavailable or unsupported states never appear as successful resets.
 
-![Quota reset demonstration](Resources/0.8.1/4.jpg)
+![Reset card in the 0.8.1 reference interface](Resources/0.8.1/4.jpg)
 
 ### Make it fit your desktop
 
@@ -125,7 +131,7 @@ DSH and Kimi Code permissions are confirmed in the original client. Available fi
 
 For Windows, follow the [Windows installation guide](Windows/README.md#下载与更新). The steps below are for macOS.
 
-1. Download [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1), unzip it, and open `QuotaView.app`.
+1. Download [QuotaView 0.8.5 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1), unzip it, and open `QuotaView.app`.
 2. Open **Settings → Connections** and enable the agents you use.
 3. Codex tasks are discovered locally. After configuring Hooks or a DSH plugin, start a new session or restart the relevant client as indicated in settings.
 
@@ -141,7 +147,7 @@ Task information is processed locally. QuotaView does not send task content to a
 
 Enabling an integration may modify the client's configuration. QuotaView backs up the configuration and manages only its own marked entries. DSH custom clients keep their own data directories and identities.
 
-Cost values are estimates, not bills. The quota-reset view remains a local demonstration and does not consume real reset credits. Do not include credentials or raw session records in bug reports.
+Cost values are estimates, not bills. Codex resets in the macOS Island require explicit confirmation and consume a real reset credit; retries retain a local operation record without saving login credentials. Do not include credentials or raw session records in bug reports.
 
 ## Build from source
 
@@ -158,7 +164,7 @@ Distribution packaging uses `scripts/build-app.sh`. Developer ID signing and not
 
 ## Project and feedback
 
-- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [Previous stable 0.8.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)
+- [Current release](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1) · [Previous stable 0.8.3](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)
 - [Version history and release evidence](VERSION_HISTORY.md) · [Development handoff](HANDOFF.md)
 - [Design and behavior specifications](docs/specs/README.md) · [Contributing](CONTRIBUTING.md)
 - [Report an issue](https://github.com/Duoasa/QuotaView/issues/new/choose), or use **Settings → Bug Feedback**.

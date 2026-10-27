@@ -1,5 +1,29 @@
 # QuotaView SDD 注册表
 
+## 当前开发与发布准备：0.8.5 Build 1
+
+[Codex 手动额度重置](codex-quota-reset.md) · `Accepted / Verifying`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；模拟服务验证重复、未知结果、账户变化与失败分支，不消费本机真实卡。完整本地测试与开发包核对通过；[0.8.5 发布](release-0.8.5.md)已获 Stable/Latest 与 macOS appcast 全链授权，签名公证、CI 和渠道发布进行中。当前事实见 Handoff。
+
+## 前序开发：0.8.3 Build 6
+
+[重置操作区深浅适配](island-glass-appearance.md#重置操作区深浅适配2026-10-27) · `Accepted / Verifying`：Claude 复制按钮和两种来源的操作说明接入统一玻璃外观；危险重置保留白字并加强浅色红底。只作用于重置操作区，保留自动与实体回退。增量编译、开发运行包与加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 5
+
+[重置页额度左右对齐](island-expanded-glass.md#重置页额度左右对齐2026-10-27) · `Accepted / Verifying`：按用户修订恢复左标签/右百分比，两侧共用须知的 14 pt 内容内距，上下间距各 16 pt；增量编译、开发运行包及加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 4
+
+[任务特效前移](island-glass-appearance.md#任务特效前移2026-10-27) · `Accepted / Verifying`：特效三选项移动到顶部预览正下方，后续依次为外观与布局、显示内容、自动展开；绑定、尺寸和保存行为不变。增量编译、开发包及实际加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 3
+
+[重置页额度摘要](island-expanded-glass.md#重置页额度摘要排版2026-10-27) · `Superseded by Build 5`：“剩余额度 + 百分比”并入重置次数下方的居中摘要，标签 10.5 pt Regular、数值 12 pt Medium，保留真实/旧数据/未知态。增量编译、开发运行包及加载路径核对通过，证据见 Handoff；视觉待用户验收，仅本地修改。
+
+## 前序开发：0.8.3 Build 2
+
+[重置说明深色玻璃](island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27) · `Accepted / Verifying`：须知/空态/Claude 说明容器接入用量卡片相同的深色玻璃与辅助功能回退。增量编译、开发运行包及加载路径核对通过；视觉待用户验收，当前修改仅本地，详见 Handoff。
+
 ## Windows 首个正式版：0.8.3-win
 
 [Windows 工程与独立更新通道](windows-channel.md) · `Released / User Acceptance Pending`：公开名称 `0.8.3-win · Windows`，包内和更新版本保留 `0.8.3-win.10`。原始 ZIP 已发布并公开回下载验签，首个条目加入独立 Windows appcast；中英文 README 增加上线与功能降级适配说明。macOS Release 仅补充平台名称，原更新通道不变。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实升级体验待用户验收。

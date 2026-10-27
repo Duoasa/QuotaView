@@ -458,6 +458,7 @@ final class IslandBoardState: ObservableObject {
     var onArchive: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
     var onRefreshUsage: (() async -> Void)?
+    var resetController: CodexResetController?
     var onOpenSettings: (() -> Void)?
     @Published private(set) var isRefreshingUsage = false
     func refreshUsage() async {
@@ -1490,7 +1491,8 @@ struct IslandBoardView: View {
                 usageState: state.effectiveUsageProvider == .claudeCode ? .current : state.display?.usageState ?? .loading,
                 english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight,
-                provider: state.effectiveUsageProvider)
+                provider: state.effectiveUsageProvider, resetController: state.resetController,
+                isPresented: state.showsReset && !state.compact && !state.resetTransitionInFlight)
                 .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
                 .environment(\.islandGlassActive, !state.compact && state.showsReset)
                 .opacity(state.showsReset ? 1 : 0)

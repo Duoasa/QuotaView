@@ -2,6 +2,44 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## 当前开发与发布准备：0.8.5 Build 1 / Codex 手动重置
+
+2026-10-27 用户明确要求 0.8.5、真实 Codex 重置、GitHub/main 和 appcast 更新，同时禁止开发验证消耗其重置卡。本次精确发布身份为 0.8.5 Build 1 / 内部 81，tag `v0.8.5-build.1`、ZIP `QuotaView-v0.8.5-build.1.zip`；完整 macOS Stable/Latest 和签名 appcast 链路已授权。Windows 独立渠道及正式安装保持。规格见[手动重置](docs/specs/codex-quota-reset.md)、[0.8.5 发布](docs/specs/release-0.8.5.md)。
+
+实现：官方 App Server 先读取具体卡片，人工确认后重新核对账户/卡片再消费；记录绑定账户哈希、明确卡片 ID 与幂等 UUID，未知结果经再次确认复用原操作，不后台重试。只升级灵动岛 Codex；Claude 继续复制命令，旧菜单演示保留。确认卡、等待/失败/未知结果均支持中英文，真实额度来自刷新。包含本轮玻璃、额度对齐与特效选项前移；已同步 origin/main，保留 Windows 发布记录。
+
+本地完整测试 722 项、6 跳过、0 失败，审批契约 44 项通过；消费请求只在内存模拟服务和明确的临时假进程中执行，未使用真实卡。10:37（上海）0.8.5 开发包已更新并启动 PID 82509，236 输入/13 资产、完整包/备份与加载路径一致；证据 `.build/codex-reset-085-runtime/`。上一稳定版 `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc` 的公开 ZIP 已回下载，SHA-256 与版本历史一致。当前正在签名、公证、PR/main CI 和发布；尚未声明上线，真实扣卡与视觉留给用户验收。
+
+## 前序开发：0.8.3 Build 6 / 重置操作区深浅适配
+
+2026-10-27：修复重置页按钮/下方说明固定白字或浅灰的问题。普通复制按钮浅色黑字、深色白字，材质同步外观；危险重置保留白字并加强浅色红底；说明与底栏共用外观前景。范围仅重置操作区，深色内容/审批卡按钮、复制和演示业务保持。配置 0.8.3 Build 6 / 内部 80。规格见[重置操作区深浅适配](docs/specs/island-glass-appearance.md#重置操作区深浅适配2026-10-27)。
+
+10:05（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 70532；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-actions-appearance-20261027/`，旧包 `.build/runtime-package-backups/reset-actions-appearance-20261027-100526/QuotaView.app`。已审查可用/禁用、复制完成/演示反馈、深浅/自动与实体回退路径；未做 UI 自动化或真实重置，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 5 / 额度左右对齐
+
+2026-10-27：按用户修订，额度行恢复左标签/右百分比，与须知共用 14 pt 内容内距、上下各 16 pt 间隔；标签 10.5 pt Regular、数值 12 pt Medium，保持旧数据说明与未知值。配置 0.8.3 Build 5 / 内部 79。详见[额度左右对齐](docs/specs/island-expanded-glass.md#重置页额度左右对齐2026-10-27)。
+
+10:00（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 67706；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-quota-alignment-20261027/`，旧包 `.build/runtime-package-backups/reset-quota-alignment-20261027-100028/QuotaView.app`。仅本地修改，未推送、发布或替换正式安装；视觉由用户验收。
+
+## 前序开发：0.8.3 Build 4 / 任务特效前移
+
+2026-10-27：按用户截图，将灵动岛设置中的任务特效网格移至顶部岛预览正下方；后续依次为外观与布局、显示内容、自动展开。保持三项特效的尺寸、偏好与实时预览绑定，使切换控件靠近预览。配置 0.8.3 Build 4 / 内部 78。规格见[任务特效前移](docs/specs/island-glass-appearance.md#任务特效前移2026-10-27)。
+
+09:57（上海）Debug arm64 增量编译完成，开发包已更新并启动 PID 65551；234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/settings-effects-order-20261027/`，旧包 `.build/runtime-package-backups/settings-effects-order-20261027-095722/QuotaView.app`。未做 UI 自动化，实际效果待用户验收；仅本地开发修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 3 / 重置页额度摘要
+
+2026-10-27：按用户截图，将原两端分散的额度行收拢到重置次数下方，居中显示“剩余额度 + 百分比”，标签 10.5 pt Regular、数值 12 pt Medium，组间及行内均为 8 pt；旧数据与未知值语义保留。说明卡片延续 Build 2 深色玻璃，真实重置保持演示。规格见[额度摘要排版](docs/specs/island-expanded-glass.md#重置页额度摘要排版2026-10-27)。
+
+0.8.3 Build 3 / 内部 77 Debug arm64 增量编译成功，09:53（上海）开发包更新并启动 PID 61927；App/Widget 版本同步，234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/reset-quota-summary-20261027/`，回退 `.build/runtime-package-backups/reset-quota-summary-20261027-095311/QuotaView.app`。受影响中英文、旧数据/未知状态与辅助功能已源码审查；未新增测试或做 UI 自动化，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 2 / 重置说明深色玻璃
+
+2026-10-27：按用户截图，将 `IslandResetPage` 的重置须知容器从独立纯黑背景/手工描边改为用量卡片相同的 `islandGlass`，采用 14 pt continuous 圆角、white 0.075 / alpha 0.75 和共享实体回退；空态、未知次数与 Claude 说明同步。文字、内距、重置券及演示逻辑不变。规格见[展开态玻璃](docs/specs/island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27)。
+
+0.8.3 Build 2 / 内部 76 Debug arm64 增量构建成功，09:46（上海）开发包已更新并启动 PID 56501；234 输入、13 资产、完整运行包/备份与实际加载路径一致。证据 `.build/reset-notice-glass-20261027/`；旧开发包备份 `.build/runtime-package-backups/reset-notice-glass-20261027-094613/QuotaView.app`。本次仅本地开发修改；未推送、发布或替换正式安装，视觉待用户验收。
+
 ## Windows 首个正式版与更新通道（2026-10-23）
 
 按用户要求，完整 Windows 源码自 `Duoasa/quotaview-windows@cfc5490` 迁至 [Windows/](Windows/README.md)，后续开发、发布和问题反馈统一使用本仓库。首个正式版 **QuotaView 0.8.3-win · Windows** 基于 `0.8.3-win.10` 发布；包内版本、ZIP 名称和 tag 保留 `.10`，使用独立签名 appcast。macOS 生产源码、版本、Latest 与 Sparkle feed 保留。
@@ -526,13 +564,13 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.7.7-build1-development`（沿用历史分支名）；0.8.3 发布提交 `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`，后续文档补记不改变应用输入 |
-| 开发身份 | `com.quotaview.development073`；0.8.3 / 显示 Build 1 / 内部 75 |
+| 分支 / 源码提交 | `codex/0.8.5-release`；已合并 origin/main，当前 0.8.5 发布提交与 CI 待记录 |
+| 开发身份 | `com.quotaview.development073`；0.8.5 / 显示 Build 1 / 内部 81 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-16 10:08（上海）PID 15395；234 输入、13 资产、完整包/备份与实际加载路径一致 |
-| 源码与运行包 | 最新玻璃、设置、字体及 Widget 修复已进入 0.8.3 运行包；视觉待用户验收 |
+| 最近运行核验 | 2026-10-27 10:37（上海）PID 82509；236 输入、13 资产、完整包/备份与实际加载路径一致 |
+| 源码与运行包 | 0.8.5 手动重置及本轮界面调整已进入开发运行包；真实扣卡与视觉待用户验收 |
 | 公开稳定版 | 0.8.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
-| 本机正式安装 | `/Applications/QuotaView.app` 保留此前授权安装的 0.8.2 Build 10；本轮发布未替换 |
+| 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
 
@@ -794,5 +832,5 @@ PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目�
 
 ## 后续工作边界
 
-按 [AGENTS.md](AGENTS.md) 与[规格索引](docs/specs/README.md)读取受影响范围。默认保持本地源码迭代；推送、合并、正式包装或新版本发布需对应请求。真实额度重置保持演示。
+按 [AGENTS.md](AGENTS.md) 与[规格索引](docs/specs/README.md)读取受影响范围。默认保持本地源码迭代；推送、合并、正式包装或新版本发布需对应请求。真实重置按 0.8.5 手动重置契约执行；开发验证不消耗用户卡。
 `Prototypes/IslandTextConsole/` 是永久工具；`Prototypes/MultitaskIslandConsole/` 的固定快照保持，历史“下一步”不触发重新构建或迁移。

@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1"><img alt="macOS 版本" src="https://img.shields.io/badge/macOS-v0.8.3_Build_1-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1"><img alt="macOS 版本" src="https://img.shields.io/badge/macOS-v0.8.5_Build_1-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows 版本" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI 状态" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111111?logo=apple">
@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip"><strong>下载 macOS 版 · v0.8.3 Build 1</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip"><strong>下载 macOS 版 · v0.8.5 Build 1</strong></a>
   ·
   <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>下载 Windows 版 · 0.8.3-win</strong></a>
   ·
@@ -41,7 +41,7 @@
 
 | 平台 | 下载与源码 | 更新通道 |
 | --- | --- | --- |
-| macOS 14+ | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-build.1/QuotaView-v0.8.3-build.1.zip) · 根目录 Swift 工程 | 原有 macOS Sparkle 通道 |
+| macOS 14+ | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip) · 根目录 Swift 工程 | 原有 macOS Sparkle 通道 |
 | Windows x64 | [稳定版下载](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) · [.NET + WebView2 完整源码与说明](Windows/README.md) | 独立的签名 Windows appcast |
 
 ### Windows 首个正式版上线
@@ -50,7 +50,13 @@
 
 两个平台后续均在本仓库维护，Release 标明所属平台，更新通道相互独立。Windows 包内与更新版本号保留为 `0.8.3-win.10`，安装方法见 [Windows 说明](Windows/README.md)。下方截图和版本说明为 macOS 版。
 
-## 0.8.3 更新
+## 0.8.5 更新
+
+灵动岛接入 Codex 官方本地 App Server 的真实额度重置。先检查可用重置卡，再由你确认使用；请求中断后保留同一次操作标识与卡片，手动重试不会悄悄换用另一张卡。Claude Code 保持原生命令流程。
+
+重置页统一深色玻璃，调整额度行对齐，并补齐按钮与说明的深浅适配。任务特效选项移到预览正下方，方便边切换边查看。本次开发和发布检查使用模拟重置服务，没有消耗真实重置卡。
+
+## 同时包含 0.8.3 的改进
 
 改善 macOS 27 的液态玻璃兼容性。灵动岛下部玻璃区域与悬浮用量胶囊统一采用清透材质，支持浅色、深色和自动外观；设置项目重新分组，并优化工具图标、文字与标签间距。
 
@@ -90,9 +96,9 @@ QuotaView 0.8.1 为灵动岛带来新的液态玻璃界面。任务、用量和�
 
 ### 重置卡，也有新的样子
 
-重置次数、剩余额度和操作说明放在同一页，红色按钮让操作更醒目。**额度重置目前仍为演示，不消耗真实重置次数。**
+重置次数、剩余额度和操作说明放在同一页。**macOS 灵动岛中确认 Codex 重置后，会消耗 1 次真实重置机会。**提交前再次检查账户与卡片，数据不可用或接口不支持时不会显示为重置成功。
 
-![额度重置卡演示](Resources/0.8.1/4.jpg)
+![0.8.1 参考界面中的重置卡](Resources/0.8.1/4.jpg)
 
 ### 按你的桌面来调整
 
@@ -125,7 +131,7 @@ DSH 和 Kimi Code 的权限请求在原客户端确认。可用字段取决于 A
 
 Windows 用户请参阅 [Windows 安装说明](Windows/README.md#下载与更新)，以下步骤适用于 macOS。
 
-1. 下载 [QuotaView 0.8.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)，解压并打开 `QuotaView.app`。
+1. 下载 [QuotaView 0.8.5 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1)，解压并打开 `QuotaView.app`。
 2. 在**设置 → 连接**中启用需要的 Agent。
 3. Codex 自动发现本地任务。配置 Hook 或 DSH 插件后，按设置提示新建会话或重启对应客户端。
 
@@ -141,7 +147,7 @@ Windows 用户请参阅 [Windows 安装说明](Windows/README.md#下载与更新
 
 启用接入可能修改对应客户端配置；修改前保存备份，只管理 QuotaView 自己的标记项。DSH 定制客户端继续使用各自独立的数据目录与会话身份。
 
-成本为估算值，不是账单。额度重置仍是本地演示，不消耗真实重置次数。反馈问题时请勿上传凭据或原始会话记录。
+成本为估算值，不是账单。macOS 灵动岛中的 Codex 重置需要明确确认，并会消耗真实重置卡；为处理重试，本机保存操作记录，不保存登录凭据。反馈问题时请勿上传凭据或原始会话记录。
 
 ## 从源码构建
 
@@ -158,7 +164,7 @@ swift run QuotaView
 
 ## 项目与反馈
 
-- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) · [上一稳定版 0.8.2](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.2-build.2)
+- [当前版本](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1) · [上一稳定版 0.8.3](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1)
 - [版本历史与发布证据](VERSION_HISTORY.md) · [开发交接](HANDOFF.md)
 - [设计与行为规格](docs/specs/README.md) · [贡献指南](CONTRIBUTING.md)
 - [提交问题](https://github.com/Duoasa/QuotaView/issues/new/choose)，也可从**设置 → Bug 反馈**进入。

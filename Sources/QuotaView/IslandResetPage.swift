@@ -25,24 +25,23 @@ struct IslandResetPageData {
         return (window?.remainingPercent ?? snapshot?.remainingPercent).map { min(100, max(0, $0)) }
     }
     var creditsAfterOne: Int? { credits.map { max(0, $0 - 1) } }
-    var canPreview: Bool { creditAvailability == .available && remainingPercent != nil }
-    func actionTitle(previewed: Bool, copy: AppCopy) -> String {
+    var canRequestReset: Bool { creditAvailability == .available && remainingPercent != nil }
+    func actionTitle(copy: AppCopy) -> String {
         switch creditAvailability {
         case .empty: return copy.text("暂无可用重置卡", "No reset credits available")
         case .unknown: return copy.text("等待重置卡数据", "Waiting for reset credits")
         case .available:
             guard remainingPercent != nil else { return copy.text("等待额度数据", "Waiting for quota data") }
-            return previewed ? copy.text("演示完成", "Preview complete") : copy.text("额度重置", "Quota Reset")
+            return copy.text("额度重置", "Quota Reset")
         }
     }
-    func caption(previewed: Bool, copy: AppCopy) -> String {
+    func caption(copy: AppCopy) -> String {
         switch creditAvailability {
         case .empty: return copy.text("没有可用重置次数", "No reset credits available")
         case .unknown: return copy.text("次数不可用", "Credits unavailable")
         case .available:
-            guard canPreview, let count = creditsAfterOne else { return copy.text("等待额度数据", "Waiting for quota data") }
-            if previewed { return copy.text("未消耗次数或重置额度", "No credit or quota changed") }
-            return copy.text("演示 · 重置后剩余 \(count) 次", "Demo · \(count) left after reset")
+            guard canRequestReset else { return copy.text("等待额度数据", "Waiting for quota data") }
+            return copy.text("确认后使用 1 次重置机会", "Uses one reset credit after confirmation")
         }
     }
 }
@@ -57,12 +56,14 @@ struct IslandResetPage: View {
     var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
     var provider: IslandAgentProvider = .codex
-    @State private var previewed = false
+    var resetController: CodexResetController? = nil
+    var isPresented = true
     @State private var copiedCommand = false
     private var isClaude: Bool { provider == .claudeCode }
     static let claudeResetCommand = "/limit-reset"
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private let secondary = Color(white: 0.84)
+    private let contentInset: CGFloat = 14
 
     var body: some View {
         IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
@@ -81,19 +82,23 @@ struct IslandResetPage: View {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
                     }.font(AstaSans.semiBold(15)).tracking(-0.15)
-                }.padding(.vertical, 12).frame(maxWidth: .infinity)
+                }.padding(.top, 12).frame(maxWidth: .infinity)
 
-                if usageState.isStale {
-                    Text(copy.text("显示上次数据", "Showing previous data"))
-                        .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                HStack {
-                    Text(usageState.isStale ? copy.text("上次额度", "Previous quota") : copy.text("可用额度", "Available quota")).foregroundStyle(secondary)
-                    Spacer(minLength: 8)
-                    Text(data.remainingPercent.map { "\($0)%" } ?? "—")
-                        .font(AstaSans.medium(11)).monospacedDigit()
-                }.font(AstaSans.regular(11))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(usageState.isStale
+                            ? copy.text("上次剩余额度", "Previous remaining quota")
+                            : copy.text("剩余额度", "Remaining quota"))
+                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                        Spacer(minLength: 8)
+                        Text(data.remainingPercent.map { "\($0)%" } ?? "—")
+                            .font(AstaSans.medium(12)).monospacedDigit()
+                    }.accessibilityElement(children: .combine)
+                    if usageState.isStale {
+                        Text(copy.text("显示上次数据", "Showing previous data"))
+                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                    }
+                }.padding(.horizontal, contentInset)
 
                 VStack(alignment: .leading, spacing: 8) {
                     if isClaude {
@@ -122,10 +127,11 @@ struct IslandResetPage: View {
                         warning(copy.text("重置后无法撤销。", "A reset cannot be undone."))
                     }
                     }
-                }.font(AstaSans.regular(11)).lineSpacing(3).padding(14)
+                }.font(AstaSans.regular(11)).lineSpacing(3).padding(contentInset)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
-                    .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
+                    .islandGlass(RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        tint: Color(white: 0.075).opacity(0.75),
+                        solidTint: Color(white: 0.075))
 
                 if isClaude {
                     Button {
@@ -137,30 +143,23 @@ struct IslandResetPage: View {
                             : copy.text("复制 /limit-reset", "Copy /limit-reset"))
                             .font(AstaSans.semiBold(13))
                             .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                    }.buttonStyle(IslandApprovalActionStyle(primary: false))
+                    }.buttonStyle(IslandApprovalActionStyle(primary: false, followsGlassAppearance: true))
                         .frame(maxWidth: .infinity)
                         .accessibilityHint(copy.text("复制命令，不会使用重置", "Copies the command; no reset is used"))
+                } else if let resetController, data.snapshot != nil {
+                    IslandCodexResetControls(controller: resetController, data: data, copy: copy, isCurrent: usageState == .current)
                 } else {
-                Button {
-                    guard data.canPreview else { return }
-                    previewed = true
-                } label: {
-                    Text(data.actionTitle(previewed: previewed, copy: copy))
-                        .font(AstaSans.semiBold(13))
-                        .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true))
-                    .frame(maxWidth: .infinity).disabled(!data.canPreview)
-                    .accessibilityLabel(data.canPreview ? copy.text("额度重置演示", "Quota reset preview") : data.actionTitle(previewed: false, copy: copy))
-                    .accessibilityHint(data.canPreview
-                        ? copy.text("仅演示，次数与真实额度不变", "Preview only; real credits and quota stay unchanged")
-                        : copy.text("刷新数据或返回用量", "Refresh or return to usage"))
+                    Text(copy.text("重置服务不可用", "Reset service unavailable"))
+                        .font(AstaSans.regular(10.5)).modifier(IslandGlassForeground())
                 }
             }
 
-            Text(isClaude ? copy.text("重置次数与期限只在 Claude Code 中显示。", "Resets left and deadlines are shown only in Claude Code.")
-                 : data.caption(previewed: previewed, copy: copy))
-                .font(AstaSans.regular(10.5)).lineSpacing(2).foregroundStyle(secondary)
+            if isClaude {
+            Text(copy.text("重置次数与期限只在 Claude Code 中显示。", "Resets left and deadlines are shown only in Claude Code."))
+                .font(AstaSans.regular(10.5)).lineSpacing(2)
+                .modifier(IslandGlassForeground())
                 .fixedSize(horizontal: false, vertical: true)
+            }
             }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
         } footer: {
             IslandChromeFooter {
@@ -170,8 +169,9 @@ struct IslandResetPage: View {
             } trailing: { utilities }
         }.foregroundStyle(.white)
             .accessibilityElement(children: .contain)
-            .onChange(of: data.credits) { _, _ in previewed = false }
-            .onChange(of: provider) { _, _ in previewed = false; copiedCommand = false }
+            .onChange(of: provider) { _, _ in resetController?.cancelConfirmation(); copiedCommand = false }
+            .onChange(of: data.credits) { _, credits in if credits == nil { resetController?.cancelConfirmation() } }
+            .onChange(of: isPresented) { _, visible in if !visible { resetController?.cancelConfirmation() } }
     }
     private func warning(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 5) {
