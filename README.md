@@ -22,11 +22,11 @@
 
 ## See it in action
 
-A 68-second walkthrough of the compact Island, tasks, approvals, usage, and settings. Select the cover to open the English MP4.
+A 68-second walkthrough of the compact Island, tasks, approvals, usage, and settings. Select the cover to play the English demo in your browser.
 
-[![QuotaView English demo showing agent tasks](docs/media/readme/en/01-tasks.jpg)](docs/media/readme/en/QuotaView-demo-en.mp4)
+[![QuotaView English demo showing agent tasks](docs/media/readme/en/01-tasks.jpg)](https://duoasa.github.io/QuotaView/demos/0.8.5/en/)
 
-**[▶ English demo · 1:08](docs/media/readme/en/QuotaView-demo-en.mp4)** · [Download MP4](docs/media/readme/en/QuotaView-demo-en.mp4?raw=true)
+**[▶ English demo · 1:08](https://duoasa.github.io/QuotaView/demos/0.8.5/en/)** · [MP4 file](https://duoasa.github.io/QuotaView/demos/0.8.5/en/QuotaView-demo-en.mp4)
 
 These images and videos show the macOS app. The interface was captured on a real Mac; the menu bar, branding, and captions were composited. Original task text and unavailable-transcript messages are preserved. No reset credits were used in the demo. Select a product image to view it at full size.
 
