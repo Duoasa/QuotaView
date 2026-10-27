@@ -2,13 +2,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发与发布准备：0.8.5 Build 1 / Codex 手动重置
+## 当前开发与发布：0.8.5 Build 1 / Codex 手动重置
 
 2026-10-27 用户明确要求 0.8.5、真实 Codex 重置、GitHub/main 和 appcast 更新，同时禁止开发验证消耗其重置卡。本次精确发布身份为 0.8.5 Build 1 / 内部 81，tag `v0.8.5-build.1`、ZIP `QuotaView-v0.8.5-build.1.zip`；完整 macOS Stable/Latest 和签名 appcast 链路已授权。Windows 独立渠道及正式安装保持。规格见[手动重置](docs/specs/codex-quota-reset.md)、[0.8.5 发布](docs/specs/release-0.8.5.md)。
 
 实现：官方 App Server 先读取具体卡片，人工确认后重新核对账户/卡片再消费；记录绑定账户哈希、明确卡片 ID 与幂等 UUID，未知结果经再次确认复用原操作，不后台重试。只升级灵动岛 Codex；Claude 继续复制命令，旧菜单演示保留。确认卡、等待/失败/未知结果均支持中英文，真实额度来自刷新。包含本轮玻璃、额度对齐与特效选项前移；已同步 origin/main，保留 Windows 发布记录。
 
-本地完整测试 722 项、6 跳过、0 失败，审批契约 44 项通过；消费请求只在内存模拟服务和明确的临时假进程中执行，未使用真实卡。10:37（上海）0.8.5 开发包已更新并启动 PID 82509，236 输入/13 资产、完整包/备份与加载路径一致；证据 `.build/codex-reset-085-runtime/`。上一稳定版 `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc` 的公开 ZIP 已回下载，SHA-256 与版本历史一致。当前正在签名、公证、PR/main CI 和发布；尚未声明上线，真实扣卡与视觉留给用户验收。
+本地完整测试 722 项、6 跳过、0 失败，审批契约 44 项通过；消费请求只在内存模拟服务和明确的临时假进程中执行，未使用真实卡。10:37（上海）0.8.5 开发包已更新并启动 PID 82509，236 输入/13 资产、完整包/备份与加载路径一致；证据 `.build/codex-reset-085-runtime/`。上一稳定版 `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc` 的公开 ZIP 已回下载，SHA-256 与版本历史一致。已由 [PR #105](https://github.com/Duoasa/QuotaView/pull/105) 合入 main，PR/main CI 均成功；Universal 正式包完成 Developer ID、公证/Staple、Gatekeeper 和解压启动。GitHub Stable / Latest 与签名 macOS appcast 已上线，公开 ZIP 与 Feed 的字节、身份和内置公钥验签通过。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.3-build.1`。真实扣卡与视觉留给用户验收。
 
 ## 前序开发：0.8.3 Build 6 / 重置操作区深浅适配
 
@@ -564,12 +564,12 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.5-release`；已合并 origin/main，当前 0.8.5 发布提交与 CI 待记录 |
+| 分支 / 源码提交 | `codex/0.8.5-release`；发布源码经 PR #105 合入 `9982a8d8b15258fb08f4eb33743f718c0b00e749`，PR/main CI 通过；后续仅回填发布文档 |
 | 开发身份 | `com.quotaview.development073`；0.8.5 / 显示 Build 1 / 内部 81 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-10-27 10:37（上海）PID 82509；236 输入、13 资产、完整包/备份与实际加载路径一致 |
 | 源码与运行包 | 0.8.5 手动重置及本轮界面调整已进入开发运行包；真实扣卡与视觉待用户验收 |
-| 公开稳定版 | 0.8.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。

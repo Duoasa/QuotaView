@@ -1,8 +1,8 @@
 # QuotaView SDD 注册表
 
-## 当前开发与发布准备：0.8.5 Build 1
+## 当前开发与发布：0.8.5 Build 1
 
-[Codex 手动额度重置](codex-quota-reset.md) · `Accepted / Verifying`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；模拟服务验证重复、未知结果、账户变化与失败分支，不消费本机真实卡。完整本地测试与开发包核对通过；[0.8.5 发布](release-0.8.5.md)已获 Stable/Latest 与 macOS appcast 全链授权，签名公证、CI 和渠道发布进行中。当前事实见 Handoff。
+[Codex 手动额度重置](codex-quota-reset.md) · `Released / User Acceptance Pending`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；隔离模拟验证，不消费本机真实卡。[0.8.5 发布](release-0.8.5.md)已完成 PR/main CI、签名公证、GitHub Stable/Latest 与 macOS appcast 上线及公开回下载核验。中英文 README 与开发版已更新，回滚基线 0.8.3 Build 1；真实扣卡与视觉待用户验收。完整事实见版本历史，当前运行状态见 Handoff。
 
 ## 前序开发：0.8.3 Build 6
 
@@ -28,7 +28,7 @@
 
 [Windows 工程与独立更新通道](windows-channel.md) · `Released / User Acceptance Pending`：公开名称 `0.8.3-win · Windows`，包内和更新版本保留 `0.8.3-win.10`。原始 ZIP 已发布并公开回下载验签，首个条目加入独立 Windows appcast；中英文 README 增加上线与功能降级适配说明。macOS Release 仅补充平台名称，原更新通道不变。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实升级体验待用户验收。
 
-## 当前发布：0.8.3 Build 1
+## 前序发布：0.8.3 Build 1
 
 [0.8.3 发布规格](release-0.8.3.md) · `Released / User Acceptance Pending`：GitHub Stable / Latest 与签名 appcast 已发布，源码 PR/main CI、公开 ZIP 与 Feed 验证通过。中英文 README 已更新，回滚基线 0.8.2 Build 2；完整发布事实见版本历史，开发运行包见 Handoff。
 
