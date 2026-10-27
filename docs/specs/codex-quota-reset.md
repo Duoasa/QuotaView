@@ -1,6 +1,6 @@
 # Codex 手动额度重置
 
-Spec ID：`QV-CODEX-QUOTA-RESET-001` · `Accepted / Verifying` · 2026-10-27。
+Spec ID：`QV-CODEX-QUOTA-RESET-001` · `Released / User Acceptance Pending` · 2026-10-27。
 
 ## 授权与范围
 
@@ -26,3 +26,5 @@ Spec ID：`QV-CODEX-QUOTA-RESET-001` · `Accepted / Verifying` · 2026-10-27。
 - `CodexRateLimitResetTests` 使用临时文件和内存模拟服务检查确认/取消、重复点击、超时后重启、账户及卡片变化、过期、无明细、存储失败和结果分支；`CodexAppServerClientTests` 使用明确指定的临时假进程检查 RPC 格式。发布结果见 [0.8.5 规格](release-0.8.5.md)。
 
 真实业务扣卡与视觉体验留给用户验收，不以模拟成功替代真实服务的端到端验证。
+
+2026-10-27：源码经 PR #105 合入 main，PR/main CI 成功；722 项测试（6 跳过、0 失败）及 44 项审批契约通过。Universal 包签名、公证/Staple、解压启动与公开回下载验签完成；GitHub Stable / Latest、签名 appcast 和中英文 README 已更新。真实消费仅在隔离夹具验证，没有使用用户重置卡；真实扣卡与视觉仍待用户验收。完整发布证据见版本历史，开发包状态见 Handoff。
