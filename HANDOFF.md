@@ -2,6 +2,12 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## README 中英文媒体整理（2026-10-27）
+
+用户提供独立中英文实机配图与演示视频。`README.zh-CN.md` 使用 13 张中文 JPEG 与约 75 秒中文 MP4，`README.md` 使用 11 张英文 JPEG 与约 68 秒英文 MP4；各自素材位于 `docs/media/readme/zh-CN/`、`en/`。保留原始媒体字节，未混用两种语言；QQ 二维码转为白底 JPEG。首页按演示、任务/审批、用量/重置、设置、支持范围与安装重新组织，旧版本逐段介绍合并为当前更新摘要。
+
+视频通过封面及 MP4 链接接入，未上传 GitHub 附件。素材说明保留真实采集/后期合成和原任务语言的边界。用户已授权本次 README、媒体与交接改动推送 GitHub 并合并 main；本次交付范围不涉及应用版本、已发布包、appcast 或开发运行包。链接、语言隔离、JPEG 格式及源文件哈希核验见 `.build/readme-media-085/`；文档变更不重建应用。
+
 ## 当前开发与发布：0.8.5 Build 1 / Codex 手动重置
 
 2026-10-27 用户明确要求 0.8.5、真实 Codex 重置、GitHub/main 和 appcast 更新，同时禁止开发验证消耗其重置卡。本次精确发布身份为 0.8.5 Build 1 / 内部 81，tag `v0.8.5-build.1`、ZIP `QuotaView-v0.8.5-build.1.zip`；完整 macOS Stable/Latest 和签名 appcast 链路已授权。Windows 独立渠道及正式安装保持。规格见[手动重置](docs/specs/codex-quota-reset.md)、[0.8.5 发布](docs/specs/release-0.8.5.md)。
@@ -564,7 +570,7 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.5-release`；发布源码经 PR #105 合入 `9982a8d8b15258fb08f4eb33743f718c0b00e749`，PR/main CI 通过；后续仅回填发布文档 |
+| 分支 / 源码提交 | `codex/readme-bilingual-media`；基于 0.8.5 发布记录已合入的 main `22557cd487c0b793d5cc72773864513c5e4a45ef`，本轮仅整理 README 与媒体 |
 | 开发身份 | `com.quotaview.development073`；0.8.5 / 显示 Build 1 / 内部 81 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-10-27 10:37（上海）PID 82509；236 输入、13 资产、完整包/备份与实际加载路径一致 |
