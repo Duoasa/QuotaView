@@ -63,6 +63,7 @@ struct IslandResetPage: View {
     static let claudeResetCommand = "/limit-reset"
     private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
     private let secondary = Color(white: 0.84)
+    private let contentInset: CGFloat = 14
 
     var body: some View {
         IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
@@ -81,19 +82,23 @@ struct IslandResetPage: View {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
                     }.font(AstaSans.semiBold(15)).tracking(-0.15)
-                }.padding(.vertical, 12).frame(maxWidth: .infinity)
+                }.padding(.top, 12).frame(maxWidth: .infinity)
 
-                if usageState.isStale {
-                    Text(copy.text("显示上次数据", "Showing previous data"))
-                        .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                HStack {
-                    Text(usageState.isStale ? copy.text("上次额度", "Previous quota") : copy.text("可用额度", "Available quota")).foregroundStyle(secondary)
-                    Spacer(minLength: 8)
-                    Text(data.remainingPercent.map { "\($0)%" } ?? "—")
-                        .font(AstaSans.medium(11)).monospacedDigit()
-                }.font(AstaSans.regular(11))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(usageState.isStale
+                            ? copy.text("上次剩余额度", "Previous remaining quota")
+                            : copy.text("剩余额度", "Remaining quota"))
+                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                        Spacer(minLength: 8)
+                        Text(data.remainingPercent.map { "\($0)%" } ?? "—")
+                            .font(AstaSans.medium(12)).monospacedDigit()
+                    }.accessibilityElement(children: .combine)
+                    if usageState.isStale {
+                        Text(copy.text("显示上次数据", "Showing previous data"))
+                            .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                    }
+                }.padding(.horizontal, contentInset)
 
                 VStack(alignment: .leading, spacing: 8) {
                     if isClaude {
@@ -122,10 +127,11 @@ struct IslandResetPage: View {
                         warning(copy.text("重置后无法撤销。", "A reset cannot be undone."))
                     }
                     }
-                }.font(AstaSans.regular(11)).lineSpacing(3).padding(14)
+                }.font(AstaSans.regular(11)).lineSpacing(3).padding(contentInset)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 14))
-                    .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(Color(white: 0.13), lineWidth: 0.5) }
+                    .islandGlass(RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        tint: Color(white: 0.075).opacity(0.75),
+                        solidTint: Color(white: 0.075))
 
                 if isClaude {
                     Button {
@@ -137,7 +143,7 @@ struct IslandResetPage: View {
                             : copy.text("复制 /limit-reset", "Copy /limit-reset"))
                             .font(AstaSans.semiBold(13))
                             .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                    }.buttonStyle(IslandApprovalActionStyle(primary: false))
+                    }.buttonStyle(IslandApprovalActionStyle(primary: false, followsGlassAppearance: true))
                         .frame(maxWidth: .infinity)
                         .accessibilityHint(copy.text("复制命令，不会使用重置", "Copies the command; no reset is used"))
                 } else {
@@ -148,7 +154,7 @@ struct IslandResetPage: View {
                     Text(data.actionTitle(previewed: previewed, copy: copy))
                         .font(AstaSans.semiBold(13))
                         .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
-                }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true))
+                }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true, followsGlassAppearance: true))
                     .frame(maxWidth: .infinity).disabled(!data.canPreview)
                     .accessibilityLabel(data.canPreview ? copy.text("额度重置演示", "Quota reset preview") : data.actionTitle(previewed: false, copy: copy))
                     .accessibilityHint(data.canPreview
@@ -159,7 +165,8 @@ struct IslandResetPage: View {
 
             Text(isClaude ? copy.text("重置次数与期限只在 Claude Code 中显示。", "Resets left and deadlines are shown only in Claude Code.")
                  : data.caption(previewed: previewed, copy: copy))
-                .font(AstaSans.regular(10.5)).lineSpacing(2).foregroundStyle(secondary)
+                .font(AstaSans.regular(10.5)).lineSpacing(2)
+                .modifier(IslandGlassForeground())
                 .fixedSize(horizontal: false, vertical: true)
             }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
         } footer: {

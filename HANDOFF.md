@@ -2,6 +2,36 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## 当前开发：0.8.3 Build 6 / 重置操作区深浅适配
+
+2026-10-27：修复重置页按钮/下方说明固定白字或浅灰的问题。普通复制按钮浅色黑字、深色白字，材质同步外观；危险重置保留白字并加强浅色红底；说明与底栏共用外观前景。范围仅重置操作区，深色内容/审批卡按钮、复制和演示业务保持。配置 0.8.3 Build 6 / 内部 80。规格见[重置操作区深浅适配](docs/specs/island-glass-appearance.md#重置操作区深浅适配2026-10-27)。
+
+10:05（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 70532；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-actions-appearance-20261027/`，旧包 `.build/runtime-package-backups/reset-actions-appearance-20261027-100526/QuotaView.app`。已审查可用/禁用、复制完成/演示反馈、深浅/自动与实体回退路径；未做 UI 自动化或真实重置，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 5 / 额度左右对齐
+
+2026-10-27：按用户修订，额度行恢复左标签/右百分比，与须知共用 14 pt 内容内距、上下各 16 pt 间隔；标签 10.5 pt Regular、数值 12 pt Medium，保持旧数据说明与未知值。配置 0.8.3 Build 5 / 内部 79。详见[额度左右对齐](docs/specs/island-expanded-glass.md#重置页额度左右对齐2026-10-27)。
+
+10:00（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 67706；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-quota-alignment-20261027/`，旧包 `.build/runtime-package-backups/reset-quota-alignment-20261027-100028/QuotaView.app`。仅本地修改，未推送、发布或替换正式安装；视觉由用户验收。
+
+## 前序开发：0.8.3 Build 4 / 任务特效前移
+
+2026-10-27：按用户截图，将灵动岛设置中的任务特效网格移至顶部岛预览正下方；后续依次为外观与布局、显示内容、自动展开。保持三项特效的尺寸、偏好与实时预览绑定，使切换控件靠近预览。配置 0.8.3 Build 4 / 内部 78。规格见[任务特效前移](docs/specs/island-glass-appearance.md#任务特效前移2026-10-27)。
+
+09:57（上海）Debug arm64 增量编译完成，开发包已更新并启动 PID 65551；234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/settings-effects-order-20261027/`，旧包 `.build/runtime-package-backups/settings-effects-order-20261027-095722/QuotaView.app`。未做 UI 自动化，实际效果待用户验收；仅本地开发修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 3 / 重置页额度摘要
+
+2026-10-27：按用户截图，将原两端分散的额度行收拢到重置次数下方，居中显示“剩余额度 + 百分比”，标签 10.5 pt Regular、数值 12 pt Medium，组间及行内均为 8 pt；旧数据与未知值语义保留。说明卡片延续 Build 2 深色玻璃，真实重置保持演示。规格见[额度摘要排版](docs/specs/island-expanded-glass.md#重置页额度摘要排版2026-10-27)。
+
+0.8.3 Build 3 / 内部 77 Debug arm64 增量编译成功，09:53（上海）开发包更新并启动 PID 61927；App/Widget 版本同步，234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/reset-quota-summary-20261027/`，回退 `.build/runtime-package-backups/reset-quota-summary-20261027-095311/QuotaView.app`。受影响中英文、旧数据/未知状态与辅助功能已源码审查；未新增测试或做 UI 自动化，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 2 / 重置说明深色玻璃
+
+2026-10-27：按用户截图，将 `IslandResetPage` 的重置须知容器从独立纯黑背景/手工描边改为用量卡片相同的 `islandGlass`，采用 14 pt continuous 圆角、white 0.075 / alpha 0.75 和共享实体回退；空态、未知次数与 Claude 说明同步。文字、内距、重置券及演示逻辑不变。规格见[展开态玻璃](docs/specs/island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27)。
+
+0.8.3 Build 2 / 内部 76 Debug arm64 增量构建成功，09:46（上海）开发包已更新并启动 PID 56501；234 输入、13 资产、完整运行包/备份与实际加载路径一致。证据 `.build/reset-notice-glass-20261027/`；旧开发包备份 `.build/runtime-package-backups/reset-notice-glass-20261027-094613/QuotaView.app`。本次仅本地开发修改；未推送、发布或替换正式安装，视觉待用户验收。
+
 ## 当前发布：0.8.3 Build 1
 
 2026-10-16：按用户授权，最新开发代码已封装为 0.8.3 Build 1，源码经 [PR #101](https://github.com/Duoasa/QuotaView/pull/101) 合入 main；PR/main CI 通过。Universal 正式包已签名、公证、Staple，GitHub Stable / Latest 和签名 appcast 已上线，公开 ZIP、Feed 字节与内置公钥验证通过。中英文 README 已同步。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.2-build.2`。
@@ -514,13 +544,13 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.7.7-build1-development`（沿用历史分支名）；0.8.3 发布提交 `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`，后续文档补记不改变应用输入 |
-| 开发身份 | `com.quotaview.development073`；0.8.3 / 显示 Build 1 / 内部 75 |
+| 分支 / 源码提交 | `codex/0.7.7-build1-development`（沿用历史分支名），HEAD `f779531`；重置说明玻璃、额度摘要排版及任务特效前移为本地修改 |
+| 开发身份 | `com.quotaview.development073`；0.8.3 / 显示 Build 6 / 内部 80 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-16 10:08（上海）PID 15395；234 输入、13 资产、完整包/备份与实际加载路径一致 |
-| 源码与运行包 | 最新玻璃、设置、字体及 Widget 修复已进入 0.8.3 运行包；视觉待用户验收 |
+| 最近运行核验 | 2026-10-27 10:05（上海）PID 70532；234 输入、13 资产、完整包/备份与实际加载路径一致 |
+| 源码与运行包 | Build 6 重置操作区深浅适配及前序额度对齐、设置排序、说明玻璃已进入开发运行包；视觉待用户验收 |
 | 公开稳定版 | 0.8.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
-| 本机正式安装 | `/Applications/QuotaView.app` 保留此前授权安装的 0.8.2 Build 10；本轮发布未替换 |
+| 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
 

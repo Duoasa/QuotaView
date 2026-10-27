@@ -597,6 +597,17 @@ struct SettingsView: View {
     }
     private var islandSettings: some View {
         VStack(alignment: .leading, spacing: 18) {
+            settingsSection(copy.text("任务特效", "Task effects")) {
+                LazyVGrid(columns: Array(repeating: .init(.flexible()), count: AppPreferences.CodexActivityProgressEffect.allCases.count), spacing: 8) {
+                    ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
+                        Button { preferences.codexActivityProgressEffect = effect } label: {
+                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                        }.buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: preferences.codexActivityProgressEffect == effect))
+                            .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                            .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
+                    }
+                }
+            }
             islandMaterialSettings
             settingsSection(copy.text("显示内容", "Content")) {
                 NativeSettingsCard {
@@ -610,17 +621,6 @@ struct SettingsView: View {
                         symbol: "eye.slash.fill", color: .systemGray,
                         isOn: $preferences.codexIslandPrivacy)
 
-                }
-            }
-            settingsSection(copy.text("任务特效", "Task effects")) {
-                LazyVGrid(columns: Array(repeating: .init(.flexible()), count: AppPreferences.CodexActivityProgressEffect.allCases.count), spacing: 8) {
-                    ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
-                        Button { preferences.codexActivityProgressEffect = effect } label: {
-                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                        }.buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: preferences.codexActivityProgressEffect == effect))
-                            .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
-                            .accessibilityValue(preferences.codexActivityProgressEffect == effect ? copy.text("已选择", "Selected") : "")
-                    }
                 }
             }
             settingsSection(copy.text("自动展开", "Automatic opening")) {

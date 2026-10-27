@@ -422,27 +422,44 @@ struct IslandApprovalActionStyle: ButtonStyle {
     let primary: Bool
     var destructive = false
     var emphasized = false
+    var followsGlassAppearance = false
     func makeBody(configuration: Configuration) -> some View {
-        Surface(configuration: configuration, primary: primary, destructive: destructive, emphasized: emphasized)
+        Surface(configuration: configuration, primary: primary, destructive: destructive, emphasized: emphasized,
+            followsGlassAppearance: followsGlassAppearance)
     }
     private struct Surface: View {
         let configuration: Configuration
         let primary: Bool
         let destructive: Bool
         let emphasized: Bool
+        let followsGlassAppearance: Bool
         @Environment(\.isEnabled) private var enabled
+        @Environment(\.colorScheme) private var colorScheme
+        @Environment(\.islandGlassColorScheme) private var glassColorScheme
         @State private var hovered = false
+        private var lightGlass: Bool { followsGlassAppearance && glassColorScheme == .light }
+        private var foreground: Color {
+            guard enabled else {
+                return followsGlassAppearance
+                    ? (lightGlass ? Color.black : .white).opacity(0.45)
+                    : IslandApprovalAppearance.muted
+            }
+            if destructive && emphasized { return .white }
+            if primary && !destructive { return Color(white: 0.10) }
+            return lightGlass ? Color.black.opacity(0.86) : .white
+        }
         var body: some View {
             configuration.label
-                .foregroundStyle(enabled ? (primary && !destructive ? Color(white: 0.10) : Color.white) : IslandApprovalAppearance.muted)
+                .foregroundStyle(foreground)
                 .islandGlass(RoundedRectangle(cornerRadius: 10, style: .continuous),
-                    tint: enabled && destructive ? (emphasized ? Color(red: 0.68, green: 0.10, blue: 0.12).opacity(0.78) : Color.red.opacity(0.22))
-                        : enabled && primary ? Color.white.opacity(0.90) : Color.white.opacity(0.04),
+                    tint: enabled && destructive ? (emphasized ? Color(red: 0.68, green: 0.10, blue: 0.12).opacity(lightGlass ? 0.90 : 0.78) : Color.red.opacity(0.22))
+                        : enabled && primary ? Color.white.opacity(0.90) : Color.white.opacity(lightGlass ? 0.22 : 0.04),
                     solidTint: enabled && destructive ? Color(red: 0.68, green: 0.18, blue: 0.19)
                         : enabled && primary ? Color(white: 0.94) : Color(white: 0.14),
                     clearSurface: !(enabled && ((primary && !destructive) || (destructive && emphasized))))
                 .brightness(configuration.isPressed && enabled ? -0.08 : hovered && enabled ? 0.04 : 0)
                 .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous)).onHover { hovered = $0 }
+                .environment(\.colorScheme, followsGlassAppearance ? glassColorScheme : colorScheme)
         }
     }
 }
