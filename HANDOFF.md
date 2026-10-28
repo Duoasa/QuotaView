@@ -6,7 +6,7 @@
 
 用户授权修复待确认/审批聚焦卡特效丢失、推送 GitHub 合并 main，并完成后更新本机开发运行包；明确不发布任何 Release 包或修改 appcast。移除 `IslandQuantumProgressHost` 在 awaitingConfirmation 时隐藏和禁播特效的分支，沿用原进度、等待 Profile、确认边缘呼吸光和可见性/减少动态策略。历史分支由 2026-10-11 `066b397` 引入，0.8.3 至 Build 4 的相关状态映射、审批头卡与渲染器未变，不能断言是最近版本引入。
 
-配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户要求列表/审批页两张截图，目前 Mac 锁屏，已请求解锁，待获取画面；视觉未验收。
+配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户最初要求列表/审批页两张截图，随后明确“先不截屏”；截图暂缓，隔离预览未启动，视觉未验收。
 
 本次分支 `codex/0.8.6-confirmation-progress`，PR/main CI 待完成；当前运行包暂为 Build 4，按要求合并完成后更新为 Build 5。正式安装与公开 0.8.5 稳定渠道保持。
 
