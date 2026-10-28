@@ -2,9 +2,17 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 4 / 图标验收与预览清理（2026-10-28）
+## 当前开发：0.8.6 Build 5 / 待确认进度特效（2026-10-29）
 
-用户已授权本次源码推送 GitHub 并合并 main。集成分支 `codex/0.8.6-task-provider-icons` 基于当前 `origin/main`；PR 与精确 main 提交的 CI 待完成，证据目录 `.build/source-push-provider-icons-20261028/`。本次不发布 Release 或 appcast。
+用户授权修复待确认/审批聚焦卡特效丢失、推送 GitHub 合并 main，并完成后更新本机开发运行包；明确不发布任何 Release 包或修改 appcast。移除 `IslandQuantumProgressHost` 在 awaitingConfirmation 时隐藏和禁播特效的分支，沿用原进度、等待 Profile、确认边缘呼吸光和可见性/减少动态策略。历史分支由 2026-10-11 `066b397` 引入，0.8.3 至 Build 4 的相关状态映射、审批头卡与渲染器未变，不能断言是最近版本引入。
+
+配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户要求列表/审批页两张截图，目前 Mac 锁屏，已请求解锁，待获取画面；视觉未验收。
+
+本次分支 `codex/0.8.6-confirmation-progress`，PR/main CI 待完成；当前运行包暂为 Build 4，按要求合并完成后更新为 Build 5。正式安装与公开 0.8.5 稳定渠道保持。
+
+## 前序开发：0.8.6 Build 4 / 图标验收与预览清理（2026-10-28）
+
+用户已授权本次源码推送 GitHub 并合并 main。[PR #109](https://github.com/Duoasa/QuotaView/pull/109) 于 2026-10-28 15:43（上海）合并为 `186961a3c34954540d31a55b22d4b8bd39422741`，源码提交 `c9d88a91dddaa3e5a8e166f6521d49259369cd5d`。PR CI `40651280979` 成功（722 测试、6 跳过、0 失败，44 契约检查通过）；精确 main CI [40651890373](https://github.com/Duoasa/QuotaView/actions/runs/40651890373) 也已成功，Swift tests 与原生问题关闭契约检查均通过。提交和合并后的 236 项输入均与当前开发运行包匹配；证据 `.build/source-push-provider-icons-20261028/`。本次未发布 Release 或 appcast。
 
 用户确认“图标没问题了”，接受 Claude、DSH、Kimi 的圆角矩形真实品牌图标，并要求清理三张虚拟任务卡及临时注入。已移除模拟卡生成、Debug 开关/启动参数读取、临时选择/归档分支和预览 Tooltip 修饰器，保留已验收图标与真实任务流程。`Sources` 中临时注入标记与预览符号扫描无匹配；此次视觉结论仅覆盖用户查看的图标。
 
@@ -598,11 +606,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-task-provider-icons`；基于 main `80bf0e5`，本轮图标、版本配置和交接进入源码集成；临时注入已清理 |
-| 开发身份 | `com.quotaview.development073`；0.8.6 / 显示 Build 4 / 内部 85 |
+| 分支 / 源码提交 | `codex/0.8.6-confirmation-progress`；基于 main `186961a3c34954540d31a55b22d4b8bd39422741`，本轮恢复待确认特效 |
+| 开发身份 | `com.quotaview.development073`；源码 0.8.6 / Build 5 / 内部 86，当前运行 Build 4 / 内部 85，待合并后更新 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-10-28 15:30（上海）PID 93658；236 输入、13 资产、完整包/备份与实际加载路径一致，未带预览参数 |
-| 源码与运行包 | 已同步为 0.8.6 Build 4；任务来源品牌图标经用户验收，三张虚拟卡及全部临时注入已清理，仅显示真实任务 |
+| 源码与运行包 | Build 5 待确认特效修复已编译，尚未替换运行 Build 4；图标已验收，待确认修复视觉待验收 |
 | 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
