@@ -1,6 +1,14 @@
 # QuotaView SDD 注册表
 
-## 当前开发与发布：0.8.5 Build 1
+## 当前开发：0.8.6 Build 4
+
+[任务来源图标](../design/quotaview-provider-icons.md#task-provider-icons) · `Accepted / User Verified`：Claude、DSH、Kimi 任务卡使用圆角矩形真实 Logo，用户已确认图标无问题；Build 4 清理三张模拟卡及全部临时注入，恢复纯真实任务展示。0.8.6 / Build 4 / 内部 85 增量编译、运行包、无预览参数启动及加载路径核对通过。图标验收不扩展为真实来源协议或其他场景验收。用户已授权本轮源码推送并合并 main，PR/main CI 状态见 Handoff；未获发布/appcast 准入；当前运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 前序开发：0.8.6 Build 1
+
+2026-10-28 按用户要求更新开发版本为 0.8.6 / Build 1 / 内部 82，App、Widget 与兼容 Info.plist 同步；增量编译及运行包更新、启动和加载路径核对通过。功能沿用 0.8.5，具体改动等待用户指示，暂无新增功能规格。仅本地开发，未授权发布或 appcast 准入；公开稳定版仍为 0.8.5 Build 1，证据与当前运行定位见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 当前发布：0.8.5 Build 1
 
 [Codex 手动额度重置](codex-quota-reset.md) · `Released / User Acceptance Pending`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；隔离模拟验证，不消费本机真实卡。[0.8.5 发布](release-0.8.5.md)已完成 PR/main CI、签名公证、GitHub Stable/Latest 与 macOS appcast 上线及公开回下载核验。中英文 README 与开发版已更新，回滚基线 0.8.3 Build 1；真实扣卡与视觉待用户验收。完整事实见版本历史，当前运行状态见 Handoff。
 

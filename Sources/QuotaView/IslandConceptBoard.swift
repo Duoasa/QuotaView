@@ -336,6 +336,37 @@ enum IslandProviderIcon {
     }
 }
 
+// Task badges keep Codex's existing canvas and match its visible app-tile size.
+// The other providers reuse the original brand assets from the connection list.
+private struct IslandTaskProviderIcon: View {
+    let provider: IslandAgentProvider
+    var size: CGFloat = 16
+    private var tileSize: CGFloat { size * 0.8 }
+
+    var body: some View {
+        Group {
+            if let icon = IslandProviderIcon.settingsMark(for: provider) {
+                if provider == .codex {
+                    Image(nsImage: icon).resizable().scaledToFit()
+                } else {
+                    ZStack {
+                        provider == .claudeCode
+                            ? Color(red: 0.96, green: 0.94, blue: 0.90) : Color.white
+                        Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
+                            .frame(width: provider == .kimiCode ? tileSize : tileSize * 16 / 22,
+                                   height: provider == .kimiCode ? tileSize : tileSize * 16 / 22)
+                    }
+                    .frame(width: tileSize, height: tileSize)
+                    .clipShape(RoundedRectangle(cornerRadius: tileSize * 5 / 22, style: .continuous))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel(provider.displayName)
+        .allowsHitTesting(false)
+    }
+}
+
 // Geometry uses NSScreen's public safe/auxiliary regions, not model-specific sizes.
 struct IslandNotchGeometry: Equatable {
     let screenFrame: CGRect
@@ -825,6 +856,7 @@ final class IslandBoardState: ObservableObject {
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
         return quotaPercent + " · " + countdown
     }
+
     func update(_ incoming: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
         let value = incoming
         if value.islandFloatingUsageEnabled && !value.privacyMode,
@@ -1137,9 +1169,8 @@ struct IslandSubagentStrip: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
-                if let icon = IslandProviderIcon.image(for: children.first?.provider ?? .codex) {
-                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 14, height: 14)
-                }
+                IslandTaskProviderIcon(provider: children.first?.provider ?? .codex, size: 14)
+                    .accessibilityHidden(true)
                 (Text(copy.islandSubagentGroupName(children.first?.provider ?? .codex) + " (") + Text("\(children.count)").foregroundColor(.white) + Text(")"))
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
             }.fixedSize(horizontal: true, vertical: false)
@@ -1231,9 +1262,8 @@ struct IslandTaskCard: View {
                                 Text(metadata.durationTitle).monospacedDigit().fixedSize()
                             }
                             if !showsArchiveButton {
-                                if let icon = IslandProviderIcon.image(for: task.provider) {
-                                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
-                                        .accessibilityLabel(task.provider.displayName)
+                                if IslandProviderIcon.settingsMark(for: task.provider) != nil {
+                                    IslandTaskProviderIcon(provider: task.provider)
                                 } else { Text(task.provider.displayName).foregroundStyle(IslandBoardStyle.muted) }
                             }
                         }.frame(height: IslandVibeLayout.textRowHeight)
@@ -1279,6 +1309,7 @@ struct IslandTaskCard: View {
     }
 }
 
+
 private struct IslandBoardTaskRow: View {
     let progressEffect: AppPreferences.CodexActivityProgressEffect
     let task: CodexMultitaskRenderTask
@@ -1321,11 +1352,11 @@ struct IslandTaskArchiveButton: View {
     var body: some View {
         Button(action: action) {
             Group {
-                if showsArchiveIcon || IslandProviderIcon.image(for: provider) == nil {
+                if showsArchiveIcon || IslandProviderIcon.settingsMark(for: provider) == nil {
                     Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
-                } else if let icon = IslandProviderIcon.image(for: provider) {
-                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
+                } else {
+                    IslandTaskProviderIcon(provider: provider).accessibilityHidden(true)
                 }
             }.frame(width: IslandVibeLayout.taskActionSize, height: IslandVibeLayout.taskActionSize).contentShape(RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(IslandArchiveButtonStyle(hovered: hovered))

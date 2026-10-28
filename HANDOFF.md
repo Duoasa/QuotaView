@@ -2,6 +2,28 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## 当前开发：0.8.6 Build 4 / 图标验收与预览清理（2026-10-28）
+
+用户已授权本次源码推送 GitHub 并合并 main。集成分支 `codex/0.8.6-task-provider-icons` 基于当前 `origin/main`；PR 与精确 main 提交的 CI 待完成，证据目录 `.build/source-push-provider-icons-20261028/`。本次不发布 Release 或 appcast。
+
+用户确认“图标没问题了”，接受 Claude、DSH、Kimi 的圆角矩形真实品牌图标，并要求清理三张虚拟任务卡及临时注入。已移除模拟卡生成、Debug 开关/启动参数读取、临时选择/归档分支和预览 Tooltip 修饰器，保留已验收图标与真实任务流程。`Sources` 中临时注入标记与预览符号扫描无匹配；此次视觉结论仅覆盖用户查看的图标。
+
+15:30（上海）0.8.6 / Build 4 / 内部 85 Debug arm64 增量编译成功，开发运行包已更新并启动 PID 93658，进程未带预览参数。App/Widget 版本同步，236 输入、13 资产、完整运行包/旧包备份及实际加载路径核对通过。证据 `.build/provider-preview-cleanup-086b4-runtime/`，旧包 `.build/runtime-package-backups/provider-preview-cleanup-086b4-20261028-153010/QuotaView.app`。正常运行仅显示真实任务；开发身份和数据保留，正式安装身份与主可执行文件哈希未改，未提交/推送/发布，未做额外 UI 自动化。
+
+## 前序开发：0.8.6 Build 3 / 三来源图标预览（2026-10-28）
+
+Build 2 将 Claude、DSH、Kimi 主任务卡、子任务行及归档按钮品牌展示态统一为圆角矩形真实产品 Logo；复用连接页现有素材，保留 Codex 原图、图标槽位和归档行为。详见[图标规格](docs/design/quotaview-provider-icons.md#task-provider-icons)。15:09 Debug arm64 增量编译完成，0.8.6 / Build 2 / 内部 83 更新启动 PID 88979，证据 `.build/task-provider-icons-086b2-runtime/`。
+
+用户随后要求虚拟另外三个 Agent 的任务卡检查效果。Build 3 / 内部 84 增加仅 Debug、开发 Bundle ID 与 `--debug-provider-cards` 启动参数共同开启的 `DEBUG-ONLY-MOCK` 展示，三张卡置于列表前方；标题、说明、Tooltip 与辅助功能标明 DEBUG。数据仅在进程内，不调用真实任务选择、归档或审批，不修改连接、用户账户、额度和持久化任务。支持归档逐张关闭；正常退出后不带参数重启即停用。当时暂留供用户查看；现已由上方 Build 4 在图标验收后清理。
+
+15:13（上海）Build 3 Debug arm64 增量编译成功，开发包已启动 PID 91323，带上述临时预览参数。App/Widget 版本一致，236 输入无漂移、13 资产、完整包/备份和实际加载路径核对通过；证据 `.build/provider-cards-preview-086b3-runtime/`，旧包 `.build/runtime-package-backups/provider-cards-preview-086b3-20261028-151349/QuotaView.app`。正式安装身份与主可执行文件哈希未改；仅本地修改，未提交/推送/发布或修改 appcast，未做 UI 自动化，视觉由用户检查。
+
+## 前序开发：0.8.6 Build 1（2026-10-28）
+
+按用户要求建立 0.8.6 开发起点，仅同步 App、Widget 配置与兼容 Info.plist 为 0.8.6 / 显示 Build 1 / 内部 82；功能沿用 0.8.5，具体修改等待用户后续指示。保持开发身份 `com.quotaview.development073` 和现有数据，不切换分支。公开稳定版仍为 0.8.5 Build 1；本次未授权发布或 appcast 准入。
+
+14:53（上海）Debug arm64 最小增量编译成功，开发运行包已更新并启动 PID 85897。App/Widget 版本一致，236 项输入构建前后无漂移，13 项资产、完整运行包/旧包备份与实际 App/Debug dylib/Core 加载路径核对通过。证据 `.build/development-086b1-runtime/`；旧开发包备份 `.build/runtime-package-backups/development-086b1-20261028-145321/QuotaView.app`。正式安装身份与主可执行文件哈希保持不变；未消费真实重置卡，未执行 UI 自动化或视觉验收，未提交、推送或发布。
+
 ## README 视频播放修复（2026-10-27）
 
 初版 README 将视频封面指向 GitHub 的仓库文件页，文件下载检查虽通过，该页面对约 5–6 MB MP4 显示无法预览，不能作为播放器。中英文入口现改用现有 GitHub Pages 的 `demos/0.8.5/en/` 与 `demos/0.8.5/zh-CN/`：原始 H.264 视频、JPEG 封面、原生播放控件、播放/暂停按钮、下载与语言切换；页面及视频在 `gh-pages` 分支维护。README 的 MP4 原视频链接也直接指向 Pages 媒体地址。
@@ -14,7 +36,7 @@
 
 初版视频通过仓库文件链接接入，播放入口已由上方修复改为 GitHub Pages；未上传 GitHub 附件。素材说明保留真实采集/后期合成和原任务语言的边界。用户已授权本次 README、媒体与交接改动推送 GitHub 并合并 main；本次交付范围不涉及应用版本、已发布包、appcast 或开发运行包。链接、语言隔离、JPEG 格式及源文件哈希核验见 `.build/readme-media-085/`；文档变更不重建应用。
 
-## 当前开发与发布：0.8.5 Build 1 / Codex 手动重置
+## 已发布：0.8.5 Build 1 / Codex 手动重置
 
 2026-10-27 用户明确要求 0.8.5、真实 Codex 重置、GitHub/main 和 appcast 更新，同时禁止开发验证消耗其重置卡。本次精确发布身份为 0.8.5 Build 1 / 内部 81，tag `v0.8.5-build.1`、ZIP `QuotaView-v0.8.5-build.1.zip`；完整 macOS Stable/Latest 和签名 appcast 链路已授权。Windows 独立渠道及正式安装保持。规格见[手动重置](docs/specs/codex-quota-reset.md)、[0.8.5 发布](docs/specs/release-0.8.5.md)。
 
@@ -576,11 +598,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/readme-video-playback`；基于 README 媒体已合入的 main `8534786a8c1d48463dd0180c67675d704537e0bd`，本轮修复视频播放入口 |
-| 开发身份 | `com.quotaview.development073`；0.8.5 / 显示 Build 1 / 内部 81 |
+| 分支 / 源码提交 | `codex/0.8.6-task-provider-icons`；基于 main `80bf0e5`，本轮图标、版本配置和交接进入源码集成；临时注入已清理 |
+| 开发身份 | `com.quotaview.development073`；0.8.6 / 显示 Build 4 / 内部 85 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-27 10:37（上海）PID 82509；236 输入、13 资产、完整包/备份与实际加载路径一致 |
-| 源码与运行包 | 0.8.5 手动重置及本轮界面调整已进入开发运行包；真实扣卡与视觉待用户验收 |
+| 最近运行核验 | 2026-10-28 15:30（上海）PID 93658；236 输入、13 资产、完整包/备份与实际加载路径一致，未带预览参数 |
+| 源码与运行包 | 已同步为 0.8.6 Build 4；任务来源品牌图标经用户验收，三张虚拟卡及全部临时注入已清理，仅显示真实任务 |
 | 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
