@@ -1,8 +1,12 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.6 Build 4
+## 当前开发：0.8.6 Build 5
 
-[任务来源图标](../design/quotaview-provider-icons.md#task-provider-icons) · `Accepted / User Verified`：Claude、DSH、Kimi 任务卡使用圆角矩形真实 Logo，用户已确认图标无问题；Build 4 清理三张模拟卡及全部临时注入，恢复纯真实任务展示。0.8.6 / Build 4 / 内部 85 增量编译、运行包、无预览参数启动及加载路径核对通过。图标验收不扩展为真实来源协议或其他场景验收。用户已授权本轮源码推送并合并 main，PR/main CI 状态见 Handoff；未获发布/appcast 准入；当前运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+[聚焦待确认特效](PROGRESS_EFFECT_ADAPTATION.md) · `Accepted / Verifying`：移除待确认状态对整个进度特效的隐藏/禁播，列表聚焦卡与审批头卡保留所选特效及原进度，确认边缘光保持。三种特效与首次待确认、状态切换、可见性/离窗、减少动态的宿主级回归通过；相关渲染和审批冒烟共 12 项通过，Debug arm64 增量编译通过。用户已暂缓任务列表/审批页隔离模拟截图，视觉待验收；源码合并与运行包状态见 [Handoff](../../HANDOFF.md#工作区与版本定位)。本次仅源码集成和本地开发运行包更新，不发布 Release、安装包或 appcast。
+
+## 前序开发：0.8.6 Build 4
+
+[任务来源图标](../design/quotaview-provider-icons.md#task-provider-icons) · `Accepted / User Verified`：Claude、DSH、Kimi 任务卡使用圆角矩形真实 Logo，用户已确认图标无问题；Build 4 清理三张模拟卡及全部临时注入，恢复纯真实任务展示。0.8.6 / Build 4 / 内部 85 增量编译、运行包、无预览参数启动及加载路径核对通过。图标验收不扩展为真实来源协议或其他场景验收。源码已由 [PR #109](https://github.com/Duoasa/QuotaView/pull/109) 合入 main，PR 与精确 main 提交 CI 均通过，证据见 Handoff；未获发布/appcast 准入；当前运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
 
 ## 前序开发：0.8.6 Build 1
 
