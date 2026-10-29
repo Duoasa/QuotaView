@@ -46,7 +46,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                         .font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
                         .frame(width: 12, height: 22).accessibilityHidden(true)
                     AgentSettingsIcon(provider: provider)
-                    Text(provider.displayName).font(.system(size: 14, weight: .medium))
+                    Text(provider.displayName).font(.system(size: 13, weight: .medium))
                     Spacer(minLength: 8)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -56,10 +56,10 @@ struct AgentIntegrationSettings<Details: View>: View {
                 .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
                 .fixedSize()
                 .frame(width: preferences.resolvedLanguage == .english ? 116 : 76, alignment: .leading)
-            Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                 .tint(Color(nsColor: .secondaryLabelColor))
         }
-        .frame(minHeight: 52).padding(.horizontal, 18)
+        .frame(minHeight: 40).padding(.horizontal, 12)
     }
     private func presentation(_ provider: IslandAgentProvider, enabled: Bool) -> (title: String, symbol: String, color: Color) {
         let connected = (copy.text("已连接", "Connected"), "checkmark.circle.fill", Color(nsColor: .systemGreen))
