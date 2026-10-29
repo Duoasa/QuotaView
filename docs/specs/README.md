@@ -1,8 +1,29 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.6 Build 12
 
-[网络代理布局](../design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12) · `Accepted / Verifying`：移除顶部可视化及专用动画，标题后直接显示真实设置。开发构建与运行状态见 Handoff，视觉由用户验收；仅本地修改。
+2026-10-29：用户已接受 Build 19 的公告与设置修改，授权本轮源码推送并合并 main、暂不发布；精确合并和 CI 事实见 Handoff。下方各批「本地修改」保留为阶段记录。
+
+
+[设置恢复原宽度](../design/QUOTAVIEW_UI_RULES.md#恢复原默认宽度2026-10-29086-build-19) · `Accepted / Verifying`：按用户要求恢复默认 780 × 680、最小 740 × 560、内容最大宽 560；保留紧凑元素与上下材质选项。Build 19 已增量构建并更新开发运行包，输入/产物/加载路径核对通过；证据见 Handoff，视觉由用户验收。
+
+
+[公告与设置元素尺寸](../design/QUOTAVIEW_UI_RULES.md#参考对照图调整元素尺寸2026-10-29086-build-18) · `Accepted / Verifying`：按用户同屏 VibeIsland 对照收紧图标、标题、行高和控件；设置窗口宽 620，恢复发行版玻璃/纯色上下双选项。公告隐藏系统交通灯，保留底部按钮与键盘关闭。Build 18 已构建并更新开发运行包，既有设置行布局冒烟通过；运行证据见 Handoff，视觉由用户验收。
+
+## 当前开发：0.8.6 Build 15
+
+[网络代理仅保留设置](../design/QUOTAVIEW_UI_RULES.md#网络代理仅保留设置2026-10-29086-build-15) · `Accepted / Verifying`：用户否定当前可视化方案并要求移除，专用视图、绘制与动画已清理，恢复无可视化的代理设置布局。Build 13–14 方案不再作为实施目标；运行核验见 Handoff。本次仅本地开发。
+
+## 前序开发：0.8.6 Build 14
+
+[当前通路蓝色描边](../design/QUOTAVIEW_UI_RULES.md#当前通路蓝色描边2026-10-29086-build-14) · `Accepted / Verifying`：补齐参考中的蓝色路径与节点选中轮廓，保留无额外填充底板和已有动效。运行核验见 Handoff，视觉待用户查看；仅本地开发。
+
+## 前序开发：0.8.6 Build 13
+
+[代理路径动效](../design/QUOTAVIEW_UI_RULES.md#代理路径动效2026-10-29086-build-13) · `Accepted / Verifying`：用户授权在开发版实现参考中的路径层级表达，保留公开版背景、无额外图标底托和说明。两条路线随草稿切换并沿线流动，真实测试状态独立表达；三个隔离冒烟、增量编译及运行包核验通过，实际动效待用户验收。本批仅本地开发。
+
+## 前序开发：0.8.6 Build 12
+
+[网络代理布局](../design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12) · `Accepted / Verifying`：移除顶部可视化及专用动画，标题后直接显示真实设置。开发构建与运行状态见 Handoff；Build 10–12 已通过 [PR #112](https://github.com/Duoasa/QuotaView/pull/112) 合入 main，PR 与精确 main CI 均成功。新的可视化仍为独立设计方案，未接入应用；未发布 Release。
 
 ## 前序开发：0.8.6 Build 11
 
@@ -10,7 +31,7 @@
 
 ## 前序开发：0.8.6 Build 10
 
-[品牌升级公告](brand-announcement.md) · `Review / Verifying`：现有名称与 Logo 的原生首次启动公告，开发版已开启预览；支持两个指定发布 Build 各展示一次，当前正式名单为空，待版本确定后配置。三个策略冒烟与增量构建、运行包核验通过；视觉由用户验收。仅本地开发，未发布或推送。
+[更新与公告](brand-announcement.md) · `Review / Verifying`：原公告扩展为可滚动、可折叠的通用内容窗口，支持亮点、新功能、改进、公告和提醒；保留指定发布版本各展示一次的规则，正式名单为空。Build 18 进一步调整元素尺寸为 460 × 580 并隐藏交通灯；原提醒策略保持，构建与运行证据见 Handoff，视觉由用户验收。
 
 ## 前序开发：0.8.6 Build 9
 
@@ -121,7 +142,7 @@
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-BRAND-ANNOUNCEMENT-001` | [品牌升级公告](brand-announcement.md) | Review / Verifying | 本地原生预览、跨两版首次启动提醒；正式名单待配置 |
+| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Review / Verifying | 多类型分组、滚动与折叠、按版本提醒；正式名单待配置 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |
