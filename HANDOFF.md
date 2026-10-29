@@ -2,13 +2,45 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 5 / 待确认进度特效（2026-10-29）
+## 当前开发：0.8.6 Build 9 / 设置说明与信息层级（2026-10-29）
+
+用户已确认本次设置修改可以，并授权当前改动推送 GitHub、合并 main；明确不发布 Release 包。分支 `codex/0.8.6-settings-cleanup`，提交包含设置精简、此前默认自动检查配置及临时审批卡清理/验收记录；PR 与精确 main CI 完成后回填证据。
+
+按用户要求删除设置页重复说明，用布局表达归属和选择：页头去掉复述、语言合并为单行菜单、材质使用分段控件、Agent 详情紧接所属行缩进展开、Claude 启用/状态只在列表展示、更新按钮不重复标题。移除外观、胶囊、立即生效及关闭模块不占位等冗余说明；代理仅在测试发生或有未保存更改时呈现反馈。保留输入/认证限制、隐私/权限范围、错误与安装确认提示。中英文同步，偏好绑定和实际功能保持。详见[设置规范](docs/design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9)。
+
+10:22（上海）0.8.6 / Build 9 / 内部 90 Debug arm64 增量构建成功，开发运行包更新启动 PID 31625，无临时参数；236 输入、13 资产、完整包/备份和加载路径核对通过。既有分段控件设置行布局冒烟 1 项通过，未新增重复实现测试或 UI 自动化。证据 `.build/settings-copy-cleanup-086b9/` 和 `.build/settings-copy-cleanup-086b9-runtime/`；备份 `.build/runtime-package-backups/settings-copy-cleanup-086b9-20261029-102213/QuotaView.app`。用户已接受本次设置调整；当前授权源码推送/合并，未发布 Release 或 appcast，正式安装未替换。
+
+## 前序开发：0.8.6 Build 8 / 审批特效验收与临时卡清理（2026-10-29）
+
+用户确认“效果没问题了”，接受本次实际灵动岛待批准卡的显示效果，并要求清理临时审批卡和注入。已移除会话显示副本中的模拟卡、Debug 开关/参数读取、选择/归档/审批等模拟回调、自动聚焦和临时 Tooltip；两个修改文件逐字节恢复到预览前生产基线，保留已合入的特效修复和 Build 6 默认自动检查配置。`Sources` 临时标记及符号扫描零匹配。
+
+09:49（上海）0.8.6 / Build 8 / 内部 89 Debug arm64 增量构建成功，开发运行包已更新并启动 PID 27248，无临时启动参数。236 输入、13 资产、完整包/旧包备份和实际加载路径核对通过；App/Widget 版本同步，自动检查默认 true 保留。证据 `.build/approval-card-cleanup-086b8-runtime/`；备份 `.build/runtime-package-backups/approval-card-cleanup-086b8-20261029-094943/QuotaView.app`。仅本地修改，未推送/发布，正式安装未替换。用户验收仅覆盖本次查看的效果，不扩展为所有设备或真实审批协议验收。
+
+## 前序开发：0.8.6 Build 7 / 实际灵动岛临时审批卡（2026-10-29）
+
+用户明确要求在实际运行的灵动岛内查看，拒绝独立预览窗口。已退出独立预览并清理其生成源码副本、构建和 app；开发运行包增加一张 `DEBUG · 临时审批任务卡`，停在 65% awaitingConfirmation，初始聚焦列表并展开，点击进入真实审批页。当前用户设置的特效继续生效。
+
+临时注入只在 `#if DEBUG`、`com.quotaview.development073` 和 `--debug-approval-card` 参数共同满足时启用；只修改会话显示副本，不写生产 Store、真实任务、审批或归档数据。模拟选择/归档/审批/claim/下一个等入口全部隔离，批准与拒绝仅显示模拟反馈，归档可移除此卡。界面、Tooltip 与辅助功能标明 DEBUG。当时按要求保留供用户查看；用户验收后，已由上方 Build 8 移除全部注入、临时 Tooltip 和启动参数。
+
+09:46（上海）0.8.6 / Build 7 / 内部 88 Debug arm64 增量编译成功，更新运行包并启动 PID 25147，确认携带唯一临时参数。236 输入、13 资产、完整包/备份、实际加载路径与独立预览已退出核对通过。证据 `.build/temporary-approval-card-086b7-runtime/`；备份 `.build/runtime-package-backups/temporary-approval-card-086b7-20261029-094658/QuotaView.app`。仅本地，未推送/发布，正式安装未替换，视觉由用户验收。
+
+## 前序开发：0.8.6 Build 6 / 默认自动检查更新（2026-10-29）
+
+用户要求后续 Release 包默认开启自动检查更新。`SUEnableAutomaticChecks` 已改 true，正式打包脚本门禁同步要求 true，更新规格和发布规则已同步；保留 24 小时周期、已保存用户偏好和手动下载安装，开发身份仍禁用更新器。不发布包或 appcast，此追加变更仅本地，未沿用上一批推送授权。
+
+01:35（上海）0.8.6 / Build 6 / 内部 87 Debug arm64 增量构建成功，开发包已更新启动 PID 3178；236 输入、13 资产、完整包/备份与实际加载路径核对通过。产物自动检查 true、自动更新两个开关 false、周期 86400 核对通过，发布脚本语法检查通过。证据 `.build/automatic-update-checks-086b6-runtime/`；备份 `.build/runtime-package-backups/automatic-update-checks-086b6-20261029-013509/QuotaView.app`。正式安装未替换，未做 UI 自动化。
+
+用户随后要求创建审批卡查看效果：已从 Build 6 当前生产源码构建并打开隔离预览 `.build/approval-card-preview-086b6/Approval Card Preview.app`，独立身份 `com.quotaview.confirmation-preview`，初始审批页、65% 待批准，支持任务列表/审批页和三种特效切换。所有模拟按钮仅更新本地预览反馈，不构造生产服务或提交真实审批。此独立预览方案随后被用户拒绝，现已退出并清理生成包/源码副本/构建；由上方 Build 7 实际灵动岛临时卡替代。
+
+## 前序开发：0.8.6 Build 5 / 待确认进度特效（2026-10-29）
 
 用户授权修复待确认/审批聚焦卡特效丢失、推送 GitHub 合并 main，并完成后更新本机开发运行包；明确不发布任何 Release 包或修改 appcast。移除 `IslandQuantumProgressHost` 在 awaitingConfirmation 时隐藏和禁播特效的分支，沿用原进度、等待 Profile、确认边缘呼吸光和可见性/减少动态策略。历史分支由 2026-10-11 `066b397` 引入，0.8.3 至 Build 4 的相关状态映射、审批头卡与渲染器未变，不能断言是最近版本引入。
 
-配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户最初要求列表/审批页两张截图，随后明确“先不截屏”；截图暂缓，隔离预览未启动，视觉未验收。
+配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户最初要求列表/审批页两张截图，随后明确“先不截屏”；截图暂缓，隔离预览未启动，临时预览源码、构建和应用已清理，视觉未验收。
 
-本次分支 `codex/0.8.6-confirmation-progress`，PR/main CI 待完成；当前运行包暂为 Build 4，按要求合并完成后更新为 Build 5。正式安装与公开 0.8.5 稳定渠道保持。
+[PR #110](https://github.com/Duoasa/QuotaView/pull/110) 已合入 main，合并提交 `694417d15246bdff6f7fa15590a178141f9ae4df`。PR CI `40734718174` 与精确 main CI [40735725793](https://github.com/Duoasa/QuotaView/actions/runs/40735725793) 均成功：723 项测试、6 跳过、0 失败，另 44 项契约检查通过。
+
+01:32（上海）开发运行包已更新为 0.8.6 / Build 5 / 内部 86 并启动 PID 99025，无预览参数；236 输入、13 资产、完整包/备份及实际加载路径核对通过。证据 `.build/confirmation-progress-086b5-runtime/`；旧包 `.build/runtime-package-backups/confirmation-progress-086b5-20261029-013224/QuotaView.app`。正式安装身份与主可执行文件哈希未改，未发布 Release、安装包或 appcast。
 
 ## 前序开发：0.8.6 Build 4 / 图标验收与预览清理（2026-10-28）
 
@@ -606,11 +638,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-confirmation-progress`；基于 main `186961a3c34954540d31a55b22d4b8bd39422741`，本轮恢复待确认特效 |
-| 开发身份 | `com.quotaview.development073`；源码 0.8.6 / Build 5 / 内部 86，当前运行 Build 4 / 内部 85，待合并后更新 |
+| 分支 / 源码提交 | `codex/0.8.6-settings-cleanup`；基于 main `694417d15246bdff6f7fa15590a178141f9ae4df`，本次提交默认自动检查、审批卡清理和 Build 9 设置精简 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.6 / Build 9 / 内部 90 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-28 15:30（上海）PID 93658；236 输入、13 资产、完整包/备份与实际加载路径一致，未带预览参数 |
-| 源码与运行包 | Build 5 待确认特效修复已编译，尚未替换运行 Build 4；图标已验收，待确认修复视觉待验收 |
+| 最近运行核验 | 2026-10-29 10:22（上海）PID 31625；236 输入、13 资产、完整包/备份与实际加载路径一致，无临时参数 |
+| 源码与运行包 | Build 9 设置说明/布局已更新运行，用户已接受本次调整；Build 8 已按用户验收清理全部临时卡和注入，已更新运行；Build 6 默认自动检查为本地未提交修改，已更新运行；Build 5 待确认特效修复已由 PR #110 合入 main，PR/main CI 与开发运行包加载核对通过；图标及本次查看的待批准卡效果已获用户验收 |
 | 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

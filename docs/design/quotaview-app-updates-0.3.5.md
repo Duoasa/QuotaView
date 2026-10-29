@@ -14,7 +14,7 @@
 ## 产品行为
 
 - 关于页“检查更新…”调用 Sparkle 标准界面；自动检查是独立原生设置行，
-  默认关闭，用户开启后每 24 小时检查；每次安装仍需明确确认；
+  自 2026-10-29 起后续 Release 包默认开启，每 24 小时检查，用户可关闭；每次安装仍需明确确认；
 - 只接收 Stable 通道，不向稳定版提供 Preview/Pre-release；
 - Debug、SwiftPM、非 `.app`、错误 Bundle ID、Ad Hoc/未签名或非预期 Team
   构建不创建更新器、不访问 Feed，并显示真实不可用原因；
@@ -52,7 +52,7 @@
 |---|---|
 | `APP-UPDATES-01` | 单一长生命周期控制器并注入所有设置入口 |
 | `APP-UPDATES-02` | 非正式环境无网络更新并显示真实原因 |
-| `APP-UPDATES-03` | 手动检查、独立自动检查行、默认关闭、24 小时周期和显式安装 |
+| `APP-UPDATES-03` | 手动检查、独立自动检查行、默认开启且可关闭、24 小时周期和显式安装 |
 | `APP-UPDATES-04` | HTTPS、EdDSA、Developer ID、公证、签名 Feed 和解压前验证 |
 | `APP-UPDATES-05` | Stable-only、macOS 14、产品 Build 归 1 与内部序号单调递增 |
 | `APP-UPDATES-06` | Sparkle 嵌套组件由内到外签名且均为 Universal |
@@ -110,3 +110,7 @@ Build 2 转为草稿，公开时间线不再显示；其 tag / 资产保留且�
 ## 2026-10-04 Build3 发布完成
 
 0.7.5 Build3 / 内部52 已经PR #75合并main，发布为GitHub Stable / Latest，签名Feed序列为52 → 49 → 38。正式Developer ID、公证/Staple、Gatekeeper、解压启动、GitHub回下载逐字节比较、旧稳定版公钥校验ZIP及线上Feed全部通过；历史资产URL及签名保持。完整不可变资产和CI/Pages证据见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。`APP-UPDATES-07`真实客户端N → N+1安装仍待独立记录，规格整体保持Verifying。
+
+## 2026-10-29 后续 Release 默认自动检查
+
+用户要求后续所有 Release 包默认开启自动检查。`SUEnableAutomaticChecks=true`，正式打包门禁同步要求 true；自动下载安装仍关闭，保持 24 小时检查周期和用户显式安装。Sparkle 已保存的用户偏好优先，不覆盖显式关闭；旧客户端只有升级后才获得新默认配置。Debug/开发身份仍不创建更新器。此配置变更不授权发布包或 appcast；开发身份更新为 0.8.6 Build 6 / 内部 87。

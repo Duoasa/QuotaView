@@ -63,17 +63,7 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         case .about: copy.text("关于", "About")
         }
     }
-    func subtitle(_ copy: AppCopy) -> String {
-        switch self {
-        case .general: copy.text("语言与应用控制。", "Language and app controls.")
-        case .island: copy.text("材质、隐私、任务特效与自动展开。", "Material, privacy, task effects and automatic opening.")
-        case .usage: copy.text("选择用量页显示的可选模块。", "Choose the optional modules on the usage page.")
-        case .connections: copy.text("管理 Codex、Claude Code、DSH 和 Kimi Code 的任务接入。", "Manage task integrations for Codex, Claude Code, DSH and Kimi Code.")
-        case .proxy: copy.text("查询额度与用量时使用的网络代理。", "The network proxy used for quota and usage queries.")
-        case .feedback: copy.text("遇到问题时，通过以下方式联系我们。", "Reach us here when something goes wrong.")
-        case .about: copy.text("版本信息与软件更新。", "Version information and software updates.")
-        }
-    }
+
 }
 
 enum SettingsFeedbackResources {
@@ -269,16 +259,11 @@ struct SettingsView: View {
     }
 
     private func settingsPageHeading(for page: IslandSettingsPage) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 10) {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
-                Text(page.title(copy))
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.primary)
-            }
-            Text(page.subtitle(copy))
-                .font(.callout).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 10) {
+            SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
+            Text(page.title(copy))
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.primary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
@@ -490,7 +475,6 @@ struct SettingsView: View {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text("自定义代理", "Custom proxy"),
-                    subtitle: copy.text("保存后生效。", "Save to apply changes."),
                     symbol: "network", symbolColor: Color(nsColor: .systemTeal)
                 ) {
                     Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
@@ -525,8 +509,8 @@ struct SettingsView: View {
                 }
             }
             Text(copy.text(
-                "支持无需认证的 HTTP / SOCKS5 代理。",
-                "Supports HTTP / SOCKS5 proxies without authentication."
+                "仅支持无需认证的代理；用于额度与用量查询。",
+                "For quota and usage queries. Proxy authentication is not supported."
             ))
             .font(.callout).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -565,18 +549,20 @@ struct SettingsView: View {
                 .buttonStyle(SettingsActionButtonStyle(prominent: true))
                 .disabled(proxyDraft == preferences.proxyConfiguration || proxyValidationFailure != nil)
             }
-            HStack(spacing: 8) {
-                if store.proxyTestState == .testing {
-                    ProgressView().controlSize(.small)
+            if store.proxyTestState != .idle {
+                HStack(spacing: 8) {
+                    if store.proxyTestState == .testing {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(copy.proxyTestStatus(store.proxyTestState))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(copy.proxyTestStatus(store.proxyTestState))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(proxyDraft == preferences.proxyConfiguration
-                 ? copy.text("已保存", "Saved")
-                 : copy.text("有未保存的更改", "Unsaved changes"))
-                .font(.footnote).foregroundStyle(.secondary)
+            if proxyDraft != preferences.proxyConfiguration {
+                Text(copy.text("有未保存的更改", "Unsaved changes"))
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
         }
         .onAppear { proxyDraft = preferences.proxyConfiguration }
         .onDisappear { store.cancelProxyTest() }
@@ -612,7 +598,6 @@ struct SettingsView: View {
             settingsSection(copy.text("显示内容", "Content")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
-                        subtitle: copy.text("在灵动岛下方显示剩余额度和重置倒计时，宽度随周期数量自适应。", "Show remaining quota and reset countdown below the Island; width adapts to available periods."),
                         symbol: "chart.pie.fill", color: .systemGreen,
                         isOn: $preferences.islandFloatingUsageEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
@@ -648,19 +633,14 @@ struct SettingsView: View {
     private var usageSettings: some View {
         settingsSection(copy.text("可选模块", "Optional modules")) {
             NativeSettingsCard {
-                preferenceToggle(copy.text("成本估算", "Cost estimate"),
-                    subtitle: copy.text("最近 30 天的估算成本。", "Estimated costs for the last 30 days."),
+                preferenceToggle(copy.text("近 30 天成本估算", "30-day cost estimate"),
                     symbol: "dollarsign.circle.fill", color: .systemGreen,
                     isOn: $preferences.showEstimatedCost)
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 preferenceToggle(copy.text("Token 活动", "Token activity"),
-                    subtitle: copy.text("每日、每周和累计用量。", "Daily, weekly and cumulative usage."),
+                    subtitle: copy.text("每日 · 每周 · 累计", "Daily · Weekly · Total"),
                     symbol: "square.grid.3x3.fill", color: .systemBlue,
                     isOn: $preferences.showTokenActivity)
-                NativeSettingsDivider()
-                NativeSettingsNote(text: copy.text(
-                    "额度、Token 统计与账户信息始终显示；关闭的模块不占位。",
-                    "Quota, token totals and account details are always shown; hidden modules leave no gap."))
             }
         }
     }
@@ -792,12 +772,17 @@ struct SettingsView: View {
                   if let language = AppPreferences.Language(rawValue: value) { preferences.customLanguage = language }
               })
     }
+    private var systemLanguageOption: String {
+        guard preferences.followsSystemLanguage else { return copy.text("跟随系统", "System") }
+        let language = preferences.resolvedLanguage == .simplifiedChinese ? "简体中文" : "English"
+        return copy.text("跟随系统 · \(language)", "System · \(language)")
+    }
     private var languageSettings: some View {
         NativeSettingsCard {
-            NativeSettingsRow(title: copy.text("语言", "Language"), subtitle: languageSummary,
+            NativeSettingsRow(title: copy.text("语言", "Language"),
                 symbol: "globe", symbolColor: Color(nsColor: .systemBlue)) {
                 SettingsValueMenu(title: copy.text("语言", "Language"), selection: languageSelection,
-                    options: [("system", copy.text("跟随系统", "System")), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
+                    options: [("system", systemLanguageOption), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
             }
         }
     }
@@ -839,11 +824,10 @@ struct SettingsView: View {
 
     private var generalSettings: some View {
         VStack(alignment: .leading, spacing: 16) {
-            settingsSection(copy.text("语言", "Language")) { languageSettings }
+            languageSettings
             settingsSection(copy.text("灵动岛显示位置", "Island display")) {
                 NativeSettingsCard {
-                    NativeSettingsRow(title: copy.text("焦点屏幕跟随", "Follow focused display"),
-                        subtitle: copy.text("跟随当前活动窗口所在的屏幕。", "Follow the display containing the active window."),
+                    NativeSettingsRow(title: copy.text("跟随活动窗口", "Follow active window"),
                         symbol: "display.2", symbolColor: .blue) {
                         Toggle("", isOn: $preferences.islandFollowsFocus).labelsHidden()
                             .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
@@ -877,15 +861,14 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             settingsSection(copy.text("外观与布局", "Appearance and layout")) {
                 NativeSettingsCard {
-                    islandMaterialOption(.liquidGlass,
-                        title: copy.text("液态玻璃", "Liquid Glass"),
-                        subtitle: copy.text("通透材质、自然高光与深色玻璃卡片。", "Translucent surfaces, natural highlights and dark glass cards."),
-                        symbol: "drop.fill")
-                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
-                    islandMaterialOption(.classic,
-                        title: copy.text("经典纯色", "Classic solid"),
-                        subtitle: copy.text("关闭背景、卡片与按钮的玻璃材质。遇到卡顿时可切换至此。", "Turn off glass on the background, cards and buttons. Choose this if glass feels slow."),
-                        symbol: "rectangle.fill")
+                    NativeSettingsRow(title: copy.text("材质", "Material"),
+                        symbol: "drop.fill", symbolColor: .secondary) {
+                        NativeSettingsSegmentedPicker(copy.text("材质", "Material"), selection: $preferences.islandMaterial) {
+                            Text(copy.text("液态玻璃", "Liquid Glass")).tag(AppPreferences.IslandMaterial.liquidGlass)
+                            Text(copy.text("经典纯色", "Classic solid")).tag(AppPreferences.IslandMaterial.classic)
+                        }
+                        .help(copy.text("经典纯色关闭玻璃材质，可减少渲染开销。", "Classic solid disables glass to reduce rendering work."))
+                    }
                 }
                 if preferences.islandMaterial == .liquidGlass {
                     NativeSettingsCard {
@@ -896,9 +879,6 @@ struct SettingsView: View {
                                     glassAppearanceOption(appearance)
                                 }
                             }
-                            Text(copy.text("底部玻璃、按钮和用量胶囊统一切换；自动跟随系统。", "Applies to the lower glass, controls and usage capsule. Auto follows macOS."))
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
                         }.padding(16)
                     }
                     NativeSettingsCard {
@@ -917,20 +897,19 @@ struct SettingsView: View {
                 }
                 NativeSettingsCard {
                     NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
-                        subtitle: copy.text("仅调整任务列表与用量页，刘海两侧自动保留安全空间。", "Task list and usage only. Space around the camera notch stays clear."),
                         symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
                         HStack(spacing: 12) {
                             Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
                                 .controlSize(.small).frame(width: 150)
                                 .disabled(islandWidthRange.lowerBound == islandWidthRange.upperBound)
                                 .accessibilityLabel(copy.text("展开宽度", "Expanded width"))
+                                .help(copy.text("调整任务列表与用量页宽度。", "Adjust the task list and usage page width."))
                                 .accessibilityValue("\(Int(islandWidthSelection.wrappedValue)) pt")
                             Text("\(Int(islandWidthSelection.wrappedValue)) pt")
                                 .font(.callout.monospacedDigit()).frame(width: 52, alignment: .trailing)
                         }
                     }
                 }
-                NativeSettingsNote(text: copy.text("立即生效，并记住你的选择。任务特效保持当前设置。", "Applies immediately and remembers your choice. Task effects keep their current setting."))
                 if #unavailable(macOS 26.0) {
                     NativeSettingsNote(text: copy.text("原生液态玻璃需要 macOS 26 或更新版本；当前系统使用半透明材质。", "Native Liquid Glass requires macOS 26 or later; this system uses translucent material."))
                 }
@@ -960,25 +939,6 @@ struct SettingsView: View {
         .accessibilityLabel(appearance.title(copy))
         .accessibilityValue(selected ? copy.text("已选择", "Selected") : copy.text("未选择", "Not selected"))
         .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private func islandMaterialOption(_ mode: AppPreferences.IslandMaterial, title: String,
-                                      subtitle: String, symbol: String) -> some View {
-        Button { preferences.islandMaterial = mode } label: {
-            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol, symbolColor: .secondary) {
-                Image(systemName: preferences.islandMaterial == mode ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 16))
-                    .foregroundStyle(preferences.islandMaterial == mode ? Color.primary : Color.secondary)
-                    .accessibilityHidden(true)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
-        .accessibilityHint(subtitle)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityValue(preferences.islandMaterial == mode ? copy.text("已选择", "Selected") : copy.text("未选择", "Not selected"))
     }
 
     private var feedbackSettings: some View {
@@ -1050,19 +1010,20 @@ struct SettingsView: View {
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
-                        NativeSettingsRow(title: copy.text("检查更新", "Check for updates"), subtitle: updateStatusText,
-                            symbol: "arrow.triangle.2.circlepath", symbolColor: Color(nsColor: .systemBlue)) {
-                            Button(copy.text("检查更新…", "Check for Updates…")) { updateController.checkForUpdates() }
-                                .nativeSettingsActionStyle().disabled(!updateController.canCheckForUpdates).help(updateCheckHelpText)
-                        }
-                        NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                         NativeSettingsRow(title: copy.text("自动检查更新", "Automatically check for updates"),
+                            subtitle: copy.text("每 24 小时；安装前确认。", "Every 24 hours; confirm before installing."),
                             symbol: "clock.arrow.circlepath", symbolColor: Color(nsColor: .systemGreen)) {
                             Toggle(copy.text("自动检查更新", "Automatically check for updates"), isOn: Binding(
                                 get: { updateController.automaticallyChecksForUpdates },
                                 set: { updateController.setAutomaticallyChecksForUpdates($0) }))
                                 .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
                         }
+                        NativeSettingsDivider()
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button(copy.text("检查更新…", "Check for Updates…")) { updateController.checkForUpdates() }
+                                .nativeSettingsActionStyle().disabled(!updateController.canCheckForUpdates).help(updateCheckHelpText)
+                        }.padding(.horizontal, 12).padding(.vertical, 8)
                     } else {
                         NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText,
                             symbol: "hammer.fill", symbolColor: Color(nsColor: .systemGray)) {}
@@ -1140,7 +1101,7 @@ struct SettingsView: View {
 
     private func preferenceToggle(
         _ title: String,
-        subtitle: String,
+        subtitle: String? = nil,
         symbol: String,
         color: NSColor,
         isOn: Binding<Bool>
@@ -1158,25 +1119,6 @@ struct SettingsView: View {
         }
     }
 
-    private var languageSummary: String {
-        if preferences.followsSystemLanguage {
-            let language = preferences.resolvedLanguage == .simplifiedChinese
-                ? "简体中文"
-                : "English"
-            return copy.text(
-                "跟随系统：\(language)",
-                "System language: \(language)"
-            )
-        }
-
-        let language = preferences.customLanguage == .simplifiedChinese
-            ? "简体中文"
-            : "English"
-        return copy.text(
-            "使用\(language)",
-            "Use \(language)"
-        )
-    }
 
     private var codexActivityActionTitle: String {
         if activityRuntime.isConfiguring { return copy.text("正在配置", "Configuring") }
