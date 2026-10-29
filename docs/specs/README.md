@@ -1,8 +1,20 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.6 Build 9
+## 当前开发：0.8.6 Build 12
 
-[设置说明与信息层级](../design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9) · `Accepted / User Verified`：移除页头/语言/外观等重复解释，用分段选择和 Agent 就近展开表达关系，合并 Claude 重复启用开关与更新按钮标题；保留操作限制、错误及未保存提示，中英文同步。Build 9 / 内部 90 增量编译、运行包加载与既有设置行布局冒烟通过。用户已接受本次调整并授权源码推送与合并 main；PR/main CI 与提交证据见 Handoff。本次不发布 Release 或 appcast。
+[网络代理布局](../design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12) · `Accepted / Verifying`：移除顶部可视化及专用动画，标题后直接显示真实设置。开发构建与运行状态见 Handoff，视觉由用户验收；仅本地修改。
+
+## 前序开发：0.8.6 Build 11
+
+[原生设置下拉](../design/QUOTAVIEW_UI_RULES.md#原生下拉选择2026-10-29086-build-11) · `Accepted / Verifying`：按用户系统设置参考，四处下拉共用原生弹出式选择控件，系统管理选中勾选、高亮和定位。增量编译、开发运行包与加载路径核对通过；视觉待用户验收，仅本地修改。
+
+## 前序开发：0.8.6 Build 10
+
+[品牌升级公告](brand-announcement.md) · `Review / Verifying`：现有名称与 Logo 的原生首次启动公告，开发版已开启预览；支持两个指定发布 Build 各展示一次，当前正式名单为空，待版本确定后配置。三个策略冒烟与增量构建、运行包核验通过；视觉由用户验收。仅本地开发，未发布或推送。
+
+## 前序开发：0.8.6 Build 9
+
+[设置说明与信息层级](../design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9) · `Accepted / User Verified`：移除页头/语言/外观等重复解释，用分段选择和 Agent 就近展开表达关系，合并 Claude 重复启用开关与更新按钮标题；保留操作限制、错误及未保存提示，中英文同步。Build 9 / 内部 90 增量编译、运行包加载与既有设置行布局冒烟通过。用户已接受本次调整；[PR #111](https://github.com/Duoasa/QuotaView/pull/111) 已合入 main，PR 与精确 main CI 均通过（723 项测试、6 跳过、0 失败，另 44 项契约检查），运行输入与合并源码一致。证据见 Handoff；未发布 Release 或 appcast。
 
 ## 前序开发：0.8.6 Build 8
 
@@ -109,6 +121,7 @@
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
+| `QV-BRAND-ANNOUNCEMENT-001` | [品牌升级公告](brand-announcement.md) | Review / Verifying | 本地原生预览、跨两版首次启动提醒；正式名单待配置 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |

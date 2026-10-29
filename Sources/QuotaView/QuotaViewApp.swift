@@ -65,6 +65,10 @@ final class QuotaViewAppDelegate: NSObject, NSApplicationDelegate {
         activityRuntime.onOpenSettings = { [weak settings] in settings?.openSettings() }
         store.start()
         activityRuntime.start()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            BrandAnnouncementController.shared.presentOnLaunch(copy: self.preferences.copy)
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

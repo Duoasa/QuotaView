@@ -272,7 +272,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsStage(for page: IslandSettingsPage) -> some View {
         // Only these pages need a separate illustration above their controls.
-        if page == .island || page == .proxy || page == .about {
+        if page == .island || page == .about {
             let height: CGFloat = page == .island ? 210 : 132
             settingsStageVisual(for: page)
                 .environment(\.colorScheme, .dark)
@@ -285,10 +285,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsStageVisual(for page: IslandSettingsPage) -> some View {
         switch page {
-        case .general, .usage, .connections, .feedback: EmptyView()
+        case .general, .usage, .connections, .proxy, .feedback: EmptyView()
         case .island: islandStageVisual
-        case .proxy:
-            supplementarySettingsStage(width: 500) { proxyStageVisual }
         case .about:
             supplementarySettingsStage(width: 400) { aboutStageVisual }
         }
@@ -325,117 +323,6 @@ struct SettingsView: View {
     private var appServerStageColor: Color {
         if activityRuntime.isNativeActivityConnected { return SettingsStagePalette.live }
         return activityRuntime.localHealth.hasReadError ? SettingsStagePalette.failure : SettingsStagePalette.faint
-    }
-
-    // Proxy: the path a quota request takes, drawn from the draft being edited.
-    private var proxyStageVisual: some View {
-        VStack(spacing: 16) {
-            HStack(alignment: .top, spacing: 0) {
-                proxyStageNode(title: "QuotaView", image: SettingsFeedbackResources.appIcon)
-                proxyStageConnector(segment: 0)
-                proxyStageNode(
-                    title: proxyDraft.isEnabled ? (proxyDraft.scheme == .http ? "HTTP" : "SOCKS5") : copy.text("直连", "Direct"),
-                    symbol: proxyDraft.isEnabled ? "network" : "arrow.up.right")
-                .contentTransition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: proxyDraft.isEnabled)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: proxyDraft.scheme)
-                proxyStageConnector(segment: 1)
-                proxyStageNode(title: copy.text("用量服务", "Usage service"), symbol: "cloud")
-            }
-            HStack(spacing: 9) {
-                if proxyDraft.isEnabled {
-                    Text(proxyStageAddress).monospacedDigit()
-                        .lineLimit(1).truncationMode(.middle).help(proxyStageAddress)
-                    Text("·").accessibilityHidden(true)
-                }
-                HStack(spacing: 5) {
-                    Image(systemName: proxyStageStatus.symbol)
-                        .foregroundStyle(proxyStageStatus.tint).accessibilityHidden(true)
-                    Text(proxyStageStatus.text).lineLimit(1)
-                }
-                .fixedSize()
-            }
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(SettingsIllustrationPalette.secondary)
-            .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
-            .contentTransition(.opacity)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: proxyStageStatus.text)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func proxyStageNode(title: String, image: NSImage? = nil, symbol: String = "app") -> some View {
-        VStack(spacing: 9) {
-            Group {
-                if let image {
-                    Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
-                        .frame(width: 36, height: 36)
-                } else {
-                    Image(systemName: symbol).font(.system(size: 24, weight: .regular))
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: 52, height: 52)
-            .modifier(SettingsProxyIconSurface())
-            .accessibilityHidden(true)
-            Text(title).font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white).lineLimit(1)
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
-        }
-        .frame(width: 104)
-    }
-
-    private func proxyStageConnector(segment: Int) -> some View {
-        HStack(spacing: 0) {
-            Rectangle().fill(.white).frame(width: 4.5, height: 4.5)
-                .rotationEffect(.degrees(45)).frame(width: 6.4, height: 8)
-            SettingsProxyDashedLine()
-                .stroke(.white.opacity(0.95), style: StrokeStyle(lineWidth: 1.2, dash: [3, 2]))
-                .frame(height: 12)
-                .overlay {
-                    SettingsProxyFlow(isActive: proxyStageFlowActive,
-                                      isTesting: store.proxyTestState == .testing,
-                                      segment: segment, reduceMotion: reduceMotion)
-                        .frame(height: 12)
-                        .mask(SettingsProxyDashedLine()
-                            .stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [3, 2])))
-                }
-            Image(systemName: "arrowtriangle.right.fill")
-                .font(.system(size: 8, weight: .regular)).foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity).frame(height: 52)
-        .shadow(color: .black.opacity(0.55), radius: 1, y: 0.5)
-        .accessibilityHidden(true)
-    }
-
-    private var proxyStageFlowActive: Bool {
-        // Decorative route direction, not a measurement of live network traffic.
-        guard proxyDraft.isEnabled else { return true }
-        if case .failed = store.proxyTestState { return false }
-        return proxyValidationFailure == nil
-    }
-
-    private var proxyStageAddress: String {
-        guard proxyDraft.isEnabled else { return copy.text("未启用自定义代理", "No custom proxy") }
-        let host = proxyDraft.host.trimmingCharacters(in: .whitespacesAndNewlines)
-        let port = proxyDraft.port.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !host.isEmpty, !port.isEmpty else { return copy.text("请填写地址与端口", "Enter host and port") }
-        return host + ":" + port
-    }
-
-    private var proxyStageStatus: (symbol: String, text: String, tint: Color) {
-        guard proxyDraft.isEnabled else {
-            return ("arrow.up.right", copy.text("直连模式", "Direct connection"), SettingsIllustrationPalette.secondary)
-        }
-        if proxyValidationFailure != nil {
-            return ("exclamationmark.circle.fill", copy.text("请检查代理配置", "Check proxy configuration"), .orange)
-        }
-        return switch store.proxyTestState {
-        case .idle: ("circle.dashed", copy.text("未测试", "Not tested"), SettingsIllustrationPalette.secondary)
-        case .testing: ("hourglass", copy.text("测试中", "Testing"), .white)
-        case .success: ("checkmark.circle.fill", copy.text("可连接", "Reachable"), .green)
-        case .failed: ("xmark.circle.fill", copy.text("连接失败", "Failed"), .red)
-        }
     }
 
     // About: identity and the exact build that is running.
@@ -1027,6 +914,16 @@ struct SettingsView: View {
                     } else {
                         NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText,
                             symbol: "hammer.fill", symbolColor: Color(nsColor: .systemGray)) {}
+                    }
+                }
+            }
+            if BrandAnnouncementController.isAvailable {
+                NativeSettingsCard {
+                    NativeSettingsRow(title: copy.text("品牌升级公告", "Brand announcement"),
+                        symbol: "megaphone", symbolColor: .secondary) {
+                        Button(copy.text("查看", "View")) {
+                            BrandAnnouncementController.shared.showPreview(copy: copy)
+                        }.nativeSettingsActionStyle()
                     }
                 }
             }
@@ -1627,148 +1524,6 @@ private enum SettingsIllustrationPalette {
     static let shadow = Color.black.opacity(0.24)
 }
 
-/// Confine the material to small icon plates, leaving labels and paths open.
-private struct SettingsProxyIconSurface: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: shape)
-        } else {
-            content.background(.regularMaterial, in: shape)
-                .overlay(shape.strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5))
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 6, y: 3)
-        }
-    }
-}
-
-private struct SettingsProxyDashedLine: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        }
-    }
-}
-
-/// Decorative route flow follows the dashed path; actual tests run faster.
-/// Two compositor layers share a clock; no per-frame settings updates or polling.
-private struct SettingsProxyFlow: NSViewRepresentable {
-    let isActive: Bool
-    let isTesting: Bool
-    let segment: Int
-    let reduceMotion: Bool
-
-    func makeNSView(context: Context) -> FlowView { FlowView(frame: .zero) }
-    func updateNSView(_ nsView: FlowView, context: Context) {
-        nsView.configure(enabled: isActive && !reduceMotion, isTesting: isTesting, segment: segment)
-    }
-    static func dismantleNSView(_ nsView: FlowView, coordinator: ()) {
-        nsView.configure(enabled: false, isTesting: false, segment: 0)
-    }
-
-    final class FlowView: NSView {
-        private let packet = CAGradientLayer()
-        private var enabled = false
-        private var duration: CFTimeInterval = 2.4
-        private var segment = 0
-        private var renderedSize = CGSize.zero
-        private static let animationKey = "settings.proxy.flow"
-
-        override init(frame: NSRect) {
-            super.init(frame: frame)
-            wantsLayer = true
-            layer?.masksToBounds = true
-            packet.colors = [NSColor.white.withAlphaComponent(0).cgColor,
-                             NSColor.white.cgColor, NSColor.white.withAlphaComponent(0).cgColor]
-            packet.startPoint = CGPoint(x: 0, y: 0.5)
-            packet.endPoint = CGPoint(x: 1, y: 0.5)
-            packet.cornerRadius = 1.25
-            packet.shadowColor = NSColor.white.cgColor
-            packet.shadowOpacity = 0.6
-            packet.shadowRadius = 2
-            packet.shadowOffset = .zero
-            packet.isHidden = true
-            layer?.addSublayer(packet)
-        }
-        required init?(coder: NSCoder) { nil }
-        deinit { NotificationCenter.default.removeObserver(self) }
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            NotificationCenter.default.removeObserver(self)
-            if let window {
-                for name in [NSWindow.didChangeOcclusionStateNotification,
-                             NSWindow.didMiniaturizeNotification,
-                             NSWindow.didDeminiaturizeNotification] {
-                    NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged),
-                                                           name: name, object: window)
-                }
-            }
-            updateAnimation()
-        }
-
-        @objc private func visibilityChanged(_ notification: Notification) { updateAnimation() }
-
-        func configure(enabled: Bool, isTesting: Bool, segment: Int) {
-            let nextDuration = isTesting ? 1.2 : 2.4
-            if duration != nextDuration || self.segment != segment {
-                duration = nextDuration
-                self.segment = segment
-                packet.removeAnimation(forKey: Self.animationKey)
-            }
-            self.enabled = enabled
-            updateAnimation()
-        }
-
-        override func layout() {
-            super.layout()
-            if renderedSize != bounds.size {
-                renderedSize = bounds.size
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                packet.bounds = CGRect(x: 0, y: 0, width: 36, height: 2.5)
-                packet.position = CGPoint(x: -18, y: bounds.midY)
-                CATransaction.commit()
-                packet.removeAnimation(forKey: Self.animationKey)
-            }
-            updateAnimation()
-        }
-
-        private func updateAnimation() {
-            let playing = enabled && window?.occlusionState.contains(.visible) == true
-                && window?.isMiniaturized == false && !isHiddenOrHasHiddenAncestor
-                && bounds.width > 0 && bounds.height > 0
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            packet.isHidden = !playing
-            CATransaction.commit()
-            guard playing else {
-                packet.removeAnimation(forKey: Self.animationKey)
-                return
-            }
-            guard packet.animation(forKey: Self.animationKey) == nil else { return }
-            let motion = CAKeyframeAnimation(keyPath: "position.x")
-            motion.values = [-18, bounds.width + 18, bounds.width + 18]
-            motion.keyTimes = [0, 0.45, 1]
-            let fade = CAKeyframeAnimation(keyPath: "opacity")
-            fade.values = [0, 1, 1, 0, 0]
-            fade.keyTimes = [0, 0.06, 0.38, 0.45, 1]
-            motion.duration = duration
-            fade.duration = duration
-            let sequence = CAAnimationGroup()
-            sequence.animations = [motion, fade]
-            sequence.duration = duration
-            sequence.repeatCount = .infinity
-            // A shared media-time origin keeps the left/right links sequential.
-            sequence.beginTime = 1
-            sequence.timeOffset = Double(segment) * duration / 2
-            packet.add(sequence, forKey: Self.animationKey)
-        }
-    }
-}
-
 private struct NativeSettingsSidebarSurface: ViewModifier {
     let fallbackCornerRadius: CGFloat
 
@@ -2112,31 +1867,63 @@ private struct SettingsSidebarIcon: View {
     }
 }
 
-// Native menus with the reference's plain value and circular chevrons.
-private struct SettingsValueMenu<Selection: Hashable>: View {
+// A pop-up selection control lets AppKit position and highlight the selected item.
+private struct SettingsValueMenu<Selection: Hashable>: NSViewRepresentable {
     let title: String
     @Binding var selection: Selection
     let options: [(Selection, String)]
-    var body: some View {
-        Menu {
-            ForEach(Array(options.enumerated()), id: \.offset) { item in
-                Button { selection = item.element.0 } label: {
-                    if selection == item.element.0 { Label(item.element.1, systemImage: "checkmark") }
-                    else { Text(item.element.1) }
-                }
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeCoordinator() -> Coordinator { Coordinator(selection: $selection, options: options) }
+
+    func makeNSView(context: Context) -> NSPopUpButton {
+        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.isBordered = false
+        button.controlSize = .regular
+        button.font = .systemFont(ofSize: 14, weight: .medium)
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.selectItem(_:))
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return button
+    }
+
+    func updateNSView(_ button: NSPopUpButton, context: Context) {
+        context.coordinator.selection = $selection
+        context.coordinator.options = options
+        let titles = options.map { $0.1 }
+        if button.itemTitles != titles {
+            button.removeAllItems()
+            // Add individual items so distinct values may share a localized label.
+            for title in titles {
+                button.menu?.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: ""))
             }
-        } label: {
-            HStack(spacing: 12) {
-                Text(options.first { $0.0 == selection }?.1 ?? "—")
-                    .font(.system(size: 14, weight: .medium)).lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(Color.primary.opacity(0.06), in: Circle())
-            }.frame(minHeight: 28)
-        }.menuIndicator(.hidden).buttonStyle(.plain)
-            .fixedSize(horizontal: true, vertical: true)
-            .accessibilityLabel(title).accessibilityValue(options.first { $0.0 == selection }?.1 ?? "—")
+        }
+        button.selectItem(at: options.firstIndex { $0.0 == selection } ?? -1)
+        button.isEnabled = isEnabled && !options.isEmpty
+        button.setAccessibilityLabel(title)
+        button.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSPopUpButton, context: Context) -> CGSize? {
+        let size = nsView.intrinsicContentSize
+        return CGSize(width: size.width, height: max(28, size.height))
+    }
+
+    final class Coordinator: NSObject {
+        var selection: Binding<Selection>
+        var options: [(Selection, String)]
+
+        init(selection: Binding<Selection>, options: [(Selection, String)]) {
+            self.selection = selection
+            self.options = options
+        }
+
+        @objc func selectItem(_ sender: NSPopUpButton) {
+            let index = sender.indexOfSelectedItem
+            guard options.indices.contains(index) else { return }
+            selection.wrappedValue = options[index].0
+        }
     }
 }
 
