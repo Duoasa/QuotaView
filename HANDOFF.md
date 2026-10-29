@@ -2,13 +2,35 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 9 / 设置说明与信息层级（2026-10-29）
+## 当前开发：0.8.6 Build 12 / 移除代理可视化（2026-10-29）
 
-用户已确认本次设置修改可以，并授权当前改动推送 GitHub、合并 main；明确不发布 Release 包。分支 `codex/0.8.6-settings-cleanup`，提交包含设置精简、此前默认自动检查配置及临时审批卡清理/验收记录；PR 与精确 main CI 完成后回填证据。
+用户已授权将 Build 10–12 的公告预览、原生设置下拉和代理可视化移除推送 GitHub 并合并 main；不发布 Release。当前整理到 `codex/0.8.6-announcement-settings`，PR 与精确 main CI 待核验。新的代理可视化仅制作独立设计方案，等待用户选择后再实施。
+
+用户要求去掉网络代理可视化窗口。已移除顶部壁纸与路由节点、状态摘要及其专用动画/绘制代码；标题下直接显示实际设置，不保留原区域高度。代理配置、保存、测试及错误反馈保持。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12)。
+
+11:29（上海）0.8.6 / Build 12 / 内部 93 Debug arm64 增量构建成功，开发运行包更新并启动 PID 49396，无预览参数；237 输入、13 资产、完整包/备份和加载路径核对通过，代理专用可视化符号扫描零匹配，diff 检查通过。证据 `.build/remove-proxy-visual-086b12-runtime/`；旧包 `.build/runtime-package-backups/remove-proxy-visual-086b12-20261029-112915/QuotaView.app`。本次未新增测试或执行 UI 自动化，布局由用户查看。修改仅本地，未推送或发布，正式安装不变。
+
+## 前序开发：0.8.6 Build 11 / 原生设置下拉选择（2026-10-29）
+
+按用户截图，将设置中的共用普通命令菜单替换为原生 NSPopUpButton，系统提供真实选中项、勾选、高亮和菜单定位；覆盖语言、固定屏幕、停留时间、代理协议。保留真实偏好、动态屏幕列表、禁用状态和中英文。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#原生下拉选择2026-10-29086-build-11)。
+
+11:24（上海）0.8.6 / Build 11 / 内部 92 Debug arm64 增量构建成功，开发运行包更新并启动 PID 47103，无预览启动参数；237 输入、13 资产、完整包/备份与实际加载路径核对通过。源码检查覆盖选中项同步、空列表、禁用、动态列表和回调绑定；本次未增加 UI 自动化或重复实现测试，视觉由用户验收。证据 `.build/native-settings-popup-086b11-runtime/`；备份 `.build/runtime-package-backups/native-settings-popup-086b11-20261029-112413/QuotaView.app`。品牌公告代码保留，仍可从设置手动查看；两个正式版本尚未配置。所有本次修改仍为本地未提交，未推送、发布或改动 appcast，正式安装保持原样。
+
+## 前序开发：0.8.6 Build 10 / 品牌升级公告预览（2026-10-29）
+
+用户要求先设计更新后首次启动的公告弹窗，后续两个版本均可展示，暂不发布；已确认先用现有名称和 Logo。已在实际开发应用接入原生 520 × 520 公告窗口，使用 QuotaView 图标、升级预告和“继续使用”按钮；中文/English 同步，支持关闭、Escape 和回车，可由“设置 → 关于 → 品牌升级公告 → 查看”重开。设计待用户验收，详见[公告规格](docs/specs/brand-announcement.md)。
+
+展示策略按活动与内部 Build 分别记录关闭状态，两个指定版本各提示一次；跳过首个版本仍可在第二个版本看到。当前发布 Build 列表为空，正式渠道尚未启用；待设计接受且发布版本确定后填写两个精确序号。开发预览由 Debug + 开发身份 + `--preview-brand-announcement` 开启，不写入正式展示记录。
+
+11:09（上海）0.8.6 / Build 10 / 内部 91 Debug arm64 增量构建成功，开发包更新并启动 PID 43256，携带上述预览参数；237 输入、13 资产、完整包/备份和实际加载路径核对通过。三个展示策略冒烟测试通过，未进行 UI 自动化或视觉验收。证据 `.build/brand-announcement-086b10/policy-smoke.log` 与 `.build/brand-announcement-086b10-runtime/runtime-result.json`；旧包 `.build/runtime-package-backups/brand-announcement-086b10-20261029-110923/QuotaView.app`。本次仅本地开发，未推送、发布、修改 appcast 或替换正式安装。
+
+## 前序开发：0.8.6 Build 9 / 设置说明与信息层级（2026-10-29）
+
+用户已确认本次设置修改可以，并授权源码推送 GitHub、合并 main；明确不发布 Release 包。[PR #111](https://github.com/Duoasa/QuotaView/pull/111) 已于 2026-10-29 10:50（上海）合入 main，源码提交 `e8d2aa4692477274cddf0308b120be42fe5fffc7`，合并提交 `8988528ef2f853338091bc763f39e2321a2df3a8`。PR CI [40808299936](https://github.com/Duoasa/QuotaView/actions/runs/40808299936) 与精确 main CI [40808752752](https://github.com/Duoasa/QuotaView/actions/runs/40808752752) 均成功：723 项测试、6 跳过、0 失败，另 44 项原生问题关闭契约检查通过。当前 Build 9 运行包的 236 项输入与源码提交及 main 合并提交逐项一致；证据 `.build/settings-source-integration-086b9/`。未发布 Release、标签、安装包或 appcast。
 
 按用户要求删除设置页重复说明，用布局表达归属和选择：页头去掉复述、语言合并为单行菜单、材质使用分段控件、Agent 详情紧接所属行缩进展开、Claude 启用/状态只在列表展示、更新按钮不重复标题。移除外观、胶囊、立即生效及关闭模块不占位等冗余说明；代理仅在测试发生或有未保存更改时呈现反馈。保留输入/认证限制、隐私/权限范围、错误与安装确认提示。中英文同步，偏好绑定和实际功能保持。详见[设置规范](docs/design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9)。
 
-10:22（上海）0.8.6 / Build 9 / 内部 90 Debug arm64 增量构建成功，开发运行包更新启动 PID 31625，无临时参数；236 输入、13 资产、完整包/备份和加载路径核对通过。既有分段控件设置行布局冒烟 1 项通过，未新增重复实现测试或 UI 自动化。证据 `.build/settings-copy-cleanup-086b9/` 和 `.build/settings-copy-cleanup-086b9-runtime/`；备份 `.build/runtime-package-backups/settings-copy-cleanup-086b9-20261029-102213/QuotaView.app`。用户已接受本次设置调整；当前授权源码推送/合并，未发布 Release 或 appcast，正式安装未替换。
+10:22（上海）0.8.6 / Build 9 / 内部 90 Debug arm64 增量构建成功，开发运行包更新启动 PID 31625，无临时参数；236 输入、13 资产、完整包/备份和加载路径核对通过。既有分段控件设置行布局冒烟 1 项通过，未新增重复实现测试或 UI 自动化。证据 `.build/settings-copy-cleanup-086b9/` 和 `.build/settings-copy-cleanup-086b9-runtime/`；备份 `.build/runtime-package-backups/settings-copy-cleanup-086b9-20261029-102213/QuotaView.app`。用户已接受本次设置调整；源码已由 PR #111 合入 main，未发布 Release 或 appcast，正式安装未替换。
 
 ## 前序开发：0.8.6 Build 8 / 审批特效验收与临时卡清理（2026-10-29）
 
@@ -638,11 +660,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-settings-cleanup`；基于 main `694417d15246bdff6f7fa15590a178141f9ae4df`，本次提交默认自动检查、审批卡清理和 Build 9 设置精简 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.6 / Build 9 / 内部 90 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 main `8988528ef2f853338091bc763f39e2321a2df3a8`，公告预览、原生下拉修复和代理可视化移除为本地未提交修改 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.6 / Build 12 / 内部 93 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-29 10:22（上海）PID 31625；236 输入、13 资产、完整包/备份与实际加载路径一致，无临时参数 |
-| 源码与运行包 | Build 9 设置说明/布局已更新运行，用户已接受本次调整；Build 8 已按用户验收清理全部临时卡和注入，已更新运行；Build 6 默认自动检查为本地未提交修改，已更新运行；Build 5 待确认特效修复已由 PR #110 合入 main，PR/main CI 与开发运行包加载核对通过；图标及本次查看的待批准卡效果已获用户验收 |
+| 最近运行核验 | 2026-10-29 11:29（上海）PID 49396；237 输入、13 资产、完整包/备份与实际加载路径一致；无预览启动参数 |
+| 源码与运行包 | Build 12 已移除网络代理可视化并更新运行；Build 11 原生设置下拉已更新运行，视觉待验收；Build 10 品牌公告已进入开发运行包，视觉待验收、正式发布名单未配置；Build 9 设置说明/布局已更新运行并经 PR #111 合入 main，用户已接受本次调整；Build 8 已按用户验收清理全部临时卡和注入，已更新运行；Build 6 默认自动检查已随 PR #111 合入 main；Build 5 待确认特效修复已由 PR #110 合入 main，PR/main CI 与开发运行包加载核对通过；图标及本次查看的待批准卡效果已获用户验收 |
 | 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
