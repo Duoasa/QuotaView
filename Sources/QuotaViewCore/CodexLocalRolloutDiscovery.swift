@@ -254,6 +254,10 @@ final class CodexLocalRolloutDiscovery {
                 (try? file.resourceValues(forKeys: Set(keys)))?.contentModificationDate ?? .distantPast
         }
         discoveredFiles = Dictionary(uniqueKeysWithValues: discoveredFiles.keys.compactMap { file in
+            // Enumerator URLs cache resource values. Revalidate the live path after
+            // Codex archives/deletes a rollout, rather than retaining a phantom file.
+            var file = file
+            file.removeAllCachedResourceValues()
             guard Self.isAllowedRollout(file, sessionsURL: sessionsURL) else { return nil }
             // Refresh cached metadata dates so an older task that resumes is promoted.
             let date = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
@@ -329,6 +333,8 @@ final class CodexLocalRolloutDiscovery {
         _ fileURL: URL,
         sessionsURL: URL
     ) -> Bool {
+        var fileURL = fileURL
+        fileURL.removeAllCachedResourceValues()
         let path = fileURL.resolvingSymlinksInPath().standardizedFileURL.path
         let root = sessionsURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
         guard path.hasPrefix(root), fileURL.pathExtension == "jsonl" else { return false }

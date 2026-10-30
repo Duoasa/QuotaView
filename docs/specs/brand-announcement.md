@@ -49,3 +49,5 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Review / Verifying` · 2026-10-29
 2026-10-29 Build 18 按用户同屏对照缩小分类图标、标题和内距，窗口 460 × 580，隐藏全部系统交通灯；保留原关闭及按版本已读规则。15:29（上海）内部 99 增量构建通过，PID 95905 以预览参数启动，237 输入/13 资产及包、备份、加载路径核对通过；最终证据 `.build/settings-announcement-density-086b18-final/`。同时调整设置元素尺寸并恢复发行版材质双选项；已有设置行布局冒烟 1 项通过，公告策略未改，不重复前轮测试。视觉和键盘实机验收由用户完成，未推送或发布。
 
 2026-10-29 用户确认当前公告与设置调整可以，并授权本轮源码推送及合并 main，明确暂不发布。此前 Build 16–19 的「仅本地」为各批完成时状态；本轮合并需通过 PR 及实际 main CI。用户确认限本次呈现效果，不扩展为全设备/辅助功能验收；正式自动展示名单仍为空。
+
+2026-10-29 15:41（上海）[PR #113](https://github.com/Duoasa/QuotaView/pull/113) 已合并 main，源码 `71f5e4f90e29f200f1458d014a3a29571d1ffff9`，合并 `691eed672fd6b1d4e9827740e87a3350a781b09c`。[PR CI 40836619344](https://github.com/Duoasa/QuotaView/actions/runs/40836619344) 与 [main CI 40837017488](https://github.com/Duoasa/QuotaView/actions/runs/40837017488) 均成功，各 726 项测试、6 跳过、0 失败及 44 项契约检查。当前 Build 19 运行包的 237 输入与源码/合并提交逐项一致，无需重建。证据 `.build/source-integration-086b19/source-proof.json`。未创建 Release、标签、安装包或 appcast 更新；正式安装未变。合并后的交付结果补记保留本地，GitHub PR 描述同步最终 CI 事实。
