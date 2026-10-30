@@ -1,6 +1,10 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.7 Build 7
+## 当前开发：0.8.7 Build 8
+
+[标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。开发包与 PR #117 集成结果见 Handoff，视觉由用户检查。
+
+## 前序开发：0.8.7 Build 7
 
 [标签圆底与重置卡恢复](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：用量标签圆形图标与胶囊左端同心，重置卡恢复 0.8.6 Build 21 原始灰色渐变素材。运行核验及用户已授权的本轮源码推送/main 合并结果见 Handoff；视觉待用户检查，未授权发布或 appcast。
 

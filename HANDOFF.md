@@ -2,7 +2,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.7 Build 7 / 标签圆底与重置卡恢复（2026-10-30）
+## 当前开发：0.8.7 Build 8 / 标签图标尺寸与原色（2026-10-30）
+
+按用户反馈将用量标签圆底缩至 16 pt、标志 11 pt，左内距 4 pt 保持与 24 pt 胶囊左端同心。取消未选中图标降透明度，将玻璃移至独立背景层，图标以原色绘于上层；重置卡保留发行版灰色渐变。规格见[来源图标](docs/design/quotaview-provider-icons.md)。17:21（上海）0.8.7 / Build 8 / 内部 110 Debug arm64 增量构建成功，开发包已更新启动 PID 76809；239 输入、14 资源、完整包/旧包与实际加载路径核对通过，无临时参数，正式安装保持。仅绘制修订，未新增或重复功能测试；diff 检查通过。证据 `.build/provider-capsules-087b8-runtime/`。
+
+用户已授权本轮源码推送与 main 合并；[PR #117](https://github.com/Duoasa/QuotaView/pull/117) 已创建，本批追加修订将更新 PR 后重新核对精确提交的 CI，尚未合并。发布与 appcast 未授权，视觉由用户验收。
+
+## 前序开发：0.8.7 Build 7 / 标签圆底与重置卡恢复（2026-10-30）
 
 用量标签的 Agent 图标改为 18 pt 圆底，24 pt 胶囊的左内距由半径差计算为 3 pt，使两者同心；Codex 白底黑标，Claude 橙底白标。重置卡按用户最新要求逐字节恢复 `v0.8.6-build.21` 灰色渐变原始素材。Build 6 曾临时改为黑标并更新本地包，已由本批覆盖，未单独提交。规格见[来源图标](docs/design/quotaview-provider-icons.md)。
 
@@ -748,11 +754,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 `fbcc8da`（PR #116 发布记录合并），0.8.7 Build 1–7 待本轮源码集成 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 7 / 内部 109 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 `fbcc8da`（PR #116 发布记录合并），0.8.7 Build 1–8 由 PR #117 进行源码集成 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 8 / 内部 110 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-30T17:16:00.308174+08:00；PID 73983，239 输入、完整包与加载路径一致，无临时参数 |
-| 源码与运行包 | 0.8.7 Build 7 标签圆底与重置卡恢复已进入开发包；公告名单仍仅包含内部 102；证据 `.build/provider-capsules-087b7-runtime/` |
+| 最近运行核验 | 2026-10-30T17:21:25.582554+08:00；PID 76809，239 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | 0.8.7 Build 8 标签图标尺寸与原色修订已进入开发包；公告名单仍仅包含内部 102；证据 `.build/provider-capsules-087b8-runtime/` |
 | 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

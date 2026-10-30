@@ -65,7 +65,7 @@ enum IslandChromeMetrics {
     static let footerHeight = buttonSize + bottomInset
     static let font = Font.system(size: fontSize, weight: .medium)
     static let navigationFont = Font.system(size: fontSize, weight: .regular)
-    static let providerIconDiameter: CGFloat = 18
+    static let providerIconDiameter: CGFloat = 16
     static let providerLeadingInset = (buttonSize - providerIconDiameter) / 2
     static let providerTrailingInset: CGFloat = 12
 }
@@ -349,7 +349,7 @@ private struct IslandUsageProviderIcon: View {
             if let mark = IslandProviderIcon.usageMark(for: provider) {
                 Image(nsImage: mark).renderingMode(.template).resizable().scaledToFit()
                     .foregroundStyle(provider == .codex ? Color.black : Color.white)
-                    .frame(width: 14, height: 14)
+                    .frame(width: 11, height: 11)
             }
         }
         .frame(width: IslandChromeMetrics.providerIconDiameter, height: IslandChromeMetrics.providerIconDiameter)
@@ -2804,7 +2804,6 @@ struct IslandUsageBento: View {
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
                     HStack(spacing: 6) {
                         IslandUsageProviderIcon(provider: value)
-                            .opacity(selected ? 1 : 0.72)
                         Text(value.displayName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
                     }
                         .fixedSize(horizontal: true, vertical: false)
@@ -2812,7 +2811,12 @@ struct IslandUsageBento: View {
                         .padding(.trailing, IslandChromeMetrics.providerTrailingInset)
                         .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
-                        .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                        .background {
+                            // Brand artwork stays above the glass compositor at full opacity.
+                            Color.clear
+                                .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                                .allowsHitTesting(false)
+                        }
                         .contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .accessibilityLabel(value.displayName)
