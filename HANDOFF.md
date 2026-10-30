@@ -2,11 +2,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 21 / 发布准备（2026-10-30）
+## 当前开发与发布：0.8.6 Build 21（2026-10-30）
 
-用户已恢复 0.8.6 发布流程，授权 GitHub 合并、Stable Release 与 macOS appcast；README 不动，说明简短。身份固定为 Build 21 / 内部 102，tag `v0.8.6-build.21`、资产 `QuotaView-v0.8.6-build.21.zip`。先修复已确认的 Codex 归档记录缓存误报，再完成发布门禁；默认自动检查更新 true，保留已有用户偏好。发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。
+用户授权的 0.8.6 发布完成：源码经 [PR #115](https://github.com/Duoasa/QuotaView/pull/115) 合入 main `3b737073d8a33b8362448d497141772629c3d989`，PR/main CI 成功；Universal 签名、公证/Staple、Gatekeeper、解压启动、公开 ZIP 回下载和签名 appcast 线上验证通过。GitHub Stable/Latest 与应用内更新目标均为 Build 21 / 内部 102。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚 `v0.8.5-build.1`，发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。README 未改，Release 说明简短，正式安装和 Windows 通道不变。
 
-`CodexLocalRolloutDiscovery` 重新获取实际文件元数据，移走或删除的 rollout 不再污染目录读取状态；28 项连接测试与 44 项契约检查通过。前一 Build 20 开发运行包已更新，237 输入、完整包及加载路径一致，正式安装未变；证据 `.build/release-086b20-runtime/`。Build 20 签名包验证时发现正式公告名单尚未启用，故补齐本次精确版本 102，顺延 Build 21 并重新构建验证。签名包、CI 和公开渠道验证进行中，当前稳定回滚版仍为 0.8.5 Build 1。
+修复 Codex 记录归档/删除后的缓存误报；公告启用本次正式内部 102，首次启动展示一次并保留设置查看入口，第二个公告版本未指定。默认自动检查更新 true，尊重已有偏好。727 项本地测试（6 跳过、0 失败）和 44 项契约通过，没有消费真实重置卡。视觉与真实升级体验由用户验收。
+
+Build 21 开发包已更新启动 PID 2846；237 输入、完整包及实际加载路径核对通过，无临时预览参数。运行证据 `.build/release-086b21-runtime/`，发布证据 `dist/verification/0.8.6-build21-release/`。Build 20 曾完成本地签名验证，但因正式公告开关遗漏而顺延 Build 21，前者未公开。
 
 ## 前序开发：0.8.6 Build 19 / 恢复设置默认宽度（2026-10-29）
 
@@ -710,12 +712,12 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 main `e635bc2e8de4108af2089ac8999873a7002c6d22`；PR #112 已合并，本地 Build 15 已移除代理路径动效，版本与交接记录尚未提交 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.6 / Build 15 / 内部 96 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；PR #115 已合入 `3b737073d8a33b8362448d497141772629c3d989`，后续仅补发布记录 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.6 / Build 21 / 内部 102 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-29 14:28（上海）PID 79728；237 输入、13 资产、完整包/备份与实际加载路径一致；无预览启动参数 |
-| 源码与运行包 | Build 15 已完整移除代理可视化并更新运行；设置源码和工程文件与 main 的 Build 12 基线一致。Build 10–12 已由 PR #112 合入 main；Build 13–14 可视化方案作废。公告正式名单仍为空。 |
-| 公开稳定版 | 0.8.5 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 最近运行核验 | 2026-10-30T11:49:43.000077+08:00；PID 2846，237 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | Build 21 源码、开发运行包和正式发布包输入一致；公告本次内部 102 已启用。 |
+| 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
