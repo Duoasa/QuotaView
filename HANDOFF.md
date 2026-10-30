@@ -2,11 +2,11 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 20 / 发布准备（2026-10-30）
+## 当前开发：0.8.6 Build 21 / 发布准备（2026-10-30）
 
-用户已恢复 0.8.6 发布流程，授权 GitHub 合并、Stable Release 与 macOS appcast；README 不动，说明简短。身份固定为 Build 20 / 内部 101，tag `v0.8.6-build.20`、资产 `QuotaView-v0.8.6-build.20.zip`。先修复已确认的 Codex 归档记录缓存误报，再完成发布门禁；默认自动检查更新 true，保留已有用户偏好。发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。
+用户已恢复 0.8.6 发布流程，授权 GitHub 合并、Stable Release 与 macOS appcast；README 不动，说明简短。身份固定为 Build 21 / 内部 102，tag `v0.8.6-build.21`、资产 `QuotaView-v0.8.6-build.21.zip`。先修复已确认的 Codex 归档记录缓存误报，再完成发布门禁；默认自动检查更新 true，保留已有用户偏好。发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。
 
-`CodexLocalRolloutDiscovery` 重新获取实际文件元数据，移走或删除的 rollout 不再污染目录读取状态；28 项连接测试与 44 项契约检查通过。Build 20 开发运行包已更新，237 输入、完整包及加载路径一致，正式安装未变；证据 `.build/release-086b20-runtime/`。签名包、CI 和公开渠道验证进行中，当前稳定回滚版仍为 0.8.5 Build 1。
+`CodexLocalRolloutDiscovery` 重新获取实际文件元数据，移走或删除的 rollout 不再污染目录读取状态；28 项连接测试与 44 项契约检查通过。前一 Build 20 开发运行包已更新，237 输入、完整包及加载路径一致，正式安装未变；证据 `.build/release-086b20-runtime/`。Build 20 签名包验证时发现正式公告名单尚未启用，故补齐本次精确版本 102，顺延 Build 21 并重新构建验证。签名包、CI 和公开渠道验证进行中，当前稳定回滚版仍为 0.8.5 Build 1。
 
 ## 前序开发：0.8.6 Build 19 / 恢复设置默认宽度（2026-10-29）
 

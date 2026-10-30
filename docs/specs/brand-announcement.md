@@ -51,3 +51,5 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Review / Verifying` · 2026-10-29
 2026-10-29 用户确认当前公告与设置调整可以，并授权本轮源码推送及合并 main，明确暂不发布。此前 Build 16–19 的「仅本地」为各批完成时状态；本轮合并需通过 PR 及实际 main CI。用户确认限本次呈现效果，不扩展为全设备/辅助功能验收；正式自动展示名单仍为空。
 
 2026-10-29 15:41（上海）[PR #113](https://github.com/Duoasa/QuotaView/pull/113) 已合并 main，源码 `71f5e4f90e29f200f1458d014a3a29571d1ffff9`，合并 `691eed672fd6b1d4e9827740e87a3350a781b09c`。[PR CI 40836619344](https://github.com/Duoasa/QuotaView/actions/runs/40836619344) 与 [main CI 40837017488](https://github.com/Duoasa/QuotaView/actions/runs/40837017488) 均成功，各 726 项测试、6 跳过、0 失败及 44 项契约检查。当前 Build 19 运行包的 237 输入与源码/合并提交逐项一致，无需重建。证据 `.build/source-integration-086b19/source-proof.json`。未创建 Release、标签、安装包或 appcast 更新；正式安装未变。合并后的交付结果补记保留本地，GitHub PR 描述同步最终 CI 事实。
+
+2026-10-30：用户已接受公告并授权 0.8.6 正式发布。启用内部 102（Build 21）首次启动公告与正式设置入口；第二次公告版本尚未指定，不预设未来序号。
