@@ -15,7 +15,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
             providerGroup(.codex, isOn: $preferences.codexIntegrationEnabled)
             providerGroup(.claudeCode, isOn: $preferences.claudeCodeEnabled)
             providerGroup(.dsh, isOn: $preferences.dshEnabled)
@@ -23,7 +23,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         }
     }
     private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
             NativeSettingsCard { row(provider, isOn: isOn) }
             if expanded == provider {
                 Group {
@@ -33,7 +33,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                     case .dsh: nativeDetails(dsh)
                     case .kimiCode: nativeDetails(kimi)
                     }
-                }.padding(.leading, 22)
+                }.frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -59,7 +59,8 @@ struct AgentIntegrationSettings<Details: View>: View {
             Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                 .tint(Color(nsColor: .secondaryLabelColor))
         }
-        .frame(minHeight: 40).padding(.horizontal, 12)
+        .frame(minHeight: SettingsLayoutMetrics.rowMinHeight)
+        .padding(.horizontal, SettingsLayoutMetrics.cardInset)
     }
     private func presentation(_ provider: IslandAgentProvider, enabled: Bool) -> (title: String, symbol: String, color: Color) {
         let connected = (copy.text("已连接", "Connected"), "checkmark.circle.fill", Color(nsColor: .systemGreen))
@@ -150,13 +151,14 @@ struct AgentIntegrationSettings<Details: View>: View {
 private struct AgentSettingsIcon: View {
     let provider: IslandAgentProvider
     private var background: Color {
-        provider == .claudeCode ? Color(red: 0.96, green: 0.94, blue: 0.90) : .white
+        provider == .claudeCode ? .clear : .white
     }
     var body: some View {
         ZStack {
             background
-            if provider == .codex, let icon = IslandProviderIcon.image {
-                // The bundled macOS app icon has 10% transparent canvas on each edge.
+            if (provider == .codex || provider == .claudeCode),
+               let icon = IslandProviderIcon.settingsMark(for: provider) {
+                // Official macOS app icons include about 10% transparent canvas on each edge.
                 Image(nsImage: icon).resizable().scaledToFit().frame(width: 27.5, height: 27.5)
             } else if let icon = IslandProviderIcon.settingsMark(for: provider) {
                 Image(nsImage: icon).resizable().scaledToFit()

@@ -27,6 +27,22 @@ enum SettingsWindowMetrics {
     }
 }
 
+// Shared rhythm for detail pages; sidebar navigation keeps its own compact metrics.
+enum SettingsLayoutMetrics {
+    static let pageTopInset: CGFloat = 24
+    static let pageBottomInset: CGFloat = 28
+    static let sectionSpacing: CGFloat = 24
+    static let itemSpacing: CGFloat = 12
+    static let headingSpacing: CGFloat = 8
+    static let cardInset: CGFloat = 12
+    static let cardCornerRadius: CGFloat = 12
+    static let rowMinHeight: CGFloat = 44
+    static let describedRowMinHeight: CGFloat = 56
+    static let rowVerticalInset: CGFloat = 10
+    static let iconSize: CGFloat = 20
+    static let iconGap: CGFloat = 8
+}
+
 enum IslandSettingsPage: String, CaseIterable, Identifiable {
     case general, island, usage, connections, proxy, feedback, about
     var id: String { rawValue }
@@ -228,7 +244,7 @@ struct SettingsView: View {
         for page: IslandSettingsPage
     ) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
                 settingsPageHeading(for: page)
                 settingsStage(for: page)
                 switch page {
@@ -243,8 +259,8 @@ struct SettingsView: View {
             }
             .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth, alignment: .topLeading)
             .padding(.horizontal, SettingsWindowMetrics.contentInset)
-            .padding(.top, 20)
-            .padding(.bottom, 20)
+            .padding(.top, SettingsLayoutMetrics.pageTopInset)
+            .padding(.bottom, SettingsLayoutMetrics.pageBottomInset)
             .frame(maxWidth: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -255,7 +271,7 @@ struct SettingsView: View {
 
     private func settingsPageHeading(for page: IslandSettingsPage) -> some View {
         HStack(spacing: 10) {
-            SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 20)
+            SettingsDetailIcon(symbol: page.symbol)
             Text(page.title(copy))
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.primary)
@@ -353,11 +369,11 @@ struct SettingsView: View {
     }
 
     private var proxySettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text("自定义代理", "Custom proxy"),
-                    symbol: "network", symbolColor: Color(nsColor: .systemTeal)
+                    symbol: "network"
                 ) {
                     Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
                         .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
@@ -365,7 +381,7 @@ struct SettingsView: View {
                 }
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("协议", "Protocol"),
-                    symbol: "arrow.left.arrow.right", symbolColor: Color(nsColor: .systemIndigo)) {
+                    symbol: "arrow.left.arrow.right") {
                     SettingsValueMenu(title: copy.text("代理协议", "Proxy protocol"), selection: $proxyDraft.scheme,
                         options: [(.http, "HTTP"), (.socks5, "SOCKS5")])
                     .disabled(!proxyDraft.isEnabled)
@@ -374,7 +390,7 @@ struct SettingsView: View {
                 NativeSettingsRow(
                     title: copy.text("服务器地址", "Server address"),
                     subtitle: copy.text("IP 或主机名，不含协议。", "IP or hostname, without a protocol prefix."),
-                    symbol: "server.rack", symbolColor: Color(nsColor: .systemGray)
+                    symbol: "server.rack"
                 ) {
                     TextField("127.0.0.1", text: $proxyDraft.host)
                         .textFieldStyle(.roundedBorder).frame(width: 190)
@@ -383,7 +399,7 @@ struct SettingsView: View {
                 }
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("端口", "Port"),
-                    symbol: "number", symbolColor: Color(nsColor: .systemGray)) {
+                    symbol: "number") {
                     TextField("7890", text: $proxyDraft.port)
                         .textFieldStyle(.roundedBorder).frame(width: 100)
                         .accessibilityLabel(copy.text("代理端口", "Proxy port"))
@@ -464,7 +480,7 @@ struct SettingsView: View {
                 set: { preferences.codexIslandExpandedWidth = AppPreferences.IslandExpandedWidth.normalized($0) })
     }
     private var islandSettings: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("任务特效", "Task effects")) {
                 LazyVGrid(columns: Array(repeating: .init(.flexible()), count: AppPreferences.CodexActivityProgressEffect.allCases.count), spacing: 8) {
                     ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
@@ -480,12 +496,12 @@ struct SettingsView: View {
             settingsSection(copy.text("显示内容", "Content")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
-                        symbol: "chart.pie.fill", color: .systemGreen,
+                        symbol: "chart.pie.fill",
                         isOn: $preferences.islandFloatingUsageEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     preferenceToggle(copy.text("隐私模式", "Privacy mode"),
                         subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
-                        symbol: "eye.slash.fill", color: .systemGray,
+                        symbol: "eye.slash.fill",
                         isOn: $preferences.codexIslandPrivacy)
 
                 }
@@ -494,12 +510,12 @@ struct SettingsView: View {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("自动弹出", "Automatic popups"),
                         subtitle: copy.text("新任务、完成或待确认时弹出。", "Open for new tasks, completions and requests."),
-                        symbol: "macwindow.badge.plus", color: .systemPurple,
+                        symbol: "macwindow.badge.plus",
                         isOn: $preferences.codexActivityAutomaticPopupEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     NativeSettingsRow(title: copy.text("停留时间", "Stay open for"),
                         subtitle: copy.text("待确认或固定时保持展开。", "Stay open for pending requests or when pinned."),
-                        symbol: "timer", symbolColor: Color(nsColor: .systemOrange)) {
+                        symbol: "timer") {
                         SettingsValueMenu(title: copy.text("停留时间", "Popup duration"),
                             selection: $preferences.codexActivityAutomaticPopupDuration,
                             options: AppPreferences.CodexActivityAutomaticPopupTiming.durationRange.map {
@@ -516,12 +532,12 @@ struct SettingsView: View {
         settingsSection(copy.text("可选模块", "Optional modules")) {
             NativeSettingsCard {
                 preferenceToggle(copy.text("近 30 天成本估算", "30-day cost estimate"),
-                    symbol: "dollarsign.circle.fill", color: .systemGreen,
+                    symbol: "dollarsign.circle.fill",
                     isOn: $preferences.showEstimatedCost)
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 preferenceToggle(copy.text("Token 活动", "Token activity"),
                     subtitle: copy.text("每日 · 每周 · 累计", "Daily · Weekly · Total"),
-                    symbol: "square.grid.3x3.fill", color: .systemBlue,
+                    symbol: "square.grid.3x3.fill",
                     isOn: $preferences.showTokenActivity)
             }
         }
@@ -662,7 +678,7 @@ struct SettingsView: View {
     private var languageSettings: some View {
         NativeSettingsCard {
             NativeSettingsRow(title: copy.text("语言", "Language"),
-                symbol: "globe", symbolColor: Color(nsColor: .systemBlue)) {
+                symbol: "globe") {
                 SettingsValueMenu(title: copy.text("语言", "Language"), selection: languageSelection,
                     options: [("system", systemLanguageOption), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
             }
@@ -671,25 +687,16 @@ struct SettingsView: View {
 
     private func settingsSection<Content: View>(
         _ title: String,
-        provider: IslandAgentProvider? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                if let provider, let icon = IslandProviderIcon.image(for: provider) {
-                    Image(nsImage: icon).resizable().scaledToFit()
-                        .padding(provider == .claudeCode ? 4 : 0)
-                        .frame(width: 22, height: 22)
-                        .background(provider == .claudeCode
-                            ? Color(red: 0.96, green: 0.94, blue: 0.91) : .clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        .accessibilityHidden(true)
-                }
-                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
-                    .accessibilityAddTraits(.isHeader)
-            }
-            .padding(.leading, 10)
-            content()
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.leading, SettingsLayoutMetrics.cardInset)
+            VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing, content: content)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -705,12 +712,12 @@ struct SettingsView: View {
     }
 
     private var generalSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             languageSettings
             settingsSection(copy.text("灵动岛显示位置", "Island display")) {
                 NativeSettingsCard {
                     NativeSettingsRow(title: copy.text("跟随活动窗口", "Follow active window"),
-                        symbol: "display.2", symbolColor: .blue) {
+                        symbol: "display.2") {
                         Toggle("", isOn: $preferences.islandFollowsFocus).labelsHidden()
                             .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
                             .accessibilityLabel(copy.text("焦点屏幕跟随", "Follow focused display"))
@@ -719,7 +726,7 @@ struct SettingsView: View {
                         NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                         NativeSettingsRow(title: copy.text("固定屏幕", "Fixed display"),
                             subtitle: copy.text("断开时暂回主屏，重新连接后恢复。", "Falls back to the main display until reconnected."),
-                            symbol: "display", symbolColor: .blue) {
+                            symbol: "display") {
                             SettingsValueMenu(title: copy.text("固定屏幕", "Fixed display"),
                                 selection: $preferences.islandFixedScreenID, options: screenOptions)
                         }
@@ -730,17 +737,17 @@ struct SettingsView: View {
                 }
             }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
-                Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
+                Text(copy.text("退出 QuotaView", "Quit QuotaView"))
                     .font(.system(size: 13, weight: .medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 12).frame(height: 40)
+                    .padding(.horizontal, SettingsLayoutMetrics.cardInset).frame(height: SettingsLayoutMetrics.rowMinHeight)
             }
             .buttonStyle(SettingsQuitRowStyle())
         }
     }
 
     private var islandMaterialSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("外观与布局", "Appearance and layout")) {
                 NativeSettingsCard {
                     islandMaterialOption(.liquidGlass,
@@ -756,17 +763,17 @@ struct SettingsView: View {
                 if preferences.islandMaterial == .liquidGlass {
                     NativeSettingsCard {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(copy.text("玻璃外观", "Glass appearance")).font(.headline)
-                            HStack(alignment: .top, spacing: 14) {
+                            Text(copy.text("玻璃外观", "Glass appearance")).font(.system(size: 13, weight: .medium))
+                            HStack(alignment: .top, spacing: SettingsLayoutMetrics.itemSpacing) {
                                 ForEach(AppPreferences.IslandGlassAppearance.allCases) { appearance in
                                     glassAppearanceOption(appearance)
                                 }
                             }
-                        }.padding(16)
+                        }.padding(SettingsLayoutMetrics.cardInset)
                     }
                     NativeSettingsCard {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(copy.text("玻璃程度", "Glass amount")).font(.headline)
+                            Text(copy.text("玻璃程度", "Glass amount")).font(.system(size: 13, weight: .medium))
                             Slider(value: $preferences.islandGlassDegree, in: 0.2...0.8)
                                 .accessibilityLabel(copy.text("玻璃程度", "Glass amount"))
                                 .accessibilityValue(copy.text("黑色区域 \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%", "Black area \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%"))
@@ -775,12 +782,12 @@ struct SettingsView: View {
                                 Spacer()
                                 Text(copy.text("玻璃", "Glass"))
                             }.font(.caption).foregroundStyle(.secondary)
-                        }.padding(16)
+                        }.padding(SettingsLayoutMetrics.cardInset)
                     }
                 }
                 NativeSettingsCard {
                     NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
-                        symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
+                        symbol: "arrow.left.and.right") {
                         HStack(spacing: 12) {
                             Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
                                 .controlSize(.small).frame(minWidth: 80, idealWidth: 110, maxWidth: 150)
@@ -827,7 +834,7 @@ struct SettingsView: View {
     private func islandMaterialOption(_ mode: AppPreferences.IslandMaterial, title: String,
                                       subtitle: String, symbol: String) -> some View {
         Button { preferences.islandMaterial = mode } label: {
-            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol, symbolColor: .secondary) {
+            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol) {
                 Image(systemName: preferences.islandMaterial == mode ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16))
                     .foregroundStyle(preferences.islandMaterial == mode ? Color.primary : Color.secondary)
@@ -844,12 +851,12 @@ struct SettingsView: View {
     }
 
     private var feedbackSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
             Button { showsFeedbackQRCode = true } label: {
                 feedbackRow(
                     title: copy.text("QQ群", "QQ group"),
                     detail: copy.text("群号：1108649282", "Group: 1108649282"),
-                    symbol: "qrcode", color: .systemBlue
+                    symbol: "qrcode"
                 )
             }
             .buttonStyle(SettingsFeedbackRowStyle())
@@ -859,7 +866,7 @@ struct SettingsView: View {
                 feedbackRow(
                     title: "GitHub Issues",
                     detail: "Duoasa / QuotaView",
-                    symbol: "chevron.left.forwardslash.chevron.right", color: .systemGray,
+                    symbol: "chevron.left.forwardslash.chevron.right",
                     trailingSymbol: "arrow.up.right"
                 )
             }
@@ -868,11 +875,11 @@ struct SettingsView: View {
         }
     }
 
-    private func feedbackRow(title: String, detail: String, symbol: String, color: NSColor,
+    private func feedbackRow(title: String, detail: String, symbol: String,
                              trailingSymbol: String = "chevron.right") -> some View {
         HStack(spacing: 10) {
-            SettingsSidebarIcon(symbol: symbol, color: Color(nsColor: color), size: 20)
-            VStack(alignment: .leading, spacing: 5) {
+            SettingsDetailIcon(symbol: symbol)
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.system(size: 13, weight: .medium))
                 Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
             }
@@ -883,8 +890,10 @@ struct SettingsView: View {
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, SettingsLayoutMetrics.cardInset)
+        .padding(.vertical, SettingsLayoutMetrics.rowVerticalInset)
+        .frame(minHeight: SettingsLayoutMetrics.describedRowMinHeight)
+        .contentShape(RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
     }
 
     private var feedbackQRCode: some View {
@@ -908,13 +917,13 @@ struct SettingsView: View {
     }
 
     private var aboutSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
                         NativeSettingsRow(title: copy.text("自动检查更新", "Automatically check for updates"),
                             subtitle: copy.text("每 24 小时；安装前确认。", "Every 24 hours; confirm before installing."),
-                            symbol: "clock.arrow.circlepath", symbolColor: Color(nsColor: .systemGreen)) {
+                            symbol: "clock.arrow.circlepath") {
                             Toggle(copy.text("自动检查更新", "Automatically check for updates"), isOn: Binding(
                                 get: { updateController.automaticallyChecksForUpdates },
                                 set: { updateController.setAutomaticallyChecksForUpdates($0) }))
@@ -928,14 +937,14 @@ struct SettingsView: View {
                         }.padding(.horizontal, 12).padding(.vertical, 8)
                     } else {
                         NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText,
-                            symbol: "hammer.fill", symbolColor: Color(nsColor: .systemGray)) {}
+                            symbol: "hammer.fill") {}
                     }
                 }
             }
             if BrandAnnouncementController.isAvailable {
                 NativeSettingsCard {
                     NativeSettingsRow(title: copy.text("更新与公告", "Updates & announcements"),
-                        symbol: "megaphone", symbolColor: .secondary) {
+                        symbol: "megaphone") {
                         Button(copy.text("查看", "View")) {
                             BrandAnnouncementController.shared.showPreview(copy: copy)
                         }.nativeSettingsActionStyle()
@@ -1015,14 +1024,12 @@ struct SettingsView: View {
         _ title: String,
         subtitle: String? = nil,
         symbol: String,
-        color: NSColor,
         isOn: Binding<Bool>
     ) -> some View {
         NativeSettingsRow(
             title: title,
             subtitle: subtitle,
-            symbol: symbol,
-            symbolColor: Color(nsColor: color)
+            symbol: symbol
         ) {
             Toggle(title, isOn: isOn)
                 .labelsHidden()
@@ -1848,6 +1855,18 @@ private struct CodexActivityTimingControl: View {
     }
 }
 
+private struct SettingsDetailIcon: View {
+    let symbol: String
+
+    var body: some View {
+        SettingsSidebarIcon(
+            symbol: symbol,
+            color: Color(nsColor: .systemGray),
+            size: SettingsLayoutMetrics.iconSize
+        )
+    }
+}
+
 private struct SettingsSidebarIcon: View {
     let symbol: String
     let color: Color
@@ -1988,18 +2007,18 @@ private struct SettingsQuitRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.foregroundStyle(Color(nsColor: .systemRed))
             .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .fill(Color(nsColor: .systemRed).opacity(0.06))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                             .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovered ? 0.06 : 0))
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
             }
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }.onDisappear { hovered = false }
     }
@@ -2013,14 +2032,14 @@ private struct SettingsFeedbackRowStyle: ButtonStyle {
         configuration.label
             .foregroundStyle(.primary)
             .background(Color(nsColor: .controlBackgroundColor),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        in: RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .fill(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.05 : 0))
                     .allowsHitTesting(false)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
                     .allowsHitTesting(false)
             }
@@ -2130,13 +2149,13 @@ struct NativeSettingsCard<Content: View>: View {
         .background(
             Color(nsColor: .controlBackgroundColor),
             in: RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
         )
         .overlay {
             RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
             .strokeBorder(
@@ -2146,7 +2165,7 @@ struct NativeSettingsCard<Content: View>: View {
         }
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 12,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
         )
@@ -2157,7 +2176,6 @@ struct NativeSettingsRow<Control: View>: View {
     let title: String
     let subtitle: String?
     let symbol: String?
-    let symbolColor: Color
     let horizontalPadding: CGFloat
     let control: Control
 
@@ -2165,14 +2183,12 @@ struct NativeSettingsRow<Control: View>: View {
         title: String,
         subtitle: String? = nil,
         symbol: String? = nil,
-        symbolColor: Color = Color(nsColor: .systemGray),
-        horizontalPadding: CGFloat = 12,
+        horizontalPadding: CGFloat = SettingsLayoutMetrics.cardInset,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
         self.subtitle = subtitle
         self.symbol = symbol
-        self.symbolColor = symbolColor
         self.horizontalPadding = horizontalPadding
         self.control = control()
     }
@@ -2181,7 +2197,7 @@ struct NativeSettingsRow<Control: View>: View {
         HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .center, spacing: NativeSettingsDivider.iconGap) {
             if let symbol {
-                SettingsSidebarIcon(symbol: symbol, color: symbolColor)
+                SettingsDetailIcon(symbol: symbol)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -2202,8 +2218,9 @@ struct NativeSettingsRow<Control: View>: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, horizontalPadding)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, minHeight: 36)
+        .padding(.vertical, SettingsLayoutMetrics.rowVerticalInset)
+        .frame(maxWidth: .infinity, minHeight: subtitle == nil
+            ? SettingsLayoutMetrics.rowMinHeight : SettingsLayoutMetrics.describedRowMinHeight)
         .contentShape(Rectangle())
     }
 }
@@ -2238,10 +2255,10 @@ struct NativeSettingsSegmentedPicker<
 }
 
 struct NativeSettingsDivider: View {
-    static let iconGap: CGFloat = 8
-    // Row padding + 20 pt icon + gap: the divider starts under the row title.
-    static let iconLeading: CGFloat = 12 + 20 + iconGap
-    var leading: CGFloat = 12
+    static let iconGap = SettingsLayoutMetrics.iconGap
+    // Keep separators aligned with the text column.
+    static let iconLeading = SettingsLayoutMetrics.cardInset + SettingsLayoutMetrics.iconSize + iconGap
+    var leading: CGFloat = SettingsLayoutMetrics.cardInset
     var body: some View {
         Divider()
             .padding(.leading, leading)
