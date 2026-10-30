@@ -65,6 +65,8 @@ enum IslandChromeMetrics {
     static let footerHeight = buttonSize + bottomInset
     static let font = Font.system(size: fontSize, weight: .medium)
     static let navigationFont = Font.system(size: fontSize, weight: .regular)
+    static let providerIconDiameter: CGFloat = 16
+    static let providerLeadingInset = (buttonSize - providerIconDiameter) / 2
     static let providerTrailingInset: CGFloat = 12
 }
 
@@ -316,12 +318,13 @@ enum IslandProviderIcon {
     static let image = bundle.url(forResource: "CodexProviderIcon", withExtension: "png").flatMap { NSImage(contentsOf: $0) }
     static let codexMark = bundle.image(forResource: NSImage.Name("CodexProviderMark"))
     static let claudeImage = bundle.image(forResource: NSImage.Name("ClaudeProviderIcon"))
+    static let claudeApplicationIcon = bundle.image(forResource: NSImage.Name("ClaudeApplicationIcon"))
     private static let dshBrandMark = bundle.image(forResource: NSImage.Name("DSHProviderMark"))
     private static let kimiApplicationIcon = bundle.image(forResource: NSImage.Name("KimiCodeProviderIcon"))
     static func settingsMark(for provider: IslandAgentProvider) -> NSImage? {
         switch provider {
         case .codex: image
-        case .claudeCode: claudeImage
+        case .claudeCode: claudeApplicationIcon
         case .dsh: dshBrandMark
         case .kimiCode: kimiApplicationIcon
         }
@@ -329,15 +332,34 @@ enum IslandProviderIcon {
     static let dshImage = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "DSH")
     static let kimiImage = NSImage(systemSymbolName: "k.circle.fill", accessibilityDescription: "Kimi Code")
     static func image(for provider: IslandAgentProvider) -> NSImage? {
-        switch provider { case .codex: image; case .claudeCode: claudeImage; case .dsh: dshImage; case .kimiCode: kimiImage }
+        switch provider { case .codex: image; case .claudeCode: claudeApplicationIcon; case .dsh: dshImage; case .kimiCode: kimiImage }
     }
-    static func unframedImage(for provider: IslandAgentProvider) -> NSImage? {
-        provider == .codex ? codexMark : image(for: provider)
+    static func usageMark(for provider: IslandAgentProvider) -> NSImage? {
+        provider == .codex ? codexMark : claudeImage
     }
 }
 
-// Task badges keep Codex's existing canvas and match its visible app-tile size.
-// The other providers reuse the original brand assets from the connection list.
+// The badge and the capsule's leading semicircle share the same center.
+private struct IslandUsageProviderIcon: View {
+    let provider: IslandAgentProvider
+
+    var body: some View {
+        ZStack {
+            Circle().fill(provider == .codex ? Color.white : Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255))
+            if let mark = IslandProviderIcon.usageMark(for: provider) {
+                Image(nsImage: mark).renderingMode(.template).resizable().scaledToFit()
+                    .foregroundStyle(provider == .codex ? Color.black : Color.white)
+                    .frame(width: 11, height: 11)
+            }
+        }
+        .frame(width: IslandChromeMetrics.providerIconDiameter, height: IslandChromeMetrics.providerIconDiameter)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+}
+
+// Official Codex and Claude app icons retain their original transparent canvas.
+// Other providers reuse the brand assets from the connection list.
 private struct IslandTaskProviderIcon: View {
     let provider: IslandAgentProvider
     var size: CGFloat = 16
@@ -346,12 +368,11 @@ private struct IslandTaskProviderIcon: View {
     var body: some View {
         Group {
             if let icon = IslandProviderIcon.settingsMark(for: provider) {
-                if provider == .codex {
-                    Image(nsImage: icon).resizable().scaledToFit()
+                if provider == .codex || provider == .claudeCode {
+                    Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
                 } else {
                     ZStack {
-                        provider == .claudeCode
-                            ? Color(red: 0.96, green: 0.94, blue: 0.90) : Color.white
+                        Color.white
                         Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
                             .frame(width: provider == .kimiCode ? tileSize : tileSize * 16 / 22,
                                    height: provider == .kimiCode ? tileSize : tileSize * 16 / 22)
@@ -2782,20 +2803,20 @@ struct IslandUsageBento: View {
                 let selected = (showsClaude ? IslandAgentProvider.claudeCode : .codex) == value
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
                     HStack(spacing: 6) {
-                        if let icon = IslandProviderIcon.unframedImage(for: value) {
-                            Image(nsImage: icon).resizable().scaledToFit()
-                                .frame(width: 14, height: 14)
-                                .opacity(selected ? 1 : 0.72)
-                                .accessibilityHidden(true)
-                        }
+                        IslandUsageProviderIcon(provider: value)
                         Text(value.displayName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
                     }
                         .fixedSize(horizontal: true, vertical: false)
-                        .padding(.leading, IslandChromeMetrics.labelInset)
+                        .padding(.leading, IslandChromeMetrics.providerLeadingInset)
                         .padding(.trailing, IslandChromeMetrics.providerTrailingInset)
                         .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
-                        .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                        .background {
+                            // Brand artwork stays above the glass compositor at full opacity.
+                            Color.clear
+                                .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                                .allowsHitTesting(false)
+                        }
                         .contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .accessibilityLabel(value.displayName)

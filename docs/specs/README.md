@@ -1,5 +1,35 @@
 # QuotaView SDD 注册表
 
+## 当前开发：0.8.7 Build 8
+
+[标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。开发包与 PR #117 集成结果见 Handoff，视觉由用户检查。
+
+## 前序开发：0.8.7 Build 7
+
+[标签圆底与重置卡恢复](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：用量标签圆形图标与胶囊左端同心，重置卡恢复 0.8.6 Build 21 原始灰色渐变素材。运行核验及用户已授权的本轮源码推送/main 合并结果见 Handoff；视觉待用户检查，未授权发布或 appcast。
+
+## 前序开发：0.8.7 Build 5
+
+[退出入口仅文字](../design/QUOTAVIEW_UI_RULES.md#退出入口仅保留文字2026-10-30087-build-5) · `Accepted / Verifying`：移除退出行图标及占位，保留危险动作样式和确认流程。开发包更新与核验见 Handoff，视觉由用户检查，仅本地修改。
+
+## 前序开发：0.8.7 Build 4
+
+[设置图标圆角底托](../design/QUOTAVIEW_UI_RULES.md#单色图标保留圆角底托2026-10-30087-build-4) · `Accepted / Verifying`：按 macOS 设置参考，将子页面功能图标统一为灰色圆角底与白色符号，覆盖页标题、设置行、反馈及退出入口；Build 3 排版保持。构建与开发包状态见 Handoff，视觉由用户验收，仅本地修改。
+
+## 前序开发：0.8.7 Build 3
+
+[设置排版与单色图标](../design/QUOTAVIEW_UI_RULES.md#子页面单色图标与统一间距2026-10-30087-build-3) · `Accepted / Verifying`：子页面功能图标改为单色，统一设置框尺寸规则、页顶留白及分组/组内间距；品牌图标保留官方素材。增量编译、开发包更新与加载路径核验通过（239 输入、14 资源），既有控件对齐冒烟结果见 Handoff；视觉由用户验收。本批仅本地修改。
+
+## 前序开发：0.8.7 Build 2
+
+[官方来源图标](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：Claude 使用官方应用包内橙底白标，ChatGPT/Codex 用量与重置卡使用官方 Blossom 路径；截图仅作参考。增量构建、开发运行包核验、四项资源解码及官方素材一致性检查通过；239 输入、14 资源，视觉与小尺寸效果由用户验收。仅本地开发，运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 前序开发：0.8.7 Build 1
+
+2026-10-30 按用户要求初始化 0.8.7 / Build 1 / 内部 103。App、Widget 与兼容 Info.plist 同步，保留开发身份；功能沿用 0.8.6 Build 21，具体功能范围尚未指定，暂无新增功能规格。Debug arm64 增量构建及开发包更新启动完成，237 输入、完整包与实际加载路径核对通过；本次初始化 `Complete`，具体功能待定。证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。仅本地开发，未授权发布或 appcast 准入。
+
+## 最近公开发布：0.8.6 Build 21
+
 [0.8.6 发布](release-0.8.6.md) · `Released / User Acceptance Pending`：Build 21 / 内部 102，PR/main CI、签名公证、公开 ZIP 与签名 appcast 已验证；公告已启用，Codex 缓存误报已修复，默认检查更新开启。公开 README 未改，视觉及真实升级体验由用户验收。
 
 
@@ -11,7 +41,7 @@
 
 [公告与设置元素尺寸](../design/QUOTAVIEW_UI_RULES.md#参考对照图调整元素尺寸2026-10-29086-build-18) · `Accepted / Verifying`：按用户同屏 VibeIsland 对照收紧图标、标题、行高和控件；设置窗口宽 620，恢复发行版玻璃/纯色上下双选项。公告隐藏系统交通灯，保留底部按钮与键盘关闭。Build 18 已构建并更新开发运行包，既有设置行布局冒烟通过；运行证据见 Handoff，视觉由用户验收。
 
-## 当前开发：0.8.6 Build 15
+## 前序开发：0.8.6 Build 15
 
 [网络代理仅保留设置](../design/QUOTAVIEW_UI_RULES.md#网络代理仅保留设置2026-10-29086-build-15) · `Accepted / Verifying`：用户否定当前可视化方案并要求移除，专用视图、绘制与动画已清理，恢复无可视化的代理设置布局。Build 13–14 方案不再作为实施目标；运行核验见 Handoff。本次仅本地开发。
 
@@ -63,7 +93,7 @@
 
 2026-10-28 按用户要求更新开发版本为 0.8.6 / Build 1 / 内部 82，App、Widget 与兼容 Info.plist 同步；增量编译及运行包更新、启动和加载路径核对通过。功能沿用 0.8.5，具体改动等待用户指示，暂无新增功能规格。仅本地开发，未授权发布或 appcast 准入；公开稳定版仍为 0.8.5 Build 1，证据与当前运行定位见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
 
-## 当前发布：0.8.5 Build 1
+## 前序发布：0.8.5 Build 1
 
 [Codex 手动额度重置](codex-quota-reset.md) · `Released / User Acceptance Pending`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；隔离模拟验证，不消费本机真实卡。[0.8.5 发布](release-0.8.5.md)已完成 PR/main CI、签名公证、GitHub Stable/Latest 与 macOS appcast 上线及公开回下载核验。中英文 README 与开发版已更新，回滚基线 0.8.3 Build 1；真实扣卡与视觉待用户验收。完整事实见版本历史，当前运行状态见 Handoff。
 
