@@ -93,8 +93,8 @@ struct BrandAnnouncementCampaign {
     let id: String
     let releaseBuilds: Set<String>
 
-    // Configure the two exact release build IDs after the announcement is accepted.
-    static let current = Self(id: "brand-refresh-2026", releaseBuilds: [])
+    // This release is approved; add the second exact build when its release is scheduled.
+    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102"])
     var storageKey: String { "announcement.\(id).acknowledgedBuilds" }
 
     func shouldPresent(build: String, acknowledged: Set<String>) -> Bool {

@@ -1,7 +1,9 @@
 # QuotaView SDD 注册表
 
+[0.8.6 发布](release-0.8.6.md) · `Accepted / Verifying`：Build 21 / 内部 102，恢复完整发布授权；修复 Codex 归档缓存误报，默认检查更新开启，公开 README 保持不变。
 
-2026-10-29：用户已接受 Build 19 的公告与设置修改，授权本轮源码推送并合并 main、暂不发布；精确合并和 CI 事实见 Handoff。下方各批「本地修改」保留为阶段记录。
+
+2026-10-29：用户接受 Build 19 的公告与设置修改后，本轮已由 [PR #113](https://github.com/Duoasa/QuotaView/pull/113) 合入 main `691eed6`；PR 与 main CI 均通过（726 测试、6 跳过、0 失败，44 契约检查），运行包 237 输入与合并源码一致。未发布；完整事实见 Handoff。下方各批「本地修改」保留为阶段记录。
 
 
 [设置恢复原宽度](../design/QUOTAVIEW_UI_RULES.md#恢复原默认宽度2026-10-29086-build-19) · `Accepted / Verifying`：按用户要求恢复默认 780 × 680、最小 740 × 560、内容最大宽 560；保留紧凑元素与上下材质选项。Build 19 已增量构建并更新开发运行包，输入/产物/加载路径核对通过；证据见 Handoff，视觉由用户验收。

@@ -2,9 +2,19 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.6 Build 19 / 恢复设置默认宽度（2026-10-29）
+## 当前开发：0.8.6 Build 21 / 发布准备（2026-10-30）
 
-用户已接受当前公告与设置修改，并明确授权本轮源码推送 GitHub、合并 main，先不发布。提交包含 Build 16–19 的通用公告、紧凑元素、恢复材质双选项及设置原宽度；保留开发身份与正式公告空名单。PR / main CI 与合并结果在执行后补记；此授权不包含 Release、标签、appcast 或正式安装替换。
+用户已恢复 0.8.6 发布流程，授权 GitHub 合并、Stable Release 与 macOS appcast；README 不动，说明简短。身份固定为 Build 21 / 内部 102，tag `v0.8.6-build.21`、资产 `QuotaView-v0.8.6-build.21.zip`。先修复已确认的 Codex 归档记录缓存误报，再完成发布门禁；默认自动检查更新 true，保留已有用户偏好。发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。
+
+`CodexLocalRolloutDiscovery` 重新获取实际文件元数据，移走或删除的 rollout 不再污染目录读取状态；28 项连接测试与 44 项契约检查通过。前一 Build 20 开发运行包已更新，237 输入、完整包及加载路径一致，正式安装未变；证据 `.build/release-086b20-runtime/`。Build 20 签名包验证时发现正式公告名单尚未启用，故补齐本次精确版本 102，顺延 Build 21 并重新构建验证。签名包、CI 和公开渠道验证进行中，当前稳定回滚版仍为 0.8.5 Build 1。
+
+## 前序开发：0.8.6 Build 19 / 恢复设置默认宽度（2026-10-29）
+
+2026-10-30：用户原要求打包发布 0.8.6、默认开启更新检查并发布 Release/appcast、README 不动；随后明确「先暂停，检查一下这个问题」，因此发布暂停，尚未打包或发布。检查发现本地记录归档后的读取健康误报：`CodexLocalRolloutDiscovery.discoveredFiles` 保留带有旧 resourceValues 的 URL，已移走的 JSONL 仍通过 regular-file 判断，再被 `isReadableFile` 判成读取失败；`recheck()` 只重置枚举器，无法清除该缓存。隔离夹具从两个文件移走一个后，剩余候选为 1 但连续三次 `readFailed=true`，重新检查后仍为 true。本机现存 58 个 rollout 全部可读取，日志仍有 localRollout 活动。证据 `.build/codex-directory-diagnosis-20261030/result.json` 与同目录 `discovery-probe.swift`。本轮仅诊断，未改生产源码或重启运行包；修复及验证未完成，恢复发布需用户继续指令。
+
+2026-10-29 15:41（上海）[PR #113](https://github.com/Duoasa/QuotaView/pull/113) 已合并 main，源码 `71f5e4f90e29f200f1458d014a3a29571d1ffff9`，合并 `691eed672fd6b1d4e9827740e87a3350a781b09c`。[PR CI 40836619344](https://github.com/Duoasa/QuotaView/actions/runs/40836619344) 与 [main CI 40837017488](https://github.com/Duoasa/QuotaView/actions/runs/40837017488) 均成功，各 726 项测试、6 跳过、0 失败及 44 项契约检查。当前 Build 19 运行包的 237 输入与源码/合并提交逐项一致，无需重建。证据 `.build/source-integration-086b19/source-proof.json`。未创建 Release、标签、安装包或 appcast 更新；正式安装未变。合并后的交付结果补记保留本地，GitHub PR 描述同步最终 CI 事实。
+
+用户已接受当前公告与设置修改，并明确授权本轮源码推送 GitHub、合并 main，先不发布。提交包含 Build 16–19 的通用公告、紧凑元素、恢复材质双选项及设置原宽度；保留开发身份与正式公告空名单。本轮 PR / main CI 与合并均已完成，见下方记录；此授权不包含 Release、标签、appcast 或正式安装替换。
 
 按用户要求恢复设置默认 780 × 680、最小 740 × 560、内容最大宽 560。仅回调窗口/内容宽度，保留 Build 18 的紧凑图标、字体、行高、原生控件及玻璃/纯色上下双选项，公告保持无交通灯的 460 × 580。规范见[恢复原默认宽度](docs/design/QUOTAVIEW_UI_RULES.md#恢复原默认宽度2026-10-29086-build-19)。
 
