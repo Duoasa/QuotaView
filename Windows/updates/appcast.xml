@@ -5,6 +5,12 @@
     <link>https://github.com/Duoasa/QuotaView/tree/main/Windows</link>
     <description>Windows x64 standalone updates</description>
     <item>
+      <title>QuotaView 0.8.3-win.13 · Windows</title>
+      <link>https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13</link>
+      <pubDate>Sat, 31 Oct 2026 11:40:15 GMT</pubDate>
+      <enclosure url="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip" length="61035198" type="application/zip" qv:version="0.8.3-win.13" qv:os="windows" qv:arch="x64" qv:kind="standalone" qv:sha256="e183694f924ad8562ba6f819ee0a7733ea06e88d58c9c2c2fff702dc6c79faaf" qv:signature="vM9V3/hDKs7BXf+2hJb+/QWA4oW1k/FRpdOEdA2g1KUlTm8msr6u1OvZvtNjeDynYEkcqbAJCDf5j1+CfY9rcwWN/GonJFnTx7M2ZvU6F+QdgU6wOsBV4Vkg1XUXLjeHF1W235XLLlSSccK2LXZ8PItZS9ohu5UfbuOklD4q9MKmYdZ9ZU3+ZfH3Fws6QGq/m6j7US1XtX/7lvba8B51ZmtilrSDjC8inv6F64vlhPKypC0P18wS1ym7iD0OtHwL4yXRvXvvJb2XoI8lodjGRQ8PEWboH/LIYMnvsl0+d+JPMrX4SF9Gya8aRsZppF0Z13gmfhifouKzRy/eIVf0RT1JPsfvVY9mGM1r6CxpP4Q1XRjdB0D8p+baD2OpRE5WmBwMP+V1IIiyew8UA3mG1f87c0K2rogEjlWi9D57hp7ikw2wz9h+FH/1+ohM6DyE7nJUlhTsPt6LoXhLSdoq6nUiiQbxMBwE/nw+IqdN9BZIQ2My3qAYzdPcVmXAWX50" />
+    </item>
+    <item>
       <title>QuotaView 0.8.3-win · Windows</title>
       <link>https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10</link>
       <pubDate>Fri, 23 Oct 2026 15:38:03 GMT</pubDate>

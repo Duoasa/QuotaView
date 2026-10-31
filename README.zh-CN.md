@@ -6,14 +6,14 @@
 
 <p align="center">
   <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.6-build.21"><img alt="macOS 0.8.6 Build 21" src="https://img.shields.io/badge/macOS-v0.8.6_Build_21-blue"></a>
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows 0.8.3-win" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13"><img alt="Windows 0.8.3-win" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.6-build.21/QuotaView-v0.8.6-build.21.zip"><strong>下载 macOS 版</strong></a>
-  · <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>下载 Windows 版</strong></a>
+  · <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip"><strong>下载 Windows 版</strong></a>
   · <a href="#快速开始">快速开始</a>
   · <a href="#agent-支持范围">Agent 支持范围</a>
 </p>
@@ -137,7 +137,7 @@
 | 平台 | 当前版本与下载 | 系统与说明 |
 | --- | --- | --- |
 | **macOS** | [0.8.6 Build 21](https://github.com/Duoasa/QuotaView/releases/download/v0.8.6-build.21/QuotaView-v0.8.6-build.21.zip) | macOS 14+；Universal，支持 Apple 芯片与 Intel；Developer ID 签名与 Apple 公证。 |
-| **Windows** | [0.8.3-win](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) | x64；[安装与接入说明](Windows/README.md)。 |
+| **Windows** | [0.8.3-win](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip) | x64；[安装与接入说明](Windows/README.md)。 |
 
 **macOS 安装：**
 
