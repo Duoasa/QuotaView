@@ -5,14 +5,14 @@
 <p align="center">Keep an eye on Codex, Claude Code, DSH, and Kimi Code from one desktop Island.</p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1"><img alt="macOS 0.8.5 Build 1" src="https://img.shields.io/badge/macOS-v0.8.5_Build_1-blue"></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.6-build.21"><img alt="macOS 0.8.6 Build 21" src="https://img.shields.io/badge/macOS-v0.8.6_Build_21-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10"><img alt="Windows 0.8.3-win" src="https://img.shields.io/badge/Windows-v0.8.3--win-blue"></a>
   <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip"><strong>Download for macOS</strong></a>
+  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.6-build.21/QuotaView-v0.8.6-build.21.zip"><strong>Download for macOS</strong></a>
   · <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip"><strong>Download for Windows</strong></a>
   · <a href="#get-started">Get started</a>
   · <a href="#agent-support">Agent support</a>
@@ -125,7 +125,7 @@ Available fields and actions depend on the agent and its version. DSH and Kimi i
 
 | Platform | Current release | Requirements and guide |
 | --- | --- | --- |
-| **macOS** | [0.8.5 Build 1](https://github.com/Duoasa/QuotaView/releases/download/v0.8.5-build.1/QuotaView-v0.8.5-build.1.zip) | macOS 14+; Universal Apple silicon + Intel; Developer ID signed and Apple notarized. |
+| **macOS** | [0.8.6 Build 21](https://github.com/Duoasa/QuotaView/releases/download/v0.8.6-build.21/QuotaView-v0.8.6-build.21.zip) | macOS 14+; Universal Apple silicon + Intel; Developer ID signed and Apple notarized. |
 | **Windows** | [0.8.3-win](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.10/QuotaView-Windows-0.8.3-win.10-x64.zip) | x64; [installation and connection guide](Windows/README.md). |
 
 **On macOS:**
