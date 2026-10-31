@@ -65,6 +65,8 @@ enum IslandChromeMetrics {
     static let footerHeight = buttonSize + bottomInset
     static let font = Font.system(size: fontSize, weight: .medium)
     static let navigationFont = Font.system(size: fontSize, weight: .regular)
+    static let providerIconDiameter: CGFloat = 16
+    static let providerLeadingInset = (buttonSize - providerIconDiameter) / 2
     static let providerTrailingInset: CGFloat = 12
 }
 
@@ -316,12 +318,13 @@ enum IslandProviderIcon {
     static let image = bundle.url(forResource: "CodexProviderIcon", withExtension: "png").flatMap { NSImage(contentsOf: $0) }
     static let codexMark = bundle.image(forResource: NSImage.Name("CodexProviderMark"))
     static let claudeImage = bundle.image(forResource: NSImage.Name("ClaudeProviderIcon"))
+    static let claudeApplicationIcon = bundle.image(forResource: NSImage.Name("ClaudeApplicationIcon"))
     private static let dshBrandMark = bundle.image(forResource: NSImage.Name("DSHProviderMark"))
     private static let kimiApplicationIcon = bundle.image(forResource: NSImage.Name("KimiCodeProviderIcon"))
     static func settingsMark(for provider: IslandAgentProvider) -> NSImage? {
         switch provider {
         case .codex: image
-        case .claudeCode: claudeImage
+        case .claudeCode: claudeApplicationIcon
         case .dsh: dshBrandMark
         case .kimiCode: kimiApplicationIcon
         }
@@ -329,10 +332,59 @@ enum IslandProviderIcon {
     static let dshImage = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "DSH")
     static let kimiImage = NSImage(systemSymbolName: "k.circle.fill", accessibilityDescription: "Kimi Code")
     static func image(for provider: IslandAgentProvider) -> NSImage? {
-        switch provider { case .codex: image; case .claudeCode: claudeImage; case .dsh: dshImage; case .kimiCode: kimiImage }
+        switch provider { case .codex: image; case .claudeCode: claudeApplicationIcon; case .dsh: dshImage; case .kimiCode: kimiImage }
     }
-    static func unframedImage(for provider: IslandAgentProvider) -> NSImage? {
-        provider == .codex ? codexMark : image(for: provider)
+    static func usageMark(for provider: IslandAgentProvider) -> NSImage? {
+        provider == .codex ? codexMark : claudeImage
+    }
+}
+
+// The badge and the capsule's leading semicircle share the same center.
+private struct IslandUsageProviderIcon: View {
+    let provider: IslandAgentProvider
+
+    var body: some View {
+        ZStack {
+            Circle().fill(provider == .codex ? Color.white : Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255))
+            if let mark = IslandProviderIcon.usageMark(for: provider) {
+                Image(nsImage: mark).renderingMode(.template).resizable().scaledToFit()
+                    .foregroundStyle(provider == .codex ? Color.black : Color.white)
+                    .frame(width: 11, height: 11)
+            }
+        }
+        .frame(width: IslandChromeMetrics.providerIconDiameter, height: IslandChromeMetrics.providerIconDiameter)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+}
+
+// Official Codex and Claude app icons retain their original transparent canvas.
+// Other providers reuse the brand assets from the connection list.
+private struct IslandTaskProviderIcon: View {
+    let provider: IslandAgentProvider
+    var size: CGFloat = 16
+    private var tileSize: CGFloat { size * 0.8 }
+
+    var body: some View {
+        Group {
+            if let icon = IslandProviderIcon.settingsMark(for: provider) {
+                if provider == .codex || provider == .claudeCode {
+                    Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
+                } else {
+                    ZStack {
+                        Color.white
+                        Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
+                            .frame(width: provider == .kimiCode ? tileSize : tileSize * 16 / 22,
+                                   height: provider == .kimiCode ? tileSize : tileSize * 16 / 22)
+                    }
+                    .frame(width: tileSize, height: tileSize)
+                    .clipShape(RoundedRectangle(cornerRadius: tileSize * 5 / 22, style: .continuous))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel(provider.displayName)
+        .allowsHitTesting(false)
     }
 }
 
@@ -458,6 +510,7 @@ final class IslandBoardState: ObservableObject {
     var onArchive: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
     var onRefreshUsage: (() async -> Void)?
+    var resetController: CodexResetController?
     var onOpenSettings: (() -> Void)?
     @Published private(set) var isRefreshingUsage = false
     func refreshUsage() async {
@@ -824,6 +877,7 @@ final class IslandBoardState: ObservableObject {
             copy: AppCopy(language: english ? .english : .simplifiedChinese))
         return quotaPercent + " · " + countdown
     }
+
     func update(_ incoming: CodexMultitaskDisplay, reduceMotion: Bool, now: Date = Date()) {
         let value = incoming
         if value.islandFloatingUsageEnabled && !value.privacyMode,
@@ -1136,9 +1190,8 @@ struct IslandSubagentStrip: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
-                if let icon = IslandProviderIcon.image(for: children.first?.provider ?? .codex) {
-                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 14, height: 14)
-                }
+                IslandTaskProviderIcon(provider: children.first?.provider ?? .codex, size: 14)
+                    .accessibilityHidden(true)
                 (Text(copy.islandSubagentGroupName(children.first?.provider ?? .codex) + " (") + Text("\(children.count)").foregroundColor(.white) + Text(")"))
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(IslandBoardStyle.muted)
             }.fixedSize(horizontal: true, vertical: false)
@@ -1230,9 +1283,8 @@ struct IslandTaskCard: View {
                                 Text(metadata.durationTitle).monospacedDigit().fixedSize()
                             }
                             if !showsArchiveButton {
-                                if let icon = IslandProviderIcon.image(for: task.provider) {
-                                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
-                                        .accessibilityLabel(task.provider.displayName)
+                                if IslandProviderIcon.settingsMark(for: task.provider) != nil {
+                                    IslandTaskProviderIcon(provider: task.provider)
                                 } else { Text(task.provider.displayName).foregroundStyle(IslandBoardStyle.muted) }
                             }
                         }.frame(height: IslandVibeLayout.textRowHeight)
@@ -1278,6 +1330,7 @@ struct IslandTaskCard: View {
     }
 }
 
+
 private struct IslandBoardTaskRow: View {
     let progressEffect: AppPreferences.CodexActivityProgressEffect
     let task: CodexMultitaskRenderTask
@@ -1320,11 +1373,11 @@ struct IslandTaskArchiveButton: View {
     var body: some View {
         Button(action: action) {
             Group {
-                if showsArchiveIcon || IslandProviderIcon.image(for: provider) == nil {
+                if showsArchiveIcon || IslandProviderIcon.settingsMark(for: provider) == nil {
                     Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
-                } else if let icon = IslandProviderIcon.image(for: provider) {
-                    Image(nsImage: icon).resizable().scaledToFit().frame(width: 16, height: 16)
+                } else {
+                    IslandTaskProviderIcon(provider: provider).accessibilityHidden(true)
                 }
             }.frame(width: IslandVibeLayout.taskActionSize, height: IslandVibeLayout.taskActionSize).contentShape(RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(IslandArchiveButtonStyle(hovered: hovered))
@@ -1490,7 +1543,8 @@ struct IslandBoardView: View {
                 usageState: state.effectiveUsageProvider == .claudeCode ? .current : state.display?.usageState ?? .loading,
                 english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight,
-                provider: state.effectiveUsageProvider)
+                provider: state.effectiveUsageProvider, resetController: state.resetController,
+                isPresented: state.showsReset && !state.compact && !state.resetTransitionInFlight)
                 .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
                 .environment(\.islandGlassActive, !state.compact && state.showsReset)
                 .opacity(state.showsReset ? 1 : 0)
@@ -2749,20 +2803,20 @@ struct IslandUsageBento: View {
                 let selected = (showsClaude ? IslandAgentProvider.claudeCode : .codex) == value
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
                     HStack(spacing: 6) {
-                        if let icon = IslandProviderIcon.unframedImage(for: value) {
-                            Image(nsImage: icon).resizable().scaledToFit()
-                                .frame(width: 14, height: 14)
-                                .opacity(selected ? 1 : 0.72)
-                                .accessibilityHidden(true)
-                        }
+                        IslandUsageProviderIcon(provider: value)
                         Text(value.displayName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
                     }
                         .fixedSize(horizontal: true, vertical: false)
-                        .padding(.leading, IslandChromeMetrics.labelInset)
+                        .padding(.leading, IslandChromeMetrics.providerLeadingInset)
                         .padding(.trailing, IslandChromeMetrics.providerTrailingInset)
                         .frame(height: IslandChromeMetrics.buttonSize)
                         .foregroundStyle(selected ? .white : secondary)
-                        .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                        .background {
+                            // Brand artwork stays above the glass compositor at full opacity.
+                            Color.clear
+                                .islandGlass(Capsule(), tint: selected ? .white.opacity(0.20) : .black.opacity(0.28))
+                                .allowsHitTesting(false)
+                        }
                         .contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .accessibilityLabel(value.displayName)

@@ -55,7 +55,7 @@
 - 数据缺失不伪造为零或成功，订阅来自真实快照，未知值用占位符。连接圆点
   只表示最近数据获取是否有效。计划进度不是耗时或工具调用数；只有可信的
   真实完成事件进入 100%。
-- 额度重置保持演示，不调用 `account/rateLimitResetCredit/consume`。
+- 2026-10-27 用户授权 0.8.5 灵动岛 Codex 手动真实重置，须用户在应用内明确确认后才调用 `account/rateLimitResetCredit/consume`，遵循[重置契约](docs/specs/codex-quota-reset.md)。本轮开发与发布验证禁止消耗用户本机重置卡，仅使用隔离模拟服务；Claude 继续复制原生命令，自动重置不在范围内。
   不硬编码额度、重置次数、更新时间或语言；业务文案、Tooltip、辅助功能
   文本使用 `AppCopy`，支持中文与 English。
 - 禁用功能停止对应后台工作；Prototype 和测试夹具与生产 Target、真实账户

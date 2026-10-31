@@ -27,6 +27,22 @@ enum SettingsWindowMetrics {
     }
 }
 
+// Shared rhythm for detail pages; sidebar navigation keeps its own compact metrics.
+enum SettingsLayoutMetrics {
+    static let pageTopInset: CGFloat = 24
+    static let pageBottomInset: CGFloat = 28
+    static let sectionSpacing: CGFloat = 24
+    static let itemSpacing: CGFloat = 12
+    static let headingSpacing: CGFloat = 8
+    static let cardInset: CGFloat = 12
+    static let cardCornerRadius: CGFloat = 12
+    static let rowMinHeight: CGFloat = 44
+    static let describedRowMinHeight: CGFloat = 56
+    static let rowVerticalInset: CGFloat = 10
+    static let iconSize: CGFloat = 20
+    static let iconGap: CGFloat = 8
+}
+
 enum IslandSettingsPage: String, CaseIterable, Identifiable {
     case general, island, usage, connections, proxy, feedback, about
     var id: String { rawValue }
@@ -63,17 +79,7 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         case .about: copy.text("关于", "About")
         }
     }
-    func subtitle(_ copy: AppCopy) -> String {
-        switch self {
-        case .general: copy.text("语言与应用控制。", "Language and app controls.")
-        case .island: copy.text("材质、隐私、任务特效与自动展开。", "Material, privacy, task effects and automatic opening.")
-        case .usage: copy.text("选择用量页显示的可选模块。", "Choose the optional modules on the usage page.")
-        case .connections: copy.text("管理 Codex、Claude Code、DSH 和 Kimi Code 的任务接入。", "Manage task integrations for Codex, Claude Code, DSH and Kimi Code.")
-        case .proxy: copy.text("查询额度与用量时使用的网络代理。", "The network proxy used for quota and usage queries.")
-        case .feedback: copy.text("遇到问题时，通过以下方式联系我们。", "Reach us here when something goes wrong.")
-        case .about: copy.text("版本信息与软件更新。", "Version information and software updates.")
-        }
-    }
+
 }
 
 enum SettingsFeedbackResources {
@@ -181,11 +187,6 @@ struct SettingsView: View {
                 .frame(width: 84, height: 44)
                 .padding(.leading, 8)
                 .padding(.top, 9)
-            Text(copy.text("设置", "Settings"))
-                .font(.title3.weight(.semibold))
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
             ScrollView {
                 VStack(spacing: 4) {
                     ForEach(Array(Self.navigationGroups.enumerated()), id: \.offset) { index, group in
@@ -243,7 +244,7 @@ struct SettingsView: View {
         for page: IslandSettingsPage
     ) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
                 settingsPageHeading(for: page)
                 settingsStage(for: page)
                 switch page {
@@ -258,8 +259,8 @@ struct SettingsView: View {
             }
             .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth, alignment: .topLeading)
             .padding(.horizontal, SettingsWindowMetrics.contentInset)
-            .padding(.top, 20)
-            .padding(.bottom, 20)
+            .padding(.top, SettingsLayoutMetrics.pageTopInset)
+            .padding(.bottom, SettingsLayoutMetrics.pageBottomInset)
             .frame(maxWidth: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -269,16 +270,11 @@ struct SettingsView: View {
     }
 
     private func settingsPageHeading(for page: IslandSettingsPage) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 10) {
-                SettingsSidebarIcon(symbol: page.symbol, color: Color(nsColor: page.color), size: 24)
-                Text(page.title(copy))
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.primary)
-            }
-            Text(page.subtitle(copy))
-                .font(.callout).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 10) {
+            SettingsDetailIcon(symbol: page.symbol)
+            Text(page.title(copy))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.primary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
@@ -287,7 +283,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsStage(for page: IslandSettingsPage) -> some View {
         // Only these pages need a separate illustration above their controls.
-        if page == .island || page == .proxy || page == .about {
+        if page == .island || page == .about {
             let height: CGFloat = page == .island ? 210 : 132
             settingsStageVisual(for: page)
                 .environment(\.colorScheme, .dark)
@@ -300,10 +296,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsStageVisual(for page: IslandSettingsPage) -> some View {
         switch page {
-        case .general, .usage, .connections, .feedback: EmptyView()
+        case .general, .usage, .connections, .proxy, .feedback: EmptyView()
         case .island: islandStageVisual
-        case .proxy:
-            supplementarySettingsStage(width: 500) { proxyStageVisual }
         case .about:
             supplementarySettingsStage(width: 400) { aboutStageVisual }
         }
@@ -342,127 +336,16 @@ struct SettingsView: View {
         return activityRuntime.localHealth.hasReadError ? SettingsStagePalette.failure : SettingsStagePalette.faint
     }
 
-    // Proxy: the path a quota request takes, drawn from the draft being edited.
-    private var proxyStageVisual: some View {
-        VStack(spacing: 16) {
-            HStack(alignment: .top, spacing: 0) {
-                proxyStageNode(title: "QuotaView", image: SettingsFeedbackResources.appIcon)
-                proxyStageConnector(segment: 0)
-                proxyStageNode(
-                    title: proxyDraft.isEnabled ? (proxyDraft.scheme == .http ? "HTTP" : "SOCKS5") : copy.text("直连", "Direct"),
-                    symbol: proxyDraft.isEnabled ? "network" : "arrow.up.right")
-                .contentTransition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: proxyDraft.isEnabled)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: proxyDraft.scheme)
-                proxyStageConnector(segment: 1)
-                proxyStageNode(title: copy.text("用量服务", "Usage service"), symbol: "cloud")
-            }
-            HStack(spacing: 9) {
-                if proxyDraft.isEnabled {
-                    Text(proxyStageAddress).monospacedDigit()
-                        .lineLimit(1).truncationMode(.middle).help(proxyStageAddress)
-                    Text("·").accessibilityHidden(true)
-                }
-                HStack(spacing: 5) {
-                    Image(systemName: proxyStageStatus.symbol)
-                        .foregroundStyle(proxyStageStatus.tint).accessibilityHidden(true)
-                    Text(proxyStageStatus.text).lineLimit(1)
-                }
-                .fixedSize()
-            }
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(SettingsIllustrationPalette.secondary)
-            .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
-            .contentTransition(.opacity)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: proxyStageStatus.text)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func proxyStageNode(title: String, image: NSImage? = nil, symbol: String = "app") -> some View {
-        VStack(spacing: 9) {
-            Group {
-                if let image {
-                    Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
-                        .frame(width: 36, height: 36)
-                } else {
-                    Image(systemName: symbol).font(.system(size: 24, weight: .regular))
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: 52, height: 52)
-            .modifier(SettingsProxyIconSurface())
-            .accessibilityHidden(true)
-            Text(title).font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white).lineLimit(1)
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
-        }
-        .frame(width: 104)
-    }
-
-    private func proxyStageConnector(segment: Int) -> some View {
-        HStack(spacing: 0) {
-            Rectangle().fill(.white).frame(width: 4.5, height: 4.5)
-                .rotationEffect(.degrees(45)).frame(width: 6.4, height: 8)
-            SettingsProxyDashedLine()
-                .stroke(.white.opacity(0.95), style: StrokeStyle(lineWidth: 1.2, dash: [3, 2]))
-                .frame(height: 12)
-                .overlay {
-                    SettingsProxyFlow(isActive: proxyStageFlowActive,
-                                      isTesting: store.proxyTestState == .testing,
-                                      segment: segment, reduceMotion: reduceMotion)
-                        .frame(height: 12)
-                        .mask(SettingsProxyDashedLine()
-                            .stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [3, 2])))
-                }
-            Image(systemName: "arrowtriangle.right.fill")
-                .font(.system(size: 8, weight: .regular)).foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity).frame(height: 52)
-        .shadow(color: .black.opacity(0.55), radius: 1, y: 0.5)
-        .accessibilityHidden(true)
-    }
-
-    private var proxyStageFlowActive: Bool {
-        // Decorative route direction, not a measurement of live network traffic.
-        guard proxyDraft.isEnabled else { return true }
-        if case .failed = store.proxyTestState { return false }
-        return proxyValidationFailure == nil
-    }
-
-    private var proxyStageAddress: String {
-        guard proxyDraft.isEnabled else { return copy.text("未启用自定义代理", "No custom proxy") }
-        let host = proxyDraft.host.trimmingCharacters(in: .whitespacesAndNewlines)
-        let port = proxyDraft.port.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !host.isEmpty, !port.isEmpty else { return copy.text("请填写地址与端口", "Enter host and port") }
-        return host + ":" + port
-    }
-
-    private var proxyStageStatus: (symbol: String, text: String, tint: Color) {
-        guard proxyDraft.isEnabled else {
-            return ("arrow.up.right", copy.text("直连模式", "Direct connection"), SettingsIllustrationPalette.secondary)
-        }
-        if proxyValidationFailure != nil {
-            return ("exclamationmark.circle.fill", copy.text("请检查代理配置", "Check proxy configuration"), .orange)
-        }
-        return switch store.proxyTestState {
-        case .idle: ("circle.dashed", copy.text("未测试", "Not tested"), SettingsIllustrationPalette.secondary)
-        case .testing: ("hourglass", copy.text("测试中", "Testing"), .white)
-        case .success: ("checkmark.circle.fill", copy.text("可连接", "Reachable"), .green)
-        case .failed: ("xmark.circle.fill", copy.text("连接失败", "Failed"), .red)
-        }
-    }
-
     // About: identity and the exact build that is running.
     private var aboutStageVisual: some View {
-        HStack(spacing: 22) {
+        HStack(spacing: 16) {
             Image(nsImage: SettingsFeedbackResources.appIcon)
-                .resizable().interpolation(.high).scaledToFit().frame(width: 80, height: 80)
+                .resizable().interpolation(.high).scaledToFit().frame(width: 64, height: 64)
                 .shadow(color: SettingsIllustrationPalette.shadow, radius: 10, y: 5)
                 .accessibilityLabel(copy.text("QuotaView 应用图标", "QuotaView app icon"))
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("QuotaView").font(.system(size: 28, weight: .semibold)).foregroundStyle(.white)
+                    Text("QuotaView").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
                     Text(copy.text("Codex 任务与用量灵动岛", "Codex task and usage island"))
                         .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.white.opacity(0.88))
                         .fixedSize(horizontal: false, vertical: true)
@@ -477,7 +360,7 @@ struct SettingsView: View {
             }
         }
         // Center the visible icon/text group, excluding unused trailing space.
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var proxyValidationFailure: ProxyConnectionFailure? {
@@ -486,20 +369,19 @@ struct SettingsView: View {
     }
 
     private var proxySettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
             NativeSettingsCard {
                 NativeSettingsRow(
                     title: copy.text("自定义代理", "Custom proxy"),
-                    subtitle: copy.text("保存后生效。", "Save to apply changes."),
-                    symbol: "network", symbolColor: Color(nsColor: .systemTeal)
+                    symbol: "network"
                 ) {
                     Toggle(copy.text("自定义代理", "Custom proxy"), isOn: $proxyDraft.isEnabled)
-                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
                         .help(copy.text("使用此代理查询额度与用量。", "Use this proxy for quota and usage."))
                 }
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("协议", "Protocol"),
-                    symbol: "arrow.left.arrow.right", symbolColor: Color(nsColor: .systemIndigo)) {
+                    symbol: "arrow.left.arrow.right") {
                     SettingsValueMenu(title: copy.text("代理协议", "Proxy protocol"), selection: $proxyDraft.scheme,
                         options: [(.http, "HTTP"), (.socks5, "SOCKS5")])
                     .disabled(!proxyDraft.isEnabled)
@@ -508,7 +390,7 @@ struct SettingsView: View {
                 NativeSettingsRow(
                     title: copy.text("服务器地址", "Server address"),
                     subtitle: copy.text("IP 或主机名，不含协议。", "IP or hostname, without a protocol prefix."),
-                    symbol: "server.rack", symbolColor: Color(nsColor: .systemGray)
+                    symbol: "server.rack"
                 ) {
                     TextField("127.0.0.1", text: $proxyDraft.host)
                         .textFieldStyle(.roundedBorder).frame(width: 190)
@@ -517,7 +399,7 @@ struct SettingsView: View {
                 }
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("端口", "Port"),
-                    symbol: "number", symbolColor: Color(nsColor: .systemGray)) {
+                    symbol: "number") {
                     TextField("7890", text: $proxyDraft.port)
                         .textFieldStyle(.roundedBorder).frame(width: 100)
                         .accessibilityLabel(copy.text("代理端口", "Proxy port"))
@@ -525,8 +407,8 @@ struct SettingsView: View {
                 }
             }
             Text(copy.text(
-                "支持无需认证的 HTTP / SOCKS5 代理。",
-                "Supports HTTP / SOCKS5 proxies without authentication."
+                "仅支持无需认证的代理；用于额度与用量查询。",
+                "For quota and usage queries. Proxy authentication is not supported."
             ))
             .font(.callout).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -565,18 +447,20 @@ struct SettingsView: View {
                 .buttonStyle(SettingsActionButtonStyle(prominent: true))
                 .disabled(proxyDraft == preferences.proxyConfiguration || proxyValidationFailure != nil)
             }
-            HStack(spacing: 8) {
-                if store.proxyTestState == .testing {
-                    ProgressView().controlSize(.small)
+            if store.proxyTestState != .idle {
+                HStack(spacing: 8) {
+                    if store.proxyTestState == .testing {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(copy.proxyTestStatus(store.proxyTestState))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(copy.proxyTestStatus(store.proxyTestState))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(proxyDraft == preferences.proxyConfiguration
-                 ? copy.text("已保存", "Saved")
-                 : copy.text("有未保存的更改", "Unsaved changes"))
-                .font(.footnote).foregroundStyle(.secondary)
+            if proxyDraft != preferences.proxyConfiguration {
+                Text(copy.text("有未保存的更改", "Unsaved changes"))
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
         }
         .onAppear { proxyDraft = preferences.proxyConfiguration }
         .onDisappear { store.cancelProxyTest() }
@@ -596,22 +480,7 @@ struct SettingsView: View {
                 set: { preferences.codexIslandExpandedWidth = AppPreferences.IslandExpandedWidth.normalized($0) })
     }
     private var islandSettings: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            islandMaterialSettings
-            settingsSection(copy.text("显示内容", "Content")) {
-                NativeSettingsCard {
-                    preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
-                        subtitle: copy.text("在灵动岛下方显示剩余额度和重置倒计时，宽度随周期数量自适应。", "Show remaining quota and reset countdown below the Island; width adapts to available periods."),
-                        symbol: "chart.pie.fill", color: .systemGreen,
-                        isOn: $preferences.islandFloatingUsageEnabled)
-                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
-                    preferenceToggle(copy.text("隐私模式", "Privacy mode"),
-                        subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
-                        symbol: "eye.slash.fill", color: .systemGray,
-                        isOn: $preferences.codexIslandPrivacy)
-
-                }
-            }
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("任务特效", "Task effects")) {
                 LazyVGrid(columns: Array(repeating: .init(.flexible()), count: AppPreferences.CodexActivityProgressEffect.allCases.count), spacing: 8) {
                     ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
@@ -623,16 +492,30 @@ struct SettingsView: View {
                     }
                 }
             }
+            islandMaterialSettings
+            settingsSection(copy.text("显示内容", "Content")) {
+                NativeSettingsCard {
+                    preferenceToggle(copy.text("悬浮用量胶囊", "Floating usage capsule"),
+                        symbol: "chart.pie.fill",
+                        isOn: $preferences.islandFloatingUsageEnabled)
+                    NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+                    preferenceToggle(copy.text("隐私模式", "Privacy mode"),
+                        subtitle: copy.text("隐藏任务内容和账户数据。", "Hide task contents and account data."),
+                        symbol: "eye.slash.fill",
+                        isOn: $preferences.codexIslandPrivacy)
+
+                }
+            }
             settingsSection(copy.text("自动展开", "Automatic opening")) {
                 NativeSettingsCard {
                     preferenceToggle(copy.text("自动弹出", "Automatic popups"),
                         subtitle: copy.text("新任务、完成或待确认时弹出。", "Open for new tasks, completions and requests."),
-                        symbol: "macwindow.badge.plus", color: .systemPurple,
+                        symbol: "macwindow.badge.plus",
                         isOn: $preferences.codexActivityAutomaticPopupEnabled)
                     NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                     NativeSettingsRow(title: copy.text("停留时间", "Stay open for"),
                         subtitle: copy.text("待确认或固定时保持展开。", "Stay open for pending requests or when pinned."),
-                        symbol: "timer", symbolColor: Color(nsColor: .systemOrange)) {
+                        symbol: "timer") {
                         SettingsValueMenu(title: copy.text("停留时间", "Popup duration"),
                             selection: $preferences.codexActivityAutomaticPopupDuration,
                             options: AppPreferences.CodexActivityAutomaticPopupTiming.durationRange.map {
@@ -648,19 +531,14 @@ struct SettingsView: View {
     private var usageSettings: some View {
         settingsSection(copy.text("可选模块", "Optional modules")) {
             NativeSettingsCard {
-                preferenceToggle(copy.text("成本估算", "Cost estimate"),
-                    subtitle: copy.text("最近 30 天的估算成本。", "Estimated costs for the last 30 days."),
-                    symbol: "dollarsign.circle.fill", color: .systemGreen,
+                preferenceToggle(copy.text("近 30 天成本估算", "30-day cost estimate"),
+                    symbol: "dollarsign.circle.fill",
                     isOn: $preferences.showEstimatedCost)
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 preferenceToggle(copy.text("Token 活动", "Token activity"),
-                    subtitle: copy.text("每日、每周和累计用量。", "Daily, weekly and cumulative usage."),
-                    symbol: "square.grid.3x3.fill", color: .systemBlue,
+                    subtitle: copy.text("每日 · 每周 · 累计", "Daily · Weekly · Total"),
+                    symbol: "square.grid.3x3.fill",
                     isOn: $preferences.showTokenActivity)
-                NativeSettingsDivider()
-                NativeSettingsNote(text: copy.text(
-                    "额度、Token 统计与账户信息始终显示；关闭的模块不占位。",
-                    "Quota, token totals and account details are always shown; hidden modules leave no gap."))
             }
         }
     }
@@ -792,37 +670,33 @@ struct SettingsView: View {
                   if let language = AppPreferences.Language(rawValue: value) { preferences.customLanguage = language }
               })
     }
+    private var systemLanguageOption: String {
+        guard preferences.followsSystemLanguage else { return copy.text("跟随系统", "System") }
+        let language = preferences.resolvedLanguage == .simplifiedChinese ? "简体中文" : "English"
+        return copy.text("跟随系统 · \(language)", "System · \(language)")
+    }
     private var languageSettings: some View {
         NativeSettingsCard {
-            NativeSettingsRow(title: copy.text("语言", "Language"), subtitle: languageSummary,
-                symbol: "globe", symbolColor: Color(nsColor: .systemBlue)) {
+            NativeSettingsRow(title: copy.text("语言", "Language"),
+                symbol: "globe") {
                 SettingsValueMenu(title: copy.text("语言", "Language"), selection: languageSelection,
-                    options: [("system", copy.text("跟随系统", "System")), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
+                    options: [("system", systemLanguageOption), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
             }
         }
     }
 
     private func settingsSection<Content: View>(
         _ title: String,
-        provider: IslandAgentProvider? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                if let provider, let icon = IslandProviderIcon.image(for: provider) {
-                    Image(nsImage: icon).resizable().scaledToFit()
-                        .padding(provider == .claudeCode ? 4 : 0)
-                        .frame(width: 22, height: 22)
-                        .background(provider == .claudeCode
-                            ? Color(red: 0.96, green: 0.94, blue: 0.91) : .clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        .accessibilityHidden(true)
-                }
-                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
-                    .accessibilityAddTraits(.isHeader)
-            }
-            .padding(.leading, 10)
-            content()
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.leading, SettingsLayoutMetrics.cardInset)
+            VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing, content: content)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -838,22 +712,21 @@ struct SettingsView: View {
     }
 
     private var generalSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            settingsSection(copy.text("语言", "Language")) { languageSettings }
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
+            languageSettings
             settingsSection(copy.text("灵动岛显示位置", "Island display")) {
                 NativeSettingsCard {
-                    NativeSettingsRow(title: copy.text("焦点屏幕跟随", "Follow focused display"),
-                        subtitle: copy.text("跟随当前活动窗口所在的屏幕。", "Follow the display containing the active window."),
-                        symbol: "display.2", symbolColor: .blue) {
+                    NativeSettingsRow(title: copy.text("跟随活动窗口", "Follow active window"),
+                        symbol: "display.2") {
                         Toggle("", isOn: $preferences.islandFollowsFocus).labelsHidden()
-                            .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                            .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
                             .accessibilityLabel(copy.text("焦点屏幕跟随", "Follow focused display"))
                     }
                     if !preferences.islandFollowsFocus {
                         NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                         NativeSettingsRow(title: copy.text("固定屏幕", "Fixed display"),
                             subtitle: copy.text("断开时暂回主屏，重新连接后恢复。", "Falls back to the main display until reconnected."),
-                            symbol: "display", symbolColor: .blue) {
+                            symbol: "display") {
                             SettingsValueMenu(title: copy.text("固定屏幕", "Fixed display"),
                                 selection: $preferences.islandFixedScreenID, options: screenOptions)
                         }
@@ -864,17 +737,17 @@ struct SettingsView: View {
                 }
             }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
-                Label(copy.text("退出 QuotaView", "Quit QuotaView"), systemImage: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 14, weight: .medium))
+                Text(copy.text("退出 QuotaView", "Quit QuotaView"))
+                    .font(.system(size: 13, weight: .medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 18).frame(height: 52)
+                    .padding(.horizontal, SettingsLayoutMetrics.cardInset).frame(height: SettingsLayoutMetrics.rowMinHeight)
             }
             .buttonStyle(SettingsQuitRowStyle())
         }
     }
 
     private var islandMaterialSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("外观与布局", "Appearance and layout")) {
                 NativeSettingsCard {
                     islandMaterialOption(.liquidGlass,
@@ -890,20 +763,17 @@ struct SettingsView: View {
                 if preferences.islandMaterial == .liquidGlass {
                     NativeSettingsCard {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(copy.text("玻璃外观", "Glass appearance")).font(.headline)
-                            HStack(alignment: .top, spacing: 14) {
+                            Text(copy.text("玻璃外观", "Glass appearance")).font(.system(size: 13, weight: .medium))
+                            HStack(alignment: .top, spacing: SettingsLayoutMetrics.itemSpacing) {
                                 ForEach(AppPreferences.IslandGlassAppearance.allCases) { appearance in
                                     glassAppearanceOption(appearance)
                                 }
                             }
-                            Text(copy.text("底部玻璃、按钮和用量胶囊统一切换；自动跟随系统。", "Applies to the lower glass, controls and usage capsule. Auto follows macOS."))
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }.padding(16)
+                        }.padding(SettingsLayoutMetrics.cardInset)
                     }
                     NativeSettingsCard {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(copy.text("玻璃程度", "Glass amount")).font(.headline)
+                            Text(copy.text("玻璃程度", "Glass amount")).font(.system(size: 13, weight: .medium))
                             Slider(value: $preferences.islandGlassDegree, in: 0.2...0.8)
                                 .accessibilityLabel(copy.text("玻璃程度", "Glass amount"))
                                 .accessibilityValue(copy.text("黑色区域 \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%", "Black area \(Int(((1 - preferences.islandGlassDegree) * 100).rounded()))%"))
@@ -912,25 +782,24 @@ struct SettingsView: View {
                                 Spacer()
                                 Text(copy.text("玻璃", "Glass"))
                             }.font(.caption).foregroundStyle(.secondary)
-                        }.padding(16)
+                        }.padding(SettingsLayoutMetrics.cardInset)
                     }
                 }
                 NativeSettingsCard {
                     NativeSettingsRow(title: copy.text("展开宽度", "Expanded width"),
-                        subtitle: copy.text("仅调整任务列表与用量页，刘海两侧自动保留安全空间。", "Task list and usage only. Space around the camera notch stays clear."),
-                        symbol: "arrow.left.and.right", symbolColor: Color(nsColor: .systemGray)) {
+                        symbol: "arrow.left.and.right") {
                         HStack(spacing: 12) {
                             Slider(value: islandWidthSelection, in: islandWidthRange, step: 8)
-                                .controlSize(.small).frame(width: 150)
+                                .controlSize(.small).frame(minWidth: 80, idealWidth: 110, maxWidth: 150)
                                 .disabled(islandWidthRange.lowerBound == islandWidthRange.upperBound)
                                 .accessibilityLabel(copy.text("展开宽度", "Expanded width"))
+                                .help(copy.text("调整任务列表与用量页宽度。", "Adjust the task list and usage page width."))
                                 .accessibilityValue("\(Int(islandWidthSelection.wrappedValue)) pt")
                             Text("\(Int(islandWidthSelection.wrappedValue)) pt")
                                 .font(.callout.monospacedDigit()).frame(width: 52, alignment: .trailing)
                         }
                     }
                 }
-                NativeSettingsNote(text: copy.text("立即生效，并记住你的选择。任务特效保持当前设置。", "Applies immediately and remembers your choice. Task effects keep their current setting."))
                 if #unavailable(macOS 26.0) {
                     NativeSettingsNote(text: copy.text("原生液态玻璃需要 macOS 26 或更新版本；当前系统使用半透明材质。", "Native Liquid Glass requires macOS 26 or later; this system uses translucent material."))
                 }
@@ -965,7 +834,7 @@ struct SettingsView: View {
     private func islandMaterialOption(_ mode: AppPreferences.IslandMaterial, title: String,
                                       subtitle: String, symbol: String) -> some View {
         Button { preferences.islandMaterial = mode } label: {
-            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol, symbolColor: .secondary) {
+            NativeSettingsRow(title: title, subtitle: subtitle, symbol: symbol) {
                 Image(systemName: preferences.islandMaterial == mode ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16))
                     .foregroundStyle(preferences.islandMaterial == mode ? Color.primary : Color.secondary)
@@ -982,12 +851,12 @@ struct SettingsView: View {
     }
 
     private var feedbackSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
             Button { showsFeedbackQRCode = true } label: {
                 feedbackRow(
                     title: copy.text("QQ群", "QQ group"),
                     detail: copy.text("群号：1108649282", "Group: 1108649282"),
-                    symbol: "qrcode", color: .systemBlue
+                    symbol: "qrcode"
                 )
             }
             .buttonStyle(SettingsFeedbackRowStyle())
@@ -997,7 +866,7 @@ struct SettingsView: View {
                 feedbackRow(
                     title: "GitHub Issues",
                     detail: "Duoasa / QuotaView",
-                    symbol: "chevron.left.forwardslash.chevron.right", color: .systemGray,
+                    symbol: "chevron.left.forwardslash.chevron.right",
                     trailingSymbol: "arrow.up.right"
                 )
             }
@@ -1006,13 +875,13 @@ struct SettingsView: View {
         }
     }
 
-    private func feedbackRow(title: String, detail: String, symbol: String, color: NSColor,
+    private func feedbackRow(title: String, detail: String, symbol: String,
                              trailingSymbol: String = "chevron.right") -> some View {
-        HStack(spacing: 14) {
-            SettingsSidebarIcon(symbol: symbol, color: Color(nsColor: color), size: 30)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.system(size: 14, weight: .medium))
-                Text(detail).font(.system(size: 12)).foregroundStyle(.secondary)
+        HStack(spacing: 10) {
+            SettingsDetailIcon(symbol: symbol)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 13, weight: .medium))
+                Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
             Image(systemName: trailingSymbol)
@@ -1021,8 +890,10 @@ struct SettingsView: View {
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, SettingsLayoutMetrics.cardInset)
+        .padding(.vertical, SettingsLayoutMetrics.rowVerticalInset)
+        .frame(minHeight: SettingsLayoutMetrics.describedRowMinHeight)
+        .contentShape(RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
     }
 
     private var feedbackQRCode: some View {
@@ -1046,26 +917,37 @@ struct SettingsView: View {
     }
 
     private var aboutSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
-                        NativeSettingsRow(title: copy.text("检查更新", "Check for updates"), subtitle: updateStatusText,
-                            symbol: "arrow.triangle.2.circlepath", symbolColor: Color(nsColor: .systemBlue)) {
-                            Button(copy.text("检查更新…", "Check for Updates…")) { updateController.checkForUpdates() }
-                                .nativeSettingsActionStyle().disabled(!updateController.canCheckForUpdates).help(updateCheckHelpText)
-                        }
-                        NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                         NativeSettingsRow(title: copy.text("自动检查更新", "Automatically check for updates"),
-                            symbol: "clock.arrow.circlepath", symbolColor: Color(nsColor: .systemGreen)) {
+                            subtitle: copy.text("每 24 小时；安装前确认。", "Every 24 hours; confirm before installing."),
+                            symbol: "clock.arrow.circlepath") {
                             Toggle(copy.text("自动检查更新", "Automatically check for updates"), isOn: Binding(
                                 get: { updateController.automaticallyChecksForUpdates },
                                 set: { updateController.setAutomaticallyChecksForUpdates($0) }))
-                                .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                                .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
                         }
+                        NativeSettingsDivider()
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button(copy.text("检查更新…", "Check for Updates…")) { updateController.checkForUpdates() }
+                                .nativeSettingsActionStyle().disabled(!updateController.canCheckForUpdates).help(updateCheckHelpText)
+                        }.padding(.horizontal, 12).padding(.vertical, 8)
                     } else {
                         NativeSettingsRow(title: copy.text("当前构建", "Current build"), subtitle: updateStatusText,
-                            symbol: "hammer.fill", symbolColor: Color(nsColor: .systemGray)) {}
+                            symbol: "hammer.fill") {}
+                    }
+                }
+            }
+            if BrandAnnouncementController.isAvailable {
+                NativeSettingsCard {
+                    NativeSettingsRow(title: copy.text("更新与公告", "Updates & announcements"),
+                        symbol: "megaphone") {
+                        Button(copy.text("查看", "View")) {
+                            BrandAnnouncementController.shared.showPreview(copy: copy)
+                        }.nativeSettingsActionStyle()
                     }
                 }
             }
@@ -1140,43 +1022,22 @@ struct SettingsView: View {
 
     private func preferenceToggle(
         _ title: String,
-        subtitle: String,
+        subtitle: String? = nil,
         symbol: String,
-        color: NSColor,
         isOn: Binding<Bool>
     ) -> some View {
         NativeSettingsRow(
             title: title,
             subtitle: subtitle,
-            symbol: symbol,
-            symbolColor: Color(nsColor: color)
+            symbol: symbol
         ) {
             Toggle(title, isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor))
-                .controlSize(.small)
+                .controlSize(.mini)
         }
     }
 
-    private var languageSummary: String {
-        if preferences.followsSystemLanguage {
-            let language = preferences.resolvedLanguage == .simplifiedChinese
-                ? "简体中文"
-                : "English"
-            return copy.text(
-                "跟随系统：\(language)",
-                "System language: \(language)"
-            )
-        }
-
-        let language = preferences.customLanguage == .simplifiedChinese
-            ? "简体中文"
-            : "English"
-        return copy.text(
-            "使用\(language)",
-            "Use \(language)"
-        )
-    }
 
     private var codexActivityActionTitle: String {
         if activityRuntime.isConfiguring { return copy.text("正在配置", "Configuring") }
@@ -1685,148 +1546,6 @@ private enum SettingsIllustrationPalette {
     static let shadow = Color.black.opacity(0.24)
 }
 
-/// Confine the material to small icon plates, leaving labels and paths open.
-private struct SettingsProxyIconSurface: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: shape)
-        } else {
-            content.background(.regularMaterial, in: shape)
-                .overlay(shape.strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5))
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 6, y: 3)
-        }
-    }
-}
-
-private struct SettingsProxyDashedLine: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        }
-    }
-}
-
-/// Decorative route flow follows the dashed path; actual tests run faster.
-/// Two compositor layers share a clock; no per-frame settings updates or polling.
-private struct SettingsProxyFlow: NSViewRepresentable {
-    let isActive: Bool
-    let isTesting: Bool
-    let segment: Int
-    let reduceMotion: Bool
-
-    func makeNSView(context: Context) -> FlowView { FlowView(frame: .zero) }
-    func updateNSView(_ nsView: FlowView, context: Context) {
-        nsView.configure(enabled: isActive && !reduceMotion, isTesting: isTesting, segment: segment)
-    }
-    static func dismantleNSView(_ nsView: FlowView, coordinator: ()) {
-        nsView.configure(enabled: false, isTesting: false, segment: 0)
-    }
-
-    final class FlowView: NSView {
-        private let packet = CAGradientLayer()
-        private var enabled = false
-        private var duration: CFTimeInterval = 2.4
-        private var segment = 0
-        private var renderedSize = CGSize.zero
-        private static let animationKey = "settings.proxy.flow"
-
-        override init(frame: NSRect) {
-            super.init(frame: frame)
-            wantsLayer = true
-            layer?.masksToBounds = true
-            packet.colors = [NSColor.white.withAlphaComponent(0).cgColor,
-                             NSColor.white.cgColor, NSColor.white.withAlphaComponent(0).cgColor]
-            packet.startPoint = CGPoint(x: 0, y: 0.5)
-            packet.endPoint = CGPoint(x: 1, y: 0.5)
-            packet.cornerRadius = 1.25
-            packet.shadowColor = NSColor.white.cgColor
-            packet.shadowOpacity = 0.6
-            packet.shadowRadius = 2
-            packet.shadowOffset = .zero
-            packet.isHidden = true
-            layer?.addSublayer(packet)
-        }
-        required init?(coder: NSCoder) { nil }
-        deinit { NotificationCenter.default.removeObserver(self) }
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            NotificationCenter.default.removeObserver(self)
-            if let window {
-                for name in [NSWindow.didChangeOcclusionStateNotification,
-                             NSWindow.didMiniaturizeNotification,
-                             NSWindow.didDeminiaturizeNotification] {
-                    NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged),
-                                                           name: name, object: window)
-                }
-            }
-            updateAnimation()
-        }
-
-        @objc private func visibilityChanged(_ notification: Notification) { updateAnimation() }
-
-        func configure(enabled: Bool, isTesting: Bool, segment: Int) {
-            let nextDuration = isTesting ? 1.2 : 2.4
-            if duration != nextDuration || self.segment != segment {
-                duration = nextDuration
-                self.segment = segment
-                packet.removeAnimation(forKey: Self.animationKey)
-            }
-            self.enabled = enabled
-            updateAnimation()
-        }
-
-        override func layout() {
-            super.layout()
-            if renderedSize != bounds.size {
-                renderedSize = bounds.size
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                packet.bounds = CGRect(x: 0, y: 0, width: 36, height: 2.5)
-                packet.position = CGPoint(x: -18, y: bounds.midY)
-                CATransaction.commit()
-                packet.removeAnimation(forKey: Self.animationKey)
-            }
-            updateAnimation()
-        }
-
-        private func updateAnimation() {
-            let playing = enabled && window?.occlusionState.contains(.visible) == true
-                && window?.isMiniaturized == false && !isHiddenOrHasHiddenAncestor
-                && bounds.width > 0 && bounds.height > 0
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            packet.isHidden = !playing
-            CATransaction.commit()
-            guard playing else {
-                packet.removeAnimation(forKey: Self.animationKey)
-                return
-            }
-            guard packet.animation(forKey: Self.animationKey) == nil else { return }
-            let motion = CAKeyframeAnimation(keyPath: "position.x")
-            motion.values = [-18, bounds.width + 18, bounds.width + 18]
-            motion.keyTimes = [0, 0.45, 1]
-            let fade = CAKeyframeAnimation(keyPath: "opacity")
-            fade.values = [0, 1, 1, 0, 0]
-            fade.keyTimes = [0, 0.06, 0.38, 0.45, 1]
-            motion.duration = duration
-            fade.duration = duration
-            let sequence = CAAnimationGroup()
-            sequence.animations = [motion, fade]
-            sequence.duration = duration
-            sequence.repeatCount = .infinity
-            // A shared media-time origin keeps the left/right links sequential.
-            sequence.beginTime = 1
-            sequence.timeOffset = Double(segment) * duration / 2
-            packet.add(sequence, forKey: Self.animationKey)
-        }
-    }
-}
-
 private struct NativeSettingsSidebarSurface: ViewModifier {
     let fallbackCornerRadius: CGFloat
 
@@ -2136,10 +1855,22 @@ private struct CodexActivityTimingControl: View {
     }
 }
 
+private struct SettingsDetailIcon: View {
+    let symbol: String
+
+    var body: some View {
+        SettingsSidebarIcon(
+            symbol: symbol,
+            color: Color(nsColor: .systemGray),
+            size: SettingsLayoutMetrics.iconSize
+        )
+    }
+}
+
 private struct SettingsSidebarIcon: View {
     let symbol: String
     let color: Color
-    // 22 pt is the sidebar/row size; inset and radius keep the same proportions at any size.
+    // Sidebar and row icons share a 20 pt footprint; other sizes retain these proportions.
     var size: CGFloat = 20
     @Environment(\.colorSchemeContrast) private var contrast
 
@@ -2170,31 +1901,63 @@ private struct SettingsSidebarIcon: View {
     }
 }
 
-// Native menus with the reference's plain value and circular chevrons.
-private struct SettingsValueMenu<Selection: Hashable>: View {
+// A pop-up selection control lets AppKit position and highlight the selected item.
+private struct SettingsValueMenu<Selection: Hashable>: NSViewRepresentable {
     let title: String
     @Binding var selection: Selection
     let options: [(Selection, String)]
-    var body: some View {
-        Menu {
-            ForEach(Array(options.enumerated()), id: \.offset) { item in
-                Button { selection = item.element.0 } label: {
-                    if selection == item.element.0 { Label(item.element.1, systemImage: "checkmark") }
-                    else { Text(item.element.1) }
-                }
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeCoordinator() -> Coordinator { Coordinator(selection: $selection, options: options) }
+
+    func makeNSView(context: Context) -> NSPopUpButton {
+        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.isBordered = false
+        button.controlSize = .small
+        button.font = .systemFont(ofSize: 13)
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.selectItem(_:))
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return button
+    }
+
+    func updateNSView(_ button: NSPopUpButton, context: Context) {
+        context.coordinator.selection = $selection
+        context.coordinator.options = options
+        let titles = options.map { $0.1 }
+        if button.itemTitles != titles {
+            button.removeAllItems()
+            // Add individual items so distinct values may share a localized label.
+            for title in titles {
+                button.menu?.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: ""))
             }
-        } label: {
-            HStack(spacing: 12) {
-                Text(options.first { $0.0 == selection }?.1 ?? "—")
-                    .font(.system(size: 14, weight: .medium)).lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(Color.primary.opacity(0.06), in: Circle())
-            }.frame(minHeight: 28)
-        }.menuIndicator(.hidden).buttonStyle(.plain)
-            .fixedSize(horizontal: true, vertical: true)
-            .accessibilityLabel(title).accessibilityValue(options.first { $0.0 == selection }?.1 ?? "—")
+        }
+        button.selectItem(at: options.firstIndex { $0.0 == selection } ?? -1)
+        button.isEnabled = isEnabled && !options.isEmpty
+        button.setAccessibilityLabel(title)
+        button.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSPopUpButton, context: Context) -> CGSize? {
+        let size = nsView.intrinsicContentSize
+        return CGSize(width: size.width, height: max(24, size.height))
+    }
+
+    final class Coordinator: NSObject {
+        var selection: Binding<Selection>
+        var options: [(Selection, String)]
+
+        init(selection: Binding<Selection>, options: [(Selection, String)]) {
+            self.selection = selection
+            self.options = options
+        }
+
+        @objc func selectItem(_ sender: NSPopUpButton) {
+            let index = sender.indexOfSelectedItem
+            guard options.indices.contains(index) else { return }
+            selection.wrappedValue = options[index].0
+        }
     }
 }
 
@@ -2244,18 +2007,18 @@ private struct SettingsQuitRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.foregroundStyle(Color(nsColor: .systemRed))
             .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .fill(Color(nsColor: .systemRed).opacity(0.06))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                             .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovered ? 0.06 : 0))
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
             }
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }.onDisappear { hovered = false }
     }
@@ -2269,14 +2032,14 @@ private struct SettingsFeedbackRowStyle: ButtonStyle {
         configuration.label
             .foregroundStyle(.primary)
             .background(Color(nsColor: .controlBackgroundColor),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        in: RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .fill(Color.primary.opacity(configuration.isPressed ? 0.10 : hovered ? 0.05 : 0))
                     .allowsHitTesting(false)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
                     .allowsHitTesting(false)
             }
@@ -2366,8 +2129,8 @@ struct NativeSettingsConnectionDetails<Content: View>: View {
             Text(copy.text("连接详情", "Connection Details"))
                 .font(.body.weight(.medium))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 
@@ -2386,13 +2149,13 @@ struct NativeSettingsCard<Content: View>: View {
         .background(
             Color(nsColor: .controlBackgroundColor),
             in: RoundedRectangle(
-                cornerRadius: 14,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
         )
         .overlay {
             RoundedRectangle(
-                cornerRadius: 14,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
             .strokeBorder(
@@ -2402,7 +2165,7 @@ struct NativeSettingsCard<Content: View>: View {
         }
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 14,
+                cornerRadius: SettingsLayoutMetrics.cardCornerRadius,
                 style: .continuous
             )
         )
@@ -2413,7 +2176,6 @@ struct NativeSettingsRow<Control: View>: View {
     let title: String
     let subtitle: String?
     let symbol: String?
-    let symbolColor: Color
     let horizontalPadding: CGFloat
     let control: Control
 
@@ -2421,14 +2183,12 @@ struct NativeSettingsRow<Control: View>: View {
         title: String,
         subtitle: String? = nil,
         symbol: String? = nil,
-        symbolColor: Color = Color(nsColor: .systemGray),
-        horizontalPadding: CGFloat = 12,
+        horizontalPadding: CGFloat = SettingsLayoutMetrics.cardInset,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
         self.subtitle = subtitle
         self.symbol = symbol
-        self.symbolColor = symbolColor
         self.horizontalPadding = horizontalPadding
         self.control = control()
     }
@@ -2437,7 +2197,7 @@ struct NativeSettingsRow<Control: View>: View {
         HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .center, spacing: NativeSettingsDivider.iconGap) {
             if let symbol {
-                SettingsSidebarIcon(symbol: symbol, color: symbolColor)
+                SettingsDetailIcon(symbol: symbol)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -2458,8 +2218,9 @@ struct NativeSettingsRow<Control: View>: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, horizontalPadding)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .padding(.vertical, SettingsLayoutMetrics.rowVerticalInset)
+        .frame(maxWidth: .infinity, minHeight: subtitle == nil
+            ? SettingsLayoutMetrics.rowMinHeight : SettingsLayoutMetrics.describedRowMinHeight)
         .contentShape(Rectangle())
     }
 }
@@ -2494,10 +2255,10 @@ struct NativeSettingsSegmentedPicker<
 }
 
 struct NativeSettingsDivider: View {
-    static let iconGap: CGFloat = 8
-    // Row padding + 20 pt icon + gap: the divider starts under the row title.
-    static let iconLeading: CGFloat = 12 + 20 + iconGap
-    var leading: CGFloat = 12
+    static let iconGap = SettingsLayoutMetrics.iconGap
+    // Keep separators aligned with the text column.
+    static let iconLeading = SettingsLayoutMetrics.cardInset + SettingsLayoutMetrics.iconSize + iconGap
+    var leading: CGFloat = SettingsLayoutMetrics.cardInset
     var body: some View {
         Divider()
             .padding(.leading, leading)
@@ -2506,7 +2267,7 @@ struct NativeSettingsDivider: View {
 
 struct NativeSettingsNote: View {
     let text: String
-    var horizontalPadding: CGFloat = 18
+    var horizontalPadding: CGFloat = 12
 
     var body: some View {
         Text(text)
@@ -2514,7 +2275,7 @@ struct NativeSettingsNote: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 13)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

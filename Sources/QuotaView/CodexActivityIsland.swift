@@ -4002,6 +4002,7 @@ final class IslandQuantumProgressHost: NSView {
     var glowFrameInWindow: CGRect { glow.convert(glow.bounds, to: nil) }
     var isRendering: Bool { effect.isRendererAvailable && !effect.isPaused }
     var effectAvailable: Bool { effect.isRendererAvailable }
+    var effectIsHidden: Bool { effect.isHidden }
     var progressPosition: Float? { effect.displayedProgressPosition }
     var confirmationPulse: CAAnimationGroup? { effect.layer?.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
     var completionPulse: CAAnimationGroup? { glow.islandPulse }
@@ -4073,8 +4074,9 @@ final class IslandQuantumProgressHost: NSView {
         let visible = requestedVisible && window != nil
         guard let renderState else { return }
         let confirming = renderState.visualState == .awaitingConfirmation
-        effect.isHidden = confirming
-        effect.setPlaybackEnabled(visible && !confirming)
+        // Waiting keeps the selected progress effect at its current position.
+        // Confirmation emphasis is an independent outline/glow, not a replacement.
+        effect.setPlaybackEnabled(visible)
         IslandConfirmationPulse.update(effect.layer, animated: false)
         let emphasis: CodexActivityIslandEdgeEmphasis = confirming ? .confirmationReminder : CodexActivityIslandConfirmationReminderContract.edgeEmphasis(
             visualState: renderState.visualState,

@@ -9,7 +9,7 @@
 
 ## 当前最新版本
 
-> macOS 稳定版 **0.8.3 Build 1**（保留 GitHub Latest）；Windows 稳定版 **0.8.3-win**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.8.6 Build 21**（GitHub Latest）；Windows 稳定版 **0.8.3-win**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
 
 ### Windows 0.8.3-win（首个正式版）
 
@@ -33,9 +33,63 @@
 
 首版包含顶部纯色灵动岛与胶囊、悬停展开、任务归档、AI 球与量子噪点、用量统计及兼容客户端的审批和问题回复。受系统能力与软件架构差异影响，它是在 macOS 版基础上的功能降级适配，后续继续完善；不包含桌面小组件或原生液态玻璃。
 
-README 中英文已增加上线通知和平台下载入口；原有 31 个 macOS Release 的名称添加 `· macOS`，不修改其 tag、资产、说明、预发布状态或 Latest。macOS feed 保持下表原字节。Windows 当前没有更早的正式更新包；旧预览版首次手动安装，之后使用独立通道。真实升级体验由用户验收；辅助进程退出/重启的可选实机实验未执行，不能将文件回滚测试记为完整实机升级验收。
+README 中英文已增加上线通知和平台下载入口；原有 31 个 macOS Release 的名称添加 `· macOS`，不修改其 tag、资产、说明、预发布状态或 Latest。该次 Windows 发布时 macOS feed 保持原字节；后续 macOS 发布见下节。Windows 当前没有更早的正式更新包；旧预览版首次手动安装，之后使用独立通道。真实升级体验由用户验收；辅助进程退出/重启的可选实机实验未执行，不能将文件回滚测试记为完整实机升级验收。
 
-### macOS 0.8.3 Build 1
+### macOS 0.8.6 Build 21
+
+2026-10-30 按用户授权发布；README 保持原样，Release 使用简短英文说明。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.8.6 / Build 21 / 内部 102` |
+| Tag / 发布提交 | `v0.8.6-build.21` / `3b737073d8a33b8362448d497141772629c3d989`；[PR #115](https://github.com/Duoasa/QuotaView/pull/115)；源码 `912b52c31bfa89152ed0667931a9e25308cd2d1f` |
+| GitHub Release | [QuotaView 0.8.6 Build 21 · macOS](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.6-build.21)，Stable / Latest，非 Draft / Pre-release |
+| 资产 | `QuotaView-v0.8.6-build.21.zip`，24,990,894 bytes；资产 ID `690852005` |
+| SHA-256 | `d3d8a12d7e70e490459adbb81bd3d3a98c62509a968a005e4c072833bf473176` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`74238fe4-0c29-428c-8aff-b4ad14555b50` |
+| 产物验证 | 240 个冻结输入与源提交、合并提交一致；签名、Gatekeeper、13 项资源、解压启动 15 秒及动态库路径通过；公开 ZIP 与本地包逐字节一致，内置公钥验证 EdDSA |
+| 本地 / CI | 727 项测试，6 跳过，0 失败；44 项契约通过；[PR CI 40999575332](https://github.com/Duoasa/QuotaView/actions/runs/40999575332)、[main CI 41000054090](https://github.com/Duoasa/QuotaView/actions/runs/41000054090) 成功 |
+| appcast | `https://duoasa.github.io/QuotaView/appcast.xml`；gh-pages `7d0f802e64f032276766cfaa8e9e4f4101d1a8e5`，Pages 41000449171；序列 102 / 81 / 75，保留项下载 URL、长度及签名不变 |
+| Feed SHA-256 | `8357ec966156adde854cdf67d178e9aa98358c789119dbe0cd8383022f23ddd7`；线上字节及内置公钥验签通过，旧版下一更新为内部 102 |
+| EdDSA | `wtcd9LIGUmINHNL5og4jx1piR0YaopGus3I92ri/7vf4iwiMfWLd5ThMUN5tWppaqQHrpCCc495SFTy/WHXcDQ==` |
+| 回滚 | [v0.8.5-build.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1) / `9982a8d8b15258fb08f4eb33743f718c0b00e749`；公开 ZIP 再次回下载核对，旧 tag 与资产保留 |
+
+本版包含紧凑设置、恢复上下材质选择、无交通灯的分组公告窗口及待确认卡片特效；修复 Codex 记录归档或删除后缓存元数据引发的目录不可读误报。公告在内部 102 首次启动时展示，关闭后不重复，设置入口保留；第二个公告版本尚未指定。自动检查更新默认 true，周期 24 小时；已有用户偏好优先，下载和安装仍需用户操作。
+
+公开 README、Windows 通道和 `/Applications/QuotaView.app` 未修改。开发包已更新 Build 21，无临时预览参数。没有消耗真实重置卡，视觉及真实升级体验由用户验收。证据 `dist/verification/0.8.6-build21-release/`。Build 20 仅为本地候选，未公开发布。
+
+## 0.8.5 Build 1（上一 macOS 稳定版）
+
+> 历史发布事实，现为 0.8.6 Build 21 的回滚基线。
+
+2026-10-27 按用户精确版本授权发布。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.8.5 / Build 1 / 内部 81` |
+| Tag / 发布提交 | `v0.8.5-build.1` / `9982a8d8b15258fb08f4eb33743f718c0b00e749`；[PR #105](https://github.com/Duoasa/QuotaView/pull/105)；源码 `61bc55934fd4d236744ede5574b7a055634e4c41` |
+| GitHub Release | [QuotaView 0.8.5 Build 1 · macOS](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.5-build.1)，Stable / Latest，非 Draft / Pre-release |
+| 资产 | `QuotaView-v0.8.5-build.1.zip`，24,992,165 bytes；资产 ID `680242815` |
+| SHA-256 | `7215c998fa47ee0d05bd1ceecdfc1da8c70a32e83452b49e09cf20495deadbe9` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`85895903-dd5d-4d3f-9689-22b671cf0645` |
+| 产物验证 | 247 个冻结输入与源提交、合并提交一致；签名、Gatekeeper、13 项资源、解压启动 15 秒及动态库路径通过；公开 ZIP 与本地包逐字节一致，EdDSA 用内置公钥验证 |
+| 本地 / CI | 722 项测试，6 跳过，0 失败；审批契约 44 项通过；[PR CI 40439931859](https://github.com/Duoasa/QuotaView/actions/runs/40439931859)、[main CI 40440521622](https://github.com/Duoasa/QuotaView/actions/runs/40440521622) 均成功 |
+| appcast | `https://duoasa.github.io/QuotaView/appcast.xml`；gh-pages `477fe192bcfe71cf4677e295683943ed4b531357`，Pages 40441006524；序列 81 / 75 / 66，保留项下载 URL、长度及签名不变 |
+| Feed SHA-256 | `e1dd4fa9c543b7380733b206e8d29655b1eacc6790e04967e5d170ca26f841f5`；线上字节及内置公钥签名验证通过，旧版内部序号 66、75、80 的下一更新为 81 |
+| EdDSA | `FZF+cvauRIvH48/U9cvQJR8o/rToaawTdJqW2nlHVexe8TMry/OzoUceZz+YJZS2a7s+bcv7crEkztb7LV1eAw==` |
+| 回滚 | [v0.8.3-build.1](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-build.1) / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`；旧版公开 ZIP 已再次回下载核对，旧 tag 与资产保留 |
+
+本版将灵动岛 Codex 重置接入官方本地 App Server：先检查具体重置卡，经人工确认再核对账户/卡片并提交；幂等操作记录持久化，未知结果须人工重试原操作，不自动消费另一张卡，结果后刷新真实额度。Claude 保留复制 `/limit-reset`，旧菜单演示入口保持原行为。包含重置说明深色玻璃、额度行对齐、操作区深浅适配及设置任务特效前移。中英文 README 与英文 Release Notes 已同步；Windows 独立版本和更新通道未修改。
+
+所有消费路径使用隔离模拟服务和明确的假进程验证，未消耗用户真实重置卡。真实扣卡端到端、视觉及交互由用户验收；未把自动化结果扩大为跨设备、Intel 实机或完整辅助功能验收。0.8.5 开发版已启动，`/Applications/QuotaView.app` 保持 0.8.3 Build 1 / 内部 75。证据 `dist/verification/0.8.5-build1-release/`。
+
+## 0.8.3 Build 1（上一 macOS 稳定版）
+
+> 历史发布事实，现为 0.8.5 Build 1 的回滚基线。
 
 | 项目 | 当前值 |
 |---|---|

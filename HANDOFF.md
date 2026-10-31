@@ -1,7 +1,5 @@
 # QuotaView 开发交接
 
-公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
-
 ## Windows 设置精简 0.8.3-win.12（2026-10-31）
 
 设置页继续移除常驻说明，以明确标题、控件及连接状态表达用途；详情默认折叠，操作相关提示按需出现。前端与原生开发编译通过，独立开发运行入口切至 win.12；继承上一轮 Issue #114 修复。当前运行路径与验收边界见 [Windows Handoff](Windows/HANDOFF.md)。源码尚未推送，公开版本不变。
@@ -9,6 +7,236 @@
 ## Windows 本地修复 0.8.3-win.11（2026-10-31）
 
 [Issue #114](https://github.com/Duoasa/QuotaView/issues/114) 的通知与完成展开按轮次去重，Codex 重复会话、轮次身份和断线终态回退已修复，兼容旧归档；设置页精简重复说明。24 项定向检查与 8 项原生适配检查通过，独立开发运行包已启动。源码尚未提交或推送，正式版与 appcast 不变；具体运行路径、证据及待用户验收范围见 [Windows Handoff](Windows/HANDOFF.md#本地开发版-083-win112026-10-31)。
+
+公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+## 当前开发：0.8.7 Build 8 / 标签图标尺寸与原色（2026-10-30）
+
+按用户反馈将用量标签圆底缩至 16 pt、标志 11 pt，左内距 4 pt 保持与 24 pt 胶囊左端同心。取消未选中图标降透明度，将玻璃移至独立背景层，图标以原色绘于上层；重置卡保留发行版灰色渐变。规格见[来源图标](docs/design/quotaview-provider-icons.md)。17:21（上海）0.8.7 / Build 8 / 内部 110 Debug arm64 增量构建成功，开发包已更新启动 PID 76809；239 输入、14 资源、完整包/旧包与实际加载路径核对通过，无临时参数，正式安装保持。仅绘制修订，未新增或重复功能测试；diff 检查通过。证据 `.build/provider-capsules-087b8-runtime/`。
+
+用户已授权本轮源码推送与 main 合并；[PR #117](https://github.com/Duoasa/QuotaView/pull/117) 已创建，本批追加修订将更新 PR 后重新核对精确提交的 CI，尚未合并。发布与 appcast 未授权，视觉由用户验收。
+
+## 前序开发：0.8.7 Build 7 / 标签圆底与重置卡恢复（2026-10-30）
+
+用量标签的 Agent 图标改为 18 pt 圆底，24 pt 胶囊的左内距由半径差计算为 3 pt，使两者同心；Codex 白底黑标，Claude 橙底白标。重置卡按用户最新要求逐字节恢复 `v0.8.6-build.21` 灰色渐变原始素材。Build 6 曾临时改为黑标并更新本地包，已由本批覆盖，未单独提交。规格见[来源图标](docs/design/quotaview-provider-icons.md)。
+
+17:16（上海）0.8.7 / Build 7 / 内部 109 Debug arm64 增量编译成功，开发包已更新启动 PID 73983；239 输入、14 资源、完整包/旧包及实际加载路径核对通过，无临时参数。重置素材与稳定 tag 逐字节一致；本批绘制修改未新增/重复功能测试，既有设置行对齐冒烟通过。证据 `.build/provider-capsules-087b7-runtime/`。用户已授权本轮 0.8.7 源码推送 GitHub 并合入 main，正在执行源码审查与集成；此前各批“未提交/推送”保留为阶段事实。发布、appcast 与正式安装不在本轮范围内，视觉由用户验收。
+
+## 前序开发：0.8.7 Build 5 / 退出入口仅文字（2026-10-30）
+
+按用户要求移除退出行图标和占位，保留文字、危险动作样式、行高及确认流程；其他设置图标保持。规格见[退出入口](docs/design/QUOTAVIEW_UI_RULES.md#退出入口仅保留文字2026-10-30087-build-5)。16:16（上海）0.8.7 / Build 5 / 内部 107 Debug arm64 增量构建成功，开发包已更新启动 PID 66649；239 输入、14 资源、完整包/备份和实际加载路径核对通过，正式安装未变。仅移除装饰图标，未新增或重复功能测试；视觉由用户检查。运行证据 `.build/quit-text-087b5-runtime/`。本批仅本地修改，未提交、推送或发布。
+
+## 前序开发：0.8.7 Build 4 / 设置图标圆角底托（2026-10-30）
+
+按用户 macOS 设置参考，子页面功能图标改为灰色圆角矩形底托与白色单色符号，覆盖页标题、设置行、反馈和退出入口。复用侧栏图标组件，保留 20 pt 槽位、原排版与分组间距；官方品牌素材保持。具体规则见[设置图标规范](docs/design/QUOTAVIEW_UI_RULES.md#单色图标保留圆角底托2026-10-30087-build-4)。
+
+16:12（上海）0.8.7 / Build 4 / 内部 106 Debug arm64 增量构建成功，开发运行包已更新启动 PID 65079。239 输入、14 资源、完整包/旧包备份与实际加载路径核对通过，无临时参数，正式安装未变。证据 `.build/settings-icon-tiles-087b4-runtime/`；备份 `.build/runtime-package-backups/settings-icon-tiles-087b4-20261030-161250/QuotaView.app`。仅绘制和退出图标排版调整，未新增或重复运行功能测试；diff 检查通过。本批仅本地修改，未提交、推送或发布；视觉由用户验收。
+
+## 前序开发：0.8.7 Build 3 / 设置排版与单色图标（2026-10-30）
+
+按用户要求统一设置子页面排版：功能图标使用无彩底单色符号，设置框统一宽度、圆角、内距和基础行高；页顶/分组 24、组内 12、标题间距 8，普通/说明行最小高 44/56。玻璃选项标题和内距统一，连接详情框左右对齐。官方品牌标识保持上一批素材。具体边界见[设置规范](docs/design/QUOTAVIEW_UI_RULES.md#子页面单色图标与统一间距2026-10-30087-build-3)。
+
+16:08（上海）0.8.7 / Build 3 / 内部 105 Debug arm64 增量构建成功，开发包已更新启动 PID 62834。239 输入、14 资源、完整包与旧包、实际加载路径核对通过，无临时参数，正式安装保持。既有设置行控件对齐冒烟 1 项通过，0 失败，日志 `layout-smoke.log`。证据 `.build/settings-layout-087b3-runtime/`；备份 `.build/runtime-package-backups/settings-layout-087b3-20261030-160846/QuotaView.app`。视觉与交互由用户验收；本批仅本地修改，未提交、推送或发布。
+
+## 前序开发：0.8.7 Build 2 / 官方来源图标（2026-10-30）
+
+按用户修订，Claude 使用官方应用包内橙底白色图标，截图仅作样式参考。任务卡、子任务、连接设置和普通来源图标共用；ChatGPT/Codex 用量与重置卡切换官方应用内 Blossom 矢量路径，现有官方任务应用图标保留。来源、哈希及覆盖范围见[图标规格](docs/design/quotaview-provider-icons.md)。
+
+15:53（上海）0.8.7 / Build 2 / 内部 104 Debug arm64 增量构建成功，开发运行包已更新启动 PID 59363，无临时参数。239 输入、14 资源、完整包与旧包备份、实际加载路径核对通过；四项 AppKit 资源解码冒烟及官方路径/PNG 一致性检查通过。证据 `.build/provider-icons-087b2/` 和 `.build/provider-icons-087b2-runtime/`；备份 `.build/runtime-package-backups/provider-icons-087b2-20261030-155346/QuotaView.app`。正式安装保持，视觉由用户验收，未新增/运行完整功能测试或 UI 自动验收。本批仅本地修改，未提交、推送或发布；0.8.7 未获 appcast 准入。
+
+## 前序开发：0.8.7 Build 1（2026-10-30）
+
+按用户「开始 0.8.7 版本的开发」初始化本地开发迭代。App、Widget 与兼容 Info.plist 已同步为 0.8.7 / Build 1 / 内部 103，开发 Bundle ID 与数据身份保持；功能沿用 0.8.6 Build 21，具体功能范围尚未指定，暂无新增功能规格。
+
+基于当前工作区 `fbcc8da` 开始；该提交相对稳定 tag 仅补充发布记录和规格。保留现有分支 `codex/0.8.6-announcement-settings` 与未跟踪文件，本轮未提交或推送。当前周期稳定回滚基线为 `v0.8.6-build.21` / `3b737073d8a33b8362448d497141772629c3d989`，完整发布资产事实见[版本历史](VERSION_HISTORY.md#当前最新版本)。0.8.7 未获发布或 appcast 准入；公告名单继续仅包含已发布内部 102，未将 103 加入自动展示名单。
+
+15:45（上海）Debug arm64 增量构建成功，开发运行包已更新并启动 PID 52763，无临时预览参数。237 项输入、13 项资源、完整包与旧包备份、实际加载路径核对通过，正式安装身份及主程序哈希未变；旧包位于 `.build/runtime-package-backups/development-087b1-20261030-154509/QuotaView.app`。仅版本配置调整，未新增或运行功能测试，未执行视觉/交互验收。证据目录 `.build/development-087b1-runtime/`。
+
+## 最近公开发布：0.8.6 Build 21（2026-10-30）
+
+用户授权的 0.8.6 发布完成：源码经 [PR #115](https://github.com/Duoasa/QuotaView/pull/115) 合入 main `3b737073d8a33b8362448d497141772629c3d989`，PR/main CI 成功；Universal 签名、公证/Staple、Gatekeeper、解压启动、公开 ZIP 回下载和签名 appcast 线上验证通过。GitHub Stable/Latest 与应用内更新目标均为 Build 21 / 内部 102。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚 `v0.8.5-build.1`，发布规格见 [0.8.6](docs/specs/release-0.8.6.md)。README 未改，Release 说明简短，正式安装和 Windows 通道不变。
+
+修复 Codex 记录归档/删除后的缓存误报；公告启用本次正式内部 102，首次启动展示一次并保留设置查看入口，第二个公告版本未指定。默认自动检查更新 true，尊重已有偏好。727 项本地测试（6 跳过、0 失败）和 44 项契约通过，没有消费真实重置卡。视觉与真实升级体验由用户验收。
+
+Build 21 开发包已更新启动 PID 2846；237 输入、完整包及实际加载路径核对通过，无临时预览参数。运行证据 `.build/release-086b21-runtime/`，发布证据 `dist/verification/0.8.6-build21-release/`。Build 20 曾完成本地签名验证，但因正式公告开关遗漏而顺延 Build 21，前者未公开。
+
+## 前序开发：0.8.6 Build 19 / 恢复设置默认宽度（2026-10-29）
+
+2026-10-30：用户原要求打包发布 0.8.6、默认开启更新检查并发布 Release/appcast、README 不动；随后明确「先暂停，检查一下这个问题」，因此发布暂停，尚未打包或发布。检查发现本地记录归档后的读取健康误报：`CodexLocalRolloutDiscovery.discoveredFiles` 保留带有旧 resourceValues 的 URL，已移走的 JSONL 仍通过 regular-file 判断，再被 `isReadableFile` 判成读取失败；`recheck()` 只重置枚举器，无法清除该缓存。隔离夹具从两个文件移走一个后，剩余候选为 1 但连续三次 `readFailed=true`，重新检查后仍为 true。本机现存 58 个 rollout 全部可读取，日志仍有 localRollout 活动。证据 `.build/codex-directory-diagnosis-20261030/result.json` 与同目录 `discovery-probe.swift`。本轮仅诊断，未改生产源码或重启运行包；修复及验证未完成，恢复发布需用户继续指令。
+
+2026-10-29 15:41（上海）[PR #113](https://github.com/Duoasa/QuotaView/pull/113) 已合并 main，源码 `71f5e4f90e29f200f1458d014a3a29571d1ffff9`，合并 `691eed672fd6b1d4e9827740e87a3350a781b09c`。[PR CI 40836619344](https://github.com/Duoasa/QuotaView/actions/runs/40836619344) 与 [main CI 40837017488](https://github.com/Duoasa/QuotaView/actions/runs/40837017488) 均成功，各 726 项测试、6 跳过、0 失败及 44 项契约检查。当前 Build 19 运行包的 237 输入与源码/合并提交逐项一致，无需重建。证据 `.build/source-integration-086b19/source-proof.json`。未创建 Release、标签、安装包或 appcast 更新；正式安装未变。合并后的交付结果补记保留本地，GitHub PR 描述同步最终 CI 事实。
+
+用户已接受当前公告与设置修改，并明确授权本轮源码推送 GitHub、合并 main，先不发布。提交包含 Build 16–19 的通用公告、紧凑元素、恢复材质双选项及设置原宽度；保留开发身份与正式公告空名单。本轮 PR / main CI 与合并均已完成，见下方记录；此授权不包含 Release、标签、appcast 或正式安装替换。
+
+按用户要求恢复设置默认 780 × 680、最小 740 × 560、内容最大宽 560。仅回调窗口/内容宽度，保留 Build 18 的紧凑图标、字体、行高、原生控件及玻璃/纯色上下双选项，公告保持无交通灯的 460 × 580。规范见[恢复原默认宽度](docs/design/QUOTAVIEW_UI_RULES.md#恢复原默认宽度2026-10-29086-build-19)。
+
+15:32（上海）0.8.6 / Build 19 / 内部 100 Debug arm64 增量构建成功，开发运行包已更新启动 PID 98311，无公告预览参数。237 输入、13 资产、完整包/旧包及实际加载路径核对通过；证据 `.build/settings-width-restore-086b19-runtime/`，备份 `.build/runtime-package-backups/settings-width-restore-086b19-20261029-153244/QuotaView.app`。尺寸常量修订未新增或重复运行测试，diff 检查通过，视觉由用户检查。未提交、推送、发布或改动正式安装。
+
+## 前序开发：0.8.6 Build 18 / 公告与设置尺寸对齐参考（2026-10-29）
+
+用户提供 VibeIsland 同屏截图，要求公告/设置元素尺寸参考其调整，材质恢复发行版上下双选项，并明确公告不要红绿灯。公告为 460 × 580，顶部图标/标题 64/18 pt、分类图标/标题 20/13 pt、正文 12 pt；收紧卡片留白，隐藏三颗系统按钮，底部「好」、回车和 Escape 保持关闭。设置默认宽 620、内容宽 400、页标题 16、设置行最小高 36、下拉字体 13，使用原生紧凑开关；侧栏去掉重复「设置」标题。玻璃/纯色恢复 `v0.8.5-build.1` 上下选项、原中英文说明和右侧单选标记，原偏好绑定保持。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#参考对照图调整元素尺寸2026-10-29086-build-18)和[公告规格](docs/specs/brand-announcement.md)。
+
+15:29（上海）0.8.6 / Build 18 / 内部 99 Debug arm64 增量构建通过；开发包最终更新启动 PID 95905，携带公告预览参数。237 输入、13 资产、完整包/旧包与实际加载路径核对通过；最终证据 `.build/settings-announcement-density-086b18-final/`，备份 `.build/runtime-package-backups/settings-announcement-density-086b18-20261029-152859/QuotaView.app`。已有设置行尾部控件布局冒烟 1 项通过（`.build/settings-announcement-density-086b18-runtime/layout-smoke.log`）；未新增测试、截图或执行 UI 自动验收，实际效果由用户检查。本批仅本地编辑，未推送、发布、修改正式安装或 appcast。
+
+## 前序开发：0.8.6 Build 17 / 紧凑更新与公告（2026-10-29）
+
+用户要求参考 VibeIsland 更新弹窗，原品牌公告扩展为通用信息窗口。内容模型支持亮点、新功能、改进、公告、提醒以及可选版本信息；分类卡片可独立折叠，正文滚动，关闭按钮固定。设置入口更名为「关于 → 更新与公告」。保留按活动和内部版本记录已读的策略，正式发布名单为空；当前内容随包提供，不接入网络公告或系统通知。规格见[更新与公告](docs/specs/brand-announcement.md)。
+
+Build 16 初版 580 × 780 已构建运行；用户反馈尺寸太大，Build 17 将默认窗口缩为 460 × 620，图标 72 pt、标题 20 pt，减少顶部及底栏留白，正文保持 13 pt。可调整大小，最小 400 × 360。实际观感继续由用户检查。
+
+15:20（上海）0.8.6 / Build 17 / 内部 98 Debug arm64 增量构建通过，开发运行包更新启动 PID 91652，携带 `--preview-brand-announcement` 供查看；预览不写入正式已读记录。237 输入、13 资产、完整包/备份及实际加载路径核对一致。证据 `.build/announcement-compact-086b17-runtime/`；旧包 `.build/runtime-package-backups/announcement-compact-086b17-20261029-151959/QuotaView.app`。Build 16 三项已有公告策略冒烟通过，日志 `.build/announcement-center-086b16-runtime/policy-smoke.log`；Build 17 仅尺寸、间距与版本配置改变，未重复策略测试或进行 UI 自动验收。修改仅本地，未提交、推送、发布，正式安装不变。
+
+## 前序开发：0.8.6 Build 15 / 再次移除代理可视化（2026-10-29）
+
+用户认为没有理想方案，要求去掉可视化。已移除网络代理壁纸区域、节点、路径、蓝色选中框与动效，以及专用源码/测试和工程引用；SettingsView.swift 与工程文件逐字节恢复至已合入 main 的 Build 12 基线，实际代理配置与测试功能保留。Build 13–14 方案作废，详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#网络代理仅保留设置2026-10-29086-build-15)。删除前两份专用文件保存在忽略目录 `.build/proxy-visual-removal-086b15/`，供本地历史回查，不参与构建。
+
+14:28（上海）0.8.6 / Build 15 / 内部 96 Debug arm64 增量构建通过，开发运行包更新启动 PID 79728，无临时参数；237 输入、13 资产、完整包/备份与实际加载路径核对通过。专用符号在 Sources、Tests、工程文件中零残留，diff 检查通过；未新增测试或主动执行 UI 验收。证据 `.build/proxy-visual-removal-086b15-runtime/`；备份 `.build/runtime-package-backups/proxy-visual-removal-086b15-20261029-142847/QuotaView.app`。本批仅本地修改，未推送或发布，正式安装保持不变。
+
+## 前序开发：0.8.6 Build 14 / 当前通路蓝色选中框（2026-10-29）
+
+用户指出 Build 13 未体现参考中的蓝色节点选中框。已将当前通路改为蓝色细实线、浅蓝沿线流光，并补上参与当前通路节点的蓝色轮廓；QuotaView 描边跟随原始图标圆角，无额外填充底板，代理/云端使用无填充圆角六边形。代理关闭时其选中框隐藏。保持路由草稿、真实测试状态、停播规则和公开版背景。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#当前通路蓝色描边2026-10-29086-build-14)。
+
+14:05（上海）0.8.6 / Build 14 / 内部 95 Debug arm64 增量编译通过，开发包更新启动 PID 73692，无临时参数；238 输入、13 资产、完整包/备份及加载路径核对通过。证据 `.build/proxy-route-blue-086b14-runtime/`；备份 `.build/runtime-package-backups/proxy-route-blue-086b14-20261029-140557/QuotaView.app`。本批为绘制修订，未新增或重复运行状态测试，实际样式由用户验收。未推送或发布，正式安装保持不变。
+
+## 前序开发：0.8.6 Build 13 / 代理路径动效（2026-10-29）
+
+用户要求参考 Dribbble 网络路径表达，在实际开发版直接实现动效。恢复公开版壁纸视口，原始 App Icon 无额外底托；直连/代理两条细线拓扑，圆角折线经过代理节点，草稿切换时绘入当前高亮路线，短线段沿线移动。无额外说明文字，状态用节点符号表达；只消费既有草稿和真实测试状态，不发起请求或保存偏好。未测试不显示成功；错误/无效状态停流，减少动态和不可见时停止。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#代理路径动效2026-10-29086-build-13)。
+
+13:52（上海）0.8.6 / Build 13 / 内部 94 Debug arm64 增量编译通过，开发运行包更新启动 PID 70953，无临时参数；238 输入、13 资产、完整包/备份和实际加载路径核对通过。三个状态与离窗冒烟测试通过，未执行 UI 自动化或真实代理连接测试，实际动效由用户查看。证据 `.build/proxy-route-motion-086b13/smoke.log` 与 `.build/proxy-route-motion-086b13-runtime/`；备份 `.build/runtime-package-backups/proxy-route-motion-086b13-20261029-135230/QuotaView.app`。本次仅本地修改，未沿用前批推送授权，未发布或修改 appcast，正式安装保持不变。
+
+## 前序开发：0.8.6 Build 12 / 移除代理可视化（2026-10-29）
+
+用户已授权将 Build 10–12 的公告预览、原生设置下拉和代理可视化移除推送 GitHub 并合并 main；不发布 Release。[PR #112](https://github.com/Duoasa/QuotaView/pull/112) 已于 2026-10-29 11:50（上海）合并，源码 `f579a8da34a62195fb5604ee7a45dda5d4c86b70`、合并 `e635bc2e8de4108af2089ac8999873a7002c6d22`。PR CI [40813874636](https://github.com/Duoasa/QuotaView/actions/runs/40813874636) 成功：726 项测试、6 跳过、0 失败，另 44 项契约检查通过；精确 main CI [40814390673](https://github.com/Duoasa/QuotaView/actions/runs/40814390673) 也已成功（726 项测试、6 跳过、0 失败，44 项契约检查通过）。237 项运行包输入与源码及合并提交完全一致，证据 `.build/source-integration-086b12/`。新的代理可视化只生成三张独立设计图，按显示顺序编号 1/2/3，待用户选择后实施；对应原图路径与第三张已告知的文字错误见该证据目录 `design-options.json`。
+
+用户要求去掉网络代理可视化窗口。已移除顶部壁纸与路由节点、状态摘要及其专用动画/绘制代码；标题下直接显示实际设置，不保留原区域高度。代理配置、保存、测试及错误反馈保持。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12)。
+
+11:29（上海）0.8.6 / Build 12 / 内部 93 Debug arm64 增量构建成功，开发运行包更新并启动 PID 49396，无预览参数；237 输入、13 资产、完整包/备份和加载路径核对通过，代理专用可视化符号扫描零匹配，diff 检查通过。证据 `.build/remove-proxy-visual-086b12-runtime/`；旧包 `.build/runtime-package-backups/remove-proxy-visual-086b12-20261029-112915/QuotaView.app`。本次未新增测试或执行 UI 自动化，布局由用户查看。修改仅本地，未推送或发布，正式安装不变。
+
+## 前序开发：0.8.6 Build 11 / 原生设置下拉选择（2026-10-29）
+
+按用户截图，将设置中的共用普通命令菜单替换为原生 NSPopUpButton，系统提供真实选中项、勾选、高亮和菜单定位；覆盖语言、固定屏幕、停留时间、代理协议。保留真实偏好、动态屏幕列表、禁用状态和中英文。详见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#原生下拉选择2026-10-29086-build-11)。
+
+11:24（上海）0.8.6 / Build 11 / 内部 92 Debug arm64 增量构建成功，开发运行包更新并启动 PID 47103，无预览启动参数；237 输入、13 资产、完整包/备份与实际加载路径核对通过。源码检查覆盖选中项同步、空列表、禁用、动态列表和回调绑定；本次未增加 UI 自动化或重复实现测试，视觉由用户验收。证据 `.build/native-settings-popup-086b11-runtime/`；备份 `.build/runtime-package-backups/native-settings-popup-086b11-20261029-112413/QuotaView.app`。品牌公告代码保留，仍可从设置手动查看；两个正式版本尚未配置。所有本次修改仍为本地未提交，未推送、发布或改动 appcast，正式安装保持原样。
+
+## 前序开发：0.8.6 Build 10 / 品牌升级公告预览（2026-10-29）
+
+用户要求先设计更新后首次启动的公告弹窗，后续两个版本均可展示，暂不发布；已确认先用现有名称和 Logo。已在实际开发应用接入原生 520 × 520 公告窗口，使用 QuotaView 图标、升级预告和“继续使用”按钮；中文/English 同步，支持关闭、Escape 和回车，可由“设置 → 关于 → 品牌升级公告 → 查看”重开。设计待用户验收，详见[公告规格](docs/specs/brand-announcement.md)。
+
+展示策略按活动与内部 Build 分别记录关闭状态，两个指定版本各提示一次；跳过首个版本仍可在第二个版本看到。当前发布 Build 列表为空，正式渠道尚未启用；待设计接受且发布版本确定后填写两个精确序号。开发预览由 Debug + 开发身份 + `--preview-brand-announcement` 开启，不写入正式展示记录。
+
+11:09（上海）0.8.6 / Build 10 / 内部 91 Debug arm64 增量构建成功，开发包更新并启动 PID 43256，携带上述预览参数；237 输入、13 资产、完整包/备份和实际加载路径核对通过。三个展示策略冒烟测试通过，未进行 UI 自动化或视觉验收。证据 `.build/brand-announcement-086b10/policy-smoke.log` 与 `.build/brand-announcement-086b10-runtime/runtime-result.json`；旧包 `.build/runtime-package-backups/brand-announcement-086b10-20261029-110923/QuotaView.app`。本次仅本地开发，未推送、发布、修改 appcast 或替换正式安装。
+
+## 前序开发：0.8.6 Build 9 / 设置说明与信息层级（2026-10-29）
+
+用户已确认本次设置修改可以，并授权源码推送 GitHub、合并 main；明确不发布 Release 包。[PR #111](https://github.com/Duoasa/QuotaView/pull/111) 已于 2026-10-29 10:50（上海）合入 main，源码提交 `e8d2aa4692477274cddf0308b120be42fe5fffc7`，合并提交 `8988528ef2f853338091bc763f39e2321a2df3a8`。PR CI [40808299936](https://github.com/Duoasa/QuotaView/actions/runs/40808299936) 与精确 main CI [40808752752](https://github.com/Duoasa/QuotaView/actions/runs/40808752752) 均成功：723 项测试、6 跳过、0 失败，另 44 项原生问题关闭契约检查通过。当前 Build 9 运行包的 236 项输入与源码提交及 main 合并提交逐项一致；证据 `.build/settings-source-integration-086b9/`。未发布 Release、标签、安装包或 appcast。
+
+按用户要求删除设置页重复说明，用布局表达归属和选择：页头去掉复述、语言合并为单行菜单、材质使用分段控件、Agent 详情紧接所属行缩进展开、Claude 启用/状态只在列表展示、更新按钮不重复标题。移除外观、胶囊、立即生效及关闭模块不占位等冗余说明；代理仅在测试发生或有未保存更改时呈现反馈。保留输入/认证限制、隐私/权限范围、错误与安装确认提示。中英文同步，偏好绑定和实际功能保持。详见[设置规范](docs/design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9)。
+
+10:22（上海）0.8.6 / Build 9 / 内部 90 Debug arm64 增量构建成功，开发运行包更新启动 PID 31625，无临时参数；236 输入、13 资产、完整包/备份和加载路径核对通过。既有分段控件设置行布局冒烟 1 项通过，未新增重复实现测试或 UI 自动化。证据 `.build/settings-copy-cleanup-086b9/` 和 `.build/settings-copy-cleanup-086b9-runtime/`；备份 `.build/runtime-package-backups/settings-copy-cleanup-086b9-20261029-102213/QuotaView.app`。用户已接受本次设置调整；源码已由 PR #111 合入 main，未发布 Release 或 appcast，正式安装未替换。
+
+## 前序开发：0.8.6 Build 8 / 审批特效验收与临时卡清理（2026-10-29）
+
+用户确认“效果没问题了”，接受本次实际灵动岛待批准卡的显示效果，并要求清理临时审批卡和注入。已移除会话显示副本中的模拟卡、Debug 开关/参数读取、选择/归档/审批等模拟回调、自动聚焦和临时 Tooltip；两个修改文件逐字节恢复到预览前生产基线，保留已合入的特效修复和 Build 6 默认自动检查配置。`Sources` 临时标记及符号扫描零匹配。
+
+09:49（上海）0.8.6 / Build 8 / 内部 89 Debug arm64 增量构建成功，开发运行包已更新并启动 PID 27248，无临时启动参数。236 输入、13 资产、完整包/旧包备份和实际加载路径核对通过；App/Widget 版本同步，自动检查默认 true 保留。证据 `.build/approval-card-cleanup-086b8-runtime/`；备份 `.build/runtime-package-backups/approval-card-cleanup-086b8-20261029-094943/QuotaView.app`。仅本地修改，未推送/发布，正式安装未替换。用户验收仅覆盖本次查看的效果，不扩展为所有设备或真实审批协议验收。
+
+## 前序开发：0.8.6 Build 7 / 实际灵动岛临时审批卡（2026-10-29）
+
+用户明确要求在实际运行的灵动岛内查看，拒绝独立预览窗口。已退出独立预览并清理其生成源码副本、构建和 app；开发运行包增加一张 `DEBUG · 临时审批任务卡`，停在 65% awaitingConfirmation，初始聚焦列表并展开，点击进入真实审批页。当前用户设置的特效继续生效。
+
+临时注入只在 `#if DEBUG`、`com.quotaview.development073` 和 `--debug-approval-card` 参数共同满足时启用；只修改会话显示副本，不写生产 Store、真实任务、审批或归档数据。模拟选择/归档/审批/claim/下一个等入口全部隔离，批准与拒绝仅显示模拟反馈，归档可移除此卡。界面、Tooltip 与辅助功能标明 DEBUG。当时按要求保留供用户查看；用户验收后，已由上方 Build 8 移除全部注入、临时 Tooltip 和启动参数。
+
+09:46（上海）0.8.6 / Build 7 / 内部 88 Debug arm64 增量编译成功，更新运行包并启动 PID 25147，确认携带唯一临时参数。236 输入、13 资产、完整包/备份、实际加载路径与独立预览已退出核对通过。证据 `.build/temporary-approval-card-086b7-runtime/`；备份 `.build/runtime-package-backups/temporary-approval-card-086b7-20261029-094658/QuotaView.app`。仅本地，未推送/发布，正式安装未替换，视觉由用户验收。
+
+## 前序开发：0.8.6 Build 6 / 默认自动检查更新（2026-10-29）
+
+用户要求后续 Release 包默认开启自动检查更新。`SUEnableAutomaticChecks` 已改 true，正式打包脚本门禁同步要求 true，更新规格和发布规则已同步；保留 24 小时周期、已保存用户偏好和手动下载安装，开发身份仍禁用更新器。不发布包或 appcast，此追加变更仅本地，未沿用上一批推送授权。
+
+01:35（上海）0.8.6 / Build 6 / 内部 87 Debug arm64 增量构建成功，开发包已更新启动 PID 3178；236 输入、13 资产、完整包/备份与实际加载路径核对通过。产物自动检查 true、自动更新两个开关 false、周期 86400 核对通过，发布脚本语法检查通过。证据 `.build/automatic-update-checks-086b6-runtime/`；备份 `.build/runtime-package-backups/automatic-update-checks-086b6-20261029-013509/QuotaView.app`。正式安装未替换，未做 UI 自动化。
+
+用户随后要求创建审批卡查看效果：已从 Build 6 当前生产源码构建并打开隔离预览 `.build/approval-card-preview-086b6/Approval Card Preview.app`，独立身份 `com.quotaview.confirmation-preview`，初始审批页、65% 待批准，支持任务列表/审批页和三种特效切换。所有模拟按钮仅更新本地预览反馈，不构造生产服务或提交真实审批。此独立预览方案随后被用户拒绝，现已退出并清理生成包/源码副本/构建；由上方 Build 7 实际灵动岛临时卡替代。
+
+## 前序开发：0.8.6 Build 5 / 待确认进度特效（2026-10-29）
+
+用户授权修复待确认/审批聚焦卡特效丢失、推送 GitHub 合并 main，并完成后更新本机开发运行包；明确不发布任何 Release 包或修改 appcast。移除 `IslandQuantumProgressHost` 在 awaitingConfirmation 时隐藏和禁播特效的分支，沿用原进度、等待 Profile、确认边缘呼吸光和可见性/减少动态策略。历史分支由 2026-10-11 `066b397` 引入，0.8.3 至 Build 4 的相关状态映射、审批头卡与渲染器未变，不能断言是最近版本引入。
+
+配置已同步 0.8.6 / Build 5 / 内部 86。宿主回归先复现旧代码 12 个断言失败，修复后四项渲染冒烟与八项审批布局/语义冒烟全部通过；Debug arm64 增量构建成功。证据 `.build/confirmation-progress-086b5/`。截图使用当前生产视图的隔离源码副本，独立身份 `com.quotaview.confirmation-preview`，仅内存模拟，无生产 Store/桥/Hook/真实批准回调，不向生产 Sources 注入。用户最初要求列表/审批页两张截图，随后明确“先不截屏”；截图暂缓，隔离预览未启动，临时预览源码、构建和应用已清理，视觉未验收。
+
+[PR #110](https://github.com/Duoasa/QuotaView/pull/110) 已合入 main，合并提交 `694417d15246bdff6f7fa15590a178141f9ae4df`。PR CI `40734718174` 与精确 main CI [40735725793](https://github.com/Duoasa/QuotaView/actions/runs/40735725793) 均成功：723 项测试、6 跳过、0 失败，另 44 项契约检查通过。
+
+01:32（上海）开发运行包已更新为 0.8.6 / Build 5 / 内部 86 并启动 PID 99025，无预览参数；236 输入、13 资产、完整包/备份及实际加载路径核对通过。证据 `.build/confirmation-progress-086b5-runtime/`；旧包 `.build/runtime-package-backups/confirmation-progress-086b5-20261029-013224/QuotaView.app`。正式安装身份与主可执行文件哈希未改，未发布 Release、安装包或 appcast。
+
+## 前序开发：0.8.6 Build 4 / 图标验收与预览清理（2026-10-28）
+
+用户已授权本次源码推送 GitHub 并合并 main。[PR #109](https://github.com/Duoasa/QuotaView/pull/109) 于 2026-10-28 15:43（上海）合并为 `186961a3c34954540d31a55b22d4b8bd39422741`，源码提交 `c9d88a91dddaa3e5a8e166f6521d49259369cd5d`。PR CI `40651280979` 成功（722 测试、6 跳过、0 失败，44 契约检查通过）；精确 main CI [40651890373](https://github.com/Duoasa/QuotaView/actions/runs/40651890373) 也已成功，Swift tests 与原生问题关闭契约检查均通过。提交和合并后的 236 项输入均与当前开发运行包匹配；证据 `.build/source-push-provider-icons-20261028/`。本次未发布 Release 或 appcast。
+
+用户确认“图标没问题了”，接受 Claude、DSH、Kimi 的圆角矩形真实品牌图标，并要求清理三张虚拟任务卡及临时注入。已移除模拟卡生成、Debug 开关/启动参数读取、临时选择/归档分支和预览 Tooltip 修饰器，保留已验收图标与真实任务流程。`Sources` 中临时注入标记与预览符号扫描无匹配；此次视觉结论仅覆盖用户查看的图标。
+
+15:30（上海）0.8.6 / Build 4 / 内部 85 Debug arm64 增量编译成功，开发运行包已更新并启动 PID 93658，进程未带预览参数。App/Widget 版本同步，236 输入、13 资产、完整运行包/旧包备份及实际加载路径核对通过。证据 `.build/provider-preview-cleanup-086b4-runtime/`，旧包 `.build/runtime-package-backups/provider-preview-cleanup-086b4-20261028-153010/QuotaView.app`。正常运行仅显示真实任务；开发身份和数据保留，正式安装身份与主可执行文件哈希未改，未提交/推送/发布，未做额外 UI 自动化。
+
+## 前序开发：0.8.6 Build 3 / 三来源图标预览（2026-10-28）
+
+Build 2 将 Claude、DSH、Kimi 主任务卡、子任务行及归档按钮品牌展示态统一为圆角矩形真实产品 Logo；复用连接页现有素材，保留 Codex 原图、图标槽位和归档行为。详见[图标规格](docs/design/quotaview-provider-icons.md#task-provider-icons)。15:09 Debug arm64 增量编译完成，0.8.6 / Build 2 / 内部 83 更新启动 PID 88979，证据 `.build/task-provider-icons-086b2-runtime/`。
+
+用户随后要求虚拟另外三个 Agent 的任务卡检查效果。Build 3 / 内部 84 增加仅 Debug、开发 Bundle ID 与 `--debug-provider-cards` 启动参数共同开启的 `DEBUG-ONLY-MOCK` 展示，三张卡置于列表前方；标题、说明、Tooltip 与辅助功能标明 DEBUG。数据仅在进程内，不调用真实任务选择、归档或审批，不修改连接、用户账户、额度和持久化任务。支持归档逐张关闭；正常退出后不带参数重启即停用。当时暂留供用户查看；现已由上方 Build 4 在图标验收后清理。
+
+15:13（上海）Build 3 Debug arm64 增量编译成功，开发包已启动 PID 91323，带上述临时预览参数。App/Widget 版本一致，236 输入无漂移、13 资产、完整包/备份和实际加载路径核对通过；证据 `.build/provider-cards-preview-086b3-runtime/`，旧包 `.build/runtime-package-backups/provider-cards-preview-086b3-20261028-151349/QuotaView.app`。正式安装身份与主可执行文件哈希未改；仅本地修改，未提交/推送/发布或修改 appcast，未做 UI 自动化，视觉由用户检查。
+
+## 前序开发：0.8.6 Build 1（2026-10-28）
+
+按用户要求建立 0.8.6 开发起点，仅同步 App、Widget 配置与兼容 Info.plist 为 0.8.6 / 显示 Build 1 / 内部 82；功能沿用 0.8.5，具体修改等待用户后续指示。保持开发身份 `com.quotaview.development073` 和现有数据，不切换分支。公开稳定版仍为 0.8.5 Build 1；本次未授权发布或 appcast 准入。
+
+14:53（上海）Debug arm64 最小增量编译成功，开发运行包已更新并启动 PID 85897。App/Widget 版本一致，236 项输入构建前后无漂移，13 项资产、完整运行包/旧包备份与实际 App/Debug dylib/Core 加载路径核对通过。证据 `.build/development-086b1-runtime/`；旧开发包备份 `.build/runtime-package-backups/development-086b1-20261028-145321/QuotaView.app`。正式安装身份与主可执行文件哈希保持不变；未消费真实重置卡，未执行 UI 自动化或视觉验收，未提交、推送或发布。
+
+## README 视频播放修复（2026-10-27）
+
+初版 README 将视频封面指向 GitHub 的仓库文件页，文件下载检查虽通过，该页面对约 5–6 MB MP4 显示无法预览，不能作为播放器。中英文入口现改用现有 GitHub Pages 的 `demos/0.8.5/en/` 与 `demos/0.8.5/zh-CN/`：原始 H.264 视频、JPEG 封面、原生播放控件、播放/暂停按钮、下载与语言切换；页面及视频在 `gh-pages` 分支维护。README 的 MP4 原视频链接也直接指向 Pages 媒体地址。
+
+修复验证包含真实浏览器播放、时间推进、视频解码尺寸、HTTP 视频类型与 Range 请求，不以下载成功代替播放。沿用本次 GitHub README 交付授权发布修复；不改版本、安装包或签名 appcast。证据见 `.build/readme-video-playback/`。
+
+## README 中英文媒体整理（2026-10-27）
+
+用户提供独立中英文实机配图与演示视频。`README.zh-CN.md` 使用 13 张中文 JPEG 与约 75 秒中文 MP4，`README.md` 使用 11 张英文 JPEG 与约 68 秒英文 MP4；各自素材位于 `docs/media/readme/zh-CN/`、`en/`。保留原始媒体字节，未混用两种语言；QQ 二维码转为白底 JPEG。首页按演示、任务/审批、用量/重置、设置、支持范围与安装重新组织，旧版本逐段介绍合并为当前更新摘要。
+
+初版视频通过仓库文件链接接入，播放入口已由上方修复改为 GitHub Pages；未上传 GitHub 附件。素材说明保留真实采集/后期合成和原任务语言的边界。用户已授权本次 README、媒体与交接改动推送 GitHub 并合并 main；本次交付范围不涉及应用版本、已发布包、appcast 或开发运行包。链接、语言隔离、JPEG 格式及源文件哈希核验见 `.build/readme-media-085/`；文档变更不重建应用。
+
+## 已发布：0.8.5 Build 1 / Codex 手动重置
+
+2026-10-27 用户明确要求 0.8.5、真实 Codex 重置、GitHub/main 和 appcast 更新，同时禁止开发验证消耗其重置卡。本次精确发布身份为 0.8.5 Build 1 / 内部 81，tag `v0.8.5-build.1`、ZIP `QuotaView-v0.8.5-build.1.zip`；完整 macOS Stable/Latest 和签名 appcast 链路已授权。Windows 独立渠道及正式安装保持。规格见[手动重置](docs/specs/codex-quota-reset.md)、[0.8.5 发布](docs/specs/release-0.8.5.md)。
+
+实现：官方 App Server 先读取具体卡片，人工确认后重新核对账户/卡片再消费；记录绑定账户哈希、明确卡片 ID 与幂等 UUID，未知结果经再次确认复用原操作，不后台重试。只升级灵动岛 Codex；Claude 继续复制命令，旧菜单演示保留。确认卡、等待/失败/未知结果均支持中英文，真实额度来自刷新。包含本轮玻璃、额度对齐与特效选项前移；已同步 origin/main，保留 Windows 发布记录。
+
+本地完整测试 722 项、6 跳过、0 失败，审批契约 44 项通过；消费请求只在内存模拟服务和明确的临时假进程中执行，未使用真实卡。10:37（上海）0.8.5 开发包已更新并启动 PID 82509，236 输入/13 资产、完整包/备份与加载路径一致；证据 `.build/codex-reset-085-runtime/`。上一稳定版 `v0.8.3-build.1` / `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc` 的公开 ZIP 已回下载，SHA-256 与版本历史一致。已由 [PR #105](https://github.com/Duoasa/QuotaView/pull/105) 合入 main，PR/main CI 均成功；Universal 正式包完成 Developer ID、公证/Staple、Gatekeeper 和解压启动。GitHub Stable / Latest 与签名 macOS appcast 已上线，公开 ZIP 与 Feed 的字节、身份和内置公钥验签通过。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，回滚入口 `v0.8.3-build.1`。真实扣卡与视觉留给用户验收。
+
+## 前序开发：0.8.3 Build 6 / 重置操作区深浅适配
+
+2026-10-27：修复重置页按钮/下方说明固定白字或浅灰的问题。普通复制按钮浅色黑字、深色白字，材质同步外观；危险重置保留白字并加强浅色红底；说明与底栏共用外观前景。范围仅重置操作区，深色内容/审批卡按钮、复制和演示业务保持。配置 0.8.3 Build 6 / 内部 80。规格见[重置操作区深浅适配](docs/specs/island-glass-appearance.md#重置操作区深浅适配2026-10-27)。
+
+10:05（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 70532；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-actions-appearance-20261027/`，旧包 `.build/runtime-package-backups/reset-actions-appearance-20261027-100526/QuotaView.app`。已审查可用/禁用、复制完成/演示反馈、深浅/自动与实体回退路径；未做 UI 自动化或真实重置，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 5 / 额度左右对齐
+
+2026-10-27：按用户修订，额度行恢复左标签/右百分比，与须知共用 14 pt 内容内距、上下各 16 pt 间隔；标签 10.5 pt Regular、数值 12 pt Medium，保持旧数据说明与未知值。配置 0.8.3 Build 5 / 内部 79。详见[额度左右对齐](docs/specs/island-expanded-glass.md#重置页额度左右对齐2026-10-27)。
+
+10:00（上海）Debug arm64 增量编译成功，开发包更新并启动 PID 67706；234 输入、13 资产、完整运行包/备份及实际加载路径一致，App/Widget 版本同步。证据 `.build/reset-quota-alignment-20261027/`，旧包 `.build/runtime-package-backups/reset-quota-alignment-20261027-100028/QuotaView.app`。仅本地修改，未推送、发布或替换正式安装；视觉由用户验收。
+
+## 前序开发：0.8.3 Build 4 / 任务特效前移
+
+2026-10-27：按用户截图，将灵动岛设置中的任务特效网格移至顶部岛预览正下方；后续依次为外观与布局、显示内容、自动展开。保持三项特效的尺寸、偏好与实时预览绑定，使切换控件靠近预览。配置 0.8.3 Build 4 / 内部 78。规格见[任务特效前移](docs/specs/island-glass-appearance.md#任务特效前移2026-10-27)。
+
+09:57（上海）Debug arm64 增量编译完成，开发包已更新并启动 PID 65551；234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/settings-effects-order-20261027/`，旧包 `.build/runtime-package-backups/settings-effects-order-20261027-095722/QuotaView.app`。未做 UI 自动化，实际效果待用户验收；仅本地开发修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 3 / 重置页额度摘要
+
+2026-10-27：按用户截图，将原两端分散的额度行收拢到重置次数下方，居中显示“剩余额度 + 百分比”，标签 10.5 pt Regular、数值 12 pt Medium，组间及行内均为 8 pt；旧数据与未知值语义保留。说明卡片延续 Build 2 深色玻璃，真实重置保持演示。规格见[额度摘要排版](docs/specs/island-expanded-glass.md#重置页额度摘要排版2026-10-27)。
+
+0.8.3 Build 3 / 内部 77 Debug arm64 增量编译成功，09:53（上海）开发包更新并启动 PID 61927；App/Widget 版本同步，234 输入、13 资产、完整包/备份与实际加载路径一致。证据 `.build/reset-quota-summary-20261027/`，回退 `.build/runtime-package-backups/reset-quota-summary-20261027-095311/QuotaView.app`。受影响中英文、旧数据/未知状态与辅助功能已源码审查；未新增测试或做 UI 自动化，视觉待用户验收。仅本地修改，未推送、发布或替换正式安装。
+
+## 前序开发：0.8.3 Build 2 / 重置说明深色玻璃
+
+2026-10-27：按用户截图，将 `IslandResetPage` 的重置须知容器从独立纯黑背景/手工描边改为用量卡片相同的 `islandGlass`，采用 14 pt continuous 圆角、white 0.075 / alpha 0.75 和共享实体回退；空态、未知次数与 Claude 说明同步。文字、内距、重置券及演示逻辑不变。规格见[展开态玻璃](docs/specs/island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27)。
+
+0.8.3 Build 2 / 内部 76 Debug arm64 增量构建成功，09:46（上海）开发包已更新并启动 PID 56501；234 输入、13 资产、完整运行包/备份与实际加载路径一致。证据 `.build/reset-notice-glass-20261027/`；旧开发包备份 `.build/runtime-package-backups/reset-notice-glass-20261027-094613/QuotaView.app`。本次仅本地开发修改；未推送、发布或替换正式安装，视觉待用户验收。
 
 ## Windows 首个正式版与更新通道（2026-10-23）
 
@@ -534,13 +762,13 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.7.7-build1-development`（沿用历史分支名）；0.8.3 发布提交 `178a2b03e94cf16119777c14ebdd9d2fd6ed97dc`，后续文档补记不改变应用输入 |
-| 开发身份 | `com.quotaview.development073`；0.8.3 / 显示 Build 1 / 内部 75 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 `fbcc8da`（PR #116 发布记录合并），0.8.7 Build 1–8 由 PR #117 进行源码集成 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 8 / 内部 110 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-16 10:08（上海）PID 15395；234 输入、13 资产、完整包/备份与实际加载路径一致 |
-| 源码与运行包 | 最新玻璃、设置、字体及 Widget 修复已进入 0.8.3 运行包；视觉待用户验收 |
-| 公开稳定版 | 0.8.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
-| 本机正式安装 | `/Applications/QuotaView.app` 保留此前授权安装的 0.8.2 Build 10；本轮发布未替换 |
+| 最近运行核验 | 2026-10-30T17:21:25.582554+08:00；PID 76809，239 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | 0.8.7 Build 8 标签图标尺寸与原色修订已进入开发包；公告名单仍仅包含内部 102；证据 `.build/provider-capsules-087b8-runtime/` |
+| 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
 
@@ -802,5 +1030,5 @@ PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目�
 
 ## 后续工作边界
 
-按 [AGENTS.md](AGENTS.md) 与[规格索引](docs/specs/README.md)读取受影响范围。默认保持本地源码迭代；推送、合并、正式包装或新版本发布需对应请求。真实额度重置保持演示。
+按 [AGENTS.md](AGENTS.md) 与[规格索引](docs/specs/README.md)读取受影响范围。默认保持本地源码迭代；推送、合并、正式包装或新版本发布需对应请求。真实重置按 0.8.5 手动重置契约执行；开发验证不消耗用户卡。
 `Prototypes/IslandTextConsole/` 是永久工具；`Prototypes/MultitaskIslandConsole/` 的固定快照保持，历史“下一步”不触发重新构建或迁移。

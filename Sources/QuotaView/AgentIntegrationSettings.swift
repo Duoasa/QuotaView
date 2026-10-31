@@ -15,27 +15,25 @@ struct AgentIntegrationSettings<Details: View>: View {
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Agent").font(.system(size: 15, weight: .semibold)).padding(.leading, 10)
-            NativeSettingsCard {
-                row(.codex, isOn: $preferences.codexIntegrationEnabled)
-                NativeSettingsDivider()
-                row(.claudeCode, isOn: $preferences.claudeCodeEnabled)
-                NativeSettingsDivider()
-                row(.dsh, isOn: $preferences.dshEnabled)
-                NativeSettingsDivider()
-                row(.kimiCode, isOn: $preferences.kimiCodeEnabled)
-            }
-            if let expanded {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(expanded.displayName).font(.headline).padding(.leading, 10)
-                    switch expanded {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
+            providerGroup(.codex, isOn: $preferences.codexIntegrationEnabled)
+            providerGroup(.claudeCode, isOn: $preferences.claudeCodeEnabled)
+            providerGroup(.dsh, isOn: $preferences.dshEnabled)
+            providerGroup(.kimiCode, isOn: $preferences.kimiCodeEnabled)
+        }
+    }
+    private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
+        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
+            NativeSettingsCard { row(provider, isOn: isOn) }
+            if expanded == provider {
+                Group {
+                    switch provider {
                     case .codex: codexDetails().disabled(!preferences.codexIntegrationEnabled)
                     case .claudeCode: ClaudeCodeConnectionSettings(runtime: claude, preferences: preferences)
                     case .dsh: nativeDetails(dsh)
                     case .kimiCode: nativeDetails(kimi)
                     }
-                }
+                }.frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -48,7 +46,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                         .font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
                         .frame(width: 12, height: 22).accessibilityHidden(true)
                     AgentSettingsIcon(provider: provider)
-                    Text(provider.displayName).font(.system(size: 14, weight: .medium))
+                    Text(provider.displayName).font(.system(size: 13, weight: .medium))
                     Spacer(minLength: 8)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -58,10 +56,11 @@ struct AgentIntegrationSettings<Details: View>: View {
                 .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
                 .fixedSize()
                 .frame(width: preferences.resolvedLanguage == .english ? 116 : 76, alignment: .leading)
-            Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                 .tint(Color(nsColor: .secondaryLabelColor))
         }
-        .frame(minHeight: 52).padding(.horizontal, 18)
+        .frame(minHeight: SettingsLayoutMetrics.rowMinHeight)
+        .padding(.horizontal, SettingsLayoutMetrics.cardInset)
     }
     private func presentation(_ provider: IslandAgentProvider, enabled: Bool) -> (title: String, symbol: String, color: Color) {
         let connected = (copy.text("已连接", "Connected"), "checkmark.circle.fill", Color(nsColor: .systemGreen))
@@ -132,14 +131,10 @@ struct AgentIntegrationSettings<Details: View>: View {
             }
             NativeSettingsDivider()
             NativeSettingsNote(text: runtime.provider == .dsh
-                ? copy.text("兼容基于 DSH 的客户端，统一显示为 DSH。启用后重启对应客户端，即可接收任务、工具、压缩、完成和权限提醒。",
-                            "Supports DSH-based clients, all shown as DSH. Restart each client after enabling to receive tasks, tools, compaction, completions and permission reminders.")
-                : copy.text("启用后添加 Kimi Code Hooks，新的或重启后的会话自动连接。权限请求请在 Kimi Code 中确认。",
-                            "Adds Kimi Code hooks. New or restarted sessions connect automatically. Confirm permission requests in Kimi Code."))
-            if runtime.provider == .dsh {
-                NativeSettingsNote(text: copy.text("权限请求请在原客户端中确认；任务卡显示事件中提供的 Token 数。",
-                                                   "Confirm permission requests in the original client. Task cards show token counts supplied by its events."))
-            }
+                ? copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",
+                            "Restart the client after enabling. Confirm permissions in the original client.")
+                : copy.text("启动或重启 Kimi Code 会话以连接；权限请求仍在 Kimi Code 确认。",
+                            "Start or restart a Kimi Code session to connect. Confirm permissions in Kimi Code."))
             if runtime.status == .failed {
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("连接未完成", "Setup incomplete"),
@@ -156,13 +151,14 @@ struct AgentIntegrationSettings<Details: View>: View {
 private struct AgentSettingsIcon: View {
     let provider: IslandAgentProvider
     private var background: Color {
-        provider == .claudeCode ? Color(red: 0.96, green: 0.94, blue: 0.90) : .white
+        provider == .claudeCode ? .clear : .white
     }
     var body: some View {
         ZStack {
             background
-            if provider == .codex, let icon = IslandProviderIcon.image {
-                // The bundled macOS app icon has 10% transparent canvas on each edge.
+            if (provider == .codex || provider == .claudeCode),
+               let icon = IslandProviderIcon.settingsMark(for: provider) {
+                // Official macOS app icons include about 10% transparent canvas on each edge.
                 Image(nsImage: icon).resizable().scaledToFit().frame(width: 27.5, height: 27.5)
             } else if let icon = IslandProviderIcon.settingsMark(for: provider) {
                 Image(nsImage: icon).resizable().scaledToFit()

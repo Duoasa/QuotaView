@@ -87,4 +87,48 @@ final class IslandQuantumRenderingSmokeTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(host.progressPosition), progress)
         host.stop()
     }
+    func testWaitingCardKeepsSelectedEffectAndProgressThroughVisibilityChanges() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 624, height: 60),
+            styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        for style in AppPreferences.CodexActivityProgressEffect.allCases {
+            let host = IslandQuantumProgressHost(frame: .init(x: 0, y: 0, width: 624, height: 60))
+            window.contentView = host
+            defer { host.stop() }
+            func configure(_ state: CodexActivityVisualState, visible: Bool = true, reduced: Bool = false) {
+                host.configure(renderState: .init(taskIdentity: identity, visualState: state,
+                    approximateProgressFraction: 0.65, windowTitle: "Fixture", statusTitle: "Fixture",
+                    operation: "Fixture", accessibilityLabel: "Fixture"),
+                    visible: visible, reduceMotion: reduced, progressEffect: style)
+            }
+            // Includes a freshly selected approval header, before any working frame.
+            configure(.awaitingConfirmation, reduced: true)
+            XCTAssertFalse(host.effectIsHidden, "Waiting must retain the selected effect: \(style)")
+            XCTAssertFalse(host.isRendering, "Reduced motion keeps a static effect")
+            if host.effectAvailable {
+                XCTAssertEqual(try XCTUnwrap(host.progressPosition), 0.65, accuracy: 0.001)
+            }
+            configure(.working)
+            configure(.awaitingConfirmation)
+            XCTAssertFalse(host.effectIsHidden)
+            XCTAssertEqual(host.isRendering, host.effectAvailable)
+            XCTAssertNotNil(host.completionPulse, "Confirmation edge breathing remains independent")
+            if host.effectAvailable {
+                XCTAssertEqual(try XCTUnwrap(host.progressPosition), 0.65, accuracy: 0.001)
+            }
+            configure(.awaitingConfirmation, visible: false)
+            XCTAssertFalse(host.isRendering, "Hidden cards stop rendering")
+            XCTAssertNil(host.completionPulse)
+            configure(.awaitingConfirmation)
+            XCTAssertEqual(host.isRendering, host.effectAvailable)
+            configure(.working)
+            XCTAssertFalse(host.effectIsHidden)
+            XCTAssertNil(host.completionPulse, "Resuming clears confirmation emphasis")
+            host.removeFromSuperview()
+            XCTAssertFalse(host.isRendering, "Detached cards stop rendering")
+        }
+    }
+
 }

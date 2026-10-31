@@ -210,6 +210,31 @@ final class CodexFirstConnectionTests: XCTestCase {
         await store.stop()
     }
 
+    func testArchivedRolloutDoesNotPoisonDirectoryHealthOrRecheck() throws {
+        let root = try fixtureRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let archived = try writeRollout(root, id: "archived", lines: [])
+        let active = try writeRollout(root, id: "active", lines: [])
+        let discovery = CodexLocalRolloutDiscovery(codexHomeURL: root,
+            maximumCandidateCount: 24, fileManager: .default)
+        XCTAssertEqual(discovery.recentCandidates().count, 2)
+        XCTAssertFalse(discovery.readFailed)
+        let archiveDirectory = root.appendingPathComponent("archived_sessions")
+        try FileManager.default.createDirectory(at: archiveDirectory, withIntermediateDirectories: true)
+        try FileManager.default.moveItem(at: archived,
+            to: archiveDirectory.appendingPathComponent(archived.lastPathComponent))
+        for _ in 0..<3 {
+            XCTAssertEqual(discovery.recentCandidates().map(\.fileURL), [active])
+            XCTAssertFalse(discovery.readFailed, "An archived record is not a directory permission error")
+        }
+        discovery.recheck()
+        XCTAssertEqual(discovery.recentCandidates().map(\.fileURL), [active])
+        XCTAssertFalse(discovery.readFailed)
+        try FileManager.default.removeItem(at: active)
+        XCTAssertTrue(discovery.recentCandidates().isEmpty)
+        XCTAssertFalse(discovery.readFailed, "Removing the final record should leave an empty, readable directory")
+    }
+
     func testUnreadableDirectoryAndFileRecoverAfterReadOnlyRecheck() async throws {
         let root = try fixtureRoot()
         let sessions = root.appendingPathComponent("sessions")

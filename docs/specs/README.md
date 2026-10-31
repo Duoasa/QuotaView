@@ -6,11 +6,128 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
+## 当前开发：0.8.7 Build 8
+
+[标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。开发包与 PR #117 集成结果见 Handoff，视觉由用户检查。
+
+## 前序开发：0.8.7 Build 7
+
+[标签圆底与重置卡恢复](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：用量标签圆形图标与胶囊左端同心，重置卡恢复 0.8.6 Build 21 原始灰色渐变素材。运行核验及用户已授权的本轮源码推送/main 合并结果见 Handoff；视觉待用户检查，未授权发布或 appcast。
+
+## 前序开发：0.8.7 Build 5
+
+[退出入口仅文字](../design/QUOTAVIEW_UI_RULES.md#退出入口仅保留文字2026-10-30087-build-5) · `Accepted / Verifying`：移除退出行图标及占位，保留危险动作样式和确认流程。开发包更新与核验见 Handoff，视觉由用户检查，仅本地修改。
+
+## 前序开发：0.8.7 Build 4
+
+[设置图标圆角底托](../design/QUOTAVIEW_UI_RULES.md#单色图标保留圆角底托2026-10-30087-build-4) · `Accepted / Verifying`：按 macOS 设置参考，将子页面功能图标统一为灰色圆角底与白色符号，覆盖页标题、设置行、反馈及退出入口；Build 3 排版保持。构建与开发包状态见 Handoff，视觉由用户验收，仅本地修改。
+
+## 前序开发：0.8.7 Build 3
+
+[设置排版与单色图标](../design/QUOTAVIEW_UI_RULES.md#子页面单色图标与统一间距2026-10-30087-build-3) · `Accepted / Verifying`：子页面功能图标改为单色，统一设置框尺寸规则、页顶留白及分组/组内间距；品牌图标保留官方素材。增量编译、开发包更新与加载路径核验通过（239 输入、14 资源），既有控件对齐冒烟结果见 Handoff；视觉由用户验收。本批仅本地修改。
+
+## 前序开发：0.8.7 Build 2
+
+[官方来源图标](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：Claude 使用官方应用包内橙底白标，ChatGPT/Codex 用量与重置卡使用官方 Blossom 路径；截图仅作参考。增量构建、开发运行包核验、四项资源解码及官方素材一致性检查通过；239 输入、14 资源，视觉与小尺寸效果由用户验收。仅本地开发，运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 前序开发：0.8.7 Build 1
+
+2026-10-30 按用户要求初始化 0.8.7 / Build 1 / 内部 103。App、Widget 与兼容 Info.plist 同步，保留开发身份；功能沿用 0.8.6 Build 21，具体功能范围尚未指定，暂无新增功能规格。Debug arm64 增量构建及开发包更新启动完成，237 输入、完整包与实际加载路径核对通过；本次初始化 `Complete`，具体功能待定。证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。仅本地开发，未授权发布或 appcast 准入。
+
+## 最近公开发布：0.8.6 Build 21
+
+[0.8.6 发布](release-0.8.6.md) · `Released / User Acceptance Pending`：Build 21 / 内部 102，PR/main CI、签名公证、公开 ZIP 与签名 appcast 已验证；公告已启用，Codex 缓存误报已修复，默认检查更新开启。公开 README 未改，视觉及真实升级体验由用户验收。
+
+
+2026-10-29：用户接受 Build 19 的公告与设置修改后，本轮已由 [PR #113](https://github.com/Duoasa/QuotaView/pull/113) 合入 main `691eed6`；PR 与 main CI 均通过（726 测试、6 跳过、0 失败，44 契约检查），运行包 237 输入与合并源码一致。未发布；完整事实见 Handoff。下方各批「本地修改」保留为阶段记录。
+
+
+[设置恢复原宽度](../design/QUOTAVIEW_UI_RULES.md#恢复原默认宽度2026-10-29086-build-19) · `Accepted / Verifying`：按用户要求恢复默认 780 × 680、最小 740 × 560、内容最大宽 560；保留紧凑元素与上下材质选项。Build 19 已增量构建并更新开发运行包，输入/产物/加载路径核对通过；证据见 Handoff，视觉由用户验收。
+
+
+[公告与设置元素尺寸](../design/QUOTAVIEW_UI_RULES.md#参考对照图调整元素尺寸2026-10-29086-build-18) · `Accepted / Verifying`：按用户同屏 VibeIsland 对照收紧图标、标题、行高和控件；设置窗口宽 620，恢复发行版玻璃/纯色上下双选项。公告隐藏系统交通灯，保留底部按钮与键盘关闭。Build 18 已构建并更新开发运行包，既有设置行布局冒烟通过；运行证据见 Handoff，视觉由用户验收。
+
+## 前序开发：0.8.6 Build 15
+
+[网络代理仅保留设置](../design/QUOTAVIEW_UI_RULES.md#网络代理仅保留设置2026-10-29086-build-15) · `Accepted / Verifying`：用户否定当前可视化方案并要求移除，专用视图、绘制与动画已清理，恢复无可视化的代理设置布局。Build 13–14 方案不再作为实施目标；运行核验见 Handoff。本次仅本地开发。
+
+## 前序开发：0.8.6 Build 14
+
+[当前通路蓝色描边](../design/QUOTAVIEW_UI_RULES.md#当前通路蓝色描边2026-10-29086-build-14) · `Accepted / Verifying`：补齐参考中的蓝色路径与节点选中轮廓，保留无额外填充底板和已有动效。运行核验见 Handoff，视觉待用户查看；仅本地开发。
+
+## 前序开发：0.8.6 Build 13
+
+[代理路径动效](../design/QUOTAVIEW_UI_RULES.md#代理路径动效2026-10-29086-build-13) · `Accepted / Verifying`：用户授权在开发版实现参考中的路径层级表达，保留公开版背景、无额外图标底托和说明。两条路线随草稿切换并沿线流动，真实测试状态独立表达；三个隔离冒烟、增量编译及运行包核验通过，实际动效待用户验收。本批仅本地开发。
+
+## 前序开发：0.8.6 Build 12
+
+[网络代理布局](../design/QUOTAVIEW_UI_RULES.md#移除网络代理可视化2026-10-29086-build-12) · `Accepted / Verifying`：移除顶部可视化及专用动画，标题后直接显示真实设置。开发构建与运行状态见 Handoff；Build 10–12 已通过 [PR #112](https://github.com/Duoasa/QuotaView/pull/112) 合入 main，PR 与精确 main CI 均成功。新的可视化仍为独立设计方案，未接入应用；未发布 Release。
+
+## 前序开发：0.8.6 Build 11
+
+[原生设置下拉](../design/QUOTAVIEW_UI_RULES.md#原生下拉选择2026-10-29086-build-11) · `Accepted / Verifying`：按用户系统设置参考，四处下拉共用原生弹出式选择控件，系统管理选中勾选、高亮和定位。增量编译、开发运行包与加载路径核对通过；视觉待用户验收，仅本地修改。
+
+## 前序开发：0.8.6 Build 10
+
+[更新与公告](brand-announcement.md) · `Review / Verifying`：原公告扩展为可滚动、可折叠的通用内容窗口，支持亮点、新功能、改进、公告和提醒；保留指定发布版本各展示一次的规则，正式名单为空。Build 18 进一步调整元素尺寸为 460 × 580 并隐藏交通灯；原提醒策略保持，构建与运行证据见 Handoff，视觉由用户验收。
+
+## 前序开发：0.8.6 Build 9
+
+[设置说明与信息层级](../design/QUOTAVIEW_UI_RULES.md#信息层级与重复说明清理2026-10-29086-build-9) · `Accepted / User Verified`：移除页头/语言/外观等重复解释，用分段选择和 Agent 就近展开表达关系，合并 Claude 重复启用开关与更新按钮标题；保留操作限制、错误及未保存提示，中英文同步。Build 9 / 内部 90 增量编译、运行包加载与既有设置行布局冒烟通过。用户已接受本次调整；[PR #111](https://github.com/Duoasa/QuotaView/pull/111) 已合入 main，PR 与精确 main CI 均通过（723 项测试、6 跳过、0 失败，另 44 项契约检查），运行输入与合并源码一致。证据见 Handoff；未发布 Release 或 appcast。
+
+## 前序开发：0.8.6 Build 8
+
+[聚焦待确认特效](PROGRESS_EFFECT_ADAPTATION.md) · `Accepted / User Verified`：用户确认实际灵动岛临时审批卡效果无问题。Build 8 已清理模拟卡、全部 Debug 注入及临时启动参数，恢复真实任务展示；两个文件恢复预览前生产基线。0.8.6 / Build 8 / 内部 89 增量编译、运行包和加载路径核对通过，生产临时标记扫描零匹配。仅本地修改，未推送或发布；验收范围限本次查看的效果。
+
+## 前序开发：0.8.6 Build 7
+
+用户要求直接在实际灵动岛检查审批卡。临时 `DEBUG` 任务以 65% 待批准状态注入开发会话显示副本，默认聚焦列表，可点击进入审批页；仅模拟交互，不执行真实命令或审批。独立预览已退出并清理；Build 7 / 内部 88 增量编译、运行包更新、参数及加载路径核对通过。临时注入已在用户验收后由上方 Build 8 清理；详见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.8.6 Build 6
+
+[应用更新](../design/quotaview-app-updates-0.3.5.md) · `Accepted / Verifying`：后续 Release 默认开启自动检查更新，正式打包门禁同步校验；保持用户可关闭、24 小时周期和手动下载安装。Build 6 / 内部 87 增量编译与运行包启动、产物更新配置、加载路径和发布脚本语法检查通过。此追加变更仅本地；未发布包或 appcast。
+
+## 前序开发：0.8.6 Build 5
+
+[聚焦待确认特效](PROGRESS_EFFECT_ADAPTATION.md) · `Accepted / Verifying`：移除待确认状态对整个进度特效的隐藏/禁播，列表聚焦卡与审批头卡保留所选特效及原进度，确认边缘光保持。三种特效与首次待确认、状态切换、可见性/离窗、减少动态的宿主级回归通过；相关渲染和审批冒烟共 12 项通过，Debug arm64 增量编译通过。[PR #110](https://github.com/Duoasa/QuotaView/pull/110) 已合入 main，PR 与精确 main CI 均通过（723 项测试、6 跳过、0 失败，另 44 项契约检查）；Build 5 开发运行包已更新启动并核对加载路径。用户已暂缓任务列表/审批页隔离模拟截图，临时预览已清理，后续实际灵动岛效果已获用户验收；源码合并与运行包状态见 [Handoff](../../HANDOFF.md#工作区与版本定位)。本次仅源码集成和本地开发运行包更新，不发布 Release、安装包或 appcast。
+
+## 前序开发：0.8.6 Build 4
+
+[任务来源图标](../design/quotaview-provider-icons.md#task-provider-icons) · `Accepted / User Verified`：Claude、DSH、Kimi 任务卡使用圆角矩形真实 Logo，用户已确认图标无问题；Build 4 清理三张模拟卡及全部临时注入，恢复纯真实任务展示。0.8.6 / Build 4 / 内部 85 增量编译、运行包、无预览参数启动及加载路径核对通过。图标验收不扩展为真实来源协议或其他场景验收。源码已由 [PR #109](https://github.com/Duoasa/QuotaView/pull/109) 合入 main，PR 与精确 main 提交 CI 均通过，证据见 Handoff；未获发布/appcast 准入；当前运行证据见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 前序开发：0.8.6 Build 1
+
+2026-10-28 按用户要求更新开发版本为 0.8.6 / Build 1 / 内部 82，App、Widget 与兼容 Info.plist 同步；增量编译及运行包更新、启动和加载路径核对通过。功能沿用 0.8.5，具体改动等待用户指示，暂无新增功能规格。仅本地开发，未授权发布或 appcast 准入；公开稳定版仍为 0.8.5 Build 1，证据与当前运行定位见 [Handoff](../../HANDOFF.md#工作区与版本定位)。
+
+## 前序发布：0.8.5 Build 1
+
+[Codex 手动额度重置](codex-quota-reset.md) · `Released / User Acceptance Pending`：明确确认后调用官方接口，绑定具体卡片、账户和持久化幂等操作；隔离模拟验证，不消费本机真实卡。[0.8.5 发布](release-0.8.5.md)已完成 PR/main CI、签名公证、GitHub Stable/Latest 与 macOS appcast 上线及公开回下载核验。中英文 README 与开发版已更新，回滚基线 0.8.3 Build 1；真实扣卡与视觉待用户验收。完整事实见版本历史，当前运行状态见 Handoff。
+
+## 前序开发：0.8.3 Build 6
+
+[重置操作区深浅适配](island-glass-appearance.md#重置操作区深浅适配2026-10-27) · `Accepted / Verifying`：Claude 复制按钮和两种来源的操作说明接入统一玻璃外观；危险重置保留白字并加强浅色红底。只作用于重置操作区，保留自动与实体回退。增量编译、开发运行包与加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 5
+
+[重置页额度左右对齐](island-expanded-glass.md#重置页额度左右对齐2026-10-27) · `Accepted / Verifying`：按用户修订恢复左标签/右百分比，两侧共用须知的 14 pt 内容内距，上下间距各 16 pt；增量编译、开发运行包及加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 4
+
+[任务特效前移](island-glass-appearance.md#任务特效前移2026-10-27) · `Accepted / Verifying`：特效三选项移动到顶部预览正下方，后续依次为外观与布局、显示内容、自动展开；绑定、尺寸和保存行为不变。增量编译、开发包及实际加载路径核对通过，证据见 Handoff；视觉待用户验收。
+
+## 前序开发：0.8.3 Build 3
+
+[重置页额度摘要](island-expanded-glass.md#重置页额度摘要排版2026-10-27) · `Superseded by Build 5`：“剩余额度 + 百分比”并入重置次数下方的居中摘要，标签 10.5 pt Regular、数值 12 pt Medium，保留真实/旧数据/未知态。增量编译、开发运行包及加载路径核对通过，证据见 Handoff；视觉待用户验收，仅本地修改。
+
+## 前序开发：0.8.3 Build 2
+
+[重置说明深色玻璃](island-expanded-glass.md#重置说明卡片统一深色玻璃2026-10-27) · `Accepted / Verifying`：须知/空态/Claude 说明容器接入用量卡片相同的深色玻璃与辅助功能回退。增量编译、开发运行包及加载路径核对通过；视觉待用户验收，当前修改仅本地，详见 Handoff。
+
 ## Windows 首个正式版：0.8.3-win
 
 [Windows 工程与独立更新通道](windows-channel.md) · `Released / User Acceptance Pending`：公开名称 `0.8.3-win · Windows`，包内和更新版本保留 `0.8.3-win.10`。原始 ZIP 已发布并公开回下载验签，首个条目加入独立 Windows appcast；中英文 README 增加上线与功能降级适配说明。macOS Release 仅补充平台名称，原更新通道不变。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实升级体验待用户验收。
 
-## 当前发布：0.8.3 Build 1
+## 前序发布：0.8.3 Build 1
 
 [0.8.3 发布规格](release-0.8.3.md) · `Released / User Acceptance Pending`：GitHub Stable / Latest 与签名 appcast 已发布，源码 PR/main CI、公开 ZIP 与 Feed 验证通过。中英文 README 已更新，回滚基线 0.8.2 Build 2；完整发布事实见版本历史，开发运行包见 Handoff。
 
@@ -63,6 +180,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
+| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Review / Verifying | 多类型分组、滚动与折叠、按版本提醒；正式名单待配置 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |

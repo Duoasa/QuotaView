@@ -436,7 +436,7 @@ if [[ "${built_update_team_identifier}" \
         != "${update_team_identifier}" ]] \
     || [[ "${built_sparkle_feed_url}" != "${sparkle_feed_url}" ]] \
     || [[ "${built_sparkle_public_key}" != "${sparkle_public_key}" ]] \
-    || [[ "${built_sparkle_automatic_checks}" != "false" ]] \
+    || [[ "${built_sparkle_automatic_checks}" != "true" ]] \
     || [[ "${built_sparkle_allows_automatic_updates}" != "false" ]] \
     || [[ "${built_sparkle_verify_before_extraction}" != "true" ]] \
     || [[ "${built_sparkle_requires_signed_feed}" != "true" ]]; then

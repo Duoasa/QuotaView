@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9D75AF4DF5A10AA66CC69E9A /* BrandAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */; };
 		B05200000000000000000003 /* CodexMultitaskIslandMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */; };
 		B05200000000000000000002 /* CodexMultitaskIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000002 /* CodexMultitaskIsland.swift */; };
 		B05200000000000000000001 /* CodexActivityMultitaskState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05200000000000000000001 /* CodexActivityMultitaskState.swift */; };
@@ -15,10 +16,12 @@
 		B10000000000000000000051 /* ProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000051 /* ProxyConfiguration.swift */; };
 		B10000000000000000000001 /* QuotaViewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* QuotaViewApp.swift */; };
 		B10000000000000000000002 /* CodexStatusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* CodexStatusStore.swift */; };
+		F2CFC972219747DA80425E15 /* CodexResetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF421910CBB845D6902DB70A /* CodexResetController.swift */; };
 		B10000000000000000000003 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* MenuBarView.swift */; };
 		B10000000000000000000004 /* QuotaViewCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* QuotaViewCore.framework */; };
 		B10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* Assets.xcassets */; };
 		B10000000000000000000006 /* CodexAppServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* CodexAppServerClient.swift */; };
+		4B5D766802074B5BA765B2E2 /* CodexRateLimitReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B18680EBD1E4E29B8A028B0 /* CodexRateLimitReset.swift */; };
 		B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* CodexExecutableLocator.swift */; };
 		B10000000000000000000008 /* CodexModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000006 /* CodexModels.swift */; };
 		B10000000000000000000009 /* CodexAppServerClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000007 /* CodexAppServerClientTests.swift */; };
@@ -177,6 +180,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAnnouncement.swift; sourceTree = "<group>"; };
 		A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIslandMotion.swift; sourceTree = "<group>"; };
 		A05200000000000000000002 /* CodexMultitaskIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIsland.swift; sourceTree = "<group>"; };
 		A05200000000000000000001 /* CodexActivityMultitaskState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityMultitaskState.swift; sourceTree = "<group>"; };
@@ -185,8 +189,10 @@
 		F10000000000000000000051 /* ProxyConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyConfiguration.swift; sourceTree = "<group>"; };
 		F10000000000000000000001 /* QuotaViewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaViewApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* CodexStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexStatusStore.swift; sourceTree = "<group>"; };
+		AF421910CBB845D6902DB70A /* CodexResetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexResetController.swift; sourceTree = "<group>"; };
 		F10000000000000000000003 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		F10000000000000000000004 /* CodexAppServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClient.swift; sourceTree = "<group>"; };
+		9B18680EBD1E4E29B8A028B0 /* CodexRateLimitReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRateLimitReset.swift; sourceTree = "<group>"; };
 		F10000000000000000000005 /* CodexExecutableLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexExecutableLocator.swift; sourceTree = "<group>"; };
 		F10000000000000000000006 /* CodexModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000007 /* CodexAppServerClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClientTests.swift; sourceTree = "<group>"; };
@@ -380,9 +386,11 @@
 				F07300000000000000000003 /* IslandApprovalTypedContent.swift */,
 				F07300000000000000000002 /* IslandApprovalProtocol.swift */,
 				F07300000000000000000001 /* IslandApproval.swift */,
+				4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */,
 				F10000000000000000000001 /* QuotaViewApp.swift */,
 				F10000000000000000000030 /* AppUpdateController.swift */,
 				F10000000000000000000002 /* CodexStatusStore.swift */,
+				AF421910CBB845D6902DB70A /* CodexResetController.swift */,
 				F10000000000000000000003 /* MenuBarView.swift */,
 				F10000000000000000000011 /* AppPreferences.swift */,
 				F10000000000000000000012 /* CodexTheme.swift */,
@@ -431,6 +439,7 @@
 				F10000000000000000000052 /* SOCKS5HTTPBridge.swift */,
 				F10000000000000000000051 /* ProxyConfiguration.swift */,
 				F10000000000000000000004 /* CodexAppServerClient.swift */,
+				9B18680EBD1E4E29B8A028B0 /* CodexRateLimitReset.swift */,
 				F10000000000000000000005 /* CodexExecutableLocator.swift */,
 				F10000000000000000000006 /* CodexModels.swift */,
 				F10000000000000000000019 /* DomainModels.swift */,
@@ -775,9 +784,11 @@
 				B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */,
 				B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */,
 				B07300000000000000000001 /* IslandApproval.swift in Sources */,
+				9D75AF4DF5A10AA66CC69E9A /* BrandAnnouncement.swift in Sources */,
 				B10000000000000000000001 /* QuotaViewApp.swift in Sources */,
 				B1000000000000000000002B /* AppUpdateController.swift in Sources */,
 				B10000000000000000000002 /* CodexStatusStore.swift in Sources */,
+				F2CFC972219747DA80425E15 /* CodexResetController.swift in Sources */,
 				B10000000000000000000003 /* MenuBarView.swift in Sources */,
 				B1000000000000000000000D /* AppPreferences.swift in Sources */,
 				B1000000000000000000000E /* CodexTheme.swift in Sources */,
@@ -826,6 +837,7 @@
 				B10000000000000000000052 /* SOCKS5HTTPBridge.swift in Sources */,
 				B10000000000000000000051 /* ProxyConfiguration.swift in Sources */,
 				B10000000000000000000006 /* CodexAppServerClient.swift in Sources */,
+				4B5D766802074B5BA765B2E2 /* CodexRateLimitReset.swift in Sources */,
 				B10000000000000000000007 /* CodexExecutableLocator.swift in Sources */,
 				B10000000000000000000008 /* CodexModels.swift in Sources */,
 				B10000000000000000000015 /* DomainModels.swift in Sources */,
