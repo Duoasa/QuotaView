@@ -517,13 +517,22 @@ class CodexService extends EventEmitter {
   }
 
   getSnapshot() {
+    // Rotated/copied rollouts can carry the same thread. Resolve them before
+    // publishing; otherwise one snapshot can contain conflicting duplicate IDs.
+    const unique = new Map();
+    for (const cursor of this.cursors.values()) {
+      const task = cursor.parser.getTask(this.clock(), this.options.staleAfter || 300000);
+      if (!task) continue;
+      task.legacyTurnId = cursor.parser.turnId;
+      const previous = unique.get(cursor.parser.threadId);
+      const rank = [task.startedAt || 0, task.updatedAt || 0, cursor.mtime || 0, cursor.path || ""];
+      if (!previous || rank.some((v, i) => v > previous.rank[i] && rank.slice(0, i).every((x, j) => x === previous.rank[j])))
+        unique.set(cursor.parser.threadId, {cursor, task, rank});
+    }
     const tasks = this.enabled
-      ? [...this.cursors.values()]
-          .map((cursor) =>
-            this.desktop.overlay(cursor.parser.getTask(
-              this.clock(),
-              this.options.staleAfter || 300000,
-            ), cursor.parser.threadId),
+      ? [...unique.values()]
+          .map(({cursor, task}) =>
+            this.desktop.overlay(task, cursor.parser.threadId, cursor.parser.turnId),
           )
           .filter(Boolean)
           .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))

@@ -1,5 +1,11 @@
 # QuotaView SDD 注册表
 
+Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题、控件和状态表达用途，详情折叠、说明按需出现。构建通过，视觉待用户验收；见 [Windows Handoff](../../Windows/HANDOFF.md)，未推送或发布。
+
+## Windows 本地修复：0.8.3-win.11
+
+[终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
+
 ## 当前开发：0.8.7 Build 8
 
 [标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。开发包与 PR #117 集成结果见 Handoff，视觉由用户检查。
