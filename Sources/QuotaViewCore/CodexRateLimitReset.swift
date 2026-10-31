@@ -26,7 +26,7 @@ public protocol CodexResetTransport: Sendable {
 }
 
 public enum CodexResetError: Error, Equatable, Sendable {
-    case busy, signInRequired, accountChanged, noCredit, creditDetailsUnavailable
+    case disabledByPreference, busy, signInRequired, accountChanged, noCredit, creditDetailsUnavailable
     case confirmationExpired, storageUnavailable, unsupported, connectionFailed, outcomeUnknown
 }
 
@@ -49,12 +49,15 @@ public actor CodexRateLimitResetCoordinator {
     }
     private let client: any CodexResetTransport
     private let journalURL: URL
+    private let isConsumptionAllowed: @MainActor @Sendable () -> Bool
     private var prepared: CodexResetPreparation?
     private var busy = false
 
-    public init(client: any CodexResetTransport, journalURL: URL) {
+    public init(client: any CodexResetTransport, journalURL: URL,
+                isConsumptionAllowed: @escaping @MainActor @Sendable () -> Bool = { true }) {
         self.client = client
         self.journalURL = journalURL
+        self.isConsumptionAllowed = isConsumptionAllowed
     }
 
     public func prepare(now: Date = Date()) async throws -> CodexResetPreparation {
@@ -63,6 +66,7 @@ public actor CodexRateLimitResetCoordinator {
         prepared = nil
         defer { busy = false }
         do {
+            guard await isConsumptionAllowed() else { throw CodexResetError.disabledByPreference }
             guard let scope = try await client.readResetAccount().scope else { throw CodexResetError.signInRequired }
             let limits = try await client.readResetLimits()
             guard try await client.readResetAccount().scope == scope else { throw CodexResetError.accountChanged }
@@ -99,6 +103,7 @@ public actor CodexRateLimitResetCoordinator {
         prepared = nil
         defer { busy = false }
         do {
+            guard await isConsumptionAllowed() else { throw CodexResetError.disabledByPreference }
             guard try await client.readResetAccount().scope == confirmation.accountScope else { throw CodexResetError.accountChanged }
             if !confirmation.isRetry {
                 let limits = try await client.readResetLimits()
@@ -109,6 +114,7 @@ public actor CodexRateLimitResetCoordinator {
                 }
                 guard try await client.readResetAccount().scope == confirmation.accountScope else { throw CodexResetError.accountChanged }
             }
+            guard await isConsumptionAllowed() else { throw CodexResetError.disabledByPreference }
             let pending = try loadAttempt()
             guard pending?.id == (confirmation.isRetry ? confirmation.id : nil) else { throw CodexResetError.outcomeUnknown }
             try Task.checkCancellation()

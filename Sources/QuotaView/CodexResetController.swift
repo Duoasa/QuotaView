@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import QuotaViewCore
 import SwiftUI
@@ -9,6 +10,8 @@ final class CodexResetController: ObservableObject {
         case finished(CodexResetOutcome), failed(CodexResetError)
     }
     @Published private(set) var phase: Phase = .idle
+    @Published private(set) var usageDisabled = false
+    private var preferenceObservation: AnyCancellable?
     private let makeCoordinator: () -> CodexRateLimitResetCoordinator
     private let refresh: () async -> Void
     private let journalURL: URL
@@ -24,14 +27,18 @@ final class CodexResetController: ObservableObject {
     }
 
     init(journalURL: URL, makeCoordinator: @escaping () -> CodexRateLimitResetCoordinator,
-         refresh: @escaping () async -> Void) {
+         refresh: @escaping () async -> Void, preferences: AppPreferences? = nil) {
         self.journalURL = journalURL
         self.makeCoordinator = makeCoordinator
         self.refresh = refresh
+        preferenceObservation = preferences?.$resetCreditUsageDisabled.removeDuplicates().sink { [weak self] disabled in
+            self?.usageDisabled = disabled
+            if disabled { self?.cancelConfirmation() }
+        }
     }
 
     func prepare() async {
-        guard !busy else { return }
+        guard !usageDisabled, !busy else { return }
         revision &+= 1
         let generation = revision
         phase = .preparing
@@ -39,7 +46,7 @@ final class CodexResetController: ObservableObject {
         coordinator = service
         do {
             let confirmation = try await service.prepare()
-            guard generation == revision else { return }
+            guard generation == revision, !usageDisabled else { return }
             phase = .confirming(confirmation)
         } catch {
             guard generation == revision else { return }
@@ -55,7 +62,7 @@ final class CodexResetController: ObservableObject {
     }
 
     func confirm() async {
-        guard case .confirming(let preparation) = phase, let coordinator else { return }
+        guard !usageDisabled, case .confirming(let preparation) = phase, let coordinator else { return }
         phase = .submitting
         do { phase = .finished(try await coordinator.execute(preparation)) }
         catch { phase = .failed(error as? CodexResetError ?? .outcomeUnknown) }
@@ -93,6 +100,7 @@ struct IslandCodexResetControls: View {
                             Text(preparation.isRetry ? copy.text("确认重试", "Confirm retry") : copy.text("确认使用 1 次", "Use one reset"))
                                 .frame(maxWidth: .infinity).frame(height: 36)
                         }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true))
+                            .disabled(controller.usageDisabled)
                     }.font(AstaSans.semiBold(12)).controlSize(.large)
                 }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                     .islandGlass(RoundedRectangle(cornerRadius: 14, style: .continuous),
@@ -102,7 +110,7 @@ struct IslandCodexResetControls: View {
                     Text(actionTitle).font(AstaSans.semiBold(13))
                         .frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
                 }.buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true, followsGlassAppearance: true))
-                    .disabled(controller.busy || (!controller.hasPendingAttempt && (!data.canRequestReset || !isCurrent)))
+                    .disabled(controller.usageDisabled || controller.busy || (!controller.hasPendingAttempt && (!data.canRequestReset || !isCurrent)))
                     .accessibilityHint(copy.text("先检查重置卡，再由你确认使用。", "Checks reset credits before asking you to confirm."))
             }
             Text(caption).font(AstaSans.regular(10.5)).lineSpacing(2)
@@ -111,6 +119,7 @@ struct IslandCodexResetControls: View {
     }
 
     private var actionTitle: String {
+        if controller.usageDisabled && !controller.busy { return copy.text("重置卡使用已禁用", "Reset credit use disabled") }
         switch controller.phase {
         case .preparing: return copy.text("正在检查重置卡…", "Checking reset credits…")
         case .submitting: return copy.text("正在重置…", "Resetting…")
@@ -121,6 +130,9 @@ struct IslandCodexResetControls: View {
     }
 
     private var caption: String {
+        if controller.usageDisabled && !controller.busy {
+            return copy.text("已在设置 → 用量显示中禁用重置卡使用。", "Reset credit use is disabled in Settings → Usage display.")
+        }
         switch controller.phase {
         case .finished(.reset), .finished(.alreadyRedeemed):
             return copy.text("重置已确认，额度以刷新结果为准。", "Reset confirmed. Quota follows the refreshed account data.")
@@ -128,6 +140,7 @@ struct IslandCodexResetControls: View {
         case .finished(.noCredit): return copy.text("当前没有可用重置卡。", "No reset credits available.")
         case .failed(let error):
             switch error {
+            case .disabledByPreference: return copy.text("重置卡使用已禁用，未提交操作。", "Reset credit use is disabled. No request was submitted.")
             case .signInRequired: return copy.text("请先在 Codex 登录 ChatGPT 账户。", "Sign in to a ChatGPT account in Codex first.")
             case .accountChanged: return copy.text("账户或重置卡已变化，请切回原账户后重试。", "The account or reset credit changed. Return to the original account and retry.")
             case .noCredit: return copy.text("当前没有可用重置卡。", "No reset credits available.")

@@ -202,6 +202,7 @@ final class AppPreferences: ObservableObject {
             "preferences.panel.showEstimatedCost"
         static let tokenActivityRange =
             "preferences.panel.tokenActivityRange"
+        static let resetCreditUsageDisabled = "preferences.codex.resetCreditUsageDisabled"
         static let showResetAction = "preferences.panel.showResetAction"
         static let codexActivityIslandEnabled =
             "preferences.codexActivity.islandEnabled"
@@ -279,6 +280,10 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.showTokenActivity
             )
         }
+    }
+
+    @Published var resetCreditUsageDisabled: Bool {
+        didSet { defaults.set(resetCreditUsageDisabled, forKey: Key.resetCreditUsageDisabled) }
     }
 
     @Published var showEstimatedCost: Bool {
@@ -562,6 +567,7 @@ final class AppPreferences: ObservableObject {
             forKey: Key.showTokenActivity,
             defaultValue: true
         )
+        resetCreditUsageDisabled = defaults.storedBool(forKey: Key.resetCreditUsageDisabled, defaultValue: false)
         showEstimatedCost = defaults.storedBool(
             forKey: Key.showEstimatedCost,
             defaultValue: true
