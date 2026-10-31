@@ -47,6 +47,7 @@ struct IslandResetPageData {
 }
 
 struct IslandResetPage: View {
+    @Environment(\.appLanguage) private var appLanguage
     let data: IslandResetPageData
     let usageState: IslandUsagePresentation.State
     let english: Bool
@@ -61,7 +62,7 @@ struct IslandResetPage: View {
     @State private var copiedCommand = false
     private var isClaude: Bool { provider == .claudeCode }
     static let claudeResetCommand = "/limit-reset"
-    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     private let secondary = Color(white: 0.84)
     private let contentInset: CGFloat = 14
 

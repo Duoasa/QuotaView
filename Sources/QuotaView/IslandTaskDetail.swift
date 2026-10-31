@@ -49,15 +49,16 @@ enum IslandTaskDetailMode: Equatable {
         case .unavailable: "questionmark.circle"
         }
     }
-    func title(data: IslandTaskDetailData, english: Bool) -> String {
-        switch self {
-        case .progress: data.status == .compacting ? (english ? "Context compaction" : "上下文压缩")
-            : (english ? "Progress" : "任务进展")
-        case .approval: english ? "Needs confirmation" : "待确认"
-        case .completion: data.status == .cancelled ? (english ? "Operation cancelled" : "操作已取消")
-            : (english ? "Result" : "完成结果")
-        case .failure: english ? "Execution failed" : "执行失败"
-        case .unavailable: english ? "Activity unavailable" : "状态不可用"
+    func title(data: IslandTaskDetailData, english: Bool, language: AppPreferences.Language? = nil) -> String {
+        let copy = AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
+        return switch self {
+        case .progress: data.status == .compacting ? (copy.text("上下文压缩", "Context compaction"))
+            : (copy.text("任务进展", "Progress"))
+        case .approval: copy.text("待确认", "Needs confirmation")
+        case .completion: data.status == .cancelled ? (copy.text("操作已取消", "Operation cancelled"))
+            : (copy.text("完成结果", "Result"))
+        case .failure: copy.text("执行失败", "Execution failed")
+        case .unavailable: copy.text("状态不可用", "Activity unavailable")
         }
     }
 }
@@ -71,9 +72,9 @@ struct IslandTracePresentation {
     var code: Bool { entry.publicItem?.category != nil && entry.publicItem?.category != .message }
     var compactCommand: Bool { entry.publicItem?.category == .command && !expanded }
     var showsHeader: Bool { code || canExpand }
-    init(entry: IslandTraceEntry, english: Bool, expanded: Bool, revealOutput: Bool = true) {
+    init(entry: IslandTraceEntry, english: Bool, expanded: Bool, revealOutput: Bool = true, language: AppPreferences.Language? = nil) {
         self.entry = entry; self.expanded = expanded
-        let original = entry.text.value(english)
+        let original = entry.text.value(language ?? (english ? .english : .simplifiedChinese))
         let originalOutput = entry.publicItem?.output.flatMap { $0.isEmpty ? nil : $0 }
         func preview(_ value: String, lines: Int, characters: Int) -> String {
             String(value.components(separatedBy: "\n").prefix(lines).joined(separator: "\n").prefix(characters))
@@ -116,7 +117,7 @@ struct IslandTaskDetailMetrics {
     var viewportHeight: CGFloat { height - Self.padding * 2 - Self.headerHeight - Self.bodyGap }
     var overflows: Bool { bodyHeight > viewportHeight }
 
-    init(data: IslandTaskDetailData, width: CGFloat, english: Bool, expandedEntries: Set<UUID> = []) {
+    init(data: IslandTaskDetailData, width: CGFloat, english: Bool, expandedEntries: Set<UUID> = [], language: AppPreferences.Language? = nil) {
         mode = .init(data: data)
         cardWidth = width
         let selection = IslandTaskDetailSelection(data: data)
@@ -124,11 +125,11 @@ struct IslandTaskDetailMetrics {
         let usable = max(80, width - Self.horizontalPadding * 2 - Self.scrollGutter)
         contentWidth = usable
         result = mode == .completion ? data.finalResponse.map {
-            IslandMarkdownResultLayout(source: $0.text.value(english), width: usable)
+            IslandMarkdownResultLayout(source: $0.text.value(language ?? (english ? .english : .simplifiedChinese)), width: usable)
         } : nil
         let entries = data.confirmation == nil && mode != .completion ? selection.focus : []
         let items = entries.map { IslandTracePresentation(entry: $0, english: english,
-            expanded: expandedEntries.contains($0.id), revealOutput: !data.running) }
+            expanded: expandedEntries.contains($0.id), revealOutput: !data.running, language: language) }
         presentations = items
         let prose = items.map { item -> IslandMarkdownResultLayout? in
             item.code ? nil : IslandMarkdownResultLayout(plainText: item.primary, width: usable)
@@ -167,6 +168,7 @@ struct IslandTaskDetailMetrics {
 }
 
 struct IslandTaskDetailView: View {
+    @Environment(\.appLanguage) private var appLanguage
     let data: IslandTaskDetailData
     let metrics: IslandTaskDetailMetrics
     let english: Bool
@@ -177,7 +179,7 @@ struct IslandTaskDetailView: View {
     private var amber: Color { Color(red: 1, green: 0.76, blue: 0.44) }
     private var failure: Color { Color(red: 0.95, green: 0.43, blue: 0.42) }
     private var accent: Color { metrics.mode == .approval ? amber : (metrics.mode == .failure ? failure : .white) }
-    private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private func text(_ zh: LocalizedCopy, _ en: LocalizedCopy) -> String { AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text(zh, en) }
     private var agent: String { data.provider.displayName }
     private var sourceName: (String, String) {
         switch data.provider {
@@ -191,7 +193,7 @@ struct IslandTaskDetailView: View {
         VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.bodyGap) {
             HStack(spacing: 8) {
                 Image(systemName: metrics.mode.symbol).font(.system(size: 12))
-                Text(metrics.mode.title(data: data, english: english)).font(.system(size: 12, weight: .semibold))
+                Text(metrics.mode.title(data: data, english: english, language: appLanguage)).font(.system(size: 12, weight: .semibold))
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))

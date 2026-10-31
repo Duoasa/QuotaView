@@ -144,7 +144,8 @@ enum IslandApprovalTypedMetrics {
         max(76, 28 + IslandTaskTextMetrics.height(name, size: 14, semibold: true, width: width - 180)
             + 5 + IslandTaskTextMetrics.height(subtitle, width: width - 180))
     }
-    static func height(_ request: IslandCodexApprovalRequest, width: CGFloat, controls: CGFloat, english: Bool) -> CGFloat {
+    static func height(_ request: IslandCodexApprovalRequest, width: CGFloat, controls: CGFloat, english: Bool, language: AppPreferences.Language? = nil) -> CGFloat {
+        let copy = AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
         let reason = request.params["reason"].text
         let note = reason.isEmpty ? 0 : 12 + 18 + text(reason, width: width - 22)
         switch IslandApprovalLayout(request) {
@@ -155,7 +156,7 @@ enum IslandApprovalTypedMetrics {
             return 24 + 12 + (changes.isEmpty ? text(request.detail, width: width)
                 : changes.reduce(0) { $0 + diff($1, width: width) } + CGFloat(max(0, changes.count - 1)) * 12) + note
         case .network: return 24 + 12 + destinationHeight(name: request.params["networkApprovalContext"]["host"].text,
-            subtitle: english ? "Requested network access" : "请求网络访问", width: width) + note
+            subtitle: copy.text("请求网络访问", "Requested network access"), width: width) + note
         case .permissions: return 24 + 12 + controls + note
         case .connector: return 24 + 12 + argumentsHeight(request, width: width) + 16 + controls
         case .questions: return controls
@@ -165,13 +166,14 @@ enum IslandApprovalTypedMetrics {
             return 24 + 12 + destinationHeight(name: request.url?.host ?? request.params["serverName"].text,
                 subtitle: request.params["serverName"].text, width: width) + 12 + text(request.params["url"].text, width: width, code: true) + 16 + 64
                 + (request.detail.isEmpty ? 0 : 12 + text(request.detail, width: width))
-        case .verification: return 24 + 12 + destinationHeight(name: english ? "Verify in Codex" : "在 Codex 中验证",
+        case .verification: return 24 + 12 + destinationHeight(name: copy.text("在 Codex 中验证", "Verify in Codex"),
             subtitle: request.params["serverName"].text, width: width) + 12 + text(request.detail, width: width) + 12 + 36
         }
     }
 }
 
 struct IslandApprovalTypedContent<Controls: View>: View {
+    @Environment(\.appLanguage) private var appLanguage
     let request: IslandCodexApprovalRequest
     let width: CGFloat
     let english: Bool
@@ -182,74 +184,74 @@ struct IslandApprovalTypedContent<Controls: View>: View {
     private var layout: IslandApprovalLayout { .init(request) }
     private var muted: Color { IslandApprovalAppearance.muted }
     private var secondary: Color { IslandApprovalAppearance.secondary }
-    private func t(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private func text(_ zh: LocalizedCopy, _ en: LocalizedCopy) -> String { AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text(zh, en) }
     private var reason: String { request.params["reason"].text }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             switch layout {
             case .command:
-                heading(t("允许执行这条命令？", "Allow this command?"))
-                codePanel(t("执行命令", "Command to run"), value: request.detail, caption: request.params["cwd"].text)
+                heading(text("允许执行这条命令？", "Allow this command?"))
+                codePanel(text("执行命令", "Command to run"), value: request.detail, caption: request.params["cwd"].text)
                 if !reason.isEmpty { reasonNote }
             case .terminalInput:
-                heading(t("发送终端输入", "Send terminal input"))
+                heading(text("发送终端输入", "Send terminal input"))
                 HStack(spacing: 8) {
                     Circle().fill(Color(white: 0.65)).frame(width: 5, height: 5)
-                    Text(t("终端等待输入", "Terminal awaiting input"))
+                    Text(text("终端等待输入", "Terminal awaiting input"))
                     Spacer()
-                    Text(t("发送后继续", "Resumes after input")).foregroundStyle(muted)
+                    Text(text("发送后继续", "Resumes after input")).foregroundStyle(muted)
                 }.font(.system(size: 11)).foregroundStyle(secondary).frame(height: 28)
-                codePanel(t("待发送内容", "Input to send"), value: request.detail.debugDescription,
-                    caption: "", trailing: t("换行以 \\n 表示", "Line endings shown as \\n"))
+                codePanel(text("待发送内容", "Input to send"), value: request.detail.debugDescription,
+                    caption: "", trailing: text("换行以 \\n 表示", "Line endings shown as \\n"))
                 if !reason.isEmpty { reasonNote }
             case .fileChange:
-                heading(t("检查文件修改", "Review file changes"), trailing: "\(request.contextItem?["changes"].array.count ?? 0) " + t("个文件", "files"))
+                heading(text("检查文件修改", "Review file changes"), trailing: "\(request.contextItem?["changes"].array.count ?? 0) " + text("个文件", "files"))
                 let changes = request.contextItem?["changes"].array ?? []
                 if changes.isEmpty { note(request.detail) }
                 ForEach(Array(changes.enumerated()), id: \.offset) { _, change in diffPanel(change) }
                 if !reason.isEmpty { reasonNote }
             case .network:
-                heading(t("允许访问这个地址？", "Allow access to this host?"))
+                heading(text("允许访问这个地址？", "Allow access to this host?"))
                 destination(icon: "globe", name: request.params["networkApprovalContext"]["host"].text,
-                    subtitle: t("请求网络访问", "Requested network access"),
+                    subtitle: text("请求网络访问", "Requested network access"),
                     badge: request.params["networkApprovalContext"]["protocol"].text.uppercased())
                 if !reason.isEmpty { reasonNote }
             case .permissions:
-                heading(t("选择授权范围", "Choose access to grant"), trailing: t("按需勾选", "Select as needed"))
+                heading(text("选择授权范围", "Choose access to grant"), trailing: text("按需勾选", "Select as needed"))
                 controls
                 if !reason.isEmpty { reasonNote }
             case .connector:
-                heading(t("确认工具操作", "Review tool action"), trailing: request.contextItem?["server"].text ?? "")
+                heading(text("确认工具操作", "Review tool action"), trailing: request.contextItem?["server"].text ?? "")
                 argumentsPanel
                 controls.padding(.top, 4)
             case .questions:
                 controls
             case .toolApproval:
-                heading(t("批准工具操作", "Approve tool action"))
+                heading(text("批准工具操作", "Approve tool action"))
                 if !request.detail.isEmpty { note(request.detail) }
             case .form:
-                heading(t("填写工具表单", "Complete the tool form"), trailing: t("* 必填", "* Required"))
+                heading(text("填写工具表单", "Complete the tool form"), trailing: text("* 必填", "* Required"))
                 controls
                 if !request.detail.isEmpty { note(request.detail) }
             case .authorization:
-                heading(t("连接外部服务", "Connect an external provider"))
+                heading(text("连接外部服务", "Connect an external provider"))
                 destination(icon: "arrow.up.right.square", name: request.url?.host ?? request.params["serverName"].text,
-                    subtitle: request.params["serverName"].text, badge: t("外部授权", "Authorization"))
+                    subtitle: request.params["serverName"].text, badge: text("外部授权", "Authorization"))
                 note(request.params["url"].text, code: true)
                 HStack(spacing: 8) {
-                    step(1, title: t("打开授权页面", "Open authorization"), subtitle: t("在服务商页面完成", "Complete with the provider"), complete: openedURL)
+                    step(1, title: text("打开授权页面", "Open authorization"), subtitle: text("在服务商页面完成", "Complete with the provider"), complete: openedURL)
                     Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(muted)
-                    step(2, title: t("返回并继续", "Return and continue"), subtitle: t("继续任务", "Resume this task"), complete: false)
+                    step(2, title: text("返回并继续", "Return and continue"), subtitle: text("继续任务", "Resume this task"), complete: false)
                 }.frame(height: 64).padding(.top, 4)
                 if !request.detail.isEmpty { note(request.detail) }
             case .verification:
-                heading(t("需要身份验证", "Identity verification required"))
-                destination(icon: "lock.shield", name: t("在 Codex 中验证", "Verify in Codex"),
+                heading(text("需要身份验证", "Identity verification required"))
+                destination(icon: "lock.shield", name: text("在 Codex 中验证", "Verify in Codex"),
                     subtitle: request.params["serverName"].text, badge: "Codex")
                 note(request.detail)
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.up.right")
-                    Text(handoffMessage ?? t("请在 Codex 中验证", "Verify in Codex"))
+                    Text(handoffMessage ?? text("请在 Codex 中验证", "Verify in Codex"))
                 }.font(.system(size: 11)).foregroundStyle(secondary).frame(height: 36)
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -272,7 +274,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle").font(.system(size: 11)).foregroundStyle(muted).frame(width: 14, height: 16)
             VStack(alignment: .leading, spacing: 2) {
-                Text(t("请求原因", "Reason")).font(.system(size: 10)).foregroundStyle(muted).frame(height: 16)
+                Text(text("请求原因", "Reason")).font(.system(size: 10)).foregroundStyle(muted).frame(height: 16)
                 Text(reason).font(.system(size: 12)).foregroundStyle(secondary).lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                     .frame(height: IslandApprovalTypedMetrics.text(reason, width: width - 22), alignment: .topLeading)
@@ -305,10 +307,9 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             }.frame(height: IslandApprovalCodePreview.height(value, width: width - 24), alignment: .topLeading).padding(12)
             if IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
                 HStack {
-                    Button(t(showsCompleteCode ? "收起完整内容" : "查看完整内容",
-                        showsCompleteCode ? "Show preview" : "Show full content")) { showsCompleteCode.toggle() }
+                    Button((showsCompleteCode ? text("收起完整内容", "Show preview") : text("查看完整内容", "Show full content"))) { showsCompleteCode.toggle() }
                     Spacer()
-                    Button(t("复制完整内容", "Copy full text")) {
+                    Button(text("复制完整内容", "Copy full text")) {
                         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
                     }
                 }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(IslandUtilityButtonStyle())
@@ -366,7 +367,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                 Image(systemName: "square.stack.3d.up").foregroundStyle(muted)
                 Text(request.contextItem?["tool"].text ?? "").foregroundStyle(.white)
                 Spacer()
-                Text(t("工具参数", "Arguments")).foregroundStyle(muted)
+                Text(text("工具参数", "Arguments")).foregroundStyle(muted)
             }.font(.system(size: 11, design: .monospaced)).padding(.horizontal, 12).frame(height: 36)
                 .background(IslandApprovalAppearance.raised)
             ForEach(Array(IslandApprovalTypedMetrics.arguments(request).enumerated()), id: \.offset) { _, argument in

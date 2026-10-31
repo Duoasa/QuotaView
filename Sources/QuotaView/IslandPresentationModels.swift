@@ -129,9 +129,23 @@ enum IslandTaskStatus: String, CaseIterable {
     }
 }
 struct IslandDetailText: Equatable {
-    var chinese: String; var english: String
-    init(_ chinese: String, _ english: String? = nil) { self.chinese = chinese; self.english = english ?? chinese }
+    var chinese: String { didSet { chineseCopy = nil } }
+    var english: String { didSet { englishCopy = nil } }
+    private var chineseCopy: LocalizedCopy?
+    private var englishCopy: LocalizedCopy?
+    init(_ value: String) { chinese = value; english = value }
+    init(_ chinese: LocalizedCopy, _ english: LocalizedCopy) {
+        self.chinese = chinese.render(); self.english = english.render()
+        chineseCopy = chinese; englishCopy = english
+    }
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.chinese == rhs.chinese && lhs.english == rhs.english
+    }
     func value(_ english: Bool) -> String { english ? self.english : chinese }
+    func value(_ language: AppPreferences.Language) -> String {
+        guard chinese != english else { return chinese }
+        return AppCopy(language: language).text(chineseCopy ?? LocalizedCopy(chinese), englishCopy ?? LocalizedCopy(english))
+    }
 }
 struct IslandTraceEntry: Identifiable, Equatable {
     enum Kind { case progress, result, confirmation, failure }

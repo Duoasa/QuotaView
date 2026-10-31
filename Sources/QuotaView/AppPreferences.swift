@@ -75,22 +75,48 @@ final class AppPreferences: ObservableObject {
     }
 
     enum Language: String, CaseIterable, Identifiable {
-        case simplifiedChinese
-        case english
-
+        case simplifiedChinese, english, japanese, korean, traditionalChinese, spanish
         var id: String { rawValue }
-
         var localeIdentifier: String {
             switch self {
             case .simplifiedChinese: "zh-Hans"
             case .english: "en"
+            case .japanese: "ja"
+            case .korean: "ko"
+            case .traditionalChinese: "zh-Hant"
+            case .spanish: "es"
             }
         }
-
-        static var systemResolved: Language {
-            let preferred = Locale.preferredLanguages.first?.lowercased() ?? "en"
-            return preferred.hasPrefix("zh") ? .simplifiedChinese : .english
+        var nativeName: String {
+            switch self {
+            case .simplifiedChinese: "简体中文"
+            case .english: "English"
+            case .japanese: "日本語"
+            case .korean: "한국어"
+            case .traditionalChinese: "繁體中文"
+            case .spanish: "Español"
+            }
         }
+        var usesLatinLayout: Bool { self == .english || self == .spanish }
+        static func resolve(preferredLanguages: [String]) -> Language {
+            for identifier in preferredLanguages {
+                let tag = identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+                let parts = tag.split(separator: "-")
+                switch parts.first {
+                case "ja": return .japanese
+                case "ko": return .korean
+                case "es": return .spanish
+                case "en": return .english
+                case "zh":
+                    if parts.contains("hans") { return .simplifiedChinese }
+                    return parts.contains("hant") || parts.contains("tw") || parts.contains("hk") || parts.contains("mo")
+                        ? .traditionalChinese : .simplifiedChinese
+                default: continue
+                }
+            }
+            return .english
+        }
+        static var systemResolved: Language { resolve(preferredLanguages: Locale.preferredLanguages) }
     }
 
     enum MenuBarComponent {
@@ -801,12 +827,14 @@ struct AppCopy {
     var islandArchiveTask: String { text("归档卡片", "Archive card") }
     var islandArchiveTaskHint: String { text("从灵动岛移除，Codex 任务与聊天保留", "Remove from the Island; keep the Codex task and chat") }
 
-    func text(_ simplifiedChinese: String, _ english: String) -> String {
-        switch language {
-        case .simplifiedChinese: simplifiedChinese
-        case .english: english
-        }
+    /// For predefined labels already stored as strings; interpolated copy uses text(_:_:).
+    func named(_ simplifiedChinese: String, _ english: String) -> String {
+        text(LocalizedCopy(simplifiedChinese), LocalizedCopy(english))
     }
+    func text(_ simplifiedChinese: LocalizedCopy, _ english: LocalizedCopy) -> String {
+        AppLocalization.text(chinese: simplifiedChinese, english: english, language: language.localeIdentifier)
+    }
+
 }
 
 private extension UserDefaults {
@@ -818,5 +846,15 @@ private extension UserDefaults {
     func storedInt(forKey key: String, defaultValue: Int) -> Int {
         guard object(forKey: key) != nil else { return defaultValue }
         return integer(forKey: key)
+    }
+}
+
+private struct AppLanguageKey: EnvironmentKey {
+    static let defaultValue: AppPreferences.Language? = nil
+}
+extension EnvironmentValues {
+    var appLanguage: AppPreferences.Language? {
+        get { self[AppLanguageKey.self] }
+        set { self[AppLanguageKey.self] = newValue }
     }
 }

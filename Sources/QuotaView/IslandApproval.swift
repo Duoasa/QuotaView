@@ -56,18 +56,18 @@ enum IslandApprovalDecisionChoices {
         let options = options(request)
         return options.first { $0.id == id } ?? options.first { $0.action.result["decision"].text == "accept" }
     }
-    static func optionHeight(_ option: IslandApprovalDecisionOption, width: CGFloat, english: Bool) -> CGFloat {
-        IslandTaskTextMetrics.limitedHeight(option.title.value(english), lines: 2, size: 12, semibold: true, width: width - 54)
-            + 4 + IslandTaskTextMetrics.limitedHeight(option.detail.value(english), lines: 2, size: 11, code: option.isRule, width: width - 54) + 20
+    static func optionHeight(_ option: IslandApprovalDecisionOption, width: CGFloat, english: Bool, language: AppPreferences.Language? = nil) -> CGFloat {
+        IslandTaskTextMetrics.limitedHeight(option.title.value(language ?? (english ? .english : .simplifiedChinese)), lines: 2, size: 12, semibold: true, width: width - 54)
+            + 4 + IslandTaskTextMetrics.limitedHeight(option.detail.value(language ?? (english ? .english : .simplifiedChinese)), lines: 2, size: 11, code: option.isRule, width: width - 54) + 20
     }
-    static func height(_ request: IslandCodexApprovalRequest, width: CGFloat, english: Bool) -> CGFloat {
+    static func height(_ request: IslandCodexApprovalRequest, width: CGFloat, english: Bool, language: AppPreferences.Language? = nil) -> CGFloat {
         let options = options(request)
         guard options.count > 1 else { return 0 }
         let scopes = options.filter { !$0.isRule }, rules = options.filter(\.isRule)
         let scopeWidth = (width - CGFloat(max(0, scopes.count - 1)) * 8) / CGFloat(max(1, scopes.count))
-        let scopeHeight = scopes.map { optionHeight($0, width: scopeWidth, english: english) }.max() ?? 0
+        let scopeHeight = scopes.map { optionHeight($0, width: scopeWidth, english: english, language: language) }.max() ?? 0
         return 24 + (scopes.isEmpty ? 0 : scopeHeight + 8)
-            + rules.reduce(0) { $0 + optionHeight($1, width: width, english: english) + 8 } - 8
+            + rules.reduce(0) { $0 + optionHeight($1, width: width, english: english, language: language) + 8 } - 8
     }
 }
 
@@ -120,14 +120,14 @@ struct IslandApprovalMetrics {
             ? CGFloat(field.choices.count) * 32 + CGFloat(max(0, field.choices.count - 1)) * 6 : inputHeight
         return max(label, control) + 24
     }
-    init(request: IslandConfirmation, width: CGFloat, english: Bool, maximumViewportHeight: CGFloat, cardHeight: CGFloat = IslandVibeLayout.rowHeight) {
+    init(request: IslandConfirmation, width: CGFloat, english: Bool, maximumViewportHeight: CGFloat, cardHeight: CGFloat = IslandVibeLayout.rowHeight, language: AppPreferences.Language? = nil) {
         self.maximumViewportHeight = max(0, min(Self.maximumContentViewport, maximumViewportHeight))
         contentWidth = width
-        questionHeight = IslandTaskTextMetrics.height(request.question.value(english), size: 13, semibold: true, width: width)
-        impactHeight = IslandTaskTextMetrics.height(request.impact.value(english), size: 12, width: width - Self.inset * 2)
+        questionHeight = IslandTaskTextMetrics.height(request.question.value(language ?? (english ? .english : .simplifiedChinese)), size: 13, semibold: true, width: width)
+        impactHeight = IslandTaskTextMetrics.height(request.impact.value(language ?? (english ? .english : .simplifiedChinese)), size: 12, width: width - Self.inset * 2)
         let failure: String
         switch request.phase {
-        case .failed(_, let message): failure = message.value(english)
+        case .failed(_, let message): failure = message.value(language ?? (english ? .english : .simplifiedChinese))
         default: failure = ""
         }
         failureHeight = failure.isEmpty ? 0 : IslandTaskTextMetrics.height(failure, width: width - 48) + 24
@@ -158,9 +158,9 @@ struct IslandApprovalMetrics {
             }
         }
         controlsHeight = h
-        decisionsHeight = request.protocolRequest.map { IslandApprovalDecisionChoices.height($0, width: width, english: english) } ?? 0
-        let impactBlock = request.impact.value(english).isEmpty ? 0 : Self.inset * 2 + 16 + 4 + impactHeight + Self.gap
-        let bodyHeight = request.protocolRequest.map { IslandApprovalTypedMetrics.height($0, width: width, controls: h, english: english) }
+        decisionsHeight = request.protocolRequest.map { IslandApprovalDecisionChoices.height($0, width: width, english: english, language: language) } ?? 0
+        let impactBlock = request.impact.value(language ?? (english ? .english : .simplifiedChinese)).isEmpty ? 0 : Self.inset * 2 + 16 + 4 + impactHeight + Self.gap
+        let bodyHeight = request.protocolRequest.map { IslandApprovalTypedMetrics.height($0, width: width, controls: h, english: english, language: language) }
             ?? (questionHeight + Self.gap + impactBlock + controlsHeight)
         contentHeight = cardHeight + Self.gap + bodyHeight
             + (decisionsHeight > 0 ? Self.gap + decisionsHeight : 0)
@@ -280,6 +280,7 @@ struct IslandQuestionInteractionEntry {
 }
 
 struct IslandApprovalView: View {
+    @Environment(\.appLanguage) private var appLanguage
     let task: CodexMultitaskRenderTask
     let metadata: IslandSessionMetadata?
     let request: IslandConfirmation
@@ -301,7 +302,7 @@ struct IslandApprovalView: View {
     @State private var taskHeaderHovered = false
     private var muted: Color { IslandApprovalAppearance.muted }
     private var secondary: Color { IslandApprovalAppearance.secondary }
-    private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private func text(_ zh: LocalizedCopy, _ en: LocalizedCopy) -> String { AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text(zh, en) }
     private var wire: IslandCodexApprovalRequest? { request.protocolRequest }
     var questionInteraction: IslandQuestionInteractionEntry {
         .init(request: request, draft: $draft, onDecision: onDecision)
@@ -454,15 +455,15 @@ struct IslandApprovalView: View {
                     controls: controls(wire).disabled(wire.kind == .questions
                         ? !questionInteraction.canEdit : !request.canRespond || !request.phase.canSubmit))
             } else {
-            Text(request.question.value(english)).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
+            Text(request.question.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
                 .foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.questionHeight, alignment: .topLeading)
                 .textSelection(.enabled)
-            if !request.impact.value(english).isEmpty {
+            if !request.impact.value(appLanguage ?? (english ? .english : .simplifiedChinese)).isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(wire == nil ? text("请求状态", "Request status") : text("请求内容与范围", "Request and scope"))
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(muted).frame(height: 16)
-                    Text(request.impact.value(english)).font(.system(size: 12)).lineSpacing(2)
+                    Text(request.impact.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 12)).lineSpacing(2)
                         .foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.impactHeight, alignment: .topLeading)
                         .textSelection(.enabled)
@@ -484,7 +485,7 @@ struct IslandApprovalView: View {
     }
     private var failureMessage: String? {
         switch request.phase {
-        case .failed(_, let message): message.value(english)
+        case .failed(_, let message): message.value(appLanguage ?? (english ? .english : .simplifiedChinese))
         default: nil
         }
     }
@@ -706,14 +707,14 @@ struct IslandApprovalView: View {
                 .font(.system(size: 10, weight: .medium)).foregroundStyle(muted).frame(height: 16)
             if !scopes.isEmpty {
                 let width = (metrics.contentWidth - CGFloat(max(0, scopes.count - 1)) * 8) / CGFloat(scopes.count)
-                let height = scopes.map { IslandApprovalDecisionChoices.optionHeight($0, width: width, english: english) }.max() ?? 0
+                let height = scopes.map { IslandApprovalDecisionChoices.optionHeight($0, width: width, english: english, language: appLanguage) }.max() ?? 0
                 HStack(spacing: 8) {
                     ForEach(scopes) { option in decisionOption(option, request: request, width: width, height: height) }
                 }
             }
             ForEach(rules) { option in
                 decisionOption(option, request: request, width: metrics.contentWidth,
-                    height: IslandApprovalDecisionChoices.optionHeight(option, width: metrics.contentWidth, english: english))
+                    height: IslandApprovalDecisionChoices.optionHeight(option, width: metrics.contentWidth, english: english, language: appLanguage))
             }
         }
     }
@@ -722,19 +723,19 @@ struct IslandApprovalView: View {
         return Button { draft.decisionID = option.id } label: {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(option.title.value(english)).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                    Text(option.title.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
                         .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.title.value(english), lines: 2, size: 12, semibold: true, width: width - 54), alignment: .topLeading)
-                    Text(option.detail.value(english)).font(.system(size: 11, design: option.isRule ? .monospaced : .default)).foregroundStyle(secondary).lineSpacing(2)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.title.value(appLanguage ?? (english ? .english : .simplifiedChinese)), lines: 2, size: 12, semibold: true, width: width - 54), alignment: .topLeading)
+                    Text(option.detail.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 11, design: option.isRule ? .monospaced : .default)).foregroundStyle(secondary).lineSpacing(2)
                         .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.detail.value(english), lines: 2, size: 11, code: option.isRule, width: width - 54), alignment: .topLeading)
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(option.detail.value(appLanguage ?? (english ? .english : .simplifiedChinese)), lines: 2, size: 11, code: option.isRule, width: width - 54), alignment: .topLeading)
                 }.fixedSize(horizontal: false, vertical: true)
                 selectionMark(selected, multiple: false)
             }.padding(.horizontal, 12).frame(maxWidth: .infinity).frame(height: height)
         }.buttonStyle(IslandApprovalSelectionStyle(selected: selected)).disabled(!self.request.phase.canSubmit)
-            .contextMenu { copyContentButton(option.title.value(english) + "\n" + option.detail.value(english)) }
+            .contextMenu { copyContentButton(option.title.value(appLanguage ?? (english ? .english : .simplifiedChinese)) + "\n" + option.detail.value(appLanguage ?? (english ? .english : .simplifiedChinese))) }
             .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
     }
     private func copyContentButton(_ value: String) -> some View {
@@ -758,7 +759,7 @@ struct IslandApprovalView: View {
         return Button { send(action) } label: {
             HStack(spacing: 8) {
                 if submitting && primary { ProgressView().controlSize(.small).tint(secondary) }
-                Text(submitting && primary ? submittingTitle : action.label.value(english))
+                Text(submitting && primary ? submittingTitle : action.label.value(appLanguage ?? (english ? .english : .simplifiedChinese)))
                 if primary && !submitting { Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)) }
             }.font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: IslandApprovalMetrics.buttonHeight)
         }.buttonStyle(IslandApprovalActionStyle(primary: primary, destructive: destructive)).disabled(!enabled)

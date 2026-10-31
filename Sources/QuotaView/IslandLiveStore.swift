@@ -1057,18 +1057,18 @@ final class IslandLiveStore {
         return summary(name)
     }
 
-    private func childPresentations(parent: String, english: Bool, at now: Date) -> [IslandSubagentPresentation] {
+    private func childPresentations(parent: String, english: Bool, language: AppPreferences.Language, at now: Date) -> [IslandSubagentPresentation] {
         subagents.values.filter { $0.identity.parentSessionHash == parent && $0.startedAt != nil && !$0.terminal
             && presentationKind(for: $0.identity.sessionHash) == .subagent }
             .sorted { ($0.startedAt ?? .distantPast, $0.identity.sessionHash) < ($1.startedAt ?? .distantPast, $1.identity.sessionHash) }
             .map { child in
-                let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+                let copy = AppCopy(language: language)
                 let title = child.title.isEmpty ? (child.identity.nickname ?? child.identity.role ?? copy.islandSubagentTitle) : child.title
                 let status: String
                 switch child.status {
                 case .unknown: status = copy.islandSubagentStatusUnavailable
                 case .cancelled: status = copy.islandSubagentInterrupted
-                default: status = CodexActivityCopy(language: english ? .english : .simplifiedChinese).statusTitle(for: child.status.visualState)
+                default: status = CodexActivityCopy(language: language).statusTitle(for: child.status.visualState)
                 }
                 let metadata = IslandSessionMetadata(modelName: child.model, reasoningEffort: child.effort,
                     elapsedSeconds: child.status == .unknown ? nil : child.startedAt.map { max(0, Int(now.timeIntervalSince($0))) })
@@ -2021,11 +2021,13 @@ final class IslandLiveStore {
             tasks[i].progressUpdatedAt = now
         }
     }
-    func display(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, at now: Date = Date()) -> CodexMultitaskDisplay {
+    func display(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, at now: Date = Date(), language selectedLanguage: AppPreferences.Language? = nil) -> CodexMultitaskDisplay {
+        let language = selectedLanguage ?? (english ? .english : .simplifiedChinese)
+        let appCopy = AppCopy(language: language)
         advanceConfirmationPresentation(at: now, visible: enabled && !privacy)
         advanceProgress(at: now)
         var details: [Int: IslandTaskDetailData] = [:]; var metas: [Int: IslandSessionMetadata] = [:]
-        let copy = CodexActivityCopy(language: english ? .english : .simplifiedChinese)
+        let copy = CodexActivityCopy(language: language)
         let visibleTasks = tasks.filter { !isArchived($0) }
         let items = visibleTasks.map { task -> CodexMultitaskRenderTask in
             let settlement = task.terminal ? nil : task.requestLifecycle.desktopSettlementDisplay(at: now)
@@ -2033,9 +2035,9 @@ final class IslandLiveStore {
             let presentationStatus = settlement == nil ? task.status : task.activityStatus
             let visual: CodexActivityVisualState = synchronizing ? .working : presentationStatus.visualState
             let duration = task.startedAt.map { max(0, Int((task.endedAt ?? now).timeIntervalSince($0))) }
-            let children = privacy ? [] : childPresentations(parent: task.key, english: english, at: now)
+            let children = privacy ? [] : childPresentations(parent: task.key, english: english, language: language, at: now)
             let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
-            metas[task.id] = .init(modelName: task.model.isEmpty ? (english ? "Unknown model" : "模型未知") : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
+            metas[task.id] = .init(modelName: task.model.isEmpty ? (appCopy.text("模型未知", "Unknown model")) : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
             var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
             if settlement != nil { request = nil }
             if let pending = task.requests.first(where: { $0.value.id == request?.id }) {
@@ -2050,30 +2052,30 @@ final class IslandLiveStore {
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
             }
             details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider)
-            let title = privacy ? provider.displayName + (english ? " task" : " 任务") : (task.title.isEmpty ? (english ? "Untitled task" : "未命名任务") : task.title)
+            let title = privacy ? provider.displayName + (appCopy.text(" 任务", " task")) : (task.title.isEmpty ? (appCopy.text("未命名任务", "Untitled task")) : task.title)
             let status: String
-            if synchronizing { status = english ? "Syncing" : "同步中" }
-            else if task.status == .cancelled { status = english ? "Interrupted" : "已中断" }
-            else if task.status == .queued { status = english ? "Queued" : "排队中" }
-            else if presentationStatus == .waiting && task.sourceWaitReason == .userInput { status = english ? "Awaiting answer" : "等待回答" }
+            if synchronizing { status = appCopy.text("同步中", "Syncing") }
+            else if task.status == .cancelled { status = appCopy.text("已中断", "Interrupted") }
+            else if task.status == .queued { status = appCopy.text("排队中", "Queued") }
+            else if presentationStatus == .waiting && task.sourceWaitReason == .userInput { status = appCopy.text("等待回答", "Awaiting answer") }
             else { status = copy.statusTitle(for: visual) }
             let operation: String
             if task.operation == "exec" || task.operation.hasPrefix("exec · ") {
-                operation = (english ? "Executing" : "执行中") + task.operation.dropFirst(4)
+                operation = (appCopy.text("执行中", "Executing")) + task.operation.dropFirst(4)
             } else if !task.operation.isEmpty { operation = task.operation }
             else if !runningChildren.isEmpty && !task.terminal {
-                operation = summary(runningChildren.map(\.title).joined(separator: english ? ", " : "、")) + (english ? " are working" : " 正在工作")
+                operation = summary(runningChildren.map(\.title).joined(separator: appCopy.text("、", ", "))) + (appCopy.text(" 正在工作", " are working"))
             } else { operation = task.publicProgress }
             let render = CodexActivityRenderState(taskIdentity: .init(sessionHash: task.key, turnHash: task.turnKey),
                 visualState: visual, approximateProgressFraction: task.displayedProgress,
                 windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (synchronizing
-                    ? (english ? "Request handled" : "请求已处理") : presentationStatus == .waiting
-                    ? status + " · " + (request?.question.value(english) ?? "") : operation),
+                    ? (appCopy.text("请求已处理", "Request handled")) : presentationStatus == .waiting
+                    ? status + " · " + (request?.question.value(language) ?? "") : operation),
                 tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tokens" },
                 accessibilityLabel: "\(title), \(status)")
             return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty, provider: provider)
         }
-        let connectionCopy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let connectionCopy = AppCopy(language: language)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),
             english: english, effect: .dropField, visible: enabled, playbackEnabled: true, totalTokens: nil, remainingPercent: remaining,
             sessionMetadata: metas, taskDetails: details, connectionTitle: connection == .connected || desktopConnected
@@ -2081,6 +2083,6 @@ final class IslandLiveStore {
                 : (visibleTasks.isEmpty ? connectionCopy.text("等待 Codex 任务", "Waiting for Codex") : connectionCopy.text("本地活动数据", "Local activity")),
             privacyMode: privacy, activeRequestIDs: privacy ? [] : Set(visibleTasks.flatMap {
                 $0.requestLifecycle.desktopSettlementDisplay(at: now) != nil ? [] : $0.requests.map { $0.value.id }
-            }))
+            }), language: language)
     }
 }

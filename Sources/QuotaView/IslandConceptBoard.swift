@@ -475,6 +475,7 @@ final class IslandBoardState: ObservableObject {
     private struct DetailMetricsKey: Equatable {
         let data: IslandTaskDetailData
         let english: Bool
+        let language: AppPreferences.Language
         let expanded: Set<UUID>
     }
     // At most the normal and rail-adjusted widths; clocks and scrolling reuse
@@ -483,6 +484,7 @@ final class IslandBoardState: ObservableObject {
     private struct ApprovalMetricsKey: Equatable {
         let request: IslandConfirmation
         let english: Bool
+        let language: AppPreferences.Language
         let maximumViewportHeight: CGFloat
         let cardHeight: CGFloat
     }
@@ -597,6 +599,7 @@ final class IslandBoardState: ObservableObject {
     var onClaimConfirmation: ((Int, UUID) -> Void)?
     var onDismissConfirmation: ((Int, UUID) -> Void)?
     var english: Bool { display?.english ?? false }
+    var language: AppPreferences.Language { display?.language ?? (english ? .english : .simplifiedChinese) }
     var tasks: [CodexMultitaskRenderTask] { display?.state.tasks ?? [] }
     var memoryActivity: IslandMemoryActivity? { IslandMemoryActivity(snapshots: display?.backgroundMemorySnapshots ?? []) }
     static func needsAttention(_ task: CodexMultitaskRenderTask) -> Bool { task.hasPendingRequest || task.renderState.visualState == .awaitingConfirmation }
@@ -682,10 +685,10 @@ final class IslandBoardState: ObservableObject {
             width: expandedWidth - IslandVibeLayout.listInset - IslandVibeLayout.scrollingListTrailingInset) : metrics
     }
     private func measuredApproval(request: IslandConfirmation, width: CGFloat) -> IslandApprovalMetrics {
-        let key = ApprovalMetricsKey(request: request, english: english, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.taskGroupHeight(width: width) ?? IslandVibeLayout.rowHeight)
+        let key = ApprovalMetricsKey(request: request, english: english, language: language, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.taskGroupHeight(width: width) ?? IslandVibeLayout.rowHeight)
         if let cached = approvalMetricsCache[width], cached.0 == key { return cached.1 }
         let result = IslandApprovalMetrics(request: request, width: width, english: english,
-            maximumViewportHeight: key.maximumViewportHeight, cardHeight: key.cardHeight)
+            maximumViewportHeight: key.maximumViewportHeight, cardHeight: key.cardHeight, language: language)
         if approvalMetricsCache[width] == nil && approvalMetricsCache.count >= 2 { approvalMetricsCache.removeAll() }
         approvalMetricsCache[width] = (key, result)
         return result
@@ -695,9 +698,9 @@ final class IslandBoardState: ObservableObject {
             - (showsScrollRail ? IslandVibeLayout.scrollingListTrailingInset : IslandVibeLayout.listInset))
     }
     private func measuredDetail(for task: CodexMultitaskRenderTask, width: CGFloat) -> IslandTaskDetailMetrics {
-        let key = DetailMetricsKey(data: detailData(for: task), english: english, expanded: expandedTraceEntries)
+        let key = DetailMetricsKey(data: detailData(for: task), english: english, language: language, expanded: expandedTraceEntries)
         if let cached = detailMetricsCache[width], cached.0 == key { return cached.1 }
-        let result = IslandTaskDetailMetrics(data: key.data, width: width, english: english, expandedEntries: key.expanded)
+        let result = IslandTaskDetailMetrics(data: key.data, width: width, english: english, expandedEntries: key.expanded, language: language)
         if detailMetricsCache[width] == nil && detailMetricsCache.count >= 2 { detailMetricsCache.removeAll() }
         detailMetricsCache[width] = (key, result)
         return result
@@ -859,7 +862,7 @@ final class IslandBoardState: ObservableObject {
         guard presentation != .pinned else { return }
         collapse()
     }
-    func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    func text(_ zh: LocalizedCopy, _ en: LocalizedCopy) -> String { AppCopy(language: language).text(zh, en) }
     var summary: String {
         if tasks.isEmpty { return display?.connectionTitle.isEmpty == false ? display!.connectionTitle : text("暂无运行任务", "No running tasks") }
         if completedCount == tasks.count { return text("全部任务已完成", "All tasks completed") }
@@ -874,7 +877,7 @@ final class IslandBoardState: ObservableObject {
     }
     var quota: String {
         let countdown = MenuBarQuotaImage.countdown(until: display?.quotaResetsAt, now: Date(),
-            copy: AppCopy(language: english ? .english : .simplifiedChinese))
+            copy: AppCopy(language: language))
         return quotaPercent + " · " + countdown
     }
 
@@ -1155,11 +1158,12 @@ enum IslandSubagentAvatarImages {
 }
 
 struct IslandSubagentStrip: View {
+    @Environment(\.appLanguage) private var appLanguage
     let children: [IslandSubagentPresentation]
     let english: Bool
     let visible: Bool
     let reduceMotion: Bool
-    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     static func activityText(_ children: [IslandSubagentPresentation]) -> NSAttributedString {
         let result = NSMutableAttributedString(string: "")
         let font = NSFont.systemFont(ofSize: 11)
@@ -1212,13 +1216,21 @@ struct IslandSubagentStrip: View {
 struct IslandTaskCardAppearance {
     let visualState: CodexActivityVisualState
     let hovered: Bool
+    var selected = false
+    private var statusTint: NSColor { CodexActivityRippleGlowContract.statusTint(for: visualState) }
     var glassTint: Color {
-        if visualState == .completed {
-            // Tint the native material and its optical highlight together;
-            // completion is no longer represented by a painted green border.
-            return Color(red: 0.025, green: 0.055, blue: 0.035).opacity(hovered ? 0.32 : 0.42)
+        if selected {
+            return visualState == .completed
+                ? Color(red: 0.025, green: 0.055, blue: 0.035).opacity(hovered ? 0.32 : 0.42)
+                : .black.opacity(hovered ? 0.32 : 0.42)
         }
-        return .black.opacity(hovered ? 0.32 : 0.42)
+        let tint = NSColor.black.blended(withFraction: hovered ? 0.18 : 0.14, of: statusTint) ?? .black
+        return Color(nsColor: tint).opacity(hovered ? 0.32 : 0.42)
+    }
+    var solidTint: Color {
+        let base = NSColor(white: 0.055, alpha: 1)
+        guard !selected else { return Color(nsColor: base) }
+        return Color(nsColor: base.blended(withFraction: hovered ? 0.11 : 0.08, of: statusTint) ?? base)
     }
 }
 
@@ -1231,6 +1243,7 @@ extension VerticalAlignment {
 
 // Shared presentation: list rows add selection, approval headers are read-only.
 struct IslandTaskCard: View {
+    @Environment(\.appLanguage) private var appLanguage
     var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
     let task: CodexMultitaskRenderTask
     let selected: Bool
@@ -1247,7 +1260,7 @@ struct IslandTaskCard: View {
     // stretching text, icons or the effect. Live cards retain their own height.
     var minimumCardHeight: CGFloat = 0
     private var appearance: IslandTaskCardAppearance {
-        .init(visualState: task.renderState.visualState, hovered: hovered)
+        .init(visualState: task.renderState.visualState, hovered: hovered, selected: selected)
     }
     private var primaryContentHeight: CGFloat {
         max(minimumCardHeight, metadata?.primaryContentHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
@@ -1298,7 +1311,7 @@ struct IslandTaskCard: View {
                             Text(task.renderState.tokenUsageTitle ?? "— tokens")
                                 .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
                                 .foregroundStyle(IslandBoardStyle.muted).fixedSize()
-                                .accessibilityHint(english ? "Session total" : "会话累计")
+                                .accessibilityHint(AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text("会话累计", "Session total"))
                                 .padding(.trailing, showsArchiveButton ? IslandVibeLayout.taskActionOpticalInset : 0)
                         }.frame(height: IslandVibeLayout.textRowHeight)
                     }
@@ -1322,7 +1335,7 @@ struct IslandTaskCard: View {
                         .allowsHitTesting(false).accessibilityHidden(true)
                 }
             }
-            .islandGlass(IslandVibeLayout.rowShape, tint: appearance.glassTint, solidTint: Color(white: 0.055))
+            .islandGlass(IslandVibeLayout.rowShape, tint: appearance.glassTint, solidTint: appearance.solidTint)
             .contentShape(IslandVibeLayout.rowShape)
             .accessibilityHint("\(task.title) · \(task.renderState.statusTitle)")
             .accessibilityElement(children: .ignore)
@@ -1332,6 +1345,7 @@ struct IslandTaskCard: View {
 
 
 private struct IslandBoardTaskRow: View {
+    @Environment(\.appLanguage) private var appLanguage
     let progressEffect: AppPreferences.CodexActivityProgressEffect
     let task: CodexMultitaskRenderTask
     let selected: Bool
@@ -1357,19 +1371,20 @@ private struct IslandBoardTaskRow: View {
                     .padding(.trailing, IslandVibeLayout.contentInset)
                     .alignmentGuide(.islandTaskHeader) { $0[VerticalAlignment.center] }
             }
-            .accessibilityValue(selected ? (english ? "Details open" : "详情已展开") : "")
+            .accessibilityValue(selected ? AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text("详情已展开", "Details open") : "")
             .contentShape(IslandVibeLayout.rowShape)
             .onHover { hovered = $0 }
     }
 }
 
 struct IslandTaskArchiveButton: View {
+    @Environment(\.appLanguage) private var appLanguage
     let english: Bool
     var showsArchiveIcon = true
     var provider: IslandAgentProvider = .codex
     let action: () -> Void
     @State private var hovered = false
-    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     var body: some View {
         Button(action: action) {
             Group {
@@ -1485,9 +1500,9 @@ struct IslandBoardView: View {
                                         Text(state.text("记忆整理", "Memory consolidation"))
                                     }
                                     .fixedSize(horizontal: true, vertical: false)
-                                    .help(memory.label(english: state.english))
+                                    .help(memory.label(english: state.english, language: state.language))
                                     .accessibilityElement(children: .ignore)
-                                    .accessibilityLabel(memory.label(english: state.english))
+                                    .accessibilityLabel(memory.label(english: state.english, language: state.language))
                                 }
                             }.lineLimit(1)
                         } trailing: {
@@ -1500,6 +1515,8 @@ struct IslandBoardView: View {
                 }
             }
         }
+        .environment(\.appLanguage, state.language)
+        .environment(\.locale, Locale(identifier: state.language.localeIdentifier))
         .environment(\.islandGlassActive, !state.compact)
         .environment(\.islandLiquidGlassEnabled, state.display?.islandMaterial != .classic)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -1852,6 +1869,7 @@ private struct IslandFloatingUsageCapsule: View {
                 IslandUsageCapsuleContent(windows: state.display?.usageSnapshot?.quotaWindows ?? [],
                     current: state.display?.usageState.isCurrent == true,
                     english: state.english, now: state.floatingUsageNow)
+                    .environment(\.appLanguage, state.language)
                 .position(x: geometry.value.rect.midX, y: geometry.value.rect.maxY + 24)
             }
         }
@@ -1867,6 +1885,7 @@ private struct IslandFloatingUsageCapsule: View {
 
 /// Shared artwork; callers supply either live usage or isolated settings illustration data.
 struct IslandUsageCapsuleContent: View {
+    @Environment(\.appLanguage) private var appLanguage
     let windows: [CodexQuotaWindowPresentation]
     let current: Bool
     let english: Bool
@@ -1890,9 +1909,9 @@ struct IslandUsageCapsuleContent: View {
 
     private func period(_ window: CodexQuotaWindowPresentation?, short: Bool) -> some View {
         let percent = current ? window?.remainingPercent : nil
-        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let copy = AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese))
         let countdown = MenuBarQuotaImage.countdown(until: current ? window?.resetsAt : nil, now: now, copy: copy)
-        let title = copy.text(short ? "5小时" : "周额度", short ? "5h" : "Weekly")
+        let title = (short ? copy.text("5小时", "5h") : copy.text("周额度", "Weekly"))
         let value = percent.map { "\(min(100, max(0, $0)))%" } ?? "—"
         return HStack(spacing: 6) {
             IslandQuotaRing(remainingPercent: percent)
@@ -2656,6 +2675,7 @@ private struct IslandRecentChartScroll<Content: View>: View {
 }
 
 struct IslandUsageBento: View {
+    @Environment(\.appLanguage) private var appLanguage
     let snapshot: CurrentCodexPresentation?
     let usageState: IslandUsagePresentation.State
     let english: Bool
@@ -2691,10 +2711,10 @@ struct IslandUsageBento: View {
     @State private var activityMode: IslandActivityHeatmap.Mode = .daily
     @StateObject private var chartCache = IslandUsageChartCache()
     private let secondary = Color(white: 0.84)
-    private func text(_ zh: String, _ en: String) -> String { english ? en : zh }
+    private func text(_ zh: LocalizedCopy, _ en: LocalizedCopy) -> String { AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text(zh, en) }
     private func tokens(_ value: Int64?) -> String { value.map { CodexActivityTokenUsageFormatter.string(for: $0) } ?? "—" }
-    private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "—" }
-    private var copy: AppCopy { .init(language: english ? .english : .simplifiedChinese) }
+    private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: copy.language.localeIdentifier))) } ?? "—" }
+    private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     private var charts: IslandUsageChartCache.Models {
         chartCache.models(activity: current?.tokenActivity ?? [],
                           lifetimeTokens: current?.lifetimeTokens, endingAt: Date())
@@ -3107,7 +3127,7 @@ struct IslandUsageBento: View {
                     }
                     ZStack(alignment: .topLeading) {
                         ForEach(grid.months, id: \.column) { month in
-                            Text(month.date.formatted(english ? .dateTime.month(.abbreviated) : .dateTime.month()))
+                            Text(month.date.formatted(.dateTime.month(.abbreviated).locale(Locale(identifier: copy.language.localeIdentifier))))
                                 .font(.system(size: 9)).foregroundStyle(secondary)
                                 .fixedSize().offset(x: min(CGFloat(month.column) * pitch, max(0, activityPlotWidth - 25)))
                         }
@@ -3150,9 +3170,9 @@ struct IslandUsageBento: View {
     }
     private func activityDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: english ? "en_US" : "zh_CN")
+        formatter.locale = Locale(identifier: copy.language.localeIdentifier)
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = english ? "MMM d, yyyy" : "yyyy年M月d日"
+        formatter.setLocalizedDateFormatFromTemplate("yMMMd")
         let label = formatter.string(from: date)
         switch activityMode {
         case .daily: return label
@@ -3163,8 +3183,8 @@ struct IslandUsageBento: View {
     private func activityTokens(_ value: Int64?) -> String {
         guard let value else { return text("暂无数据", "No data") }
         let label: String
-        if !english && value >= 100_000_000 { label = String(format: "%.1f亿", Double(value) / 100_000_000) }
-        else if !english && value >= 10_000 { label = String(format: "%.1f万", Double(value) / 10_000) }
+        if [.simplifiedChinese, .traditionalChinese].contains(copy.language) && value >= 100_000_000 { label = String(format: "%.1f亿", Double(value) / 100_000_000) }
+        else if [.simplifiedChinese, .traditionalChinese].contains(copy.language) && value >= 10_000 { label = String(format: "%.1f万", Double(value) / 10_000) }
         else { label = value.formatted() }
         return label + text(" 个 Token", " tokens")
     }

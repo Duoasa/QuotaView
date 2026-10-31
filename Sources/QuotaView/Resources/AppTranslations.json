@@ -1,0 +1,3577 @@
+{
+  "Show connection settings": {
+    "ja": "接続設定を表示",
+    "ko": "연결 설정 표시",
+    "es": "Mostrar ajustes de conexión"
+  },
+  "Expanded": {
+    "ja": "展開",
+    "ko": "펼침",
+    "es": "Expandido"
+  },
+  "Collapsed": {
+    "ja": "折りたたみ",
+    "ko": "접힘",
+    "es": "Contraído"
+  },
+  "Connected": {
+    "ja": "接続済み",
+    "ko": "연결됨",
+    "es": "Conectado"
+  },
+  "Waiting": {
+    "ja": "待機中",
+    "ko": "대기 중",
+    "es": "En espera"
+  },
+  "Configuring": {
+    "ja": "設定中",
+    "ko": "설정 중",
+    "es": "Configurando"
+  },
+  "Needs attention": {
+    "ja": "確認が必要",
+    "ko": "확인 필요",
+    "es": "Requiere atención"
+  },
+  "Disabled": {
+    "ja": "無効",
+    "ko": "비활성화됨",
+    "es": "Desactivado"
+  },
+  "Install and open the agent once, then retry.": {
+    "ja": "エージェントをインストールして一度起動し、再試行してください。",
+    "ko": "에이전트를 설치하고 한 번 실행한 후 다시 시도하세요.",
+    "es": "Instala y abre el agente una vez y vuelve a intentarlo."
+  },
+  "Could not safely update the configuration. Check its format and file permissions.": {
+    "ja": "設定を安全に更新できませんでした。形式とファイルのアクセス権を確認してください。",
+    "ko": "설정을 안전하게 업데이트하지 못했습니다. 형식과 파일 권한을 확인하세요.",
+    "es": "No se pudo actualizar la configuración de forma segura. Comprueba el formato y los permisos del archivo."
+  },
+  "Another application changed the configuration. Retry shortly.": {
+    "ja": "別のアプリが設定を変更しました。少し待って再試行してください。",
+    "ko": "다른 앱이 설정을 변경했습니다. 잠시 후 다시 시도하세요.",
+    "es": "Otra aplicación cambió la configuración. Inténtalo de nuevo en unos instantes."
+  },
+  "The connection helper is missing. Reinstall QuotaView.": {
+    "ja": "接続ヘルパーが見つかりません。QuotaViewを再インストールしてください。",
+    "ko": "연결 도우미가 없습니다. QuotaView를 다시 설치하세요.",
+    "es": "Falta el asistente de conexión. Reinstala QuotaView."
+  },
+  "The local listener could not start. Quit other copies of this QuotaView channel and retry.": {
+    "ja": "ローカルリスナーを起動できませんでした。同じチャンネルの他のQuotaViewを終了して再試行してください。",
+    "ko": "로컬 리스너를 시작하지 못했습니다. 같은 채널의 다른 QuotaView를 종료하고 다시 시도하세요.",
+    "es": "No se pudo iniciar el servicio local. Cierra las otras instancias de este canal de QuotaView y reinténtalo."
+  },
+  "Setup did not finish. Please retry.": {
+    "ja": "設定が完了しませんでした。再試行してください。",
+    "ko": "설정이 완료되지 않았습니다. 다시 시도하세요.",
+    "es": "La configuración no se completó. Vuelve a intentarlo."
+  },
+  "Configuration directories": {
+    "ja": "設定ディレクトリ",
+    "ko": "설정 디렉터리",
+    "es": "Directorios de configuración"
+  },
+  "Detects DSH and compatible clients. Custom directories can also be added.": {
+    "ja": "DSHと互換クライアントを検出します。カスタムディレクトリも追加できます。",
+    "ko": "DSH 및 호환 클라이언트를 감지합니다. 사용자 지정 디렉터리도 추가할 수 있습니다.",
+    "es": "Detecta DSH y clientes compatibles. También puedes añadir directorios personalizados."
+  },
+  "Connected to {{0}} configuration directories.": {
+    "ja": "{{0}}個の設定ディレクトリに接続済み。",
+    "ko": "설정 디렉터리 {{0}}개에 연결되었습니다.",
+    "es": "Conectado a {{0}} directorios de configuración."
+  },
+  "Recheck": {
+    "ja": "再確認",
+    "ko": "다시 확인",
+    "es": "Volver a comprobar"
+  },
+  "Add Directory": {
+    "ja": "ディレクトリを追加",
+    "ko": "디렉터리 추가",
+    "es": "Añadir directorio"
+  },
+  "Custom directory": {
+    "ja": "カスタムディレクトリ",
+    "ko": "사용자 지정 디렉터리",
+    "es": "Directorio personalizado"
+  },
+  "Remove": {
+    "ja": "削除",
+    "ko": "제거",
+    "es": "Eliminar"
+  },
+  "No valid DSH profile was found in this directory. Open the client once first.": {
+    "ja": "このディレクトリに有効なDSHプロファイルがありません。先にクライアントを一度起動してください。",
+    "ko": "이 디렉터리에 유효한 DSH 프로필이 없습니다. 먼저 클라이언트를 한 번 실행하세요.",
+    "es": "No se encontró un perfil de DSH válido en este directorio. Abre primero el cliente una vez."
+  },
+  "Configuration directory": {
+    "ja": "設定ディレクトリ",
+    "ko": "설정 디렉터리",
+    "es": "Directorio de configuración"
+  },
+  "Open Directory": {
+    "ja": "ディレクトリを開く",
+    "ko": "디렉터리 열기",
+    "es": "Abrir directorio"
+  },
+  "Restart the client after enabling. Confirm permissions in the original client.": {
+    "ja": "有効にしたらクライアントを再起動してください。権限の確認は元のクライアントで行います。",
+    "ko": "활성화한 후 클라이언트를 다시 시작하세요. 권한은 원래 클라이언트에서 확인하세요.",
+    "es": "Reinicia el cliente tras activarlo. Confirma los permisos en el cliente original."
+  },
+  "Start or restart a Kimi Code session to connect. Confirm permissions in Kimi Code.": {
+    "ja": "接続するにはKimi Codeセッションを開始または再起動してください。権限はKimi Codeで確認します。",
+    "ko": "연결하려면 Kimi Code 세션을 시작하거나 다시 시작하세요. 권한은 Kimi Code에서 확인하세요.",
+    "es": "Inicia o reinicia una sesión de Kimi Code para conectar. Confirma los permisos en Kimi Code."
+  },
+  "Setup incomplete": {
+    "ja": "設定未完了",
+    "ko": "설정 미완료",
+    "es": "Configuración incompleta"
+  },
+  "Retry": {
+    "ja": "再試行",
+    "ko": "다시 시도",
+    "es": "Reintentar"
+  },
+  "Light": {
+    "ja": "ライト",
+    "ko": "라이트",
+    "es": "Claro"
+  },
+  "Dark": {
+    "ja": "ダーク",
+    "ko": "다크",
+    "es": "Oscuro"
+  },
+  "Auto": {
+    "ja": "自動",
+    "ko": "자동",
+    "es": "Automático"
+  },
+  "Archive card": {
+    "ja": "カードをアーカイブ",
+    "ko": "카드 보관",
+    "es": "Archivar tarjeta"
+  },
+  "Remove from the Island; keep the Codex task and chat": {
+    "ja": "アイランドから削除し、Codexのタスクとチャットは保持",
+    "ko": "아일랜드에서 제거하고 Codex 작업과 채팅은 유지",
+    "es": "Quitar de la isla; conservar la tarea y el chat de Codex"
+  },
+  "Highlights": {
+    "ja": "注目の更新",
+    "ko": "주요 소식",
+    "es": "Destacados"
+  },
+  "What's new": {
+    "ja": "新機能",
+    "ko": "새로운 기능",
+    "es": "Novedades"
+  },
+  "Improvements": {
+    "ja": "改善",
+    "ko": "개선 사항",
+    "es": "Mejoras"
+  },
+  "Announcements": {
+    "ja": "お知らせ",
+    "ko": "공지",
+    "es": "Anuncios"
+  },
+  "Reminders": {
+    "ja": "リマインダー",
+    "ko": "알림",
+    "es": "Recordatorios"
+  },
+  "Updates & announcements": {
+    "ja": "アップデートとお知らせ",
+    "ko": "업데이트 및 공지",
+    "es": "Actualizaciones y anuncios"
+  },
+  "Important news, in one place": {
+    "ja": "大切なお知らせをひとつに",
+    "ko": "중요한 소식을 한곳에서",
+    "es": "Las noticias importantes, en un solo lugar"
+  },
+  "Discover new features, improvements and product announcements here.": {
+    "ja": "新機能、改善、製品のお知らせをここで確認できます。",
+    "ko": "새로운 기능, 개선 사항, 제품 공지를 여기서 확인하세요.",
+    "es": "Descubre aquí nuevas funciones, mejoras y anuncios del producto."
+  },
+  "Browse by category": {
+    "ja": "カテゴリ別に見る",
+    "ko": "카테고리별 보기",
+    "es": "Explorar por categoría"
+  },
+  "Expand or collapse each section, and scroll to read more.": {
+    "ja": "各セクションを開閉し、スクロールして続きをお読みください。",
+    "ko": "각 섹션을 펼치거나 접고 스크롤하여 더 읽어보세요.",
+    "es": "Expande o contrae cada sección y desplázate para leer más."
+  },
+  "Revisit anytime": {
+    "ja": "いつでも確認",
+    "ko": "언제든 다시 확인",
+    "es": "Consulta cuando quieras"
+  },
+  "Open this window again from Settings → About → Updates & announcements.": {
+    "ja": "設定 → このアプリについて → アップデートとお知らせから再度開けます。",
+    "ko": "설정 → 정보 → 업데이트 및 공지에서 다시 열 수 있습니다.",
+    "es": "Vuelve a abrir esta ventana desde Ajustes → Acerca de → Actualizaciones y anuncios."
+  },
+  "Native settings menus": {
+    "ja": "ネイティブの設定メニュー",
+    "ko": "네이티브 설정 메뉴",
+    "es": "Menús de ajustes nativos"
+  },
+  "Language, pinned display, display duration and proxy protocol now use native menus with a clear selection.": {
+    "ja": "言語、固定画面、表示時間、プロキシ方式を、選択状態が明確なネイティブメニューに変更しました。",
+    "ko": "언어, 고정 화면, 표시 시간, 프록시 프로토콜에 선택 상태가 명확한 네이티브 메뉴를 적용했습니다.",
+    "es": "El idioma, la pantalla fija, la duración y el protocolo del proxy ahora usan menús nativos con una selección clara."
+  },
+  "Simpler proxy settings": {
+    "ja": "よりシンプルなプロキシ設定",
+    "ko": "더 간편한 프록시 설정",
+    "es": "Ajustes de proxy más sencillos"
+  },
+  "Access proxy configuration, connection testing and error feedback in a simpler layout.": {
+    "ja": "プロキシ設定、接続テスト、エラー表示をよりシンプルにまとめました。",
+    "ko": "프록시 설정, 연결 테스트, 오류 안내를 더 간결하게 배치했습니다.",
+    "es": "Accede a la configuración del proxy, las pruebas de conexión y los errores en una interfaz más sencilla."
+  },
+  "A fresh look for QuotaView": {
+    "ja": "QuotaViewの新しい装い",
+    "ko": "QuotaView의 새로운 모습",
+    "es": "Una nueva imagen para QuotaView"
+  },
+  "We're preparing a new visual identity. Keep using the app as usual; more details will follow here.": {
+    "ja": "新しいビジュアルを準備中です。引き続き通常どおりご利用ください。詳細はここでお知らせします。",
+    "ko": "새로운 디자인을 준비하고 있습니다. 평소처럼 앱을 사용하세요. 자세한 내용은 이곳에서 알려드리겠습니다.",
+    "es": "Estamos preparando una nueva identidad visual. Sigue usando la app como siempre; pronto compartiremos más detalles aquí."
+  },
+  "Preview": {
+    "ja": "プレビュー",
+    "ko": "미리보기",
+    "es": "Vista previa"
+  },
+  "updated to": {
+    "ja": "更新先",
+    "ko": "업데이트됨",
+    "es": "actualizado a"
+  },
+  "OK": {
+    "ja": "OK",
+    "ko": "확인",
+    "es": "Aceptar"
+  },
+  ": ": {
+    "ja": "： ",
+    "ko": ": ",
+    "es": ": "
+  },
+  "Claude Code hooks were not fully written; try again.": {
+    "ja": "Claude Codeのフックを書き込めませんでした。再試行してください。",
+    "ko": "Claude Code 훅을 완전히 기록하지 못했습니다. 다시 시도하세요.",
+    "es": "No se guardaron todos los hooks de Claude Code; vuelve a intentarlo."
+  },
+  "Start or restart a Claude Code session to connect.": {
+    "ja": "接続するにはClaude Codeセッションを開始または再起動してください。",
+    "ko": "연결하려면 Claude Code 세션을 시작하거나 다시 시작하세요.",
+    "es": "Inicia o reinicia una sesión de Claude Code para conectar."
+  },
+  "Show Settings File": {
+    "ja": "設定ファイルを表示",
+    "ko": "설정 파일 보기",
+    "es": "Mostrar archivo de configuración"
+  },
+  "Handle permission prompts in the island": {
+    "ja": "権限の確認をアイランドで行う",
+    "ko": "아일랜드에서 권한 요청 처리",
+    "es": "Gestionar permisos en la isla"
+  },
+  "When off, the island only shows a reminder; confirm in the terminal.": {
+    "ja": "オフの場合は通知のみ表示し、ターミナルで確認します。",
+    "ko": "끄면 아일랜드에는 알림만 표시됩니다. 터미널에서 확인하세요.",
+    "es": "Si se desactiva, la isla solo muestra un aviso; confirma en el terminal."
+  },
+  "Read official usage windows": {
+    "ja": "公式の使用量を読み取る",
+    "ko": "공식 사용량 읽기",
+    "es": "Leer los periodos de uso oficiales"
+  },
+  "5-hour and weekly usage; keeps your status line output.": {
+    "ja": "5時間と週間の使用量。ステータス行の出力は保持します。",
+    "ko": "5시간 및 주간 사용량을 읽으며 상태 표시줄 출력은 유지합니다.",
+    "es": "Uso de 5 horas y semanal; conserva la salida de tu línea de estado."
+  },
+  "Adds QuotaView hooks to settings.json with a backup before the first change. Disabling removes only these entries and restores your status line. Tasks and transcripts are read locally.": {
+    "ja": "初回変更前にバックアップし、settings.jsonにQuotaViewのフックを追加します。無効にすると追加分のみ削除し、ステータス行を復元します。タスクと履歴はローカルで読み取ります。",
+    "ko": "첫 변경 전에 백업하고 settings.json에 QuotaView 훅을 추가합니다. 비활성화하면 추가된 항목만 제거하고 상태 표시줄을 복원합니다. 작업과 대화 기록은 로컬에서 읽습니다.",
+    "es": "Añade hooks de QuotaView a settings.json con una copia de seguridad previa. Al desactivarlos, solo elimina esas entradas y restaura la línea de estado. Las tareas y transcripciones se leen localmente."
+  },
+  "Awaiting session": {
+    "ja": "セッション待機中",
+    "ko": "세션 대기 중",
+    "es": "Esperando sesión"
+  },
+  "Automatic session connection": {
+    "ja": "セッションの自動接続",
+    "ko": "자동 세션 연결",
+    "es": "Conexión automática de sesiones"
+  },
+  "Service Connected": {
+    "ja": "サービス接続済み",
+    "ko": "서비스 연결됨",
+    "es": "Servicio conectado"
+  },
+  "Checking": {
+    "ja": "確認中",
+    "ko": "확인 중",
+    "es": "Comprobando"
+  },
+  "Waiting for First Task": {
+    "ja": "最初のタスクを待機中",
+    "ko": "첫 작업 대기 중",
+    "es": "Esperando la primera tarea"
+  },
+  "Ready, Waiting for Task": {
+    "ja": "準備完了、タスク待機中",
+    "ko": "준비 완료, 작업 대기 중",
+    "es": "Listo, esperando tarea"
+  },
+  "Task Activity Received": {
+    "ja": "タスクのアクティビティを受信",
+    "ko": "작업 활동 수신됨",
+    "es": "Actividad de tarea recibida"
+  },
+  "Directory Unreadable": {
+    "ja": "ディレクトリを読み取れません",
+    "ko": "디렉터리를 읽을 수 없음",
+    "es": "Directorio ilegible"
+  },
+  "Unsupported Record Format": {
+    "ja": "未対応の記録形式",
+    "ko": "지원하지 않는 기록 형식",
+    "es": "Formato de registro no compatible"
+  },
+  "Discovering Service": {
+    "ja": "サービスを検出中",
+    "ko": "서비스 검색 중",
+    "es": "Buscando servicio"
+  },
+  "Automatic Reading Disabled": {
+    "ja": "自動読み取りは無効",
+    "ko": "자동 읽기 비활성화됨",
+    "es": "Lectura automática desactivada"
+  },
+  "Checking local Codex task records.": {
+    "ja": "ローカルのCodexタスク記録を確認中。",
+    "ko": "로컬 Codex 작업 기록을 확인 중입니다.",
+    "es": "Comprobando los registros locales de tareas de Codex."
+  },
+  "No task records yet. Run a task in Codex.": {
+    "ja": "タスク記録がありません。Codexでタスクを実行してください。",
+    "ko": "아직 작업 기록이 없습니다. Codex에서 작업을 실행하세요.",
+    "es": "Aún no hay registros. Ejecuta una tarea en Codex."
+  },
+  "Task records are readable; waiting for activity.": {
+    "ja": "タスク記録を読み取れます。アクティビティを待機中。",
+    "ko": "작업 기록을 읽을 수 있습니다. 활동을 기다리는 중입니다.",
+    "es": "Los registros son legibles; esperando actividad."
+  },
+  "Codex task activity received.": {
+    "ja": "Codexのタスクアクティビティを受信しました。",
+    "ko": "Codex 작업 활동을 수신했습니다.",
+    "es": "Se recibió actividad de tareas de Codex."
+  },
+  "Check the directory and read permissions, or choose another data directory.": {
+    "ja": "ディレクトリと読み取り権限を確認するか、別のデータディレクトリを選択してください。",
+    "ko": "디렉터리와 읽기 권한을 확인하거나 다른 데이터 디렉터리를 선택하세요.",
+    "es": "Comprueba el directorio y sus permisos de lectura, o elige otro directorio de datos."
+  },
+  "Unsupported task record format. Recheck or enable the Hook compatibility connection.": {
+    "ja": "未対応のタスク記録形式です。再確認するか、Hook互換接続を有効にしてください。",
+    "ko": "지원하지 않는 작업 기록 형식입니다. 다시 확인하거나 Hook 호환 연결을 활성화하세요.",
+    "es": "Formato de registro no compatible. Vuelve a comprobarlo o activa la conexión de compatibilidad con Hook."
+  },
+  "Automatic reading is off.": {
+    "ja": "自動読み取りはオフです。",
+    "ko": "자동 읽기가 꺼져 있습니다.",
+    "es": "La lectura automática está desactivada."
+  },
+  "Connected to the local Codex service.": {
+    "ja": "ローカルのCodexサービスに接続済み。",
+    "ko": "로컬 Codex 서비스에 연결되었습니다.",
+    "es": "Conectado al servicio local de Codex."
+  },
+  "Untitled task": {
+    "ja": "名称未設定のタスク",
+    "ko": "이름 없는 작업",
+    "es": "Tarea sin título"
+  },
+  "This turn {{0}} tokens": {
+    "ja": "このターン {{0}}トークン",
+    "ko": "이번 턴 {{0}} 토큰",
+    "es": "Este turno: {{0}} tokens"
+  },
+  "{{0}} tokens this turn": {
+    "ja": "このターンで{{0}}トークン",
+    "ko": "이번 턴에서 {{0}} 토큰",
+    "es": "{{0}} tokens en este turno"
+  },
+  ", current quota remaining unavailable": {
+    "ja": "、現在の残り枠は取得できません",
+    "ko": ", 현재 잔여 한도를 확인할 수 없음",
+    "es": ", cuota restante no disponible"
+  },
+  ", current quota remaining: {{0}} percent": {
+    "ja": "、現在の残り枠：{{0}}パーセント",
+    "ko": ", 현재 잔여 한도: {{0}}퍼센트",
+    "es": ", cuota restante: {{0}} por ciento"
+  },
+  "Codex Not Connected": {
+    "ja": "Codex未接続",
+    "ko": "Codex 연결 안 됨",
+    "es": "Codex no conectado"
+  },
+  "Idle": {
+    "ja": "待機",
+    "ko": "대기",
+    "es": "Inactivo"
+  },
+  "Thinking": {
+    "ja": "思考中",
+    "ko": "생각 중",
+    "es": "Pensando"
+  },
+  "Working": {
+    "ja": "作業中",
+    "ko": "작업 중",
+    "es": "Trabajando"
+  },
+  "Compacting Context": {
+    "ja": "コンテキストを圧縮中",
+    "ko": "컨텍스트 압축 중",
+    "es": "Comprimiendo contexto"
+  },
+  "Awaiting Confirmation": {
+    "ja": "確認待ち",
+    "ko": "확인 대기 중",
+    "es": "Esperando confirmación"
+  },
+  "Completed": {
+    "ja": "完了",
+    "ko": "완료",
+    "es": "Completado"
+  },
+  "Failed": {
+    "ja": "失敗",
+    "ko": "실패",
+    "es": "Error"
+  },
+  "Not Loaded": {
+    "ja": "未読み込み",
+    "ko": "로드되지 않음",
+    "es": "Sin cargar"
+  },
+  "Preparing the Codex island connection": {
+    "ja": "Codexアイランド接続を準備中",
+    "ko": "Codex 아일랜드 연결 준비 중",
+    "es": "Preparando la conexión de Codex con la isla"
+  },
+  "Waiting for natural Codex context compaction": {
+    "ja": "Codexによるコンテキスト圧縮を待機中",
+    "ko": "Codex의 자연스러운 컨텍스트 압축 대기 중",
+    "es": "Esperando la compresión natural del contexto de Codex"
+  },
+  "Connect the Codex island in QuotaView Settings": {
+    "ja": "QuotaViewの設定でCodexアイランドを接続してください",
+    "ko": "QuotaView 설정에서 Codex 아일랜드를 연결하세요",
+    "es": "Conecta la isla de Codex en los ajustes de QuotaView"
+  },
+  "Recheck Hook authorization in Settings": {
+    "ja": "設定でHookの認証を再確認してください",
+    "ko": "설정에서 Hook 인증을 다시 확인하세요",
+    "es": "Revisa la autorización de Hook en Ajustes"
+  },
+  "Authorize the Hook connection in QuotaView Settings": {
+    "ja": "QuotaViewの設定でHook接続を許可してください",
+    "ko": "QuotaView 설정에서 Hook 연결을 허용하세요",
+    "es": "Autoriza la conexión de Hook en los ajustes de QuotaView"
+  },
+  "Send a new Codex message to finish connecting": {
+    "ja": "新しいCodexメッセージを送信すると接続が完了します",
+    "ko": "새 Codex 메시지를 보내 연결을 완료하세요",
+    "es": "Envía un mensaje nuevo en Codex para completar la conexión"
+  },
+  "Codex activity is active": {
+    "ja": "Codexのアクティビティは有効です",
+    "ko": "Codex 활동이 활성화되어 있습니다",
+    "es": "La actividad de Codex está activa"
+  },
+  "Connection needs attention in QuotaView Settings": {
+    "ja": "QuotaViewの設定で接続を確認してください",
+    "ko": "QuotaView 설정에서 연결을 확인하세요",
+    "es": "La conexión requiere atención en los ajustes de QuotaView"
+  },
+  "Connecting to the Codex session": {
+    "ja": "Codexセッションに接続中",
+    "ko": "Codex 세션에 연결 중",
+    "es": "Conectando con la sesión de Codex"
+  },
+  "The Codex session ended": {
+    "ja": "Codexセッションが終了しました",
+    "ko": "Codex 세션이 종료되었습니다",
+    "es": "La sesión de Codex ha finalizado"
+  },
+  "Analyzing the new task": {
+    "ja": "新しいタスクを分析中",
+    "ko": "새 작업 분석 중",
+    "es": "Analizando la nueva tarea"
+  },
+  "Running a terminal operation": {
+    "ja": "ターミナル操作を実行中",
+    "ko": "터미널 작업 실행 중",
+    "es": "Ejecutando una operación de terminal"
+  },
+  "Editing project files": {
+    "ja": "プロジェクトファイルを編集中",
+    "ko": "프로젝트 파일 편집 중",
+    "es": "Editando archivos del proyecto"
+  },
+  "Calling an external tool": {
+    "ja": "外部ツールを呼び出し中",
+    "ko": "외부 도구 호출 중",
+    "es": "Llamando a una herramienta externa"
+  },
+  "Coordinating a subtask": {
+    "ja": "サブタスクを調整中",
+    "ko": "하위 작업 조율 중",
+    "es": "Coordinando una subtarea"
+  },
+  "Running a local tool": {
+    "ja": "ローカルツールを実行中",
+    "ko": "로컬 도구 실행 중",
+    "es": "Ejecutando una herramienta local"
+  },
+  "Executing a multi-step plan": {
+    "ja": "複数ステップの計画を実行中",
+    "ko": "다단계 계획 실행 중",
+    "es": "Ejecutando un plan de varios pasos"
+  },
+  "Updating the long-running goal": {
+    "ja": "長期目標を更新中",
+    "ko": "장기 목표 업데이트 중",
+    "es": "Actualizando el objetivo a largo plazo"
+  },
+  "Following the long-running goal": {
+    "ja": "長期目標を遂行中",
+    "ko": "장기 목표 진행 중",
+    "es": "Siguiendo el objetivo a largo plazo"
+  },
+  "The long-running goal is paused": {
+    "ja": "長期目標は一時停止中です",
+    "ko": "장기 목표가 일시 중지되었습니다",
+    "es": "El objetivo a largo plazo está en pausa"
+  },
+  "The long-running goal needs attention": {
+    "ja": "長期目標の確認が必要です",
+    "ko": "장기 목표에 확인이 필요합니다",
+    "es": "El objetivo a largo plazo requiere atención"
+  },
+  "The long-running goal is usage-limited": {
+    "ja": "長期目標は使用量制限に達しました",
+    "ko": "장기 목표가 사용량 한도에 도달했습니다",
+    "es": "El objetivo a largo plazo alcanzó el límite de uso"
+  },
+  "The long-running goal is complete": {
+    "ja": "長期目標が完了しました",
+    "ko": "장기 목표가 완료되었습니다",
+    "es": "El objetivo a largo plazo se ha completado"
+  },
+  "Running a tool": {
+    "ja": "ツールを実行中",
+    "ko": "도구 실행 중",
+    "es": "Ejecutando una herramienta"
+  },
+  "An operation needs your approval": {
+    "ja": "操作の承認が必要です",
+    "ko": "작업 승인이 필요합니다",
+    "es": "Una operación necesita tu aprobación"
+  },
+  "The task is waiting for your input": {
+    "ja": "タスクは入力を待っています",
+    "ko": "작업이 입력을 기다리고 있습니다",
+    "es": "La tarea está esperando tu respuesta"
+  },
+  "Reviewing the tool result": {
+    "ja": "ツールの結果を確認中",
+    "ko": "도구 결과 검토 중",
+    "es": "Revisando el resultado de la herramienta"
+  },
+  "Condensing earlier messages to free context": {
+    "ja": "コンテキストを空けるため過去のメッセージを圧縮中",
+    "ko": "컨텍스트 공간 확보를 위해 이전 메시지 압축 중",
+    "es": "Resumiendo mensajes anteriores para liberar contexto"
+  },
+  "Context compacted; continuing the task": {
+    "ja": "コンテキストを圧縮しました。タスクを継続中",
+    "ko": "컨텍스트를 압축했습니다. 작업을 계속합니다",
+    "es": "Contexto comprimido; continuando la tarea"
+  },
+  "A subtask started": {
+    "ja": "サブタスクが開始されました",
+    "ko": "하위 작업이 시작되었습니다",
+    "es": "Se inició una subtarea"
+  },
+  "Summarizing subtask results": {
+    "ja": "サブタスクの結果をまとめ中",
+    "ko": "하위 작업 결과 요약 중",
+    "es": "Resumiendo los resultados de las subtareas"
+  },
+  "The current task is complete": {
+    "ja": "現在のタスクが完了しました",
+    "ko": "현재 작업이 완료되었습니다",
+    "es": "La tarea actual se ha completado"
+  },
+  "The current task was interrupted": {
+    "ja": "現在のタスクが中断されました",
+    "ko": "현재 작업이 중단되었습니다",
+    "es": "La tarea actual se interrumpió"
+  },
+  "The current task failed": {
+    "ja": "現在のタスクが失敗しました",
+    "ko": "현재 작업이 실패했습니다",
+    "es": "La tarea actual ha fallado"
+  },
+  "The Codex island connection is unavailable": {
+    "ja": "Codexアイランド接続を利用できません",
+    "ko": "Codex 아일랜드 연결을 사용할 수 없습니다",
+    "es": "La conexión de Codex con la isla no está disponible"
+  },
+  "Received an unrecognized Codex status event": {
+    "ja": "不明なCodexステータスイベントを受信しました",
+    "ko": "알 수 없는 Codex 상태 이벤트를 수신했습니다",
+    "es": "Se recibió un evento de estado de Codex desconocido"
+  },
+  "{{0}}, status: {{1}}, approximate progress: {{2}}%, current operation: {{3}}": {
+    "ja": "{{0}}、状態：{{1}}、およその進捗：{{2}}%、現在の操作：{{3}}",
+    "ko": "{{0}}, 상태: {{1}}, 대략적인 진행률: {{2}}%, 현재 작업: {{3}}",
+    "es": "{{0}}, estado: {{1}}, progreso aproximado: {{2}}%, operación actual: {{3}}"
+  },
+  "{{0}}, status: {{1}}, current operation: {{2}}": {
+    "ja": "{{0}}、状態：{{1}}、現在の操作：{{2}}",
+    "ko": "{{0}}, 상태: {{1}}, 현재 작업: {{2}}",
+    "es": "{{0}}, estado: {{1}}, operación actual: {{2}}"
+  },
+  ", {{0}}": {
+    "ja": "、{{0}}",
+    "ko": ", {{0}}",
+    "es": ", {{0}}"
+  },
+  "Compact": {
+    "ja": "コンパクト",
+    "ko": "축소",
+    "es": "Compacto"
+  },
+  "Choose the Codex data directory (usually .codex, containing the sessions folder).": {
+    "ja": "Codexのデータディレクトリを選択してください（通常はsessionsフォルダを含む.codex）。",
+    "ko": "Codex 데이터 디렉터리(일반적으로 sessions 폴더가 있는 .codex)를 선택하세요.",
+    "es": "Elige el directorio de datos de Codex (normalmente .codex, que contiene la carpeta sessions)."
+  },
+  "Choose Directory": {
+    "ja": "ディレクトリを選択",
+    "ko": "디렉터리 선택",
+    "es": "Elegir directorio"
+  },
+  "Hooks are disabled, but configuration remains. Retry disabling to finish cleanup.": {
+    "ja": "フックは無効ですが、設定が残っています。再度無効にして削除を完了してください。",
+    "ko": "훅은 비활성화되었지만 설정이 남아 있습니다. 다시 비활성화하여 정리하세요.",
+    "es": "Los hooks están desactivados, pero quedan ajustes. Vuelve a desactivarlos para terminar la limpieza."
+  },
+  "Hooks have not fully loaded. Check QuotaView in Codex Hooks settings.": {
+    "ja": "フックが完全に読み込まれていません。CodexのHooks設定でQuotaViewを確認してください。",
+    "ko": "훅이 완전히 로드되지 않았습니다. Codex Hooks 설정에서 QuotaView를 확인하세요.",
+    "es": "Los hooks no se han cargado por completo. Revisa QuotaView en los ajustes de Hooks de Codex."
+  },
+  "QuotaView Hooks are disabled in Codex.": {
+    "ja": "CodexでQuotaViewのフックが無効になっています。",
+    "ko": "Codex에서 QuotaView 훅이 비활성화되어 있습니다.",
+    "es": "Los hooks de QuotaView están desactivados en Codex."
+  },
+  "Authorization was not confirmed. Check QuotaView in Codex Hooks settings and retry.": {
+    "ja": "認証を確認できませんでした。CodexのHooks設定でQuotaViewを確認し、再試行してください。",
+    "ko": "인증이 확인되지 않았습니다. Codex Hooks 설정에서 QuotaView를 확인하고 다시 시도하세요.",
+    "es": "No se confirmó la autorización. Revisa QuotaView en los ajustes de Hooks de Codex y reinténtalo."
+  },
+  "Hooks are disabled in Codex. Enable them in Codex Settings and recheck.": {
+    "ja": "Codexでフックが無効です。Codexの設定で有効にして再確認してください。",
+    "ko": "Codex에서 훅이 비활성화되어 있습니다. Codex 설정에서 활성화하고 다시 확인하세요.",
+    "es": "Los hooks están desactivados en Codex. Actívalos en los ajustes de Codex y vuelve a comprobarlo."
+  },
+  "Codex has not fully loaded QuotaView Hooks. Check Codex Hooks settings and retry.": {
+    "ja": "CodexがQuotaViewのフックを完全に読み込んでいません。Hooks設定を確認し、再試行してください。",
+    "ko": "Codex가 QuotaView 훅을 완전히 로드하지 못했습니다. Codex Hooks 설정을 확인하고 다시 시도하세요.",
+    "es": "Codex no ha cargado todos los hooks de QuotaView. Revisa los ajustes de Hooks de Codex y reinténtalo."
+  },
+  "Compacting": {
+    "ja": "圧縮中",
+    "ko": "압축 중",
+    "es": "Comprimiendo"
+  },
+  "Needs input": {
+    "ja": "入力待ち",
+    "ko": "입력 필요",
+    "es": "Requiere respuesta"
+  },
+  "Offline": {
+    "ja": "オフライン",
+    "ko": "오프라인",
+    "es": "Sin conexión"
+  },
+  "Organizing": {
+    "ja": "整理中",
+    "ko": "정리 중",
+    "es": "Organizando"
+  },
+  "Awaiting action": {
+    "ja": "操作待ち",
+    "ko": "작업 대기 중",
+    "es": "Esperando acción"
+  },
+  "Status unavailable": {
+    "ja": "状態を取得できません",
+    "ko": "상태를 확인할 수 없음",
+    "es": "Estado no disponible"
+  },
+  "Interrupted": {
+    "ja": "中断",
+    "ko": "중단됨",
+    "es": "Interrumpido"
+  },
+  "Memory consolidation": {
+    "ja": "メモリの整理",
+    "ko": "메모리 통합",
+    "es": "Consolidación de memoria"
+  },
+  " ({{0}} background tasks)": {
+    "ja": "（バックグラウンドタスク{{0}}件）",
+    "ko": " (백그라운드 작업 {{0}}개)",
+    "es": " ({{0}} tareas en segundo plano)"
+  },
+  "All tasks completed": {
+    "ja": "すべてのタスクが完了",
+    "ko": "모든 작업 완료",
+    "es": "Todas las tareas completadas"
+  },
+  "Total {{0}} tokens": {
+    "ja": "合計{{0}}トークン",
+    "ko": "총 {{0}} 토큰",
+    "es": "Total: {{0}} tokens"
+  },
+  "All done · {{0}} tasks": {
+    "ja": "全件完了 · {{0}}件",
+    "ko": "모두 완료 · 작업 {{0}}개",
+    "es": "Todo listo · {{0}} tareas"
+  },
+  "Quota remaining": {
+    "ja": "残り枠",
+    "ko": "잔여 한도",
+    "es": "Cuota restante"
+  },
+  "Confirm quota reset": {
+    "ja": "枠のリセットを確認",
+    "ko": "한도 초기화 확인",
+    "es": "Confirmar restablecimiento de cuota"
+  },
+  "The previous result is unknown. Retry the same operation without selecting another reset credit.": {
+    "ja": "前回の結果は不明です。別のリセットクレジットを選ばず、同じ操作を再試行してください。",
+    "ko": "이전 결과를 알 수 없습니다. 다른 초기화 크레딧을 선택하지 않고 같은 작업을 다시 시도하세요.",
+    "es": "Se desconoce el resultado anterior. Reintenta la misma operación sin seleccionar otro crédito de restablecimiento."
+  },
+  "Use one reset credit for eligible Codex usage windows. {{0}} available. This cannot be undone.": {
+    "ja": "対象のCodex使用枠にリセットクレジットを1つ使います。残り{{0}}回。この操作は取り消せません。",
+    "ko": "해당 Codex 사용 기간에 초기화 크레딧 1개를 사용합니다. {{0}}개 사용 가능. 되돌릴 수 없습니다.",
+    "es": "Usar un crédito para restablecer los periodos de uso aptos de Codex. Hay {{0}} disponibles. Esta acción no se puede deshacer."
+  },
+  "Cancel": {
+    "ja": "キャンセル",
+    "ko": "취소",
+    "es": "Cancelar"
+  },
+  "Confirm retry": {
+    "ja": "再試行を確認",
+    "ko": "재시도 확인",
+    "es": "Confirmar reintento"
+  },
+  "Use one reset": {
+    "ja": "1回リセット",
+    "ko": "초기화 1회 사용",
+    "es": "Usar un restablecimiento"
+  },
+  "Checks reset credits before asking you to confirm.": {
+    "ja": "確認を求める前にリセットクレジットを確認します。",
+    "ko": "확인을 요청하기 전에 초기화 크레딧을 확인합니다.",
+    "es": "Comprueba los créditos de restablecimiento antes de pedir confirmación."
+  },
+  "Reset credit use disabled": {
+    "ja": "リセットクレジットは使用禁止",
+    "ko": "초기화 크레딧 사용 금지됨",
+    "es": "Uso de créditos de restablecimiento desactivado"
+  },
+  "Checking reset credits…": {
+    "ja": "リセットクレジットを確認中…",
+    "ko": "초기화 크레딧 확인 중…",
+    "es": "Comprobando créditos de restablecimiento…"
+  },
+  "Resetting…": {
+    "ja": "リセット中…",
+    "ko": "초기화 중…",
+    "es": "Restableciendo…"
+  },
+  "Check previous reset": {
+    "ja": "前回のリセットを確認",
+    "ko": "이전 초기화 확인",
+    "es": "Comprobar el restablecimiento anterior"
+  },
+  "Reset credit use is disabled in Settings → Usage display.": {
+    "ja": "設定 → 使用量表示でリセットクレジットの使用が禁止されています。",
+    "ko": "설정 → 사용량 표시에서 초기화 크레딧 사용이 금지되어 있습니다.",
+    "es": "El uso de créditos está desactivado en Ajustes → Uso."
+  },
+  "Reset confirmed. Quota follows the refreshed account data.": {
+    "ja": "リセットを確認しました。枠は更新後のアカウントデータに従います。",
+    "ko": "초기화가 확인되었습니다. 한도는 새로 고친 계정 데이터를 따릅니다.",
+    "es": "Restablecimiento confirmado. La cuota refleja los datos actualizados de la cuenta."
+  },
+  "No eligible usage window; no reset credit used.": {
+    "ja": "対象の使用枠がありません。リセットクレジットは使われていません。",
+    "ko": "초기화 가능한 사용 기간이 없습니다. 초기화 크레딧은 사용되지 않았습니다.",
+    "es": "No hay periodos de uso aptos; no se usó ningún crédito."
+  },
+  "No reset credits available.": {
+    "ja": "リセットクレジットがありません。",
+    "ko": "사용 가능한 초기화 크레딧이 없습니다.",
+    "es": "No hay créditos de restablecimiento disponibles."
+  },
+  "Reset credit use is disabled. No request was submitted.": {
+    "ja": "リセットクレジットの使用は禁止されています。リクエストは送信していません。",
+    "ko": "초기화 크레딧 사용이 금지되어 있습니다. 요청을 전송하지 않았습니다.",
+    "es": "El uso de créditos está desactivado. No se envió ninguna solicitud."
+  },
+  "Sign in to a ChatGPT account in Codex first.": {
+    "ja": "先にCodexでChatGPTアカウントにサインインしてください。",
+    "ko": "먼저 Codex에서 ChatGPT 계정에 로그인하세요.",
+    "es": "Primero inicia sesión con una cuenta de ChatGPT en Codex."
+  },
+  "The account or reset credit changed. Return to the original account and retry.": {
+    "ja": "アカウントまたはリセットクレジットが変わりました。元のアカウントに戻って再試行してください。",
+    "ko": "계정 또는 초기화 크레딧이 변경되었습니다. 원래 계정으로 돌아가 다시 시도하세요.",
+    "es": "La cuenta o el crédito han cambiado. Vuelve a la cuenta original y reinténtalo."
+  },
+  "Reset credit details are unavailable. Refresh or update Codex and retry.": {
+    "ja": "リセットクレジットの詳細を取得できません。Codexを更新または再読み込みして再試行してください。",
+    "ko": "초기화 크레딧 정보를 확인할 수 없습니다. Codex를 새로 고치거나 업데이트하고 다시 시도하세요.",
+    "es": "No se pueden consultar los créditos. Actualiza los datos o la versión de Codex y reinténtalo."
+  },
+  "Confirmation expired. Check again.": {
+    "ja": "確認の有効期限が切れました。再確認してください。",
+    "ko": "확인 유효 시간이 만료되었습니다. 다시 확인하세요.",
+    "es": "La confirmación ha caducado. Vuelve a comprobarlo."
+  },
+  "Cannot safely save the reset record. Operation stopped.": {
+    "ja": "リセット記録を安全に保存できません。操作を中止しました。",
+    "ko": "초기화 기록을 안전하게 저장할 수 없습니다. 작업을 중지했습니다.",
+    "es": "No se puede guardar el registro de forma segura. Operación detenida."
+  },
+  "Update Codex to use the reset interface.": {
+    "ja": "リセット機能を使うにはCodexを更新してください。",
+    "ko": "초기화 기능을 사용하려면 Codex를 업데이트하세요.",
+    "es": "Actualiza Codex para usar la función de restablecimiento."
+  },
+  "Result unknown. Retry will reuse the same operation.": {
+    "ja": "結果は不明です。再試行は同じ操作を再利用します。",
+    "ko": "결과를 알 수 없습니다. 재시도 시 같은 작업을 재사용합니다.",
+    "es": "Resultado desconocido. El reintento reutilizará la misma operación."
+  },
+  "Connection failed before submission. Try again later.": {
+    "ja": "送信前に接続が失敗しました。後で再試行してください。",
+    "ko": "전송 전에 연결이 실패했습니다. 나중에 다시 시도하세요.",
+    "es": "La conexión falló antes del envío. Inténtalo más tarde."
+  },
+  "The previous operation is still running.": {
+    "ja": "前回の操作がまだ実行中です。",
+    "ko": "이전 작업이 아직 실행 중입니다.",
+    "es": "La operación anterior sigue en curso."
+  },
+  "Reading the current account and reset credits.": {
+    "ja": "現在のアカウントとリセットクレジットを読み取り中。",
+    "ko": "현재 계정과 초기화 크레딧을 읽는 중입니다.",
+    "es": "Leyendo la cuenta actual y los créditos de restablecimiento."
+  },
+  "Waiting for Codex confirmation. Please do not repeat the action.": {
+    "ja": "Codexの確認を待機中。同じ操作を繰り返さないでください。",
+    "ko": "Codex 확인을 기다리는 중입니다. 작업을 반복하지 마세요.",
+    "es": "Esperando la confirmación de Codex. No repitas la acción."
+  },
+  "A previous reset needs reconciliation.": {
+    "ja": "前回のリセット結果の照合が必要です。",
+    "ko": "이전 초기화 결과를 확인해야 합니다.",
+    "es": "Es necesario verificar un restablecimiento anterior."
+  },
+  "Refresh quota data first.": {
+    "ja": "先に使用量データを更新してください。",
+    "ko": "먼저 사용량 데이터를 새로 고치세요.",
+    "es": "Primero actualiza los datos de cuota."
+  },
+  "Loading usage…": {
+    "ja": "使用量を読み込み中…",
+    "ko": "사용량 로드 중…",
+    "es": "Cargando uso…"
+  },
+  "Codex status read timed out": {
+    "ja": "Codexの状態読み取りがタイムアウトしました",
+    "ko": "Codex 상태 읽기 시간 초과",
+    "es": "Se agotó el tiempo de lectura del estado de Codex"
+  },
+  "Codex data connection disconnected": {
+    "ja": "Codexデータ接続が切断されました",
+    "ko": "Codex 데이터 연결이 끊어졌습니다",
+    "es": "Conexión de datos de Codex desconectada"
+  },
+  "Codex executable not found": {
+    "ja": "Codex実行ファイルが見つかりません",
+    "ko": "Codex 실행 파일을 찾을 수 없습니다",
+    "es": "No se encontró el ejecutable de Codex"
+  },
+  "Codex denied the read request; check sign-in": {
+    "ja": "Codexが読み取りを拒否しました。サインインを確認してください",
+    "ko": "Codex가 읽기 요청을 거부했습니다. 로그인을 확인하세요",
+    "es": "Codex rechazó la lectura; comprueba el inicio de sesión"
+  },
+  "Unsupported Codex data format": {
+    "ja": "未対応のCodexデータ形式",
+    "ko": "지원하지 않는 Codex 데이터 형식",
+    "es": "Formato de datos de Codex no compatible"
+  },
+  "Read cancelled": {
+    "ja": "読み取りをキャンセルしました",
+    "ko": "읽기 취소됨",
+    "es": "Lectura cancelada"
+  },
+  "Codex usage temporarily unavailable": {
+    "ja": "Codexの使用量を一時的に取得できません",
+    "ko": "Codex 사용량을 일시적으로 확인할 수 없습니다",
+    "es": "El uso de Codex no está disponible temporalmente"
+  },
+  "Codex temporarily unreachable": {
+    "ja": "Codexに一時的に接続できません",
+    "ko": "Codex에 일시적으로 연결할 수 없습니다",
+    "es": "No se puede acceder a Codex temporalmente"
+  },
+  "Approving…": {
+    "ja": "承認中…",
+    "ko": "승인 중…",
+    "es": "Aprobando…"
+  },
+  "Submitting…": {
+    "ja": "送信中…",
+    "ko": "전송 중…",
+    "es": "Enviando…"
+  },
+  "Request scrollbar": {
+    "ja": "リクエストのスクロールバー",
+    "ko": "요청 스크롤 막대",
+    "es": "Barra de desplazamiento de solicitudes"
+  },
+  "Interactive": {
+    "ja": "操作可能",
+    "ko": "상호작용 가능",
+    "es": "Interactivo"
+  },
+  "Read-only": {
+    "ja": "読み取り専用",
+    "ko": "읽기 전용",
+    "es": "Solo lectura"
+  },
+  "Use terminal": {
+    "ja": "ターミナルで操作",
+    "ko": "터미널 사용",
+    "es": "Usar terminal"
+  },
+  "Open Codex": {
+    "ja": "Codexを開く",
+    "ko": "Codex 열기",
+    "es": "Abrir Codex"
+  },
+  "Skip": {
+    "ja": "スキップ",
+    "ko": "건너뛰기",
+    "es": "Omitir"
+  },
+  "Skip these questions and notify {{0}}": {
+    "ja": "質問をスキップして{{0}}に通知",
+    "ko": "질문을 건너뛰고 {{0}}에 알림",
+    "es": "Omitir estas preguntas y notificar a {{0}}"
+  },
+  "Open authorization page": {
+    "ja": "認証ページを開く",
+    "ko": "인증 페이지 열기",
+    "es": "Abrir página de autorización"
+  },
+  "Verify in terminal": {
+    "ja": "ターミナルで検証",
+    "ko": "터미널에서 확인",
+    "es": "Verificar en el terminal"
+  },
+  "Verify in Codex": {
+    "ja": "Codexで検証",
+    "ko": "Codex에서 확인",
+    "es": "Verificar en Codex"
+  },
+  "Continue in terminal": {
+    "ja": "ターミナルで続行",
+    "ko": "터미널에서 계속",
+    "es": "Continuar en el terminal"
+  },
+  "Continue in Codex": {
+    "ja": "Codexで続行",
+    "ko": "Codex에서 계속",
+    "es": "Continuar en Codex"
+  },
+  "Hide reminder": {
+    "ja": "通知を非表示",
+    "ko": "알림 숨기기",
+    "es": "Ocultar aviso"
+  },
+  "Hide this island reminder; continue in {{0}}": {
+    "ja": "アイランドの通知を隠し、{{0}}で続行",
+    "ko": "아일랜드 알림을 숨기고 {{0}}에서 계속",
+    "es": "Ocultar este aviso de la isla; continuar en {{0}}"
+  },
+  "Request status": {
+    "ja": "リクエストの状態",
+    "ko": "요청 상태",
+    "es": "Estado de la solicitud"
+  },
+  "Request and scope": {
+    "ja": "リクエストと範囲",
+    "ko": "요청 및 범위",
+    "es": "Solicitud y alcance"
+  },
+  "Network access": {
+    "ja": "ネットワークアクセス",
+    "ko": "네트워크 접근",
+    "es": "Acceso a la red"
+  },
+  "Read files": {
+    "ja": "ファイル読み取り",
+    "ko": "파일 읽기",
+    "es": "Leer archivos"
+  },
+  "Write files": {
+    "ja": "ファイル書き込み",
+    "ko": "파일 쓰기",
+    "es": "Escribir archivos"
+  },
+  "File access": {
+    "ja": "ファイルアクセス",
+    "ko": "파일 접근",
+    "es": "Acceso a archivos"
+  },
+  "Allow network connections for this task": {
+    "ja": "このタスクのネットワーク接続を許可",
+    "ko": "이 작업의 네트워크 연결 허용",
+    "es": "Permitir conexiones de red para esta tarea"
+  },
+  "Selected": {
+    "ja": "選択済み",
+    "ko": "선택됨",
+    "es": "Seleccionado"
+  },
+  "Not selected": {
+    "ja": "未選択",
+    "ko": "선택 안 됨",
+    "es": "Sin seleccionar"
+  },
+  "Access duration": {
+    "ja": "アクセス期間",
+    "ko": "접근 허용 기간",
+    "es": "Duración del acceso"
+  },
+  "This turn": {
+    "ja": "このターン",
+    "ko": "이번 턴",
+    "es": "Este turno"
+  },
+  "This session": {
+    "ja": "このセッション",
+    "ko": "이번 세션",
+    "es": "Esta sesión"
+  },
+  "Yes": {
+    "ja": "はい",
+    "ko": "예",
+    "es": "Sí"
+  },
+  "No": {
+    "ja": "いいえ",
+    "ko": "아니요",
+    "es": "No"
+  },
+  "Clear selection": {
+    "ja": "選択を解除",
+    "ko": "선택 해제",
+    "es": "Borrar selección"
+  },
+  "Choose an option": {
+    "ja": "オプションを選択",
+    "ko": "옵션 선택",
+    "es": "Elige una opción"
+  },
+  "Enter value": {
+    "ja": "値を入力",
+    "ko": "값 입력",
+    "es": "Introduce un valor"
+  },
+  "Sent, awaiting {{0}} confirmation": {
+    "ja": "送信済み、{{0}}の確認待ち",
+    "ko": "전송됨, {{0}} 확인 대기 중",
+    "es": "Enviado, esperando confirmación de {{0}}"
+  },
+  "Result unconfirmed; check in {{0}}": {
+    "ja": "結果未確認。{{0}}で確認してください",
+    "ko": "결과 미확인. {{0}}에서 확인하세요",
+    "es": "Resultado sin confirmar; compruébalo en {{0}}"
+  },
+  "Request resolved": {
+    "ja": "リクエストは処理済み",
+    "ko": "요청 처리됨",
+    "es": "Solicitud resuelta"
+  },
+  "Handle this request in {{0}}": {
+    "ja": "{{0}}でこのリクエストを処理",
+    "ko": "{{0}}에서 이 요청 처리",
+    "es": "Gestionar esta solicitud en {{0}}"
+  },
+  "Awaiting a choice": {
+    "ja": "選択待ち",
+    "ko": "선택 대기 중",
+    "es": "Esperando una elección"
+  },
+  "{{0}} of {{1}} ready · Confirm to send": {
+    "ja": "{{0}} / {{1}}件入力済み · 確認して送信",
+    "ko": "{{1}}개 중 {{0}}개 준비됨 · 확인하여 전송",
+    "es": "{{0}} de {{1}} listos · Confirma para enviar"
+  },
+  "{{0}} selected · {{1}}": {
+    "ja": "{{0}}件選択 · {{1}}",
+    "ko": "{{0}}개 선택됨 · {{1}}",
+    "es": "{{0}} seleccionados · {{1}}"
+  },
+  "Resumes after approval": {
+    "ja": "承認後に再開",
+    "ko": "승인 후 재개",
+    "es": "Se reanuda tras la aprobación"
+  },
+  "Complete required fields in the requested format": {
+    "ja": "必須項目を指定の形式で入力してください",
+    "ko": "필수 항목을 요청된 형식으로 입력하세요",
+    "es": "Completa los campos obligatorios con el formato solicitado"
+  },
+  "Ready to submit": {
+    "ja": "送信準備完了",
+    "ko": "전송 준비 완료",
+    "es": "Listo para enviar"
+  },
+  "Continue when authorization is complete": {
+    "ja": "認証が完了したら続行",
+    "ko": "인증 완료 후 계속",
+    "es": "Continúa cuando se complete la autorización"
+  },
+  "Open the authorization page": {
+    "ja": "認証ページを開いてください",
+    "ko": "인증 페이지를 여세요",
+    "es": "Abre la página de autorización"
+  },
+  "Continue in {{0}}": {
+    "ja": "{{0}}で続行",
+    "ko": "{{0}}에서 계속",
+    "es": "Continuar en {{0}}"
+  },
+  "Access scope and rules": {
+    "ja": "アクセス範囲とルール",
+    "ko": "접근 범위 및 규칙",
+    "es": "Alcance y reglas de acceso"
+  },
+  "Approval scope": {
+    "ja": "承認範囲",
+    "ko": "승인 범위",
+    "es": "Alcance de aprobación"
+  },
+  "Copy full text": {
+    "ja": "全文をコピー",
+    "ko": "전체 텍스트 복사",
+    "es": "Copiar texto completo"
+  },
+  "Switch to the terminal running Claude Code": {
+    "ja": "Claude Codeが動作中のターミナルに切り替える",
+    "ko": "Claude Code가 실행 중인 터미널로 전환",
+    "es": "Cambiar al terminal que ejecuta Claude Code"
+  },
+  "Codex not found; open the task manually": {
+    "ja": "Codexが見つかりません。手動でタスクを開いてください",
+    "ko": "Codex를 찾을 수 없습니다. 작업을 직접 여세요",
+    "es": "No se encontró Codex; abre la tarea manualmente"
+  },
+  "Codex opened; select this task": {
+    "ja": "Codexを開きました。このタスクを選択してください",
+    "ko": "Codex가 열렸습니다. 이 작업을 선택하세요",
+    "es": "Codex abierto; selecciona esta tarea"
+  },
+  "Could not open Codex; open the task manually": {
+    "ja": "Codexを開けませんでした。手動でタスクを開いてください",
+    "ko": "Codex를 열지 못했습니다. 작업을 직접 여세요",
+    "es": "No se pudo abrir Codex; abre la tarea manualmente"
+  },
+  "Allow this command?": {
+    "ja": "このコマンドを許可しますか？",
+    "ko": "이 명령을 허용할까요?",
+    "es": "¿Permitir este comando?"
+  },
+  "Command to run": {
+    "ja": "実行するコマンド",
+    "ko": "실행할 명령",
+    "es": "Comando que se ejecutará"
+  },
+  "Send terminal input": {
+    "ja": "ターミナルに入力を送信",
+    "ko": "터미널 입력 전송",
+    "es": "Enviar entrada al terminal"
+  },
+  "Terminal awaiting input": {
+    "ja": "ターミナルは入力待ち",
+    "ko": "터미널 입력 대기 중",
+    "es": "El terminal espera una entrada"
+  },
+  "Resumes after input": {
+    "ja": "入力後に再開",
+    "ko": "입력 후 재개",
+    "es": "Se reanuda tras la entrada"
+  },
+  "Input to send": {
+    "ja": "送信する入力",
+    "ko": "전송할 입력",
+    "es": "Entrada que se enviará"
+  },
+  "Line endings shown as \\n": {
+    "ja": "改行は\\nで表示",
+    "ko": "줄바꿈은 \\n으로 표시",
+    "es": "Los saltos de línea se muestran como \\n"
+  },
+  "Review file changes": {
+    "ja": "ファイル変更を確認",
+    "ko": "파일 변경 검토",
+    "es": "Revisar cambios de archivos"
+  },
+  "files": {
+    "ja": "ファイル",
+    "ko": "파일",
+    "es": "archivos"
+  },
+  "Allow access to this host?": {
+    "ja": "このホストへのアクセスを許可しますか？",
+    "ko": "이 호스트 접근을 허용할까요?",
+    "es": "¿Permitir el acceso a este servidor?"
+  },
+  "Requested network access": {
+    "ja": "要求されたネットワークアクセス",
+    "ko": "요청된 네트워크 접근",
+    "es": "Acceso de red solicitado"
+  },
+  "Choose access to grant": {
+    "ja": "許可するアクセスを選択",
+    "ko": "허용할 접근 선택",
+    "es": "Elige el acceso que quieres conceder"
+  },
+  "Select as needed": {
+    "ja": "必要に応じて選択",
+    "ko": "필요에 따라 선택",
+    "es": "Selecciona según sea necesario"
+  },
+  "Review tool action": {
+    "ja": "ツールの操作を確認",
+    "ko": "도구 작업 검토",
+    "es": "Revisar acción de la herramienta"
+  },
+  "Approve tool action": {
+    "ja": "ツールの操作を承認",
+    "ko": "도구 작업 승인",
+    "es": "Aprobar acción de la herramienta"
+  },
+  "Complete the tool form": {
+    "ja": "ツールのフォームに入力",
+    "ko": "도구 양식 작성",
+    "es": "Completar el formulario de la herramienta"
+  },
+  "* Required": {
+    "ja": "* 必須",
+    "ko": "* 필수",
+    "es": "* Obligatorio"
+  },
+  "Connect an external provider": {
+    "ja": "外部プロバイダーに接続",
+    "ko": "외부 제공자 연결",
+    "es": "Conectar un proveedor externo"
+  },
+  "Authorization": {
+    "ja": "認証",
+    "ko": "인증",
+    "es": "Autorización"
+  },
+  "Open authorization": {
+    "ja": "認証を開く",
+    "ko": "인증 열기",
+    "es": "Abrir autorización"
+  },
+  "Complete with the provider": {
+    "ja": "プロバイダー側で完了",
+    "ko": "제공자에서 완료",
+    "es": "Completar con el proveedor"
+  },
+  "Return and continue": {
+    "ja": "戻って続行",
+    "ko": "돌아와서 계속",
+    "es": "Volver y continuar"
+  },
+  "Resume this task": {
+    "ja": "このタスクを再開",
+    "ko": "이 작업 재개",
+    "es": "Reanudar esta tarea"
+  },
+  "Identity verification required": {
+    "ja": "本人確認が必要",
+    "ko": "본인 확인 필요",
+    "es": "Se requiere verificación de identidad"
+  },
+  "Reason": {
+    "ja": "理由",
+    "ko": "이유",
+    "es": "Motivo"
+  },
+  "Arguments": {
+    "ja": "引数",
+    "ko": "인수",
+    "es": "Argumentos"
+  },
+  "No running tasks": {
+    "ja": "実行中のタスクなし",
+    "ko": "실행 중인 작업 없음",
+    "es": "No hay tareas en curso"
+  },
+  "{{0}} running · {{1}} done": {
+    "ja": "{{0}}件実行中 · {{1}}件完了",
+    "ko": "{{0}}개 진행 중 · {{1}}개 완료",
+    "es": "{{0}} en curso · {{1}} completadas"
+  },
+  "Session total ": {
+    "ja": "セッション合計 ",
+    "ko": "세션 합계 ",
+    "es": "Total de sesión "
+  },
+  "Session total": {
+    "ja": "セッション合計",
+    "ko": "세션 합계",
+    "es": "Total de sesión"
+  },
+  "Details open": {
+    "ja": "詳細を表示中",
+    "ko": "세부 정보 열림",
+    "es": "Detalles abiertos"
+  },
+  "Waiting for tasks": {
+    "ja": "タスク待機中",
+    "ko": "작업 대기 중",
+    "es": "Esperando tareas"
+  },
+  "Task scrollbar": {
+    "ja": "タスクのスクロールバー",
+    "ko": "작업 스크롤 막대",
+    "es": "Barra de desplazamiento de tareas"
+  },
+  "{{0}} sessions": {
+    "ja": "{{0}}セッション",
+    "ko": "세션 {{0}}개",
+    "es": "{{0}} sesiones"
+  },
+  "Back": {
+    "ja": "戻る",
+    "ko": "뒤로",
+    "es": "Atrás"
+  },
+  "Tasks": {
+    "ja": "タスク",
+    "ko": "작업",
+    "es": "Tareas"
+  },
+  "Usage": {
+    "ja": "使用量",
+    "ko": "사용량",
+    "es": "Uso"
+  },
+  "Pending request": {
+    "ja": "保留中のリクエスト",
+    "ko": "대기 중인 요청",
+    "es": "Solicitud pendiente"
+  },
+  "View usage": {
+    "ja": "使用量を表示",
+    "ko": "사용량 보기",
+    "es": "Ver uso"
+  },
+  "Next pending request": {
+    "ja": "次の保留リクエスト",
+    "ko": "다음 대기 요청",
+    "es": "Siguiente solicitud pendiente"
+  },
+  "Back to sessions": {
+    "ja": "セッションに戻る",
+    "ko": "세션으로 돌아가기",
+    "es": "Volver a las sesiones"
+  },
+  "Return to sessions; keep the request pending": {
+    "ja": "リクエストを保留したままセッションに戻る",
+    "ko": "요청을 대기 상태로 두고 세션으로 돌아가기",
+    "es": "Volver a las sesiones y mantener la solicitud pendiente"
+  },
+  "Filter sessions needing attention": {
+    "ja": "確認が必要なセッションを絞り込む",
+    "ko": "확인이 필요한 세션 필터링",
+    "es": "Filtrar sesiones que requieren atención"
+  },
+  "Filtered": {
+    "ja": "絞り込み中",
+    "ko": "필터 적용됨",
+    "es": "Filtrado"
+  },
+  "All sessions": {
+    "ja": "すべてのセッション",
+    "ko": "모든 세션",
+    "es": "Todas las sesiones"
+  },
+  "Pin open; click again to collapse": {
+    "ja": "展開状態で固定。再クリックで折りたたみ",
+    "ko": "펼친 상태로 고정, 다시 클릭하면 접기",
+    "es": "Fijar abierto; haz clic de nuevo para contraer"
+  },
+  "Collapse island": {
+    "ja": "アイランドを折りたたむ",
+    "ko": "아일랜드 접기",
+    "es": "Contraer isla"
+  },
+  "{{0}} done": {
+    "ja": "{{0}}件完了",
+    "ko": "{{0}}개 완료",
+    "es": "{{0}} completadas"
+  },
+  "Hover or click to expand session details": {
+    "ja": "ホバーまたはクリックでセッションの詳細を展開",
+    "ko": "마우스를 올리거나 클릭하여 세션 세부 정보 펼치기",
+    "es": "Pasa el cursor o haz clic para ver los detalles de la sesión"
+  },
+  "Awaiting confirmation": {
+    "ja": "確認待ち",
+    "ko": "확인 대기 중",
+    "es": "Esperando confirmación"
+  },
+  "Confirm": {
+    "ja": "確認",
+    "ko": "확인",
+    "es": "Confirmar"
+  },
+  "Resets in {{0}}": {
+    "ja": "{{0}}後にリセット",
+    "ko": "{{0}} 후 초기화",
+    "es": "Se restablece en {{0}}"
+  },
+  "Reset —": {
+    "ja": "リセット —",
+    "ko": "초기화 —",
+    "es": "Restablecimiento —"
+  },
+  "{{0}}, {{1}} remaining, resets in {{2}}": {
+    "ja": "{{0}}、残り{{1}}、{{2}}後にリセット",
+    "ko": "{{0}}, {{1}} 남음, {{2}} 후 초기화",
+    "es": "{{0}}, queda {{1}}, se restablece en {{2}}"
+  },
+  "Refreshing": {
+    "ja": "更新中",
+    "ko": "새로 고치는 중",
+    "es": "Actualizando"
+  },
+  "Refresh usage": {
+    "ja": "使用量を更新",
+    "ko": "사용량 새로 고침",
+    "es": "Actualizar uso"
+  },
+  "Settings": {
+    "ja": "設定",
+    "ko": "설정",
+    "es": "Ajustes"
+  },
+  "Open QuotaView settings": {
+    "ja": "QuotaViewの設定を開く",
+    "ko": "QuotaView 설정 열기",
+    "es": "Abrir ajustes de QuotaView"
+  },
+  "Resets in {{0}}d {{1}}h": {
+    "ja": "{{0}}日{{1}}時間後にリセット",
+    "ko": "{{0}}일 {{1}}시간 후 초기화",
+    "es": "Se restablece en {{0}} d {{1}} h"
+  },
+  "Resets in {{0}}h": {
+    "ja": "{{0}}時間後にリセット",
+    "ko": "{{0}}시간 후 초기화",
+    "es": "Se restablece en {{0}} h"
+  },
+  "Updated ": {
+    "ja": "更新 ",
+    "ko": "업데이트 ",
+    "es": "Actualizado "
+  },
+  "Waiting for data": {
+    "ja": "データ待機中",
+    "ko": "데이터 대기 중",
+    "es": "Esperando datos"
+  },
+  "Usage data": {
+    "ja": "使用量データ",
+    "ko": "사용량 데이터",
+    "es": "Datos de uso"
+  },
+  "Privacy mode is on": {
+    "ja": "プライバシーモードがオンです",
+    "ko": "개인정보 보호 모드가 켜져 있습니다",
+    "es": "El modo de privacidad está activado"
+  },
+  "Turn off privacy mode in Settings.": {
+    "ja": "設定でプライバシーモードをオフにしてください。",
+    "ko": "설정에서 개인정보 보호 모드를 끄세요.",
+    "es": "Desactiva el modo de privacidad en Ajustes."
+  },
+  "Refresh to try again.": {
+    "ja": "更新して再試行してください。",
+    "ko": "새로 고침하여 다시 시도하세요.",
+    "es": "Actualiza para reintentarlo."
+  },
+  "Showing previous data": {
+    "ja": "前回のデータを表示中",
+    "ko": "이전 데이터 표시 중",
+    "es": "Mostrando datos anteriores"
+  },
+  "5-hour quota": {
+    "ja": "5時間の使用枠",
+    "ko": "5시간 한도",
+    "es": "Cuota de 5 horas"
+  },
+  "Weekly quota": {
+    "ja": "週間の使用枠",
+    "ko": "주간 한도",
+    "es": "Cuota semanal"
+  },
+  "Spark weekly quota": {
+    "ja": "Spark週間使用枠",
+    "ko": "Spark 주간 한도",
+    "es": "Cuota semanal de Spark"
+  },
+  "Latest day tokens": {
+    "ja": "直近日のトークン",
+    "ko": "최근 일일 토큰",
+    "es": "Tokens del último día"
+  },
+  "30-day tokens": {
+    "ja": "30日間のトークン",
+    "ko": "30일 토큰",
+    "es": "Tokens de 30 días"
+  },
+  "Total tokens": {
+    "ja": "合計トークン",
+    "ko": "총 토큰",
+    "es": "Tokens totales"
+  },
+  "Usage source": {
+    "ja": "使用量の取得元",
+    "ko": "사용량 출처",
+    "es": "Fuente de uso"
+  },
+  "{{0}}-minute quota": {
+    "ja": "{{0}}分間の使用枠",
+    "ko": "{{0}}분 한도",
+    "es": "Cuota de {{0}} minutos"
+  },
+  "Off": {
+    "ja": "オフ",
+    "ko": "끔",
+    "es": "Desactivado"
+  },
+  "Turn on “Read official usage windows” in Settings › Connections › Claude Code.": {
+    "ja": "設定 › Agent接続 › Claude Codeで「公式の使用量を読み取る」をオンにしてください。",
+    "ko": "설정 › Agent 연결 › Claude Code에서 ‘공식 사용량 읽기’를 켜세요.",
+    "es": "Activa «Leer los periodos de uso oficiales» en Ajustes › Agentes › Claude Code."
+  },
+  "Appears after Claude Code refreshes its status line.": {
+    "ja": "Claude Codeがステータス行を更新すると表示されます。",
+    "ko": "Claude Code가 상태 표시줄을 새로 고치면 나타납니다.",
+    "es": "Aparece cuando Claude Code actualiza su línea de estado."
+  },
+  "left": {
+    "ja": "残り",
+    "ko": "남음",
+    "es": "restante"
+  },
+  "{{0}}% Used": {
+    "ja": "{{0}}%使用済み",
+    "ko": "{{0}}% 사용됨",
+    "es": "{{0}}% usado"
+  },
+  "Account": {
+    "ja": "アカウント",
+    "ko": "계정",
+    "es": "Cuenta"
+  },
+  "Extra usage": {
+    "ja": "追加使用量",
+    "ko": "추가 사용량",
+    "es": "Uso adicional"
+  },
+  "Credit balance": {
+    "ja": "クレジット残高",
+    "ko": "크레딧 잔액",
+    "es": "Saldo de créditos"
+  },
+  "Quota reset": {
+    "ja": "枠のリセット",
+    "ko": "한도 초기화",
+    "es": "Restablecimiento de cuota"
+  },
+  "0 left · unavailable": {
+    "ja": "残り0回 · 利用不可",
+    "ko": "0회 남음 · 사용 불가",
+    "es": "0 disponibles · no disponible"
+  },
+  "{{0}} left": {
+    "ja": "残り{{0}}回",
+    "ko": "{{0}}회 남음",
+    "es": "{{0}} disponibles"
+  },
+  "Open Claude quota reset": {
+    "ja": "Claudeの枠リセットを開く",
+    "ko": "Claude 한도 초기화 열기",
+    "es": "Abrir restablecimiento de cuota de Claude"
+  },
+  "Open quota reset": {
+    "ja": "枠リセットを開く",
+    "ko": "한도 초기화 열기",
+    "es": "Abrir restablecimiento de cuota"
+  },
+  "Run /limit-reset in Claude Code to use a reset": {
+    "ja": "Claude Codeで/limit-resetを実行してリセット",
+    "ko": "Claude Code에서 /limit-reset을 실행하여 초기화",
+    "es": "Ejecuta /limit-reset en Claude Code para usar un restablecimiento"
+  },
+  "No reset credits; open for details": {
+    "ja": "リセットクレジットなし。開いて詳細を確認",
+    "ko": "초기화 크레딧 없음. 열어서 세부 정보 확인",
+    "es": "No hay créditos; abre para ver los detalles"
+  },
+  "Quota reset preview": {
+    "ja": "枠リセットのプレビュー",
+    "ko": "한도 초기화 미리보기",
+    "es": "Vista previa de restablecimiento"
+  },
+  "{{0}}% used": {
+    "ja": "{{0}}%使用済み",
+    "ko": "{{0}}% 사용됨",
+    "es": "{{0}}% usado"
+  },
+  "On": {
+    "ja": "オン",
+    "ko": "켬",
+    "es": "Activado"
+  },
+  "Cost estimate": {
+    "ja": "推定コスト",
+    "ko": "예상 비용",
+    "es": "Coste estimado"
+  },
+  "Last 30 days": {
+    "ja": "過去30日間",
+    "ko": "최근 30일",
+    "es": "Últimos 30 días"
+  },
+  " · estimated": {
+    "ja": " · 推定",
+    "ko": " · 추정",
+    "es": " · estimado"
+  },
+  "Latest day": {
+    "ja": "直近日",
+    "ko": "최근 일자",
+    "es": "Último día"
+  },
+  "Estimate · not a bill": {
+    "ja": "推定値 · 請求額ではありません",
+    "ko": "추정치 · 청구서 아님",
+    "es": "Estimación · no es una factura"
+  },
+  "Token activity": {
+    "ja": "トークン使用状況",
+    "ko": "토큰 활동",
+    "es": "Actividad de tokens"
+  },
+  " · week starting": {
+    "ja": " · 週の開始日",
+    "ko": " · 주 시작일",
+    "es": " · semana del"
+  },
+  "Total through ": {
+    "ja": "累計（基準日）",
+    "ko": "누적 기준일 ",
+    "es": "Total hasta "
+  },
+  "No data": {
+    "ja": "データなし",
+    "ko": "데이터 없음",
+    "es": "Sin datos"
+  },
+  " tokens": {
+    "ja": "トークン",
+    "ko": " 토큰",
+    "es": " tokens"
+  },
+  "Daily": {
+    "ja": "日別",
+    "ko": "일별",
+    "es": "Diario"
+  },
+  "Weekly": {
+    "ja": "週別",
+    "ko": "주별",
+    "es": "Semanal"
+  },
+  "Cumulative": {
+    "ja": "累計",
+    "ko": "누적",
+    "es": "Acumulado"
+  },
+  "Unknown model": {
+    "ja": "不明なモデル",
+    "ko": "알 수 없는 모델",
+    "es": "Modelo desconocido"
+  },
+  " task": {
+    "ja": "のタスク",
+    "ko": " 작업",
+    "es": " tarea"
+  },
+  "Syncing": {
+    "ja": "同期中",
+    "ko": "동기화 중",
+    "es": "Sincronizando"
+  },
+  "Queued": {
+    "ja": "待機列",
+    "ko": "대기열",
+    "es": "En cola"
+  },
+  "Awaiting answer": {
+    "ja": "回答待ち",
+    "ko": "답변 대기 중",
+    "es": "Esperando respuesta"
+  },
+  "Executing": {
+    "ja": "実行中",
+    "ko": "실행 중",
+    "es": "Ejecutando"
+  },
+  ", ": {
+    "ja": "、",
+    "ko": ", ",
+    "es": ", "
+  },
+  " are working": {
+    "ja": "が作業中",
+    "ko": " 작업 중",
+    "es": " están trabajando"
+  },
+  "Request handled": {
+    "ja": "リクエスト処理済み",
+    "ko": "요청 처리됨",
+    "es": "Solicitud gestionada"
+  },
+  "Ready": {
+    "ja": "準備完了",
+    "ko": "준비됨",
+    "es": "Listo"
+  },
+  "Waiting for Codex": {
+    "ja": "Codex待機中",
+    "ko": "Codex 대기 중",
+    "es": "Esperando Codex"
+  },
+  "Local activity": {
+    "ja": "ローカルアクティビティ",
+    "ko": "로컬 활동",
+    "es": "Actividad local"
+  },
+  "Codex agent": {
+    "ja": "Codexエージェント",
+    "ko": "Codex 에이전트",
+    "es": "Agente de Codex"
+  },
+  "Codex agents": {
+    "ja": "Codexエージェント",
+    "ko": "Codex 에이전트",
+    "es": "Agentes de Codex"
+  },
+  "{{0}} agents": {
+    "ja": "{{0}}エージェント",
+    "ko": "에이전트 {{0}}개",
+    "es": "{{0}} agentes"
+  },
+  "{{0}} more agents": {
+    "ja": "他{{0}}エージェント",
+    "ko": "에이전트 {{0}}개 더 보기",
+    "es": "{{0}} agentes más"
+  },
+  "No reset credits available": {
+    "ja": "リセットクレジットなし",
+    "ko": "초기화 크레딧 없음",
+    "es": "No hay créditos de restablecimiento"
+  },
+  "Waiting for reset credits": {
+    "ja": "リセットクレジット待機中",
+    "ko": "초기화 크레딧 대기 중",
+    "es": "Esperando créditos de restablecimiento"
+  },
+  "Waiting for quota data": {
+    "ja": "使用枠データ待機中",
+    "ko": "한도 데이터 대기 중",
+    "es": "Esperando datos de cuota"
+  },
+  "Quota Reset": {
+    "ja": "枠リセット",
+    "ko": "한도 초기화",
+    "es": "Restablecer cuota"
+  },
+  "Credits unavailable": {
+    "ja": "クレジットを取得できません",
+    "ko": "크레딧을 확인할 수 없음",
+    "es": "Créditos no disponibles"
+  },
+  "Uses one reset credit after confirmation": {
+    "ja": "確認後にリセットクレジットを1つ使用します",
+    "ko": "확인 후 초기화 크레딧 1개를 사용합니다",
+    "es": "Usa un crédito de restablecimiento tras confirmar"
+  },
+  "Previous remaining quota": {
+    "ja": "前回の残り枠",
+    "ko": "이전 잔여 한도",
+    "es": "Cuota restante anterior"
+  },
+  "Remaining quota": {
+    "ja": "残り枠",
+    "ko": "잔여 한도",
+    "es": "Cuota restante"
+  },
+  "Use resets in Claude Code": {
+    "ja": "Claude Codeでリセットを使う",
+    "ko": "Claude Code에서 초기화 사용",
+    "es": "Usar restablecimientos en Claude Code"
+  },
+  "Run /limit-reset to see resets left and their deadline.": {
+    "ja": "/limit-resetを実行すると残り回数と期限を確認できます。",
+    "ko": "/limit-reset을 실행하여 남은 초기화 횟수와 만료일을 확인하세요.",
+    "es": "Ejecuta /limit-reset para ver los restablecimientos restantes y su vencimiento."
+  },
+  "Each reset refills your limits now; your weekly reset day stays the same.": {
+    "ja": "リセットすると使用枠がすぐに回復します。週間のリセット日は変わりません。",
+    "ko": "초기화하면 한도가 즉시 복원됩니다. 주간 초기화 날짜는 바뀌지 않습니다.",
+    "es": "Cada restablecimiento repone tus límites de inmediato; el día de restablecimiento semanal no cambia."
+  },
+  "QuotaView reads local data only and never uses a reset for you.": {
+    "ja": "QuotaViewはローカルデータの読み取りのみを行い、代わりにリセットすることはありません。",
+    "ko": "QuotaView는 로컬 데이터만 읽으며 대신 초기화를 실행하지 않습니다.",
+    "es": "QuotaView solo lee datos locales y nunca usa un restablecimiento por ti."
+  },
+  "Return to usage to check your quota and reset time.": {
+    "ja": "使用量画面に戻り、残り枠とリセット時間を確認してください。",
+    "ko": "사용량으로 돌아가 한도와 초기화 시간을 확인하세요.",
+    "es": "Vuelve a Uso para consultar tu cuota y la hora de restablecimiento."
+  },
+  "Reset credits unavailable": {
+    "ja": "リセットクレジットを取得できません",
+    "ko": "초기화 크레딧을 확인할 수 없음",
+    "es": "Créditos de restablecimiento no disponibles"
+  },
+  "Refresh to check reset credits.": {
+    "ja": "更新してリセットクレジットを確認してください。",
+    "ko": "새로 고침하여 초기화 크레딧을 확인하세요.",
+    "es": "Actualiza para consultar los créditos de restablecimiento."
+  },
+  "⚠️ Before resetting": {
+    "ja": "⚠️ リセット前に",
+    "ko": "⚠️ 초기화 전 확인",
+    "es": "⚠️ Antes de restablecer"
+  },
+  "Resetting uses one reset credit.": {
+    "ja": "リセットにはクレジットを1つ使用します。",
+    "ko": "초기화 시 초기화 크레딧 1개를 사용합니다.",
+    "es": "El restablecimiento usa un crédito."
+  },
+  "Eligible Codex usage cycles reset immediately.": {
+    "ja": "対象のCodex使用期間はすぐにリセットされます。",
+    "ko": "해당 Codex 사용 기간이 즉시 초기화됩니다.",
+    "es": "Los periodos de uso aptos de Codex se restablecen inmediatamente."
+  },
+  "A reset cannot be undone.": {
+    "ja": "リセットは取り消せません。",
+    "ko": "초기화는 되돌릴 수 없습니다.",
+    "es": "El restablecimiento no se puede deshacer."
+  },
+  "Copied — paste it in Claude Code": {
+    "ja": "コピー済み — Claude Codeに貼り付け",
+    "ko": "복사됨 — Claude Code에 붙여넣기",
+    "es": "Copiado: pégalo en Claude Code"
+  },
+  "Copy /limit-reset": {
+    "ja": "/limit-resetをコピー",
+    "ko": "/limit-reset 복사",
+    "es": "Copiar /limit-reset"
+  },
+  "Copies the command; no reset is used": {
+    "ja": "コマンドをコピーするだけで、リセットは実行しません",
+    "ko": "명령만 복사하며 초기화는 실행하지 않습니다",
+    "es": "Copia el comando; no usa un restablecimiento"
+  },
+  "Reset service unavailable": {
+    "ja": "リセットサービスを利用できません",
+    "ko": "초기화 서비스를 사용할 수 없음",
+    "es": "Servicio de restablecimiento no disponible"
+  },
+  "Resets left and deadlines are shown only in Claude Code.": {
+    "ja": "残り回数と期限はClaude Codeでのみ表示されます。",
+    "ko": "남은 초기화 횟수와 만료일은 Claude Code에서만 표시됩니다.",
+    "es": "Los restablecimientos restantes y sus vencimientos solo se muestran en Claude Code."
+  },
+  "Context compaction": {
+    "ja": "コンテキスト圧縮",
+    "ko": "컨텍스트 압축",
+    "es": "Compresión de contexto"
+  },
+  "Progress": {
+    "ja": "進捗",
+    "ko": "진행 상황",
+    "es": "Progreso"
+  },
+  "Needs confirmation": {
+    "ja": "確認が必要",
+    "ko": "확인 필요",
+    "es": "Requiere confirmación"
+  },
+  "Operation cancelled": {
+    "ja": "操作をキャンセルしました",
+    "ko": "작업 취소됨",
+    "es": "Operación cancelada"
+  },
+  "Result": {
+    "ja": "結果",
+    "ko": "결과",
+    "es": "Resultado"
+  },
+  "Execution failed": {
+    "ja": "実行失敗",
+    "ko": "실행 실패",
+    "es": "Error de ejecución"
+  },
+  "Activity unavailable": {
+    "ja": "アクティビティを取得できません",
+    "ko": "활동을 확인할 수 없음",
+    "es": "Actividad no disponible"
+  },
+  "Close details": {
+    "ja": "詳細を閉じる",
+    "ko": "세부 정보 닫기",
+    "es": "Cerrar detalles"
+  },
+  "Detail content": {
+    "ja": "詳細内容",
+    "ko": "세부 내용",
+    "es": "Contenido detallado"
+  },
+  "Answer exceeds the local cache; continue in {{0}}": {
+    "ja": "回答がローカルキャッシュを超えています。{{0}}で続きを確認",
+    "ko": "답변이 로컬 캐시를 초과합니다. {{0}}에서 계속 확인하세요",
+    "es": "La respuesta supera la caché local; continúa en {{0}}"
+  },
+  "Task completed. View the full answer in {{0}}": {
+    "ja": "タスク完了。{{0}}で回答全文を確認",
+    "ko": "작업 완료. {{0}}에서 전체 답변을 확인하세요",
+    "es": "Tarea completada. Consulta la respuesta completa en {{0}}"
+  },
+  "Final answer has not synced; view it in {{0}}": {
+    "ja": "最終回答が未同期です。{{0}}で確認",
+    "ko": "최종 답변이 동기화되지 않았습니다. {{0}}에서 확인하세요",
+    "es": "La respuesta final no se ha sincronizado; consúltala en {{0}}"
+  },
+  "No public progress content available": {
+    "ja": "公開された進捗はありません",
+    "ko": "공개 진행 내용이 없습니다",
+    "es": "No hay información pública de progreso disponible"
+  },
+  "Public event": {
+    "ja": "公開イベント",
+    "ko": "공개 이벤트",
+    "es": "Evento público"
+  },
+  "Progress message": {
+    "ja": "進捗メッセージ",
+    "ko": "진행 메시지",
+    "es": "Mensaje de progreso"
+  },
+  "Latest update": {
+    "ja": "最新の更新",
+    "ko": "최근 업데이트",
+    "es": "Última actualización"
+  },
+  "Command": {
+    "ja": "コマンド",
+    "ko": "명령",
+    "es": "Comando"
+  },
+  "File changes": {
+    "ja": "ファイル変更",
+    "ko": "파일 변경",
+    "es": "Cambios de archivos"
+  },
+  "Collapse": {
+    "ja": "折りたたむ",
+    "ko": "접기",
+    "es": "Contraer"
+  },
+  "Source": {
+    "ja": "ソース",
+    "ko": "소스",
+    "es": "Fuente"
+  },
+  "Output": {
+    "ja": "出力",
+    "ko": "출력",
+    "es": "Salida"
+  },
+  "Local cache truncated; see the full source in {{0}}": {
+    "ja": "ローカルキャッシュは省略されています。{{0}}で全文を確認",
+    "ko": "로컬 캐시가 잘렸습니다. {{0}}에서 전체 원문을 확인하세요",
+    "es": "La caché local está truncada; consulta la fuente completa en {{0}}"
+  },
+  "{{0}} status": {
+    "ja": "{{0}}の状態",
+    "ko": "{{0}} 상태",
+    "es": "Estado de {{0}}"
+  },
+  "QuotaView Settings": {
+    "ja": "QuotaView設定",
+    "ko": "QuotaView 설정",
+    "es": "Ajustes de QuotaView"
+  },
+  "Reset quota now?": {
+    "ja": "今すぐ枠をリセットしますか？",
+    "ko": "지금 한도를 초기화할까요?",
+    "es": "¿Restablecer la cuota ahora?"
+  },
+  "Confirm Demo Reset": {
+    "ja": "デモのリセットを確認",
+    "ko": "데모 초기화 확인",
+    "es": "Confirmar restablecimiento de demostración"
+  },
+  "Choose the compatible client's DSH data directory or profiles directory.": {
+    "ja": "互換クライアントのDSHデータまたはprofilesディレクトリを選択してください。",
+    "ko": "호환 클라이언트의 DSH 데이터 또는 profiles 디렉터리를 선택하세요.",
+    "es": "Elige el directorio de datos DSH o profiles del cliente compatible."
+  },
+  "task": {
+    "ja": "タスク",
+    "ko": "작업",
+    "es": "tarea"
+  },
+  "Quit QuotaView": {
+    "ja": "QuotaViewを終了",
+    "ko": "QuotaView 종료",
+    "es": "Salir de QuotaView"
+  },
+  "Period Remaining": {
+    "ja": "今期の残り枠",
+    "ko": "현재 기간 잔여량",
+    "es": "Cuota restante del periodo"
+  },
+  "Period quota": {
+    "ja": "今期の使用枠",
+    "ko": "현재 기간 한도",
+    "es": "Cuota del periodo"
+  },
+  "Spark Weekly Quota": {
+    "ja": "Spark週間使用枠",
+    "ko": "Spark 주간 한도",
+    "es": "Cuota semanal de Spark"
+  },
+  "Codex subscription: {{0}}": {
+    "ja": "Codexのサブスクリプション：{{0}}",
+    "ko": "Codex 구독: {{0}}",
+    "es": "Suscripción de Codex: {{0}}"
+  },
+  "Token Activity": {
+    "ja": "トークン使用状況",
+    "ko": "토큰 활동",
+    "es": "Actividad de tokens"
+  },
+  "Show {{0}} usage": {
+    "ja": "{{0}}の使用量を表示",
+    "ko": "{{0}} 사용량 표시",
+    "es": "Mostrar uso de {{0}}"
+  },
+  "W": {
+    "ja": "週",
+    "ko": "주",
+    "es": "S"
+  },
+  "M": {
+    "ja": "月",
+    "ko": "월",
+    "es": "M"
+  },
+  "3M": {
+    "ja": "3か月",
+    "ko": "3개월",
+    "es": "3M"
+  },
+  "6M": {
+    "ja": "6か月",
+    "ko": "6개월",
+    "es": "6M"
+  },
+  "Last week": {
+    "ja": "過去1週間",
+    "ko": "지난주",
+    "es": "Última semana"
+  },
+  "Last month": {
+    "ja": "過去1か月",
+    "ko": "지난달",
+    "es": "Último mes"
+  },
+  "Last three months": {
+    "ja": "過去3か月",
+    "ko": "최근 3개월",
+    "es": "Últimos tres meses"
+  },
+  "Last six months": {
+    "ja": "過去6か月",
+    "ko": "최근 6개월",
+    "es": "Últimos seis meses"
+  },
+  "Cost Estimate (30d)": {
+    "ja": "推定コスト（30日）",
+    "ko": "예상 비용 (30일)",
+    "es": "Coste estimado (30 d)"
+  },
+  "Estimated · Not a bill": {
+    "ja": "推定値 · 請求額ではありません",
+    "ko": "추정치 · 청구서 아님",
+    "es": "Estimación · no es una factura"
+  },
+  "Latest day ": {
+    "ja": "直近日 ",
+    "ko": "최근 일자 ",
+    "es": "Último día "
+  },
+  "Reset an eligible Codex usage cycle": {
+    "ja": "対象のCodex使用期間をリセット",
+    "ko": "해당 Codex 사용 기간 초기화",
+    "es": "Restablecer un periodo de uso apto de Codex"
+  },
+  "Quota Reset, {{0}} Available": {
+    "ja": "枠リセット、残り{{0}}回",
+    "ko": "한도 초기화, {{0}}회 사용 가능",
+    "es": "Restablecer cuota, {{0}} disponibles"
+  },
+  "Update {{0}}": {
+    "ja": "更新 {{0}}",
+    "ko": "업데이트 {{0}}",
+    "es": "Actualizar {{0}}"
+  },
+  "Sync": {
+    "ja": "同期",
+    "ko": "동기화",
+    "es": "Sincronizar"
+  },
+  "Open Settings": {
+    "ja": "設定を開く",
+    "ko": "설정 열기",
+    "es": "Abrir ajustes"
+  },
+  "— Used": {
+    "ja": "— 使用済み",
+    "ko": "— 사용됨",
+    "es": "— usado"
+  },
+  "Next Reset {{0}}": {
+    "ja": "次回リセット {{0}}",
+    "ko": "다음 초기화 {{0}}",
+    "es": "Próximo restablecimiento {{0}}"
+  },
+  "Weekly Limit Remaining": {
+    "ja": "週間の残り枠",
+    "ko": "주간 잔여 한도",
+    "es": "Límite semanal restante"
+  },
+  "{{0}}-Day Limit Remaining": {
+    "ja": "{{0}}日間の残り枠",
+    "ko": "{{0}}일 잔여 한도",
+    "es": "Límite restante de {{0}} días"
+  },
+  "{{0}}-Hour Limit Remaining": {
+    "ja": "{{0}}時間の残り枠",
+    "ko": "{{0}}시간 잔여 한도",
+    "es": "Límite restante de {{0}} horas"
+  },
+  "{{0}}-Minute Limit Remaining": {
+    "ja": "{{0}}分間の残り枠",
+    "ko": "{{0}}분 잔여 한도",
+    "es": "Límite restante de {{0}} minutos"
+  },
+  "{{0}}-day quota": {
+    "ja": "{{0}}日間の使用枠",
+    "ko": "{{0}}일 한도",
+    "es": "Cuota de {{0}} días"
+  },
+  "{{0}}-hour quota": {
+    "ja": "{{0}}時間の使用枠",
+    "ko": "{{0}}시간 한도",
+    "es": "Cuota de {{0}} horas"
+  },
+  "Unavailable": {
+    "ja": "利用不可",
+    "ko": "사용 불가",
+    "es": "No disponible"
+  },
+  "{{0}} percent remaining, {{1}} percent used": {
+    "ja": "残り{{0}}パーセント、使用済み{{1}}パーセント",
+    "ko": "{{0}}퍼센트 남음, {{1}}퍼센트 사용됨",
+    "es": "{{0}} por ciento restante, {{1}} por ciento usado"
+  },
+  "Credits Balance": {
+    "ja": "クレジット残高",
+    "ko": "크레딧 잔액",
+    "es": "Saldo de créditos"
+  },
+  "Latest Daily Tokens": {
+    "ja": "直近日のトークン",
+    "ko": "최근 일일 토큰",
+    "es": "Tokens del último día"
+  },
+  "30-Day Tokens": {
+    "ja": "30日間のトークン",
+    "ko": "30일 토큰",
+    "es": "Tokens de 30 días"
+  },
+  "Lifetime Tokens": {
+    "ja": "累計トークン",
+    "ko": "누적 토큰",
+    "es": "Tokens acumulados"
+  },
+  "{{0}} Available": {
+    "ja": "残り{{0}}回",
+    "ko": "{{0}}회 사용 가능",
+    "es": "{{0}} disponibles"
+  },
+  "{{0}}d {{1}}h": {
+    "ja": "{{0}}日{{1}}時間",
+    "ko": "{{0}}일 {{1}}시간",
+    "es": "{{0}} d {{1}} h"
+  },
+  "{{0}}h {{1}}m": {
+    "ja": "{{0}}時間{{1}}分",
+    "ko": "{{0}}시간 {{1}}분",
+    "es": "{{0}} h {{1}} min"
+  },
+  "{{0}}m": {
+    "ja": "{{0}}分",
+    "ko": "{{0}}분",
+    "es": "{{0}} min"
+  },
+  "Unlimited": {
+    "ja": "無制限",
+    "ko": "무제한",
+    "es": "Sin límite"
+  },
+  "30-day cost estimate chart": {
+    "ja": "30日間の推定コストグラフ",
+    "ko": "30일 예상 비용 차트",
+    "es": "Gráfico de coste estimado de 30 días"
+  },
+  "Estimate unavailable": {
+    "ja": "推定値を取得できません",
+    "ko": "추정치를 확인할 수 없음",
+    "es": "Estimación no disponible"
+  },
+  "Estimated {{0}}": {
+    "ja": "推定 {{0}}",
+    "ko": "추정 {{0}}",
+    "es": "Estimación: {{0}}"
+  },
+  "Token activity chart": {
+    "ja": "トークン使用状況グラフ",
+    "ko": "토큰 활동 차트",
+    "es": "Gráfico de actividad de tokens"
+  },
+  "Usage unavailable": {
+    "ja": "使用量を取得できません",
+    "ko": "사용량을 확인할 수 없음",
+    "es": "Uso no disponible"
+  },
+  "{{0}} tokens": {
+    "ja": "{{0}}トークン",
+    "ko": "{{0}} 토큰",
+    "es": "{{0}} tokens"
+  },
+  "Return to quota overview": {
+    "ja": "使用枠の概要に戻る",
+    "ko": "한도 개요로 돌아가기",
+    "es": "Volver al resumen de cuota"
+  },
+  "Demo": {
+    "ja": "デモ",
+    "ko": "데모",
+    "es": "Demostración"
+  },
+  "Current Quota Available": {
+    "ja": "現在の使用可能枠",
+    "ko": "현재 사용 가능 한도",
+    "es": "Cuota actual disponible"
+  },
+  "⚠️ Before Resetting": {
+    "ja": "⚠️ リセット前に",
+    "ko": "⚠️ 초기화 전 확인",
+    "es": "⚠️ Antes de restablecer"
+  },
+  "This action consumes one reset credit.": {
+    "ja": "この操作はリセットクレジットを1つ消費します。",
+    "ko": "이 작업은 초기화 크레딧 1개를 사용합니다.",
+    "es": "Esta acción consume un crédito de restablecimiento."
+  },
+  "Your eligible Codex usage cycle resets immediately.": {
+    "ja": "対象のCodex使用期間がすぐにリセットされます。",
+    "ko": "해당 Codex 사용 기간이 즉시 초기화됩니다.",
+    "es": "Tu periodo de uso apto de Codex se restablece inmediatamente."
+  },
+  "A completed quota reset cannot be undone.": {
+    "ja": "完了した枠リセットは取り消せません。",
+    "ko": "완료된 한도 초기화는 되돌릴 수 없습니다.",
+    "es": "Un restablecimiento de cuota completado no se puede deshacer."
+  },
+  "Reset quota": {
+    "ja": "枠をリセット",
+    "ko": "한도 초기화",
+    "es": "Restablecer cuota"
+  },
+  "Loading quota data…": {
+    "ja": "使用枠データを読み込み中…",
+    "ko": "한도 데이터 로드 중…",
+    "es": "Cargando datos de cuota…"
+  },
+  "Quota data unavailable": {
+    "ja": "使用枠データを取得できません",
+    "ko": "한도 데이터를 확인할 수 없음",
+    "es": "Datos de cuota no disponibles"
+  },
+  "No reset credits are available": {
+    "ja": "使用できるリセットクレジットがありません",
+    "ko": "사용 가능한 초기화 크레딧이 없습니다",
+    "es": "No hay créditos de restablecimiento disponibles"
+  },
+  "Review and confirm a quota reset": {
+    "ja": "枠リセットを確認して実行",
+    "ko": "한도 초기화 검토 및 확인",
+    "es": "Revisar y confirmar el restablecimiento de cuota"
+  },
+  "General": {
+    "ja": "一般",
+    "ko": "일반",
+    "es": "General"
+  },
+  "Island": {
+    "ja": "アイランド",
+    "ko": "아일랜드",
+    "es": "Isla"
+  },
+  "Usage display": {
+    "ja": "使用量表示",
+    "ko": "사용량 표시",
+    "es": "Uso"
+  },
+  "Agent integration": {
+    "ja": "Agent接続",
+    "ko": "Agent 연결",
+    "es": "Agentes"
+  },
+  "Network proxy": {
+    "ja": "ネットワークプロキシ",
+    "ko": "네트워크 프록시",
+    "es": "Proxy de red"
+  },
+  "Bug feedback": {
+    "ja": "不具合の報告",
+    "ko": "버그 신고",
+    "es": "Reportar un error"
+  },
+  "About": {
+    "ja": "このアプリについて",
+    "ko": "정보",
+    "es": "Acerca de"
+  },
+  "Quit QuotaView?": {
+    "ja": "QuotaViewを終了しますか？",
+    "ko": "QuotaView를 종료할까요?",
+    "es": "¿Salir de QuotaView?"
+  },
+  "Quit": {
+    "ja": "終了",
+    "ko": "종료",
+    "es": "Salir"
+  },
+  "Codex tasks will keep running.": {
+    "ja": "Codexのタスクは実行を継続します。",
+    "ko": "Codex 작업은 계속 실행됩니다.",
+    "es": "Las tareas de Codex seguirán ejecutándose."
+  },
+  "Automatic local connection": {
+    "ja": "ローカルの自動接続",
+    "ko": "자동 로컬 연결",
+    "es": "Conexión local automática"
+  },
+  "QuotaView app icon": {
+    "ja": "QuotaViewアプリアイコン",
+    "ko": "QuotaView 앱 아이콘",
+    "es": "Icono de QuotaView"
+  },
+  "Codex task and usage island": {
+    "ja": "Codexのタスクと使用量アイランド",
+    "ko": "Codex 작업 및 사용량 아일랜드",
+    "es": "Isla de tareas y uso de Codex"
+  },
+  "Custom proxy": {
+    "ja": "カスタムプロキシ",
+    "ko": "사용자 지정 프록시",
+    "es": "Proxy personalizado"
+  },
+  "Use this proxy for quota and usage.": {
+    "ja": "使用枠と使用量にこのプロキシを使います。",
+    "ko": "한도 및 사용량 조회에 이 프록시를 사용합니다.",
+    "es": "Usa este proxy para consultar la cuota y el uso."
+  },
+  "Protocol": {
+    "ja": "プロトコル",
+    "ko": "프로토콜",
+    "es": "Protocolo"
+  },
+  "Proxy protocol": {
+    "ja": "プロキシプロトコル",
+    "ko": "프록시 프로토콜",
+    "es": "Protocolo del proxy"
+  },
+  "Server address": {
+    "ja": "サーバーアドレス",
+    "ko": "서버 주소",
+    "es": "Dirección del servidor"
+  },
+  "IP or hostname, without a protocol prefix.": {
+    "ja": "プロトコルの接頭辞なしでIPまたはホスト名を入力。",
+    "ko": "프로토콜 접두사 없이 IP 또는 호스트 이름을 입력하세요.",
+    "es": "IP o nombre de host, sin el prefijo del protocolo."
+  },
+  "Proxy server address": {
+    "ja": "プロキシサーバーアドレス",
+    "ko": "프록시 서버 주소",
+    "es": "Dirección del servidor proxy"
+  },
+  "Port": {
+    "ja": "ポート",
+    "ko": "포트",
+    "es": "Puerto"
+  },
+  "Proxy port": {
+    "ja": "プロキシポート",
+    "ko": "프록시 포트",
+    "es": "Puerto del proxy"
+  },
+  "For quota and usage queries. Proxy authentication is not supported.": {
+    "ja": "使用枠と使用量の照会に使います。プロキシ認証には対応していません。",
+    "ko": "한도 및 사용량 조회용입니다. 프록시 인증은 지원하지 않습니다.",
+    "es": "Para consultas de cuota y uso. No se admite autenticación del proxy."
+  },
+  "Restore Defaults": {
+    "ja": "デフォルトに戻す",
+    "ko": "기본값 복원",
+    "es": "Restaurar valores predeterminados"
+  },
+  "Turn off the proxy and restore defaults.": {
+    "ja": "プロキシをオフにしてデフォルトに戻します。",
+    "ko": "프록시를 끄고 기본값을 복원합니다.",
+    "es": "Desactiva el proxy y restaura los valores predeterminados."
+  },
+  "Cancel Test": {
+    "ja": "テストを中止",
+    "ko": "테스트 취소",
+    "es": "Cancelar prueba"
+  },
+  "Test Connection": {
+    "ja": "接続をテスト",
+    "ko": "연결 테스트",
+    "es": "Probar conexión"
+  },
+  "Test this proxy without saving changes.": {
+    "ja": "変更を保存せずにこのプロキシをテストします。",
+    "ko": "변경 사항을 저장하지 않고 이 프록시를 테스트합니다.",
+    "es": "Prueba este proxy sin guardar los cambios."
+  },
+  "Save": {
+    "ja": "保存",
+    "ko": "저장",
+    "es": "Guardar"
+  },
+  "Unsaved changes": {
+    "ja": "未保存の変更",
+    "ko": "저장되지 않은 변경 사항",
+    "es": "Cambios sin guardar"
+  },
+  "Layout and display": {
+    "ja": "レイアウトと表示",
+    "ko": "레이아웃 및 표시",
+    "es": "Diseño y visualización"
+  },
+  "Floating usage capsule": {
+    "ja": "フローティング使用量カプセル",
+    "ko": "플로팅 사용량 캡슐",
+    "es": "Cápsula flotante de uso"
+  },
+  "Optional modules": {
+    "ja": "オプション項目",
+    "ko": "선택 모듈",
+    "es": "Módulos opcionales"
+  },
+  "30-day cost estimate": {
+    "ja": "30日間の推定コスト",
+    "ko": "30일 예상 비용",
+    "es": "Coste estimado de 30 días"
+  },
+  "Daily · Weekly · Total": {
+    "ja": "日別 · 週別 · 累計",
+    "ko": "일별 · 주별 · 합계",
+    "es": "Diario · Semanal · Total"
+  },
+  "Action protection": {
+    "ja": "誤操作防止",
+    "ko": "오작동 방지",
+    "es": "Protección de acciones"
+  },
+  "Disable reset credit use": {
+    "ja": "リセットクレジットの使用を禁止",
+    "ko": "초기화 크레딧 사용 금지",
+    "es": "Desactivar el uso de créditos de restablecimiento"
+  },
+  "Disable the Codex reset button to prevent accidental use.": {
+    "ja": "誤操作を防ぐためCodexのリセットボタンを無効にします。",
+    "ko": "실수로 사용하는 것을 방지하기 위해 Codex 초기화 버튼을 비활성화합니다.",
+    "es": "Desactiva el botón de restablecimiento de Codex para evitar usos accidentales."
+  },
+  "Connect Codex": {
+    "ja": "Codexに接続",
+    "ko": "Codex 연결",
+    "es": "Conectar Codex"
+  },
+  "Check the current directory without changing Hooks.": {
+    "ja": "フックを変更せず現在のディレクトリを確認します。",
+    "ko": "훅을 변경하지 않고 현재 디렉터리를 확인합니다.",
+    "es": "Comprueba el directorio actual sin modificar los hooks."
+  },
+  "Data directory": {
+    "ja": "データディレクトリ",
+    "ko": "데이터 디렉터리",
+    "es": "Directorio de datos"
+  },
+  "Choose Directory…": {
+    "ja": "ディレクトリを選択…",
+    "ko": "디렉터리 선택…",
+    "es": "Elegir directorio…"
+  },
+  "Restore Default Directory": {
+    "ja": "デフォルトのディレクトリに戻す",
+    "ko": "기본 디렉터리 복원",
+    "es": "Restaurar directorio predeterminado"
+  },
+  "Change Directory": {
+    "ja": "ディレクトリを変更",
+    "ko": "디렉터리 변경",
+    "es": "Cambiar directorio"
+  },
+  "The selected directory needs a readable sessions folder.": {
+    "ja": "選択したディレクトリには読み取り可能なsessionsフォルダが必要です。",
+    "ko": "선택한 디렉터리에 읽을 수 있는 sessions 폴더가 필요합니다.",
+    "es": "El directorio seleccionado debe contener una carpeta sessions legible."
+  },
+  "Task event connection": {
+    "ja": "タスクイベント接続",
+    "ko": "작업 이벤트 연결",
+    "es": "Conexión de eventos de tareas"
+  },
+  "Disable task event connection": {
+    "ja": "タスクイベント接続を無効にする",
+    "ko": "작업 이벤트 연결 비활성화",
+    "es": "Desactivar la conexión de eventos de tareas"
+  },
+  "Automatic task record reading stays active.": {
+    "ja": "タスク記録の自動読み取りは継続します。",
+    "ko": "작업 기록 자동 읽기는 계속 활성화됩니다.",
+    "es": "La lectura automática de registros de tareas sigue activa."
+  },
+  "Disable": {
+    "ja": "無効にする",
+    "ko": "비활성화",
+    "es": "Desactivar"
+  },
+  "Tasks and usage come from local Codex. Hooks provide additional task events and require authorization in Codex on first use. Disabling removes only QuotaView hooks.": {
+    "ja": "タスクと使用量はローカルのCodexから取得します。フックは追加のタスクイベントを提供し、初回はCodexで認証が必要です。無効にするとQuotaViewのフックのみを削除します。",
+    "ko": "작업과 사용량은 로컬 Codex에서 가져옵니다. 훅은 추가 작업 이벤트를 제공하며 처음 사용할 때 Codex 인증이 필요합니다. 비활성화하면 QuotaView 훅만 제거합니다.",
+    "es": "Las tareas y el uso provienen de Codex local. Los hooks aportan eventos adicionales y requieren autorización inicial en Codex. Al desactivarlos, solo se eliminan los hooks de QuotaView."
+  },
+  "Hook Configuration Directory": {
+    "ja": "Hook設定ディレクトリ",
+    "ko": "Hook 설정 디렉터리",
+    "es": "Directorio de configuración de Hooks"
+  },
+  "Codex version": {
+    "ja": "Codexのバージョン",
+    "ko": "Codex 버전",
+    "es": "Versión de Codex"
+  },
+  "Activity support": {
+    "ja": "アクティビティ対応",
+    "ko": "활동 지원",
+    "es": "Compatibilidad de actividad"
+  },
+  "Local connection": {
+    "ja": "ローカル接続",
+    "ko": "로컬 연결",
+    "es": "Conexión local"
+  },
+  "Diagnostic log": {
+    "ja": "診断ログ",
+    "ko": "진단 로그",
+    "es": "Registro de diagnóstico"
+  },
+  "System": {
+    "ja": "システムに従う",
+    "ko": "시스템",
+    "es": "Sistema"
+  },
+  "System · {{0}}": {
+    "ja": "システム · {{0}}",
+    "ko": "시스템 · {{0}}",
+    "es": "Sistema · {{0}}"
+  },
+  "Language": {
+    "ja": "言語",
+    "ko": "언어",
+    "es": "Idioma"
+  },
+  "Main display": {
+    "ja": "メインディスプレイ",
+    "ko": "주 디스플레이",
+    "es": "Pantalla principal"
+  },
+  "Selected display disconnected": {
+    "ja": "選択したディスプレイは未接続",
+    "ko": "선택한 디스플레이 연결 끊김",
+    "es": "Pantalla seleccionada desconectada"
+  },
+  "Island display": {
+    "ja": "アイランドの表示先",
+    "ko": "아일랜드 표시 화면",
+    "es": "Pantalla de la isla"
+  },
+  "Focus following takes effect when multiple displays are connected.": {
+    "ja": "フォーカス追従は複数のディスプレイを接続しているときに有効です。",
+    "ko": "활성 화면 따라가기는 여러 디스플레이가 연결되었을 때 적용됩니다.",
+    "es": "El seguimiento del foco se aplica cuando hay varias pantallas conectadas."
+  },
+  "Behavior and privacy": {
+    "ja": "動作とプライバシー",
+    "ko": "동작 및 개인정보 보호",
+    "es": "Comportamiento y privacidad"
+  },
+  "Automatic popups": {
+    "ja": "自動展開",
+    "ko": "자동 펼치기",
+    "es": "Apertura automática"
+  },
+  "Open for new tasks, completions and requests.": {
+    "ja": "新しいタスク、完了、リクエスト時に開きます。",
+    "ko": "새 작업, 완료 및 요청 시 열립니다.",
+    "es": "Se abre para tareas nuevas, finalizaciones y solicitudes."
+  },
+  "Stay open for": {
+    "ja": "表示時間",
+    "ko": "표시 유지 시간",
+    "es": "Mantener abierto durante"
+  },
+  "Stay open for pending requests or when pinned.": {
+    "ja": "確認待ちまたは固定中は開いたままにします。",
+    "ko": "대기 중인 요청이 있거나 고정된 경우 계속 열어둡니다.",
+    "es": "Permanece abierto si hay solicitudes pendientes o está fijado."
+  },
+  "Popup duration": {
+    "ja": "展開時間",
+    "ko": "팝업 표시 시간",
+    "es": "Duración de apertura"
+  },
+  "{{0}} s": {
+    "ja": "{{0}}秒",
+    "ko": "{{0}}초",
+    "es": "{{0}} s"
+  },
+  "Privacy mode": {
+    "ja": "プライバシーモード",
+    "ko": "개인정보 보호 모드",
+    "es": "Modo de privacidad"
+  },
+  "Hide task contents and account data.": {
+    "ja": "タスク内容とアカウントデータを隠します。",
+    "ko": "작업 내용과 계정 데이터를 숨깁니다.",
+    "es": "Oculta el contenido de las tareas y los datos de la cuenta."
+  },
+  "Follow active window": {
+    "ja": "アクティブウィンドウに追従",
+    "ko": "활성 창 따라가기",
+    "es": "Seguir la ventana activa"
+  },
+  "Follow focused display": {
+    "ja": "フォーカス中の画面に追従",
+    "ko": "활성 디스플레이 따라가기",
+    "es": "Seguir la pantalla activa"
+  },
+  "Fixed display": {
+    "ja": "固定ディスプレイ",
+    "ko": "고정 디스플레이",
+    "es": "Pantalla fija"
+  },
+  "Falls back to the main display until reconnected.": {
+    "ja": "再接続するまでメインディスプレイを使います。",
+    "ko": "다시 연결될 때까지 주 디스플레이를 사용합니다.",
+    "es": "Se usa la pantalla principal hasta que vuelva a conectarse."
+  },
+  "Expanded width": {
+    "ja": "展開時の幅",
+    "ko": "펼친 너비",
+    "es": "Ancho expandido"
+  },
+  "Adjust the task list and usage page width.": {
+    "ja": "タスク一覧と使用量ページの幅を調整します。",
+    "ko": "작업 목록과 사용량 페이지의 너비를 조정합니다.",
+    "es": "Ajusta el ancho de la lista de tareas y de la página de uso."
+  },
+  "Appearance": {
+    "ja": "外観",
+    "ko": "모양",
+    "es": "Apariencia"
+  },
+  "Liquid Glass": {
+    "ja": "リキッドガラス",
+    "ko": "리퀴드 글래스",
+    "es": "Liquid Glass"
+  },
+  "Translucent surfaces, natural highlights and dark glass cards.": {
+    "ja": "半透明の素材、自然なハイライト、ダークガラスのカード。",
+    "ko": "반투명 소재, 자연스러운 하이라이트, 어두운 유리 카드.",
+    "es": "Superficies translúcidas, reflejos naturales y tarjetas de cristal oscuro."
+  },
+  "Classic solid": {
+    "ja": "クラシックな単色",
+    "ko": "클래식 단색",
+    "es": "Color sólido clásico"
+  },
+  "Turn off glass on the background, cards and buttons. Choose this if glass feels slow.": {
+    "ja": "背景、カード、ボタンのガラス効果をオフにします。動作が重い場合に選択してください。",
+    "ko": "배경, 카드, 버튼의 유리 효과를 끕니다. 유리 효과가 느리면 선택하세요.",
+    "es": "Desactiva el cristal en el fondo, las tarjetas y los botones. Elige esta opción si el efecto va lento."
+  },
+  "Glass appearance": {
+    "ja": "ガラスの外観",
+    "ko": "유리 모양",
+    "es": "Apariencia del cristal"
+  },
+  "Glass amount": {
+    "ja": "ガラスの強さ",
+    "ko": "유리 효과 강도",
+    "es": "Intensidad del cristal"
+  },
+  "Black": {
+    "ja": "ブラック",
+    "ko": "검정",
+    "es": "Negro"
+  },
+  "Black area {{0}}%": {
+    "ja": "黒い領域{{0}}%",
+    "ko": "검정 영역 {{0}}%",
+    "es": "Área negra {{0}}%"
+  },
+  "Glass": {
+    "ja": "ガラス",
+    "ko": "유리",
+    "es": "Cristal"
+  },
+  "Task effects": {
+    "ja": "タスクエフェクト",
+    "ko": "작업 효과",
+    "es": "Efectos de tareas"
+  },
+  "Native Liquid Glass requires macOS 26 or later; this system uses translucent material.": {
+    "ja": "ネイティブのLiquid GlassにはmacOS 26以降が必要です。このシステムでは半透明素材を使います。",
+    "ko": "네이티브 Liquid Glass는 macOS 26 이상이 필요합니다. 이 시스템에서는 반투명 소재를 사용합니다.",
+    "es": "Liquid Glass nativo requiere macOS 26 o posterior; este sistema usa material translúcido."
+  },
+  "QQ group": {
+    "ja": "QQグループ",
+    "ko": "QQ 그룹",
+    "es": "Grupo de QQ"
+  },
+  "Group: 1108649282": {
+    "ja": "グループ：1108649282",
+    "ko": "그룹: 1108649282",
+    "es": "Grupo: 1108649282"
+  },
+  "Show the group QR code": {
+    "ja": "グループのQRコードを表示",
+    "ko": "그룹 QR 코드 표시",
+    "es": "Mostrar el código QR del grupo"
+  },
+  "Open the feedback page in your browser": {
+    "ja": "ブラウザでフィードバックページを開く",
+    "ko": "브라우저에서 피드백 페이지 열기",
+    "es": "Abrir la página de comentarios en el navegador"
+  },
+  "QuotaView feedback group QR code, group 1108649282": {
+    "ja": "QuotaViewフィードバックグループのQRコード、グループ1108649282",
+    "ko": "QuotaView 피드백 그룹 QR 코드, 그룹 1108649282",
+    "es": "Código QR del grupo de comentarios de QuotaView, grupo 1108649282"
+  },
+  "The QR code is unavailable.": {
+    "ja": "QRコードを利用できません。",
+    "ko": "QR 코드를 사용할 수 없습니다.",
+    "es": "El código QR no está disponible."
+  },
+  "Close": {
+    "ja": "閉じる",
+    "ko": "닫기",
+    "es": "Cerrar"
+  },
+  "Software updates": {
+    "ja": "ソフトウェアアップデート",
+    "ko": "소프트웨어 업데이트",
+    "es": "Actualizaciones de software"
+  },
+  "Automatically check for updates": {
+    "ja": "アップデートを自動確認",
+    "ko": "업데이트 자동 확인",
+    "es": "Buscar actualizaciones automáticamente"
+  },
+  "Every 24 hours; confirm before installing.": {
+    "ja": "24時間ごとに確認。インストール前に確認します。",
+    "ko": "24시간마다 확인하며 설치 전에 확인을 요청합니다.",
+    "es": "Cada 24 horas; pide confirmación antes de instalar."
+  },
+  "Check for Updates…": {
+    "ja": "アップデートを確認…",
+    "ko": "업데이트 확인…",
+    "es": "Buscar actualizaciones…"
+  },
+  "Current build": {
+    "ja": "現在のビルド",
+    "ko": "현재 빌드",
+    "es": "Compilación actual"
+  },
+  "View": {
+    "ja": "表示",
+    "ko": "보기",
+    "es": "Ver"
+  },
+  "Visit": {
+    "ja": "開く",
+    "ko": "방문",
+    "es": "Visitar"
+  },
+  "Open the QuotaView GitHub repository in your browser": {
+    "ja": "ブラウザでQuotaViewのGitHubリポジトリを開く",
+    "ko": "브라우저에서 QuotaView GitHub 저장소 열기",
+    "es": "Abrir el repositorio de QuotaView en GitHub en el navegador"
+  },
+  "Visit the QuotaView GitHub repository": {
+    "ja": "QuotaViewのGitHubリポジトリを開く",
+    "ko": "QuotaView GitHub 저장소 방문",
+    "es": "Visitar el repositorio de QuotaView en GitHub"
+  },
+  "Check for a new version.": {
+    "ja": "新しいバージョンを確認します。",
+    "ko": "새 버전을 확인합니다.",
+    "es": "Busca una versión nueva."
+  },
+  "This build does not support online updates.": {
+    "ja": "このビルドはオンライン更新に対応していません。",
+    "ko": "이 빌드는 온라인 업데이트를 지원하지 않습니다.",
+    "es": "Esta compilación no admite actualizaciones en línea."
+  },
+  "Check every 24 hours and ask before installing.": {
+    "ja": "24時間ごとに確認し、インストール前に確認を求めます。",
+    "ko": "24시간마다 확인하고 설치 전에 확인을 요청합니다.",
+    "es": "Busca cada 24 horas y pregunta antes de instalar."
+  },
+  "Online updates are unavailable in debug builds.": {
+    "ja": "デバッグビルドではオンライン更新を利用できません。",
+    "ko": "디버그 빌드에서는 온라인 업데이트를 사용할 수 없습니다.",
+    "es": "Las actualizaciones en línea no están disponibles en compilaciones de depuración."
+  },
+  "The current launch environment does not support online updates.": {
+    "ja": "現在の起動環境ではオンライン更新を利用できません。",
+    "ko": "현재 실행 환경에서는 온라인 업데이트를 지원하지 않습니다.",
+    "es": "El entorno de ejecución actual no admite actualizaciones en línea."
+  },
+  "Use an officially signed release to receive updates.": {
+    "ja": "アップデートを受け取るには公式署名済みリリースを使ってください。",
+    "ko": "업데이트를 받으려면 공식 서명된 릴리스를 사용하세요.",
+    "es": "Usa una versión oficial firmada para recibir actualizaciones."
+  },
+  "Update configuration is invalid. Reinstall the official release.": {
+    "ja": "更新設定が無効です。公式リリースを再インストールしてください。",
+    "ko": "업데이트 설정이 잘못되었습니다. 공식 릴리스를 다시 설치하세요.",
+    "es": "La configuración de actualización no es válida. Reinstala la versión oficial."
+  },
+  "Built on {{0}}": {
+    "ja": "ビルド日時 {{0}}",
+    "ko": "빌드 날짜 {{0}}",
+    "es": "Compilado el {{0}}"
+  },
+  "Version {{0}} ({{1}}){{2}}": {
+    "ja": "バージョン{{0}}（{{1}}）{{2}}",
+    "ko": "버전 {{0}} ({{1}}){{2}}",
+    "es": "Versión {{0}} ({{1}}){{2}}"
+  },
+  "Authorizing": {
+    "ja": "認証中",
+    "ko": "인증 중",
+    "es": "Autorizando"
+  },
+  "Enable Hooks": {
+    "ja": "フックを有効にする",
+    "ko": "훅 활성화",
+    "es": "Activar hooks"
+  },
+  "Authorize": {
+    "ja": "認証",
+    "ko": "인증",
+    "es": "Autorizar"
+  },
+  "Disable Hooks": {
+    "ja": "フックを無効にする",
+    "ko": "훅 비활성화",
+    "es": "Desactivar hooks"
+  },
+  "Authorize QuotaView task event Hooks through Codex.": {
+    "ja": "Codexを通じてQuotaViewのタスクイベントフックを認証します。",
+    "ko": "Codex를 통해 QuotaView 작업 이벤트 훅을 인증합니다.",
+    "es": "Autoriza los hooks de eventos de tareas de QuotaView mediante Codex."
+  },
+  "Disable Hooks; the App Server connection keeps working.": {
+    "ja": "フックを無効にしてもApp Server接続は維持されます。",
+    "ko": "훅을 비활성화해도 App Server 연결은 유지됩니다.",
+    "es": "Desactiva los hooks; la conexión con App Server sigue funcionando."
+  },
+  "Check and maintain QuotaView Hooks while preserving other Hooks.": {
+    "ja": "他のフックを保持しながらQuotaViewのフックを確認・管理します。",
+    "ko": "다른 훅을 유지하면서 QuotaView 훅을 확인하고 관리합니다.",
+    "es": "Comprueba y mantiene los hooks de QuotaView conservando los demás."
+  },
+  "Checking and configuring automatically…": {
+    "ja": "自動確認・設定中…",
+    "ko": "자동으로 확인 및 설정 중…",
+    "es": "Comprobando y configurando automáticamente…"
+  },
+  "Verifying authorization through Codex…": {
+    "ja": "Codexで認証を確認中…",
+    "ko": "Codex를 통해 인증 확인 중…",
+    "es": "Verificando la autorización mediante Codex…"
+  },
+  "Hooks are off. Enable them at any time.": {
+    "ja": "フックはオフです。いつでも有効にできます。",
+    "ko": "훅이 꺼져 있습니다. 언제든 활성화할 수 있습니다.",
+    "es": "Los hooks están desactivados. Puedes activarlos en cualquier momento."
+  },
+  "Configured automatically. Authorize to receive task events without terminal setup.": {
+    "ja": "自動設定済み。認証するとターミナル設定なしでタスクイベントを受信できます。",
+    "ko": "자동 설정되었습니다. 인증하면 터미널 설정 없이 작업 이벤트를 수신할 수 있습니다.",
+    "es": "Configurado automáticamente. Autoriza para recibir eventos sin configurar el terminal."
+  },
+  "Authorization verified by Codex; waiting for task activity.": {
+    "ja": "Codexが認証を確認しました。タスクのアクティビティを待機中。",
+    "ko": "Codex 인증이 확인되었습니다. 작업 활동을 기다리는 중입니다.",
+    "es": "Autorización verificada por Codex; esperando actividad de tareas."
+  },
+  "Receiving task events for task and context compaction updates.": {
+    "ja": "タスクとコンテキスト圧縮のイベントを受信中。",
+    "ko": "작업 및 컨텍스트 압축 업데이트 이벤트를 수신 중입니다.",
+    "es": "Recibiendo eventos de tareas y compresión de contexto."
+  },
+  "Authorization Needed": {
+    "ja": "認証が必要",
+    "ko": "인증 필요",
+    "es": "Se requiere autorización"
+  },
+  "Authorized": {
+    "ja": "認証済み",
+    "ko": "인증됨",
+    "es": "Autorizado"
+  },
+  "Needs Attention": {
+    "ja": "確認が必要",
+    "ko": "확인 필요",
+    "es": "Requiere atención"
+  },
+  "Checking version…": {
+    "ja": "バージョンを確認中…",
+    "ko": "버전 확인 중…",
+    "es": "Comprobando versión…"
+  },
+  "Hooks Enabled": {
+    "ja": "フック有効",
+    "ko": "훅 활성화됨",
+    "es": "Hooks activados"
+  },
+  "Hooks Disabled": {
+    "ja": "フック無効",
+    "ko": "훅 비활성화됨",
+    "es": "Hooks desactivados"
+  },
+  "Hooks Unavailable": {
+    "ja": "フックを利用できません",
+    "ko": "훅 사용 불가",
+    "es": "Hooks no disponibles"
+  },
+  "Receives task events through a local connection.": {
+    "ja": "ローカル接続でタスクイベントを受信します。",
+    "ko": "로컬 연결을 통해 작업 이벤트를 수신합니다.",
+    "es": "Recibe eventos de tareas mediante una conexión local."
+  },
+  "The event bridge is not running.": {
+    "ja": "イベントブリッジは動作していません。",
+    "ko": "이벤트 브리지가 실행 중이 아닙니다.",
+    "es": "El puente de eventos no está en ejecución."
+  },
+  "Listening": {
+    "ja": "待ち受け中",
+    "ko": "수신 대기 중",
+    "es": "Escuchando"
+  },
+  "Stopped": {
+    "ja": "停止中",
+    "ko": "중지됨",
+    "es": "Detenido"
+  },
+  "Codex task": {
+    "ja": "Codexタスク",
+    "ko": "Codex 작업",
+    "es": "Tarea de Codex"
+  },
+  "Organize project notes": {
+    "ja": "プロジェクト資料を整理",
+    "ko": "프로젝트 자료 정리",
+    "es": "Organizar notas del proyecto"
+  },
+  "Content hidden": {
+    "ja": "内容は非表示",
+    "ko": "내용 숨김",
+    "es": "Contenido oculto"
+  },
+  "Summarizing notes for release": {
+    "ja": "リリース用の資料をまとめ中",
+    "ko": "릴리스 자료 요약 중",
+    "es": "Resumiendo notas para el lanzamiento"
+  },
+  "Privacy mode is off": {
+    "ja": "プライバシーモードはオフです",
+    "ko": "개인정보 보호 모드가 꺼져 있습니다",
+    "es": "El modo de privacidad está desactivado"
+  },
+  "Expanded width {{0}} pt": {
+    "ja": "展開幅{{0}} pt",
+    "ko": "펼친 너비 {{0}} pt",
+    "es": "Ancho expandido {{0}} pt"
+  },
+  "Island appearance preview": {
+    "ja": "アイランド外観のプレビュー",
+    "ko": "아일랜드 모양 미리보기",
+    "es": "Vista previa de la apariencia de la isla"
+  },
+  "46% · 4 d": {
+    "ja": "46% · 4日",
+    "ko": "46% · 4일",
+    "es": "46% · 4 d"
+  },
+  "1 session": {
+    "ja": "1セッション",
+    "ko": "세션 1개",
+    "es": "1 sesión"
+  },
+  "1 working": {
+    "ja": "1件作業中",
+    "ko": "1개 작업 중",
+    "es": "1 en curso"
+  },
+  "Connection Details": {
+    "ja": "接続の詳細",
+    "ko": "연결 세부 정보",
+    "es": "Detalles de conexión"
+  },
+  "{{0}} {{1}} remaining, resets in {{2}}": {
+    "ja": "{{0}} {{1}}残り、{{2}}後にリセット",
+    "ko": "{{0}} {{1}} 남음, {{2}} 후 초기화",
+    "es": "{{0}} {{1}} restante, se restablece en {{2}}"
+  },
+  "QuotaView: {{0}}": {
+    "ja": "QuotaView：{{0}}",
+    "ko": "QuotaView: {{0}}",
+    "es": "QuotaView: {{0}}"
+  },
+  "Codex {{0}}, {{1}}% remaining": {
+    "ja": "Codex {{0}}、残り{{1}}%",
+    "ko": "Codex {{0}}, {{1}}% 남음",
+    "es": "Codex {{0}}, queda {{1}}%"
+  },
+  "QuotaView is connecting": {
+    "ja": "QuotaView接続中",
+    "ko": "QuotaView 연결 중",
+    "es": "QuotaView se está conectando"
+  },
+  "Available": {
+    "ja": "利用可能",
+    "ko": "사용 가능",
+    "es": "Disponible"
+  },
+  "Limited": {
+    "ja": "制限あり",
+    "ko": "제한됨",
+    "es": "Limitado"
+  },
+  "Exhausted": {
+    "ja": "枠を使い切りました",
+    "ko": "한도 소진됨",
+    "es": "Agotado"
+  },
+  "Due": {
+    "ja": "期限到来",
+    "ko": "초기화 시점",
+    "es": "Vencido"
+  },
+  "{{0}}d": {
+    "ja": "{{0}}日",
+    "ko": "{{0}}일",
+    "es": "{{0}} d"
+  },
+  "{{0}}h": {
+    "ja": "{{0}}時間",
+    "ko": "{{0}}시간",
+    "es": "{{0}} h"
+  },
+  "Enter a valid IP or hostname without a protocol, path, or credentials.": {
+    "ja": "プロトコル、パス、認証情報を含めず、有効なIPまたはホスト名を入力してください。",
+    "ko": "프로토콜, 경로, 인증 정보 없이 유효한 IP 또는 호스트 이름을 입력하세요.",
+    "es": "Introduce una IP o un nombre de host válido sin protocolo, ruta ni credenciales."
+  },
+  "Port must be an integer from 1 to 65535.": {
+    "ja": "ポートは1～65535の整数で指定してください。",
+    "ko": "포트는 1~65535 사이의 정수여야 합니다.",
+    "es": "El puerto debe ser un número entero entre 1 y 65535."
+  },
+  "Proxies requiring a username or password are not supported.": {
+    "ja": "ユーザー名やパスワードが必要なプロキシには対応していません。",
+    "ko": "사용자 이름이나 비밀번호가 필요한 프록시는 지원하지 않습니다.",
+    "es": "No se admiten proxies que requieran usuario o contraseña."
+  },
+  "Codex was not found. Install Codex first.": {
+    "ja": "Codexが見つかりません。先にインストールしてください。",
+    "ko": "Codex를 찾을 수 없습니다. 먼저 Codex를 설치하세요.",
+    "es": "No se encontró Codex. Instálalo primero."
+  },
+  "The request timed out. Check the proxy address, port, and network.": {
+    "ja": "リクエストがタイムアウトしました。プロキシのアドレス、ポート、ネットワークを確認してください。",
+    "ko": "요청 시간이 초과되었습니다. 프록시 주소, 포트, 네트워크를 확인하세요.",
+    "es": "La solicitud agotó el tiempo de espera. Comprueba la dirección, el puerto y la red del proxy."
+  },
+  "Quota access was denied. Check your Codex sign-in and account permissions.": {
+    "ja": "使用枠へのアクセスが拒否されました。Codexのサインインとアカウント権限を確認してください。",
+    "ko": "한도 접근이 거부되었습니다. Codex 로그인과 계정 권한을 확인하세요.",
+    "es": "Se denegó el acceso a la cuota. Comprueba el inicio de sesión y los permisos de la cuenta de Codex."
+  },
+  "The connection did not return valid quota data.": {
+    "ja": "接続から有効な使用枠データが返されませんでした。",
+    "ko": "연결에서 유효한 한도 데이터가 반환되지 않았습니다.",
+    "es": "La conexión no devolvió datos de cuota válidos."
+  },
+  "Quota request failed. Check that the proxy is available and Codex is signed in.": {
+    "ja": "使用枠の照会に失敗しました。プロキシの動作とCodexへのサインインを確認してください。",
+    "ko": "한도 요청이 실패했습니다. 프록시 사용 가능 여부와 Codex 로그인을 확인하세요.",
+    "es": "La consulta de cuota falló. Comprueba que el proxy esté disponible y que hayas iniciado sesión en Codex."
+  },
+  "The connection test queries account quota through the proxy.": {
+    "ja": "接続テストはプロキシ経由でアカウントの使用枠を照会します。",
+    "ko": "연결 테스트는 프록시를 통해 계정 한도를 조회합니다.",
+    "es": "La prueba consulta la cuota de la cuenta a través del proxy."
+  },
+  "Querying quota through the proxy…": {
+    "ja": "プロキシ経由で使用枠を照会中…",
+    "ko": "프록시를 통해 한도 조회 중…",
+    "es": "Consultando la cuota a través del proxy…"
+  },
+  "Connected. Valid quota data was received.": {
+    "ja": "接続しました。有効な使用枠データを取得しました。",
+    "ko": "연결되었습니다. 유효한 한도 데이터를 수신했습니다.",
+    "es": "Conectado. Se recibieron datos de cuota válidos."
+  },
+  "Once": {
+    "ja": "今回のみ",
+    "ko": "이번만",
+    "es": "Una vez"
+  },
+  "Ask again next time": {
+    "ja": "次回も確認する",
+    "ko": "다음에도 확인",
+    "es": "Preguntar de nuevo la próxima vez"
+  },
+  "This approval lasts for the session": {
+    "ja": "この承認はセッション中有効です",
+    "ko": "이 승인은 세션 동안 유효합니다",
+    "es": "Esta aprobación dura toda la sesión"
+  },
+  "Always": {
+    "ja": "常に許可",
+    "ko": "항상",
+    "es": "Siempre"
+  },
+  "Saves a Claude Code permission rule": {
+    "ja": "Claude Codeの権限ルールを保存します",
+    "ko": "Claude Code 권한 규칙을 저장합니다",
+    "es": "Guarda una regla de permisos de Claude Code"
+  },
+  "Allow and remember command rule": {
+    "ja": "コマンドルールを記憶して許可",
+    "ko": "명령 규칙을 기억하고 허용",
+    "es": "Permitir y recordar la regla del comando"
+  },
+  "Allow and remember this host": {
+    "ja": "このホストを記憶して許可",
+    "ko": "이 호스트를 기억하고 허용",
+    "es": "Permitir y recordar este servidor"
+  },
+  "Block and remember this host": {
+    "ja": "このホストを記憶してブロック",
+    "ko": "이 호스트를 기억하고 차단",
+    "es": "Bloquear y recordar este servidor"
+  },
+  "Grant selected": {
+    "ja": "選択した権限を許可",
+    "ko": "선택한 권한 허용",
+    "es": "Conceder lo seleccionado"
+  },
+  "Approve": {
+    "ja": "承認",
+    "ko": "승인",
+    "es": "Aprobar"
+  },
+  "Submit form": {
+    "ja": "フォームを送信",
+    "ko": "양식 전송",
+    "es": "Enviar formulario"
+  },
+  "Authorization complete, continue": {
+    "ja": "認証完了、続行",
+    "ko": "인증 완료, 계속",
+    "es": "Autorización completa, continuar"
+  },
+  "Allow command": {
+    "ja": "コマンドを許可",
+    "ko": "명령 허용",
+    "es": "Permitir comando"
+  },
+  "Send input": {
+    "ja": "入力を送信",
+    "ko": "입력 전송",
+    "es": "Enviar entrada"
+  },
+  "Allow changes": {
+    "ja": "変更を許可",
+    "ko": "변경 허용",
+    "es": "Permitir cambios"
+  },
+  "Allow access": {
+    "ja": "アクセスを許可",
+    "ko": "접근 허용",
+    "es": "Permitir acceso"
+  },
+  "Cancel request": {
+    "ja": "リクエストをキャンセル",
+    "ko": "요청 취소",
+    "es": "Cancelar solicitud"
+  },
+  "Run command": {
+    "ja": "コマンドを実行",
+    "ko": "명령 실행",
+    "es": "Ejecutar comando"
+  },
+  "Terminal input": {
+    "ja": "ターミナル入力",
+    "ko": "터미널 입력",
+    "es": "Entrada de terminal"
+  },
+  "Change files": {
+    "ja": "ファイルを変更",
+    "ko": "파일 변경",
+    "es": "Cambiar archivos"
+  },
+  "Access permissions": {
+    "ja": "アクセス権限",
+    "ko": "접근 권한",
+    "es": "Permisos de acceso"
+  },
+  "Answer questions": {
+    "ja": "質問に回答",
+    "ko": "질문에 답변",
+    "es": "Responder preguntas"
+  },
+  "Tool form": {
+    "ja": "ツールフォーム",
+    "ko": "도구 양식",
+    "es": "Formulario de herramienta"
+  },
+  "External authorization": {
+    "ja": "外部認証",
+    "ko": "외부 인증",
+    "es": "Autorización externa"
+  },
+  "Allow once": {
+    "ja": "1回だけ許可",
+    "ko": "한 번 허용",
+    "es": "Permitir una vez"
+  },
+  "Allow for session": {
+    "ja": "セッション中許可",
+    "ko": "세션 동안 허용",
+    "es": "Permitir durante la sesión"
+  },
+  "Always allow": {
+    "ja": "常に許可",
+    "ko": "항상 허용",
+    "es": "Permitir siempre"
+  },
+  "Decline": {
+    "ja": "拒否",
+    "ko": "거부",
+    "es": "Rechazar"
+  },
+  "Allow and remember command": {
+    "ja": "コマンドを記憶して許可",
+    "ko": "명령을 기억하고 허용",
+    "es": "Permitir y recordar el comando"
+  },
+  "Allow and remember host": {
+    "ja": "ホストを記憶して許可",
+    "ko": "호스트를 기억하고 허용",
+    "es": "Permitir y recordar el servidor"
+  },
+  "Deny and remember host": {
+    "ja": "ホストを記憶して拒否",
+    "ko": "호스트를 기억하고 거부",
+    "es": "Denegar y recordar el servidor"
+  },
+  "Deny": {
+    "ja": "許可しない",
+    "ko": "허용 안 함",
+    "es": "Denegar"
+  },
+  "5h": {
+    "ja": "5時間",
+    "ko": "5시간",
+    "es": "5 h"
+  },
+  "State Smoke": {
+    "ja": "状態スモーク",
+    "ko": "상태 연기",
+    "es": "Humo de estado"
+  },
+  "Quantum Noise": {
+    "ja": "量子ノイズ",
+    "ko": "양자 노이즈",
+    "es": "Ruido cuántico"
+  },
+  "Liquid Slosh": {
+    "ja": "液体ウェーブ",
+    "ko": "액체 물결",
+    "es": "Olas líquidas"
+  },
+  "{{0}} reset credits available": {
+    "ja": "リセットクレジット残り{{0}}回",
+    "ko": "초기화 크레딧 {{0}}개 사용 가능",
+    "es": "{{0}} créditos de restablecimiento disponibles"
+  },
+  "{{0}} reset credits will remain after reset": {
+    "ja": "リセット後は残り{{0}}回",
+    "ko": "초기화 후 {{0}}회 남음",
+    "es": "Quedarán {{0}} créditos después del restablecimiento"
+  },
+  "Request details unavailable": {
+    "ja": "リクエストの詳細を取得できません",
+    "ko": "요청 세부 정보를 확인할 수 없음",
+    "es": "Detalles de la solicitud no disponibles"
+  },
+  "Syncing request details. If macOS shows a permission dialog, respond in that system dialog.": {
+    "ja": "リクエストの詳細を同期中です。macOSの権限ダイアログが表示された場合は、そのダイアログで応答してください。",
+    "ko": "요청 세부 정보를 동기화하는 중입니다. macOS 권한 대화상자가 표시되면 해당 시스템 대화상자에서 응답하세요.",
+    "es": "Sincronizando los detalles de la solicitud. Si macOS muestra un diálogo de permisos, responde en él."
+  },
+  "Review and handle this request in Codex.": {
+    "ja": "Codexでこのリクエストを確認して処理してください。",
+    "ko": "Codex에서 이 요청을 검토하고 처리하세요.",
+    "es": "Revisa y gestiona esta solicitud en Codex."
+  },
+  "Claude Code requests your input": {
+    "ja": "Claude Codeが入力を求めています",
+    "ko": "Claude Code가 입력을 요청합니다",
+    "es": "Claude Code solicita tu respuesta"
+  },
+  "Send this response to Claude Code.": {
+    "ja": "この回答をClaude Codeに送信します。",
+    "ko": "이 응답을 Claude Code로 보냅니다.",
+    "es": "Envía esta respuesta a Claude Code."
+  },
+  "Handle this request in the Claude Code terminal.": {
+    "ja": "Claude Codeのターミナルでこのリクエストを処理してください。",
+    "ko": "Claude Code 터미널에서 이 요청을 처리하세요.",
+    "es": "Gestiona esta solicitud en el terminal de Claude Code."
+  },
+  "Send this response to Codex.": {
+    "ja": "この回答をCodexに送信します。",
+    "ko": "이 응답을 Codex로 보냅니다.",
+    "es": "Envía esta respuesta a Codex."
+  },
+  "Handle this request in Codex.": {
+    "ja": "Codexでこのリクエストを処理してください。",
+    "ko": "Codex에서 이 요청을 처리하세요.",
+    "es": "Gestiona esta solicitud en Codex."
+  },
+  "Answer in Codex.": {
+    "ja": "Codexで回答してください。",
+    "ko": "Codex에서 답변하세요.",
+    "es": "Responde en Codex."
+  },
+  "Approve to resume the task.": {
+    "ja": "承認するとタスクを再開します。",
+    "ko": "승인하면 작업을 재개합니다.",
+    "es": "Aprueba para reanudar la tarea."
+  },
+  "This connection is read-only; handle the request in Codex.": {
+    "ja": "この接続は読み取り専用です。Codexでリクエストを処理してください。",
+    "ko": "이 연결은 읽기 전용입니다. Codex에서 요청을 처리하세요.",
+    "es": "Esta conexión es de solo lectura; gestiona la solicitud en Codex."
+  },
+  "Confirm this request in {{0}}.": {
+    "ja": "{{0}}でこのリクエストを確認してください。",
+    "ko": "{{0}}에서 이 요청을 확인하세요.",
+    "es": "Confirma esta solicitud en {{0}}."
+  },
+  "Next Reset": {
+    "ja": "次回リセット",
+    "ko": "다음 초기화",
+    "es": "Próximo restablecimiento"
+  },
+  "Today Tokens": {
+    "ja": "今日のトークン",
+    "ko": "오늘 토큰",
+    "es": "Tokens de hoy"
+  },
+  "Codex data connection available": {
+    "ja": "Codexデータ接続は利用可能",
+    "ko": "Codex 데이터 연결 사용 가능",
+    "es": "Conexión de datos de Codex disponible"
+  },
+  "Codex data connection unavailable": {
+    "ja": "Codexデータ接続は利用不可",
+    "ko": "Codex 데이터 연결 사용 불가",
+    "es": "Conexión de datos de Codex no disponible"
+  },
+  "Refresh in app": {
+    "ja": "アプリで更新",
+    "ko": "앱에서 새로 고침",
+    "es": "Actualizar en la app"
+  },
+  "QuotaView, Codex data connection unavailable, quota data unavailable, refresh in QuotaView": {
+    "ja": "QuotaView、Codexデータ接続と使用枠データを利用できません。QuotaViewで更新してください",
+    "ko": "QuotaView, Codex 데이터 연결 및 한도 데이터를 사용할 수 없습니다. QuotaView에서 새로 고치세요",
+    "es": "QuotaView, conexión de datos de Codex y datos de cuota no disponibles; actualiza en QuotaView"
+  },
+  "Plan {{0}}": {
+    "ja": "プラン{{0}}",
+    "ko": "요금제 {{0}}",
+    "es": "Plan {{0}}"
+  },
+  "QuotaView, Codex data connection available, {{0}} percent remaining in the current period, next reset {{1}}, credits balance {{2}}, today tokens {{3}}, lifetime tokens {{4}}": {
+    "ja": "QuotaView、Codexデータ接続は利用可能、今期の残り{{0}}パーセント、次回リセット{{1}}、クレジット残高{{2}}、今日のトークン{{3}}、累計トークン{{4}}",
+    "ko": "QuotaView, Codex 데이터 연결 사용 가능, 현재 기간 {{0}}퍼센트 남음, 다음 초기화 {{1}}, 크레딧 잔액 {{2}}, 오늘 토큰 {{3}}, 누적 토큰 {{4}}",
+    "es": "QuotaView, conexión de datos de Codex disponible, queda un {{0}} por ciento en el periodo actual, próximo restablecimiento {{1}}, saldo de créditos {{2}}, tokens de hoy {{3}}, tokens acumulados {{4}}"
+  },
+  "Show preview": {
+    "ja": "プレビューを表示",
+    "ko": "미리보기 표시",
+    "es": "Mostrar vista previa"
+  },
+  "Show full content": {
+    "ja": "全文を表示",
+    "ko": "전체 내용 표시",
+    "es": "Mostrar todo el contenido"
+  },
+  "Reset Credit Available": {
+    "ja": "使用可能なリセットクレジット",
+    "ko": "사용 가능한 초기화 크레딧",
+    "es": "Crédito de restablecimiento disponible"
+  },
+  "Reset Credits Available": {
+    "ja": "使用可能なリセットクレジット",
+    "ko": "사용 가능한 초기화 크레딧",
+    "es": "Créditos de restablecimiento disponibles"
+  },
+  "This action uses one reset credit to reset an eligible Codex usage cycle immediately. It cannot be undone. This version remains in demo mode and will not call the live reset endpoint or consume a credit.": {
+    "ja": "この操作はリセットクレジットを1つ使い、対象のCodex使用期間を直ちにリセットします。取り消しはできません。このバージョンはデモモードのため、実際のリセットAPIを呼び出したり、クレジットを消費したりすることはありません。",
+    "ko": "이 작업은 초기화 크레딧 1개를 사용하여 해당 Codex 사용 기간을 즉시 초기화하며 되돌릴 수 없습니다. 이 버전은 데모 모드이므로 실제 초기화 API를 호출하거나 크레딧을 사용하지 않습니다.",
+    "es": "Esta acción usa un crédito para restablecer inmediatamente un periodo de uso apto de Codex y no se puede deshacer. Esta versión sigue en modo de demostración: no llama a la API real ni consume créditos."
+  }
+}

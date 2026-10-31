@@ -17,6 +17,7 @@ struct QuotaViewApp: App {
             )
             .environment(\.locale, appDelegate.preferences.locale)
         }
+        .windowResizability(.contentSize)
     }
 }
 
