@@ -2,11 +2,49 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.7 Build 8 / 标签图标尺寸与原色（2026-10-30）
+## 当前开发：0.8.7 Build 16 / 最新图标替换（2026-10-31）
+
+用户已授权推送当前运行开发版的源码并合入 main。本轮以 Build 16 / 内部 118 为准，运行包及 239 项输入已重新核对；保留 main 现有 Windows 更新和本地无关文件。集成证据 `.build/source-integration-087b16/`，最终 PR/CI 结果完成后回填。下方未提交记录为此前阶段事实，不代表本次集成结果。
+
+按用户新文件 `QV-icon-iOS-Solid@1x.png` 替换 AppIcon 全尺寸及应用内图标，同步现有 Dock 临时预览，保留关于布局，不操作窗口。2026-10-31T23:23:51.771595+08:00，开发包更新启动 PID 16048；239 输入、14 资源、完整包及加载路径核对通过。证据 `.build/app-icon-087b16-runtime/`，Dock 预览记录 `.build/current-dock-icon-preview.json`。仅本地，未提交/推送/发布，正式安装保持。
+
+## 前序开发：0.8.7 Build 15 / 最新图标替换（2026-10-31）
+
+按用户新文件 `QV-icon-iOS-Default-1024-2@1x.png` 替换 AppIcon 全尺寸及应用内图标，同步现有 Dock 临时预览，保留关于布局，不操作窗口。2026-10-31T23:21:21.456870+08:00，开发包更新启动 PID 15116；239 输入、14 资源、完整包及加载路径核对通过。证据 `.build/app-icon-087b15-runtime/`，Dock 预览记录 `.build/current-dock-icon-preview.json`。仅本地，未提交/推送/发布，正式安装保持。
+
+## 前序开发：0.8.7 Build 14 / 最新图标替换（2026-10-31）
+
+按用户最新同名 PNG 替换 AppIcon 全尺寸与应用内图标；仅更新当前开发包及 Dock 预览，不操作设置或其他窗口。2026-10-31T23:14:30.462925+08:00，开发包更新启动 PID 13496，239 输入、14 资源、完整包及加载路径核对通过。保留现有关于布局；证据 `.build/app-icon-087b14-runtime/`。独立 Dock 预览已同步同一编译图标资源，记录 `.build/current-dock-icon-preview.json`。仅本地，未提交/推送/发布。
+
+## 前序开发：0.8.7 Build 13 / App 图标再次更新与 Dock 预览（2026-10-31）
+
+用户更新同名图标 PNG 后，已重新生成所有 AppIcon 尺寸及应用内图标资源；文件哈希已确认改变。保留关于页 96 pt 图标、构建日期与版权布局。2026-10-31T23:05:57.062402+08:00，Debug arm64 增量构建通过，开发包已更新启动 PID 10332；239 输入、14 资源、完整包与加载路径核对通过。证据 `.build/app-icon-087b13-runtime/`，素材规格见[App 图标试装](docs/design/quotaview-app-icon.md)。
+
+旧 Dock 预览已退出，新独立预览 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/dock-icon-preview-20261031-230644/QuotaView Icon Preview.app` 已启动，使用 Build 13 的 ICNS 与 Assets.car；不含 QuotaView 业务逻辑。用户表示已看到效果、不需要继续打开窗口，已停止 UI 操作，保留开发版及预览供查看。当前记录 `.build/current-dock-icon-preview.json`。仅本地，未提交/推送/发布，正式安装保持。
+
+## 前序开发：0.8.7 Build 12 / 关于信息补全与图标放大（2026-10-31）
+
+按用户参考图将关于图标由 64 pt 放大至 96 pt，补齐「构建于」日期和与 LICENSE 一致的 `© 2026 Duoasa`；日期来自当前包可执行文件时间并按应用语言显示，版权来自 Info.plist。保持名称、说明、真实版本号和纯色居中布局。规范见[关于页信息补全](docs/design/QUOTAVIEW_UI_RULES.md#关于页信息补全2026-10-31087-build-12)。2026-10-31T22:51:07.810836+08:00，Debug arm64 增量构建通过，开发包已更新启动 PID 7016；239 输入、14 资源、完整包、元数据和实际加载路径核对一致。证据 `.build/about-info-087b12-runtime/`。仅本地，未提交/推送/发布，正式安装保持；视觉由用户检查。
+
+用户随后要求查看 Dock 效果，已创建并启动独立临时应用 `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget/.build/dock-icon-preview-20261031-225252/QuotaView Icon Preview.app`，Bundle ID `com.quotaview.icon-dock-preview`，PID 7849，常规 Dock 应用；图标 ICNS 与 Assets.car 和 Build 12 逐字节一致。预览仅运行最小 AppKit 主循环与退出菜单，不含 QuotaView 业务、连接、Hook 或数据访问。保留运行供用户查看，可右键 Dock 图标退出；记录 `.build/current-dock-icon-preview.json`。
+
+## 前序开发：0.8.7 Build 11 / App 图标素材更新（2026-10-31）
+
+按用户新图 `QV-icon-iOS-Default-1024@1x.png` 更新 AppIcon 全部尺寸及应用内图标资源，保留 Build 10 关于页纯色居中布局。素材原样缩放，1024 px 主资源与原图一致；图标编译尺寸 16–1024 px 核对通过。规格见[App 图标试装](docs/design/quotaview-app-icon.md)。2026-10-31T22:48:49.520740+08:00，Debug arm64 增量构建通过，开发包已更新启动 PID 5499；239 输入、14 项既有资源、完整包与加载路径一致。证据 `.build/app-icon-087b11-runtime/`。仅本地更新，未提交/推送/发布，正式安装保持，视觉由用户查看。
+
+## 前序开发：0.8.7 Build 10 / 关于页纯色居中布局（2026-10-31）
+
+按用户参考图移除关于页顶部壁纸横幅与重复页标题，图标、名称、说明和真实版本信息在系统纯色背景上居中纵向排列；保留更新与公告操作区。图标没有额外阴影或描边，原图上下边缘高光保持。规范见[关于页纯色与居中布局](docs/design/QUOTAVIEW_UI_RULES.md#关于页纯色与居中布局2026-10-31087-build-10)。2026-10-31T22:40:49.979324+08:00，Debug arm64 增量构建通过，开发包已更新启动 PID 3289；239 输入、14 项既有资源、完整包及加载路径核对一致。证据 `.build/about-layout-087b10-runtime/`。局部布局未新增重复实现测试、未做 UI 自动验收，实际效果由用户检查。本次仅本地，未提交/推送/发布，正式安装保持。
+
+## 前序开发：0.8.7 Build 9 / 用户 App 图标试装（2026-10-31）
+
+按用户提供的 `QV-icon-1024@1x.png` 替换 AppIcon 全部 macOS 尺寸，同步应用内 App 图标备用资源；原图造型、颜色与透明边缘保留。规格见[App 图标试装](docs/design/quotaview-app-icon.md)。2026-10-31T22:34:12.732838+08:00，Debug arm64 增量构建通过，开发包已更新并启动 PID 99340；239 输入、14 项既有资源、图标 16–1024 px 编译资源、完整包及实际加载路径核对通过，无临时预览参数。证据 `.build/app-icon-087b9-runtime/`。视觉由用户查看，本次仅本地试装，未提交/推送/发布，正式安装保持。
+
+## 前序开发：0.8.7 Build 8 / 标签图标尺寸与原色（2026-10-30）
 
 按用户反馈将用量标签圆底缩至 16 pt、标志 11 pt，左内距 4 pt 保持与 24 pt 胶囊左端同心。取消未选中图标降透明度，将玻璃移至独立背景层，图标以原色绘于上层；重置卡保留发行版灰色渐变。规格见[来源图标](docs/design/quotaview-provider-icons.md)。17:21（上海）0.8.7 / Build 8 / 内部 110 Debug arm64 增量构建成功，开发包已更新启动 PID 76809；239 输入、14 资源、完整包/旧包与实际加载路径核对通过，无临时参数，正式安装保持。仅绘制修订，未新增或重复功能测试；diff 检查通过。证据 `.build/provider-capsules-087b8-runtime/`。
 
-用户已授权本轮源码推送与 main 合并；[PR #117](https://github.com/Duoasa/QuotaView/pull/117) 已创建，本批追加修订将更新 PR 后重新核对精确提交的 CI，尚未合并。发布与 appcast 未授权，视觉由用户验收。
+2026-10-30 17:28（上海），本轮源码已通过 [PR #117](https://github.com/Duoasa/QuotaView/pull/117) 合入 main：最终源码 `4ea4167db9310182d27ffdeca970a03a2a762500`，合并 `6c3f55fe26fb6b1172156fd801c82c91b1992865`。[PR CI 41032932756](https://github.com/Duoasa/QuotaView/actions/runs/41032932756) 与 [main CI 41033704295](https://github.com/Duoasa/QuotaView/actions/runs/41033704295) 均成功，各 727 项测试、6 跳过、0 失败及 44 项契约检查通过。239 项生产输入与源码提交、合并提交及当前 Build 8 运行包逐项一致，无需重建。证据 `.build/source-integration-087b7/`（目录沿用初次集成命名，最终记录为 Build 8）。工作区已快进到合并提交，原有未跟踪文件保持；合并后结果补记保留本地。未发布 Release、tag 或 appcast，正式安装保持，视觉由用户验收。
 
 ## 前序开发：0.8.7 Build 7 / 标签圆底与重置卡恢复（2026-10-30）
 
@@ -754,11 +792,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；基线 `fbcc8da`（PR #116 发布记录合并），0.8.7 Build 1–8 由 PR #117 进行源码集成 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 8 / 内部 110 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；HEAD `37bd5b1`，README 修复已由 PR #119 合入远端 main；已有本地交付补记保留，本轮 Build 9–16 图标及关于信息修改未提交 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 16 / 内部 118 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-10-30T17:21:25.582554+08:00；PID 76809，239 输入、完整包与加载路径一致，无临时参数 |
-| 源码与运行包 | 0.8.7 Build 8 标签图标尺寸与原色修订已进入开发包；公告名单仍仅包含内部 102；证据 `.build/provider-capsules-087b8-runtime/` |
+| 最近运行核验 | 2026-10-31T23:23:51.771595+08:00；PID 16048，239 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | Build 16 最新图标已同步开发版及 Dock 预览；没有进一步窗口操作。 |
 | 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

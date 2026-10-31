@@ -1,8 +1,20 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.8.7 Build 8
+## 当前开发：0.8.7 Build 16
 
-[标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。开发包与 PR #117 集成结果见 Handoff，视觉由用户检查。
+[最新 App 图标与 Dock 预览](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：Build 16 已按用户要求替换最新 `QV-icon-iOS-Solid@1x.png`，开发包与 Dock 预览同步；不操作窗口。仅本地。
+
+[关于页信息补全](../design/QUOTAVIEW_UI_RULES.md#关于页信息补全2026-10-31087-build-12) · `Implemented / User Acceptance Pending`：图标放大 50% 至 96 pt，增加实际包构建日期与版权；0.8.7 Build 12 开发运行包已更新，视觉由用户验收。
+
+[最新 App 图标](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：用户新 PNG 已装入 0.8.7 Build 11，完整图标尺寸及运行包核对通过，保留纯色关于页；仅本地试装。
+
+[关于页纯色居中布局](../design/QUOTAVIEW_UI_RULES.md#关于页纯色与居中布局2026-10-31087-build-10) · `Implemented / User Acceptance Pending`：移除壁纸横幅，图标与真实产品信息纵向居中；Build 10 开发包已更新，保留更新操作，视觉由用户查看。
+
+[App 图标试装](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：用户 PNG 已装入 0.8.7 Build 9 开发版，图标资源、构建和运行包核对通过；仅本地，视觉由用户查看。
+
+## 前序开发：0.8.7 Build 8
+
+[标签图标尺寸与原色](../design/quotaview-provider-icons.md) · `Accepted / Verifying`：圆底/标志缩至 16/11 pt，左内距 4 pt 保持同心；图标完整不透明度绘于独立玻璃背景上方。重置卡保持发行版灰色渐变。本轮已通过 [PR #117](https://github.com/Duoasa/QuotaView/pull/117) 合入 main `6c3f55f`，PR/main CI 均成功（各 727 测试、6 跳过、0 失败，44 契约检查）；239 项运行输入与源码/合并提交一致。完整证据见 Handoff，视觉由用户检查；未发布。
 
 ## 前序开发：0.8.7 Build 7
 
