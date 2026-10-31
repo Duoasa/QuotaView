@@ -1393,6 +1393,17 @@ private struct SettingsGlassAppearanceThumbnail: View {
     }
 }
 
+private struct SettingsPreviewWallpaperTone: ViewModifier {
+    @Environment(\.islandGlassColorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(scheme == .dark ? Color.black.opacity(0.42) : Color.white.opacity(0.14))
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: scheme)
+    }
+}
+
 /// Settings illustration with native materials, image wallpaper and one live task effect.
 /// It has no task store, lifecycle timers or request handles.
 private struct SettingsIslandPreview: View {
@@ -1429,6 +1440,7 @@ private struct SettingsIslandPreview: View {
                 SettingsIslandPreviewAssets.image("Wallpaper")
                     .resizable().scaledToFill()
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                    .modifier(SettingsPreviewWallpaperTone())
                     .clipShape(SettingsPreviewContour.shape)
                 VStack(spacing: 0) {
                     header

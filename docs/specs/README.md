@@ -8,7 +8,11 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.8.7 Build 23
+## 当前开发：0.8.7 Build 24
+
+[预览背景明暗联动](../design/QUOTAVIEW_UI_RULES.md#预览背景明暗联动2026-11-01087-build-24) · `Implemented / User Acceptance Pending`：预览壁纸深色压暗、浅色提亮，自动跟随实际系统外观；前景和真实岛体保持。增量构建与运行包核验通过，已运行 Build 24 / 内部 126。本批纳入已授权的 PR #123，集成状态见 Handoff，视觉由用户检查。
+
+## 前序开发：0.8.7 Build 23
 
 [系统滚动边缘分层](../design/QUOTAVIEW_UI_RULES.md#系统滚动边缘分层2026-11-01087-build-23) · `Implemented / User Acceptance Pending`：macOS 26+ 改用系统 safeAreaBar 和 soft scroll edge effect，移除当前系统路径的自绘面板。保留设置归类、四色侧栏、原始图标加载、GitHub 入口和重置禁用保护。增量构建及运行核验通过；当前运行 Build 23 / 内部 125。用户已授权本批源码推送/合并，集成状态见 Handoff，视觉继续由用户检查。
 

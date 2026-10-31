@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>0.8.7</string>
 	<key>CFBundleVersion</key>
-	<string>125</string>
+	<string>126</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
@@ -35,7 +35,7 @@
 	<key>QuotaViewAppGroupIdentifier</key>
 	<string>$(QUOTAVIEW_APP_GROUP_ID)</string>
 	<key>QuotaViewDisplayBuildNumber</key>
-	<string>23</string>
+	<string>24</string>
 	<key>QuotaViewUpdateTeamIdentifier</key>
 	<string>BUUH229D5Q</string>
 	<key>SUAllowsAutomaticUpdates</key>

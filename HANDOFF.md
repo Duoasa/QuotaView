@@ -16,7 +16,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.7 Build 23 / 系统滚动边缘分层（2026-11-01）
+## 当前开发：0.8.7 Build 24 / 预览背景明暗联动（2026-11-01）
+
+按用户后续要求，灵动岛预览壁纸随实际玻璃外观变暗/变亮：深色叠加 42% 黑色，浅色叠加 14% 白色；自动复用系统外观解析，经典材质沿用深色回退。不改变任务卡、文字、图标及真实岛体，不修改壁纸文件。减少动态时取消 0.16 秒色调过渡。
+
+Debug arm64 增量构建通过，2026-11-01T00:26:28.052931+08:00 已更新并启动开发包 PID 60063，0.8.7 / Build 24 / 内部 126；239 输入、14 资源、完整包与加载路径一致。证据 `.build/settings-preview-tone-087b24-runtime/`。本项纳入用户已授权的 [PR #123](https://github.com/Duoasa/QuotaView/pull/123)，合并与精确 main CI 结果完成后回填；集成证据 `.build/source-integration-087b24/`。视觉/滚动手感由用户验收，未发布 Release/appcast。
+
+## 前序开发：0.8.7 Build 23 / 系统滚动边缘分层（2026-11-01）
 
 用户反馈 Build 22 仍为纯色面板。确认本机 Reduce Transparency / Increase Contrast 均关闭；macOS 26+ 改为系统 safeAreaBar 固定预览与 scrollEdgeEffectStyle(.soft)，由系统在滚动内容与固定栏之间处理模糊边界，不在此路径叠加自绘背景。旧系统继续走兼容分支。保留 28 pt 下边距、左栏顶部 12 pt 留白、同一滚动可用宽度，以及 Build 17–22 的设置、图标加载和重置保护。实际视觉与滚动效果仍由用户验收。
 
@@ -844,11 +850,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；HEAD `57864ea`，Build 16 已由 PR #122 合入 main；Build 17–23 设置调整与重置保护准备按本轮授权集成 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 23 / 内部 125 |
+| 分支 / 源码提交 | `codex/0.8.6-announcement-settings`；HEAD `376950e`，本批设置与重置保护在 PR #123；Build 24 明暗联动按同一授权补入 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 24 / 内部 126 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-01T00:22:05.152130+08:00；PID 52533，239 输入、完整包与加载路径一致，无临时参数 |
-| 源码与运行包 | Build 23 系统滚动边缘分层已运行；独立 Dock 预览已按另一批授权清理，见上方记录。 |
+| 最近运行核验 | 2026-11-01T00:26:28.052931+08:00；PID 60063，239 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | Build 24 预览背景明暗联动与系统滚动边缘分层已运行；独立 Dock 预览已按另一批授权清理，见上方记录。 |
 | 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
