@@ -1033,7 +1033,7 @@ final class CodexActivityRuntime: ObservableObject {
                                       source: store.titleSource(for: entry.snapshot.sessionHash))
         }
         let current = islandUsage.state.isCurrent ? islandUsage.snapshot : nil
-        liveIsland.update(english: preferences.resolvedLanguage == .english,
+        liveIsland.update(english: preferences.resolvedLanguage.usesLatinLayout,
             remaining: current?.remainingPercent, enabled: enabled, privacy: preferences.codexIslandPrivacy,
             weeklyRemaining: current?.weeklyRemainingPercent,
             quotaResetsAt: current?.resetsAt, usageSnapshot: islandUsage.snapshot, usageState: islandUsage.state,
@@ -1046,7 +1046,7 @@ final class CodexActivityRuntime: ObservableObject {
             islandGlassDegree: preferences.islandGlassDegree,
             islandFloatingUsageEnabled: preferences.islandFloatingUsageEnabled,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots,
-            followsFocus: preferences.islandFollowsFocus, fixedScreenID: preferences.islandFixedScreenID)
+            followsFocus: preferences.islandFollowsFocus, fixedScreenID: preferences.islandFixedScreenID, language: preferences.resolvedLanguage)
     }
 
     private static func defaultSocketURL() -> URL {

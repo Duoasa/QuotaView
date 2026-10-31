@@ -112,6 +112,7 @@ final class CodexMultitaskTaskNode: NSView {
     private(set) var renderer: ActivityIslandContentView?
     private var task: CodexMultitaskRenderTask?
     private var english = false
+    private var language: AppPreferences.Language?
     private var effect: AppPreferences.CodexActivityProgressEffect = .dropField
     private var reduceMotion = false
     private var playback = false
@@ -143,8 +144,6 @@ final class CodexMultitaskTaskNode: NSView {
         satelliteJellyHost.addSubview(satelliteCompletionGlow)
         satelliteJellyHost.addSubview(satelliteBody)
         satelliteJellyHost.addSubview(satelliteStatusOutline)
-        satelliteCompletionGlow.completionColor = .systemGreen
-        satelliteStatusOutline.completionColor = .systemGreen
         satelliteCompletionGlow.completionRevealDelay = 0
         satelliteStatusOutline.completionRevealDelay = 0
         satelliteCompletionGlow.alphaValue = 0.55
@@ -165,15 +164,15 @@ final class CodexMultitaskTaskNode: NSView {
     override func accessibilityPerformPress() -> Bool { onSelect?(); return true }
     func configure(task: CodexMultitaskRenderTask, english: Bool, effect: AppPreferences.CodexActivityProgressEffect, reduceMotion: Bool,
                    completionCount: Int? = nil,
-                   totalTokens: Int64? = nil, remainingPercent: Int? = nil) {
-        guard self.task != task || self.english != english || self.effect != effect || self.reduceMotion != reduceMotion
+                   totalTokens: Int64? = nil, remainingPercent: Int? = nil, language: AppPreferences.Language? = nil) {
+        guard self.task != task || self.english != english || self.language != language || self.effect != effect || self.reduceMotion != reduceMotion
                 || self.completionCount != completionCount
                 || self.totalTokens != totalTokens || self.remainingPercent != remainingPercent else { return }
         notice.observe(task.renderState.visualState, at: ProcessInfo.processInfo.systemUptime)
-        self.task = task; self.english = english; self.effect = effect; self.reduceMotion = reduceMotion
+        self.task = task; self.language = language; self.english = english; self.effect = effect; self.reduceMotion = reduceMotion
         self.completionCount = completionCount
         self.totalTokens = totalTokens; self.remainingPercent = remainingPercent
-        satelliteStatusOutline.completionColor = task.color
+        satelliteStatusOutline.completionColor = task.renderState.visualState == .completed ? nil : task.color
         toolTip = "\(task.title) · \(task.renderState.statusTitle)"
         setAccessibilityLabel(toolTip)
         if let renderer { renderer.update(renderState: renderState, progressEffect: effect); renderer.setReduceMotion(reduceMotion) }
@@ -190,7 +189,7 @@ final class CodexMultitaskTaskNode: NSView {
         let state = task!.renderState
         guard let completionCount else { return state }
         return CodexMultitaskCompletionSummary(count: completionCount, english: english,
-            totalTokens: totalTokens, remainingPercent: remainingPercent).applying(to: state)
+            totalTokens: totalTokens, remainingPercent: remainingPercent, language: language).applying(to: state)
     }
     func apply(_ pose: CodexMultitaskMotion.Pose, isMain: Bool, compact: Bool,
                presentation: CodexMultitaskPresentation.Sample? = nil, selectionTextOpacity: CGFloat = 1) {
@@ -244,7 +243,7 @@ final class CodexMultitaskTaskNode: NSView {
                 ?? CodexActivityIslandGeometry.panelSize(presentation: mode, renderState: renderState)
             let inset = CodexActivityIslandGeometry.panelInset
             let scaleX = frame.width / (base.width - inset * 2), scaleY = frame.height / (base.height - inset * 2)
-            renderer?.setPresentationMode(mode, accessibilityValue: CodexActivityCopy(language: english ? .english : .simplifiedChinese).presentationAccessibilityValue(mode))
+            renderer?.setPresentationMode(mode, accessibilityValue: CodexActivityCopy(language: language ?? (english ? .english : .simplifiedChinese)).presentationAccessibilityValue(mode))
             renderer?.setMultitaskContour(capsule: isMain ? pose.capsule : 1, recoil: pose.contourRecoil, jelly: pose.shellJelly)
             renderer?.setPresentationLayoutSize(base)
             renderer?.frame = CGRect(x: -inset * scaleX, y: -inset * scaleY, width: base.width * scaleX, height: base.height * scaleY)
@@ -304,7 +303,7 @@ final class CodexMultitaskTaskNode: NSView {
         if isMain || !presented { notice.cancel() }
         let now = ProcessInfo.processInfo.systemUptime
         let showing = notice.isShowing(at: now)
-        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+        let copy = AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
         let status: String
         switch task.renderState.visualState {
         case .compactingContext: status = copy.text("压缩上下文", "Compacting")
@@ -391,8 +390,8 @@ struct IslandMemoryActivity: Equatable {
     var playbackEnabled: Bool {
         [.thinking, .working, .compactingContext, .awaitingConfirmation].contains(snapshot.state)
     }
-    func label(english: Bool) -> String {
-        let copy = AppCopy(language: english ? .english : .simplifiedChinese)
+    func label(english: Bool, language: AppPreferences.Language? = nil) -> String {
+        let copy = AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
         let status: String
         switch snapshot.state {
         case .thinking, .working, .compactingContext: status = copy.text("正在整理", "Organizing")
@@ -444,6 +443,7 @@ struct CodexMultitaskDisplay: Equatable {
     var activeRequestIDs: Set<UUID> = []
     // Background memory work has its own lifecycle and never becomes a session row.
     var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+    var language: AppPreferences.Language? = nil
 }
 
 @MainActor
@@ -492,7 +492,7 @@ final class CodexMultitaskIslandController: NSObject {
         let ids = model.state.tasks.map(\.id)
         let allDone = model.state.allCompleted && ids.count > 1
         presentation.update(visible: model.visible, compact: model.state.compact, at: now, animate: !reduceMotion && controlVisible,
-                            compactWidth: allDone ? CodexMultitaskCompletionSummary.compactWidth(count: ids.count, english: model.english) : nil)
+                            compactWidth: allDone ? CodexMultitaskCompletionSummary.compactWidth(count: ids.count, english: model.english, language: model.language) : nil)
         let newCompletionKey = allDone ? model.state.receiptStartedAt.map { "\($0)-\(model.state.selectedID)" } : nil
         let collectionChanged = newCompletionKey != completionKey
         for id in Array(nodes.keys) where !ids.contains(id) { nodes[id]?.setPresented(false); nodes[id]?.setPlayback(false); nodes[id]?.removeFromSuperview(); nodes[id] = nil }
@@ -561,7 +561,7 @@ final class CodexMultitaskIslandController: NSObject {
             let allDone = model.state.allCompleted && model.state.tasks.count > 1
             node.configure(task: previousContent?.previous ?? task, english: model.english, effect: model.effect, reduceMotion: reduceMotion,
                            completionCount: allDone && isMain ? model.state.tasks.count : nil,
-                           totalTokens: model.totalTokens, remainingPercent: model.remainingPercent)
+                           totalTokens: model.totalTokens, remainingPercent: model.remainingPercent, language: model.language)
             display.frame = CGRect(x: anchor.x + pose.frame.minX * scaleX, y: anchor.y + pose.frame.minY * scaleY,
                                    width: pose.frame.width * scaleX, height: pose.frame.height * scaleY)
             display.opacity *= single.shell.visibility

@@ -133,14 +133,8 @@ struct MenuBarView: View {
 
                 Text(
                     copy.text(
-                        "此操作将消耗 1 次额度重置机会，并立即重置一个符合条件的 "
-                        + "Codex 使用周期。操作完成后无法撤销。当前版本仍为演示"
-                        + "模式，不会调用真实重置接口，也不会消耗次数。",
-                        "This action uses one reset credit to reset an "
-                        + "eligible Codex usage cycle immediately. It cannot "
-                        + "be undone. This version remains in demo mode and "
-                        + "will not call the live reset endpoint or consume "
-                        + "a credit."
+                        "此操作将消耗 1 次额度重置机会，并立即重置一个符合条件的 Codex 使用周期。操作完成后无法撤销。当前版本仍为演示模式，不会调用真实重置接口，也不会消耗次数。",
+                        "This action uses one reset credit to reset an eligible Codex usage cycle immediately. It cannot be undone. This version remains in demo mode and will not call the live reset endpoint or consume a credit."
                     )
                 )
                 .font(AstaSans.regular(11.5))

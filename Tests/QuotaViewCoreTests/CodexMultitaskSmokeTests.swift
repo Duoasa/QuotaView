@@ -262,7 +262,7 @@ final class CodexMultitaskSmokeTests: XCTestCase {
     }
 
     @MainActor
-    func testCompletedSatelliteBreathesGreenWithoutStatusIconAndCleansUp() throws {
+    func testCompletedSatelliteUsesSharedPaletteWithoutStatusIconAndCleansUp() throws {
         _ = NSApplication.shared
         let node = CodexMultitaskTaskNode(frame: .zero)
         var pose = CodexMultitaskMotion.Pose(frame: CGRect(x: 0, y: 0, width: 104, height: 52))
@@ -279,8 +279,8 @@ final class CodexMultitaskSmokeTests: XCTestCase {
         XCTAssertEqual(node.satelliteTitleFrame.midX, 52)
         let glow = node.satelliteCompletionGlow, outline = node.satelliteStatusOutline
         XCTAssertFalse(glow.isHidden); XCTAssertFalse(outline.isHidden)
-        XCTAssertEqual(glow.completionColor, .systemGreen)
-        XCTAssertEqual(outline.completionColor, .systemGreen)
+        XCTAssertNil(glow.completionColor)
+        XCTAssertNil(outline.completionColor)
         XCTAssertTrue(glow.superview === outline.superview)
         XCTAssertEqual(try XCTUnwrap(glow.superview?.layer?.affineTransform().d), 0.91, accuracy: 0.001)
         XCTAssertEqual(glow.superview?.layer?.masksToBounds, false)
@@ -289,7 +289,8 @@ final class CodexMultitaskSmokeTests: XCTestCase {
         let key = "quotaview.activity.completion-glow.radius"
         let breath = try XCTUnwrap(layers.first?.animation(forKey: key))
         XCTAssertEqual(breath.repeatCount, .infinity)
-        XCTAssertEqual(layers.first?.shadowColor, NSColor.systemGreen.cgColor)
+        XCTAssertEqual(layers.first?.shadowColor, CodexActivityIslandCompletionPalette.violet.cgColor)
+        XCTAssertNotNil(outline.flowAnimation)
         configure(.completed)
         XCTAssertEqual(layers.first?.animation(forKey: key)?.beginTime, breath.beginTime,
                        "Repeated completion never restarts the breath")
@@ -301,9 +302,10 @@ final class CodexMultitaskSmokeTests: XCTestCase {
         for state in CodexActivityVisualState.allCases {
             configure(state)
             XCTAssertFalse(outline.isHidden)
-            XCTAssertEqual(outline.completionColor, state == .completed ? .systemGreen : state.activityAccentColor)
+            XCTAssertEqual(outline.completionColor, state == .completed ? nil : state.activityAccentColor)
             let colors = (outline.layer?.sublayers?.first as? CAGradientLayer)?.colors as? [CGColor]
-            XCTAssertEqual(colors?[1], (state == .completed ? NSColor.systemGreen : state.activityAccentColor).cgColor)
+            XCTAssertEqual(colors?[1], (state == .completed ? CodexActivityIslandCompletionPalette.blue : state.activityAccentColor).cgColor)
+            XCTAssertEqual(outline.flowAnimation != nil, state == .completed)
             XCTAssertEqual(glow.isHidden, state != .completed)
         }
         configure(.working)

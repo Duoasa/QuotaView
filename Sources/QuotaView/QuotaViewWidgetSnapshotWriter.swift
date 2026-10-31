@@ -94,27 +94,25 @@ struct QuotaViewWidgetSnapshotProjector {
 private struct WidgetMetricFormatter {
     let localeIdentifier: String
 
-    private var isChinese: Bool {
-        localeIdentifier.lowercased().hasPrefix("zh")
-    }
+    private var copy: AppCopy { .init(language: .resolve(preferredLanguages: [localeIdentifier])) }
 
     var creditsBalanceLabel: String {
-        isChinese ? "Credits 余额" : "Credits Balance"
+        copy.text("Credits 余额", "Credits Balance")
     }
 
     var todayTokensLabel: String {
-        isChinese ? "今日 Tokens" : "Today Tokens"
+        copy.text("今日 Tokens", "Today Tokens")
     }
 
     var lifetimeTokensLabel: String {
-        isChinese ? "累计 Tokens" : "Lifetime Tokens"
+        copy.text("累计 Tokens", "Lifetime Tokens")
     }
 
     func creditBalance(
         _ presentation: CurrentCodexPresentation
     ) -> String {
         if presentation.unlimitedCredits {
-            return isChinese ? "无限" : "Unlimited"
+            return copy.text("无限", "Unlimited")
         }
         return presentation.creditBalance ?? "—"
     }

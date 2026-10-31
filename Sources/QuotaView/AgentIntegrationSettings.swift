@@ -55,7 +55,7 @@ struct AgentIntegrationSettings<Details: View>: View {
             Label(state.title, systemImage: state.symbol)
                 .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
                 .fixedSize()
-                .frame(width: preferences.resolvedLanguage == .english ? 116 : 76, alignment: .leading)
+                .frame(width: preferences.resolvedLanguage.usesLatinLayout ? 126 : 90, alignment: .leading)
             Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                 .tint(Color(nsColor: .secondaryLabelColor))
         }

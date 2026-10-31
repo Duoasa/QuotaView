@@ -51,291 +51,106 @@ enum CodexActivityTokenUsageFormatter {
 
 struct CodexActivityCopy {
     let language: AppPreferences.Language
+    private var copy: AppCopy { AppCopy(language: language) }
 
     func taskTitle(resolvedTitle: String?, workspaceName: String?) -> String {
         for candidate in [resolvedTitle, workspaceName] {
             if let title = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty { return title }
         }
-        return AppCopy(language: language).text("未命名任务", "Untitled task")
+        return copy.text("未命名任务", "Untitled task")
     }
-
     func tokenUsageTitle(totalTokens: Int64) -> String {
-        let count = CodexActivityTokenUsageFormatter.string(
-            for: totalTokens
-        )
-        return switch language {
-        case .simplifiedChinese: "本次 \(count) tokens"
-        case .english: "This turn \(count) tokens"
-        }
+        let count = CodexActivityTokenUsageFormatter.string(for: totalTokens)
+        return copy.text("本次 \(count) tokens", "This turn \(count) tokens")
     }
-
     func completionTokenUsageDetail(totalTokens: Int64) -> String {
-        let count = CodexActivityTokenUsageFormatter.string(
-            for: totalTokens
-        )
-        return switch language {
-        case .simplifiedChinese: "本次消耗 \(count) tokens"
-        case .english: "\(count) tokens this turn"
-        }
+        let count = CodexActivityTokenUsageFormatter.string(for: totalTokens)
+        return copy.text("本次消耗 \(count) tokens", "\(count) tokens this turn")
     }
-
-    func completionQuotaAccessibilitySuffix(
-        remainingPercent: Int?
-    ) -> String {
-        switch (language, remainingPercent) {
-        case (.simplifiedChinese, .some(let remainingPercent)):
-            "，当前额度剩余 \(min(max(remainingPercent, 0), 100))%"
-        case (.simplifiedChinese, .none):
-            "，当前额度剩余不可用"
-        case (.english, .some(let remainingPercent)):
-            ", current quota remaining: "
-                + "\(min(max(remainingPercent, 0), 100)) percent"
-        case (.english, .none):
-            ", current quota remaining unavailable"
+    func completionQuotaAccessibilitySuffix(remainingPercent: Int?) -> String {
+        guard let remainingPercent else {
+            return copy.text("，当前额度剩余不可用", ", current quota remaining unavailable")
         }
+        let percent = min(max(remainingPercent, 0), 100)
+        return copy.text("，当前额度剩余 \(percent)%", ", current quota remaining: \(percent) percent")
     }
-
     func statusTitle(for state: CodexActivityVisualState) -> String {
-        switch (language, state) {
-        case (.simplifiedChinese, .disconnectedCodex):
-            "未连接 Codex"
-        case (.simplifiedChinese, .standby): "空闲"
-        case (.simplifiedChinese, .thinking): "思考中"
-        case (.simplifiedChinese, .working): "工作中"
-        case (.simplifiedChinese, .compactingContext):
-            "正在压缩上下文"
-        case (.simplifiedChinese, .awaitingConfirmation): "待确认"
-        case (.simplifiedChinese, .completed): "已完成"
-        case (.simplifiedChinese, .error): "失败"
-        case (.simplifiedChinese, .unavailable): "未载入"
-        case (.english, .disconnectedCodex): "Codex Not Connected"
-        case (.english, .standby): "Idle"
-        case (.english, .thinking): "Thinking"
-        case (.english, .working): "Working"
-        case (.english, .compactingContext): "Compacting Context"
-        case (.english, .awaitingConfirmation): "Awaiting Confirmation"
-        case (.english, .completed): "Completed"
-        case (.english, .error): "Failed"
-        case (.english, .unavailable): "Not Loaded"
+        switch state {
+        case .disconnectedCodex: return copy.text("未连接 Codex", "Codex Not Connected")
+        case .standby: return copy.text("空闲", "Idle")
+        case .thinking: return copy.text("思考中", "Thinking")
+        case .working: return copy.text("工作中", "Working")
+        case .compactingContext: return copy.text("正在压缩上下文", "Compacting Context")
+        case .awaitingConfirmation: return copy.text("待确认", "Awaiting Confirmation")
+        case .completed: return copy.text("已完成", "Completed")
+        case .error: return copy.text("失败", "Failed")
+        case .unavailable: return copy.text("未载入", "Not Loaded")
         }
     }
-
-    func disconnectedOperation(
-        for status: CodexActivityConnectionStatus,
-        isConfiguring: Bool,
-        compactionOnly: Bool = false
-    ) -> String {
-        if isConfiguring {
-            return switch language {
-            case .simplifiedChinese:
-                "正在准备 Codex 灵动岛连接"
-            case .english:
-                "Preparing the Codex island connection"
-            }
-        }
-
+    func disconnectedOperation(for status: CodexActivityConnectionStatus, isConfiguring: Bool, compactionOnly: Bool = false) -> String {
+        if isConfiguring { return copy.text("正在准备 Codex 灵动岛连接", "Preparing the Codex island connection") }
         if status == .awaitingFirstEvent, compactionOnly {
-            return language == .simplifiedChinese
-                ? "等待 Codex 自然压缩上下文"
-                : "Waiting for natural Codex context compaction"
+            return copy.text("等待 Codex 自然压缩上下文", "Waiting for natural Codex context compaction")
         }
-
-        return switch (language, status) {
-        case (.simplifiedChinese, .notInstalled):
-            "在 QuotaView 设置中连接 Codex 灵动岛"
-        case (.simplifiedChinese, .installedNeedsRestart):
-            "请在设置中重新检查 Hook 授权"
-        case (.simplifiedChinese, .awaitingTrust):
-            "请在 QuotaView 设置中授权 Hook 连接"
-        case (.simplifiedChinese, .awaitingFirstEvent):
-            "向 Codex 发送一条新消息以完成连接"
-        case (.simplifiedChinese, .connected):
-            "Codex 灵动岛连接已激活"
-        case (.simplifiedChinese, .abnormal):
-            "连接遇到问题，请返回 QuotaView 设置"
-        case (.english, .notInstalled):
-            "Connect the Codex island in QuotaView Settings"
-        case (.english, .installedNeedsRestart):
-            "Recheck Hook authorization in Settings"
-        case (.english, .awaitingTrust):
-            "Authorize the Hook connection in QuotaView Settings"
-        case (.english, .awaitingFirstEvent):
-            "Send a new Codex message to finish connecting"
-        case (.english, .connected):
-            "Codex activity is active"
-        case (.english, .abnormal):
-            "Connection needs attention in QuotaView Settings"
+        switch status {
+        case .notInstalled: return copy.text("在 QuotaView 设置中连接 Codex 灵动岛", "Connect the Codex island in QuotaView Settings")
+        case .installedNeedsRestart: return copy.text("请在设置中重新检查 Hook 授权", "Recheck Hook authorization in Settings")
+        case .awaitingTrust: return copy.text("请在 QuotaView 设置中授权 Hook 连接", "Authorize the Hook connection in QuotaView Settings")
+        case .awaitingFirstEvent: return copy.text("向 Codex 发送一条新消息以完成连接", "Send a new Codex message to finish connecting")
+        case .connected: return copy.text("Codex 灵动岛连接已激活", "Codex activity is active")
+        case .abnormal: return copy.text("连接遇到问题，请返回 QuotaView 设置", "Connection needs attention in QuotaView Settings")
         }
     }
-
     func operation(for key: CodexActivityOperationKey) -> String {
-        switch (language, key) {
-        case (.simplifiedChinese, .connectingSession):
-            "正在连接 Codex 会话"
-        case (.simplifiedChinese, .sessionEnded):
-            "Codex 会话已结束"
-        case (.simplifiedChinese, .analyzingRequest):
-            "正在分析新的任务"
-        case (.simplifiedChinese, .executingShell):
-            "正在执行终端操作"
-        case (.simplifiedChinese, .editingFiles):
-            "正在修改项目文件"
-        case (.simplifiedChinese, .callingExternalTool):
-            "正在调用外部工具"
-        case (.simplifiedChinese, .coordinatingSubagent):
-            "正在协调子任务"
-        case (.simplifiedChinese, .usingLocalTool):
-            "正在执行本地工具"
-        case (.simplifiedChinese, .executingPlan):
-            "正在执行多步骤计划"
-        case (.simplifiedChinese, .managingGoal):
-            "正在更新长期目标"
-        case (.simplifiedChinese, .followingGoal):
-            "正在跟进长期目标"
-        case (.simplifiedChinese, .goalPaused):
-            "长期目标已暂停"
-        case (.simplifiedChinese, .goalBlocked):
-            "长期目标需要处理"
-        case (.simplifiedChinese, .goalLimited):
-            "长期目标暂受用量限制"
-        case (.simplifiedChinese, .goalCompleted):
-            "长期目标已完成"
-        case (.simplifiedChinese, .usingTool):
-            "正在执行工具操作"
-        case (.simplifiedChinese, .awaitingApproval):
-            "有一项操作需要你的批准"
-        case (.simplifiedChinese, .awaitingUserInput):
-            "任务正在等待你的输入"
-        case (.simplifiedChinese, .reviewingToolResult):
-            "正在检查工具执行结果"
-        case (.simplifiedChinese, .compactingContext):
-            "正在整理较早消息以释放上下文空间"
-        case (.simplifiedChinese, .continuingAfterCompaction):
-            "上下文整理完成，正在继续任务"
-        case (.simplifiedChinese, .subagentStarted):
-            "子任务已启动"
-        case (.simplifiedChinese, .subagentStopped):
-            "正在汇总子任务结果"
-        case (.simplifiedChinese, .turnCompleted):
-            "当前任务已完成"
-        case (.simplifiedChinese, .turnInterrupted):
-            "当前任务已中断"
-        case (.simplifiedChinese, .turnFailed):
-            "当前任务执行失败"
-        case (.simplifiedChinese, .bridgeUnavailable):
-            "Codex 灵动岛连接不可用"
-        case (.simplifiedChinese, .malformedEvent):
-            "收到无法识别的 Codex 状态事件"
-        case (.english, .connectingSession):
-            "Connecting to the Codex session"
-        case (.english, .sessionEnded):
-            "The Codex session ended"
-        case (.english, .analyzingRequest):
-            "Analyzing the new task"
-        case (.english, .executingShell):
-            "Running a terminal operation"
-        case (.english, .editingFiles):
-            "Editing project files"
-        case (.english, .callingExternalTool):
-            "Calling an external tool"
-        case (.english, .coordinatingSubagent):
-            "Coordinating a subtask"
-        case (.english, .usingLocalTool):
-            "Running a local tool"
-        case (.english, .executingPlan):
-            "Executing a multi-step plan"
-        case (.english, .managingGoal):
-            "Updating the long-running goal"
-        case (.english, .followingGoal):
-            "Following the long-running goal"
-        case (.english, .goalPaused):
-            "The long-running goal is paused"
-        case (.english, .goalBlocked):
-            "The long-running goal needs attention"
-        case (.english, .goalLimited):
-            "The long-running goal is usage-limited"
-        case (.english, .goalCompleted):
-            "The long-running goal is complete"
-        case (.english, .usingTool):
-            "Running a tool"
-        case (.english, .awaitingApproval):
-            "An operation needs your approval"
-        case (.english, .awaitingUserInput):
-            "The task is waiting for your input"
-        case (.english, .reviewingToolResult):
-            "Reviewing the tool result"
-        case (.english, .compactingContext):
-            "Condensing earlier messages to free context"
-        case (.english, .continuingAfterCompaction):
-            "Context compacted; continuing the task"
-        case (.english, .subagentStarted):
-            "A subtask started"
-        case (.english, .subagentStopped):
-            "Summarizing subtask results"
-        case (.english, .turnCompleted):
-            "The current task is complete"
-        case (.english, .turnInterrupted):
-            "The current task was interrupted"
-        case (.english, .turnFailed):
-            "The current task failed"
-        case (.english, .bridgeUnavailable):
-            "The Codex island connection is unavailable"
-        case (.english, .malformedEvent):
-            "Received an unrecognized Codex status event"
+        switch key {
+        case .connectingSession: return copy.text("正在连接 Codex 会话", "Connecting to the Codex session")
+        case .sessionEnded: return copy.text("Codex 会话已结束", "The Codex session ended")
+        case .analyzingRequest: return copy.text("正在分析新的任务", "Analyzing the new task")
+        case .executingShell: return copy.text("正在执行终端操作", "Running a terminal operation")
+        case .editingFiles: return copy.text("正在修改项目文件", "Editing project files")
+        case .callingExternalTool: return copy.text("正在调用外部工具", "Calling an external tool")
+        case .coordinatingSubagent: return copy.text("正在协调子任务", "Coordinating a subtask")
+        case .usingLocalTool: return copy.text("正在执行本地工具", "Running a local tool")
+        case .executingPlan: return copy.text("正在执行多步骤计划", "Executing a multi-step plan")
+        case .managingGoal: return copy.text("正在更新长期目标", "Updating the long-running goal")
+        case .followingGoal: return copy.text("正在跟进长期目标", "Following the long-running goal")
+        case .goalPaused: return copy.text("长期目标已暂停", "The long-running goal is paused")
+        case .goalBlocked: return copy.text("长期目标需要处理", "The long-running goal needs attention")
+        case .goalLimited: return copy.text("长期目标暂受用量限制", "The long-running goal is usage-limited")
+        case .goalCompleted: return copy.text("长期目标已完成", "The long-running goal is complete")
+        case .usingTool: return copy.text("正在执行工具操作", "Running a tool")
+        case .awaitingApproval: return copy.text("有一项操作需要你的批准", "An operation needs your approval")
+        case .awaitingUserInput: return copy.text("任务正在等待你的输入", "The task is waiting for your input")
+        case .reviewingToolResult: return copy.text("正在检查工具执行结果", "Reviewing the tool result")
+        case .compactingContext: return copy.text("正在整理较早消息以释放上下文空间", "Condensing earlier messages to free context")
+        case .continuingAfterCompaction: return copy.text("上下文整理完成，正在继续任务", "Context compacted; continuing the task")
+        case .subagentStarted: return copy.text("子任务已启动", "A subtask started")
+        case .subagentStopped: return copy.text("正在汇总子任务结果", "Summarizing subtask results")
+        case .turnCompleted: return copy.text("当前任务已完成", "The current task is complete")
+        case .turnInterrupted: return copy.text("当前任务已中断", "The current task was interrupted")
+        case .turnFailed: return copy.text("当前任务执行失败", "The current task failed")
+        case .bridgeUnavailable: return copy.text("Codex 灵动岛连接不可用", "The Codex island connection is unavailable")
+        case .malformedEvent: return copy.text("收到无法识别的 Codex 状态事件", "Received an unrecognized Codex status event")
         }
     }
-
-    func accessibilityLabel(
-        windowTitle: String,
-        statusTitle: String,
-        operation: String,
-        approximateProgressFraction: Double?,
-        tokenUsageTitle: String? = nil
-    ) -> String {
-        let progressText = approximateProgressFraction.map {
-            String(Int((min(max($0, 0), 1) * 100).rounded()))
+    func accessibilityLabel(windowTitle: String, statusTitle: String, operation: String,
+                            approximateProgressFraction: Double?, tokenUsageTitle: String? = nil) -> String {
+        let text: String
+        if let fraction = approximateProgressFraction {
+            let progress = String(Int((min(max(fraction, 0), 1) * 100).rounded()))
+            text = copy.text("\(windowTitle)，状态：\(statusTitle)，近似进度：\(progress)%，当前操作：\(operation)",
+                             "\(windowTitle), status: \(statusTitle), approximate progress: \(progress)%, current operation: \(operation)")
+        } else {
+            text = copy.text("\(windowTitle)，状态：\(statusTitle)，当前操作：\(operation)",
+                             "\(windowTitle), status: \(statusTitle), current operation: \(operation)")
         }
-        switch language {
-        case .simplifiedChinese:
-            if let progressText {
-                return "\(windowTitle)，状态：\(statusTitle)，"
-                    + "近似进度：\(progressText)%，当前操作：\(operation)"
-                    + tokenUsageAccessibilitySuffix(tokenUsageTitle)
-            }
-            return "\(windowTitle)，状态：\(statusTitle)，"
-                + "当前操作：\(operation)"
-                + tokenUsageAccessibilitySuffix(tokenUsageTitle)
-        case .english:
-            if let progressText {
-                return "\(windowTitle), status: \(statusTitle), "
-                    + "approximate progress: \(progressText)%, "
-                    + "current operation: \(operation)"
-                    + tokenUsageAccessibilitySuffix(tokenUsageTitle)
-            }
-            return "\(windowTitle), status: \(statusTitle), "
-                + "current operation: \(operation)"
-                + tokenUsageAccessibilitySuffix(tokenUsageTitle)
-        }
+        guard let tokenUsageTitle else { return text }
+        return text + copy.text("，\(tokenUsageTitle)", ", \(tokenUsageTitle)")
     }
-
-    private func tokenUsageAccessibilitySuffix(
-        _ tokenUsageTitle: String?
-    ) -> String {
-        guard let tokenUsageTitle else { return "" }
-        return switch language {
-        case .simplifiedChinese: "，\(tokenUsageTitle)"
-        case .english: ", \(tokenUsageTitle)"
-        }
-    }
-
-    func presentationAccessibilityValue(
-        _ presentation: CodexActivityIslandPresentation
-    ) -> String {
-        switch (language, presentation) {
-        case (.simplifiedChinese, .expanded): "展开"
-        case (.simplifiedChinese, .compact): "紧凑"
-        case (.english, .expanded): "Expanded"
-        case (.english, .compact): "Compact"
+    func presentationAccessibilityValue(_ presentation: CodexActivityIslandPresentation) -> String {
+        switch presentation {
+        case .expanded: return copy.text("展开", "Expanded")
+        case .compact: return copy.text("紧凑", "Compact")
         }
     }
 }

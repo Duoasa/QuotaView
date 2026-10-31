@@ -2095,25 +2095,19 @@ private final class ActivityIslandSurfaceView: NSView {
 }
 
 struct CodexActivityIslandCompletionPalette {
-    static let violet = NSColor(
-        srgbRed: 0.55,
-        green: 0.36,
-        blue: 1.00,
-        alpha: 1
-    )
-    static let blue = NSColor(
-        srgbRed: 0.31,
-        green: 0.63,
-        blue: 1.00,
-        alpha: 1
-    )
-    static let cyan = NSColor(
-        srgbRed: 0.43,
-        green: 0.89,
-        blue: 1.00,
-        alpha: 1
-    )
+    static let violet = NSColor(srgbRed: 0.55, green: 0.36, blue: 1.00, alpha: 1)
+    static let blue = NSColor(srgbRed: 0.31, green: 0.63, blue: 1.00, alpha: 1)
+    static let cyan = NSColor(srgbRed: 0.43, green: 0.89, blue: 1.00, alpha: 1)
     static let gradientLocations: [NSNumber] = [0, 0.52, 1]
+    static let flowDuration: CFTimeInterval = 6
+    static let flowLocations: [NSNumber] = [0.0, 1.0 / 3, 2.0 / 3, 1.0].map { NSNumber(value: $0) }
+    // Closing each frame with its first color avoids a seam at the conic origin.
+    static let flowFrames: [[CGColor]] = [
+        [violet.cgColor, blue.cgColor, cyan.cgColor, violet.cgColor],
+        [cyan.cgColor, violet.cgColor, blue.cgColor, cyan.cgColor],
+        [blue.cgColor, cyan.cgColor, violet.cgColor, blue.cgColor],
+        [violet.cgColor, blue.cgColor, cyan.cgColor, violet.cgColor],
+    ]
 }
 
 enum CodexActivityQuotaRiskBand: Equatable {
@@ -2449,9 +2443,16 @@ final class ActivityIslandCompletionGlowView: NSView {
 
 final class ActivityIslandCompletionOutlineView: NSView {
     var usesContinuousCorners = false
-    var completionColor: NSColor? { didSet { applyColors() } }
+    var completionColor: NSColor? {
+        didSet {
+            guard completionColor != oldValue else { return }
+            applyColors()
+            applyState(delaysReveal: false)
+        }
+    }
     var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
+        static let flow = "quotaview.activity.completion-outline.flow"
         static let reveal =
             "quotaview.activity.completion-outline.reveal"
     }
@@ -2463,6 +2464,11 @@ final class ActivityIslandCompletionOutlineView: NSView {
     private var playbackVisible = false
     private var islandCornerRadius: CGFloat = 34
 
+    var flowAnimation: CAKeyframeAnimation? {
+        outlineGradientLayer.animation(forKey: AnimationKey.flow) as? CAKeyframeAnimation
+    }
+    var displayedColors: [CGColor] { outlineGradientLayer.colors as? [CGColor] ?? [] }
+    var outlinePath: CGPath? { outlineMaskLayer.path }
     override var isOpaque: Bool { false }
 
     override init(frame frameRect: NSRect) {
@@ -2567,7 +2573,18 @@ final class ActivityIslandCompletionOutlineView: NSView {
         isHidden = !shouldShow
         needsLayout = true
 
-        guard shouldShow, !reduceMotion, delaysReveal else { return }
+        guard shouldShow, !reduceMotion else { return }
+        if edgeEmphasis == .completion && completionColor == nil {
+            let flow = CAKeyframeAnimation(keyPath: "colors")
+            flow.values = CodexActivityIslandCompletionPalette.flowFrames
+            flow.keyTimes = CodexActivityIslandCompletionPalette.flowLocations
+            flow.duration = CodexActivityIslandCompletionPalette.flowDuration
+            flow.repeatCount = .infinity
+            flow.calculationMode = .linear
+            flow.beginTime = outlineGradientLayer.convertTime(CACurrentMediaTime(), from: nil)
+            outlineGradientLayer.add(flow, forKey: AnimationKey.flow)
+        }
+        guard delaysReveal else { return }
         let now = outlineGradientLayer.convertTime(
             CACurrentMediaTime(),
             from: nil
@@ -2593,22 +2610,25 @@ final class ActivityIslandCompletionOutlineView: NSView {
     }
 
     private func applyColors() {
-        switch edgeEmphasis {
-        case .completion, .none:
-            outlineGradientLayer.colors = [
-                (completionColor?.withAlphaComponent(0.76) ?? CodexActivityIslandCompletionPalette.violet).cgColor,
-                (completionColor ?? CodexActivityIslandCompletionPalette.blue).cgColor,
-                (completionColor?.withAlphaComponent(0.76) ?? CodexActivityIslandCompletionPalette.cyan).cgColor,
-            ]
-        case .confirmationReminder:
-            let warning =
-                CodexActivityIslandConfirmationReminderContract
-                .approvalColor
-            outlineGradientLayer.colors = [
-                warning.withAlphaComponent(0.76).cgColor,
-                warning.cgColor,
-                warning.withAlphaComponent(0.76).cgColor,
-            ]
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        if edgeEmphasis == .completion && completionColor == nil {
+            outlineGradientLayer.type = .conic
+            outlineGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+            outlineGradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+            outlineGradientLayer.locations = CodexActivityIslandCompletionPalette.flowLocations
+            outlineGradientLayer.colors = CodexActivityIslandCompletionPalette.flowFrames[0]
+        } else {
+            outlineGradientLayer.type = .axial
+            outlineGradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+            outlineGradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+            outlineGradientLayer.locations = CodexActivityIslandCompletionPalette.gradientLocations
+            let color = edgeEmphasis == .confirmationReminder
+                ? CodexActivityIslandConfirmationReminderContract.approvalColor
+                : completionColor ?? CodexActivityIslandCompletionPalette.cyan
+            outlineGradientLayer.colors = [color.withAlphaComponent(0.76).cgColor,
+                                           color.cgColor, color.withAlphaComponent(0.76).cgColor]
         }
     }
 }
@@ -4006,6 +4026,7 @@ final class IslandQuantumProgressHost: NSView {
     var progressPosition: Float? { effect.displayedProgressPosition }
     var confirmationPulse: CAAnimationGroup? { effect.layer?.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
     var completionPulse: CAAnimationGroup? { glow.islandPulse }
+    var completionOutlineFlow: CAKeyframeAnimation? { outline.flowAnimation }
     var completionOutlinePulse: CAAnimationGroup? { outline.layer?.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -4015,6 +4036,7 @@ final class IslandQuantumProgressHost: NSView {
         glow.drawsOnlyEdge = true
         glow.usesContinuousCorners = true
         outline.usesContinuousCorners = true
+        outline.completionRevealDelay = 0
         surface.addSubview(effect)
         effect.setEffect(.dropField)
         effect.setPlaybackEnabled(false)
@@ -4083,10 +4105,10 @@ final class IslandQuantumProgressHost: NSView {
             reminderActive: renderState.isConfirmationReminderActive,
             completionEffectAvailable: effect.isRendererAvailable)
         glow.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion, playbackVisible: visible)
-        outline.update(edgeEmphasis: emphasis, reduceMotion: true, playbackVisible: visible)
+        outline.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion || confirming, playbackVisible: visible)
         let completionBreathing = visible && !reduceMotion && (renderState.visualState == .completed || confirming)
         glow.updateIslandConfirmationPulse(animated: completionBreathing)
-        // Keep the completion outline steady; only its outer bloom goes dark.
+        // The outline circulates without pulsing its brightness; only the bloom breathes.
         IslandConfirmationPulse.update(outline.layer, animated: false)
     }
     func stop() { requestedVisible = false; synchronizePlayback() }

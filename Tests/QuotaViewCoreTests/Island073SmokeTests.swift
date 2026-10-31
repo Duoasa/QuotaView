@@ -11,7 +11,7 @@ final class Island073SmokeTests: XCTestCase {
         let pages = IslandSettingsPage.allCases
         XCTAssertEqual(Set(pages.map(\.id)), Set(["general", "island", "usage", "connections", "proxy", "feedback", "about"]),
             "Only settings for the current primary interface should be reachable")
-        for language in [AppPreferences.Language.simplifiedChinese, .english] {
+        for language in AppPreferences.Language.allCases {
             let copy = AppCopy(language: language)
             XCTAssertEqual(Set(pages.map { $0.title(copy) }).count, pages.count)
             for page in pages {
@@ -642,7 +642,7 @@ final class Island073SmokeTests: XCTestCase {
         let host = IslandQuantumProgressHost(frame: .zero); window.contentView = host
         host.configure(renderState: render, visible: true, reduceMotion: false)
         let pulse = try XCTUnwrap(host.completionPulse)
-        XCTAssertNil(host.completionOutlinePulse, "Completion outline stays steady while outer glow breathes")
+        XCTAssertNil(host.completionOutlinePulse, "Completion outline brightness stays steady while its colors flow and outer glow breathes")
         XCTAssertEqual(pulse.duration, 3)
         let opacity = try XCTUnwrap(pulse.animations?.first as? CAKeyframeAnimation)
         XCTAssertEqual((opacity.values as? [NSNumber])?.map(\.doubleValue), [0, 0, 1, 0, 0])

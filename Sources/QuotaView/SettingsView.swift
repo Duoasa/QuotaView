@@ -3,8 +3,10 @@ import QuotaViewCore
 import SwiftUI
 
 enum SettingsWindowMetrics {
-    static let defaultContentSize = NSSize(width: 780, height: 680)
-    static let minimumContentSize = NSSize(width: 740, height: 560)
+    // User-confirmed fixed width (2026-11-01).
+    static let fixedContentWidth: CGFloat = 820
+    static let defaultContentSize = NSSize(width: fixedContentWidth, height: 680)
+    static let minimumContentSize = NSSize(width: fixedContentWidth, height: 560)
     static let outerCornerRadius: CGFloat = 24
     static let contentMaxWidth: CGFloat = 560
     static let contentInset: CGFloat = 20
@@ -12,6 +14,16 @@ enum SettingsWindowMetrics {
     static let sidebarInset: CGFloat = 16
     static let fallbackSidebarCornerRadius: CGFloat =
         outerCornerRadius - sidebarInset
+
+    @MainActor
+    static func applySizingPolicy(to window: NSWindow) {
+        let maximumHeight = max(minimumContentSize.height, window.contentMaxSize.height)
+        window.contentMinSize = minimumContentSize
+        window.contentMaxSize = NSSize(width: fixedContentWidth, height: maximumHeight)
+        window.collectionBehavior.remove([.fullScreenPrimary, .fullScreenAllowsTiling])
+        window.collectionBehavior.insert([.fullScreenNone, .fullScreenDisallowsTiling])
+        window.standardWindowButton(.zoomButton)?.isEnabled = false
+    }
 
     @MainActor
     static func applyOuterShape(to window: NSWindow) {
@@ -25,6 +37,12 @@ enum SettingsWindowMetrics {
         contentView.layer?.masksToBounds = true
         window.invalidateShadow()
     }
+}
+
+@MainActor
+final class QuotaViewSettingsWindow: NSWindow {
+    override func zoom(_ sender: Any?) {}
+    override func toggleFullScreen(_ sender: Any?) {}
 }
 
 // Shared rhythm for detail pages; sidebar navigation keeps its own compact metrics.
@@ -143,12 +161,14 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
             availableScreens = NSScreen.screens
         }
+        .environment(\.appLanguage, preferences.resolvedLanguage)
         .environment(\.colorScheme, .dark)
         .tint(Color(nsColor: .controlAccentColor))
         .buttonStyle(SettingsActionButtonStyle())
         .frame(
             minWidth: SettingsWindowMetrics.minimumContentSize.width,
             idealWidth: SettingsWindowMetrics.defaultContentSize.width,
+            maxWidth: SettingsWindowMetrics.fixedContentWidth,
             minHeight: SettingsWindowMetrics.minimumContentSize.height,
             idealHeight: SettingsWindowMetrics.defaultContentSize.height
         )
@@ -204,8 +224,14 @@ struct SettingsView: View {
             .padding(.top, 12)
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        // Material and group spacing separate navigation without divider lines.
-        .background(.regularMaterial, in: Rectangle())
+        // Keep the sidebar material, but anchor it in a deeper neutral black.
+        .background {
+            ZStack {
+                Rectangle().fill(.regularMaterial)
+                Color.black.opacity(0.60)
+            }
+            .ignoresSafeArea(edges: [.top, .bottom])
+        }
     }
 
     private func settingsNavigationItem(_ page: IslandSettingsPage) -> some View {
@@ -451,16 +477,16 @@ struct SettingsView: View {
                     subtitle: copy.text("IP 或主机名，不含协议。", "IP or hostname, without a protocol prefix."),
                     symbol: "server.rack"
                 ) {
-                    TextField("127.0.0.1", text: $proxyDraft.host)
-                        .textFieldStyle(.roundedBorder).frame(width: 190)
+                    SettingsTextField(placeholder: "127.0.0.1", text: $proxyDraft.host)
+                        .frame(width: 190)
                         .accessibilityLabel(copy.text("代理服务器地址", "Proxy server address"))
                         .disabled(!proxyDraft.isEnabled)
                 }
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("端口", "Port"),
                     symbol: "number") {
-                    TextField("7890", text: $proxyDraft.port)
-                        .textFieldStyle(.roundedBorder).frame(width: 100)
+                    SettingsTextField(placeholder: "7890", text: $proxyDraft.port)
+                        .frame(width: 100)
                         .accessibilityLabel(copy.text("代理端口", "Proxy port"))
                         .disabled(!proxyDraft.isEnabled)
                 }
@@ -707,7 +733,7 @@ struct SettingsView: View {
     }
     private var systemLanguageOption: String {
         guard preferences.followsSystemLanguage else { return copy.text("跟随系统", "System") }
-        let language = preferences.resolvedLanguage == .simplifiedChinese ? "简体中文" : "English"
+        let language = preferences.resolvedLanguage.nativeName
         return copy.text("跟随系统 · \(language)", "System · \(language)")
     }
     private var languageSettings: some View {
@@ -715,7 +741,7 @@ struct SettingsView: View {
             NativeSettingsRow(title: copy.text("语言", "Language"),
                 symbol: "globe") {
                 SettingsValueMenu(title: copy.text("语言", "Language"), selection: languageSelection,
-                    options: [("system", systemLanguageOption), (AppPreferences.Language.simplifiedChinese.rawValue, "简体中文"), (AppPreferences.Language.english.rawValue, "English")])
+                    options: [("system", systemLanguageOption)] + AppPreferences.Language.allCases.map { ($0.rawValue, $0.nativeName) })
             }
         }
     }
@@ -862,10 +888,10 @@ struct SettingsView: View {
                     ForEach(AppPreferences.CodexActivityProgressEffect.allCases) { effect in
                         let selected = preferences.codexActivityProgressEffect == effect
                         Button { preferences.codexActivityProgressEffect = effect } label: {
-                            Text(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                            Text(copy.named(effect.displayName.simplifiedChinese, effect.displayName.english))
                         }
                         .buttonStyle(SettingsEffectOptionStyle(effect: effect, selected: selected))
-                        .accessibilityLabel(copy.text(effect.displayName.simplifiedChinese, effect.displayName.english))
+                        .accessibilityLabel(copy.named(effect.displayName.simplifiedChinese, effect.displayName.english))
                         .accessibilityValue(selected ? copy.text("已选择", "Selected") : copy.text("未选择", "Not selected"))
                         .accessibilityAddTraits(selected ? .isSelected : [])
                     }
@@ -1431,7 +1457,7 @@ private struct SettingsIslandPreview: View {
             ? copy.text("隐私模式已开启", "Privacy mode is on")
             : copy.text("隐私模式已关闭", "Privacy mode is off")
         let width = copy.text("展开宽度 \(Int(expandedWidth)) pt", "Expanded width \(Int(expandedWidth)) pt")
-        return [copy.text(effect.simplifiedChinese, effect.english), privacy, width].joined(separator: ", ")
+        return [copy.named(effect.simplifiedChinese, effect.english), privacy, width].joined(separator: ", ")
     }
 
     var body: some View {
@@ -1462,7 +1488,7 @@ private struct SettingsIslandPreview: View {
                               windowDurationMinutes: 300, resetsAt: Date(timeIntervalSince1970: 3 * 3600 + 20 * 60)),
                         .init(id: CodexDomainCatalog.secondaryRateWindowID, usedPercent: 54, remainingPercent: 46,
                               windowDurationMinutes: 10080, resetsAt: Date(timeIntervalSince1970: 4 * 86400))
-                    ], current: true, english: preferences.resolvedLanguage == .english,
+                    ], current: true, english: preferences.resolvedLanguage.usesLatinLayout,
                        now: Date(timeIntervalSince1970: 0))
                     .modifier(IslandGlassColorScheme())
                     .padding(.top, previewHeight + 8)
@@ -1732,7 +1758,7 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
         window.isMovableByWindowBackground = true
         SettingsWindowMetrics.applyOuterShape(to: window)
         window.hasShadow = true
-        window.minSize = SettingsWindowMetrics.minimumContentSize
+        SettingsWindowMetrics.applySizingPolicy(to: window)
 
         if coordinator.configuredWindow !== window {
             coordinator.configuredWindow = window
@@ -1789,6 +1815,7 @@ private struct SettingsTrafficLightHost: NSViewRepresentable {
                 if button.superview !== self {
                     addSubview(button)
                 }
+                if buttonType == .zoomButton { button.isEnabled = false }
 
                 button.setFrameOrigin(
                     NSPoint(
@@ -2421,6 +2448,32 @@ struct NativeSettingsRow<Control: View>: View {
         .frame(maxWidth: .infinity, minHeight: subtitle == nil
             ? SettingsLayoutMetrics.rowMinHeight : SettingsLayoutMetrics.describedRowMinHeight)
         .contentShape(Rectangle())
+    }
+}
+
+/// A full-height editing surface independent of the row's compact control size.
+private struct SettingsTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    @Environment(\.isEnabled) private var isEnabled
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .textFieldStyle(.plain)
+            .controlSize(.regular)
+            .font(.system(size: 13))
+            .focused($isFocused)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 7))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .strokeBorder(isFocused ? Color.accentColor : Color(nsColor: .separatorColor),
+                                  lineWidth: isFocused ? 1.5 : 0.5)
+                    .allowsHitTesting(false)
+            }
+            .opacity(isEnabled ? 1 : 0.5)
     }
 }
 

@@ -56,7 +56,7 @@ final class QuotaViewSettingsWindowController {
             let hostingController = NSHostingController(
                 rootView: rootView
             )
-            let window = NSWindow(
+            let window = QuotaViewSettingsWindow(
                 contentViewController: hostingController
             )
             window.title = preferences.copy.text(
@@ -76,7 +76,7 @@ final class QuotaViewSettingsWindowController {
             window.toolbar = nil
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
-            window.minSize = SettingsWindowMetrics.minimumContentSize
+            SettingsWindowMetrics.applySizingPolicy(to: window)
             window.setContentSize(
                 SettingsWindowMetrics.defaultContentSize
             )
@@ -811,7 +811,7 @@ final class MenuBarPanelController: NSObject {
             let hostingController = NSHostingController(
                 rootView: rootView
             )
-            let window = NSWindow(
+            let window = QuotaViewSettingsWindow(
                 contentViewController: hostingController
             )
             window.title = preferences.copy.text(
@@ -831,7 +831,7 @@ final class MenuBarPanelController: NSObject {
             window.toolbar = nil
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
-            window.minSize = SettingsWindowMetrics.minimumContentSize
+            SettingsWindowMetrics.applySizingPolicy(to: window)
             window.setContentSize(
                 SettingsWindowMetrics.defaultContentSize
             )

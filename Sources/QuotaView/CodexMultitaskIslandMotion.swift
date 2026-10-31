@@ -296,20 +296,21 @@ struct CodexMultitaskCompletionSummary {
     let english: Bool
     let totalTokens: Int64?
     let remainingPercent: Int?
-    private var copy: AppCopy { AppCopy(language: english ? .english : .simplifiedChinese) }
+    var language: AppPreferences.Language? = nil
+    private var copy: AppCopy { AppCopy(language: language ?? (english ? .english : .simplifiedChinese)) }
     var title: String { copy.text("已完成全部任务", "All tasks completed") }
-    var compactTitle: String { Self.compactTitle(count: count, english: english) }
+    var compactTitle: String { Self.compactTitle(count: count, english: english, language: language) }
     var tokens: String {
         let value = totalTokens.map(CodexActivityTokenUsageFormatter.string) ?? "—"
         return copy.text("总计 \(value) tokens", "Total \(value) tokens")
     }
-    private static func compactTitle(count: Int, english: Bool) -> String {
-        AppCopy(language: english ? .english : .simplifiedChinese)
+    private static func compactTitle(count: Int, english: Bool, language: AppPreferences.Language? = nil) -> String {
+        AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
             .text("全部完成 · \(count) 项任务", "All done · \(count) tasks")
     }
-    static func compactWidth(count: Int, english: Bool) -> CGFloat {
+    static func compactWidth(count: Int, english: Bool, language: AppPreferences.Language? = nil) -> CGFloat {
         CodexActivityIslandProgressBarGeometry.compactCompletionSurfaceWidth(
-            for: compactTitle(count: count, english: english))
+            for: compactTitle(count: count, english: english, language: language))
     }
     func applying(to state: CodexActivityRenderState) -> CodexActivityRenderState {
         let quota = remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"

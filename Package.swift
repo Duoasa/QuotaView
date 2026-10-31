@@ -54,6 +54,7 @@ let package = Package(
             resources: [
                 .copy("Resources/CodexActivityRippleGlowShader.txt"),
                 .copy("Resources/CodexProviderIcon.png"),
+                .process("Resources/AppTranslations.json"),
                 .copy("Resources/CodexAgentAvatars"),
                 .copy("Resources/QuotaViewFeedbackQQ.jpg"),
                 .process("Resources/ProviderIcons.xcassets"),

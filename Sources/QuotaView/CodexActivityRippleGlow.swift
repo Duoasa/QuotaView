@@ -9,6 +9,13 @@ enum CodexActivityRippleGlowContract {
     static let sphereRadius: Float = 0.535
     static let contourDeformation: Float = 0
     static let approvedSpeedMultiplier: Float = 1.5
+
+    /// Shared with inactive task cards; derive the hue from the actual orb palette.
+    static func statusTint(for state: CodexActivityVisualState) -> NSColor {
+        let color = state.rippleGlowConfiguration.secondary
+        return NSColor(srgbRed: CGFloat(color.red), green: CGFloat(color.green),
+                       blue: CGFloat(color.blue), alpha: 1)
+    }
 }
 
 private enum RippleGlowUniformLayout {

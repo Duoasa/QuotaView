@@ -60,6 +60,7 @@ final class IslandSession {
     private var fixedScreenID = ""
     private var enabled = false
     private var english = false
+    private var language: AppPreferences.Language?
     private var remaining: Int?
     private var weeklyRemaining: Int?
     private var quotaResetsAt: Date?
@@ -118,7 +119,7 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassAppearance: AppPreferences.IslandGlassAppearance = .dark, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, backgroundMemorySnapshots: [CodexActivitySnapshot] = [], followsFocus: Bool = false, fixedScreenID: String = "") {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassAppearance: AppPreferences.IslandGlassAppearance = .dark, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, backgroundMemorySnapshots: [CodexActivitySnapshot] = [], followsFocus: Bool = false, fixedScreenID: String = "", language: AppPreferences.Language? = nil) {
         self.followsFocus = followsFocus
         self.fixedScreenID = fixedScreenID
         self.backgroundMemorySnapshots = backgroundMemorySnapshots
@@ -136,6 +137,7 @@ final class IslandSession {
         self.quotaResetsAt = quotaResetsAt
         self.weeklyRemaining = weeklyRemaining
         if self.privacy != privacy { self.privacy = privacy; board.state.clearDrafts() }
+        self.language = language
         self.english = english; self.remaining = remaining; self.enabled = enabled
         updateClock()
         // A source batch can update connection, titles, usage and activity in
@@ -164,7 +166,7 @@ final class IslandSession {
         if (!enabled || locked) && !board.isVisible { return }
         model.preservedID = board.state.detailID
         board.screen = IslandScreenSelection.target(followsFocus: followsFocus, fixedID: fixedScreenID, previous: board.screen)
-        var display = model.display(english: english, remaining: remaining, enabled: enabled && !locked, privacy: privacy)
+        var display = model.display(english: english, remaining: remaining, enabled: enabled && !locked, privacy: privacy, language: language)
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot

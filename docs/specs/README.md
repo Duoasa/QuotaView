@@ -8,9 +8,25 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.8.7 Build 24
+## 当前开发：0.8.7 Build 28
 
-[预览背景明暗联动](../design/QUOTAVIEW_UI_RULES.md#预览背景明暗联动2026-11-01087-build-24) · `Implemented / User Acceptance Pending`：预览壁纸深色压暗、浅色提亮，自动跟随实际系统外观；前景和真实岛体保持。增量构建与运行包核验通过，已运行 Build 24 / 内部 126。本批纳入已授权的 PR #123，集成状态见 Handoff，视觉由用户检查。
+[设置固定宽度](../design/QUOTAVIEW_UI_RULES.md#设置固定宽度与完成配色回调2026-11-01087-build-28)与[恢复原完成配色](PROGRESS_EFFECT_ADAPTATION.md#087-build-28恢复原完成配色2026-11-01) · `Implemented / User Acceptance Pending`：设置窗口固定 820 pt、最大化置灰，完成态恢复紫—蓝—青 6 秒循环；继承多语言、32 pt 代理输入、非聚焦淡色与深黑侧栏。5 项相关冒烟、原生增量构建及 241 输入/运行核验通过，已运行 Build 28 / 内部 130。用户已授权本批推送合入 main，正在核对集成 CI；实际效果由用户检查。
+
+## 前序开发：0.8.7 Build 27
+
+[完成态蓝青绿流动描边](PROGRESS_EFFECT_ADAPTATION.md#087-build-27完成态蓝青绿流动描边2026-11-01)与[卡片/侧栏样式](../design/QUOTAVIEW_UI_RULES.md#完成描边非聚焦着色与深色侧栏2026-11-01087-build-27) · `Implemented / User Acceptance Pending`：完成描边蓝—青—绿 6 秒循环，非聚焦卡片复用 AI 球状态色并淡化，侧栏进一步压黑。7 项冒烟、原生增量构建及 241 输入/运行核验通过，已运行 Build 27 / 内部 129。本批仅本地，用户明确实际效果由其检查。
+
+## 前序开发：0.8.7 Build 26
+
+[代理输入框高度](../design/QUOTAVIEW_UI_RULES.md#代理输入框高度2026-11-01087-build-26) · `Implemented / User Acceptance Pending`：地址与端口输入框统一为 32 pt 高，完整背景/焦点框与 10 pt 水平内边距。原生增量构建和 241 输入/运行核验通过，已运行 Build 26 / 内部 128。仅本地修改，实际效果由用户检查。
+
+## 前序开发：0.8.7 Build 25
+
+[应用多语言](app-localization.md) · `Implemented / User Acceptance Pending`：新增日语、韩语、繁体中文与西班牙语，保留简体中文/English与系统跟随；设置、灵动岛、菜单、重置与小组件共用翻译，用户数据原样保留。14 项定向冒烟、708 个源码模板覆盖及 715 条目录文案检查通过。原生增量构建与 241 输入/运行核验通过，已运行 Build 25 / 内部 127。本批仅本地，视觉和交互待用户检查。
+
+## 前序开发：0.8.7 Build 24
+
+[预览背景明暗联动](../design/QUOTAVIEW_UI_RULES.md#预览背景明暗联动2026-11-01087-build-24) · `Implemented / User Acceptance Pending`：预览壁纸深色压暗、浅色提亮，自动跟随实际系统外观；前景和真实岛体保持。增量构建与运行包核验通过，已运行 Build 24 / 内部 126。本批已由 [PR #123](https://github.com/Duoasa/QuotaView/pull/123) 合入 main `93888fd`，PR/main CI 均通过（各 731 测试、6 跳过、0 失败，44 契约检查）。视觉由用户检查；未发布。
 
 ## 前序开发：0.8.7 Build 23
 

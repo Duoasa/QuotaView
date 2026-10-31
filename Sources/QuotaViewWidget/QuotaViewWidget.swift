@@ -714,11 +714,9 @@ private struct WidgetPalette {
 }
 
 private struct WidgetCopy {
-    let isChinese: Bool
     let locale: Locale
 
     init(localeIdentifier: String) {
-        isChinese = localeIdentifier.lowercased().hasPrefix("zh")
         locale = Locale(identifier: localeIdentifier)
     }
 
@@ -811,10 +809,10 @@ private struct WidgetCopy {
     }
 
     private func text(
-        _ simplifiedChinese: String,
-        _ english: String
+        _ simplifiedChinese: LocalizedCopy,
+        _ english: LocalizedCopy
     ) -> String {
-        isChinese ? simplifiedChinese : english
+        AppLocalization.text(chinese: simplifiedChinese, english: english, language: locale.identifier)
     }
 }
 

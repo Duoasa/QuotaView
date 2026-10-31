@@ -536,9 +536,7 @@ struct QuotaViewFigmaResetMenu: View {
     private var resetCreditsAccessibilityLabel: String {
         copy.text(
             "\(availableResetCredits) 次额度重置机会可用",
-            "\(availableResetCredits) reset "
-                + (availableResetCredits == 1 ? "credit" : "credits")
-                + " available"
+            "\(availableResetCredits) reset credits available"
         )
     }
 
@@ -563,9 +561,7 @@ struct QuotaViewFigmaResetMenu: View {
         let remaining = snapshot.availableResetCreditsAfterOne
         return copy.text(
             "重置后将剩余 \(remaining) 次",
-            "\(remaining) reset "
-                + (remaining == 1 ? "credit" : "credits")
-                + " will remain after reset"
+            "\(remaining) reset credits will remain after reset"
         )
     }
 
