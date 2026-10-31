@@ -245,7 +245,7 @@ struct SettingsView: View {
     ) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
-                settingsPageHeading(for: page)
+                if page != .about { settingsPageHeading(for: page) }
                 settingsStage(for: page)
                 switch page {
                 case .general: generalSettings
@@ -282,33 +282,12 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func settingsStage(for page: IslandSettingsPage) -> some View {
-        // Only these pages need a separate illustration above their controls.
-        if page == .island || page == .about {
-            let height: CGFloat = page == .island ? 210 : 132
-            settingsStageVisual(for: page)
+        if page == .island {
+            islandStageVisual
                 .environment(\.colorScheme, .dark)
                 .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth)
-                .frame(height: height)
+                .frame(height: 210)
                 .frame(maxWidth: .infinity)
-        }
-    }
-
-    @ViewBuilder
-    private func settingsStageVisual(for page: IslandSettingsPage) -> some View {
-        switch page {
-        case .general, .usage, .connections, .proxy, .feedback: EmptyView()
-        case .island: islandStageVisual
-        case .about:
-            supplementarySettingsStage(width: 400) { aboutStageVisual }
-        }
-    }
-
-    private func supplementarySettingsStage<Content: View>(width: CGFloat, @ViewBuilder content: @escaping () -> Content) -> some View {
-        SettingsDesktopPreview {
-            content()
-                .frame(maxWidth: width)
-                .padding(12)
-                .padding(.horizontal, 24)
         }
     }
 
@@ -336,31 +315,41 @@ struct SettingsView: View {
         return activityRuntime.localHealth.hasReadError ? SettingsStagePalette.failure : SettingsStagePalette.faint
     }
 
-    // About: identity and the exact build that is running.
-    private var aboutStageVisual: some View {
-        HStack(spacing: 16) {
+    // About uses the page's solid background and the exact running build.
+    private var aboutIdentity: some View {
+        VStack(spacing: 18) {
             Image(nsImage: SettingsFeedbackResources.appIcon)
-                .resizable().interpolation(.high).scaledToFit().frame(width: 64, height: 64)
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 10, y: 5)
+                .resizable().interpolation(.high).scaledToFit()
+                .frame(width: 96, height: 96)
                 .accessibilityLabel(copy.text("QuotaView 应用图标", "QuotaView app icon"))
-            VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("QuotaView").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                    Text(copy.text("Codex 任务与用量灵动岛", "Codex task and usage island"))
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.white.opacity(0.88))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
+            Text("QuotaView")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 4) {
+                Text(copy.text("Codex 任务与用量灵动岛", "Codex task and usage island"))
                 Text(versionAndBuildLabel)
-                    .font(.system(size: 11, weight: .medium)).monospacedDigit()
-                    .foregroundStyle(SettingsIllustrationPalette.secondary)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                    .shadow(color: SettingsIllustrationPalette.shadow, radius: 3, y: 1)
+                    .monospacedDigit()
                     .textSelection(.enabled)
             }
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            if let buildDateLabel {
+                Text(buildDateLabel)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            if let copyright = Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String,
+               !copyright.isEmpty {
+                Text(copyright)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
         }
-        // Center the visible icon/text group, excluding unused trailing space.
-        .fixedSize(horizontal: false, vertical: true)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
     }
 
     private var proxyValidationFailure: ProxyConnectionFailure? {
@@ -918,6 +907,7 @@ struct SettingsView: View {
 
     private var aboutSettings: some View {
         VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
+            aboutIdentity
             settingsSection(copy.text("软件更新", "Software updates")) {
                 NativeSettingsCard {
                     if updateController.availability == .available {
@@ -996,6 +986,18 @@ struct SettingsView: View {
                 "Update configuration is invalid. Reinstall the official release."
             )
         }
+    }
+
+    private var buildDateLabel: String? {
+        guard let executableURL = Bundle.main.executableURL,
+              let date = try? executableURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = preferences.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        let formatted = formatter.string(from: date)
+        return copy.text("构建于 \(formatted)", "Built on \(formatted)")
     }
 
     private var versionAndBuildLabel: String {
@@ -1213,28 +1215,6 @@ private enum SettingsIslandPreviewAssets {
 
 private enum SettingsPreviewContour {
     static var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 20, style: .continuous) }
-}
-
-/// A bounded, static desktop surface shared by the settings illustrations.
-private struct SettingsDesktopPreview<Content: View>: View {
-    var alignment: Alignment = .center
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: alignment) {
-                SettingsIslandPreviewAssets.image("Wallpaper")
-                    .resizable().scaledToFill()
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipShape(SettingsPreviewContour.shape)
-                    .accessibilityHidden(true)
-                    .allowsHitTesting(false)
-                content()
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: alignment)
-            .contentShape(SettingsPreviewContour.shape)
-        }
-    }
 }
 
 // The single live card preview reuses the bounded 24 fps renderer; option tiles stay images.
