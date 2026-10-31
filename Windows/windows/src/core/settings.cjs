@@ -15,7 +15,7 @@ const DEFAULTS = Object.freeze({
   display: "active",
   refreshSeconds: 60,
   notifications: true,
-  autoCheckUpdates: false,
+  autoCheckUpdates: true,
   providers: { codex: true, claude: false, dsh: false, kimi: false },
   codexPath: "",
   codexHome: "",

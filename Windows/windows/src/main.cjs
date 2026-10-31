@@ -142,6 +142,7 @@ function runApplication() {
     quitting = false,
     lastSnapshot = null,
     update = { available: false, checking: false };
+  const completionLedger = new (require("./core/task-lifecycle.cjs").CompletionLedger)();
   let oldTaskStates = new Map(),
     oldAttentionKeys = new Map(),
     notifyQuota = new Map(),
@@ -356,15 +357,14 @@ function runApplication() {
       const state = displayState(t), attention = attentionKey(t);
       const newAttention = attention && oldAttentionKeys.get(t.id) !== attention;
       const previous = oldTaskStates.get(t.id);
+      const justCompleted = completionLedger.observe(t);
       const terminal = ["completed", "failed", "interrupted"].includes(
         t.status,
       );
       if ((previous !== state || newAttention) && !terminal && state !== "unknown")
         island?.showInactive();
       if (
-        previous &&
-        previous !== state &&
-        terminal &&
+        justCompleted &&
         t.verified !== false &&
         settings.notifications &&
         settings.completionNotifications &&
@@ -384,9 +384,7 @@ function runApplication() {
       if ((previous !== state || newAttention) && settings.autoExpand) {
         if (
           needsAttention(t) ||
-          (previous &&
-            terminal &&
-            t.verified !== false &&
+          (justCompleted &&
             settings.autoExpandOnComplete) ||
           (!previous && !terminal)
         ) {

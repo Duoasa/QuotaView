@@ -300,6 +300,10 @@ module.exports = async function verifyUI({
     if (win.qvMaterial !== "none")
       throw Error("Native backdrop is still enabled");
 
+  // Native pointer exits may collapse the island during earlier captures.
+  // Force an expanded-state edge; repeating true does not reset local UI state.
+  await inject(island, { ...fixture, ui: { expanded: false, pinned: true } });
+  await inject(island, { ...fixture, ui: { expanded: true, pinned: true } });
   const usage = await run(
     island,
     `

@@ -33,7 +33,8 @@ class DismissedTasks {
     } catch {}
   }
   has(task) {
-    return this.entries.has(fingerprint(task));
+    return this.entries.has(fingerprint(task)) || !!(task.provider === "codex" && task.legacyTurnId &&
+      this.entries.has(fingerprint({...task, turnId:task.legacyTurnId})));
   }
   dismiss(task) {
     this.entries.set(fingerprint(task), Date.now());

@@ -1,5 +1,13 @@
 # QuotaView SDD 注册表
 
+Windows 当前发布：**0.8.3-win.13** · Released / User Acceptance Pending。包括终态通知修复、设置精简和默认开启自动检查更新；已接入独立签名 appcast，现有关闭偏好保留。完整证据见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。下方 win.11/12 为开发阶段记录。
+
+Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题、控件和状态表达用途，详情折叠、说明按需出现。构建通过，视觉待用户验收；见 [Windows Handoff](../../Windows/HANDOFF.md)，未推送或发布。
+
+## Windows 本地修复：0.8.3-win.11
+
+[终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
+
 ## 当前开发：0.8.7 Build 16
 
 [最新 App 图标与 Dock 预览](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：Build 16 已按用户要求替换最新 `QV-icon-iOS-Solid@1x.png`，开发包与 Dock 预览同步；不操作窗口。仅本地。
