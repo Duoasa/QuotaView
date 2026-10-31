@@ -89,7 +89,7 @@ function project(state, threadId) {
     requests.push(...asyncRequests(turn, threadId));
   }
   if (requests.length > 256) throw Error("too_many_desktop_requests");
-  return { authoritative: true, turnId: turn.turnId, status: turn.status, requests, title: state.title, cwd: state.cwd };
+  return { authoritative: true, turnId: turn.turnId, startedAt: turn.turnStartedAtMs, status: turn.status, requests, title: state.title, cwd: state.cwd };
 }
 
 function approval(raw, id, canRespond) {

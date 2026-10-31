@@ -3,6 +3,8 @@ const { EventEmitter } = require("node:events");
 const crypto = require("node:crypto");
 const net = require("node:net");
 const P = require("./codex-desktop-state.cjs");
+const { hash } = require("./codex-rollout.cjs");
+const { terminal } = require("./task-lifecycle.cjs");
 const MAX_FRAME = 72 * 1024 * 1024;
 const MAX_RETAINED = 128 * 1024 * 1024;
 const failure = (code) => Object.assign(new Error(code), { code });
@@ -14,6 +16,8 @@ class CodexDesktop extends EventEmitter {
     super(); this.options = options;
     this.connector = options.connector || net.connectCodexDesktop;
     this.follows = new Map(); this.pending = new Map(); this.handles = new Map();
+    this.settled = new Map();
+    this.latestTasks = new Map();
     this.enabled = false; this.connected = false; this.epoch = 0; this.clientId = "";
     this.status = "disconnected";
   }
@@ -53,7 +57,7 @@ class CodexDesktop extends EventEmitter {
     socket?.destroy(); this.emit("change");
   }
   sync(threadIds) {
-    const desired = new Set(threadIds.slice(0, 24));
+    const desired = new Set([...new Set(threadIds)].slice(0, 24));
     for (const [id, entry] of this.follows) if (!desired.has(id)) {
       if (this.connected && entry.owner) this.broadcast(id, entry.owner, false);
       this.dropHandles(entry); this.rejectRefresh(entry); this.follows.delete(id);
@@ -199,14 +203,41 @@ class CodexDesktop extends EventEmitter {
       return {accepted:true, pendingSettlement:this.handles.has(id)};
     } finally { h.submitting = false; }
   }
-  overlay(task, threadId) {
+  overlay(task, threadId, localTurnId) {
     const entry=this.follows.get(threadId), p=entry?.projection;
-    if (!this.connected || !p?.authoritative) return task;
-    const h=entry.handles[0];
-    const base=task || {id:"codex:"+threadId,sessionId:threadId,provider:"codex",title:p.title||"Codex",cwd:p.cwd,startedAt:Date.now(),updatedAt:Date.now()};
-    const status=p.status === "inProgress" ? (h ? "waiting" : ["working","thinking","compacting"].includes(base.status)?base.status:"working") : p.status === "completed"?"completed":p.status === "failed"?"failed":"interrupted";
-    return {...base,status,turnId:p.turnId,title:p.title||base.title,approval:h?{...P.approval(h.raw,h.id,entry.supportsInput && !h.submitted),submitted:h.submitted}:null,
-      ...(h?{phase:h.raw.method.includes("requestUserInput")?"等待回答":"等待确认"}:{}),desktopConnected:true};
+    const latest = this.latestTasks.get(threadId);
+    if (task && latest && latest.turnId !== task.turnId && Number.isFinite(task.startedAt) &&
+        Number.isFinite(latest.startedAt) && task.startedAt < latest.startedAt) {
+      task = {...latest, status:terminal.has(latest.status) ? latest.status : "unknown", approval:null, live:false, desktopConnected:false};
+      localTurnId = latest.legacyTurnId;
+    }
+    // A delayed Desktop snapshot must not replace a newer rollout turn.
+    const usable = this.connected && p?.authoritative && (!task || !localTurnId || localTurnId === p.turnId ||
+      (Number.isFinite(p.startedAt) && Number.isFinite(task.startedAt) && p.startedAt > task.startedAt));
+    const turnId = usable ? hash(p.turnId) : task?.turnId;
+    const key = JSON.stringify([threadId, turnId]);
+    let result = task;
+    if (usable) {
+      const h=entry.handles[0];
+      const base=task || {id:"codex:"+threadId,sessionId:threadId,provider:"codex",title:p.title||"Codex",cwd:p.cwd,startedAt:null,updatedAt:Date.now()};
+      const status=p.status === "inProgress" ? (h ? "waiting" : ["working","thinking","compacting"].includes(base.status)?base.status:"working") : p.status === "completed"?"completed":p.status === "failed"?"failed":"interrupted";
+      result = {...base,status,turnId,legacyTurnId:p.turnId,startedAt:Number.isFinite(p.startedAt)?p.startedAt:base.startedAt,
+        title:p.title||base.title,approval:h?{...P.approval(h.raw,h.id,entry.supportsInput && !h.submitted),submitted:h.submitted}:null,
+        ...(h?{phase:h.raw.method.includes("requestUserInput")?"等待回答":"等待确认"}:{}),desktopConnected:true};
+    }
+    if (!result || !turnId) return result;
+    const previous = this.settled.get(key);
+    if (terminal.has(result.status) && result.verified !== false && (!previous || usable)) {
+      this.settled.set(key, { status: result.status });
+      if (this.settled.size > 8192) this.settled.delete(this.settled.keys().next().value);
+    }
+    const settled = this.settled.get(key);
+    // Keep display settlement during resync, but never keep approval handles.
+    result = settled ? {...result, status:settled.status, approval:null, live:false, compacting:false,
+      phase:null, tool:null, desktopConnected:!!usable} : result;
+    this.latestTasks.set(threadId, {...result, approval:null});
+    if (this.latestTasks.size > 1024) this.latestTasks.delete(this.latestTasks.keys().next().value);
+    return result;
   }
   getState() { return {connected:this.connected,status:this.status,followed:this.follows.size,owners:[...this.follows.values()].filter(e=>e.owner).length,pending:this.handles.size}; }
 }

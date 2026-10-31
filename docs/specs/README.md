@@ -1,5 +1,11 @@
 # QuotaView SDD 注册表
 
+Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题、控件和状态表达用途，详情折叠、说明按需出现。构建通过，视觉待用户验收；见 [Windows Handoff](../../Windows/HANDOFF.md)，未推送或发布。
+
+## Windows 本地修复：0.8.3-win.11
+
+[终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
+
 ## Windows 首个正式版：0.8.3-win
 
 [Windows 工程与独立更新通道](windows-channel.md) · `Released / User Acceptance Pending`：公开名称 `0.8.3-win · Windows`，包内和更新版本保留 `0.8.3-win.10`。原始 ZIP 已发布并公开回下载验签，首个条目加入独立 Windows appcast；中英文 README 增加上线与功能降级适配说明。macOS Release 仅补充平台名称，原更新通道不变。完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实升级体验待用户验收。

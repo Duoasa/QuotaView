@@ -2,6 +2,14 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## Windows 设置精简 0.8.3-win.12（2026-10-31）
+
+设置页继续移除常驻说明，以明确标题、控件及连接状态表达用途；详情默认折叠，操作相关提示按需出现。前端与原生开发编译通过，独立开发运行入口切至 win.12；继承上一轮 Issue #114 修复。当前运行路径与验收边界见 [Windows Handoff](Windows/HANDOFF.md)。源码尚未推送，公开版本不变。
+
+## Windows 本地修复 0.8.3-win.11（2026-10-31）
+
+[Issue #114](https://github.com/Duoasa/QuotaView/issues/114) 的通知与完成展开按轮次去重，Codex 重复会话、轮次身份和断线终态回退已修复，兼容旧归档；设置页精简重复说明。24 项定向检查与 8 项原生适配检查通过，独立开发运行包已启动。源码尚未提交或推送，正式版与 appcast 不变；具体运行路径、证据及待用户验收范围见 [Windows Handoff](Windows/HANDOFF.md#本地开发版-083-win112026-10-31)。
+
 ## Windows 首个正式版与更新通道（2026-10-23）
 
 按用户要求，完整 Windows 源码自 `Duoasa/quotaview-windows@cfc5490` 迁至 [Windows/](Windows/README.md)，后续开发、发布和问题反馈统一使用本仓库。首个正式版 **QuotaView 0.8.3-win · Windows** 基于 `0.8.3-win.10` 发布；包内版本、ZIP 名称和 tag 保留 `.10`，使用独立签名 appcast。macOS 生产源码、版本、Latest 与 Sparkle feed 保留。
