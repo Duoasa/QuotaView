@@ -34,8 +34,9 @@ final class CodexStatusStore: ObservableObject {
         return CodexResetController(journalURL: journalURL, makeCoordinator: { [weak self] in
             let configuration = self?.preferences?.proxyConfiguration ?? .default
             let client = self?.proxyClientFactory(configuration) ?? CodexAppServerClient(proxyConfiguration: configuration)
-            return CodexRateLimitResetCoordinator(client: client, journalURL: journalURL)
-        }, refresh: { [weak self] in await self?.refresh() })
+            return CodexRateLimitResetCoordinator(client: client, journalURL: journalURL,
+                isConsumptionAllowed: { [weak self] in self?.preferences?.resetCreditUsageDisabled == false })
+        }, refresh: { [weak self] in await self?.refresh() }, preferences: preferences)
     }()
 
     init(

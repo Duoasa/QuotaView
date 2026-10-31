@@ -1,8 +1,12 @@
 # QuotaView App 图标试装
 
+## 设置图标渲染修正：0.8.7 Build 22（2026-11-01）
+
+用户澄清原始 PNG 的高光应保留，需消除设置页中的两条突兀横线。关于页改为优先加载原始 `QuotaViewAppIcon` PNG，避免优先经过仅携带较小表示的 ICNS；尺寸仍为 96 pt。15 项图标资源与已合并 Build 16 逐字节一致，原图 SHA-256 不变。图像试修结果未采用，用户原图未改动；实际显示由用户检查。运行证据 `.build/settings-native-frost-087b22-runtime/`。
+
 ## 当前素材：0.8.7 Build 16（2026-10-31）
 
-采用用户新文件 `QV-icon-iOS-Solid@1x.png`，SHA-256：`17ce2d1a3520204f193e614033413fe77f1300cd970b9ff76d2d3c88398f225a`。全部图标尺寸、开发包与 Dock 预览已更新；保留关于布局，不操作窗口。证据 `.build/app-icon-087b16-runtime/`，仅本地。
+采用用户新文件 `QV-icon-iOS-Solid@1x.png`，SHA-256：`17ce2d1a3520204f193e614033413fe77f1300cd970b9ff76d2d3c88398f225a`。全部图标尺寸、开发包与 Dock 预览已更新；保留关于布局，不操作窗口。证据 `.build/app-icon-087b16-runtime/`。已通过 [PR #122](https://github.com/Duoasa/QuotaView/pull/122) 合入 main `57864ea`，PR/main CI 均通过，239 输入与合并源码一致；未发布。独立 Dock 预览已按用户后续要求清理，当前运行身份见 Handoff。
 
 ## 前序素材：0.8.7 Build 15（2026-10-31）
 

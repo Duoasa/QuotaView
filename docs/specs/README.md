@@ -8,9 +8,27 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.8.7 Build 16
+## 当前开发：0.8.7 Build 23
 
-[最新 App 图标与 Dock 预览](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：Build 16 已按用户要求替换最新 `QV-icon-iOS-Solid@1x.png`，开发包与 Dock 预览同步；不操作窗口。仅本地。
+[系统滚动边缘分层](../design/QUOTAVIEW_UI_RULES.md#系统滚动边缘分层2026-11-01087-build-23) · `Implemented / User Acceptance Pending`：macOS 26+ 改用系统 safeAreaBar 和 soft scroll edge effect，移除当前系统路径的自绘面板。保留设置归类、四色侧栏、原始图标加载、GitHub 入口和重置禁用保护。增量构建及运行核验通过；当前运行 Build 23 / 内部 125。用户已授权本批源码推送/合并，集成状态见 Handoff，视觉继续由用户检查。
+
+## 前序开发：0.8.7 Build 22
+
+[窗口内原生磨砂与留白](../design/QUOTAVIEW_UI_RULES.md#窗口内原生磨砂与留白2026-11-01087-build-22) · `Implemented / User Acceptance Pending`：明确 withinWindow 原生磨砂，预览下方 28 pt、左栏顶部新增 12 pt 留白；关于页改为优先原始 PNG，图标文件未修改。增量编译及运行包核验通过，当前运行 0.8.7 Build 22 / 内部 124，仅本地；实际效果由用户验收。
+
+## 前序开发：0.8.7 Build 21
+
+[重置卡禁用保护](codex-quota-reset.md#禁用重置卡使用2026-11-01087-build-21) · `Implemented / User Acceptance Pending`：用量显示新增保护开关，禁用按钮并撤销旧确认，发送前再次拦截；偏好持久化，验证未使用真实重置卡。
+
+[固定预览与原生滚动分层](../design/QUOTAVIEW_UI_RULES.md#原生滚动位置与宽度对齐修正2026-11-01087-build-21) · `Implemented / User Acceptance Pending`：原生滚动量控制渐显磨砂，同一可用宽度对齐预览与设置；恢复双材质独立选项，通用页接回交互/隐私和屏幕设置，侧栏四色，Agent 接入与关于 GitHub 入口已更新。增量构建、15 项定向检查和 239 输入/运行包核验通过，当前已运行 Build 21 / 内部 123；仅本地，视觉由用户继续检查。
+
+## 前序开发：0.8.7 Build 17
+
+[紧凑选择与底色分组](../design/QUOTAVIEW_UI_RULES.md#紧凑选择与底色分组2026-10-31087-build-17) · `Implemented / User Acceptance Pending`：任务特效/玻璃外观改为同行紧凑选择，灵动岛重组为外观、布局与显示、交互与隐私；设置框使用底色，左栏仅用间距分组。增量编译、3 项定向冒烟及运行包核验通过，开发包已更新；本批仅本地，视觉待用户检查。
+
+## 前序开发：0.8.7 Build 16
+
+[最新 App 图标与 Dock 预览](../design/quotaview-app-icon.md) · `Implemented / User Acceptance Pending`：Build 16 已按用户要求替换最新 `QV-icon-iOS-Solid@1x.png`，源码已由 [PR #122](https://github.com/Duoasa/QuotaView/pull/122) 合入 main `57864ea`，PR/main CI 均通过（各 727 测试、6 跳过、0 失败及 44 契约检查），239 项输入与当时运行的 Build 16 一致。独立 Dock 预览后续已清理；未发布。
 
 [关于页信息补全](../design/QUOTAVIEW_UI_RULES.md#关于页信息补全2026-10-31087-build-12) · `Implemented / User Acceptance Pending`：图标放大 50% 至 96 pt，增加实际包构建日期与版权；0.8.7 Build 12 开发运行包已更新，视觉由用户验收。
 

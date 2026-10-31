@@ -22,6 +22,46 @@ final class Island073SmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsPreviewMaterialBlendsWithinWindow() {
+        let view = NSVisualEffectView()
+        SettingsPinnedPreviewMaterial.configure(view, progress: 0.5)
+        XCTAssertEqual(view.material, .headerView)
+        XCTAssertEqual(view.blendingMode, .withinWindow)
+        XCTAssertEqual(view.state, .active)
+        XCTAssertEqual(view.alphaValue, 0.5)
+        SettingsPinnedPreviewMaterial.configure(view, progress: 0)
+        XCTAssertEqual(view.alphaValue, 0)
+        SettingsPinnedPreviewMaterial.configure(view, progress: 1)
+        XCTAssertEqual(view.alphaValue, 1)
+    }
+
+    @MainActor
+    func testSettingsPreviewTracksNativeScrollViewport() {
+        final class FlippedDocument: NSView { override var isFlipped: Bool { true } }
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 480, height: 300))
+        scroll.hasVerticalScroller = true
+        scroll.scrollerStyle = .legacy
+        let document = FlippedDocument(frame: NSRect(x: 0, y: 0, width: 480, height: 900))
+        let observer = SettingsScrollPositionReader.ObserverView(frame: .zero)
+        document.addSubview(observer)
+        scroll.documentView = document
+        var offset: CGFloat = -1
+        var width: CGFloat = -1
+        observer.onChange = { offset = $0; width = $1 }
+        observer.connect()
+        XCTAssertEqual(offset, 0)
+        XCTAssertEqual(width, scroll.contentView.bounds.width)
+        XCTAssertLessThan(width, scroll.bounds.width, "Pinned content must exclude the legacy scrollbar gutter")
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: 60))
+        observer.report()
+        XCTAssertEqual(offset, 60)
+        observer.disconnect()
+        scroll.contentView.scroll(to: .zero)
+        observer.report()
+        XCTAssertEqual(offset, 60, "Disconnected observers must stop publishing")
+    }
+
+    @MainActor
     func testPersistedUsageAndEffectChoicesReachPrimaryDisplay() throws {
         let suite = "QuotaView.SettingsSmoke.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

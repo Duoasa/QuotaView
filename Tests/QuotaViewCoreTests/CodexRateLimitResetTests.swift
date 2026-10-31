@@ -168,6 +168,55 @@ final class CodexRateLimitResetTests: XCTestCase {
         calls = await fake.calls
         XCTAssertEqual(calls.count, 1)
     }
+    @MainActor
+    func testDisablePreferencePersistsAndInvalidatesExistingConfirmation() async throws {
+        let suite = "QuotaView.ResetProtection.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults)
+        XCTAssertFalse(preferences.resetCreditUsageDisabled)
+        let fake = FakeResetTransport(), url = try journal()
+        var coordinatorCount = 0
+        let controller = CodexResetController(journalURL: url, makeCoordinator: {
+            coordinatorCount += 1
+            return CodexRateLimitResetCoordinator(client: fake, journalURL: url)
+        }, refresh: {}, preferences: preferences)
+        preferences.resetCreditUsageDisabled = true
+        XCTAssertTrue(AppPreferences(defaults: defaults).resetCreditUsageDisabled)
+        await controller.prepare()
+        XCTAssertTrue(controller.usageDisabled)
+        XCTAssertEqual(coordinatorCount, 0)
+        preferences.resetCreditUsageDisabled = false
+        await controller.prepare()
+        guard case .confirming = controller.phase else { return XCTFail("Expected confirmation") }
+        preferences.resetCreditUsageDisabled = true
+        XCTAssertEqual(controller.phase, .idle)
+        await controller.confirm()
+        preferences.resetCreditUsageDisabled = false
+        await controller.confirm() // Re-enabling must not revive the old confirmation.
+        let calls = await fake.calls
+        XCTAssertTrue(calls.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertFalse(AppPreferences(defaults: defaults).resetCreditUsageDisabled)
+    }
+
+    @MainActor
+    func testDisablingDuringPreflightBlocksConsumptionAndJournalWrite() async throws {
+        let fake = FakeResetTransport(), url = try journal()
+        var policyChecks = 0
+        let service = CodexRateLimitResetCoordinator(client: fake, journalURL: url, isConsumptionAllowed: {
+            policyChecks += 1
+            // Enabled at preparation and confirmation; disabled during the account recheck.
+            return policyChecks < 3
+        })
+        let ready = try await service.prepare(now: now)
+        await assertError(.disabledByPreference) { _ = try await service.execute(ready, now: now) }
+        XCTAssertEqual(policyChecks, 3)
+        let calls = await fake.calls
+        XCTAssertTrue(calls.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
+
 }
 
 private actor FakeResetTransport: CodexResetTransport {
