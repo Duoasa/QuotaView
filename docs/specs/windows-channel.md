@@ -1,5 +1,10 @@
 # Windows 工程与独立更新通道
 
+## Windows 0.8.3-win.13 发布准备（2026-10-31）
+
+自动检查更新默认开启，已有明确关闭偏好保留；设置精简与 Issue #114 修复已由 PR #118 合入 main。win.12 仅为未公开候选，本次正式发布使用 win.13。已修复冒烟测试在设置广播后未恢复用量场景的时序依赖。最终发布、签名 appcast 与运行证据将在发布完成后回填；当前公开稳定版仍见版本历史。
+
+
 Spec ID: `QV-WINDOWS-CHANNEL-001` · `Released / User Acceptance Pending`
 
 用户于 2026-10-23 授权补齐 Windows appcast 和下载安装，并将 Windows 完整工程推送至 `Duoasa/QuotaView`，后续统一在本仓库维护。

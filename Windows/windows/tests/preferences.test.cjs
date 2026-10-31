@@ -1,6 +1,11 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { cleanSettings } = require("../src/core/settings.cjs");
+test("update checks default on without overriding a saved opt-out", () => {
+  assert.equal(cleanSettings().autoCheckUpdates, true);
+  assert.equal(cleanSettings({ autoCheckUpdates: false }).autoCheckUpdates, false);
+  assert.equal(cleanSettings({ autoCheckUpdates: true }).autoCheckUpdates, true);
+});
 test("legacy Windows-only preferences cannot hide the island or disable the retained effects", () => {
   const value = cleanSettings({
     effect: "wave",
