@@ -9,9 +9,27 @@
 
 ## 当前最新版本
 
-> macOS 稳定版 **0.8.6 Build 21**（GitHub Latest）；Windows 稳定版 **0.8.3-win**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.8.6 Build 21**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
 
-### Windows 0.8.3-win（首个正式版）
+### Windows 0.8.3-win.13
+
+2026-10-31 发布。包含 Issue #114 终态通知去重、Codex 会话同步与旧归档兼容、设置说明精简；自动检查更新默认开启，已有关闭偏好优先，下载和安装仍需用户操作。win.11 / win.12 仅为本地候选，win.12 未公开草稿已移除。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本 / Tag / 发布提交 | 0.8.3-win.13 / v0.8.3-win.13 / 7c163500afb7a75ce6fe48e54664abe83d038870；源码 PR #118、#120 |
+| Release | [QuotaView 0.8.3-win.13 · Windows](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13)，Stable，非 Draft / Pre-release，不改变 GitHub Latest |
+| 资产 | QuotaView-Windows-0.8.3-win.13-x64.zip，61035198 bytes |
+| SHA-256 | e183694f924ad8562ba6f819ee0a7733ea06e88d58c9c2c2fff702dc6c79faaf |
+| 架构 / 签名 | Windows x64，.NET 10 自包含，系统 WebView2；既有 RSA-3072 / PSS / SHA-256 更新签名，非 Authenticode |
+| 验证 | 55 项业务回归、30 项更新校验、原生/界面/审批及最终包冒烟通过；公开回下载哈希一致，内置公钥验签及 324 文件解压通过 |
+| 发布提交 CI | [Windows WebView2 validation 41197425290](https://github.com/Duoasa/QuotaView/actions/runs/41197425290)、[CI 41197425342](https://github.com/Duoasa/QuotaView/actions/runs/41197425342)；均成功 |
+| Windows appcast | Windows/updates/appcast.xml；序列 win.13 / win.10；SHA-256 39f1a18effdf1ce9440ea243d1ced0aafb179548a659de06482f10ac0fa0cf48 |
+| 回滚 | [v0.8.3-win.10](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.10) / 7f369597945dd8d279486f7a5a444812aae7d0f2；资产、签名及完整事实保留在下节，旧 ZIP 再次回下载校验通过 |
+
+使用既有公钥（SHA-256 714f77d76203e0b0bab96a7ecba279b77e8a5d0549bbafd53aeeac2e0da64a33）。README 中英文仅更新 Windows 下载与 Release 链接；macOS 更新通道、资产和 Latest 保持原状。Issue #114 反馈者现场、视觉与真实升级体验仍待用户验收。发布证据在本地忽略目录 Windows/webview2/build/release-win12/（包含最终 win.13 文件）。
+
+### Windows 0.8.3-win（首个正式版 / Windows 回滚基线）
 
 2026-10-23 发布；基于原 `0.8.3-win.10`，只调整公开名称，不重打包或重写版本身份。
 
