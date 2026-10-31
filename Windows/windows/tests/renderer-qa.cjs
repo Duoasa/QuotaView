@@ -300,6 +300,9 @@ module.exports = async function verifyUI({
     if (win.qvMaterial !== "none")
       throw Error("Native backdrop is still enabled");
 
+  // The settings bridge check above broadcasts the backend's collapsed state.
+  // Restore the fixture after that asynchronous broadcast, before usage checks.
+  await inject(island, { ...fixture, ui: { expanded: true, pinned: true } });
   const usage = await run(
     island,
     `
