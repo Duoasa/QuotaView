@@ -387,6 +387,7 @@ public struct ProviderSnapshot: Equatable, Sendable {
     public let models: [UsageEntity]
     public let agents: [UsageEntity]
     public let serviceHealth: ServiceHealth
+    public let resetCreditExpirations: [Date]
 
     public init(
         schemaVersion: Int,
@@ -400,7 +401,8 @@ public struct ProviderSnapshot: Equatable, Sendable {
         currentMetrics: [MetricSample],
         models: [UsageEntity],
         agents: [UsageEntity],
-        serviceHealth: ServiceHealth
+        serviceHealth: ServiceHealth,
+        resetCreditExpirations: [Date] = []
     ) {
         self.schemaVersion = schemaVersion
         self.providerID = providerID
@@ -414,6 +416,7 @@ public struct ProviderSnapshot: Equatable, Sendable {
         self.models = models
         self.agents = agents
         self.serviceHealth = serviceHealth
+        self.resetCreditExpirations = resetCreditExpirations
     }
 }
 

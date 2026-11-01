@@ -26,6 +26,13 @@ struct IslandResetPageData {
     }
     var creditsAfterOne: Int? { credits.map { max(0, $0 - 1) } }
     var canRequestReset: Bool { creditAvailability == .available && remainingPercent != nil }
+    func expiringCredits(at now: Date) -> [Date] {
+        guard creditAvailability == .available else { return [] }
+        let deadline = now.addingTimeInterval(7 * 24 * 60 * 60)
+        return (snapshot?.resetCreditExpirations ?? [])
+            .filter { $0 > now && $0 <= deadline }
+            .sorted()
+    }
     func actionTitle(copy: AppCopy) -> String {
         switch creditAvailability {
         case .empty: return copy.text("暂无可用重置卡", "No reset credits available")
@@ -67,6 +74,7 @@ struct IslandResetPage: View {
     private let contentInset: CGFloat = 14
 
     var body: some View {
+        let expiringCredits = data.expiringCredits(at: Date())
         IslandPageLayout(maximumHeight: maximumHeight, onHeightChange: onHeightChange) {
             VStack(spacing: 10) {
             VStack(spacing: 16) {
@@ -83,22 +91,35 @@ struct IslandResetPage: View {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
                     }.font(AstaSans.semiBold(15)).tracking(-0.15)
-                    if !isClaude, data.creditAvailability == .available {
-                        HStack(spacing: 6) {
-                            Text((data.credits ?? 0) > 1
-                                ? copy.text("最近到期", "Next expiry")
-                                : copy.text("到期日", "Expires on"))
-                            Text(data.snapshot?.resetCreditExpiresAt.map {
-                                $0.formatted(.dateTime.year().month().day().hour().minute()
-                                    .locale(Locale(identifier: copy.language.localeIdentifier)))
-                            } ?? copy.text("未提供", "Not provided"))
-                        }
-                        .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityElement(children: .combine)
-                    }
                 }.padding(.top, 12).frame(maxWidth: .infinity)
+
+                if !isClaude, !expiringCredits.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(Array(expiringCredits.enumerated()), id: \.offset) { index, expiry in
+                            if index > 0 { Divider().overlay(Color.white.opacity(0.10)) }
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(copy.text("即将到期", "Expiring soon"))
+                                    .font(AstaSans.semiBold(11))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
+                                let date = expiry.formatted(.dateTime.month(.twoDigits).day(.twoDigits).hour().minute()
+                                    .locale(Locale(identifier: copy.language.localeIdentifier)))
+                                let fullDate = expiry.formatted(.dateTime.year().month().day().hour().minute().timeZone()
+                                    .locale(Locale(identifier: copy.language.localeIdentifier)))
+                                Text(date)
+                                    .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                                    .monospacedDigit().fixedSize()
+                                    .help(copy.text("将于 \(fullDate) 到期", "Expires on \(fullDate)"))
+                                    .accessibilityLabel(copy.text("将于 \(fullDate) 到期", "Expires on \(fullDate)"))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    .padding(contentInset)
+                    .islandGlass(RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        tint: Color(white: 0.075).opacity(0.75), solidTint: Color(white: 0.075))
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {

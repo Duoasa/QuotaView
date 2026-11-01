@@ -100,9 +100,31 @@ final class CodexRateLimitResetTests: XCTestCase {
         let presentation = try XCTUnwrap(CurrentCodexPresentationProjector().makePresentation(from: result))
         let page = IslandResetPageData(snapshot: presentation)
         XCTAssertEqual(page.creditAvailability, .available)
-        XCTAssertEqual(page.snapshot?.resetCreditExpiresAt, now.addingTimeInterval(60))
+        XCTAssertEqual(page.expiringCredits(at: now), [now.addingTimeInterval(60), now.addingTimeInterval(86_400)])
         let calls = await fake.calls
         XCTAssertTrue(calls.isEmpty, "Displaying an expiry must never consume a credit")
+    }
+
+    func testExpiryListUsesRollingSevenDayWindowAndKeepsSeparateCards() async throws {
+        let fake = FakeResetTransport()
+        let timestamp = Int(now.timeIntervalSince1970)
+        let week = 7 * 24 * 60 * 60
+        await fake.configureCredits([
+            .init(id: "outside", expiresAt: timestamp + week + 1),
+            .init(id: "edge", expiresAt: timestamp + week),
+            .init(id: "same-date-A", expiresAt: timestamp + 60),
+            .init(id: "same-date-B", expiresAt: timestamp + 60),
+            .init(id: "unknown", expiresAt: nil),
+        ])
+        let result = try CodexProviderAdapter.makeResult(payload: .init(
+            rateLimits: try await fake.readResetLimits(), usage: nil, capturedAt: now, optionalIssues: []))
+        let presentation = try XCTUnwrap(CurrentCodexPresentationProjector().makePresentation(from: result))
+        let page = IslandResetPageData(snapshot: presentation)
+        XCTAssertEqual(page.expiringCredits(at: now), [60, 60, week].map { now.addingTimeInterval(Double($0)) })
+        XCTAssertEqual(page.expiringCredits(at: now.addingTimeInterval(60)),
+                       [week, week + 1].map { now.addingTimeInterval(Double($0)) })
+        XCTAssertTrue(page.expiringCredits(at: now.addingTimeInterval(Double(week + 1))).isEmpty)
+        XCTAssertTrue(IslandResetPageData(snapshot: nil).expiringCredits(at: now).isEmpty)
     }
 
     func testResetExpiryRemainsUnknownWithoutAvailableDatedDetails() async throws {
@@ -118,7 +140,7 @@ final class CodexRateLimitResetTests: XCTestCase {
             let result = try CodexProviderAdapter.makeResult(payload: .init(
                 rateLimits: try await fake.readResetLimits(), usage: nil, capturedAt: now, optionalIssues: []))
             let presentation = try XCTUnwrap(CurrentCodexPresentationProjector().makePresentation(from: result))
-            XCTAssertNil(presentation.resetCreditExpiresAt)
+            XCTAssertTrue(presentation.resetCreditExpirations.isEmpty)
         }
         for (count, details) in [(2, false), (0, true)] {
             await fake.configureCredits([.init(id: "dated", expiresAt: timestamp + 60)])
@@ -126,7 +148,7 @@ final class CodexRateLimitResetTests: XCTestCase {
             let result = try CodexProviderAdapter.makeResult(payload: .init(
                 rateLimits: try await fake.readResetLimits(), usage: nil, capturedAt: now, optionalIssues: []))
             let presentation = try XCTUnwrap(CurrentCodexPresentationProjector().makePresentation(from: result))
-            XCTAssertNil(presentation.resetCreditExpiresAt)
+            XCTAssertTrue(presentation.resetCreditExpirations.isEmpty)
         }
     }
 
