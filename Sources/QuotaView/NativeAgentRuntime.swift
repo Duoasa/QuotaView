@@ -3,7 +3,7 @@ import Combine
 import Foundation
 import QuotaViewCore
 
-/// Independent local ingress for DSH and Kimi Code. No polling, account credentials, or transcript reads.
+/// Independent local ingress for observation-only agents. No polling, account credentials, or transcript reads.
 @MainActor
 final class NativeAgentRuntime: ObservableObject {
     enum Status: Equatable { case disabled, configuring, waiting, connected, failed }
@@ -40,7 +40,7 @@ final class NativeAgentRuntime: ObservableObject {
     }
     private var sessions: [String: Session] = [:]
 
-    init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults) {
+    init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil) {
         self.provider = provider; self.preferences = preferences; self.island = island; self.defaults = defaults
         additionalHomes = (provider == .dsh ? defaults.stringArray(forKey: "integrations.dsh.additionalHomes") ?? [] : []).prefix(32)
             .filter { $0.hasPrefix("/") }.map { URL(fileURLWithPath: $0) }
@@ -49,11 +49,21 @@ final class NativeAgentRuntime: ObservableObject {
         defaults.set(token, forKey: key)
         let channel = String(CodexActivityPrivacy.hashIdentifier(ClaudeCodeChannel.identifier).prefix(12))
         let socket = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("qv-\(channel)-\(provider.rawValue)/events.sock")
-        installer = NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
+        installer = suppliedInstaller ?? NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
         defaultDSHNamespace = CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path)
-        bridge = ClaudeCodeBridge(socketURL: socket, authenticationToken: token)
+        bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
     }
-    var enabled: Bool { provider == .dsh ? preferences.dshEnabled : preferences.kimiCodeEnabled }
+    var enabled: Bool {
+        switch provider {
+        case .dsh: preferences.dshEnabled
+        case .kimiCode: preferences.kimiCodeEnabled
+        case .cursor: preferences.cursorEnabled
+        case .geminiCLI: preferences.geminiCLIEnabled
+        case .openCode: preferences.openCodeEnabled
+        case .copilotCLI: preferences.copilotCLIEnabled
+        case .codex, .claudeCode: false
+        }
+    }
     func start() {
         guard !running else { return }; running = true
         observation = preferences.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in
@@ -235,7 +245,7 @@ final class NativeAgentRuntime: ObservableObject {
             if session.parent != nil { island.model.receiveSubagentActivity(activity) }
             else { island.model.receiveLegacy(activity) }
             publishMetadata(key)
-            if name == "PreToolUse", let tool,
+            if name == "PreToolUse", let tool, (!provider.usesExternalHooks || call != nil),
                let data = try? JSONSerialization.data(withJSONObject: ["type": "tool", "id": call ?? UUID().uuidString, "name": tool, "text": ""]) {
                 let content = CodexLocalPublicContent(publicSessionHash: key, turnHash: turn, data: data, occurredAt: Date())
                 island.model.receiveLocalContent(content)

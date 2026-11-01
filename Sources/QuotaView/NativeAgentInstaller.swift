@@ -12,19 +12,34 @@ struct NativeAgentInstaller: Sendable {
     let support: URL
     let bundledHelper: URL
 
-    init(provider: IslandAgentProvider, socketURL: URL, authenticationToken: String) {
+    init(provider: IslandAgentProvider, socketURL: URL, authenticationToken: String, homeOverride: URL? = nil, supportOverride: URL? = nil, helperOverride: URL? = nil) {
         self.provider = provider; self.socketURL = socketURL; self.authenticationToken = authenticationToken
         let environment = ProcessInfo.processInfo.environment
         let userHome = FileManager.default.homeDirectoryForCurrentUser
-        let key = provider == .dsh ? "DSH_HOME" : "KIMI_CODE_HOME"
-        home = environment[key].flatMap {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil
-                : URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath).resolvingSymlinksInPath()
+        let location: (key: String, folder: String)
+        switch provider {
+        case .dsh: location = ("DSH_HOME", ".dsh")
+        case .kimiCode: location = ("KIMI_CODE_HOME", ".kimi-code")
+        case .cursor: location = ("CURSOR_CONFIG_DIR", ".cursor")
+        case .geminiCLI: location = ("GEMINI_CLI_HOME", ".gemini")
+        case .openCode: location = ("OPENCODE_CONFIG_DIR", ".config/opencode")
+        case .copilotCLI: location = ("COPILOT_HOME", ".copilot")
+        default: location = ("", "")
         }
-            ?? userHome.appendingPathComponent(provider == .dsh ? ".dsh" : ".kimi-code")
-        support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        var defaultHome = userHome.appendingPathComponent(location.folder)
+        if provider == .openCode, let xdg = environment["XDG_CONFIG_HOME"], xdg.hasPrefix("/") {
+            defaultHome = URL(fileURLWithPath: xdg).appendingPathComponent("opencode")
+        }
+        // GEMINI_CLI_HOME overrides the user home, not the .gemini directory.
+        let custom = environment[location.key].flatMap { value -> URL? in
+            guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let url = URL(fileURLWithPath: (value as NSString).expandingTildeInPath)
+            return provider == .geminiCLI ? url.appendingPathComponent(".gemini") : url
+        }
+        home = (homeOverride ?? custom ?? defaultHome).resolvingSymlinksInPath()
+        support = supportOverride ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("QuotaView/Channels/" + ClaudeCodeChannel.identifier + "/" + provider.rawValue)
-        bundledHelper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/QuotaViewActivityHook")
+        bundledHelper = helperOverride ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/QuotaViewActivityHook")
     }
 
     var route: URL { support.appendingPathComponent("route.json") }
@@ -46,6 +61,7 @@ struct NativeAgentInstaller: Sendable {
         guard lock >= 0 else { throw Failure.invalidConfiguration }
         defer { flock(lock, LOCK_UN); Darwin.close(lock) }
         guard flock(lock, LOCK_EX) == 0 else { throw Failure.invalidConfiguration }
+        if provider.usesExternalHooks { return try configureExternal(enabled: enabled) }
         let discovered = configurationFiles(additionalHomes: additionalHomes)
         let ledger = support.appendingPathComponent("installed-profiles.json")
         let recorded: [String]
@@ -205,17 +221,17 @@ struct NativeAgentInstaller: Sendable {
         if result.contains(end) { throw Failure.invalidConfiguration }
         return result
     }
-    private func read(_ path: URL) throws -> Data? {
+    func read(_ path: URL) throws -> Data? {
         guard FileManager.default.fileExists(atPath: path.path) else { return nil }
         let size = try path.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         guard size <= 4_194_304 else { throw Failure.invalidConfiguration }
         return try Data(contentsOf: path)
     }
-    private func privateWrite(_ data: Data, to url: URL, mode: mode_t = 0o600) throws {
+    func privateWrite(_ data: Data, to url: URL, mode: mode_t = 0o600) throws {
         try data.write(to: url, options: .atomic); chmod(url.path, mode)
     }
-    private func quote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
-    private func jsonString(_ text: String) -> String {
+    func quote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+    func jsonString(_ text: String) -> String {
         String(data: try! JSONEncoder().encode(text), encoding: .utf8)!
     }
 }

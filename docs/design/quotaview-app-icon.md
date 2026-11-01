@@ -1,5 +1,11 @@
 # QuotaView App 图标试装
 
+## 公告直接读取 PNG：0.9.1 Build 2（2026-11-01）
+
+用户反馈公告图标毛边，要求直接使用 PNG。新增 `Sources/QuotaView/Resources/QuotaViewAppIcon.png`，与当前原始 PNG 逐字节一致，SHA-256 仍为 `17ce2d1a3520204f193e614033413fe77f1300cd970b9ff76d2d3c88398f225a`；Xcode 与 SwiftPM 将其作为独立资源原样复制。公告从包内 URL 直接解码 PNG，不经资产目录/ICNS 的表示选择，使用原色、高质量插值和现有 64 pt 尺寸，移除额外阴影；不修改原图像素、高光、其他入口或窗口尺寸。
+
+0.9.1 Build 2 / 内部 135 已增量构建并更新运行。3 项公告策略冒烟、运行包 PNG 原图一致性及 AppKit 解码 1024×1024/透明通道检查通过；254 个生产输入、资源和实际加载路径核验通过。证据 `.build/announcement-png-091b2-runtime/`。实际视觉由用户验收，未执行 UI 自动检查。以后更新原始图标时需同步此独立 PNG。
+
 ## 设置图标渲染修正：0.8.7 Build 22（2026-11-01）
 
 用户澄清原始 PNG 的高光应保留，需消除设置页中的两条突兀横线。关于页改为优先加载原始 `QuotaViewAppIcon` PNG，避免优先经过仅携带较小表示的 ICNS；尺寸仍为 96 pt。15 项图标资源与已合并 Build 16 逐字节一致，原图 SHA-256 不变。图像试修结果未采用，用户原图未改动；实际显示由用户检查。运行证据 `.build/settings-native-frost-087b22-runtime/`。

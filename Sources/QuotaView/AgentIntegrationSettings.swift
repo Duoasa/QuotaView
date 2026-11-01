@@ -6,6 +6,10 @@ struct AgentIntegrationSettings<Details: View>: View {
     @ObservedObject var claude: ClaudeCodeRuntime
     @ObservedObject var dsh: NativeAgentRuntime
     @ObservedObject var kimi: NativeAgentRuntime
+    @ObservedObject var cursor: NativeAgentRuntime
+    @ObservedObject var geminiCLI: NativeAgentRuntime
+    @ObservedObject var openCode: NativeAgentRuntime
+    @ObservedObject var copilotCLI: NativeAgentRuntime
     @State private var expanded: IslandAgentProvider?
     let codexDetails: () -> Details
     private var copy: AppCopy { preferences.copy }
@@ -13,6 +17,7 @@ struct AgentIntegrationSettings<Details: View>: View {
     init(preferences: AppPreferences, runtime: CodexActivityRuntime, @ViewBuilder codexDetails: @escaping () -> Details) {
         self.preferences = preferences; codex = runtime; claude = runtime.claudeCode
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
+        cursor = runtime.cursor; geminiCLI = runtime.geminiCLI; openCode = runtime.openCode; copilotCLI = runtime.copilotCLI
     }
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
@@ -20,6 +25,10 @@ struct AgentIntegrationSettings<Details: View>: View {
             providerGroup(.claudeCode, isOn: $preferences.claudeCodeEnabled)
             providerGroup(.dsh, isOn: $preferences.dshEnabled)
             providerGroup(.kimiCode, isOn: $preferences.kimiCodeEnabled)
+            providerGroup(.cursor, isOn: $preferences.cursorEnabled)
+            providerGroup(.geminiCLI, isOn: $preferences.geminiCLIEnabled)
+            providerGroup(.openCode, isOn: $preferences.openCodeEnabled)
+            providerGroup(.copilotCLI, isOn: $preferences.copilotCLIEnabled)
         }
     }
     private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
@@ -32,6 +41,10 @@ struct AgentIntegrationSettings<Details: View>: View {
                     case .claudeCode: ClaudeCodeConnectionSettings(runtime: claude, preferences: preferences)
                     case .dsh: nativeDetails(dsh)
                     case .kimiCode: nativeDetails(kimi)
+                    case .cursor: nativeDetails(cursor)
+                    case .geminiCLI: nativeDetails(geminiCLI)
+                    case .openCode: nativeDetails(openCode)
+                    case .copilotCLI: nativeDetails(copilotCLI)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -67,8 +80,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         let waiting = (copy.text("等待会话", "Waiting"), "clock", Color(nsColor: .secondaryLabelColor))
         let configuring = (copy.text("配置中", "Configuring"), "arrow.triangle.2.circlepath", Color(nsColor: .systemOrange))
         let failed = (copy.text("需要处理", "Needs attention"), "exclamationmark.circle.fill", Color(nsColor: .systemOrange))
-        if provider == .dsh || provider == .kimiCode {
-            let runtime = provider == .dsh ? dsh : kimi
+        if let runtime = nativeRuntime(provider) {
             if runtime.status == .failed { return failed }
             if runtime.status == .configuring { return configuring }
         }
@@ -84,10 +96,20 @@ struct AgentIntegrationSettings<Details: View>: View {
         case .claudeCode:
             switch claude.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
-        case .dsh, .kimiCode:
-            let runtime = provider == .dsh ? dsh : kimi
+        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI:
+            let runtime = nativeRuntime(provider)!
             switch runtime.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
+        }
+    }
+    private func nativeRuntime(_ provider: IslandAgentProvider) -> NativeAgentRuntime? {
+        switch provider {
+        case .dsh: dsh; case .kimiCode: kimi
+        case .cursor: cursor
+        case .geminiCLI: geminiCLI
+        case .openCode: openCode
+        case .copilotCLI: copilotCLI
+        case .codex, .claudeCode: nil
         }
     }
     private func failureMessage(_ failure: NativeAgentInstaller.Failure?) -> String {
@@ -130,11 +152,8 @@ struct AgentIntegrationSettings<Details: View>: View {
                 }
             }
             NativeSettingsDivider()
-            NativeSettingsNote(text: runtime.provider == .dsh
-                ? copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",
-                            "Restart the client after enabling. Confirm permissions in the original client.")
-                : copy.text("启动或重启 Kimi Code 会话以连接；权限请求仍在 Kimi Code 确认。",
-                            "Start or restart a Kimi Code session to connect. Confirm permissions in Kimi Code."))
+            NativeSettingsNote(text: copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",
+                            "Restart the client after enabling. Confirm permissions in the original client."))
             if runtime.status == .failed {
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("连接未完成", "Setup incomplete"),

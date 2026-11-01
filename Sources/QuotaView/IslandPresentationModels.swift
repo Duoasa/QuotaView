@@ -159,9 +159,11 @@ struct CodexPublicTraceItem: Equatable {
     var messagePhase: String? = nil
 }
 enum IslandAgentProvider: String, Equatable, Sendable {
-    case codex, claudeCode, dsh, kimiCode
+    case codex, claudeCode, dsh, kimiCode, cursor, geminiCLI, openCode, copilotCLI
+    var isObserverOnly: Bool { self != .codex && self != .claudeCode }
+    var usesExternalHooks: Bool { [.cursor, .geminiCLI, .openCode, .copilotCLI].contains(self) }
     var displayName: String {
-        switch self { case .codex: "Codex"; case .claudeCode: "Claude Code"; case .dsh: "DSH"; case .kimiCode: "Kimi Code" }
+        switch self { case .codex: "Codex"; case .claudeCode: "Claude Code"; case .dsh: "DSH"; case .kimiCode: "Kimi Code"; case .cursor: "Cursor"; case .geminiCLI: "Gemini CLI"; case .openCode: "OpenCode"; case .copilotCLI: "GitHub Copilot CLI" }
     }
 }
 enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }

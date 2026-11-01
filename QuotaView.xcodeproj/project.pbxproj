@@ -100,6 +100,7 @@
 		B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000A /* IslandTaskScrolling.swift */; };
 		B0730000000000000000000B /* CodexLocalPublicContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000B /* CodexLocalPublicContent.swift */; };
 		B0730000000000000000000C /* CodexProviderIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F0730000000000000000000C /* CodexProviderIcon.png */; };
+		B09102000000000000000001 /* QuotaViewAppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = F09102000000000000000001 /* QuotaViewAppIcon.png */; };
 		B07400000000000000000001 /* CodexAgentAvatars in Resources */ = {isa = PBXBuildFile; fileRef = F07400000000000000000001 /* CodexAgentAvatars */; };
 		B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */; };
 		B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F07700000000000000000010 /* SettingsIslandPreview.xcassets */; };
@@ -114,6 +115,10 @@
 		8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */; };
 		10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */; };
 		097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */; };
+		B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */; };
+		1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */; };
+		5C56C929A6ED683B94977A0D /* NativeAgentHookNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */; };
+		B08730000000000000000001 /* ProviderIconNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = F08730000000000000000001 /* ProviderIconNotices.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -280,6 +285,7 @@
 		F0730000000000000000000A /* IslandTaskScrolling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskScrolling.swift; sourceTree = "<group>"; };
 		F0730000000000000000000B /* CodexLocalPublicContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLocalPublicContent.swift; sourceTree = "<group>"; };
 		F0730000000000000000000C /* CodexProviderIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/CodexProviderIcon.png; sourceTree = "<group>"; };
+		F09102000000000000000001 /* QuotaViewAppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/QuotaViewAppIcon.png; sourceTree = "<group>"; };
 		F07400000000000000000001 /* CodexAgentAvatars */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/CodexAgentAvatars; sourceTree = "<group>"; };
 		F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Resources/QuotaViewFeedbackQQ.jpg; sourceTree = "<group>"; };
 		F07700000000000000000010 /* SettingsIslandPreview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/SettingsIslandPreview.xcassets; sourceTree = "<group>"; };
@@ -294,6 +300,10 @@
 		545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentDSHPlugin.swift; sourceTree = "<group>"; };
 		CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentRuntime.swift; sourceTree = "<group>"; };
 		53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIntegrationSettings.swift; sourceTree = "<group>"; };
+		439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentExternalInstaller.swift; sourceTree = "<group>"; };
+		25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentOpenCodePlugin.swift; sourceTree = "<group>"; };
+		477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentHookNormalizer.swift; sourceTree = "<group>"; };
+		F08730000000000000000001 /* ProviderIconNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/ProviderIconNotices.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -367,10 +377,12 @@
 			isa = PBXGroup;
 			children = (
 				F0730000000000000000000C /* CodexProviderIcon.png */,
+				F09102000000000000000001 /* QuotaViewAppIcon.png */,
 				F07400000000000000000001 /* CodexAgentAvatars */,
 				F07500000000000000000001 /* QuotaViewFeedbackQQ.jpg */,
 				F07700000000000000000010 /* SettingsIslandPreview.xcassets */,
 				F07700000000000000000011 /* ProviderIcons.xcassets */,
+				F08730000000000000000001 /* ProviderIconNotices.txt */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07500000000000000000031 /* IslandMarkdownResult.swift */,
@@ -380,7 +392,9 @@
 				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
 				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
 				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
+				25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */,
 				EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */,
+				439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */,
 				567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */,
 				246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */,
 				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
@@ -491,6 +505,7 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000034 /* PlanProgressParser.swift */,
+				477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */,
 			);
 			path = QuotaViewActivityHookSupport;
 			sourceTree = "<group>";
@@ -723,11 +738,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0730000000000000000000C /* CodexProviderIcon.png in Resources */,
+				B09102000000000000000001 /* QuotaViewAppIcon.png in Resources */,
 				B07400000000000000000001 /* CodexAgentAvatars in Resources */,
 				B07500000000000000000001 /* QuotaViewFeedbackQQ.jpg in Resources */,
 				B07700000000000000000010 /* SettingsIslandPreview.xcassets in Resources */,
 				B08725000000000000000002 /* AppTranslations.json in Resources */,
 				B07700000000000000000011 /* ProviderIcons.xcassets in Resources */,
+				B08730000000000000000001 /* ProviderIconNotices.txt in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,
@@ -782,7 +799,9 @@
 				097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */,
 				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
 				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
+				1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */,
 				A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */,
+				B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */,
 				7DDA0E9B06AA13280259185D /* ClaudeCodeApproval.swift in Sources */,
 				523231D07E2001C0EC71AA1C /* ClaudeCodeInstaller.swift in Sources */,
 				7BAC727FCD13404E2C8C907B /* ClaudeCodeBridge.swift in Sources */,
@@ -889,6 +908,7 @@
 				C1A0DE000000000000000002 /* ClaudeCodeHookMode.swift in Sources */,
 				B10000000000000000000029 /* main.swift in Sources */,
 				B10000000000000000000030 /* PlanProgressParser.swift in Sources */,
+				5C56C929A6ED683B94977A0D /* NativeAgentHookNormalizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -8,7 +8,7 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 
 随后要求兼容基于 DSH 的定制客户端（例如本机 Scoder、DeepViewer），只做兼容，统一显示 DSH。多目录修订随后按用户“启动”要求进入 14:26 开发运行包。
 
-连接页以四行列表呈现 Codex、Claude Code、DSH、Kimi Code，统一名称、圆角矩形真实品牌图标、连接状态与开关；展开箭头位于固定宽度最左列，状态固定列宽，名称可展开该来源的实际设置。图标来源与尺寸见[来源图标记录](../design/quotaview-provider-icons.md#agent-连接列表2026-10-09)。移除连接页独立预览；套餐、额度、Tokens、成本统计仍属于用量页。继续现有 QuotaView 中性开关与中英文文案。
+连接页以八行列表呈现 Codex、Claude Code、DSH、Kimi Code、Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI，统一名称、圆角矩形真实品牌图标、连接状态与开关；展开箭头位于固定宽度最左列，状态固定列宽，名称可展开该来源的实际设置。图标来源与尺寸见[来源图标记录](../design/quotaview-provider-icons.md#agent-连接列表2026-10-09)。移除连接页独立预览；套餐、额度、Tokens、成本统计仍属于用量页。继续现有 QuotaView 中性开关与中英文文案。
 
 ## 参考与适配
 
@@ -63,3 +63,48 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 ## 0.7.9 发布前回归
 
 DSH 插件显式消费确认回执，避免连续事件逐条等待 750 ms 连接超时；新增两客户端命名空间、24 事件生命周期/隐私和停播夹具。正式包 Helper 的 11 个 Kimi 事件、只读权限提醒与不安全 route 拒绝已在隔离目录核对。真实客户端交互仍待用户验收；发布结果见[0.7.9 发布规格](release-0.7.9.md)。
+
+
+## 四来源扩展（2026-11-01，0.8.7 Build 30）
+
+用户在四个建议来源后要求「接入，使用官方 icon」，授权本地实现与开发运行更新。
+复用既有 Provider 独立生命周期、配置串行化、迟到结果隔离、私有本地 socket，
+沿用已接受的 CodexBar 参考边界；不迁入套餐抓取、OAuth 或新的界面框架。
+
+| 来源 | 官方接口与配置 | 本次支持 |
+|---|---|---|
+| Cursor | [Hooks](https://cursor.com/docs/hooks)，`~/.cursor/hooks.json` | 提交、工具结果、压缩、完成/失败/中断及模型。跳过会改变权限处理的 preToolUse，不把工具拒绝当成正在等待审批；不宣称权限提醒支持 |
+| Gemini CLI | [Hooks reference](https://geminicli.com/docs/hooks/reference/)，`~/.gemini/settings.json` | 提交、工具、模型、ToolPermission 提醒、压缩与 AfterAgent 完成 |
+| OpenCode | [Plugins](https://opencode.ai/docs/plugins/)，全局 `~/.config/opencode/plugins/quotaview-<channel>-openCode.js` | 依据当前稳定版 v1.19.5 的插件 API，工作/空闲、工具、权限、模型/标题、完成/失败/中断；明确 parentID 的子会话隔离，失败后的 idle 不覆盖失败 |
+| GitHub Copilot CLI | [Hooks reference](https://docs.github.com/en/copilot/reference/hooks-reference)，`~/.copilot/hooks/quotaview-<channel>-copilotCLI.json` | 提交、工具、实际 permission_prompt 提醒、压缩、agentStop 完成与不可恢复错误；忽略子 Agent 的完成通知 |
+
+- 新来源默认关闭，启用后在设置中安装该渠道的 Hook/插件。有效事件才进入「已连接」，没有真实在线心跳含义。启用后重启对应客户端。
+- 配置采用精确命令归属识别和原子写入，保留其他 hooks 和设置，重复启用不重复注册；解析失败、外国内容占据独立文件或编辑冲突时停止写入并提示重试。备份存于 QuotaView 私有支持目录，避免被插件扫描器载入。
+- 停用撤下该来源卡片、停止 listener 并删除本渠道配置；保留辅助程序和路由供缓存旧 Hook 的会话无害退出。不同来源同名 session 不合并。
+- 三个命令 Hook 仅保留会话/轮次、模型、工具名与必要的 ID；不传提示词、工具参数/结果、会话文件、工作目录或账户凭据。OpenCode 插件沿用同样约束，最多 512 会话与 256 待发事件。
+- 新来源均只观察，权限确认仍在原客户端；没有返回 allow/deny。Gemini/Copilot 权限通知未提供请求 ID，无法可靠匹配并行工具结果，因此不借其他工具的完成猜测已批准；提醒可手动隐藏，轮次终止会清除。Cursor 的 beforeSubmitPrompt 仅返回 continue，不改变工具权限策略。
+- 不添加缺失的额度、Token、进度百分比或助手回答。Gemini/Copilot 未提供轮次 ID 时沿用会话内的开始/终止事件，不能宣称跨进程乱序终态有完整原生轮次保护。项目/组织配置可覆盖全局 Hook，云端或远程主机任务不属于本地 listener 支持范围。OpenCode 2.x 预览 API 不在本次兼容承诺内。
+- 图标采用官方文件原始路径与颜色、离线打包，来源及哈希见[品牌资源](../design/quotaview-provider-icons.md#四来源官方图标2026-11-01087-build-30)。保持现有 22 pt 圆角图标、状态列和开关布局。
+
+4 项隔离冒烟通过，覆盖各来源启用/停用/保留外部配置、非法配置保护、事件过滤、OpenCode 实际 socket 队列及子任务/失败隔离。既有 DSH 插件冒烟通过；实际运行包辅助程序 4 路 IPC 与失效路由中性输出检查通过。2026-11-01T14:35:29.154127+08:00 已更新运行 Build 30 / 内部 132，PID 67850，253 输入、18 资源与实际加载路径核对一致；证据 `.build/agent-expansion-087b30-complete-runtime/`、`.build/agent-expansion-087b30/`。未运行真实 Agent/账户任务，不将这些夹具等同四个客户端端到端验证。真实任务与视觉由用户验收，本次未推送或发布。
+
+
+## 可用链路验证与结束事件（2026-11-01，0.8.7 Build 31）
+
+- 新要求：从配置安装直到真实任务卡模型的事件链路必须可用，隔离解析/转换测试不能替代官方客户端验证。
+- OpenCode 1.19.5 官方二进制在隔离目录实测：原插件已接收 idle，但客户端立即退出截断异步 socket 队列，造成任务停在 thinking。终态改用 `QuotaViewActivityHook --agent-hook --configuration <private-route> --event Flush`，同步提交在途及待发消息；每帧需 accepted ACK，最多 257 帧、调用总上限 1.5 秒。关闭/断线仍无害返回；不执行 shell 或代理审批。既有 source_epoch/source_sequence 去重避免重发导致重复任务。
+- 运行组件新增可注入的安装器，生产默认路径不变，隔离冒烟使用临时目录和独立 UserDefaults；不添加生产 UI 模拟入口。
+- 原 4 项接入冒烟及新增的 3 项链路冒烟最终通过。官方 OpenCode 正式客户端加载未经插桩的生产插件，使用本地确定性模型响应：connected=true，thinking → completed；另以真实 Node 进程立即退出覆盖丢失终态的回归。Cursor/Gemini/Copilot 使用实际安装命令、辅助程序、socket 与卡片模型，验证完成、相同 session ID 隔离和停用撤下。
+- 证据 `.build/agent-usable-087b31/official-production/island-evidence.json`、`fixed-smoke.log`、`final-runtime-smoke.log`（前两项通过，新立即退出用例首次 PATH 夹具错误）、`exit-smoke.log`（修正测试进程继承环境后通过）。官方客户端二进制来源及哈希在 `official-client-identity.json`。
+- 能力边界：OpenCode 已确认真实客户端任务状态链路，但本地模型响应不是云端账号、订阅额度、完整工具与审批场景验收。其余三家未安装，尚无真实客户端任务结论；不能标记「四家全部实测可用」。本轮不操作真实额度、不做视觉/交互自动验收。
+- Build 31 / 内部 133 已进入 DevelopmentRuntime，253 生产输入、18 资源、运行身份与实际加载路径一致；记录见 Handoff。仍只保留本地修改。
+
+可重复的官方客户端冒烟：先将官方 `opencode` 二进制置于 `.build/agent-usable-087b31/client/opencode`，再运行：
+
+```sh
+QV_OPENCODE_SMOKE_SCRIPT="$PWD/Tests/Fixtures/agent-integrations/run_opencode_smoke.py" \
+QV_OPENCODE_SMOKE_ROOT=/private/tmp/quotaview-opencode-smoke \
+swift test --filter NativeAgentRuntimeSmokeTests
+```
+
+模型 HTTP 服务只绑定 127.0.0.1，配置与缓存位于指定的隔离目录，不读取本机 Agent 的认证配置。没有环境变量时，官方客户端专项显示 Skip，其余本地链路冒烟正常执行。
