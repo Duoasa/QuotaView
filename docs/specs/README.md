@@ -10,7 +10,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 ## 当前开发：0.9.1 Build 11
 
-[Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) / [Grok 修复](../design/quotaview-bug-fixes-2026-11-01.md)：修复 PR CI 旧 Swift 对 `strdup` 输入数组的类型推断不兼容，8 项针对性冒烟通过。用户授权立即制作签名好友测试 DMG，与 CI/合并并行；Build 11 / 内部 144，最终运行及产物结果见 Handoff，不公开发布或加入自动更新。
+[Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) / [Grok 修复](../design/quotaview-bug-fixes-2026-11-01.md)：修复 PR CI 旧 Swift 对 `strdup` 输入数组的类型推断不兼容，8 项针对性冒烟通过。用户授权立即制作签名好友测试 DMG，与 CI/合并并行；Build 11 / 内部 144 已重启运行，Universal DMG 已 Developer ID 签名、Apple 公证/Staple 并交付。11 项 ingress 检查通过，修正旧公共目录夹具；CI 合并结果另补记。用户要求朋友实测，未进行包内 UI/启动验收。产物完整身份与证据见 Handoff，未公开发布或加入自动更新。
 
 ## 前序开发：0.9.1 Build 10
 

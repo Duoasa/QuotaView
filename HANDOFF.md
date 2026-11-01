@@ -18,7 +18,11 @@
 
 ## 当前开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
 
-用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包更新、签名测试 DMG、公证和 PR/main CI 的最终结果另补记；测试包保留开发数据身份并使用独立应用名称，不加入 appcast、不创建公开 Release/tag。
+用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包已于 2026-11-01T23:24:34.142885+08:00 更新重启 PID 96230，256 输入/19 资源及实际加载核对通过；证据 `.build/devin-091b11-runtime/`。后续 CI 暴露旧 ingress 夹具使用公共 /tmp socket，与新的安全目录约束不符；仅将测试夹具迁至 0700 私有短路径，并让等待失败抛错，避免继续数组越界。11 项 ingress 检查通过；PR/main CI 结果另补记。
+
+已按用户“现在就封装”“直接给我”交付签名好友测试 DMG：`dist/testing/0.9.1-build11/QuotaView-Devin-Test-0.9.1-Build11-universal.dmg`，34457195 bytes，SHA-256 `090be08f3418d47d731a870e4c9f6e71dbbc37c5fa829e1c78325fbc8435cb3d`。App 与 DMG 均为 Developer ID Chenchen Xu (BUUH229D5Q) 签名、公证 Accepted/Stapled，Gatekeeper 通过；App 公证 `3aaa86fd-532e-4fd2-b6e7-f2359c73328d`，DMG 公证 `4c6b958f-506d-474d-807b-fe1a676bbd87`。App/Widget/Core/Hook/Sparkle 均为 arm64+x86_64，macOS 14+；正式发布安装保持。包内「Devin测试说明.txt」给出启用与实测步骤。
+
+测试包使用 Release 优化编译、独立应用名 QuotaView Devin Test，保留开发 Bundle ID/数据组，与稳定版隔离且不加入正式自动更新；未包含账户数据、配置或日志。用户明确交由朋友实测，未执行本包 UI 或启动验收，也未安装到本机 Applications。证据 `.build/devin-friend-091b11/`，源码基线 `714f441`，后续 CI 夹具/文档修订不改变生产输入。没有公开 Release/tag/appcast。
 
 ## 前序开发：0.9.1 Build 10 / Devin Desktop 与 CLI 独立接入（2026-11-01）
 
