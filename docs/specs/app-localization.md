@@ -2,7 +2,7 @@
 
 - Spec ID：`app-localization`
 - 状态：Implemented / User Acceptance Pending（视觉与实际交互由用户验收）
-- 范围：macOS 0.8.7 Build 25 引入，Build 28 继承；用户后续已授权本批源码推送与合入 main，未授权发布。
+- 范围：macOS 0.8.7 Build 25 引入，Build 28 继承；已由 [PR #124](https://github.com/Duoasa/QuotaView/pull/124) 合入 main `14f5193`，PR/main CI 均通过，未发布。
 - 授权：2026-11-01 用户要求新增日语、韩语、繁体中文、西班牙语；「汉语」已明确更正为「韩语」。
 
 ## 目标

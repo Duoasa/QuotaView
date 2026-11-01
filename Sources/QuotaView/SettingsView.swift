@@ -806,7 +806,14 @@ struct SettingsView: View {
                 }
             }
             Button(role: .destructive) { showsQuitConfirmation = true } label: {
-                Text(copy.text("退出 QuotaView", "Quit QuotaView"))
+                HStack(spacing: 8) {
+                    Text(copy.text("退出 QuotaView", "Quit QuotaView"))
+                    Spacer(minLength: 8)
+                    Image(systemName: "power")
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(width: 20, height: 20)
+                        .accessibilityHidden(true)
+                }
                     .font(.system(size: 13, weight: .medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, SettingsLayoutMetrics.cardInset).frame(height: SettingsLayoutMetrics.rowMinHeight)

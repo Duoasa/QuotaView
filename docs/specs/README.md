@@ -8,9 +8,15 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.8.7 Build 28
+## 当前开发：0.8.7 Build 29
 
-[设置固定宽度](../design/QUOTAVIEW_UI_RULES.md#设置固定宽度与完成配色回调2026-11-01087-build-28)与[恢复原完成配色](PROGRESS_EFFECT_ADAPTATION.md#087-build-28恢复原完成配色2026-11-01) · `Implemented / User Acceptance Pending`：设置窗口固定 820 pt、最大化置灰，完成态恢复紫—蓝—青 6 秒循环；继承多语言、32 pt 代理输入、非聚焦淡色与深黑侧栏。5 项相关冒烟、原生增量构建及 241 输入/运行核验通过，已运行 Build 28 / 内部 130。用户已授权本批推送合入 main，正在核对集成 CI；实际效果由用户检查。
+[退出行右侧图标](../design/QUOTAVIEW_UI_RULES.md#退出入口右侧图标2026-11-01087-build-29) · `Implemented / User Acceptance Pending`：退出行右侧添加同色电源图标，保留整行点击与确认。Debug arm64 增量构建、启动冒烟和 241 输入/运行核验通过，已运行 Build 29 / 内部 131。用户已授权本批源码推送合并，当前等待集成 CI；实际视觉由用户检查。
+
+[重置卡到期优先](codex-quota-reset.md) · 现有实现已按到期时间优先使用可用卡，缺少到期时间的排后；本轮补充 3 项隔离冒烟并通过，覆盖多卡乱序、无效卡过滤和重试固定原卡。未消费真实重置卡，生产逻辑与运行版本保持。
+
+## 前序开发：0.8.7 Build 28
+
+[设置固定宽度](../design/QUOTAVIEW_UI_RULES.md#设置固定宽度与完成配色回调2026-11-01087-build-28)与[恢复原完成配色](PROGRESS_EFFECT_ADAPTATION.md#087-build-28恢复原完成配色2026-11-01) · `Implemented / User Acceptance Pending`：设置窗口固定 820 pt、最大化置灰，完成态恢复紫—蓝—青 6 秒循环；继承多语言、32 pt 代理输入、非聚焦淡色与深黑侧栏。5 项相关冒烟、原生增量构建及 241 输入/运行核验通过，已运行 Build 28 / 内部 130。已由 [PR #124](https://github.com/Duoasa/QuotaView/pull/124) 合入 main `14f5193`，PR/main CI 均通过（各 741 测试、6 跳过、0 失败，44 契约检查），241 运行输入与合并提交一致；实际效果由用户检查，未发布。
 
 ## 前序开发：0.8.7 Build 27
 

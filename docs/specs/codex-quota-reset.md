@@ -10,7 +10,7 @@ Spec ID：`QV-CODEX-QUOTA-RESET-001` · `Released / User Acceptance Pending` · 
 
 - 首次点击仅读取官方 `account/read`、`account/rateLimits/read`，展示本次确认；取消、进入页面、刷新、切换账户、重启和后台任务都不会消费。
 - 使用现有本地 Codex App Server 和代理配置，不提取登录凭据、不模拟网页或直连内部 HTTP。旧 CLI 不支持方法时说明需要更新；有次数但无具体卡片明细时停止操作。
-- 明细须为 `available`、`codexRateLimits`，具有非空 ID，且未过期；优先到期较早的卡。发送明确的 `creditId`，绝不让重试自动选另一张卡。
+- 明细须为 `available`、`codexRateLimits`，具有非空 ID，且未过期；按到期时间从早到晚选择，优先使用最接近到期日的卡，未提供到期时间的卡排在有明确到期时间的卡之后，不依赖服务端返回顺序。发送明确的 `creditId`，绝不让重试自动选另一张卡。
 - 确认有效期 60 秒，绑定账户邮箱的本地 SHA-256、明确卡片 ID 和随机 UUID。发送前重新读取账户及卡片；账户变化、卡片变化、无次数或不可读时中止。账户邮箱不写入操作记录。
 - 发出消费请求前原子保存操作 UUID、账户哈希与卡片 ID。存储不可用时不发送。并发点击互斥，同一确认不能重复执行。
 - 调用官方 `account/rateLimitResetCredit/consume`。成功 `reset` / `alreadyRedeemed` 后重新读取额度，不在本地虚构 100% 或扣减次数；`nothingToReset` / `noCredit` 如实提示。
@@ -26,6 +26,8 @@ Spec ID：`QV-CODEX-QUOTA-RESET-001` · `Released / User Acceptance Pending` · 
 - `CodexRateLimitResetTests` 使用临时文件和内存模拟服务检查确认/取消、重复点击、超时后重启、账户及卡片变化、过期、无明细、存储失败和结果分支；`CodexAppServerClientTests` 使用明确指定的临时假进程检查 RPC 格式。发布结果见 [0.8.5 规格](release-0.8.5.md)。
 
 真实业务扣卡与视觉体验留给用户验收，不以模拟成功替代真实服务的端到端验证。
+
+2026-11-01：用户再次明确优先使用最接近到期日的重置卡。现有生产选择逻辑已符合该规则，本轮补充多卡乱序与重试保留原卡的隔离冒烟；共 3 项通过，覆盖 6 种返回顺序、已过期/已使用/类型不符的过滤、缺少到期日期的后置，以及结果未知后新出现更早到期卡也不替换原操作。证据 `.build/reset-expiry-priority-087b29/smoke.log`。仅测试与规则补充，生产逻辑未改，继续运行 Build 29；没有消费本机真实重置卡。
 
 2026-10-27：源码经 PR #105 合入 main，PR/main CI 成功；722 项测试（6 跳过、0 失败）及 44 项审批契约通过。Universal 包签名、公证/Staple、解压启动与公开回下载验签完成；GitHub Stable / Latest、签名 appcast 和中英文 README 已更新。真实消费仅在隔离夹具验证，没有使用用户重置卡；真实扣卡与视觉仍待用户验收。完整发布证据见版本历史，开发包状态见 Handoff。
 
