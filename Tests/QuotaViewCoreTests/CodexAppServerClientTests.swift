@@ -3,6 +3,17 @@ import XCTest
 @testable import QuotaViewCore
 
 final class CodexAppServerClientTests: XCTestCase {
+    func testServerRequestIDCannotConsumePendingClientRequest() async throws {
+        let fixture = try makeFakeAppServer(collidingServerRequest: true)
+        defer { try? FileManager.default.removeItem(at: fixture.executable.deletingLastPathComponent()) }
+        let client = CodexAppServerClient(executablePath: fixture.executable.path, requestTimeoutSeconds: 2)
+        let payload = try await client.fetchPayload()
+        XCTAssertNotNil(payload.usage)
+        await client.stop()
+        let log = try String(contentsOf: fixture.log, encoding: .utf8)
+        XCTAssertTrue(log.contains("-32601"))
+    }
+
     func testResetRequestsUseOfficialWireFormatWithAnExplicitFakeProcess() async throws {
         let fixture = try makeFakeAppServer()
         defer { try? FileManager.default.removeItem(at: fixture.executable.deletingLastPathComponent()) }
@@ -336,6 +347,7 @@ final class CodexAppServerClientTests: XCTestCase {
     }
 
     private func makeFakeAppServer(
+        collidingServerRequest: Bool = false,
         usageFails: Bool = false,
         usageHangs: Bool = false,
         emitPlanNotification: Bool = false,
@@ -384,6 +396,7 @@ final class CodexAppServerClientTests: XCTestCase {
               printf '{"id":%s,"result":{"data":[{"id":"thread-native","sessionId":null,"cwd":"/tmp/native","name":"Native Thread"}],"nextCursor":null}}\\n' "$id"
               """
         }
+        let collision = collidingServerRequest ? "printf '{\"method\":\"fixture/serverRequest\",\"id\":%s,\"params\":{}}\\n' \"$id\"" : ":"
         let script = """
         #!/bin/sh
         while IFS= read -r line; do
@@ -391,6 +404,7 @@ final class CodexAppServerClientTests: XCTestCase {
           id=$(printf '%s' "$line" | sed -n 's/.*"id":\\([0-9][0-9]*\\).*/\\1/p')
           case "$line" in
             *'"method":"initialize"'*)
+              \(collision)
               sleep 0.05
               printf '{"id":%s,"result":{"userAgent":"fake"}}\\n' "$id"
               \(planNotification)

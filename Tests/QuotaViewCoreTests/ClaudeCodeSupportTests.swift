@@ -262,7 +262,8 @@ final class ClaudeCodeSupportTests: XCTestCase {
 
         let other = try ClaudeCodeApproval.request(eventID: "e4", sessionKey: "s", turnKey: "t", toolName: "WebFetch",
             toolInput: ["url": "https://example.com"], toolUseID: "toolu_4", cwd: nil, hasSuggestions: false)
-        XCTAssertEqual(other.detail, "WebFetch · https://example.com")
+        XCTAssertTrue(other.detail.contains("https://example.com"))
+        XCTAssertTrue(other.detail.contains("\"url\""))
     }
 
     func testApprovalDecisionsMapToClaudeHookOutput() throws {

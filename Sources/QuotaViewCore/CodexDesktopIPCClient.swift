@@ -408,26 +408,28 @@ public actor CodexDesktopIPCClient {
         var backoff: UInt64 = 250_000_000
         while started, !Task.isCancelled {
             if incompatible || resourceSuspended { return }
-            if !initialized {
-                do {
-                    try await connect()
-                    backoff = 250_000_000
-                    let run = epoch
-                    for key in follows {
-                        guard initialized, run == epoch, !Task.isCancelled else { break }
-                        do { try await establishFollow(key) }
-                        catch { scheduleFollowRecovery(key) }
-                    }
-                } catch {
-                    guard started, !resourceSuspended, !Task.isCancelled else { return }
-                    await closeConnection()
-                    guard started, !resourceSuspended, !Task.isCancelled else { return }
-                    try? await Task.sleep(nanoseconds: backoff)
-                    backoff = min(backoff * 2, 5_000_000_000)
+            let began = ProcessInfo.processInfo.systemUptime
+            do {
+                if !initialized { try await connect() }
+                let run = epoch
+                for key in follows {
+                    guard initialized, run == epoch, !Task.isCancelled else { break }
+                    do { try await establishFollow(key) }
+                    catch { scheduleFollowRecovery(key) }
                 }
-            } else {
-                await withCheckedContinuation { continuation in reconnectWaiter = continuation }
+                if initialized {
+                    await withCheckedContinuation { continuation in reconnectWaiter = continuation }
+                }
+            } catch {
+                guard started, !resourceSuspended, !Task.isCancelled else { return }
+                await closeConnection()
             }
+            guard started, !resourceSuspended, !incompatible, !Task.isCancelled else { return }
+            // A successful handshake followed by an immediate EOF is still a
+            // failed connection attempt. Only a stable connection resets delay.
+            if ProcessInfo.processInfo.systemUptime - began >= 5 { backoff = 250_000_000 }
+            try? await Task.sleep(nanoseconds: backoff)
+            backoff = min(backoff * 2, 5_000_000_000)
         }
     }
     private func connect() async throws {

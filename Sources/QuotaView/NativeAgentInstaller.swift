@@ -24,6 +24,7 @@ struct NativeAgentInstaller: Sendable {
         case .geminiCLI: location = ("GEMINI_CLI_HOME", ".gemini")
         case .openCode: location = ("OPENCODE_CONFIG_DIR", ".config/opencode")
         case .copilotCLI: location = ("COPILOT_HOME", ".copilot")
+        case .devinDesktop, .devinCLI: location = ("", ".config/devin")
         default: location = ("", "")
         }
         var defaultHome = userHome.appendingPathComponent(location.folder)
@@ -57,10 +58,23 @@ struct NativeAgentInstaller: Sendable {
         let fm = FileManager.default
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
         chmod(support.path, 0o700)
-        let lock = Darwin.open(support.appendingPathComponent("install.lock").path, O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0o600)
+        // Both Devin surfaces share the same user config, including across
+        // QuotaView channels. Serialize updates with one private per-user lock.
+        let lockURL = provider.isDevin
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("quotaview-devin-" + String(CodexActivityPrivacy.hashIdentifier(home.path).prefix(20)) + ".lock")
+            : support.appendingPathComponent("install.lock")
+        let lock = Darwin.open(lockURL.path, O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0o600)
         guard lock >= 0 else { throw Failure.invalidConfiguration }
         defer { flock(lock, LOCK_UN); Darwin.close(lock) }
-        guard flock(lock, LOCK_EX) == 0 else { throw Failure.invalidConfiguration }
+        var lockInfo = stat()
+        guard fstat(lock, &lockInfo) == 0, lockInfo.st_uid == getuid(),
+              (lockInfo.st_mode & S_IFMT) == S_IFREG else { throw Failure.invalidConfiguration }
+        let deadline = ProcessInfo.processInfo.systemUptime + 2
+        while flock(lock, LOCK_EX | LOCK_NB) != 0 {
+            guard errno == EWOULDBLOCK || errno == EINTR else { throw Failure.invalidConfiguration }
+            guard !Task.isCancelled, ProcessInfo.processInfo.systemUptime < deadline else { throw Failure.configurationChanged }
+            usleep(10_000)
+        }
         if provider.usesExternalHooks { return try configureExternal(enabled: enabled) }
         let discovered = configurationFiles(additionalHomes: additionalHomes)
         let ledger = support.appendingPathComponent("installed-profiles.json")
@@ -96,7 +110,7 @@ struct NativeAgentInstaller: Sendable {
             if original != nil && String(data: original!, encoding: .utf8) == nil { throw Failure.invalidConfiguration }
             var result = try removingBlock(text)
             if enabled && currentPaths.contains(path.path) {
-                if provider == .kimiCode && result.range(of: #"(?m)^\s*hooks\s*="# , options: .regularExpression) != nil {
+                if provider == .kimiCode && Self.hasConflictingKimiHooks(result) {
                     throw Failure.invalidConfiguration
                 }
                 // A standalone empty YAML array cannot precede insert entries.
@@ -208,7 +222,7 @@ struct NativeAgentInstaller: Sendable {
         let command = quote(helper.path) + " --agent-hook --configuration " + quote(route.path)
         let events = ["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted", "PreToolUse", "PostToolUse", "PostToolUseFailure",
                       "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt"]
-        return events.map { "[[hooks]]\nevent = " + jsonString($0) + "\ncommand = " + jsonString(command) + "\ntimeout = 2\n" }.joined(separator: "\n")
+        return events.map { "[[hooks]]\nevent = " + tomlString($0) + "\ncommand = " + tomlString(command) + "\ntimeout = 2\n" }.joined(separator: "\n")
     }
     private func removingBlock(_ text: String) throws -> String {
         var result = text
@@ -228,8 +242,57 @@ struct NativeAgentInstaller: Sendable {
         return try Data(contentsOf: path)
     }
     func privateWrite(_ data: Data, to url: URL, mode: mode_t = 0o600) throws {
-        try data.write(to: url, options: .atomic); chmod(url.path, mode)
+        let temporary = url.deletingLastPathComponent().appendingPathComponent(".quotaview-" + UUID().uuidString)
+        let fd = Darwin.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, mode)
+        guard fd >= 0 else { throw Failure.invalidConfiguration }
+        defer { Darwin.close(fd); unlink(temporary.path) }
+        guard fchmod(fd, mode) == 0 else { throw Failure.invalidConfiguration }
+        try data.withUnsafeBytes { bytes in
+            var offset = 0
+            while offset < bytes.count {
+                let count = Darwin.write(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
+                if count < 0 && errno == EINTR { continue }
+                guard count > 0 else { throw Failure.invalidConfiguration }
+                offset += count
+            }
+        }
+        guard fsync(fd) == 0, rename(temporary.path, url.path) == 0 else { throw Failure.invalidConfiguration }
     }
+    /// JSON permits \/, whereas TOML does not. Escape every forbidden control
+    /// scalar explicitly without changing slash or non-ASCII path characters.
+    func tomlString(_ text: String) -> String {
+        var result = "\""
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x22: result += "\\\""
+            case 0x5c: result += "\\\\"
+            case 0...0x1f, 0x7f: result += String(format: "\\u%04X", scalar.value)
+            default: result.unicodeScalars.append(scalar)
+            }
+        }
+        return result + "\""
+    }
+
+    static func hasConflictingKimiHooks(_ text: String) -> Bool {
+        let key = #"(?:hooks|"hooks"|'hooks')"#
+        var arraySeen = false
+        for raw in text.split(separator: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("#") { continue }
+            // Escaped table/key names need a full TOML parser. Refuse ambiguous
+            // edits rather than risk introducing a second definition of hooks.
+            let prefix = line.prefix { $0 != "=" && $0 != "#" }
+            if (line.hasPrefix("[") || line.hasPrefix("\"")), prefix.contains("\\") { return true }
+            if line.range(of: #"^\[\[\s*"# + key + #"\s*\]\]"#, options: .regularExpression) != nil {
+                arraySeen = true; continue
+            }
+            if line.range(of: #"^"# + key + #"\s*(?:=|\.)"#, options: .regularExpression) != nil { return true }
+            if line.range(of: #"^\[\s*"# + key + #"\s*\]"#, options: .regularExpression) != nil { return true }
+            if !arraySeen, line.range(of: #"^\[\[?\s*"# + key + #"\s*\."#, options: .regularExpression) != nil { return true }
+        }
+        return false
+    }
+
     func quote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     func jsonString(_ text: String) -> String {
         String(data: try! JSONEncoder().encode(text), encoding: .utf8)!

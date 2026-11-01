@@ -13,6 +13,7 @@ extension NativeAgentInstaller {
         }
         let destination: URL
         switch provider {
+        case .devinDesktop, .devinCLI: destination = home.appendingPathComponent("config.json")
         case .cursor: destination = home.appendingPathComponent("hooks.json")
         case .geminiCLI: destination = home.appendingPathComponent("settings.json")
         case .copilotCLI: destination = home.appendingPathComponent("hooks/" + marker + ".json")
@@ -70,6 +71,7 @@ extension NativeAgentInstaller {
         // notification reports an actual prompt; permissionRequest fires before
         // policy evaluation and does not mean the user must approve anything.
         case .copilotCLI: ["sessionStart", "sessionEnd", "userPromptSubmitted", "preToolUse", "postToolUse", "postToolUseFailure", "agentStop", "errorOccurred", "preCompact", "notification"]
+        case .devinDesktop, .devinCLI: ["SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PermissionRequest", "Stop", "PostCompaction"]
         default: []
         }
     }
@@ -77,6 +79,9 @@ extension NativeAgentInstaller {
         quote(helper.path) + " --agent-hook --configuration " + quote(route.path) + " --event " + quote(event)
     }
     private func externalJSON(_ original: Data?, enabled: Bool) throws -> Data? {
+        if provider.isDevin {
+            return try DevinHookConfiguration.update(original, commands: Dictionary(uniqueKeysWithValues: externalEvents.map { ($0, hookCommand($0)) }), enabled: enabled)
+        }
         var object: [String: Any] = [:]
         if let original {
             guard let parsed = try? JSONSerialization.jsonObject(with: original) as? [String: Any] else {
@@ -133,5 +138,151 @@ extension NativeAgentInstaller {
         if let original, let parsed = try? JSONSerialization.jsonObject(with: original) as? NSDictionary,
            parsed.isEqual(to: object) { return original }
         return try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+    }
+}
+
+/// Edits only QuotaView-owned command nodes. The client's JSONC comments,
+/// unknown settings and foreign hook bytes survive enable/disable operations.
+private struct DevinHookConfiguration {
+    final class Node {
+        let range: Range<Int>
+        let value: Any
+        let members: [String: Node]
+        let children: [Node]
+        let commas: [Int]
+        init(_ range: Range<Int>, _ value: Any, members: [String: Node] = [:], children: [Node] = [], commas: [Int] = []) {
+            self.range = range; self.value = value; self.members = members; self.children = children; self.commas = commas
+        }
+    }
+    var bytes: [UInt8]
+    var position = 0
+    mutating func trivia() throws {
+        while position < bytes.count {
+            if [9, 10, 13, 32].contains(bytes[position]) { position += 1; continue }
+            guard position + 1 < bytes.count, bytes[position] == 47 else { break }
+            if bytes[position + 1] == 47 {
+                position += 2
+                while position < bytes.count && bytes[position] != 10 { position += 1 }
+            } else if bytes[position + 1] == 42 {
+                position += 2
+                while position + 1 < bytes.count && !(bytes[position] == 42 && bytes[position + 1] == 47) { position += 1 }
+                guard position + 1 < bytes.count else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                position += 2
+            } else { break }
+        }
+    }
+    mutating func parse(depth: Int = 0) throws -> Node {
+        try trivia()
+        guard depth < 64, position < bytes.count else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+        let start = position, opening = bytes[position]
+        if opening == 123 || opening == 91 {
+            position += 1
+            let closing: UInt8 = opening == 123 ? 125 : 93
+            var members: [String: Node] = [:], children: [Node] = [], commas: [Int] = []
+            try trivia()
+            while position < bytes.count && bytes[position] != closing {
+                if opening == 123 {
+                    let key = try parse(depth: depth + 1)
+                    guard let name = key.value as? String, members[name] == nil else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                    try trivia()
+                    guard position < bytes.count, bytes[position] == 58 else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                    position += 1
+                    members[name] = try parse(depth: depth + 1)
+                } else { children.append(try parse(depth: depth + 1)) }
+                try trivia()
+                guard position < bytes.count else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                if bytes[position] == closing { break }
+                guard bytes[position] == 44 else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                commas.append(position); position += 1; try trivia()
+            }
+            guard position < bytes.count, bytes[position] == closing else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+            position += 1
+            let value: Any = opening == 123 ? members.mapValues(\.value) : children.map(\.value)
+            return Node(start..<position, value, members: members, children: children, commas: commas)
+        }
+        if opening == 34 {
+            position += 1
+            while position < bytes.count {
+                let byte = bytes[position]; position += 1
+                if byte == 34 { break }
+                if byte == 92 { position += 1 }
+            }
+        } else {
+            while position < bytes.count && ![9, 10, 13, 32, 44, 93, 125, 47].contains(bytes[position]) { position += 1 }
+        }
+        guard position <= bytes.count, position > start,
+              let value = try? JSONSerialization.jsonObject(with: Data(bytes[start..<position]), options: .fragmentsAllowed)
+        else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+        return Node(start..<position, value)
+    }
+    static func document(_ bytes: [UInt8]) throws -> Node {
+        var parser = Self(bytes: bytes)
+        let root = try parser.parse()
+        try parser.trivia()
+        guard parser.position == bytes.count, root.value is [String: Any] else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+        return root
+    }
+    static func update(_ original: Data?, commands: [String: String], enabled: Bool) throws -> Data? {
+        var bytes = Array(original ?? Data("{}".utf8))
+        var root = try document(bytes)
+        let owned = Set(commands.values)
+        var removals: [Range<Int>] = [], counts: [String: Int] = [:]
+        func remove(_ indices: Set<Int>, from array: Node) {
+            guard !indices.isEmpty else { return }
+            for index in indices { removals.append(array.children[index].range) }
+            let kept = array.children.indices.filter { !indices.contains($0) }
+            for (index, comma) in array.commas.enumerated() where indices.contains(index) || index == kept.last {
+                removals.append(comma..<(comma + 1))
+            }
+        }
+        if let hooks = root.members["hooks"] {
+            guard hooks.value is [String: Any] else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+            for (event, array) in hooks.members {
+                guard array.value is [Any] else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                var removedEntries: Set<Int> = []
+                for (index, entry) in array.children.enumerated() {
+                    guard entry.value is [String: Any], let children = entry.members["hooks"], children.value is [Any],
+                          children.children.allSatisfy({ $0.value is [String: Any] }) else { throw NativeAgentInstaller.Failure.invalidConfiguration }
+                    let indices = Set(children.children.indices.filter {
+                        guard let command = children.children[$0].members["command"]?.value as? String else { return false }
+                        if owned.contains(command) { counts[event, default: 0] += 1; return true }
+                        return false
+                    })
+                    if !indices.isEmpty && indices.count == children.children.count { removedEntries.insert(index) }
+                    else { remove(indices, from: children) }
+                }
+                remove(removedEntries, from: array)
+            }
+        }
+        if enabled && commands.keys.allSatisfy({ counts[$0] == 1 }) && counts.values.reduce(0, +) == commands.count { return original }
+        if !enabled && removals.isEmpty { return original }
+        for range in removals.sorted(by: { $0.lowerBound > $1.lowerBound }) { bytes.removeSubrange(range) }
+        if enabled {
+            // Reparse after removal so insertion offsets and commas are exact.
+            root = try document(bytes)
+            func encoded(_ value: Any) throws -> String {
+                String(decoding: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]), as: UTF8.self)
+            }
+            let entries = commands.mapValues { ["hooks": [["type": "command", "command": $0, "timeout": 2]]] as [String: Any] }
+            var insertions: [(Int, String)] = []
+            func append(_ content: String, to node: Node, hasValues: Bool) {
+                // An existing trailing comma is legal JSONC; reuse it.
+                let needsComma = hasValues && node.commas.count < (node.value is [String: Any] ? node.members.count : node.children.count)
+                insertions.append((node.range.upperBound - 1, (needsComma ? "," : "") + "\n" + content + "\n"))
+            }
+            if let hooks = root.members["hooks"] {
+                var missing: [String] = []
+                for event in commands.keys.sorted() {
+                    if let array = hooks.members[event] { append(try encoded(entries[event]!), to: array, hasValues: !array.children.isEmpty) }
+                    else { missing.append(try encoded(event) + ": [" + encoded(entries[event]!) + "]") }
+                }
+                if !missing.isEmpty { append(missing.joined(separator: ",\n"), to: hooks, hasValues: !hooks.members.isEmpty) }
+            } else {
+                append("\"hooks\": " + (try encoded(entries.mapValues { [$0] })), to: root, hasValues: !root.members.isEmpty)
+            }
+            for (offset, text) in insertions.sorted(by: { $0.0 > $1.0 }) { bytes.insert(contentsOf: text.utf8, at: offset) }
+        }
+        _ = try document(bytes)
+        return Data(bytes)
     }
 }

@@ -10,6 +10,8 @@ struct AgentIntegrationSettings<Details: View>: View {
     @ObservedObject var geminiCLI: NativeAgentRuntime
     @ObservedObject var openCode: NativeAgentRuntime
     @ObservedObject var copilotCLI: NativeAgentRuntime
+    @ObservedObject var devinDesktop: NativeAgentRuntime
+    @ObservedObject var devinCLI: NativeAgentRuntime
     @State private var expanded: IslandAgentProvider?
     let codexDetails: () -> Details
     private var copy: AppCopy { preferences.copy }
@@ -18,6 +20,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         self.preferences = preferences; codex = runtime; claude = runtime.claudeCode
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
         cursor = runtime.cursor; geminiCLI = runtime.geminiCLI; openCode = runtime.openCode; copilotCLI = runtime.copilotCLI
+        devinDesktop = runtime.devinDesktop; devinCLI = runtime.devinCLI
     }
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
@@ -29,6 +32,8 @@ struct AgentIntegrationSettings<Details: View>: View {
             providerGroup(.geminiCLI, isOn: $preferences.geminiCLIEnabled)
             providerGroup(.openCode, isOn: $preferences.openCodeEnabled)
             providerGroup(.copilotCLI, isOn: $preferences.copilotCLIEnabled)
+            providerGroup(.devinDesktop, isOn: $preferences.devinDesktopEnabled)
+            providerGroup(.devinCLI, isOn: $preferences.devinCLIEnabled)
         }
     }
     private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
@@ -45,6 +50,8 @@ struct AgentIntegrationSettings<Details: View>: View {
                     case .geminiCLI: nativeDetails(geminiCLI)
                     case .openCode: nativeDetails(openCode)
                     case .copilotCLI: nativeDetails(copilotCLI)
+                    case .devinDesktop: nativeDetails(devinDesktop)
+                    case .devinCLI: nativeDetails(devinCLI)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -96,7 +103,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         case .claudeCode:
             switch claude.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
-        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI:
+        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI:
             let runtime = nativeRuntime(provider)!
             switch runtime.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
@@ -109,6 +116,8 @@ struct AgentIntegrationSettings<Details: View>: View {
         case .geminiCLI: geminiCLI
         case .openCode: openCode
         case .copilotCLI: copilotCLI
+        case .devinDesktop: devinDesktop
+        case .devinCLI: devinCLI
         case .codex, .claudeCode: nil
         }
     }
@@ -150,6 +159,9 @@ struct AgentIntegrationSettings<Details: View>: View {
                 NativeSettingsRow(title: copy.text("配置目录", "Configuration directory"), subtitle: runtime.installer.home.path) {
                     Button(copy.text("打开目录", "Open Directory")) { runtime.revealConfiguration() }.controlSize(.small)
                 }
+            }
+            if runtime.provider == .devinDesktop {
+                NativeSettingsNote(text: copy.text("显示 Devin Local 的本机任务；请在受信任的工作区中使用。", "Shows local Devin Local tasks. Use a trusted workspace."))
             }
             NativeSettingsDivider()
             NativeSettingsNote(text: copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",

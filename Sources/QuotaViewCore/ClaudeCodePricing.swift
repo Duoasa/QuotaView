@@ -14,12 +14,23 @@ public struct ClaudeCodeTokenUsage: Equatable, Sendable {
         self.cacheWrite5m = cacheWrite5m; self.cacheWrite1h = cacheWrite1h; self.cacheRead = cacheRead
     }
 
-    public var total: Int64 { input + output + cacheWrite5m + cacheWrite1h + cacheRead }
+    /// Nil means invalid/unrepresentable usage, never a wrapped or saturated count.
+    public var total: Int64? {
+        var result: Int64 = 0
+        for count in [input, output, cacheWrite5m, cacheWrite1h, cacheRead] {
+            let sum = result.addingReportingOverflow(count)
+            guard count >= 0, !sum.overflow else { return nil }
+            result = sum.partialValue
+        }
+        return result
+    }
 
-    public static func + (lhs: Self, rhs: Self) -> Self {
-        .init(input: lhs.input + rhs.input, output: lhs.output + rhs.output,
-              cacheWrite5m: lhs.cacheWrite5m + rhs.cacheWrite5m,
-              cacheWrite1h: lhs.cacheWrite1h + rhs.cacheWrite1h, cacheRead: lhs.cacheRead + rhs.cacheRead)
+    public static func + (lhs: Self, rhs: Self) -> Self? {
+        guard let left = lhs.total, let right = rhs.total,
+              !left.addingReportingOverflow(right).overflow else { return nil }
+        return .init(input: lhs.input + rhs.input, output: lhs.output + rhs.output,
+                     cacheWrite5m: lhs.cacheWrite5m + rhs.cacheWrite5m,
+                     cacheWrite1h: lhs.cacheWrite1h + rhs.cacheWrite1h, cacheRead: lhs.cacheRead + rhs.cacheRead)
     }
 
     /// Decodes an Anthropic `usage` object. Missing counters are zero; a
@@ -33,12 +44,14 @@ public struct ClaudeCodeTokenUsage: Equatable, Sendable {
         guard let input = count("input_tokens"), let output = count("output_tokens"),
               let creation = count("cache_creation_input_tokens"), let read = count("cache_read_input_tokens") else { return nil }
         var write5m = creation ?? 0, write1h: Int64 = 0
-        if let split = usage["cache_creation"] as? [String: Any],
-           let short = count("ephemeral_5m_input_tokens", in: split),
-           let long = count("ephemeral_1h_input_tokens", in: split), short != nil || long != nil {
-            write5m = short ?? 0; write1h = long ?? 0
+        if let raw = usage["cache_creation"] {
+            guard let split = raw as? [String: Any],
+                  let short = count("ephemeral_5m_input_tokens", in: split),
+                  let long = count("ephemeral_1h_input_tokens", in: split) else { return nil }
+            if short != nil || long != nil { write5m = short ?? 0; write1h = long ?? 0 }
         }
         self.init(input: input ?? 0, output: output ?? 0, cacheWrite5m: write5m, cacheWrite1h: write1h, cacheRead: read ?? 0)
+        guard total != nil else { return nil }
     }
 }
 
@@ -80,7 +93,7 @@ public enum ClaudeCodePricing {
     }
 
     public static func cost(model: String, usage: ClaudeCodeTokenUsage) -> Double? {
-        guard let rates = rates(for: model) else { return nil }
+        guard usage.total != nil, let rates = rates(for: model) else { return nil }
         let total = Double(usage.input) * rates.input + Double(usage.output) * rates.output
             + Double(usage.cacheWrite5m) * rates.cacheWrite5m + Double(usage.cacheWrite1h) * rates.cacheWrite1h
             + Double(usage.cacheRead) * rates.cacheRead

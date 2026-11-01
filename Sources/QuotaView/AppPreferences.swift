@@ -375,6 +375,12 @@ final class AppPreferences: ObservableObject {
     @Published var openCodeEnabled: Bool {
         didSet { defaults.set(openCodeEnabled, forKey: "integrations.openCode.enabled") }
     }
+    @Published var devinDesktopEnabled: Bool {
+        didSet { defaults.set(devinDesktopEnabled, forKey: "integrations.devinDesktop.enabled") }
+    }
+    @Published var devinCLIEnabled: Bool {
+        didSet { defaults.set(devinCLIEnabled, forKey: "integrations.devinCLI.enabled") }
+    }
     @Published var copilotCLIEnabled: Bool {
         didSet { defaults.set(copilotCLIEnabled, forKey: "integrations.copilotCLI.enabled") }
     }
@@ -643,6 +649,8 @@ final class AppPreferences: ObservableObject {
         cursorEnabled = defaults.bool(forKey: "integrations.cursor.enabled")
         geminiCLIEnabled = defaults.bool(forKey: "integrations.geminiCLI.enabled")
         openCodeEnabled = defaults.bool(forKey: "integrations.openCode.enabled")
+        devinDesktopEnabled = defaults.bool(forKey: "integrations.devinDesktop.enabled")
+        devinCLIEnabled = defaults.bool(forKey: "integrations.devinCLI.enabled")
         copilotCLIEnabled = defaults.bool(forKey: "integrations.copilotCLI.enabled")
         claudeCodeEnabled = defaults.bool(forKey: "claudeCode.enabled")
         claudeCodeInteractiveApprovals = defaults.storedBool(forKey: "claudeCode.interactiveApprovals", defaultValue: true)

@@ -66,6 +66,7 @@ public actor ClaudeCodeUsageScanner {
         var modified: Date
         var tail: ClaudeCodeTranscriptTail
         var entries: [String: Entry] = [:]
+        var invalidUsage = false
     }
 
     public static let maximumFiles = 20_000
@@ -91,6 +92,7 @@ public actor ClaudeCodeUsageScanner {
                 let before = state.tail.offset
                 for line in state.tail.readLines(maximumBytes: min(budget, 8_388_608)) {
                     for record in ClaudeCodeTranscriptDecoder.records(line, includeSidechain: true) {
+                        if case .invalidUsage = record { state.invalidUsage = true }
                         guard case let .usage(key, model, usage, timestamp) = record, state.entries[key] == nil else { continue }
                         state.entries[key] = Entry(day: Self.localDay(timestamp ?? modified), model: model, usage: usage)
                     }
@@ -108,17 +110,25 @@ public actor ClaudeCodeUsageScanner {
     }
 
     private func summarize(complete: Bool, now: Date) -> ClaudeCodeUsageSummary {
+        var complete = complete && !files.values.contains { $0.invalidUsage }
         var unique: [String: Entry] = [:]
         for state in files.values {
             for (key, entry) in state.entries where unique[key] == nil { unique[key] = entry }
         }
         var tokens: [Date: Int64] = [:], costs: [Date: Double] = [:], unpriced = Set<Date>()
         var lifetime: Int64 = 0
-        for entry in unique.values {
-            tokens[entry.day, default: 0] += entry.usage.total
-            lifetime += entry.usage.total
+        for key in unique.keys.sorted() {
+            let entry = unique[key]!
+            guard let total = entry.usage.total else { complete = false; unpriced.insert(entry.day); continue }
+            let daySum = tokens[entry.day, default: 0].addingReportingOverflow(total)
+            let lifetimeSum = lifetime.addingReportingOverflow(total)
+            guard !daySum.overflow, !lifetimeSum.overflow else {
+                complete = false; unpriced.insert(entry.day); continue
+            }
+            tokens[entry.day] = daySum.partialValue
+            lifetime = lifetimeSum.partialValue
             if let cost = ClaudeCodePricing.cost(model: entry.model, usage: entry.usage) { costs[entry.day, default: 0] += cost }
-            else if entry.usage.total > 0 { unpriced.insert(entry.day) }
+            else if total > 0 { unpriced.insert(entry.day) }
         }
         let days = tokens.keys.sorted().map {
             ClaudeCodeUsageSummary.Day(date: $0, tokens: tokens[$0] ?? 0,

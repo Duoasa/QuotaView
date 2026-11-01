@@ -114,6 +114,9 @@ struct ClaudeCodeInstaller: Sendable {
             for _ in 0..<3 {
                 let snapshot = try readSettings()
                 var root = snapshot.root
+                if configuration.statusLine, let current = root["statusLine"], !(current is [String: Any]) {
+                    throw InstallationError.invalidSettingsFile
+                }
                 try installHelper()
                 var hooks = removingOwnedHandlers(from: root["hooks"] as? [String: Any] ?? [:])
                 for event in Self.eventNames {
@@ -321,20 +324,35 @@ struct ClaudeCodeInstaller: Sendable {
 
     private func shellWords(_ command: String) -> [String]? {
         var words = [String](), word = "", quote: Character?, hasWord = false
+        var escaped = false
         for character in command {
-            if let current = quote {
-                if character == current { quote = nil } else { word.append(character) }
+            if escaped {
+                // Our encoder emits '\'' for apostrophes. Also accept normal
+                // shell escapes, but never line continuation or substitutions.
+                guard character != "\n", character != "\r" else { return nil }
+                if quote == "\"", !"\\\"$`".contains(character) { word.append("\\") }
+                word.append(character); hasWord = true; escaped = false
+            } else if character == "\\", quote != "'" {
+                escaped = true; hasWord = true
+            } else if let current = quote {
+                if character == current { quote = nil }
+                else {
+                    if current == "\"", "$`".contains(character) { return nil }
+                    word.append(character)
+                }
                 hasWord = true
             } else if character == "'" || character == "\"" {
                 quote = character; hasWord = true
             } else if character.isWhitespace {
+                // A newline is a command separator, not merely an argument gap.
+                guard character != "\n", character != "\r" else { return nil }
                 if hasWord { words.append(word); word = ""; hasWord = false }
             } else {
-                if ";|&<>`$()\\".contains(character) { return nil }
+                if ";|&<>`$()#*?[]{}~".contains(character) { return nil }
                 word.append(character); hasWord = true
             }
         }
-        guard quote == nil else { return nil }
+        guard quote == nil, !escaped else { return nil }
         if hasWord { words.append(word) }
         return words
     }

@@ -168,10 +168,18 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
             &timeout,
             socklen_t(MemoryLayout<timeval>.size)
         )
+        // Darwin may inherit nonblocking mode from the listening socket.
+        let flags = fcntl(connection, F_GETFL)
+        guard flags >= 0, fcntl(connection, F_SETFL, flags & ~O_NONBLOCK) == 0 else { Darwin.close(connection); return }
+        let deadline = ProcessInfo.processInfo.systemUptime + 1
         var data = Data()
         var buffer = [UInt8](repeating: 0, count: 8_192)
 
         while data.count <= 65_536 {
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard remaining > 0 else { break }
+            timeout = timeval(tv_sec: 0, tv_usec: __darwin_suseconds_t(max(1, remaining * 1_000_000)))
+            guard setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size)) == 0 else { break }
             let count = Darwin.recv(
                 connection,
                 &buffer,
@@ -180,6 +188,7 @@ final class CodexActivityUnixBridge: @unchecked Sendable {
             )
             guard count > 0 else { break }
             data.append(buffer, count: count)
+            guard data.count <= 65_536 else { break }
 
             if let envelope = try? JSONDecoder().decode(
                 CodexActivityBridgeEnvelope.self,

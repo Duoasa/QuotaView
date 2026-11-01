@@ -185,7 +185,7 @@ struct IslandTaskDetailView: View {
         switch data.provider {
         case .codex: (" Codex ", "Codex")
         case .claudeCode: ("Claude Code 会话记录", "the Claude Code transcript")
-        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI: (data.provider.displayName, data.provider.displayName)
+        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI: (data.provider.displayName, data.provider.displayName)
         }
     }
 

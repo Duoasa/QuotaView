@@ -162,6 +162,7 @@ public actor CodexSharedAppServerActivityClient {
     private struct PendingRequest {
         let method: String
         let continuation: CheckedContinuation<Data, Error>
+        var timer: Task<Void, Never>? = nil
     }
 
     private struct EmptyResult: Decodable {}
@@ -310,13 +311,14 @@ public actor CodexSharedAppServerActivityClient {
     private func connectAndInitialize(generation run: UInt64) async throws {
         closeConnection(error: ClientError.connectionClosed)
 
+        let deadline = ProcessInfo.processInfo.systemUptime + configuration.startupTimeoutSeconds
         let opened: OpenedSocket
         do {
-            opened = try await openSocket()
+            opened = try await openSocket(deadline: deadline)
         } catch {
-            guard configuration.launchServerIfNeeded else { throw error }
+            guard !Task.isCancelled, configuration.launchServerIfNeeded else { throw error }
             try launchServerIfNeeded()
-            opened = try await waitForServerSocket()
+            opened = try await waitForServerSocket(deadline: deadline)
         }
 
         guard isStarted, run == runGeneration, !Task.isCancelled else {
@@ -695,11 +697,12 @@ public actor CodexSharedAppServerActivityClient {
                     return
                 }
 
-                Task { [weak self] in
+                pending[id]?.timer = Task { [weak self] in
                     try? await Task.sleep(
                         nanoseconds: self?.requestTimeoutNanoseconds
                             ?? 5_000_000_000
                     )
+                    guard !Task.isCancelled else { return }
                     await self?.expireRequest(id: id)
                 }
             }
@@ -777,6 +780,7 @@ public actor CodexSharedAppServerActivityClient {
             guard let request = pending.removeValue(forKey: id) else {
                 return
             }
+            request.timer?.cancel()
             if let error = message["error"] as? [String: Any] {
                 request.continuation.resume(
                     throwing: ClientError.server(
@@ -858,6 +862,7 @@ public actor CodexSharedAppServerActivityClient {
 
     private func expireRequest(id: Int) {
         guard let request = pending.removeValue(forKey: id) else { return }
+        request.timer?.cancel()
         request.continuation.resume(
             throwing: ClientError.requestTimedOut(request.method)
         )
@@ -865,6 +870,7 @@ public actor CodexSharedAppServerActivityClient {
 
     private func cancelRequest(id: Int) {
         guard let request = pending.removeValue(forKey: id) else { return }
+        request.timer?.cancel()
         request.continuation.resume(throwing: CancellationError())
     }
 
@@ -916,6 +922,7 @@ public actor CodexSharedAppServerActivityClient {
         let requests = pending.values
         pending.removeAll()
         for request in requests {
+            request.timer?.cancel()
             request.continuation.resume(throwing: error)
         }
     }
@@ -956,15 +963,12 @@ public actor CodexSharedAppServerActivityClient {
         serverProcess = process
     }
 
-    private func waitForServerSocket() async throws -> OpenedSocket {
-        let deadline = Date().addingTimeInterval(
-            configuration.startupTimeoutSeconds
-        )
+    private func waitForServerSocket(deadline: TimeInterval) async throws -> OpenedSocket {
         var lastError: Error = ClientError.connectionClosed
 
-        while Date() < deadline, !Task.isCancelled {
+        while ProcessInfo.processInfo.systemUptime < deadline, !Task.isCancelled {
             do {
-                return try await openSocket()
+                return try await openSocket(deadline: deadline)
             } catch {
                 lastError = error
                 try await Task.sleep(nanoseconds: 100_000_000)
@@ -973,26 +977,29 @@ public actor CodexSharedAppServerActivityClient {
         throw lastError
     }
 
-    private func openSocket() async throws -> OpenedSocket {
+    private func openSocket(deadline: TimeInterval) async throws -> OpenedSocket {
         let path = configuration.socketURL.path
         let maximum = configuration.maximumMessageBytes
-        return try await Task.detached(priority: .utility) {
-            try Self.openSocket(
-                path: path,
-                maximumMessageBytes: maximum
-            )
-        }.value
+        let opening = Task.detached(priority: .utility) {
+            try Self.openSocket(path: path, maximumMessageBytes: maximum, deadline: deadline)
+        }
+        return try await withTaskCancellationHandler {
+            try await opening.value
+        } onCancel: { opening.cancel() }
     }
 
-    private struct OpenedSocket: @unchecked Sendable {
+    struct OpenedSocket: @unchecked Sendable {
         let fileDescriptor: Int32
         let remainingData: Data
     }
 
-    private nonisolated static func openSocket(
+    nonisolated static func openSocket(
         path: String,
-        maximumMessageBytes: Int
+        maximumMessageBytes: Int,
+        deadline: TimeInterval
     ) throws -> OpenedSocket {
+        try Task.checkCancellation()
+        try CodexDesktopIPCTransport.verifyPeer(URL(fileURLWithPath: path))
         let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard descriptor >= 0 else {
             throw ClientError.connectionFailed(
@@ -1007,6 +1014,20 @@ public actor CodexSharedAppServerActivityClient {
             }
         }
 
+        guard fcntl(descriptor, F_SETFD, FD_CLOEXEC) == 0,
+              fcntl(descriptor, F_SETFL, O_NONBLOCK) == 0 else { throw ClientError.connectionClosed }
+        func waitFor(_ events: Int16) throws {
+            while true {
+                try Task.checkCancellation()
+                let remaining = deadline - ProcessInfo.processInfo.systemUptime
+                guard remaining > 0 else { throw ClientError.requestTimedOut("websocket/handshake") }
+                var descriptorPoll = pollfd(fd: descriptor, events: events, revents: 0)
+                let count = Darwin.poll(&descriptorPoll, 1, Int32(min(50, max(1, remaining * 1_000))))
+                if count < 0 && errno == EINTR { continue }
+                guard count >= 0 else { throw ClientError.connectionClosed }
+                if count > 0 { return }
+            }
+        }
         var noSignal: Int32 = 1
         setsockopt(
             descriptor,
@@ -1044,11 +1065,17 @@ public actor CodexSharedAppServerActivityClient {
                 Darwin.connect(descriptor, $0, addressLength)
             }
         }
-        guard connectionResult == 0 else {
-            throw ClientError.connectionFailed(
-                String(cString: strerror(errno))
-            )
+        if connectionResult != 0 {
+            guard errno == EINPROGRESS || errno == EAGAIN else { throw ClientError.connectionClosed }
+            try waitFor(Int16(POLLOUT))
+            var socketError: Int32 = 0
+            var length = socklen_t(MemoryLayout<Int32>.size)
+            guard getsockopt(descriptor, SOL_SOCKET, SO_ERROR, &socketError, &length) == 0,
+                  socketError == 0 else { throw ClientError.connectionClosed }
         }
+        var uid: uid_t = 0, gid: gid_t = 0
+        guard getpeereid(descriptor, &uid, &gid) == 0, uid == getuid() else { throw ClientError.connectionClosed }
+        try CodexDesktopIPCTransport.verifyPeer(URL(fileURLWithPath: path))
 
         let keyData = Data(UUID().uuidString.utf8.prefix(16))
         let key = keyData.base64EncodedString()
@@ -1062,16 +1089,24 @@ public actor CodexSharedAppServerActivityClient {
         \r
 
         """
-        try writeAll(
-            Data(request.utf8),
-            to: descriptor
-        )
+        try Data(request.utf8).withUnsafeBytes { bytes in
+            var offset = 0
+            while offset < bytes.count {
+                try waitFor(Int16(POLLOUT))
+                let count = Darwin.write(descriptor, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
+                if count < 0 && [EINTR, EAGAIN, EWOULDBLOCK].contains(errno) { continue }
+                guard count > 0 else { throw ClientError.connectionClosed }
+                offset += count
+            }
+        }
 
         var response = Data()
         let separator = Data([0x0D, 0x0A, 0x0D, 0x0A])
         var buffer = [UInt8](repeating: 0, count: 4_096)
         while response.range(of: separator) == nil {
+            try waitFor(Int16(POLLIN))
             let count = Darwin.read(descriptor, &buffer, buffer.count)
+            if count < 0 && [EINTR, EAGAIN, EWOULDBLOCK].contains(errno) { continue }
             guard count > 0 else {
                 throw ClientError.connectionClosed
             }
@@ -1111,6 +1146,8 @@ public actor CodexSharedAppServerActivityClient {
         guard remaining.count <= maximumMessageBytes else {
             throw ClientError.messageTooLarge
         }
+        try Task.checkCancellation()
+        guard fcntl(descriptor, F_SETFL, 0) == 0 else { throw ClientError.connectionClosed }
         shouldClose = false
         return OpenedSocket(
             fileDescriptor: descriptor,
