@@ -50,9 +50,6 @@ public enum CodexDomainCatalog {
         namespace: "quota",
         name: "reset-credits"
     )
-    public static let resetCreditExpiryID = MetricID(
-        providerID: providerID, namespace: "quota", name: "reset-credit-expiry"
-    )
     public static let lifetimeTokensID = MetricID(
         providerID: providerID,
         namespace: "tokens",
@@ -65,11 +62,6 @@ public enum CodexDomainCatalog {
     )
 
     public static let definitions: [MetricDefinition] = [
-        MetricDefinition(
-            id: resetCreditExpiryID, labelKey: "codex.quota.resetCreditExpiry",
-            valueKind: .timestamp, unit: .timestamp, semantic: .state,
-            allowedAggregations: [.latest], sensitivity: .privateUsage, defaultDisplayPriority: 6
-        ),
         MetricDefinition(
             id: usedFractionID,
             labelKey: "codex.quota.used",
@@ -280,10 +272,13 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
         }
 
         let credits = limits.credits
-        if let summary = payload.rateLimits.rateLimitResetCredits, summary.availableCount > 0,
-           let expiry = summary.eligibleCredits(at: capturedAt).first?.expiresAt {
-            currentMetrics.append(sample(id: CodexDomainCatalog.resetCreditExpiryID,
-                value: .timestamp(Date(timeIntervalSince1970: Double(expiry))), observedAt: capturedAt))
+        let resetCreditExpirations: [Date]
+        if let summary = payload.rateLimits.rateLimitResetCredits, summary.availableCount > 0 {
+            resetCreditExpirations = summary.eligibleCredits(at: capturedAt).compactMap { credit in
+                credit.expiresAt.map { Date(timeIntervalSince1970: Double($0)) }
+            }
+        } else {
+            resetCreditExpirations = []
         }
         var balances: [Balance] = []
         if let credits {
@@ -360,7 +355,8 @@ public struct CodexProviderAdapter: UsageProviderAdapter, Sendable {
             currentMetrics: currentMetrics,
             models: [],
             agents: [],
-            serviceHealth: .unknown
+            serviceHealth: .unknown,
+            resetCreditExpirations: resetCreditExpirations
         )
 
         return ProviderFetchResult(
