@@ -218,6 +218,7 @@ struct ClaudeCodeHookForwarder {
               let object = (try? JSONSerialization.jsonObject(with: input)) as? [String: Any],
               let event = object["hook_event_name"] as? String, !event.isEmpty,
               let session = object["session_id"] as? String, !session.isEmpty else { return }
+        guard !DevinHookSource.isInheritedClaudeHook(object, environment: ProcessInfo.processInfo.environment) else { return }
         var payload: [String: Any] = [:]
         for key in Self.scalarKeys {
             if let value = ClaudeCodeHookIO.bounded(object[key], maximumBytes: 16_384) { payload[key] = value }
@@ -361,33 +362,7 @@ struct ClaudeCodeStatusLineForwarder {
     }
 
     private func forward(command: String, input: Data) -> Data? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", command]
-        let stdinPipe = Pipe(), stdoutPipe = Pipe()
-        process.standardInput = stdinPipe
-        process.standardOutput = stdoutPipe
-        process.standardError = FileHandle.nullDevice
-        do { try process.run() } catch { return nil }
-        let writer = stdinPipe.fileHandleForWriting
-        DispatchQueue.global(qos: .userInitiated).async {
-            try? writer.write(contentsOf: input)
-            try? writer.close()
-        }
-        var output = Data()
-        let reader = stdoutPipe.fileHandleForReading
-        let group = DispatchGroup()
-        group.enter()
-        DispatchQueue.global(qos: .userInitiated).async {
-            output = reader.readDataToEndOfFile()
-            group.leave()
-        }
-        if group.wait(timeout: .now() + 5) == .timedOut {
-            process.terminate()
-            return nil
-        }
-        process.waitUntilExit()
-        return output
+        BoundedStatusLineCommand.run(command: command, input: input)
     }
 
     private func compactLine(_ object: [String: Any]) -> String {
@@ -419,6 +394,9 @@ struct ClaudeCodeStatusLineForwarder {
 enum NativeAgentHookForwarder {
     static func run(route: ClaudeCodeRoute, event: String?) {
         let provider = route.agentProvider ?? "kimiCode"
+        if provider == "devinDesktop" || provider == "devinCLI" {
+            guard DevinHookSource.currentProvider() == provider else { return }
+        }
         defer {
             if let output = NativeAgentHookNormalizer.neutralOutput(provider: provider, event: event) {
                 ClaudeCodeHookIO.writeStandardOutput(output)
@@ -454,6 +432,6 @@ enum NativeAgentHookForwarder {
         let client = ClaudeCodeSocketClient()
         guard client.connect(path: route.socketPath, timeout: 0.25), client.send(line, timeout: 0.25),
               let ack = client.readLine(until: Date().addingTimeInterval(0.25)) else { return false }
-        return ack["accepted"] as? Bool == true
+        return ack["accepted"] as? Bool == true && ack["eventID"] as? String == eventID
     }
 }

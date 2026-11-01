@@ -331,13 +331,14 @@ enum IslandProviderIcon {
         case .geminiCLI: bundle.image(forResource: NSImage.Name("GeminiCLIProviderMark"))
         case .openCode: bundle.image(forResource: NSImage.Name("OpenCodeProviderMark"))
         case .copilotCLI: bundle.image(forResource: NSImage.Name("CopilotCLIProviderMark"))
+        case .devinDesktop, .devinCLI: bundle.image(forResource: NSImage.Name("DevinProviderMark"))
         }
     }
     static let dshImage = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "DSH")
     static let kimiImage = NSImage(systemSymbolName: "k.circle.fill", accessibilityDescription: "Kimi Code")
     static func image(for provider: IslandAgentProvider) -> NSImage? {
         switch provider { case .codex: image; case .claudeCode: claudeApplicationIcon; case .dsh: dshImage; case .kimiCode: kimiImage
-        case .cursor, .geminiCLI, .openCode, .copilotCLI: settingsMark(for: provider)
+        case .cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI: settingsMark(for: provider)
         }
     }
     static func usageMark(for provider: IslandAgentProvider) -> NSImage? {

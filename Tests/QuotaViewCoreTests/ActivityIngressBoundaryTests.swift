@@ -234,9 +234,10 @@ final class ActivityIngressBoundaryTests: XCTestCase {
     }
 
     private func verifyPausedBootstrap(unsupportedCurrentTurn: Bool) async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("qv-ingress-" + UUID().uuidString)
+        let root = URL(fileURLWithPath: "/private/tmp/qvi-" + String(UUID().uuidString.prefix(8)))
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try FileManager.default.createDirectory(at: root.appendingPathComponent("sessions"), withIntermediateDirectories: true)
-        let socket = URL(fileURLWithPath: "/tmp/qvi-" + String(UUID().uuidString.prefix(8)) + ".sock")
+        let socket = root.appendingPathComponent("events.sock")
         let server = Process()
         defer {
             if server.isRunning { server.terminate() }
@@ -292,7 +293,10 @@ final class ActivityIngressBoundaryTests: XCTestCase {
                            line: UInt = #line, _ condition: () -> Bool) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while !condition(), Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
-        XCTAssertTrue(condition(), "Timed out waiting for isolated ingress fixture", file: file, line: line)
+        guard condition() else {
+            XCTFail("Timed out waiting for isolated ingress fixture", file: file, line: line)
+            throw NSError(domain: "QuotaView.IngressFixture", code: 1)
+        }
     }
     private static let serverScript = #"""
 import socket, sys, json, struct, hashlib, base64

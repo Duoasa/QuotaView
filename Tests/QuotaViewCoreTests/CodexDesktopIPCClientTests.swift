@@ -4,6 +4,24 @@ import Darwin
 @testable import QuotaViewCore
 
 final class CodexDesktopIPCClientTests: XCTestCase {
+    func testSuccessfulShortConnectionsStillBackOffBeforeReconnecting() async throws {
+        let fixture = CodexDesktopIPCFixture(state: Self.state(requests: []))
+        let client = fixture.client(), recorder = CodexDesktopIPCSnapshotRecorder()
+        await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) })
+        try await recorder.waitForConnection()
+        fixture.disconnect()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(fixture.initializeCount, 1)
+        try await Task.sleep(nanoseconds: 250_000_000)
+        XCTAssertEqual(fixture.initializeCount, 2)
+        fixture.disconnect()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(fixture.initializeCount, 2)
+        await client.stop()
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(fixture.initializeCount, 2)
+    }
+
     func testLengthFramingHandlesFragmentationCoalescingAndBounds() throws {
         let a = Data("{\"a\":1}".utf8), b = Data("{\"b\":2}".utf8)
         let first = try CodexDesktopIPCFrameDecoder.frame(a, maximumFrameBytes: 1024)
@@ -669,6 +687,7 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     var followingCount: Int { lock.withLock { messages.filter { $0["method"] as? String == "thread-stream-following-changed" }.count } }
     var initializeCount: Int { lock.withLock { messages.filter { $0["method"] as? String == "initialize" }.count } }
     var discoveryMessages: [[String: Any]] { lock.withLock { messages.filter { $0["method"] as? String == "thread-owner-discovery" } } }
+    func disconnect() { lock.withLock { continuation?.finish() } }
     func setOwnerDiscoveryReady(_ ready: Bool) { lock.withLock { ownerDiscoveryReady = ready } }
     func emitFollowingStatusRequested() {
         lock.withLock { emitLocked(["type": "broadcast", "method": "thread-stream-following-status-requested",

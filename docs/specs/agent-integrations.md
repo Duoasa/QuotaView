@@ -8,7 +8,7 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 
 随后要求兼容基于 DSH 的定制客户端（例如本机 Scoder、DeepViewer），只做兼容，统一显示 DSH。多目录修订随后按用户“启动”要求进入 14:26 开发运行包。
 
-连接页以八行列表呈现 Codex、Claude Code、DSH、Kimi Code、Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI，统一名称、圆角矩形真实品牌图标、连接状态与开关；展开箭头位于固定宽度最左列，状态固定列宽，名称可展开该来源的实际设置。图标来源与尺寸见[来源图标记录](../design/quotaview-provider-icons.md#agent-连接列表2026-10-09)。移除连接页独立预览；套餐、额度、Tokens、成本统计仍属于用量页。继续现有 QuotaView 中性开关与中英文文案。
+连接页以十行列表呈现 Codex、Claude Code、DSH、Kimi Code、Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI、Devin Desktop、Devin CLI，统一名称、圆角矩形真实品牌图标、连接状态与开关；展开箭头位于固定宽度最左列，状态固定列宽，名称可展开该来源的实际设置。图标来源与尺寸见[来源图标记录](../design/quotaview-provider-icons.md#agent-连接列表2026-10-09)。移除连接页独立预览；套餐、额度、Tokens、成本统计仍属于用量页。继续现有 QuotaView 中性开关与中英文文案。
 
 ## 参考与适配
 
@@ -108,3 +108,29 @@ swift test --filter NativeAgentRuntimeSmokeTests
 ```
 
 模型 HTTP 服务只绑定 127.0.0.1，配置与缓存位于指定的隔离目录，不读取本机 Agent 的认证配置。没有环境变量时，官方客户端专项显示 Skip，其余本地链路冒烟正常执行。
+
+## 安装与传输边界修复（2026-11-01 / 0.9.1 Build 9）
+
+Kimi 采用 TOML 专用字符串转义，检查 hooks 赋值/普通表冲突并保留合法数组表；歧义转义键拒绝改写。Native 安装以最终权限创建独占临时文件，写后同步并原子替换；安装锁总等待最多 2 秒且可取消。Native ACK 必须匹配 eventID。
+
+107 项相关隔离测试与开发包构建/重启通过；具体范围、证据和未改条目见[复核与修复记录](../design/quotaview-bug-fixes-2026-11-01.md)。本批仅本地；真实客户端及视觉由用户验收。
+
+## Devin 双入口（2026-11-01，0.9.1 Build 10）
+
+用户要求接入 CLI 和桌面版，随后明确拆成 **Devin Desktop** 与 **Devin CLI**。复用 NativeAgent 模块，连接页增加两个默认关闭的独立开关、状态和任务命名空间；不合并成一行。两者使用 [Devin 官网图标](https://devin.ai/favicon.svg)，沿用 22 pt 图标容器和现有列表样式。
+
+### 接口与范围
+
+- [Devin Local 自定义文档](https://docs.devin.ai/desktop/devin-local/customizations)说明 Desktop 的 Devin Local 与 CLI 共用 harness/config/hooks。桌面入口只观察本机 Devin Local；云端会话、旧 Cascade、受限工作区不在接入范围内。详情提示需信任工作区。
+- 使用[官方 Hook 契约](https://docs.devin.ai/cli/extensibility/hooks/overview)及[生命周期](https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks)：SessionStart/End、UserPromptSubmit、Pre/PostToolUse、PermissionRequest、Stop、PostCompaction。`prompt_id` 转为轮次身份，旧轮次结束不能覆盖新任务；PostToolUse 的 `success=false` 转为工具失败，不能推断整轮失败。Stop 是可被其他 Hook 阻止的预结束通知，与 Kimi 一样不承诺 Hook 决策后的强一致终态。
+- 共用 `~/.config/devin/config.json` 的 hooks 字段。两入口各自写入准确归属的命令，停用仅删除本渠道、本入口命令；同用户/配置目录共用文件锁，避免双入口并发覆盖。支持 JSONC，编辑只涉及自有 Hook 节点和必要逗号，保留外部 Hook、未知字段和用户注释；重复键、非法配置或不可读文件拒绝修改。备份和原权限规则沿用现有安装器。
+- Hook 只在触发时有界读取最多 32 层父进程路径：Devin.app / Devin Desktop.app 的主程序或 Frameworks helper 归入 Desktop，其余完整链归入 CLI；CLI 之后遇到交互 shell 时仍归 CLI，覆盖 Desktop 集成终端场景。链读取失败且无法确定来源时不发送事件，不猜测成已连接。修改应用名称、其他桌面封装或未来进程结构需真实客户端核验。
+- 两个 Hook 都会被客户端调用，但只向匹配入口发送，防止重复卡。来源路径不进入 IPC。Devin 默认继承 Claude 配置；带 `DEVIN_PROJECT_DIR` 且不含 Claude `transcript_path` 的继承载荷在 Claude helper 中中性退出，避免多出 Claude 任务；正常 Claude 载荷保留。
+- 仅转发生命周期、会话/轮次/工具标识和工具名；不读取提示词、工具参数/输出、压缩内容、凭据或历史会话。无审批决定、自动批准、远程 API、额度或成本推算。两入口停用各自撤下卡片并停止监听。
+- 非默认 `--config`、云任务、应用改名和不同进程封装未验证。当前本机未发现 Devin CLI 或桌面应用；隔离 Hook/IPC 测试不能替代真实客户端任务与用户视觉验收。
+
+### 本批验证
+
+7 项 Devin 专项最终通过：事件映射/隐私、来源分流、共享 JSONC 幂等与独立卸载、混合 Hook 子数组保留、并发安装、坏配置保护，以及 CLI 生产 helper → listener → 任务卡/桌面规范载荷 → IPC → 任务卡。后者不等同真实 Desktop 进程到 Hook 的端到端验证；本机未安装 Devin。最终 CLI 用例使用 Build 10 运行包内辅助程序。6 项既有 NativeAgent 检查通过，1 项官方 OpenCode opt-in 跳过；本地化 708 模板/728 条目录文案通过。
+
+初次临时 Devin.app 夹具被系统校验拒绝并触发用户可见“已损坏”提示；已清理并移除该测试方式，以纯来源规则测试及桌面规范载荷 IPC 验证替代，没有删除真实客户端或关闭系统保护。Build 10 / 内部 143 已更新重启，256 输入/19 资源及加载路径验证通过，证据与限制见 [Handoff](../../HANDOFF.md)。未推送或发布。

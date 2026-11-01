@@ -16,7 +16,33 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.9.1 Build 8 / 清除模拟并恢复真实列表（2026-11-01）
+## 当前开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
+
+用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包已于 2026-11-01T23:24:34.142885+08:00 更新重启 PID 96230，256 输入/19 资源及实际加载核对通过；证据 `.build/devin-091b11-runtime/`。后续 CI 暴露旧 ingress 夹具使用公共 /tmp socket，与新的安全目录约束不符；仅将测试夹具迁至 0700 私有短路径，并让等待失败抛错，避免继续数组越界。11 项 ingress 检查通过；PR/main CI 结果另补记。
+
+已按用户“现在就封装”“直接给我”交付签名好友测试 DMG：`dist/testing/0.9.1-build11/QuotaView-Devin-Test-0.9.1-Build11-universal.dmg`，34457195 bytes，SHA-256 `090be08f3418d47d731a870e4c9f6e71dbbc37c5fa829e1c78325fbc8435cb3d`。App 与 DMG 均为 Developer ID Chenchen Xu (BUUH229D5Q) 签名、公证 Accepted/Stapled，Gatekeeper 通过；App 公证 `3aaa86fd-532e-4fd2-b6e7-f2359c73328d`，DMG 公证 `4c6b958f-506d-474d-807b-fe1a676bbd87`。App/Widget/Core/Hook/Sparkle 均为 arm64+x86_64，macOS 14+；正式发布安装保持。包内「Devin测试说明.txt」给出启用与实测步骤。
+
+测试包使用 Release 优化编译、独立应用名 QuotaView Devin Test，保留开发 Bundle ID/数据组，与稳定版隔离且不加入正式自动更新；未包含账户数据、配置或日志。用户明确交由朋友实测，未执行本包 UI 或启动验收，也未安装到本机 Applications。证据 `.build/devin-friend-091b11/`，源码基线 `714f441`，后续 CI 夹具/文档修订不改变生产输入。没有公开 Release/tag/appcast。
+
+## 前序开发：0.9.1 Build 10 / Devin Desktop 与 CLI 独立接入（2026-11-01）
+
+按用户“CLI 和桌面版都接入”“拆分成 devin desktop 和 devin cli”新增两个默认关闭的独立入口、连接状态、官方图标及任务身份。共用 Devin 用户 Hook 配置但准确增删各自命令，JSONC 注释/用户 Hook 保留，跨入口安装串行；事件根据有界父进程链分流，不重复投送。Desktop 覆盖本机 Devin Local，权限仍在原客户端处理，云任务不在范围。继承自 Claude 配置的 Devin 事件中性退出，避免错误生成 Claude 卡。详见[Devin 双入口](docs/specs/agent-integrations.md#devin-双入口2026-11-01091-build-10)。
+
+7 项 Devin 隔离冒烟最终通过，使用已更新运行包的真实辅助程序验证 CLI Hook；Desktop 采用官方格式载荷经生产 IPC/listener/runtime 验证，来源分类单独检查。另 6 项既有 NativeAgent 检查通过，官方 OpenCode opt-in 检查未启用。708 个源码文案模板、728 条目录文案本地化检查通过。证据 `.build/devin-runtime-smoke.log`、`.build/devin-smoke.log`、`.build/devin-localizations.log`；初次失败属于 `/bin/true` 测试路径及临时应用夹具，已修正测试并保留原日志，不把该失败计作通过。
+
+初次复制系统 shell 到临时 Devin.app 的来源夹具触发 macOS“Devin 已损坏”提示（用户 23:05 截图）。相关进程与临时目录已经退出/清理，测试已移除应用模拟启动，未修改或删除真实 Devin 安装、未关闭系统安全校验。当前未发现已安装 Devin 客户端，真实 Desktop/CLI 会话、应用改名/其他封装、非默认配置和视觉仍待用户验收。
+
+2026-11-01T23:09:57.101616+08:00 已完成 Debug arm64 增量构建，开发包重启 PID 87133；0.9.1 Build 10 / 内部 143，256 个生产输入、19 项资源、App/Widget 身份、完整包/备份与实际加载路径一致，正式安装保持。证据 `.build/devin-091b10-runtime/`。继承前批 Grok 修复。用户随后授权推送并合并本批代码，当前进入源码集成；PR/main CI 与最终提交以本节补记为准，未发布。
+
+## 前序开发：0.9.1 Build 9 / Grok 报告确认问题修复（2026-11-01）
+
+按用户“你来处理，完成后重启开发版”实施。修复 Kimi TOML/冲突、异常用量溢出、共享握手与本机对端校验、短连接退避、上下文回收，以及 Hook/审批/stdio/statusLine 相关问题；20 项修复和 L26 部分处理、其余项的保留原因见[复核与修复记录](docs/design/quotaview-bug-fixes-2026-11-01.md)。不将原报告 40 项全部宣称已解决。
+
+107 项相关隔离测试、TOML 解析/参数往返和本地化审计通过。2026-11-01T22:34:54.013193+08:00 已完成 Debug arm64 增量构建并重启 PID 73114；0.9.1 Build 9 / 内部 142，254 生产输入、18 资源、App/Widget 身份、完整包/备份及实际加载路径一致，正式安装保持。证据 `.build/grok-fixes-091b9-runtime/`、`.build/grok-fixes-091b9-verification/`、`.build/grok-fix-final-tests.log`。本批修改保留本地，未提交/推送/合并/发布；未消耗真实重置卡或进行真实审批，视觉由用户验收。下方 Build 8 集成事实仅对应前批源码。
+
+## 前序开发：0.9.1 Build 8 / 清除模拟并恢复真实列表（2026-11-01）
+
+2026-11-01 本批源码已经 [PR #128](https://github.com/Duoasa/QuotaView/pull/128) 合入 main `1d10b40296a8d7ff017a8b60c6983cdbb2292904`，源码提交 `f5471bef2cd5badcb461543c13379d629fba17b1`。[PR CI 41302490167](https://github.com/Duoasa/QuotaView/actions/runs/41302490167) 与精确 [main CI 41302845420](https://github.com/Duoasa/QuotaView/actions/runs/41302845420) 均成功，各 753 项测试、7 跳过、0 失败及 44 项契约检查通过。254 个生产输入与源码提交、合并提交及当前 Build 8 运行包一致，工作区已快进；证据 `.build/source-integration-091b8/`。未创建 Release/tag 或更新 appcast；合并结果补记保留本地，无关未跟踪文件保留。下文「待集成」及历史开发阶段状态以上述结果为准。
 
 用户要求清除模拟数据并推送合并。六张卡模拟日期、次数覆盖、DEBUG 控件与演示代码已移除，本机 `debug.resetExpirySixCardDemo` 偏好已删除；账户数据未改写。当前仅显示真实的未来一周内到期卡片，左侧「即将到期」、右侧精简时间，完整日期/时区保留悬停与辅助功能。下方 Build 5–7 演示记录为历史状态。
 
@@ -952,7 +978,7 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD `37a10e9`，Build 3 经 PR #127 合并；Build 4–8 到期列表、左右排版与文案待本批授权集成，模拟已移除 |
+| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD/main `1d10b40`，Build 8 经 PR #128 合并，PR/main CI 均通过；合并结果补记保留本地 |
 | 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 8 / 内部 141 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-11-01T19:33:45.863922+08:00；PID 44534，254 输入、18 项资源、完整包与加载路径一致；模拟代码和偏好已清除 |

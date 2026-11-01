@@ -33,6 +33,7 @@ final class NativeAgentRuntime: ObservableObject {
         var title: String?
         var parent: String?
         var pendingPermission: String?
+        var pendingPermissionTool: String?
         var tokens: Int64 = 0
         var sequence: Int = -1
         var epoch: String?
@@ -61,6 +62,8 @@ final class NativeAgentRuntime: ObservableObject {
         case .geminiCLI: preferences.geminiCLIEnabled
         case .openCode: preferences.openCodeEnabled
         case .copilotCLI: preferences.copilotCLIEnabled
+        case .devinDesktop: preferences.devinDesktopEnabled
+        case .devinCLI: preferences.devinCLIEnabled
         case .codex, .claudeCode: false
         }
     }
@@ -196,14 +199,14 @@ final class NativeAgentRuntime: ObservableObject {
         if name == "UserPromptSubmit" || name == "TurnStarted" {
             if !session.active || (nativeTurn != nil && session.nativeTurn != nil && nativeTurn != session.nativeTurn) {
                 session.turn = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession + ":" + (nativeTurn ?? UUID().uuidString))
-                session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil
+                session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil; session.pendingPermissionTool = nil
             }
             if let nativeTurn { session.nativeTurn = nativeTurn }
         } else if !session.active && ["PreToolUse", "PermissionRequest"].contains(name) {
             // A late tool event for a finished native turn cannot create another card.
             if let nativeTurn, nativeTurn == session.nativeTurn { return }
             session.turn = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession + ":" + (nativeTurn ?? UUID().uuidString))
-            session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil
+            session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil; session.pendingPermissionTool = nil
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
@@ -235,9 +238,12 @@ final class NativeAgentRuntime: ObservableObject {
             if name == "PermissionRequest" {
                 call = call ?? CodexActivityPrivacy.hashIdentifier(turn + ":permission:" + (tool ?? ""))
                 sessions[key]?.pendingPermission = call
-            } else if name == "PermissionResult" {
+                sessions[key]?.pendingPermissionTool = tool
+            } else if name == "PermissionResult" || (provider.isDevin && ["PostToolUse", "PostToolUseFailure"].contains(name)
+                && session.pendingPermissionTool == tool && (call == nil || call == session.pendingPermission)) {
                 call = call ?? session.pendingPermission
                 sessions[key]?.pendingPermission = nil
+                sessions[key]?.pendingPermissionTool = nil
             }
             let activity = CodexActivityEvent(event: event, sessionHash: key, turnHash: turn,
                 toolCategory: category(tool), source: .hook, turnCompletionStatus: completion,
@@ -275,7 +281,7 @@ final class NativeAgentRuntime: ObservableObject {
     }
     private func category(_ name: String?) -> CodexActivityToolCategory {
         let name = name?.lowercased() ?? ""
-        if name.contains("bash") || name.contains("shell") || name.contains("terminal") { return .shell }
+        if (name == "exec" || name.contains("bash")) || name.contains("shell") || name.contains("terminal") { return .shell }
         if name.contains("edit") || name.contains("write") || name.contains("patch") { return .fileEdit }
         if name.contains("agent") { return .subagent }
         return .localTool

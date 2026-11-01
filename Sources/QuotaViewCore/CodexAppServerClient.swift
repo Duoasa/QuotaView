@@ -104,6 +104,7 @@ public actor CodexAppServerClient: CodexResetTransport {
     private struct PendingRequest {
         let method: String
         let continuation: CheckedContinuation<Data, Error>
+        var timer: Task<Void, Never>? = nil
     }
 
     private let proxyConfiguration: ProxyConfiguration
@@ -551,7 +552,8 @@ public actor CodexAppServerClient: CodexResetTransport {
         errorTask = Task.detached(priority: .utility) {
             try? await Self.readLines(
                 from: errorStream,
-                maximumLineBytes: maximumLineBytes
+                maximumLineBytes: maximumLineBytes,
+                discardOversizedLines: true
             ) { line in
                 await errorClient.recordStandardError(line)
             }
@@ -672,8 +674,9 @@ public actor CodexAppServerClient: CodexResetTransport {
                     return
                 }
 
-                Task { [weak self] in
+                pending[id]?.timer = Task { [weak self] in
                     try? await Task.sleep(nanoseconds: timeout)
+                    guard !Task.isCancelled else { return }
                     await self?.expireRequest(id: id)
                 }
             }
@@ -718,6 +721,12 @@ public actor CodexAppServerClient: CodexResetTransport {
             return
         }
 
+        if message["method"] != nil, let id = message["id"] {
+            // A server request has its own ID namespace. This read-only client
+            // cannot answer approvals; decline the method without touching RPCs.
+            try? writeMessage(["id": id, "error": ["code": -32601, "message": "Method not supported"]])
+            return
+        }
         guard let id = message["id"] as? Int else {
             guard let event = CodexAppServerActivityNotificationDecoder
                     .decode(data: data),
@@ -732,6 +741,7 @@ public actor CodexAppServerClient: CodexResetTransport {
         guard let request = pending.removeValue(forKey: id) else {
             return
         }
+        request.timer?.cancel()
 
         if let error = message["error"] as? [String: Any] {
             request.continuation.resume(
@@ -760,6 +770,7 @@ public actor CodexAppServerClient: CodexResetTransport {
         guard let request = pending.removeValue(forKey: id) else {
             return
         }
+        request.timer?.cancel()
         request.continuation.resume(
             throwing: ClientError.requestTimedOut(request.method)
         )
@@ -769,6 +780,7 @@ public actor CodexAppServerClient: CodexResetTransport {
         guard let request = pending.removeValue(forKey: id) else {
             return
         }
+        request.timer?.cancel()
         request.continuation.resume(
             throwing: ClientError.cancelled
         )
@@ -807,6 +819,7 @@ public actor CodexAppServerClient: CodexResetTransport {
         let requests = pending.values
         pending.removeAll()
         for request in requests {
+            request.timer?.cancel()
             request.continuation.resume(throwing: error)
         }
     }
@@ -836,46 +849,34 @@ public actor CodexAppServerClient: CodexResetTransport {
         case lineTooLarge
     }
 
-    private nonisolated static func readLines(
+    nonisolated static func readLines(
         from stream: AsyncStream<Data>,
         maximumLineBytes: Int,
+        discardOversizedLines: Bool = false,
         onLine: @escaping @Sendable (String) async -> Void
     ) async throws {
         var buffer = Data()
-
+        var discarding = false
         for await chunk in stream {
-            buffer.append(chunk)
-
-            if buffer.count > maximumLineBytes,
-               !buffer.prefix(maximumLineBytes).contains(0x0A) {
-                throw LineReadError.lineTooLarge
-            }
-
-            while let newlineIndex = buffer.firstIndex(of: 0x0A) {
-                guard newlineIndex <= maximumLineBytes else {
-                    throw LineReadError.lineTooLarge
+            var start = chunk.startIndex
+            while start < chunk.endIndex {
+                let newline = chunk[start...].firstIndex(of: 0x0A)
+                let end = newline ?? chunk.endIndex
+                if !discarding {
+                    if end - start > maximumLineBytes - buffer.count {
+                        guard discardOversizedLines else { throw LineReadError.lineTooLarge }
+                        discarding = true; buffer.removeAll(keepingCapacity: true)
+                    } else { buffer.append(chunk[start..<end]) }
                 }
-
-                var lineData = Data(buffer[..<newlineIndex])
-                buffer.removeSubrange(...newlineIndex)
-
-                if lineData.last == 0x0D {
-                    lineData.removeLast()
+                guard let newline else { break }
+                if !discarding {
+                    if buffer.last == 0x0D { buffer.removeLast() }
+                    if let line = String(data: buffer, encoding: .utf8) { await onLine(line) }
                 }
-
-                if let line = String(data: lineData, encoding: .utf8) {
-                    await onLine(line)
-                }
+                buffer.removeAll(keepingCapacity: true); discarding = false
+                start = chunk.index(after: newline)
             }
         }
-
-        guard buffer.count <= maximumLineBytes else {
-            throw LineReadError.lineTooLarge
-        }
-
-        if !buffer.isEmpty,
-           let line = String(data: buffer, encoding: .utf8) {
-            await onLine(line)
-        }
+        if !discarding, !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) { await onLine(line) }
     }
 }

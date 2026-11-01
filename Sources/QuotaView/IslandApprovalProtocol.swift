@@ -128,7 +128,8 @@ struct IslandCodexApprovalRequest: Equatable {
     var userInputMode: CodexUserInputMode? {
         method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
     }
-    var observationOnly: Bool { localObservation != nil }
+    var observationOnly: Bool { localObservation != nil || contextUnavailable }
+    var contextUnavailable = false
     /// Built by QuotaView from a Claude Code PermissionRequest Hook; answered
     /// over that Hook's own connection, never through a Codex transport.
     var isClaudeCode: Bool { params["claudeCode"].boolean }

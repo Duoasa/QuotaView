@@ -3633,5 +3633,10 @@
     "ja": "まもなく期限切れ",
     "ko": "곧 만료",
     "es": "Caduca pronto"
+  },
+  "Shows local Devin Local tasks. Use a trusted workspace.": {
+    "ja": "Devin Local のローカルタスクを表示します。信頼済みワークスペースで使用してください。",
+    "ko": "Devin Local의 로컬 작업을 표시합니다. 신뢰할 수 있는 작업 공간에서 사용하세요.",
+    "es": "Muestra las tareas locales de Devin Local. Usa un espacio de trabajo de confianza."
   }
 }

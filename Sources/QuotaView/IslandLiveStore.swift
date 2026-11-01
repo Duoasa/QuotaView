@@ -1123,6 +1123,7 @@ final class IslandLiveStore {
         metadata.removeValue(forKey: key); desktopScopes.removeValue(forKey: key)
         pendingLocalContent.removeAll { $0.sessionHash == key }
         itemContexts = itemContexts.filter { !$0.key.hasPrefix(key + ":") }
+        itemContextOrder.removeAll { itemContexts[$0] == nil }
         if removed.contains(selectedID) { selectedID = tasks.first?.id ?? 0 }
         if let id = preservedID, removed.contains(id) { preservedID = nil }
         if !removed.isEmpty { onChange?() }
@@ -1196,7 +1197,7 @@ final class IslandLiveStore {
         onChange?()
     }
 
-    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); providers.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
+    func reset() { messageSummaryCache.removeAll(); asyncPresentations.removeAll(); subagents.removeAll(); subagentOrder.removeAll(); tasks.removeAll(); providers.removeAll(); metadata.removeAll(); sessionKinds.removeAll(); sessionKindOrder.removeAll(); executionMemorySessions.removeAll(); executionKindOrder.removeAll(); priorTurnKeys.removeAll(); itemContexts.removeAll(); itemContextOrder.removeAll(); pendingLocalContent.removeAll(); selectedID = 0; nativeConnectionEpoch = nil; desktopConnected = false; desktopConnectionEpoch = nil; desktopScopes.removeAll(); connectionEpoch += 1; onChange?() }
     func select(_ id: Int) { if tasks.contains(where: { $0.id == id }) { selectedID = id; onChange?() } }
     func setConnection(_ state: CodexSharedAppServerConnectionState) {
         guard state != connection else { return }
@@ -1557,6 +1558,7 @@ final class IslandLiveStore {
             tasks[i].turnKey = key; tasks[i].startedAt = date
             return
         }
+        clearItemContexts(for: tasks[i].key)
         if let old = tasks[i].turnKey { priorTurnKeys[tasks[i].key, default: []].insert(old) }
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
         tasks[i].activityStatus = .thinking; tasks[i].requestLifecycle = RequestLifecycle(); tasks[i].progress = nil; tasks[i].operation = ""
@@ -1612,11 +1614,14 @@ final class IslandLiveStore {
                 threadSource: thread["threadSource"] as? String ?? thread["thread_source"] as? String)
             setSessionKind(kind, for: key)
             guard presentationKind(for: key) != .internalTask, presentationKind(for: key) != .memoryConsolidation, presentationKind(for: key) != .subagent else { return }
-            metadata[key] = thread
             let status = thread["status"] as? [String: Any]
             let active = status?["type"] as? String == "active"
             guard let i = index(key, admit: active) else { return }
-            applyMetadata(thread, at: i); tasks[i].threadID = tid
+            // Retain only bounded display metadata after admission, never turns
+            // or complete history carried by thread/snapshot.
+            metadata[key] = thread.filter { ["name", "title", "model", "reasoningEffort", "effort"].contains($0.key) }
+                .mapValues { String(($0 as? String ?? "").prefix(4_096)) }
+            applyMetadata(metadata[key] ?? [:], at: i); tasks[i].threadID = tid
             if active { tasks[i].nativeState = true; applyFlags(status, at: i, epoch: scope) }
             onChange?(); return
         }
@@ -1647,9 +1652,11 @@ final class IslandLiveStore {
             guard var wire = try? IslandCodexApprovalRequest(data: data) else { return }
             if wire.kind == .nativeOnly && !["mcpServer/elicitation/request"].contains(method) { return }
             if let itemID = p["itemId"] as? String, let entry = tasks[i].entries.last(where: { $0.publicItem?.sourceID == itemID }) {
-                if let context = itemContexts[key + ":" + itemID] { wire.contextItem = context }
-                _ = entry
+                if let context = itemContexts[key + ":" + itemID] {
+                    if context.value == .null { wire.contextUnavailable = true } else { wire.contextItem = context.value }
+                } else if wire.kind == .fileChange || entry.publicItem?.category == .command { wire.contextUnavailable = true }
             }
+            if wire.kind == .fileChange, wire.contextItem == nil { wire.contextUnavailable = true }
             if tasks[i].turnKey == nil { tasks[i].turnKey = turnKey }
             let requestKey = RequestLifecycle.rpcKey(wire.rpcID, epoch: scope)
             guard !tasks[i].resolvedRequestKeys.contains(requestKey) else { return }
@@ -1709,7 +1716,6 @@ final class IslandLiveStore {
                 }
                 return
             }
-            if let context = try? IslandApprovalJSON(any: item) { itemContexts[key + ":" + itemID] = context }
             if type == "contextCompaction" { tasks[i].activityStatus = method == "item/started" ? .compacting : .thinking; break }
             let mode = CodexUserInputMode.forToolName(item["tool"] as? String ?? item["name"] as? String ?? item["toolName"] as? String)
             if method == "item/started" { tasks[i].requestLifecycle.observeMode(mode, callHash: CodexActivityPrivacy.hashIdentifier(itemID)) }
@@ -1730,17 +1736,45 @@ final class IslandLiveStore {
                 else { tasks[i].activityStatus = .working; tasks[i].operation = tasks[i].activeItems.sorted { $0.key < $1.key }.last!.value }
             }
             appendItem(item, turnID: turnID ?? "", at: i)
+            if tasks[i].entries.contains(where: { $0.publicItem?.sourceID == itemID }),
+               ["commandExecution", "fileChange", "mcpToolCall", "dynamicToolCall"].contains(type) {
+                // Output is trace content, not approval input. Bound retained
+                // context separately; an omitted context never grants approval.
+                let context = item.filter { ["type", "id", "command", "cwd", "changes", "arguments", "server", "tool"].contains($0.key) }
+                let data = try? JSONSerialization.data(withJSONObject: context)
+                let contextKey = key + ":" + itemID
+                itemContexts.removeValue(forKey: contextKey)
+                let value = data.map { $0.count <= 32_768 } == true ? (try? IslandApprovalJSON(any: context)) : nil
+                let size = value != nil ? (data?.count ?? 0) : 0
+                while itemContexts.count >= 200 || retainedItemContextBytes + size > 2_097_152 {
+                    guard let oldest = itemContextOrder.first else { break }
+                    itemContextOrder.removeFirst(); itemContexts.removeValue(forKey: oldest)
+                }
+                itemContextOrder.removeAll { $0 == contextKey }; itemContextOrder.append(contextKey)
+                itemContexts[contextKey] = .init(value: value ?? .null, byteCount: size)
+            }
         case "item/agentMessage/delta", "item/commandExecution/outputDelta":
             guard !tasks[i].terminal, let itemID = p["itemId"] as? String, let delta = p["delta"] as? String else { break }
             appendDelta(delta, itemID: itemID, message: method.contains("agentMessage"), at: i)
             onPublicChange?(); return
         case "thread/archived", "thread/closed":
-            tasks.removeAll { $0.key == key }; onChange?(); return
+            tasks.removeAll { $0.key == key }
+            metadata.removeValue(forKey: key); priorTurnKeys.removeValue(forKey: key); desktopScopes.removeValue(forKey: key)
+            pendingLocalContent.removeAll { $0.sessionHash == key }; clearItemContexts(for: key)
+            onChange?(); return
         default: return
         }
         tasks[i].updatedAt = now; onChange?()
     }
-    private var itemContexts: [String: IslandApprovalJSON] = [:]
+    private struct ItemContext { let value: IslandApprovalJSON; let byteCount: Int }
+    private var itemContexts: [String: ItemContext] = [:]
+    private var itemContextOrder: [String] = []
+    var retainedItemContextBytes: Int { itemContexts.values.reduce(0) { $0 + $1.byteCount } }
+    var retainedItemContextCount: Int { itemContexts.count }
+    private func clearItemContexts(for key: String) {
+        itemContexts = itemContexts.filter { !$0.key.hasPrefix(key + ":") }
+        itemContextOrder.removeAll { itemContexts[$0] == nil }
+    }
     private func applyMetadata(_ data: [String: Any], at i: Int) {
         if let name = nonempty(data["name"]) { applyTitle(name, source: .explicitName, at: i) }
         else { applyTitle(nonempty(data["title"]), source: .threadTitle, at: i) }
@@ -1805,7 +1839,7 @@ final class IslandLiveStore {
         }
     }
     private func beginNativeContent(_ i: Int) {
-        if !tasks[i].nativeContentAvailable { tasks[i].entries.removeAll(); tasks[i].nativeContentAvailable = true }
+        if !tasks[i].nativeContentAvailable { clearItemContexts(for: tasks[i].key); tasks[i].entries.removeAll(); tasks[i].nativeContentAvailable = true }
     }
     private func appendDelta(_ delta: String, itemID: String, message: Bool, at i: Int) {
         beginNativeContent(i)
@@ -1841,7 +1875,7 @@ final class IslandLiveStore {
     private func trim(_ i: Int) {
         func discardOldest(_ index: Int) {
             let entry = tasks[index].entries.removeFirst(); tasks[index].removedEntryCount += 1
-            if let id = entry.publicItem?.sourceID { itemContexts.removeValue(forKey: tasks[index].key + ":" + id) }
+            if let id = entry.publicItem?.sourceID { itemContexts.removeValue(forKey: tasks[index].key + ":" + id); itemContextOrder.removeAll { itemContexts[$0] == nil } }
         }
         while tasks[i].entries.count > 200 { discardOldest(i) }
         var bytes = tasks.reduce(0) { $0 + $1.entries.reduce(0) { $0 + $1.text.chinese.utf8.count + ($1.publicItem?.output?.utf8.count ?? 0) } }

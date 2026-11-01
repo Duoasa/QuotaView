@@ -48,7 +48,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         var turnActive = false
         var backfilling = false
         var usageKeys: Set<String> = []
-        var turnTokens: Int64 = 0
+        var turnTokens: Int64? = 0
         var lastAssistant: (id: String, text: String)?
         var model: String?
         var effort: String?
@@ -474,13 +474,18 @@ final class ClaudeCodeRuntime: ObservableObject {
             sendContent(["type": "output", "id": id, "text": text], sessionID: sessionID)
             retireApprovals(sessionID: sessionID, toolUseID: id)
             return
+        case .invalidUsage:
+            session.turnTokens = nil
         case .usage(let key, let model, let usage, _):
             if !session.usageKeys.contains(key), session.usageKeys.count < 100_000 {
                 session.usageKeys.insert(key)
-                session.turnTokens += usage.total
-                if let turn = session.turnKey, session.turnActive {
+                if let previous = session.turnTokens, let total = usage.total {
+                    let sum = previous.addingReportingOverflow(total)
+                    session.turnTokens = sum.overflow ? nil : sum.partialValue
+                } else { session.turnTokens = nil }
+                if let turn = session.turnKey, session.turnActive, let total = session.turnTokens {
                     island.model.receiveToken(.init(sessionHash: session.key, turnHash: turn,
-                        cumulativeTotalTokens: session.turnTokens, lastReportedTotalTokens: session.turnTokens))
+                        cumulativeTotalTokens: total, lastReportedTotalTokens: total))
                 }
             }
             if session.model != model {

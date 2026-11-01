@@ -205,14 +205,19 @@ final class ClaudeCodeBridge: @unchecked Sendable {
 
     private static func readLine(_ connection: Int32) -> Data? {
         var data = Data()
+        let deadline = ProcessInfo.processInfo.systemUptime + 1
         var buffer = [UInt8](repeating: 0, count: 65_536)
         while data.count <= maximumRequestBytes {
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard remaining > 0 else { return nil }
+            var timeout = timeval(tv_sec: 0, tv_usec: __darwin_suseconds_t(max(1, remaining * 1_000_000)))
+            guard setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size)) == 0 else { return nil }
             let count = Darwin.recv(connection, &buffer, buffer.count, 0)
             if count < 0, errno == EINTR { continue }
             guard count > 0 else { return nil }
             if let newline = buffer[0..<count].firstIndex(of: 0x0A) {
                 data.append(contentsOf: buffer[0..<newline])
-                return data
+                return data.count <= maximumRequestBytes ? data : nil
             }
             data.append(contentsOf: buffer[0..<count])
         }

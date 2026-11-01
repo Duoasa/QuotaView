@@ -4,6 +4,7 @@ import QuotaViewCore
 /// Maps a Claude Code PermissionRequest onto the island's typed request model,
 /// and the island's chosen result back onto Claude Code's Hook decision.
 enum ClaudeCodeApproval {
+    enum Failure: Error { case unsupportedInput }
     static func request(eventID: String, sessionKey: String, turnKey: String, toolName: String,
                         toolInput: [String: Any], toolUseID: String, cwd: String?,
                         hasSuggestions: Bool) throws -> IslandCodexApprovalRequest {
@@ -14,7 +15,12 @@ enum ClaudeCodeApproval {
         switch toolName {
         case "AskUserQuestion":
             method = "item/tool/requestUserInput"
-            params["questions"] = (toolInput["questions"] as? [[String: Any]] ?? []).map { question -> [String: Any] in
+            let questions = toolInput["questions"] as? [[String: Any]] ?? []
+            let titles = questions.compactMap { $0["question"] as? String }
+            guard !questions.isEmpty, titles.count == questions.count,
+                  titles.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
+                  Set(titles).count == titles.count else { throw Failure.unsupportedInput }
+            params["questions"] = questions.map { question -> [String: Any] in
                 let text = question["question"] as? String ?? ""
                 return ["id": text, "question": text, "header": question["header"] as? String ?? "",
                         "options": (question["options"] as? [[String: Any]] ?? []).map {
@@ -36,7 +42,7 @@ enum ClaudeCodeApproval {
         default:
             method = "item/commandExecution/requestApproval"
             params["availableDecisions"] = decisions(hasSuggestions)
-            params["command"] = summary(toolName, input: toolInput)
+            params["command"] = try summary(toolName, input: toolInput)
             params["reason"] = toolName
         }
         let data = try JSONSerialization.data(withJSONObject: ["method": method, "id": "claude:" + eventID, "params": params],
@@ -87,13 +93,13 @@ enum ClaudeCodeApproval {
         ["accept"] + (hasSuggestions ? ["acceptForSession", "acceptAlways"] : []) + ["decline", "cancel"]
     }
 
-    private static func summary(_ toolName: String, input: [String: Any]) -> String {
-        for key in ["url", "command", "file_path", "path", "pattern", "query", "prompt", "description"] {
-            if let value = input[key] as? String, !value.isEmpty { return toolName + " · " + value }
-        }
-        guard JSONSerialization.isValidJSONObject(input),
-              let data = try? JSONSerialization.data(withJSONObject: input, options: [.sortedKeys, .prettyPrinted]) else { return toolName }
-        return toolName + "\n" + String(decoding: data.prefix(4_096), as: UTF8.self)
+    private static func summary(_ toolName: String, input: [String: Any]) throws -> String {
+        guard JSONSerialization.isValidJSONObject(input) else { throw Failure.unsupportedInput }
+        let data = try JSONSerialization.data(withJSONObject: input, options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes])
+        // Never offer approval on a silently truncated parameter set. Let the
+        // original Claude prompt handle input too large for the island.
+        guard data.count <= 65_536 else { throw Failure.unsupportedInput }
+        return toolName + "\n" + String(decoding: data, as: UTF8.self)
     }
 
     private static func diff(_ toolName: String, input: [String: Any]) -> String {

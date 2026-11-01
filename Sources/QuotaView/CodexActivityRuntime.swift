@@ -56,6 +56,8 @@ final class CodexActivityRuntime: ObservableObject {
     private(set) lazy var geminiCLI = NativeAgentRuntime(provider: .geminiCLI, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var openCode = NativeAgentRuntime(provider: .openCode, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var copilotCLI = NativeAgentRuntime(provider: .copilotCLI, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var devinDesktop = NativeAgentRuntime(provider: .devinDesktop, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var devinCLI = NativeAgentRuntime(provider: .devinCLI, preferences: preferences, island: liveIsland, defaults: defaults)
 
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
@@ -332,7 +334,7 @@ final class CodexActivityRuntime: ObservableObject {
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
         claudeCode.start()
-        dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); copilotCLI.start()
+        dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); copilotCLI.start(); devinDesktop.start(); devinCLI.start()
     }
 
     private func startDesktopObservation() {
@@ -687,7 +689,7 @@ final class CodexActivityRuntime: ObservableObject {
     func stop() async {
         isRunning = false
         claudeCode.stop()
-        dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); copilotCLI.stop()
+        dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); copilotCLI.stop(); devinDesktop.stop(); devinCLI.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()

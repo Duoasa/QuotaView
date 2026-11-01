@@ -1581,7 +1581,7 @@ final class CodexActivityStore: ObservableObject {
         admittedTurnStartBySession.removeValue(forKey: session)
         if activeTurnHashBySession[session] == turn { activeTurnHashBySession.removeValue(forKey: session) }
         if snapshot?.sessionHash == session, snapshot?.taskIdentity?.turnHash == turn {
-            revision &+= 1; inactivityTask?.cancel(); titleTask?.cancel()
+            revision &+= 1; inactivityTask?.cancel(); titleTask?.cancel(); titleTask = nil; titleTaskSessionHash = nil
             snapshot = nil; lifecycle = .idle; presentation = .hidden
             resolvedThreadTitle = nil; selectedActivityAt = nil; selectedCompactionSource = nil
             resetConfirmationReminder()

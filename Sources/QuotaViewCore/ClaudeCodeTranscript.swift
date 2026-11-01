@@ -11,6 +11,7 @@ public enum ClaudeCodeTranscriptRecord: Equatable, Sendable {
     case assistantText(messageID: String, text: String)
     case toolUse(id: String, name: String, input: String)
     case toolResult(toolUseID: String, text: String, isError: Bool)
+    case invalidUsage
     case usage(key: String, model: String, usage: ClaudeCodeTokenUsage, timestamp: Date?)
 }
 
@@ -91,8 +92,10 @@ public enum ClaudeCodeTranscriptDecoder {
             records.insert(.assistantText(messageID: textID, text: joined), at: 0)
         }
         let model = message["model"] as? String ?? ""
-        if let usageObject = message["usage"] as? [String: Any], let usage = ClaudeCodeTokenUsage(usage: usageObject),
-           model != "<synthetic>" {
+        if let rawUsage = message["usage"], !(rawUsage is NSNull), model != "<synthetic>" {
+            guard let usageObject = rawUsage as? [String: Any], let usage = ClaudeCodeTokenUsage(usage: usageObject) else {
+                records.append(.invalidUsage); return records
+            }
             // Streaming repeats one response's usage on several lines.
             let request = object["requestId"] as? String ?? ""
             let key = messageID.isEmpty && request.isEmpty ? "" : messageID + ":" + request
