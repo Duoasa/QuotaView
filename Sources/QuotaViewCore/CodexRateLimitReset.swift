@@ -144,11 +144,7 @@ public actor CodexRateLimitResetCoordinator {
     }
 
     private func eligibleCredits(_ summary: RateLimitResetCreditsSummary, now: Date) -> [RateLimitResetCredit] {
-        (summary.credits ?? []).filter {
-            !$0.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && $0.status == "available" && $0.resetType == "codexRateLimits"
-                && ($0.expiresAt.map { Double($0) > now.timeIntervalSince1970 } ?? true)
-        }.sorted { ($0.expiresAt ?? Int.max) < ($1.expiresAt ?? Int.max) }
+        summary.eligibleCredits(at: now)
     }
 
     private func loadAttempt() throws -> Attempt? {

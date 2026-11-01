@@ -40,6 +40,14 @@ public struct SpendControlLimitSnapshot: Decodable, Sendable {
 public struct RateLimitResetCreditsSummary: Decodable, Sendable {
     public let availableCount: Int
     public let credits: [RateLimitResetCredit]?
+
+    public func eligibleCredits(at now: Date) -> [RateLimitResetCredit] {
+        (credits ?? []).filter {
+            !$0.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && $0.status == "available" && $0.resetType == "codexRateLimits"
+                && ($0.expiresAt.map { Double($0) > now.timeIntervalSince1970 } ?? true)
+        }.sorted { ($0.expiresAt ?? Int.max) < ($1.expiresAt ?? Int.max) }
+    }
 }
 
 public struct RateLimitResetCredit: Decodable, Sendable {

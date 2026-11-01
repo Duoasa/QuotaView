@@ -3623,5 +3623,20 @@
     "ja": "Codexの利用枠を誤ってリセットしないよう、リセットクレジットの使用を無効にする設定を追加しました。",
     "ko": "Codex 한도를 실수로 초기화하지 않도록 초기화 크레딧 사용을 비활성화하는 옵션을 추가했습니다.",
     "es": "Se ha añadido una opción para desactivar el uso de créditos de restablecimiento y evitar restablecer por error la cuota de Codex."
+  },
+  "Next expiry": {
+    "ja": "次の有効期限",
+    "ko": "가장 가까운 만료일",
+    "es": "Próximo vencimiento"
+  },
+  "Expires on": {
+    "ja": "有効期限",
+    "ko": "만료일",
+    "es": "Vence el"
+  },
+  "Not provided": {
+    "ja": "未提供",
+    "ko": "제공되지 않음",
+    "es": "No disponible"
   }
 }
