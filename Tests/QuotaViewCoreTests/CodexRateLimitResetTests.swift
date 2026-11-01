@@ -40,6 +40,48 @@ final class CodexRateLimitResetTests: XCTestCase {
         await assertError(.confirmationExpired) { _ = try await service.execute(ready, now: now) }
     }
 
+    func testResetConsumesEarliestExpiringEligibleCreditRegardlessOfResponseOrder() async throws {
+        let timestamp = Int(now.timeIntervalSince1970)
+        let credits: [FakeResetTransport.Credit] = [
+            .init(id: "no-expiry", expiresAt: nil),
+            .init(id: "later", expiresAt: timestamp + 86_400),
+            .init(id: "expired", expiresAt: timestamp),
+            .init(id: "consumed", expiresAt: timestamp + 1, status: "consumed"),
+            .init(id: "other-type", expiresAt: timestamp + 2, resetType: "unknown"),
+            .init(id: "earliest", expiresAt: timestamp + 60),
+        ]
+        for offset in credits.indices {
+            let fake = FakeResetTransport()
+            await fake.configureCredits(Array(credits[offset...] + credits[..<offset]))
+            let service = CodexRateLimitResetCoordinator(client: fake, journalURL: try journal())
+            let ready = try await service.prepare(now: now)
+            let beforeConfirmation = await fake.calls
+            XCTAssertTrue(beforeConfirmation.isEmpty)
+            _ = try await service.execute(ready, now: now)
+            let calls = await fake.calls
+            XCTAssertEqual(calls.map(\.credit), ["earliest"])
+        }
+    }
+
+    func testRetryKeepsOriginalCreditWhenEarlierExpiryBecomesAvailable() async throws {
+        let fake = FakeResetTransport(), url = try journal()
+        let timestamp = Int(now.timeIntervalSince1970)
+        await fake.configureCredits([.init(id: "original", expiresAt: timestamp + 600)])
+        await fake.configure(failure: .timeoutAfterConsumption)
+        let service = CodexRateLimitResetCoordinator(client: fake, journalURL: url)
+        let ready = try await service.prepare(now: now)
+        await assertError(.outcomeUnknown) { _ = try await service.execute(ready, now: now) }
+        await fake.configureCredits([.init(id: "new-earlier", expiresAt: timestamp + 60)])
+        let restored = CodexRateLimitResetCoordinator(client: fake, journalURL: url)
+        let retry = try await restored.prepare(now: now)
+        XCTAssertTrue(retry.isRetry)
+        let outcome = try await restored.execute(retry, now: now)
+        XCTAssertEqual(outcome, .alreadyRedeemed)
+        let calls = await fake.calls
+        XCTAssertEqual(calls.map(\.credit), ["original", "original"])
+        XCTAssertEqual(calls.map(\.key), [ready.id.uuidString, ready.id.uuidString])
+    }
+
     func testUnknownOutcomeSurvivesRestartAndReusesKeyWithNoCredits() async throws {
         let fake = FakeResetTransport(), url = try journal()
         await fake.configure(failure: .timeoutAfterConsumption)
@@ -222,7 +264,14 @@ final class CodexRateLimitResetTests: XCTestCase {
 private actor FakeResetTransport: CodexResetTransport {
     enum Failure { case timeoutAfterConsumption, unsupported }
     struct Call { let credit: String; let key: String }
+    struct Credit: Sendable {
+        let id: String
+        let expiresAt: Int?
+        var status = "available"
+        var resetType = "codexRateLimits"
+    }
     private(set) var calls: [Call] = []
+    private var suppliedCredits: [Credit]?
     private var email = "account@example.test", credit = "credit-A", status = "available", resetType = "codexRateLimits"
     private var count = 2, expiresAt = 2_000_000_000
     private var details = true, delay = false
@@ -242,9 +291,23 @@ private actor FakeResetTransport: CodexResetTransport {
     func readResetAccount() throws -> CodexResetAccountResponse {
         try decode(["account": ["type": "chatgpt", "email": email]])
     }
+    func configureCredits(_ credits: [Credit]) {
+        suppliedCredits = credits
+        count = credits.count
+    }
     func readResetLimits() throws -> AccountRateLimitsResponse {
-        let credits: Any = details ? [["id": credit, "resetType": resetType, "status": status,
-            "grantedAt": 1, "expiresAt": expiresAt]] : NSNull()
+        let credits: Any
+        if !details {
+            credits = NSNull()
+        } else if let suppliedCredits {
+            credits = suppliedCredits.map { item -> [String: Any] in
+                ["id": item.id, "resetType": item.resetType, "status": item.status,
+                 "grantedAt": 1, "expiresAt": item.expiresAt.map { $0 as Any } ?? NSNull()]
+            }
+        } else {
+            credits = [["id": credit, "resetType": resetType, "status": status,
+                        "grantedAt": 1, "expiresAt": expiresAt]]
+        }
         return try decode(["rateLimits": ["primary": ["usedPercent": 30]],
             "rateLimitResetCredits": ["availableCount": count, "credits": credits]])
     }

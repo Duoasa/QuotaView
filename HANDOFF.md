@@ -16,13 +16,21 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.8.7 Build 28 / 设置固定宽度与完成配色恢复（2026-11-01）
+## 当前开发：0.8.7 Build 29 / 退出行右侧图标（2026-11-01）
+
+按用户最新截图要求，在「退出 QuotaView」右侧添加红色 `power` 图标，13 pt Semibold、20 pt 槽位，与卡片内边距右对齐；保留整行点击和确认流程，图标不重复朗读。详见[退出入口右侧图标](docs/design/QUOTAVIEW_UI_RULES.md#退出入口右侧图标2026-11-01087-build-29)。
+
+Debug arm64 增量构建与启动冒烟通过，2026-11-01T13:13:45.682640+08:00 已更新开发运行包，PID 39452，0.8.7 / Build 29 / 内部 131；241 输入、完整包、App/Widget 身份及实际加载路径一致。证据 `.build/quit-trailing-icon-087b29-runtime/`。仅局部图标调整，未新增重复实现测试或执行 UI 验收；实际视觉由用户检查。用户已授权本批推送并合入 main，正在执行源码集成；正式安装保持。
+
+用户随后明确重置卡优先使用最接近到期日的卡。现有生产实现已经按到期时间升序选取可用卡，未提供到期日期的排后；结果未知的重试固定原卡。补充多卡乱序与重试保护测试，3 项隔离冒烟通过，证据 `.build/reset-expiry-priority-087b29/smoke.log`；见[重置规则](docs/specs/codex-quota-reset.md)。没有调用真实消费接口；仅测试和规则补充，运行包继续为 Build 29。
+
+## 前序开发：0.8.7 Build 28 / 设置固定宽度与完成配色恢复（2026-11-01）
 
 设置窗口按用户指定固定为 820 pt，禁止横向调整，最大化按钮置灰，原生窗口禁用 zoom、全屏和系统平铺扩张，保留纵向调整。完成态恢复原紫—蓝—青高光及紫/青外辉光，保留 6 秒循环；前序四种新增语言、32 pt 代理输入框、非聚焦卡片淡色与深黑侧栏保持。详见[界面规则](docs/design/QUOTAVIEW_UI_RULES.md#设置固定宽度与完成配色回调2026-11-01087-build-28)与[完成态配色契约](docs/specs/PROGRESS_EFFECT_ADAPTATION.md#087-build-28恢复原完成配色2026-11-01)。
 
 5 项相关冒烟与 Debug arm64 增量构建通过。2026-11-01T03:42:22.907872+08:00 已更新开发运行包，PID 92757，0.8.7 / Build 28 / 内部 130；241 输入、完整包及实际加载路径一致。证据 `.build/settings-fixed-width-087b28/smoke.log`、`.build/settings-fixed-width-087b28-runtime/`。仅编译和冒烟，视觉与交互由用户检查。
 
-用户已明确授权将当前 Build 25–28 改动推送并合入 main；正在分支 `codex/0.8.7-settings-refinements` 执行源码集成，合并前后核对对应 CI。前序各批“仅本地”是当时阶段事实。本次不发布 Release、tag 或 appcast，不替换正式安装，不消耗真实重置卡。
+本批 Build 25–28 已通过 [PR #124](https://github.com/Duoasa/QuotaView/pull/124) 合入 main，源码提交 `6da89de5f1a92a4aa81ddac8ec64ee4d062c4e3e`，合并提交 `14f51937af6e2b3124905f032d46ba88017d35cf`。[PR CI 41235821503](https://github.com/Duoasa/QuotaView/actions/runs/41235821503) 与精确 [main CI 41236289809](https://github.com/Duoasa/QuotaView/actions/runs/41236289809) 均成功，各 741 项测试、6 跳过、0 失败及 44 项契约检查通过。241 个生产输入与源码提交、合并提交及当前 Build 28 运行包逐项一致；工作区已快进到合并提交。证据 `.build/source-integration-087b28/`。合并结果补记保留本地，原有未跟踪文件保持；前序“仅本地”是当时阶段事实。未发布 Release、tag 或 appcast，未替换正式安装或消耗真实重置卡。
 
 ## 前序开发：0.8.7 Build 27 / 完成描边、状态着色与深色侧栏（2026-11-01）
 
@@ -876,11 +884,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.7-settings-refinements`；基于 main `93888fd`，用户已授权 Build 25–28 多语言、设置和完成态修改推送合并，当前执行源码集成 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 28 / 内部 130 |
+| 分支 / 源码提交 | `codex/0.8.7-quit-reset-priority`；基于 main `14f5193`，用户已授权 Build 29 退出图标、重置卡冒烟与交付记录推送合并 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.8.7 / Build 29 / 内部 131 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-01T03:42:22.907872+08:00；PID 92757，241 输入、完整包与加载路径一致，无临时参数 |
-| 源码与运行包 | Build 28 设置固定 820 pt、最大化置灰、恢复紫蓝青循环描边已运行，继承多语言、代理输入高度、非聚焦淡色与深黑侧栏；实际视觉与交互由用户检查。 |
+| 最近运行核验 | 2026-11-01T13:13:45.682640+08:00；PID 39452，241 输入、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | Build 29 退出行右侧电源图标已运行，继承前序设置、多语言与任务特效；实际视觉与交互由用户检查。 |
 | 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
