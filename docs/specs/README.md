@@ -8,7 +8,11 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.9.1 Build 10
+## 当前开发：0.9.1 Build 11
+
+[Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) / [Grok 修复](../design/quotaview-bug-fixes-2026-11-01.md)：修复 PR CI 旧 Swift 对 `strdup` 输入数组的类型推断不兼容，8 项针对性冒烟通过。用户授权立即制作签名好友测试 DMG，与 CI/合并并行；Build 11 / 内部 144，最终运行及产物结果见 Handoff，不公开发布或加入自动更新。
+
+## 前序开发：0.9.1 Build 10
 
 [Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) · `Implemented / User Acceptance Pending`：Devin Desktop / Devin CLI 独立开关、状态和任务身份，共用 JSONC 配置安全编辑及来源分流。7 项 Devin 专项和 6 项既有 NativeAgent 检查通过，1 项 OpenCode opt-in 跳过；本地化通过。Build 10 / 内部 143 已更新重启，256 输入/19 资源与实际加载核对通过。临时应用夹具曾触发系统弹窗，已移除并更换验证方式；真实客户端与视觉待验收，仅本地。
 

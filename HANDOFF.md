@@ -16,7 +16,11 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.9.1 Build 10 / Devin Desktop 与 CLI 独立接入（2026-11-01）
+## 当前开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
+
+用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包更新、签名测试 DMG、公证和 PR/main CI 的最终结果另补记；测试包保留开发数据身份并使用独立应用名称，不加入 appcast、不创建公开 Release/tag。
+
+## 前序开发：0.9.1 Build 10 / Devin Desktop 与 CLI 独立接入（2026-11-01）
 
 按用户“CLI 和桌面版都接入”“拆分成 devin desktop 和 devin cli”新增两个默认关闭的独立入口、连接状态、官方图标及任务身份。共用 Devin 用户 Hook 配置但准确增删各自命令，JSONC 注释/用户 Hook 保留，跨入口安装串行；事件根据有界父进程链分流，不重复投送。Desktop 覆盖本机 Devin Local，权限仍在原客户端处理，云任务不在范围。继承自 Claude 配置的 Devin 事件中性退出，避免错误生成 Claude 卡。详见[Devin 双入口](docs/specs/agent-integrations.md#devin-双入口2026-11-01091-build-10)。
 

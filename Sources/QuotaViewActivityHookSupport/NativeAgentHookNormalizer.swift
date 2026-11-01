@@ -139,7 +139,9 @@ public enum BoundedStatusLineCommand {
             posix_spawn_file_actions_addclose(&actions, inputPipe[1]),
             posix_spawn_file_actions_addclose(&actions, outputPipe[0])
         ].allSatisfy { $0 == 0 }
-        var arguments = ["/bin/sh", "-c", command].map { strdup($0) } + [nil]
+        let commandArguments: [String] = ["/bin/sh", "-c", command]
+        var arguments: [UnsafeMutablePointer<CChar>?] = commandArguments.map { strdup($0) }
+        arguments.append(nil)
         var environment = ProcessInfo.processInfo.environment.map { strdup($0.key + "=" + $0.value) } + [nil]
         defer { arguments.forEach { free($0) }; environment.forEach { free($0) } }
         var pid: pid_t = 0
