@@ -185,7 +185,7 @@ struct IslandTaskDetailView: View {
         switch data.provider {
         case .codex: (" Codex ", "Codex")
         case .claudeCode: ("Claude Code 会话记录", "the Claude Code transcript")
-        case .dsh, .kimiCode: (data.provider.displayName, data.provider.displayName)
+        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI: (data.provider.displayName, data.provider.displayName)
         }
     }
 
@@ -237,7 +237,7 @@ struct IslandTaskDetailView: View {
                         .font(.system(size: 10)).foregroundStyle(muted).lineLimit(1).truncationMode(.middle).frame(height: 18)
                 }
             } else {
-                Text(data.provider == .dsh || data.provider == .kimiCode
+                Text(data.provider.isObserverOnly
                     ? text("任务已完成，请在 \(agent) 查看完整回答", "Task completed. View the full answer in \(agent)")
                     : text("最终回答尚未同步，请在\(sourceName.0)查看", "Final answer has not synced; view it in \(sourceName.1)"))
                     .font(.system(size: 12)).foregroundStyle(secondary).frame(height: 20)

@@ -3573,5 +3573,55 @@
     "ja": "この操作はリセットクレジットを1つ使い、対象のCodex使用期間を直ちにリセットします。取り消しはできません。このバージョンはデモモードのため、実際のリセットAPIを呼び出したり、クレジットを消費したりすることはありません。",
     "ko": "이 작업은 초기화 크레딧 1개를 사용하여 해당 Codex 사용 기간을 즉시 초기화하며 되돌릴 수 없습니다. 이 버전은 데모 모드이므로 실제 초기화 API를 호출하거나 크레딧을 사용하지 않습니다.",
     "es": "Esta acción usa un crédito para restablecer inmediatamente un periodo de uso apto de Codex y no se puede deshacer. Esta versión sigue en modo de demostración: no llama a la API real ni consume créditos."
+  },
+  "Fresh look": {
+    "ja": "新しいデザイン",
+    "ko": "새로운 디자인",
+    "es": "Nueva apariencia"
+  },
+  "Refreshed app and agent icons, refined task card colors, and flowing highlights for completed tasks.": {
+    "ja": "アプリとエージェントのアイコンを刷新し、タスクカードの配色と完了時の流れるハイライトを改善しました。",
+    "ko": "앱과 에이전트 아이콘을 새롭게 하고, 작업 카드 색상과 완료 시 흐르는 하이라이트를 개선했습니다.",
+    "es": "Nuevos iconos de la app y los agentes, colores de tarjetas mejorados y reflejos animados para las tareas completadas."
+  },
+  "Settings experience": {
+    "ja": "設定の使いやすさ",
+    "ko": "설정 사용성",
+    "es": "Experiencia de ajustes"
+  },
+  "Reorganized settings with a clearer layout, improved island previews, glass layers, and refined controls.": {
+    "ja": "設定のレイアウトと分類を整理し、アイランドのプレビュー、ガラスのレイヤー表現、コントロールのデザインを改善しました。",
+    "ko": "설정 레이아웃과 분류를 정리하고, 아일랜드 미리보기, 유리 레이어와 컨트롤 디자인을 개선했습니다.",
+    "es": "Ajustes reorganizados con una disposición más clara, mejores vistas previas de la isla, capas de cristal y controles refinados."
+  },
+  "Agent integrations (preview)": {
+    "ja": "エージェント連携（プレビュー）",
+    "ko": "에이전트 연동 (미리보기)",
+    "es": "Integraciones de agentes (preliminar)"
+  },
+  "Added task status integrations for Cursor, Gemini CLI, OpenCode, and GitHub Copilot CLI.": {
+    "ja": "Cursor、Gemini CLI、OpenCode、GitHub Copilot CLIのタスク状態との連携を追加しました。",
+    "ko": "Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI의 작업 상태 연동을 추가했습니다.",
+    "es": "Se han añadido integraciones del estado de las tareas de Cursor, Gemini CLI, OpenCode y GitHub Copilot CLI."
+  },
+  "More languages": {
+    "ja": "対応言語の追加",
+    "ko": "추가 언어 지원",
+    "es": "Más idiomas"
+  },
+  "Added Japanese, Korean, Traditional Chinese, and Spanish.": {
+    "ja": "日本語、韓国語、繁体字中国語、スペイン語に対応しました。",
+    "ko": "일본어, 한국어, 중국어 번체, 스페인어를 추가했습니다.",
+    "es": "Se han añadido japonés, coreano, chino tradicional y español."
+  },
+  "Reset protection": {
+    "ja": "リセット保護",
+    "ko": "초기화 보호",
+    "es": "Protección de restablecimiento"
+  },
+  "Added Disable reset credit use to help prevent accidental Codex quota resets.": {
+    "ja": "Codexの利用枠を誤ってリセットしないよう、リセットクレジットの使用を無効にする設定を追加しました。",
+    "ko": "Codex 한도를 실수로 초기화하지 않도록 초기화 크레딧 사용을 비활성화하는 옵션을 추가했습니다.",
+    "es": "Se ha añadido una opción para desactivar el uso de créditos de restablecimiento y evitar restablecer por error la cuota de Codex."
   }
 }

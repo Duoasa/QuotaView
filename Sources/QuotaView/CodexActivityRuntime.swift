@@ -52,6 +52,11 @@ final class CodexActivityRuntime: ObservableObject {
     private(set) lazy var claudeCode = ClaudeCodeRuntime(preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var dsh = NativeAgentRuntime(provider: .dsh, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var kimiCode = NativeAgentRuntime(provider: .kimiCode, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var cursor = NativeAgentRuntime(provider: .cursor, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var geminiCLI = NativeAgentRuntime(provider: .geminiCLI, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var openCode = NativeAgentRuntime(provider: .openCode, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var copilotCLI = NativeAgentRuntime(provider: .copilotCLI, preferences: preferences, island: liveIsland, defaults: defaults)
+
     private var preferenceCancellable: AnyCancellable?
     private var observationTask: Task<Void, Never>?
     private var desktopIPCClient: CodexDesktopIPCClient
@@ -327,7 +332,7 @@ final class CodexActivityRuntime: ObservableObject {
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
         claudeCode.start()
-        dsh.start(); kimiCode.start()
+        dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); copilotCLI.start()
     }
 
     private func startDesktopObservation() {
@@ -682,7 +687,7 @@ final class CodexActivityRuntime: ObservableObject {
     func stop() async {
         isRunning = false
         claudeCode.stop()
-        dsh.stop(); kimiCode.stop()
+        dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); copilotCLI.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()

@@ -2047,7 +2047,7 @@ final class IslandLiveStore {
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
             let provider = self.provider(for: task.key)
             request?.provider = provider
-            if provider == .dsh || provider == .kimiCode {
+            if provider.isObserverOnly {
                 request?.canRespond = false
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
             }

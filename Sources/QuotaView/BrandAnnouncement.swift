@@ -65,24 +65,20 @@ struct AnnouncementContent {
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
             Section(id: "highlights", category: .highlight, items: [
-                Item(id: "news", title: copy.text("重要消息，一处查看", "Important news, in one place"),
-                     body: copy.text("新功能、体验改进和产品公告，现在都可以在这里查看。", "Discover new features, improvements and product announcements here."))
-            ]),
-            Section(id: "features", category: .feature, items: [
-                Item(id: "sections", title: copy.text("按分类阅读", "Browse by category"),
-                     body: copy.text("点击分组标题展开或收起，向下滚动即可阅读更多内容。", "Expand or collapse each section, and scroll to read more.")),
-                Item(id: "reopen", title: copy.text("随时回看", "Revisit anytime"),
-                     body: copy.text("关闭后，可从「设置 → 关于 → 更新与公告」再次打开。", "Open this window again from Settings → About → Updates & announcements."))
+                Item(id: "appearance", title: copy.text("全新外观", "Fresh look"),
+                     body: copy.text("更新应用与 Agent 图标，优化任务卡片着色和完成态流动高光。", "Refreshed app and agent icons, refined task card colors, and flowing highlights for completed tasks."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
-                Item(id: "settings", title: copy.text("更自然的设置选择", "Native settings menus"),
-                     body: copy.text("语言、固定屏幕、停留时间和代理协议使用系统下拉菜单，当前选项更清晰。", "Language, pinned display, display duration and proxy protocol now use native menus with a clear selection.")),
-                Item(id: "proxy", title: copy.text("更简洁的网络代理设置", "Simpler proxy settings"),
-                     body: copy.text("直接查看代理配置、测试连接和处理错误，减少界面干扰。", "Access proxy configuration, connection testing and error feedback in a simpler layout."))
+                Item(id: "settings", title: copy.text("设置体验", "Settings experience"),
+                     body: copy.text("重新整理设置布局与分类，优化灵动岛预览、玻璃分层和控件样式。", "Reorganized settings with a clearer layout, improved island previews, glass layers, and refined controls."))
             ]),
-            Section(id: "brand", category: .announcement, items: [
-                Item(id: "brand-refresh", title: copy.text("QuotaView 品牌升级预告", "A fresh look for QuotaView"),
-                     body: copy.text("我们正在准备新的品牌形象。继续照常使用，后续进展会在应用内告知。", "We're preparing a new visual identity. Keep using the app as usual; more details will follow here."))
+            Section(id: "features", category: .feature, items: [
+                Item(id: "agent-integrations", title: copy.text("Agent 接入（预览）", "Agent integrations (preview)"),
+                     body: copy.text("新增 Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI 任务状态接入。", "Added task status integrations for Cursor, Gemini CLI, OpenCode, and GitHub Copilot CLI.")),
+                Item(id: "languages", title: copy.text("多语言支持", "More languages"),
+                     body: copy.text("新增日语、韩语、繁体中文和西班牙语。", "Added Japanese, Korean, Traditional Chinese, and Spanish.")),
+                Item(id: "reset-protection", title: copy.text("重置保护", "Reset protection"),
+                     body: copy.text("新增「禁用重置卡使用」选项，避免误触 Codex 额度重置。", "Added Disable reset credit use to help prevent accidental Codex quota resets."))
             ])
         ])
     }
@@ -192,6 +188,24 @@ private final class BrandAnnouncementWindow: NSWindow {
     override func cancelOperation(_ sender: Any?) { performClose(sender) }
 }
 
+private enum BrandAnnouncementResources {
+    @MainActor
+    static let appIcon: NSImage = {
+        #if SWIFT_PACKAGE
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle.main
+        #endif
+        // Load the original PNG directly, without asset-catalog or ICNS representations.
+        guard let url = bundle.url(forResource: "QuotaViewAppIcon", withExtension: "png"),
+              let image = NSImage(contentsOf: url) else {
+            assertionFailure("Missing announcement PNG icon")
+            return NSImage(size: NSSize(width: 64, height: 64))
+        }
+        return image
+    }()
+}
+
 private struct AnnouncementView: View {
     let copy: AppCopy
     let announcement: AnnouncementContent
@@ -212,9 +226,10 @@ private struct AnnouncementView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 10) {
-                        Image(nsImage: SettingsFeedbackResources.appIcon)
-                            .resizable().scaledToFit().frame(width: 64, height: 64)
-                            .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
+                        Image(nsImage: BrandAnnouncementResources.appIcon)
+                            .renderingMode(.original)
+                            .resizable().interpolation(.high)
+                            .scaledToFit().frame(width: 64, height: 64)
                             .accessibilityHidden(true)
                         Text(announcement.title)
                             .font(.system(size: 18, weight: .semibold))

@@ -1,5 +1,8 @@
 import Darwin
 import Foundation
+#if SWIFT_PACKAGE
+import QuotaViewActivityHookSupport
+#endif
 
 /// Claude Code entry points of the shared activity helper.
 ///
@@ -16,13 +19,19 @@ enum ClaudeCodeHookMode {
     static func handles(_ arguments: [String]) -> Bool {
         guard let mode = arguments.first,
               mode == "--claude-code" || mode == "--claude-statusline" || mode == "--agent-hook" else { return false }
-        guard arguments.count == 3, arguments[1] == "--configuration",
+        let event = arguments.count == 5 && arguments[3] == "--event" ? arguments[4] : nil
+        guard (arguments.count == 3 || (mode == "--agent-hook" && event != nil)), arguments[1] == "--configuration",
               let route = ClaudeCodeRoute.read(from: arguments[2]) else {
-            // A broken route must never block Claude Code.
+            // A cached observer hook can outlive its route. Return a neutral
+            // schema even then, so Cursor does not veto prompt submission.
+            if mode == "--agent-hook" {
+                let output = event == "beforeSubmitPrompt" ? "{\"continue\":true}\n" : "{}\n"
+                ClaudeCodeHookIO.writeStandardOutput(Data(output.utf8))
+            }
             return true
         }
         if mode == "--agent-hook" {
-            NativeAgentHookForwarder.run(route: route)
+            NativeAgentHookForwarder.run(route: route, event: event)
         } else if mode == "--claude-code" {
             ClaudeCodeHookForwarder(route: route).run()
         } else {
@@ -36,6 +45,7 @@ struct ClaudeCodeRoute: Decodable {
     let version: Int
     let socketPath: String
     let authenticationToken: String
+    let agentProvider: String?
     let interactiveApprovals: Bool?
     let decisionTimeoutSeconds: Double?
     let statusLineSnapshotPath: String?
@@ -407,22 +417,43 @@ struct ClaudeCodeStatusLineForwarder {
 
 /// Kimi's hooks are observation-only here: never print a permission decision.
 enum NativeAgentHookForwarder {
-    static func run(route: ClaudeCodeRoute) {
-        guard let data = ClaudeCodeHookIO.readStandardInput(maximumBytes: 1_048_576),
-              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let event = object["hook_event_name"] as? String,
-              let session = object["session_id"] as? String, !session.isEmpty, session.utf8.count <= 256 else { return }
-        var payload: [String: Any] = ["hook_event_name": event, "session_id": session]
-        for key in ["turn_id", "prompt_id", "tool_name", "tool_use_id", "tool_call_id", "model", "session_title", "agent_id", "source", "reason"] {
-            if let value = object[key] as? String { payload[key] = String(value.prefix(256)) }
+    static func run(route: ClaudeCodeRoute, event: String?) {
+        let provider = route.agentProvider ?? "kimiCode"
+        defer {
+            if let output = NativeAgentHookNormalizer.neutralOutput(provider: provider, event: event) {
+                ClaudeCodeHookIO.writeStandardOutput(output)
+            }
         }
+        guard let data = ClaudeCodeHookIO.readStandardInput(maximumBytes: 1_048_576),
+              let decoded = try? JSONSerialization.jsonObject(with: data) else { return }
+        if provider == "openCode", event == "Flush" {
+            // The client exits immediately after its terminal event. Drain a
+            // bounded queue in this helper while the plugin waits for an ACK.
+            guard let objects = decoded as? [[String: Any]], objects.count <= 257 else { return }
+            var delivered = 0
+            for object in objects {
+                guard let payload = NativeAgentHookNormalizer.normalize(object, provider: provider),
+                      forward(payload, route: route) else { break }
+                delivered += 1
+            }
+            if let result = try? JSONSerialization.data(withJSONObject: ["forwarded": delivered]) {
+                ClaudeCodeHookIO.writeStandardOutput(result)
+            }
+            return
+        }
+        guard let object = decoded as? [String: Any],
+              let payload = NativeAgentHookNormalizer.normalize(object, provider: provider, event: event) else { return }
+        _ = forward(payload, route: route)
+    }
+    private static func forward(_ payload: [String: Any], route: ClaudeCodeRoute) -> Bool {
         let eventID = UUID().uuidString
         let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": eventID,
             "kind": "hook", "awaitDecision": false, "payload": payload]
-        guard var line = try? JSONSerialization.data(withJSONObject: envelope) else { return }
+        guard var line = try? JSONSerialization.data(withJSONObject: envelope) else { return false }
         line.append(0x0A)
         let client = ClaudeCodeSocketClient()
-        guard client.connect(path: route.socketPath, timeout: 0.25), client.send(line, timeout: 0.25) else { return }
-        _ = client.readLine(until: Date().addingTimeInterval(0.25))
+        guard client.connect(path: route.socketPath, timeout: 0.25), client.send(line, timeout: 0.25),
+              let ack = client.readLine(until: Date().addingTimeInterval(0.25)) else { return false }
+        return ack["accepted"] as? Bool == true
     }
 }

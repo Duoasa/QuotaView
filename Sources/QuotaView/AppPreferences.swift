@@ -366,6 +366,18 @@ final class AppPreferences: ObservableObject {
     @Published var kimiCodeEnabled: Bool {
         didSet { defaults.set(kimiCodeEnabled, forKey: "integrations.kimiCode.enabled") }
     }
+    @Published var cursorEnabled: Bool {
+        didSet { defaults.set(cursorEnabled, forKey: "integrations.cursor.enabled") }
+    }
+    @Published var geminiCLIEnabled: Bool {
+        didSet { defaults.set(geminiCLIEnabled, forKey: "integrations.geminiCLI.enabled") }
+    }
+    @Published var openCodeEnabled: Bool {
+        didSet { defaults.set(openCodeEnabled, forKey: "integrations.openCode.enabled") }
+    }
+    @Published var copilotCLIEnabled: Bool {
+        didSet { defaults.set(copilotCLIEnabled, forKey: "integrations.copilotCLI.enabled") }
+    }
     @Published var claudeCodeEnabled: Bool {
         didSet { defaults.set(claudeCodeEnabled, forKey: "claudeCode.enabled") }
     }
@@ -628,6 +640,10 @@ final class AppPreferences: ObservableObject {
         codexIntegrationEnabled = defaults.storedBool(forKey: "integrations.codex.enabled", defaultValue: true)
         dshEnabled = defaults.bool(forKey: "integrations.dsh.enabled")
         kimiCodeEnabled = defaults.bool(forKey: "integrations.kimiCode.enabled")
+        cursorEnabled = defaults.bool(forKey: "integrations.cursor.enabled")
+        geminiCLIEnabled = defaults.bool(forKey: "integrations.geminiCLI.enabled")
+        openCodeEnabled = defaults.bool(forKey: "integrations.openCode.enabled")
+        copilotCLIEnabled = defaults.bool(forKey: "integrations.copilotCLI.enabled")
         claudeCodeEnabled = defaults.bool(forKey: "claudeCode.enabled")
         claudeCodeInteractiveApprovals = defaults.storedBool(forKey: "claudeCode.interactiveApprovals", defaultValue: true)
         claudeCodeStatusLineEnabled = defaults.bool(forKey: "claudeCode.statusLineEnabled")

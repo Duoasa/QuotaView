@@ -67,3 +67,14 @@
 用户要求在开发版展示 Claude、DSH、Kimi 模拟卡检查图标。仅 Debug 构建、`com.quotaview.development073` 和显式启动参数 `--debug-provider-cards` 同时满足时，在真实任务前加入三张带 DEBUG 标记的卡片；标题、说明、Tooltip 与辅助功能均表明模拟用途。仅本次进程内展示，不写入任务存储，不修改账号、额度、Hook 或来源连接设置，不携带真实任务身份/审批协议；选择不会回调真实任务操作，归档仅在内存中隐藏对应预览卡。
 
 用户已确认图标并要求清理。0.8.6 Build 4 已移除模拟生成、参数读取、临时选择/归档分支和 Tooltip 修饰器，生产源码扫描无临时注入残留，新运行进程未带预览参数。此前预览仅存于旧进程，未写入真实任务存储。编译、运行与清理证据见 Handoff。
+
+## 四来源官方图标（2026-11-01，0.8.7 Build 30）
+
+用户要求新增 Agent 使用官方 icon。四个 SVG 原样保存，保留 viewBox、路径与原色，不重画或用 SF Symbols 替代；设置页复用 22 pt 白色圆角底与 16 pt 标志，任务卡按既有比例缩放。图标前景完整不透明，独立于玻璃材质。
+
+- `CursorProviderMark`：[官方来源](https://cursor.com/brand)；原始文件 `cursor-brand-assets.zip/General Logos/Cube/SVG/CUBE_2D_LIGHT.svg`；SHA-256 `c483c02f78eb2619778fdd959e72a9adfac4844854472cd2653d4cbfd60e4d71`。
+- `GeminiCLIProviderMark`：[官方来源](https://geminicli.com/brand-kit/)；原始文件 `https://geminicli.com/brandassets/gemini-cli-icon_full-color.svg`；SHA-256 `d2b511e4d9a97bb849526646cf1e7705ffa028a52eb53d847c6c3de1e9a40a73`。
+- `OpenCodeProviderMark`：[官方来源](https://opencode.ai/brand)；原始文件 `https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/console/app/src/asset/brand/opencode-logo-light.svg`；SHA-256 `b47a4fecc77599382e238868e74064bbe92307b0e253a32f0b1a026517a2d2a6`。
+- `CopilotCLIProviderMark`：[官方来源](https://github.com/primer/octicons/blob/main/icons/copilot-24.svg)；原始文件 `https://raw.githubusercontent.com/primer/octicons/main/icons/copilot-24.svg`；SHA-256 `eeafb3c2f333e04ccf7d031ae215f7adafaed4c6352556b0bf79496e048bcdd7`。
+
+Cursor 为官方 light-background 2D cube；Gemini CLI 为官方全彩 CLI icon；OpenCode 为官方浅色背景标志；Copilot 为 GitHub Primer 的 copilot-24 矢量（MIT，许可证随 `ProviderIconNotices.txt` 打包）。各品牌商标仍属权利人，仅用于标识服务。资源由资产目录离线打包；本批视觉待用户验收。

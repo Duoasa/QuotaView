@@ -54,10 +54,12 @@ let package = Package(
             resources: [
                 .copy("Resources/CodexActivityRippleGlowShader.txt"),
                 .copy("Resources/CodexProviderIcon.png"),
+                .copy("Resources/QuotaViewAppIcon.png"),
                 .process("Resources/AppTranslations.json"),
                 .copy("Resources/CodexAgentAvatars"),
                 .copy("Resources/QuotaViewFeedbackQQ.jpg"),
                 .process("Resources/ProviderIcons.xcassets"),
+                .copy("Resources/ProviderIconNotices.txt"),
                 .process("Resources/SettingsIslandPreview.xcassets")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]

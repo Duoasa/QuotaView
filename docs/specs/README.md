@@ -8,9 +8,25 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.8.7 Build 29
+## 当前开发：0.9.1 Build 2
 
-[退出行右侧图标](../design/QUOTAVIEW_UI_RULES.md#退出入口右侧图标2026-11-01087-build-29) · `Implemented / User Acceptance Pending`：退出行右侧添加同色电源图标，保留整行点击与确认。Debug arm64 增量构建、启动冒烟和 241 输入/运行核验通过，已运行 Build 29 / 内部 131。用户已授权本批源码推送合并，当前等待集成 CI；实际视觉由用户检查。
+[公告 PNG 图标](../design/quotaview-app-icon.md#公告直接读取-png091-build-22026-11-01) · `Implemented / User Acceptance Pending`：公告直接读取独立原始 PNG，保留 64 pt 尺寸、原色及高光，采用高质量插值并移除额外阴影。Build 2 / 内部 135 开发包已更新运行，254 输入与实际加载路径核对、3 项公告策略及 PNG 解码/一致性冒烟通过；视觉由用户检查。
+
+## 前序开发：0.9.1 Build 1
+
+[精简更新公告](brand-announcement.md#091-精简更新内容2026-11-01) · `Implemented / User Acceptance Pending`：用户批准五项精简文案并要求开发版升至 0.9.1；公告含外观、设置、Agent 预览接入、语言与重置保护，六语言覆盖，保留现有提醒策略。App/Widget 为 0.9.1 Build 1 / 内部 134，Debug arm64 增量构建并更新运行通过，253 输入/18 资源与实际加载路径一致；仅本地开发，未发布或加入自动更新序列。完整验证记录见 Handoff。
+
+## 前序开发：0.8.7 Build 31
+
+[真实接入链路与终态修复](agent-integrations.md#可用链路验证与结束事件2026-11-01087-build-31) · `Implemented / User Acceptance Pending`：修复 OpenCode 客户端退出截断完成事件。官方 OpenCode 1.19.5 + 本地模型已贯通任务卡 thinking → completed；三个命令 Hook 贯通实际辅助程序/listener/任务模型，尚无这三家真实客户端结论。7 个相关用例最终通过；Build 31 / 内部 133 开发包已运行，253 输入/18 资源与运行核验通过。仅本地。
+
+## 前序开发：0.8.7 Build 30
+
+[四来源接入](agent-integrations.md#四来源扩展2026-11-01087-build-30) · `Implemented / User Acceptance Pending`：新增 Cursor、Gemini CLI、OpenCode 1.x、GitHub Copilot CLI，默认独立关闭，使用官方图标。4 项新接入隔离冒烟、既有 DSH 冒烟及运行包辅助程序 4 路 IPC 通过。Debug arm64 构建、253 输入/18 资源与实际运行核验通过，当前已运行 Build 30 / 内部 132。仅本地修改，真实客户端与视觉由用户验收。
+
+## 前序开发：0.8.7 Build 29
+
+[退出行右侧图标](../design/QUOTAVIEW_UI_RULES.md#退出入口右侧图标2026-11-01087-build-29) · `Implemented / User Acceptance Pending`：退出行右侧添加同色电源图标，保留整行点击与确认。Debug arm64 增量构建、启动冒烟和 241 输入/运行核验通过，已运行 Build 29 / 内部 131。已通过 [PR #125](https://github.com/Duoasa/QuotaView/pull/125) 合入 main `267aff0`，PR/main CI 均通过（各 743 测试、6 跳过、0 失败，44 契约检查）；实际视觉由用户检查。
 
 [重置卡到期优先](codex-quota-reset.md) · 现有实现已按到期时间优先使用可用卡，缺少到期时间的排后；本轮补充 3 项隔离冒烟并通过，覆盖多卡乱序、无效卡过滤和重试固定原卡。未消费真实重置卡，生产逻辑与运行版本保持。
 
@@ -238,11 +254,11 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Review / Verifying | 多类型分组、滚动与折叠、按版本提醒；正式名单待配置 |
+| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 五项精简内容、六语言；正式自动展示名单仍为内部 102 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |
-| `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与 DSH / Kimi Code 接入](agent-integrations.md) | `Accepted / Verifying` | DSH 多目录兼容与会话命名空间已进入 14:26 开发包；编译与配置核对通过，真实多客户端联动待验收。 |
+| `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与任务接入](agent-integrations.md) | `Accepted / Verifying` | Build 31 修复 OpenCode 立即退出丢失完成事件；官方客户端 + 本地模型贯通，其余来源接收链路通过，真实客户端任务与视觉待验收。 |
 | `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 生命周期和审批开关修复已在开发包运行；19 项冒烟通过，真实交互待验收。 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 来源、轮次、等待结算与本地退场；原生问题组关闭仍未完成。 |
 | `QV-ISLAND-GLASS-APPEARANCE-001` | [底部玻璃与胶囊统一外观](island-glass-appearance.md) | `Accepted / Verifying` | 仅液态玻璃显示浅色/深色/自动三选项，底栏与胶囊统一；设置分组、自动跟随和偏好持久化，视觉待用户验收。 |
