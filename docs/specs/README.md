@@ -8,7 +8,13 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.9.1 Build 2
+## 当前开发：0.9.1 Build 3
+
+[重置卡到期日期](codex-quota-reset.md#重置卡到期日期2026-11-01091-build-3) · `Implemented / User Acceptance Pending`：次数下方显示最近到期日期与时分，缺失日期保留未知语义，与消费选择共用有效卡片筛选，覆盖六语言。16 项隔离重置冒烟及本地化检查通过；Build 3 / 内部 136 已编译并更新运行，254 输入/18 资源、完整包与加载路径核对通过。仅本地，未消耗真实重置卡，视觉由用户验收；完整证据见 Handoff。
+
+## 前序开发：0.9.1 Build 2
+
+源码已通过 [PR #126](https://github.com/Duoasa/QuotaView/pull/126) 合入 main `d4b5557`；PR/main CI 均通过（750 测试、7 跳过、0 失败及 44 契约检查）。254 个生产输入与当前开发运行包一致，未发布 Release/tag/appcast。证据及完整提交见 [Handoff](../../HANDOFF.md)。
 
 [公告 PNG 图标](../design/quotaview-app-icon.md#公告直接读取-png091-build-22026-11-01) · `Implemented / User Acceptance Pending`：公告直接读取独立原始 PNG，保留 64 pt 尺寸、原色及高光，采用高质量插值并移除额外阴影。Build 2 / 内部 135 开发包已更新运行，254 输入与实际加载路径核对、3 项公告策略及 PNG 解码/一致性冒烟通过；视觉由用户检查。
 

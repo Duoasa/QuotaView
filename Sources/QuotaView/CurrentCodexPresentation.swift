@@ -52,6 +52,7 @@ struct CurrentCodexPresentation: Equatable, Sendable {
     let recentDailyDate: String?
     let tokenActivity: [DailyTokenActivity]
     let lastUpdatedAt: Date
+    var resetCreditExpiresAt: Date? = nil
 
     var weeklyRemainingPercent: Int? {
         quotaWindows.first { $0.windowDurationMinutes == 7 * 24 * 60 }?.remainingPercent
@@ -204,7 +205,11 @@ struct CurrentCodexPresentationProjector {
                 Self.dailyDateFormatter.string(from: $0.date)
             },
             tokenActivity: tokenActivity,
-            lastUpdatedAt: snapshot.capturedAt
+            lastUpdatedAt: snapshot.capturedAt,
+            resetCreditExpiresAt: {
+                guard case .timestamp(let date) = metric(CodexDomainCatalog.resetCreditExpiryID, in: snapshot) else { return nil }
+                return date
+            }()
         )
     }
 

@@ -16,7 +16,15 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.9.1 Build 2 / 公告直接加载 PNG（2026-11-01）
+## 当前开发：0.9.1 Build 3 / 重置卡到期日期（2026-11-01）
+
+Codex 重置页在次数下方显示到期日期与时分，多张卡显示最近到期的一张；接口未返回日期显示「未提供」，零次数或次数未知隐藏。与消费选择共用有效卡片筛选，支持六种语言及系统时区，不从额度恢复时间推算。详见[重置规格](docs/specs/codex-quota-reset.md#重置卡到期日期2026-11-01091-build-3)。
+
+16 项隔离重置冒烟、708 个源码模板/728 条目录文案的本地化检查通过。2026-11-01T17:09:34.502648+08:00 已完成 Debug arm64 增量构建并更新开发包，PID 18611，0.9.1 Build 3 / 内部 136；254 个生产输入、18 项资源、App/Widget 身份、完整包与实际加载路径匹配，旧包已备份，正式安装保持。证据 `.build/reset-expiry-091b3-runtime/`。仅本地开发，未提交、推送或发布；未消耗真实重置卡，视觉与交互由用户验收。
+
+## 前序开发：0.9.1 Build 2 / 公告直接加载 PNG（2026-11-01）
+
+2026-11-01 本批源码已按用户授权经 [PR #126](https://github.com/Duoasa/QuotaView/pull/126) 合入 main `d4b5557d5f6b0c8e1f416e90982e4d62f94b4422`，源码提交 `768ac0f9dd086f3ea670a9fc1ee05e134c8408d3`。[PR CI 41285622270](https://github.com/Duoasa/QuotaView/actions/runs/41285622270) 与精确 [main CI 41285953015](https://github.com/Duoasa/QuotaView/actions/runs/41285953015) 均成功，各 750 项测试、7 跳过、0 失败及 44 项契约检查通过。254 个生产输入与合并提交及当前 0.9.1 Build 2 运行包一致，工作区已快进；证据 `.build/source-integration-091b2/`。未创建 Release/tag 或更新 appcast。下方“仅本地”是历史阶段事实；合并结果补记保留本地，无关未跟踪文件保留。
 
 用户反馈公告图标毛边并要求直接使用 PNG。公告现在独立读取随包 `QuotaViewAppIcon.png`，不再使用资产目录/ICNS 图像表示，采用原色、高质量插值，移除额外阴影，保留 64 pt 大小及用户原图高光。PNG 与现有原始素材逐字节一致，Xcode 与 SwiftPM 均声明该独立资源；关于页及其他图标入口未改动。
 
@@ -914,11 +922,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.8.7-quit-reset-priority`；HEAD `267aff0`，0.8.7 Build 29 已经 PR #125 合入 main；后续四来源接入、OpenCode 修复与 0.9.1 公告/版本变更均为本地未提交修改 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 2 / 内部 135 |
+| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD `d4b5557`（Build 2 经 PR #126 合并）；Build 3 到期日期修改与交付记录保留本地 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 3 / 内部 136 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-01T15:34:50.862814+08:00；PID 97346，254 输入、原始 PNG、完整包与加载路径一致，无临时参数 |
-| 源码与运行包 | 0.9.1 Build 2 已运行，含精简六语言公告及直接 PNG 图标，继承 0.8.7 Build 31 全部功能；新 Agent 的真实客户端验证边界保持，视觉/交互由用户验收。 |
+| 最近运行核验 | 2026-11-01T17:09:34.502648+08:00；PID 18611，254 输入、18 项资源、完整包与加载路径一致，无临时参数 |
+| 源码与运行包 | 0.9.1 Build 3 已运行，新增重置卡到期日期，继承 Build 2 功能；新 Agent 的真实客户端验证边界保持，视觉/交互由用户验收。 |
 | 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

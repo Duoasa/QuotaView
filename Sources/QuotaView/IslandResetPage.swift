@@ -83,6 +83,21 @@ struct IslandResetPage: View {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
                     }.font(AstaSans.semiBold(15)).tracking(-0.15)
+                    if !isClaude, data.creditAvailability == .available {
+                        HStack(spacing: 6) {
+                            Text((data.credits ?? 0) > 1
+                                ? copy.text("最近到期", "Next expiry")
+                                : copy.text("到期日", "Expires on"))
+                            Text(data.snapshot?.resetCreditExpiresAt.map {
+                                $0.formatted(.dateTime.year().month().day().hour().minute()
+                                    .locale(Locale(identifier: copy.language.localeIdentifier)))
+                            } ?? copy.text("未提供", "Not provided"))
+                        }
+                        .font(AstaSans.regular(10.5)).foregroundStyle(secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityElement(children: .combine)
+                    }
                 }.padding(.top, 12).frame(maxWidth: .infinity)
 
                 VStack(alignment: .leading, spacing: 4) {
