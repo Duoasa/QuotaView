@@ -123,7 +123,79 @@ final class DevinIntegrationSmokeTests: XCTestCase {
     @MainActor
     private func waitFor(_ condition: () -> Bool) async throws {
         for _ in 0..<200 { if condition() { return }; try await Task.sleep(nanoseconds: 20_000_000) }
-        XCTAssertTrue(condition())
+        guard condition() else {
+            XCTFail("Timed out waiting for the expected Devin observation")
+            throw NSError(domain: "DevinSmokeTimeout", code: 1)
+        }
+    }
+    @MainActor
+    func testSessionModelAndUsageReachBothCardsIncludingDelayedFinalCommit() async throws {
+        for provider in [IslandAgentProvider.devinDesktop, .devinCLI] {
+            let fixture = try DevinUsageFixture()
+            try fixture.message(1, input: 99999) // Resumed history must not be charged to the new turn.
+            let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+            let suite = "QuotaView.DevinUsage." + UUID().uuidString
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
+            let preferences = AppPreferences(defaults: defaults), island = IslandSession(); defer { island.stop() }
+            preferences.devinDesktopEnabled = provider == .devinDesktop; preferences.devinCLIEnabled = provider == .devinCLI
+            let helper = URL(fileURLWithPath: ProcessInfo.processInfo.environment["QV_NATIVE_HELPER"] ?? FileManager.default.currentDirectoryPath + "/.build/debug/QuotaViewActivityHook")
+            let item = installer(provider, root, helper: helper)
+            let runtime = NativeAgentRuntime(provider: provider, preferences: preferences, island: island, defaults: defaults, installer: item)
+            defer { runtime.stop() }
+            runtime.start(); try await waitFor { runtime.status == .waiting }
+            let config = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("config.json"))) as? [String: Any])
+            let hooks = try XCTUnwrap(config["hooks"] as? [String: [[String: Any]]])
+            func fire(_ event: String, turn: String = "first") async throws {
+                let object: [String: Any] = ["hook_event_name": event, "session_id": "shared", "prompt_id": turn, "tool_name": "exec", "prompt": "PRIVATE"]
+                if provider == .devinDesktop {
+                    // Exercise the desktop listener/runtime; ancestor classification
+                    // stays in the pure source test, without making a fake .app.
+                    var payload = try XCTUnwrap(NativeAgentHookNormalizer.normalize(object, provider: provider.rawValue))
+                    payload["devin_storage_directory"] = fixture.store.directory.path; payload["devin_storage_files"] = false
+                    if event == "UserPromptSubmit" {
+                        payload["devin_start_position"] = DevinSessionUsage.read(session: "shared", store: fixture.store)?.position
+                    }
+                    try await Task.detached { [payload] in try Self.send(payload, socket: item.socketURL.path) }.value
+                } else {
+                    let entry = try XCTUnwrap(hooks[event]?.first)
+                    let command = try XCTUnwrap((entry["hooks"] as? [[String: Any]])?.first?["command"] as? String)
+                    let process = Process(), input = Pipe(), output = Pipe()
+                    process.executableURL = URL(fileURLWithPath: "/bin/sh"); process.arguments = ["-c", command + "; :"]
+                    process.environment = ProcessInfo.processInfo.environment.merging(["DEVIN_SESSIONS_DIR": fixture.root.path, "DEVIN_SESSION_STORE": "sqlite"], uniquingKeysWith: { _, new in new })
+                    process.standardInput = input; process.standardOutput = output; process.standardError = output
+                    input.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: object)); try input.fileHandleForWriting.close()
+                    let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+                        process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
+                        do { try process.run() } catch { continuation.resume(throwing: error) }
+                    }
+                    XCTAssertEqual(status, 0); XCTAssertTrue(output.fileHandleForReading.readDataToEndOfFile().isEmpty)
+                }
+            }
+            try await fire("UserPromptSubmit")
+            try await waitFor { island.model.tasks.first?.model == "swe-2-max" }
+            XCTAssertNil(island.model.tasks.first?.tokens)
+            try fixture.message(2, request: "deduplicated")
+            try fixture.message(3, request: "deduplicated")
+            try await fire("PreToolUse")
+            try await waitFor { island.model.tasks.first?.tokens == 110 }
+            try await fire("UserPromptSubmit") // A duplicate does not move the baseline.
+            try await fire("Stop")
+            try await waitFor { island.model.tasks.first?.terminal == true }
+            try fixture.message(4, input: 20, output: 10) // Stop fired before the final DB commit.
+            try await waitFor { island.model.tasks.first?.tokens == 140 }
+            try fixture.execute("UPDATE sessions SET model='other-model'")
+            try await fire("UserPromptSubmit", turn: "second")
+            try await fire("Stop") // Old turn cannot complete or rename the current task.
+            try await waitFor { island.model.tasks.first?.model == "other-model" && island.model.tasks.first?.terminal == false }
+            XCTAssertNil(island.model.tasks.first?.tokens)
+            try fixture.message(5, input: 7, output: 3)
+            try await waitFor { island.model.tasks.first?.tokens == 10 }
+            preferences.devinDesktopEnabled = false; preferences.devinCLIEnabled = false
+            try await waitFor { runtime.status == .disabled }
+            try fixture.message(6, input: 777)
+            try await Task.sleep(nanoseconds: 1_100_000_000)
+            XCTAssertTrue(island.model.tasks.isEmpty)
+        }
     }
     @MainActor
     func testCLIHookAndDesktopIPCStaySeparateAndDisableIndependently() async throws {

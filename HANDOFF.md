@@ -16,9 +16,19 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
+## 当前开发：0.9.1 Build 12 / Devin 模型与 Token 补读（2026-11-02）
 
-用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包已于 2026-11-01T23:24:34.142885+08:00 更新重启 PID 96230，256 输入/19 资源及实际加载核对通过；证据 `.build/devin-091b11-runtime/`。后续 CI 暴露旧 ingress 夹具使用公共 /tmp socket，与新的安全目录约束不符；仅将测试夹具迁至 0700 私有短路径，并让等待失败抛错，避免继续数组越界。11 项 ingress 检查通过；PR/main CI 结果另补记。
+针对朋友反馈最新版 Devin Desktop、`swe-2-max` 仍显示模型未知/无 Token，新增当前本机会话模型和用量补读，Desktop/CLI 共用。支持默认 SQLite 与可选文件存储，按提交起点统计本轮输入/输出，按请求去重；Stop 后追踪最多 10 秒的延迟落盘。修正 Devin 卡片跨轮沿用旧 Token，新轮次不会被旧事件或异步结果覆盖。缺少起点/指标保持未知；更新后新提交的一轮开始统计。规则和边界见[模型与用量](docs/specs/agent-integrations.md#devin-当前任务模型与用量2026-11-02091-build-12)。
+
+13 项隔离冒烟与新增 1 项 WAL 只读冒烟通过，运行包内辅助程序复验 1 项双入口模型/用量链路通过；官方 CLI 3000.11.234 实际建库和文件迁移格式经生产读取器核对。首次冒烟发现跨轮旧值保留，修复后复验通过，原日志保留。证据 `.build/devin-usage-smoke-final.log`、`.build/devin-usage-runtime-smoke.log`、`.build/devin-usage-wal-smoke.log`、`.build/devin-research/check-store.log`。官方数据库首次只读检查因已关闭且 WAL 辅助文件缺失返回不可读；保留隔离写连接复现客户端运行状态后读取成功，生产代码保持只读，不修改用户数据库。使用合成请求数据，没有真实在线模型调用；朋友真实 Desktop 与视觉结果待验收。
+
+Debug arm64 增量构建通过，2026-11-02T09:51:20.073068+08:00 已重启开发包 PID 18831，0.9.1 / Build 12 / 内部 145，257 输入/19 资源与实际加载一致；证据 `.build/devin-usage-091b12-runtime/`。正式安装保留。用户随后于 2026-11-02 授权推送并合并本批源码，按 PR 与合并后精确 main CI 门禁执行，集成证据 `.build/source-integration-091b12/`；结果完成后补记。未打包或发布，之前 Build 11 好友测试 DMG 不含本次修复；无关文件保留。
+
+## 前序开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
+
+源码已通过 [PR #129](https://github.com/Duoasa/QuotaView/pull/129) 合入 main `f8d82c3b41f031d7bc9f392cbce4a5e61d382dc5`，最终源提交 `c8f5eca49d46ef11648b5dea189d8b3214662fd2`。[PR CI 41321703024](https://github.com/Duoasa/QuotaView/actions/runs/41321703024) 与精确 [main CI 41322255319](https://github.com/Duoasa/QuotaView/actions/runs/41322255319) 均成功，各 774 项测试、7 跳过、0 失败，44 项契约检查通过。256 个生产输入与合并提交、Build 11 开发包及已交付签名 DMG 一致。工作区已快进；证据 `.build/source-integration-091b10/`（覆盖后续 Build 11 CI 修复）。合并结果补记保留本地，原有未跟踪文件保持；未创建公开 Release/tag 或修改 appcast。
+
+用户已授权推送/合并，并要求立即封装签名 DMG 供朋友实测 Devin，CI 可同时继续。PR #129 首轮 CI 在较旧 Swift 工具链遇到 `strdup` 参数数组推断错误；改为显式 String 输入数组与 C 指针输出数组，8 项相关冒烟通过。App/Widget 与兼容 Info 同步为 Build 11 / 内部 144。开发包已于 2026-11-01T23:24:34.142885+08:00 更新重启 PID 96230，256 输入/19 资源及实际加载核对通过；证据 `.build/devin-091b11-runtime/`。后续 CI 暴露旧 ingress 夹具使用公共 /tmp socket，与新的安全目录约束不符；仅将测试夹具迁至 0700 私有短路径，并让等待失败抛错，避免继续数组越界。11 项 ingress 检查通过；最终 PR/main CI 结果见上方补记。
 
 已按用户“现在就封装”“直接给我”交付签名好友测试 DMG：`dist/testing/0.9.1-build11/QuotaView-Devin-Test-0.9.1-Build11-universal.dmg`，34457195 bytes，SHA-256 `090be08f3418d47d731a870e4c9f6e71dbbc37c5fa829e1c78325fbc8435cb3d`。App 与 DMG 均为 Developer ID Chenchen Xu (BUUH229D5Q) 签名、公证 Accepted/Stapled，Gatekeeper 通过；App 公证 `3aaa86fd-532e-4fd2-b6e7-f2359c73328d`，DMG 公证 `4c6b958f-506d-474d-807b-fe1a676bbd87`。App/Widget/Core/Hook/Sparkle 均为 arm64+x86_64，macOS 14+；正式发布安装保持。包内「Devin测试说明.txt」给出启用与实测步骤。
 

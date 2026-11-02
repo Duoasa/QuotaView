@@ -126,7 +126,7 @@ Kimi 采用 TOML 专用字符串转义，检查 hooks 赋值/普通表冲突并�
 - 共用 `~/.config/devin/config.json` 的 hooks 字段。两入口各自写入准确归属的命令，停用仅删除本渠道、本入口命令；同用户/配置目录共用文件锁，避免双入口并发覆盖。支持 JSONC，编辑只涉及自有 Hook 节点和必要逗号，保留外部 Hook、未知字段和用户注释；重复键、非法配置或不可读文件拒绝修改。备份和原权限规则沿用现有安装器。
 - Hook 只在触发时有界读取最多 32 层父进程路径：Devin.app / Devin Desktop.app 的主程序或 Frameworks helper 归入 Desktop，其余完整链归入 CLI；CLI 之后遇到交互 shell 时仍归 CLI，覆盖 Desktop 集成终端场景。链读取失败且无法确定来源时不发送事件，不猜测成已连接。修改应用名称、其他桌面封装或未来进程结构需真实客户端核验。
 - 两个 Hook 都会被客户端调用，但只向匹配入口发送，防止重复卡。来源路径不进入 IPC。Devin 默认继承 Claude 配置；带 `DEVIN_PROJECT_DIR` 且不含 Claude `transcript_path` 的继承载荷在 Claude helper 中中性退出，避免多出 Claude 任务；正常 Claude 载荷保留。
-- 仅转发生命周期、会话/轮次/工具标识和工具名；不读取提示词、工具参数/输出、压缩内容、凭据或历史会话。无审批决定、自动批准、远程 API、额度或成本推算。两入口停用各自撤下卡片并停止监听。
+- Build 10 初版仅转发生命周期、会话/轮次/工具标识和工具名；Build 12 增加下方当前会话模型/用量补读。无审批决定、自动批准、远程 API、额度或成本推算。两入口停用各自撤下卡片并停止监听与补读。
 - 非默认 `--config`、云任务、应用改名和不同进程封装未验证。当前本机未发现 Devin CLI 或桌面应用；隔离 Hook/IPC 测试不能替代真实客户端任务与用户视觉验收。
 
 ### 本批验证
@@ -134,3 +134,20 @@ Kimi 采用 TOML 专用字符串转义，检查 hooks 赋值/普通表冲突并�
 7 项 Devin 专项最终通过：事件映射/隐私、来源分流、共享 JSONC 幂等与独立卸载、混合 Hook 子数组保留、并发安装、坏配置保护，以及 CLI 生产 helper → listener → 任务卡/桌面规范载荷 → IPC → 任务卡。后者不等同真实 Desktop 进程到 Hook 的端到端验证；本机未安装 Devin。最终 CLI 用例使用 Build 10 运行包内辅助程序。6 项既有 NativeAgent 检查通过，1 项官方 OpenCode opt-in 跳过；本地化 708 模板/728 条目录文案通过。
 
 初次临时 Devin.app 夹具被系统校验拒绝并触发用户可见“已损坏”提示；已清理并移除该测试方式，以纯来源规则测试及桌面规范载荷 IPC 验证替代，没有删除真实客户端或关闭系统保护。Build 10 / 内部 143 已更新重启，256 输入/19 资源及加载路径验证通过，证据与限制见 [Handoff](../../HANDOFF.md)。未推送或发布。
+
+## Devin 当前任务模型与用量（2026-11-02，0.9.1 Build 12）
+
+朋友实测最新版 Devin Desktop、选择 `swe-2-max` 时，卡片仍显示模型未知、无 Token。根因是初版只处理状态 Hook；没有读取会话模型及用量。当前修复适用于 Desktop/CLI 两个本机入口。
+
+- 从当前会话的 `sessions.model` / `meta.json.model` 获取所选模型，不读取配置默认模型，不硬编码 `swe-2-max`。这表示会话模型选择，不宣称是服务端计费路由后的实际模型。
+- 存储位置来自 Hook 继承的 `DEVIN_SESSIONS_DIR`，否则使用 `XDG_DATA_HOME/devin` 或 `~/.local/share/devin`，末尾为 `cli`。默认 SQLite `sessions.db`；兼容 `DEVIN_SESSION_STORE=files` 及已存在的 `sessions/<id>/meta.json`、`log.jsonl`。这些格式依据官方 CLI **3000.11.234** 实际建库与其官方文件迁移结果核对。
+- `UserPromptSubmit` 在开始生成前捕获 SQLite 最大 node ID 或 JSONL 字节位置；后续只统计位置之后的 assistant 请求。使用持久化 `metadata.metrics.input_tokens + output_tokens`，不把 `num_tokens` / 上下文容量 / 金额当成消耗，也不额外叠加缓存分项。相同 `request_id`（缺失时 message/node ID）取最大值去重；这是本轮本地记录的输入与输出统计，不等同 `/session-stats` 的服务端计费维度。
+- 活跃任务每秒在后台补读；Stop 后最多补读 10 秒，接收延迟落盘的末次消耗。新轮次清除旧 Token 显示和边界，旧轮次事件/异步读取结果不能覆盖新任务。重复开始事件不重设边界。停用取消补读并撤下卡片，不重建已隐藏任务。
+- 无提交起点的中途接入只补模型，Token 保持未知；从更新后提交的新一轮开始统计。无指标、锁冲突、不支持的格式或超过读取上限不伪造为零；只有明确的数值零显示零。SQLite 只读、锁等待 20ms、VM 预算 80ms、每轮最多 8192 条，单值最多 1 MiB；文件存储每轮最多 16 MiB、每行最多 1 MiB、元数据最多 64 KiB，忽略尚未写完的末行。
+- 隐私边界：SQLite 只投影模型/用量/去重 ID；文件存储有界解析当前会话文件，只保留这些字段。提示词、回答、工具参数/输出及凭据不保存、不转发。辅助程序仅额外经带认证的本机 IPC 传递由环境推导的存储目录、格式及位置，供后台读取；不接收 Hook 载荷中的任意文件路径，不进入公开任务内容。会话 ID 限定安全字符，数据库和日志须为普通文件。
+
+验证：13 项 Devin 隔离冒烟通过，包含真实 CLI Hook 辅助程序 → listener → 卡片模型/用量、Desktop 规范载荷 → IPC → 卡片、重复请求/事件、新轮次、延迟末次写入、停用、只读与锁等待、JSONL 截断，以及缺失/坏数据边界。首次测试发现卡片跨轮保留旧 Token，已修正 Devin 专属轮次重置后全数通过。开发运行包内辅助程序另复验 1 项双入口模型/用量链路通过。另 1 项运行中 WAL 检查通过，数据库与 journal 字节未被观察器修改。官方 CLI 生成/迁移的隔离夹具，两种存储均由生产读取器成功解码；夹具请求值为合成值，并非真实在线推理。证据 `.build/devin-usage-smoke-final.log`、`.build/devin-usage-runtime-smoke.log`、`.build/devin-usage-wal-smoke.log`、`.build/devin-research/check-store.log`。
+
+官方数据库关闭且 WAL 辅助文件缺失时，系统 SQLite 的只读连接可能返回不可读；运行中的写连接/WAL 存在时已验证可读。生产代码不为绕过此状态开启可写连接或忽略活跃 WAL，暂时不可读时保留最后有效显示；格式核对使用保持隔离连接的合成库模拟运行状态。
+
+Debug arm64 开发包已更新重启为 Build 12 / 内部 145，257 输入与实际加载核对通过；详见 Handoff。未安装或登录真实 Devin Desktop，本机检查不代表朋友环境已修复，仍待其复测。此前已交付的 Build 11 DMG 不包含本批修复；本批未打包、推送或发布。
