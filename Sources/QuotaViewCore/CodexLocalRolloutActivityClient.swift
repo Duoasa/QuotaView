@@ -815,7 +815,7 @@ public actor CodexLocalRolloutActivityClient {
             await bootstrap(candidate: candidate, generation: run)
             return
         }
-        guard let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+        guard let metadata = discovery.sessionMetadata(from: candidate.fileURL),
               metadata.threadID == candidate.threadID, metadata.sessionHash == candidate.sessionHash,
               metadata.kind == candidate.metadataKind else {
             tailStates.removeValue(forKey: candidate.fileURL); lastCandidateRefresh = .distantPast
@@ -908,7 +908,7 @@ public actor CodexLocalRolloutActivityClient {
 
         do {
             guard let fileIdentity = FileIdentity(handle: handle),
-                  let metadata = CodexLocalRolloutDiscovery.readSessionMetadata(from: candidate.fileURL),
+                  let metadata = discovery.sessionMetadata(from: candidate.fileURL),
                   metadata.sessionHash == candidate.sessionHash, metadata.threadID == candidate.threadID,
                   metadata.kind == candidate.metadataKind else {
                 lastCandidateRefresh = .distantPast

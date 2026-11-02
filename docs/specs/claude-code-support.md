@@ -54,6 +54,10 @@ Socket 协议：请求 `{authenticationToken, eventID, kind: hook|statusLine, aw
 
 ## 状态与失败语义
 
+### 后台转录读取（2026-11-02，0.9.1 Build 14）
+
+增量 transcript I/O、JSON 解码和标题头部读取在 utility 任务执行，主线程只提交有界结果。Hook、周期轮询及 helper 断开按接收顺序串行处理，周期轮询最多保留一项待执行；Stop 仍等待本轮尾部结果后结算。停用/重启使旧代次失效，提交前同时核对轮次、路径及启用状态，旧结果不得污染新会话。截断/替换仍由原 tail 身份与 offset 规则恢复，最新真实提问后的回放及 Token 去重保持。性能证据与独立的既有 Token 展示问题见[首批优化记录](../design/quotaview-performance-review-2026-11-02.md#首批性能优化2026-11-02091-build-14)。
+
 设置页状态：已停用 / 配置中 / 等待会话（已配置，等待新会话）/ 已连接（本次运行收到事件）/ 需要处理
 （写入失败、helper 缺失、socket 失败，可重试）。App 未运行时 helper 连接失败即静默退出，
 Claude Code 行为不变；状态栏 helper 仍转发原状态栏输出。

@@ -1924,10 +1924,12 @@ private final class ActivityMetalOrbView: MTKView {
     }
 }
 
-private final class ActivitySelectableOrbView: NSView {
-    private let particleView: ActivityMetalOrbView
+final class ActivitySelectableOrbView: NSView {
+    private var particleView: ActivityMetalOrbView?
     private var rippleGlowView: ActivityRippleGlowMetalView?
-    private var activeView: NSView
+    private var activeView: NSView?
+    var hasParticleRenderer: Bool { particleView != nil }
+    var hasRippleGlowRenderer: Bool { rippleGlowView != nil }
     private var state: CodexActivityVisualState
     private var animation: AppPreferences.CodexActivityOrbAnimation
     private var reduceMotion = false
@@ -1942,15 +1944,9 @@ private final class ActivitySelectableOrbView: NSView {
     ) {
         state = initialState
         self.animation = animation
-        particleView = ActivityMetalOrbView(
-            frame: frame,
-            initialState: initialState
-        )
-        activeView = particleView
         super.init(frame: frame)
         wantsLayer = true
         layer?.backgroundColor = NSColor.clear.cgColor
-        addSubview(particleView)
         setAnimation(animation)
     }
 
@@ -1961,7 +1957,7 @@ private final class ActivitySelectableOrbView: NSView {
 
     override func layout() {
         super.layout()
-        activeView.frame = bounds
+        activeView?.frame = bounds
         redrawIfPaused()
     }
 
@@ -1971,7 +1967,7 @@ private final class ActivitySelectableOrbView: NSView {
         let requestedView: NSView
         switch newAnimation {
         case .particleOrb:
-            requestedView = particleView
+            requestedView = makeParticleViewIfNeeded()
         case .rippleGlow:
             if rippleGlowView == nil {
                 let candidate = ActivityRippleGlowMetalView(
@@ -1982,7 +1978,7 @@ private final class ActivitySelectableOrbView: NSView {
                     rippleGlowView = candidate
                 }
             }
-            requestedView = rippleGlowView ?? particleView
+            requestedView = rippleGlowView ?? makeParticleViewIfNeeded()
         }
 
         animation = newAnimation
@@ -1991,18 +1987,25 @@ private final class ActivitySelectableOrbView: NSView {
             return
         }
 
-        particleView.setReduceMotion(true)
+        particleView?.setReduceMotion(true)
         rippleGlowView?.setReduceMotion(true)
-        activeView.removeFromSuperview()
+        activeView?.removeFromSuperview()
         activeView = requestedView
-        activeView.frame = bounds
-        addSubview(activeView)
+        requestedView.frame = bounds
+        addSubview(requestedView)
         updatePlaybackState()
+    }
+
+    private func makeParticleViewIfNeeded() -> ActivityMetalOrbView {
+        if let particleView { return particleView }
+        let view = ActivityMetalOrbView(frame: bounds, initialState: state)
+        particleView = view
+        return view
     }
 
     func setState(_ newState: CodexActivityVisualState) {
         state = newState
-        particleView.setState(newState)
+        particleView?.setState(newState)
         rippleGlowView?.setState(newState)
         redrawIfPaused()
     }
@@ -2018,7 +2021,7 @@ private final class ActivitySelectableOrbView: NSView {
     }
 
     private func updatePlaybackState() {
-        particleView.setReduceMotion(
+        particleView?.setReduceMotion(
             reduceMotion
                 || !playbackEnabled
                 || activeView !== particleView
@@ -2033,7 +2036,7 @@ private final class ActivitySelectableOrbView: NSView {
     }
 
     func redrawIfPaused() {
-        particleView.redrawIfPaused()
+        particleView?.redrawIfPaused()
         rippleGlowView?.redrawIfPaused()
     }
 }

@@ -3579,10 +3579,10 @@
     "ko": "새로운 디자인",
     "es": "Nueva apariencia"
   },
-  "Refreshed app and agent icons, refined task card colors, and flowing highlights for completed tasks.": {
-    "ja": "アプリとエージェントのアイコンを刷新し、タスクカードの配色と完了時の流れるハイライトを改善しました。",
-    "ko": "앱과 에이전트 아이콘을 새롭게 하고, 작업 카드 색상과 완료 시 흐르는 하이라이트를 개선했습니다.",
-    "es": "Nuevos iconos de la app y los agentes, colores de tarjetas mejorados y reflejos animados para las tareas completadas."
+  "Refreshed app and agent icons and flowing completion highlights. Completed cards now use a neutral background.": {
+    "ja": "アプリとエージェントのアイコン、完了時の流れるハイライトを改善しました。完了したカードはニュートラルな背景色で表示します。",
+    "ko": "앱과 에이전트 아이콘, 완료 시 흐르는 하이라이트를 개선했습니다. 완료된 카드는 중립적인 배경색으로 표시합니다.",
+    "es": "Iconos de la app y los agentes y reflejos de finalización renovados. Las tarjetas completadas ahora usan un fondo neutro."
   },
   "Settings experience": {
     "ja": "設定の使いやすさ",
@@ -3599,10 +3599,10 @@
     "ko": "에이전트 연동 (미리보기)",
     "es": "Integraciones de agentes (preliminar)"
   },
-  "Added task status integrations for Cursor, Gemini CLI, OpenCode, and GitHub Copilot CLI.": {
-    "ja": "Cursor、Gemini CLI、OpenCode、GitHub Copilot CLIのタスク状態との連携を追加しました。",
-    "ko": "Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI의 작업 상태 연동을 추가했습니다.",
-    "es": "Se han añadido integraciones del estado de las tareas de Cursor, Gemini CLI, OpenCode y GitHub Copilot CLI."
+  "Added integrations for Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, Devin Desktop, and Devin CLI, with current task model and token usage reading for Devin.": {
+    "ja": "Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI、Devin Desktop、Devin CLIの連携を追加しました。Devinでは現在のタスクのモデルとトークン使用量の読み取りにも対応しました。",
+    "ko": "Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, Devin Desktop, Devin CLI 연동을 추가하고, Devin의 현재 작업 모델과 토큰 사용량 읽기를 지원합니다.",
+    "es": "Se han añadido integraciones para Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, Devin Desktop y Devin CLI, con lectura del modelo y del uso de tokens de la tarea actual de Devin."
   },
   "More languages": {
     "ja": "対応言語の追加",
@@ -3614,15 +3614,15 @@
     "ko": "일본어, 한국어, 중국어 번체, 스페인어를 추가했습니다.",
     "es": "Se han añadido japonés, coreano, chino tradicional y español."
   },
-  "Reset protection": {
-    "ja": "リセット保護",
-    "ko": "초기화 보호",
-    "es": "Protección de restablecimiento"
+  "Reset credit management": {
+    "ja": "リセットクレジット管理",
+    "ko": "초기화 크레딧 관리",
+    "es": "Gestión de créditos de restablecimiento"
   },
-  "Added Disable reset credit use to help prevent accidental Codex quota resets.": {
-    "ja": "Codexの利用枠を誤ってリセットしないよう、リセットクレジットの使用を無効にする設定を追加しました。",
-    "ko": "Codex 한도를 실수로 초기화하지 않도록 초기화 크레딧 사용을 비활성화하는 옵션을 추가했습니다.",
-    "es": "Se ha añadido una opción para desactivar el uso de créditos de restablecimiento y evitar restablecer por error la cuota de Codex."
+  "Disable reset credit use to prevent accidental resets, and see a list of credits expiring within a week.": {
+    "ja": "リセットクレジットの使用を無効にして誤操作を防ぎ、1週間以内に期限が切れるクレジットを一覧で確認できます。",
+    "ko": "초기화 크레딧 사용을 비활성화해 실수로 초기화하는 것을 방지하고, 일주일 이내에 만료되는 크레딧을 목록으로 확인할 수 있습니다.",
+    "es": "Desactiva el uso de créditos de restablecimiento para evitar restablecimientos accidentales y consulta los créditos que caducan en una semana."
   },
   "Expires on {{0}}": {
     "ja": "{{0}} に期限切れ",
@@ -3638,5 +3638,15 @@
     "ja": "Devin Local のローカルタスクを表示します。信頼済みワークスペースで使用してください。",
     "ko": "Devin Local의 로컬 작업을 표시합니다. 신뢰할 수 있는 작업 공간에서 사용하세요.",
     "es": "Muestra las tareas locales de Devin Local. Usa un espacio de trabajo de confianza."
+  },
+  "Performance improvements": {
+    "ja": "パフォーマンス改善",
+    "ko": "성능 개선",
+    "es": "Mejoras de rendimiento"
+  },
+  "Reduced repeated background reads and optimized Claude task parsing and visual effect loading.": {
+    "ja": "バックグラウンドでの重複読み取りを減らし、Claudeのタスク解析と視覚効果の読み込みを最適化しました。",
+    "ko": "백그라운드의 중복 읽기를 줄이고 Claude 작업 분석과 시각 효과 로딩을 최적화했습니다.",
+    "es": "Se han reducido las lecturas repetidas en segundo plano y optimizado el análisis de tareas de Claude y la carga de efectos visuales."
   }
 }

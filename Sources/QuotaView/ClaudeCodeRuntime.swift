@@ -3,6 +3,25 @@ import Combine
 import Foundation
 import QuotaViewCore
 
+/// A value-only result crossing from the I/O worker to the UI actor.
+struct ClaudeCodeTranscriptBatch: Sendable {
+    var tail: ClaudeCodeTranscriptTail
+    var records: [ClaudeCodeTranscriptRecord]
+    var consumedLines: Bool
+
+    static func read(_ cursor: ClaudeCodeTranscriptTail, backfilling: Bool) -> Self {
+        var tail = cursor
+        let lines = tail.readLines(maximumBytes: 2_097_152)
+        var records = lines.flatMap { ClaudeCodeTranscriptDecoder.records($0) }
+        if backfilling,
+           let prompt = records.lastIndex(where: { if case .userPrompt = $0 { return true }; return false }) {
+            let titles = records[..<prompt].filter { if case .customTitle = $0 { return true }; return false }
+            records = titles + records[prompt...]
+        }
+        return Self(tail: tail, records: records, consumedLines: !lines.isEmpty)
+    }
+}
+
 /// Claude Code usage for the island usage page, from local sources only:
 /// status-line windows, Claude Code's cached usage, its profile and transcripts.
 struct IslandClaudeUsage: Equatable {
@@ -74,12 +93,18 @@ final class ClaudeCodeRuntime: ObservableObject {
     private let installer: ClaudeCodeInstaller
     private let bridge: ClaudeCodeBridge
     private let scanner: ClaudeCodeUsageScanner
+    private let transcriptReader: @Sendable (ClaudeCodeTranscriptTail, Bool) -> ClaudeCodeTranscriptBatch
     private var sessions: [String: Session] = [:]
     private var approvals: [String: Approval] = [:]
     private var tailTimer: Timer?
     private var usageTimer: Timer?
     private var usageTask: Task<Void, Never>?
     private var configurationTask: Task<Void, Never>?
+    // Hooks, transcript polls and disconnects share one ordered lane. Suspending
+    // for background decoding must never let Stop or the next prompt overtake it.
+    private var transcriptTask: Task<Void, Never>?
+    private var transcriptGeneration = UUID()
+    private var transcriptPollPending = false
     private var configurationRevision = UUID()
     private var preferenceCancellable: AnyCancellable?
     private var appliedConfiguration: (enabled: Bool, configuration: ClaudeCodeInstaller.Configuration)?
@@ -89,9 +114,13 @@ final class ClaudeCodeRuntime: ObservableObject {
 
     init(preferences: AppPreferences, island: IslandSession,
          defaults: UserDefaults = .standard,
-         installer: ClaudeCodeInstaller? = nil) {
+         installer: ClaudeCodeInstaller? = nil,
+         transcriptReader: @escaping @Sendable (ClaudeCodeTranscriptTail, Bool) -> ClaudeCodeTranscriptBatch = {
+             ClaudeCodeTranscriptBatch.read($0, backfilling: $1)
+         }) {
         self.preferences = preferences
         self.island = island
+        self.transcriptReader = transcriptReader
         let tokenKey = "claudeCode.bridge.authenticationToken"
         let token: String
         if let existing = defaults.string(forKey: tokenKey), !existing.isEmpty { token = existing }
@@ -199,11 +228,15 @@ final class ClaudeCodeRuntime: ObservableObject {
     private func startBridge() {
         guard !bridgeRunning else { return }
         do {
-            // The main queue preserves Hook order; unstructured Tasks need not.
+            // Preserve bridge arrival order even while a transcript read suspends.
             try bridge.start(onMessage: { [weak self] message in
-                DispatchQueue.main.async { MainActor.assumeIsolated { self?.receive(message) } }
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.enqueueTranscriptWork { await $0.receive(message) } }
+                }
             }, onDisconnect: { [weak self] eventID in
-                DispatchQueue.main.async { MainActor.assumeIsolated { self?.helperDisconnected(eventID) } }
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.enqueueTranscriptWork { $0.helperDisconnected(eventID) } }
+                }
             })
             bridgeRunning = true
             usageTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
@@ -217,6 +250,9 @@ final class ClaudeCodeRuntime: ObservableObject {
     private func stopBridge() {
         bridge.stop()
         bridgeRunning = false
+        transcriptGeneration = UUID()
+        transcriptTask?.cancel(); transcriptTask = nil
+        transcriptPollPending = false
         usageTask?.cancel(); usageTask = nil
         tailTimer?.invalidate(); tailTimer = nil
         usageTimer?.invalidate(); usageTimer = nil
@@ -232,7 +268,18 @@ final class ClaudeCodeRuntime: ObservableObject {
 
     // MARK: Ingress
 
-    private func receive(_ message: ClaudeCodeBridgeMessage) {
+    private func enqueueTranscriptWork(_ operation: @escaping @MainActor (ClaudeCodeRuntime) async -> Void) {
+        let previous = transcriptTask
+        let generation = transcriptGeneration
+        transcriptTask = Task { [weak self] in
+            await previous?.value
+            guard let self, !Task.isCancelled, isRunning, bridgeRunning,
+                  transcriptGeneration == generation else { return }
+            await operation(self)
+        }
+    }
+
+    private func receive(_ message: ClaudeCodeBridgeMessage) async {
         guard isRunning, bridgeRunning, preferences.claudeCodeEnabled,
               let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any] else {
             if message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
@@ -265,31 +312,31 @@ final class ClaudeCodeRuntime: ObservableObject {
             receiveAgentEvent(event, agentID: agentID, payload: payload, sessionID: sessionID)
             return
         }
-        drainTranscript(sessionID)
+        guard await drainTranscript(sessionID) else { return }
         switch event {
         case "UserPromptSubmit":
-            beginTurn(sessionID, byPrompt: true)
+            guard await beginTurn(sessionID, byPrompt: true) else { return }
             emit(.userPromptSubmit, sessionID, payload)
             publishMetadata(sessionID)
         case "PreToolUse":
-            ensureTurn(sessionID)
+            guard await ensureTurn(sessionID) else { return }
             emit(.preToolUse, sessionID, payload)
         case "PostToolUse", "PostToolUseFailure":
             emit(.postToolUse, sessionID, payload)
             if let id = payload["tool_use_id"] as? String { retireApprovals(sessionID: sessionID, toolUseID: id) }
         case "PermissionRequest":
-            ensureTurn(sessionID)
+            guard await ensureTurn(sessionID) else { return }
             admitApproval(message, payload: payload, sessionID: sessionID)
             return
         case "PreCompact":
-            ensureTurn(sessionID)
+            guard await ensureTurn(sessionID) else { return }
             emit(.preCompact, sessionID, payload)
         case "PostCompact":
             emit(.postCompact, sessionID, payload)
         case "Stop":
-            finishTurn(sessionID, payload: payload, status: .completed)
+            await finishTurn(sessionID, payload: payload, status: .completed)
         case "StopFailure":
-            finishTurn(sessionID, payload: payload, status: .failed)
+            await finishTurn(sessionID, payload: payload, status: .failed)
         case "SubagentStart", "SubagentStop":
             // Subagent hooks without agent_id carry no child identity.
             break
@@ -339,12 +386,14 @@ final class ClaudeCodeRuntime: ObservableObject {
 
     // MARK: Turns
 
-    private func ensureTurn(_ sessionID: String) {
-        if sessions[sessionID]?.turnActive != true { beginTurn(sessionID, byPrompt: false) }
+    private func ensureTurn(_ sessionID: String) async -> Bool {
+        if sessions[sessionID]?.turnActive == true { return true }
+        return await beginTurn(sessionID, byPrompt: false)
     }
 
-    private func beginTurn(_ sessionID: String, byPrompt: Bool) {
-        guard var session = sessions[sessionID] else { return }
+    private func beginTurn(_ sessionID: String, byPrompt: Bool) async -> Bool {
+        guard var session = sessions[sessionID] else { return false }
+        let generation = transcriptGeneration
         let turnID = UUID().uuidString.lowercased()
         session.turnID = turnID
         session.turnKey = CodexActivityPrivacy.hashIdentifier("claude-turn:" + sessionID + ":" + turnID)
@@ -357,13 +406,16 @@ final class ClaudeCodeRuntime: ObservableObject {
             session.tail = .init(path: path, offset: byPrompt ? size : (size > 1_048_576 ? size - 1_048_576 : 0))
         } else { session.backfilling = false }
         sessions[sessionID] = session
-        if let path = session.transcriptPath, !session.hasTitle { discoverTitle(path, sessionID: sessionID) }
+        if let path = session.transcriptPath, !session.hasTitle { await discoverTitle(path, sessionID: sessionID) }
+        guard transcriptGeneration == generation, !Task.isCancelled,
+              isRunning, bridgeRunning, preferences.claudeCodeEnabled else { return false }
         if !byPrompt { emit(.userPromptSubmit, sessionID, [:]); publishMetadata(sessionID) }
+        return true
     }
 
-    private func finishTurn(_ sessionID: String, payload: [String: Any], status: CodexActivityTurnCompletionStatus) {
+    private func finishTurn(_ sessionID: String, payload: [String: Any], status: CodexActivityTurnCompletionStatus) async {
         guard sessions[sessionID]?.turnActive == true else { return }
-        drainTranscript(sessionID)
+        guard await drainTranscript(sessionID) else { return }
         guard var session = sessions[sessionID], session.turnActive else { return }
         if status == .completed, let last = session.lastAssistant {
             sendContent(["type": "message", "id": last.id, "text": last.text, "channel": "final"], sessionID: sessionID)
@@ -414,29 +466,36 @@ final class ClaudeCodeRuntime: ObservableObject {
     }
 
     private func pollTranscripts() {
-        for (id, session) in sessions where session.turnActive && session.tail != nil { drainTranscript(id) }
-        // Idle sessions are forgotten after a day without hooks.
-        sessions = sessions.filter { $0.value.turnActive || $0.value.updatedAt.timeIntervalSinceNow > -86_400 }
-        scheduleTailTimer()
+        guard !transcriptPollPending else { return }
+        transcriptPollPending = true
+        enqueueTranscriptWork { runtime in
+            let generation = runtime.transcriptGeneration
+            defer { if runtime.transcriptGeneration == generation { runtime.transcriptPollPending = false } }
+            let active = runtime.sessions.filter { $0.value.turnActive && $0.value.tail != nil }.map(\.key)
+            for id in active {
+                guard await runtime.drainTranscript(id) else { return }
+            }
+            // Idle sessions are forgotten after a day without hooks.
+            runtime.sessions = runtime.sessions.filter { $0.value.turnActive || $0.value.updatedAt.timeIntervalSinceNow > -86_400 }
+            runtime.scheduleTailTimer()
+        }
     }
 
-    private func drainTranscript(_ sessionID: String) {
-        guard var session = sessions[sessionID], var tail = session.tail else { return }
-        let lines = tail.readLines(maximumBytes: 2_097_152)
-        session.tail = tail
-        sessions[sessionID] = session
-        guard !lines.isEmpty else { return }
-        var records = lines.flatMap { ClaudeCodeTranscriptDecoder.records($0) }
-        if session.backfilling {
-            // A mid-turn admission shows only the current turn: records after
-            // the latest real prompt. Titles anywhere in the backlog still apply.
-            sessions[sessionID]?.backfilling = false
-            if let prompt = records.lastIndex(where: { if case .userPrompt = $0 { return true }; return false }) {
-                let titles = records[..<prompt].filter { if case .customTitle = $0 { return true }; return false }
-                records = titles + records[prompt...]
-            }
-        }
-        for record in records { apply(record, sessionID: sessionID) }
+    private func drainTranscript(_ sessionID: String) async -> Bool {
+        guard let session = sessions[sessionID], let tail = session.tail else { return true }
+        let generation = transcriptGeneration
+        let backfilling = session.backfilling
+        let reader = transcriptReader
+        let batch = await Task.detached(priority: .utility) { reader(tail, backfilling) }.value
+        guard generation == transcriptGeneration, !Task.isCancelled,
+              isRunning, bridgeRunning, preferences.claudeCodeEnabled,
+              var current = sessions[sessionID], current.turnKey == session.turnKey,
+              current.transcriptPath == session.transcriptPath else { return false }
+        current.tail = batch.tail
+        if batch.consumedLines { current.backfilling = false }
+        sessions[sessionID] = current
+        for record in batch.records { apply(record, sessionID: sessionID) }
+        return true
     }
 
     private func apply(_ record: ClaudeCodeTranscriptRecord, sessionID: String) {
@@ -498,14 +557,22 @@ final class ClaudeCodeRuntime: ObservableObject {
         sessions[sessionID] = session
     }
 
-    private func discoverTitle(_ path: String, sessionID: String) {
-        var custom: String?, prompt: String?
-        for line in ClaudeCodeTranscriptTail.headLines(path) {
-            for record in ClaudeCodeTranscriptDecoder.records(line) {
-                if case .customTitle(let title) = record { custom = title }
-                if case .userPrompt(let text) = record, prompt == nil { prompt = text }
+    private func discoverTitle(_ path: String, sessionID: String) async {
+        let generation = transcriptGeneration
+        let turn = sessions[sessionID]?.turnKey
+        let (custom, prompt) = await Task.detached(priority: .utility) {
+            var custom: String?, prompt: String?
+            for line in ClaudeCodeTranscriptTail.headLines(path) {
+                for record in ClaudeCodeTranscriptDecoder.records(line) {
+                    if case .customTitle(let title) = record { custom = title }
+                    if case .userPrompt(let text) = record, prompt == nil { prompt = text }
+                }
             }
-        }
+            return (custom, prompt)
+        }.value
+        guard generation == transcriptGeneration, !Task.isCancelled,
+              isRunning, bridgeRunning, preferences.claudeCodeEnabled,
+              sessions[sessionID]?.turnKey == turn, sessions[sessionID]?.transcriptPath == path else { return }
         if let custom { setTitle(custom, explicit: true, sessionID: sessionID) }
         else if let prompt { setTitle(Self.promptTitle(prompt), explicit: false, sessionID: sessionID) }
     }

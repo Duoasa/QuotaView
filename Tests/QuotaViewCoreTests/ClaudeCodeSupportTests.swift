@@ -420,7 +420,11 @@ final class ClaudeCodeSupportTests: XCTestCase {
 
 extension ClaudeCodeSupportTests {
     @MainActor
-    private func runtimeFixture() throws -> (AppPreferences, ClaudeCodeRuntime, ClaudeCodeInstaller, URL, IslandSession) {
+    private func runtimeFixture(
+        transcriptReader: @escaping @Sendable (ClaudeCodeTranscriptTail, Bool) -> ClaudeCodeTranscriptBatch = {
+            ClaudeCodeTranscriptBatch.read($0, backfilling: $1)
+        }
+    ) throws -> (AppPreferences, ClaudeCodeRuntime, ClaudeCodeInstaller, URL, IslandSession) {
         let suite = "QuotaView.ClaudeLifecycle.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         let preferences = AppPreferences(defaults: defaults)
@@ -434,7 +438,8 @@ extension ClaudeCodeSupportTests {
             configurationDirectory: temporary.appendingPathComponent("claude"),
             supportDirectory: temporary.appendingPathComponent("support"), helperURL: helper, environment: [:])
         let island = IslandSession()
-        let runtime = ClaudeCodeRuntime(preferences: preferences, island: island, defaults: defaults, installer: installer)
+        let runtime = ClaudeCodeRuntime(preferences: preferences, island: island, defaults: defaults, installer: installer,
+            transcriptReader: transcriptReader)
         addTeardownBlock {
             await MainActor.run { runtime.stop(); island.stop() }
             UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite)
@@ -450,6 +455,100 @@ extension ClaudeCodeSupportTests {
             try await Task.sleep(nanoseconds: 20_000_000)
         }
         XCTAssertTrue(condition(), "Claude runtime did not reach the expected state")
+    }
+
+    @MainActor
+    func testBackgroundTranscriptReadPreservesStopAndNextPromptOrder() async throws {
+        let reading = expectation(description: "background read suspended")
+        let gate = DispatchSemaphore(value: 0)
+        defer { gate.signal() }
+        let (_, runtime, _, socket, island) = try runtimeFixture { tail, backfilling in
+            XCTAssertFalse(Thread.isMainThread, "transcript I/O and decoding run off the UI thread")
+            let batch = ClaudeCodeTranscriptBatch.read(tail, backfilling: backfilling)
+            if batch.records.contains(where: { if case .assistantText(_, "First answer") = $0 { return true }; return false }) {
+                reading.fulfill()
+                _ = gate.wait(timeout: .now() + 5)
+            }
+            return batch
+        }
+        let transcript = temporary.appendingPathComponent("ordered.jsonl")
+        try Data().write(to: transcript)
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        func hook(_ event: String) {
+            _ = Self.send(["authenticationToken": "tok", "eventID": UUID().uuidString, "kind": "hook",
+                "payload": ["hook_event_name": event, "session_id": "ordered", "transcript_path": transcript.path,
+                            "tool_name": "Bash", "tool_use_id": "tool"]], to: socket)
+        }
+        func append(_ id: String, text: String, tokens: Int) throws {
+            var data = line(["type": "assistant", "uuid": id, "requestId": id,
+                "message": ["id": id, "model": "claude-opus-5-5", "content": [["type": "text", "text": text]],
+                            "usage": ["input_tokens": tokens, "output_tokens": 0]]])
+            data.append(10)
+            let file = try FileHandle(forWritingTo: transcript)
+            try file.seekToEnd(); try file.write(contentsOf: data); try file.close()
+        }
+        hook("UserPromptSubmit")
+        try await waitForRuntime { island.model.tasks.first?.turnKey != nil }
+        let firstTurn = island.model.tasks.first?.turnKey
+        try append("one", text: "First answer", tokens: 7)
+        hook("Stop")
+        await fulfillment(of: [reading], timeout: 3)
+        // The UI actor is responsive while decoding is deliberately held.
+        hook("UserPromptSubmit")
+        hook("PreToolUse")
+        XCTAssertEqual(island.model.tasks.first?.turnKey, firstTurn)
+        gate.signal()
+        try await waitForRuntime { island.model.tasks.first?.turnKey != firstTurn && island.model.tasks.first?.activityStatus == .working }
+        try append("two", text: "Second answer", tokens: 100)
+        hook("Stop")
+        try await waitForRuntime { island.model.tasks.first?.activityStatus == .completed }
+        let task = try XCTUnwrap(island.model.tasks.first)
+        XCTAssertEqual(task.tokens, 100, "previous turn's delayed usage must not be added to the new turn")
+        XCTAssertEqual(task.entries.last { $0.kind == .result }?.text.chinese, "Second answer")
+    }
+
+    @MainActor
+    func testStoppedRuntimeDiscardsInFlightTranscriptResultsAfterRestart() async throws {
+        let reading = expectation(description: "old generation reading")
+        let returned = expectation(description: "old generation returned")
+        let gate = DispatchSemaphore(value: 0)
+        defer { gate.signal() }
+        let (_, runtime, _, socket, island) = try runtimeFixture { tail, backfilling in
+            let batch = ClaudeCodeTranscriptBatch.read(tail, backfilling: backfilling)
+            if batch.records.contains(where: { if case .assistantText(_, "Stale answer") = $0 { return true }; return false }) {
+                reading.fulfill()
+                _ = gate.wait(timeout: .now() + 5)
+                returned.fulfill()
+            }
+            return batch
+        }
+        let transcript = temporary.appendingPathComponent("restart.jsonl")
+        try Data().write(to: transcript)
+        func hook(_ event: String) {
+            _ = Self.send(["authenticationToken": "tok", "eventID": UUID().uuidString, "kind": "hook",
+                "payload": ["hook_event_name": event, "session_id": "restart", "transcript_path": transcript.path]], to: socket)
+        }
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        hook("UserPromptSubmit")
+        try await waitForRuntime { island.model.tasks.first?.turnKey != nil }
+        let oldTurn = island.model.tasks.first?.turnKey
+        var data = line(["type": "assistant", "uuid": "stale", "message": ["id": "stale",
+            "content": [["type": "text", "text": "Stale answer"]]]]); data.append(10)
+        try data.write(to: transcript)
+        hook("Stop")
+        await fulfillment(of: [reading], timeout: 3)
+        runtime.stop()
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+        hook("UserPromptSubmit")
+        try await waitForRuntime { island.model.tasks.first?.turnKey != oldTurn }
+        gate.signal()
+        await fulfillment(of: [returned], timeout: 3)
+        hook("Stop")
+        try await waitForRuntime { island.model.tasks.first?.activityStatus == .completed }
+        XCTAssertFalse(island.model.tasks.first?.entries.contains { $0.text.chinese == "Stale answer" } ?? true)
     }
 
     @MainActor

@@ -16,13 +16,45 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 当前开发：0.9.1 Build 12 / Devin 模型与 Token 补读（2026-11-02）
+## 0.9.1 正式发布进行中（2026-11-02）
+
+用户已明确授权本次正式发布、main 合并和 appcast 全链路。身份冻结为 0.9.1 Build 16 / 内部 149，tag `v0.9.1-build.16`、ZIP `QuotaView-v0.9.1-build.16.zip`。双语 README 已采用用户新目录的 12 张产品图及当前蓝色终端图标，Release 英文说明以品牌视觉开篇；自动检查更新默认开启且保留旧偏好，本版 149 加入正式公告名单。详细授权、验证与未发布边界见[0.9.1 发布规格](docs/specs/release-0.9.1.md)。公开稳定/回滚基线仍为 0.8.6 Build 21，Windows 通道保持。
+
+本地完整 786 测试、7 跳过、0 失败及 44 契约通过，Universal 包签名、公证/Staple、Gatekeeper 与解压启动 15 秒通过。当前开发包于 2026-11-02T16:20:47.960190+08:00 重启为 Build 16，PID 3444，257 输入/19 资源及实际加载路径一致，证据 `.build/release-091b16-runtime/`。正式安装与用户数据保持。
+
+[PR #131](https://github.com/Duoasa/QuotaView/pull/131) 首次 CI 暴露 Devin 测试夹具写入与正常读事务竞争：零等待的写连接返回 SQLITE_BUSY。仅对夹具增加 1 秒有界 busy timeout，并让写入失败抛出错误；生产读取超时、259 个冻结生产输入及已公证包保持不变。等待修复后 PR/main CI，尚未发布 Release/appcast；发布证据 `dist/verification/0.9.1-build16-release/`。
+
+## 前序开发：0.9.1 Build 15 / 公告内容更新（2026-11-02）
+
+按用户要求将 0.9.1 公告更新为六条：全新外观、设置体验、性能优化、Agent 接入（预览）、多语言支持、重置卡管理。补入 Devin Desktop/CLI 双入口及模型/Token 读取、一周内到期重置卡列表、完成卡片中性底色与首批性能优化；保持既有三组布局、窗口尺寸、图标和按版本回执。六语言同步，正式自动展示名单仍为内部 102。完整文案见[公告规格](docs/specs/brand-announcement.md#091-公告更新2026-11-02build-15)。
+
+710 个源码模板、730 条目录文案与占位符检查及 3 项公告策略冒烟通过，证据 `.build/announcement-091b15-localizations.log`、`.build/announcement-091b15-smoke.log`。Debug arm64 增量构建成功，2026-11-02T15:51:37.630168+08:00 已重启开发包 PID 90847，0.9.1 / Build 15 / 内部 148；257 输入、19 资源、App/Widget 身份、完整包/备份和实际加载一致，正式安装保持。运行证据 `.build/announcement-091b15-runtime/`。本批仅本地，保留前序未提交改动，未推送或发布；关于页手动查看，视觉由用户验收。
+
+## 前序开发：0.9.1 Build 14 / 首批性能优化（2026-11-02）
+
+用户授权先处理已确认有价值的性能项并重启开发版。本批实施 Codex 发现/消费共用的有界首行缓存（保留实时文件身份失效、路径及内部任务验证）、Claude 转录与标题后台读取/解码（有序 Hook/轮询、代次与轮次校验）、圆球渲染器按需创建和切换复用。完成卡片中性背景保持，未修改视觉参数、轮询频率或 Hook 应答协议。实现与边界见[性能复核及实施记录](docs/design/quotaview-performance-review-2026-11-02.md#首批性能优化2026-11-02091-build-14)。
+
+31 项针对性冒烟通过，0 失败、0 跳过；证据 `.build/performance-091b14-smoke.log`。固定 24 文件 × 40 轮询的首行阶段微基准：实际读取 960 → 24 次，单次测量 100.75 → 8.17 ms，返回身份一致；不是整机 CPU/GPU/耗电降幅。后台解析阻塞夹具验证 UI actor 可继续处理事件、停止/新提问的顺序及重启后拒绝旧结果。未运行完整回归或 UI 自动验收。
+
+Debug arm64 增量构建成功，2026-11-02T11:45:18.133636+08:00 已重启 `.build/DevelopmentRuntime/QuotaView.app`，PID 52178，0.9.1 / Build 14 / 内部 147；257 个生产输入、19 项资源、App/Widget 身份、完整包/备份与实际加载路径一致，正式安装保持。证据 `.build/performance-091b14-runtime/`；原 Build 13 包已备份。本批仅本地，未提交、推送、合并、打包或发布，原未提交及无关文件保留。实际体验由用户验收；独立发现的既有 Claude 跨轮 Token 最大值展示问题另记于性能记录，未混入本次性能修改。
+
+## 前序开发：0.9.1 Build 13 / 完成卡片中性底色与性能报告复核（2026-11-02）
+
+按用户“已完成的卡片不再着色”，完成态取消状态背景染色，普通/hover、选中/未选中、玻璃/实体回退均为中性色；共享子 Agent 行同步。参数见[最新界面规则](docs/design/QUOTAVIEW_UI_RULES.md#完成卡片取消背景染色2026-11-02091-build-13)。完成标识、边缘特效及布局保留，视觉由用户验收。
+
+既有配色契约更新，3 项相关冒烟通过，证据 `.build/completed-neutral-091b13-smoke.log`。Debug arm64 增量构建通过，2026-11-02T11:15:15.775555+08:00 已重启开发包 PID 39492，0.9.1 / Build 13 / 内部 146；257 输入/19 资源与实际加载一致，证据 `.build/completed-neutral-091b13-runtime/`。本批仅本地，未推送或发布，既有未提交交接记录与无关文件保留。
+
+已逐项核对用户的 33 条性能报告项目，见[复核记录](docs/design/quotaview-performance-review-2026-11-02.md)。确认多处重复工作，也指出提前截候选、移除终态 Flush、无条件提前 ACK 等建议会破坏原语义。本机只读 EXPLAIN 证明日志查询命中 thread/time 索引，会话发现查询存在临时排序；未读取日志正文、修改客户端数据库或进行长时间 profiling，报告的资源量级仍未验证。性能项未实施；本批唯一产品修改是上述完成底色。
+
+## 前序开发：0.9.1 Build 12 / Devin 模型与 Token 补读（2026-11-02）
+
+源码已通过 [PR #130](https://github.com/Duoasa/QuotaView/pull/130) 合入 main `0a20049916d8bf5d392066790389cb58833eed2f`，源提交 `c2ffc091f508715ae855295334a1f7f6bbd466f4`。[PR CI 41377887922](https://github.com/Duoasa/QuotaView/actions/runs/41377887922) 与精确 [main CI 41378352632](https://github.com/Duoasa/QuotaView/actions/runs/41378352632) 均通过，各 781 项测试、7 跳过、0 失败，以及 44 项契约检查。257 个生产输入与源提交、合并提交及 Build 12 运行包一致，工作区已快进；证据 `.build/source-integration-091b12/`。合并结果补记保留本地，无关未跟踪文件保持；未打包或发布。
 
 针对朋友反馈最新版 Devin Desktop、`swe-2-max` 仍显示模型未知/无 Token，新增当前本机会话模型和用量补读，Desktop/CLI 共用。支持默认 SQLite 与可选文件存储，按提交起点统计本轮输入/输出，按请求去重；Stop 后追踪最多 10 秒的延迟落盘。修正 Devin 卡片跨轮沿用旧 Token，新轮次不会被旧事件或异步结果覆盖。缺少起点/指标保持未知；更新后新提交的一轮开始统计。规则和边界见[模型与用量](docs/specs/agent-integrations.md#devin-当前任务模型与用量2026-11-02091-build-12)。
 
 13 项隔离冒烟与新增 1 项 WAL 只读冒烟通过，运行包内辅助程序复验 1 项双入口模型/用量链路通过；官方 CLI 3000.11.234 实际建库和文件迁移格式经生产读取器核对。首次冒烟发现跨轮旧值保留，修复后复验通过，原日志保留。证据 `.build/devin-usage-smoke-final.log`、`.build/devin-usage-runtime-smoke.log`、`.build/devin-usage-wal-smoke.log`、`.build/devin-research/check-store.log`。官方数据库首次只读检查因已关闭且 WAL 辅助文件缺失返回不可读；保留隔离写连接复现客户端运行状态后读取成功，生产代码保持只读，不修改用户数据库。使用合成请求数据，没有真实在线模型调用；朋友真实 Desktop 与视觉结果待验收。
 
-Debug arm64 增量构建通过，2026-11-02T09:51:20.073068+08:00 已重启开发包 PID 18831，0.9.1 / Build 12 / 内部 145，257 输入/19 资源与实际加载一致；证据 `.build/devin-usage-091b12-runtime/`。正式安装保留。用户随后于 2026-11-02 授权推送并合并本批源码，按 PR 与合并后精确 main CI 门禁执行，集成证据 `.build/source-integration-091b12/`；结果完成后补记。未打包或发布，之前 Build 11 好友测试 DMG 不含本次修复；无关文件保留。
+Debug arm64 增量构建通过，2026-11-02T09:51:20.073068+08:00 已重启开发包 PID 18831，0.9.1 / Build 12 / 内部 145，257 输入/19 资源与实际加载一致；证据 `.build/devin-usage-091b12-runtime/`。正式安装保留。用户随后于 2026-11-02 授权推送并合并本批源码，PR/main CI 与合并结果见上方补记。未打包或发布，之前 Build 11 好友测试 DMG 不含本次修复；无关文件保留。
 
 ## 前序开发：0.9.1 Build 11 / Swift 兼容修复与好友测试包（2026-11-01）
 
