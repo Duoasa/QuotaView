@@ -9,7 +9,33 @@
 
 ## 当前最新版本
 
-> macOS 稳定版 **0.8.6 Build 21**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.9.1 Build 16**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+
+### macOS 0.9.1 Build 16
+
+2026-11-02 按用户授权正式发布。以新的蓝色终端图标和中英文产品图介绍 QuotaView 品牌视觉；包含新版设置、扩展 Agent 预览接入、Devin Desktop/CLI 模型与本轮 Token 补读、六语言、重置保护及到期列表、完成卡片中性背景和首批性能优化。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.9.1 / Build 16 / 内部 149` |
+| Tag / 发布提交 | `v0.9.1-build.16` / `f1bf0a3de597a56ffa0b6f2567cd38dda540c528`；[PR #131](https://github.com/Duoasa/QuotaView/pull/131) |
+| 构建源码 | `ab44fb0c27d520e91cb83e112f2bf16c4dc2f5ba`；CI 夹具修正后源提交 `23c801bd725380a31a78122d751d4b25f37e8f5a`，259 个生产输入与发布提交一致，未重打包 |
+| GitHub Release | [QuotaView 0.9.1 Build 16 · macOS](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16)，Stable / Latest，非 Draft / Pre-release；Release ID `431228579` |
+| 资产 | `QuotaView-v0.9.1-build.16.zip`，31,512,845 bytes；资产 ID `701076299` |
+| SHA-256 | `6947280fe65f1c037f08ca56ab1f770a8ce09fc90bb0a34142d3bd03d3225f85` |
+| 系统与架构 | macOS 14+，Universal arm64 + x86_64；App / Widget / Core / Hook / Sparkle 已核对 |
+| 签名 | Developer ID Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3，Hardened Runtime；正式 App / Widget / App Group 身份 |
+| 公证 | Accepted / Stapled，`66386a3c-fda4-4eee-bbe2-bd4904c80d0e` |
+| 产物验证 | 259 个冻结生产输入、19 项资源、原始图标、正式身份、签名、Staple、Gatekeeper、解压启动 15 秒及动态库路径通过；公开 ZIP 逐字节一致并通过内置公钥 EdDSA 验证 |
+| 本地 / CI | 完整 786 项测试、7 跳过、0 失败；44 项契约通过；夹具修正后 14 项 Devin 专项通过；[PR CI 41413250526](https://github.com/Duoasa/QuotaView/actions/runs/41413250526)、[main CI 41414172095](https://github.com/Duoasa/QuotaView/actions/runs/41414172095) 均成功 |
+| appcast | [macOS 签名 Feed](https://duoasa.github.io/QuotaView/appcast.xml)；gh-pages `8360dd9eb968d30269fbe67765f39fc30fd9c8b9`，[Pages 构建](https://github.com/Duoasa/QuotaView/actions/runs/41415056300) 成功；序列 149 / 102 / 81，保留项 URL、长度及签名不变 |
+| Feed SHA-256 | `476addb4ae8f3e0368c991b4a95f4b3adbc6bd7b60179a848635880cfc31c395`；线上字节和内置公钥验签通过，既有稳定版下一更新目标为内部 149 |
+| EdDSA | `lXvpfapwHNeddpdc+RYILRinuQlSav3agFNrBRi5qGxpYadCWbrd7yM1hG+QwD4OzLEpzkdWlz4vvq6P3itXDw==` |
+| 回滚 | [v0.8.6-build.21](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.6-build.21) / `3b737073d8a33b8362448d497141772629c3d989`；旧 ZIP 再次回下载哈希一致，旧 tag 与资产保留，完整事实见下节 |
+
+双语 README 使用 CN/EN 新封面、中英文各五张产品图及新产品图标；原图来源和字节哈希见 `docs/media/readme/0.9.1/assets.json`。Release 英文说明先介绍品牌视觉，再简述更新。正式公告精确名单为内部 102 / 149，分别确认一次。
+
+最终包自动检查更新默认 true、周期 24 小时；自动下载安装为 false，既有用户偏好优先。Windows 0.8.3-win.13、独立更新通道、正式安装及用户数据保持。未消耗真实重置卡；视觉、朋友真实 Devin 环境与真实升级体验由用户验收。开发包已同步至 Build 16。证据 `dist/verification/0.9.1-build16-release/`，发布规格见 [release-0.9.1.md](docs/specs/release-0.9.1.md)。
 
 ### Windows 0.8.3-win.13
 
@@ -53,7 +79,9 @@
 
 README 中英文已增加上线通知和平台下载入口；原有 31 个 macOS Release 的名称添加 `· macOS`，不修改其 tag、资产、说明、预发布状态或 Latest。该次 Windows 发布时 macOS feed 保持原字节；后续 macOS 发布见下节。Windows 当前没有更早的正式更新包；旧预览版首次手动安装，之后使用独立通道。真实升级体验由用户验收；辅助进程退出/重启的可选实机实验未执行，不能将文件回滚测试记为完整实机升级验收。
 
-### macOS 0.8.6 Build 21
+### macOS 0.8.6 Build 21（上一 macOS 稳定版 / 本次回滚基线）
+
+以下保留当时发布事实；GitHub Latest 现已由上方 0.9.1 Build 16 接替。
 
 2026-10-30 按用户授权发布；README 保持原样，Release 使用简短英文说明。
 
