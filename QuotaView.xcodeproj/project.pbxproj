@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D391B1200000000000000001 /* DevinSessionUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D391B1200000000000000003 /* DevinSessionUsage.swift */; };
+		D391B1200000000000000002 /* DevinSessionUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D391B1200000000000000003 /* DevinSessionUsage.swift */; };
         B08725000000000000000003 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = F08725000000000000000001 /* AppLocalization.swift */; };
         B08725000000000000000004 /* AppTranslations.json in Resources */ = {isa = PBXBuildFile; fileRef = F08725000000000000000002 /* AppTranslations.json */; };
 		9D75AF4DF5A10AA66CC69E9A /* BrandAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */; };
@@ -189,6 +191,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D391B1200000000000000003 /* DevinSessionUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevinSessionUsage.swift; sourceTree = "<group>"; };
 		4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAnnouncement.swift; sourceTree = "<group>"; };
 		A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIslandMotion.swift; sourceTree = "<group>"; };
 		A05200000000000000000002 /* CodexMultitaskIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexMultitaskIsland.swift; sourceTree = "<group>"; };
@@ -506,6 +509,7 @@
 			children = (
 				F10000000000000000000034 /* PlanProgressParser.swift */,
 				477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */,
+				D391B1200000000000000003 /* DevinSessionUsage.swift */,
 			);
 			path = QuotaViewActivityHookSupport;
 			sourceTree = "<group>";
@@ -798,6 +802,7 @@
 				354528488112B0F1B3C6AC88 /* ClaudeCodeRuntime.swift in Sources */,
 				097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */,
 				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
+				D391B1200000000000000001 /* DevinSessionUsage.swift in Sources */,
 				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
 				1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */,
 				A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */,
@@ -909,6 +914,7 @@
 				B10000000000000000000029 /* main.swift in Sources */,
 				B10000000000000000000030 /* PlanProgressParser.swift in Sources */,
 				5C56C929A6ED683B94977A0D /* NativeAgentHookNormalizer.swift in Sources */,
+				D391B1200000000000000002 /* DevinSessionUsage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

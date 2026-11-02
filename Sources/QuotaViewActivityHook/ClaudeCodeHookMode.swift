@@ -420,7 +420,21 @@ enum NativeAgentHookForwarder {
             return
         }
         guard let object = decoded as? [String: Any],
-              let payload = NativeAgentHookNormalizer.normalize(object, provider: provider, event: event) else { return }
+              var payload = NativeAgentHookNormalizer.normalize(object, provider: provider, event: event) else { return }
+        if provider == "devinDesktop" || provider == "devinCLI",
+           let session = payload["session_id"] as? String,
+           let store = DevinSessionUsage.Store.current(session: session) {
+            // This locator is derived from the client's environment, never from
+            // hook-supplied paths. It stays on the authenticated local connection.
+            payload["devin_storage_directory"] = store.directory.path
+            payload["devin_storage_files"] = store.files
+            if let snapshot = DevinSessionUsage.read(session: session, store: store) {
+                if let model = snapshot.model, payload["model"] == nil { payload["model"] = model }
+                if payload["hook_event_name"] as? String == "UserPromptSubmit", let position = snapshot.position {
+                    payload["devin_start_position"] = position
+                }
+            }
+        }
         _ = forward(payload, route: route)
     }
     private static func forward(_ payload: [String: Any], route: ClaudeCodeRoute) -> Bool {

@@ -49,6 +49,7 @@ let package = Package(
             dependencies: [
                 "QuotaViewCore",
                 "QuotaViewWidgetContract",
+                "QuotaViewActivityHookSupport",
                 .product(name: "Sparkle", package: "Sparkle")
             ],
             resources: [

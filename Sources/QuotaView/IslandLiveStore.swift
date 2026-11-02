@@ -1561,6 +1561,9 @@ final class IslandLiveStore {
         clearItemContexts(for: tasks[i].key)
         if let old = tasks[i].turnKey { priorTurnKeys[tasks[i].key, default: []].insert(old) }
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
+        // Devin reports usage after the prompt's saved position, so its next
+        // turn starts unknown. Other providers may report session-wide totals.
+        if provider(for: tasks[i].key).isDevin { tasks[i].tokens = nil }
         tasks[i].activityStatus = .thinking; tasks[i].requestLifecycle = RequestLifecycle(); tasks[i].progress = nil; tasks[i].operation = ""
         tasks[i].observerReminderDismissed = false
         tasks[i].observedPermissionNotices.removeAll()

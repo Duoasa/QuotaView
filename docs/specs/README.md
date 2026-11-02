@@ -8,9 +8,13 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.9.1 Build 11
+## 当前开发：0.9.1 Build 12
 
-[Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) / [Grok 修复](../design/quotaview-bug-fixes-2026-11-01.md)：修复 PR CI 旧 Swift 对 `strdup` 输入数组的类型推断不兼容，8 项针对性冒烟通过。用户授权立即制作签名好友测试 DMG，与 CI/合并并行；Build 11 / 内部 144 已重启运行，Universal DMG 已 Developer ID 签名、Apple 公证/Staple 并交付。11 项 ingress 检查通过，修正旧公共目录夹具；CI 合并结果另补记。用户要求朋友实测，未进行包内 UI/启动验收。产物完整身份与证据见 Handoff，未公开发布或加入自动更新。
+[Devin 模型与用量](agent-integrations.md#devin-当前任务模型与用量2026-11-02091-build-12) · `Implemented / User Acceptance Pending`：根据最新版 Desktop / `swe-2-max` 实测反馈补读本机会话模型、本轮输入输出 Token，兼容 SQLite/文件存储、请求去重、末次延迟写入与轮次重置。14 项定向冒烟、运行包辅助程序 1 项复验及官方 CLI 建库/迁移夹具解码通过；Build 12 / 内部 145 已重启，257 输入/19 资源与加载核对通过。朋友真实环境仍待复测，本批仅本地；原 Build 11 DMG 不含此修复。
+
+## 前序开发：0.9.1 Build 11
+
+[Devin 双入口](agent-integrations.md#devin-双入口2026-11-01091-build-10) / [Grok 修复](../design/quotaview-bug-fixes-2026-11-01.md)：修复 PR CI 旧 Swift 对 `strdup` 输入数组的类型推断不兼容，8 项针对性冒烟通过。用户授权立即制作签名好友测试 DMG，与 CI/合并并行；Build 11 / 内部 144 已重启运行，Universal DMG 已 Developer ID 签名、Apple 公证/Staple 并交付。11 项 ingress 检查通过，修正旧公共目录夹具；源码经 [PR #129](https://github.com/Duoasa/QuotaView/pull/129) 合入 main `f8d82c3`，PR/main CI 均通过（各 774 测试、7 跳过、0 失败、44 契约）。用户要求朋友实测，未进行包内 UI/启动验收。产物完整身份与证据见 Handoff，未公开发布或加入自动更新。
 
 ## 前序开发：0.9.1 Build 10
 
@@ -300,7 +304,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |
-| `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与任务接入](agent-integrations.md) | `Accepted / Verifying` | Build 10 新增 Devin Desktop/CLI 两个独立入口；共享配置、来源分流与隔离 IPC 验证通过，真实客户端与视觉待验收。保留既有 OpenCode 实测结论。 |
+| `QV-PRODUCT-AGENT-INTEGRATIONS-001` | [Agent 连接与任务接入](agent-integrations.md) | `Accepted / Verifying` | Build 12 为 Devin Desktop/CLI 补读会话模型与本轮 Token，14 项定向冒烟、运行包 helper 复验通过；朋友真实环境待复测。保留既有 OpenCode 实测结论。 |
 | `QV-PRODUCT-CLAUDE-CODE-001` | [Claude Code 适配](claude-code-support.md) | `Accepted / Verifying` | 生命周期和审批开关修复已在开发包运行；19 项冒烟通过，真实交互待验收。 |
 | `QV-PRODUCT-CODEX-ISLAND-INFORMATION-001` | [Codex 与灵动岛的信息契约](codex-island-information-contract.md) | `Accepted / Verifying` | 来源、轮次、等待结算与本地退场；原生问题组关闭仍未完成。 |
 | `QV-ISLAND-GLASS-APPEARANCE-001` | [底部玻璃与胶囊统一外观](island-glass-appearance.md) | `Accepted / Verifying` | 仅液态玻璃显示浅色/深色/自动三选项，底栏与胶囊统一；设置分组、自动跟随和偏好持久化，视觉待用户验收。 |

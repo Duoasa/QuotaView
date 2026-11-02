@@ -2,8 +2,12 @@ import AppKit
 import Combine
 import Foundation
 import QuotaViewCore
+#if SWIFT_PACKAGE
+import QuotaViewActivityHookSupport
+#endif
 
-/// Independent local ingress for observation-only agents. No polling, account credentials, or transcript reads.
+/// Independent local ingress for observation-only agents. Devin supplements hook
+/// events with bounded local model/usage reads; no account credentials are used.
 @MainActor
 final class NativeAgentRuntime: ObservableObject {
     enum Status: Equatable { case disabled, configuring, waiting, connected, failed }
@@ -25,6 +29,7 @@ final class NativeAgentRuntime: ObservableObject {
     private var running = false
     private var listening = false
     private var applied: Bool?
+    private var devinMetadataTask: Task<Void, Never>?
     private struct Session {
         var turn: String?
         var nativeTurn: String?
@@ -37,6 +42,11 @@ final class NativeAgentRuntime: ObservableObject {
         var tokens: Int64 = 0
         var sequence: Int = -1
         var epoch: String?
+        var devinStore: DevinSessionUsage.Store?
+        var devinSourceSession: String?
+        var devinStartPosition: Int64?
+        var devinCompletedAt: Date?
+        var devinHasUsage = false
         var updated = Date()
     }
     private var sessions: [String: Session] = [:]
@@ -143,6 +153,7 @@ final class NativeAgentRuntime: ObservableObject {
         }
     }
     private func stopListening() {
+        devinMetadataTask?.cancel(); devinMetadataTask = nil
         if listening { bridge.stop() }; listening = false
         for (key, value) in sessions {
             if let turn = value.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
@@ -178,6 +189,10 @@ final class NativeAgentRuntime: ObservableObject {
             sessions.removeValue(forKey: oldest)
         }
         var session = sessions[key] ?? Session()
+        let nativeTurn = payload["turn_id"] as? String
+        // Ignore stale observations before they can change current metadata.
+        if provider.isDevin, !["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted"].contains(name),
+           let nativeTurn, let expected = session.nativeTurn, nativeTurn != expected { return }
         if let epoch = payload["source_epoch"] as? String, let sequence = payload["source_sequence"] as? Int {
             if session.epoch == epoch && sequence <= session.sequence { return }
             session.epoch = epoch; session.sequence = sequence
@@ -195,11 +210,12 @@ final class NativeAgentRuntime: ObservableObject {
             island.model.setProvider(provider, for: key)
             island.model.receiveSubagentIdentity(identity)
         }
-        let nativeTurn = payload["turn_id"] as? String
+        var startedTurn = false
         if name == "UserPromptSubmit" || name == "TurnStarted" {
             if !session.active || (nativeTurn != nil && session.nativeTurn != nil && nativeTurn != session.nativeTurn) {
                 session.turn = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession + ":" + (nativeTurn ?? UUID().uuidString))
                 session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil; session.pendingPermissionTool = nil
+                startedTurn = true
             }
             if let nativeTurn { session.nativeTurn = nativeTurn }
         } else if !session.active && ["PreToolUse", "PermissionRequest"].contains(name) {
@@ -207,6 +223,21 @@ final class NativeAgentRuntime: ObservableObject {
             if let nativeTurn, nativeTurn == session.nativeTurn { return }
             session.turn = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession + ":" + (nativeTurn ?? UUID().uuidString))
             session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil; session.pendingPermissionTool = nil
+            startedTurn = true
+        }
+        if provider.isDevin {
+            if startedTurn {
+                session.devinStartPosition = name == "UserPromptSubmit" ? payload["devin_start_position"] as? Int64 : nil
+                session.devinCompletedAt = nil
+                session.devinHasUsage = false
+            }
+            if let directory = payload["devin_storage_directory"] as? String,
+               let files = payload["devin_storage_files"] as? Bool,
+               let store = DevinSessionUsage.Store(directory: directory, files: files) {
+                // A changed store cannot reuse a position from the old one.
+                if session.devinStore != nil && session.devinStore != store && !startedTurn { session.devinStartPosition = nil }
+                session.devinStore = store; session.devinSourceSession = sourceSession
+            }
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
@@ -260,7 +291,10 @@ final class NativeAgentRuntime: ObservableObject {
                let data = try? JSONSerialization.data(withJSONObject: ["type": "output", "id": call, "text": ""]) {
                 island.model.receiveLocalContent(.init(publicSessionHash: key, turnHash: turn, data: data, occurredAt: Date()))
             }
-            if completion != nil { sessions[key]?.active = false }
+            if completion != nil {
+                sessions[key]?.active = false
+                if provider.isDevin { sessions[key]?.devinCompletedAt = Date() }
+            }
         }
         // DSH's epoch/sequence above deduplicates usage before aggregation.
         if name == "Usage", provider == .dsh, session.active, session.parent == nil,
@@ -269,6 +303,59 @@ final class NativeAgentRuntime: ObservableObject {
             sessions[key] = session
             island.model.receiveToken(.init(sessionHash: key, turnHash: turn, cumulativeTotalTokens: session.tokens,
                                             lastReportedTotalTokens: count, directTurnTotalTokens: session.tokens))
+        }
+        if provider.isDevin { refreshDevinMetadata() }
+    }
+
+    private struct DevinRead: Sendable {
+        let key: String
+        let sourceSession: String
+        let turn: String
+        let store: DevinSessionUsage.Store
+        let start: Int64?
+    }
+
+    private func refreshDevinMetadata() {
+        guard devinMetadataTask == nil else { return }
+        let currentRevision = revision
+        devinMetadataTask = Task { [weak self] in
+            defer { if self?.revision == currentRevision { self?.devinMetadataTask = nil } }
+            while !Task.isCancelled {
+                guard let self, running, enabled, revision == currentRevision else { return }
+                let requests = sessions.compactMap { key, value -> DevinRead? in
+                    guard value.active || (value.devinCompletedAt.map { Date().timeIntervalSince($0) < 10 } ?? false),
+                          let turn = value.turn, let store = value.devinStore, let source = value.devinSourceSession else { return nil }
+                    return DevinRead(key: key, sourceSession: source, turn: turn, store: store, start: value.devinStartPosition)
+                }
+                guard !requests.isEmpty else { return }
+                let reader = Task.detached(priority: .utility) {
+                    var values: [(DevinRead, DevinSessionUsage.Snapshot?)] = []
+                    for request in requests {
+                        guard !Task.isCancelled else { break }
+                        values.append((request, DevinSessionUsage.read(session: request.sourceSession, store: request.store, after: request.start)))
+                    }
+                    return values
+                }
+                let snapshots = await withTaskCancellationHandler(operation: { await reader.value }, onCancel: { reader.cancel() })
+                guard !Task.isCancelled, running, enabled, revision == currentRevision else { return }
+                for (request, snapshot) in snapshots {
+                    guard let snapshot, var session = sessions[request.key], session.turn == request.turn,
+                          session.devinStore == request.store, session.devinStartPosition == request.start else { continue }
+                    if let model = snapshot.model, model != session.model {
+                        session.model = model
+                        sessions[request.key] = session
+                        publishMetadata(request.key)
+                    }
+                    if let tokens = snapshot.tokens, request.start != nil, tokens >= session.tokens,
+                       !session.devinHasUsage || tokens != session.tokens {
+                        sessions[request.key]?.tokens = tokens
+                        sessions[request.key]?.devinHasUsage = true
+                        island.model.receiveToken(.init(sessionHash: request.key, turnHash: request.turn,
+                            cumulativeTotalTokens: tokens, lastReportedTotalTokens: tokens, directTurnTotalTokens: tokens))
+                    }
+                }
+                do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+            }
         }
     }
     private func publishMetadata(_ key: String) {
