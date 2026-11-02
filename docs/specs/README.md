@@ -8,9 +8,9 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 0.9.1 正式发布准备
+## 0.9.1 正式发布
 
-[发布规格](release-0.9.1.md) · `Approved / Verifying`：用户授权 0.9.1 Build 16 / 内部 149 的 main 合并、签名公证、Stable Release 及 appcast。双语 README 全部采用新产品图、CN/EN 封面和新图标；自动检查更新默认开启，正式公告名单加入 149。完整测试、产物与线上核验进行中，公开稳定版暂仍为 0.8.6 Build 21，当前运行包见 Handoff。
+[发布规格](release-0.9.1.md) · `Released / User Acceptance Pending`：0.9.1 Build 16 / 内部 149 已合入 main，PR/main CI、签名公证、公开 ZIP 回下载与在线签名 appcast 核验通过，GitHub Stable / Latest。双语 README 全部采用新产品图、CN/EN 封面和新图标；默认检查更新开启，既有偏好保留，正式公告名单为 102 / 149。开发包同步更新；不可变发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实环境与视觉待用户验收。下方各批未发布描述保留为历史阶段。
 
 ## 前序开发：0.9.1 Build 15
 
@@ -316,7 +316,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 六项精简内容，含 Devin、重置卡到期与性能优化；六语言；正式自动展示名单仍为内部 102 |
+| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 六项精简内容，含 Devin、重置卡到期与性能优化；六语言；正式自动展示名单为内部 102 / 149 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |

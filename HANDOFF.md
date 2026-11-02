@@ -16,13 +16,13 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
-## 0.9.1 正式发布进行中（2026-11-02）
+## 0.9.1 正式发布完成（2026-11-02）
 
-用户已明确授权本次正式发布、main 合并和 appcast 全链路。身份冻结为 0.9.1 Build 16 / 内部 149，tag `v0.9.1-build.16`、ZIP `QuotaView-v0.9.1-build.16.zip`。双语 README 已采用用户新目录的 12 张产品图及当前蓝色终端图标，Release 英文说明以品牌视觉开篇；自动检查更新默认开启且保留旧偏好，本版 149 加入正式公告名单。详细授权、验证与未发布边界见[0.9.1 发布规格](docs/specs/release-0.9.1.md)。公开稳定/回滚基线仍为 0.8.6 Build 21，Windows 通道保持。
+[0.9.1 Build 16](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16) 已发布为 GitHub Stable / Latest，源码经 [PR #131](https://github.com/Duoasa/QuotaView/pull/131) 合入 main；PR 与精确发布提交 CI 均通过。签名公证包的公开回下载、内置公钥验签及在线签名 appcast 已核验。完整不可变事实只记录于[版本历史](VERSION_HISTORY.md#当前最新版本)，授权与边界见[发布规格](docs/specs/release-0.9.1.md)。回滚入口 `v0.8.6-build.21` / `3b737073d8a33b8362448d497141772629c3d989`；Windows 通道保持。
 
-本地完整 786 测试、7 跳过、0 失败及 44 契约通过，Universal 包签名、公证/Staple、Gatekeeper 与解压启动 15 秒通过。当前开发包于 2026-11-02T16:20:47.960190+08:00 重启为 Build 16，PID 3444，257 输入/19 资源及实际加载路径一致，证据 `.build/release-091b16-runtime/`。正式安装与用户数据保持。
+双语 README 已全面采用新中英产品图、CN/EN 封面及蓝色终端图标。自动检查更新默认开启、已有偏好优先；内部 149 加入正式公告名单。完整 786 测试、7 跳过、0 失败及 44 契约通过；首次 CI 的 SQLITE_BUSY 仅修复测试夹具有界等待，14 项 Devin 复验通过，259 个生产输入与已公证包一致。
 
-[PR #131](https://github.com/Duoasa/QuotaView/pull/131) 首次 CI 暴露 Devin 测试夹具写入与正常读事务竞争：零等待的写连接返回 SQLITE_BUSY。仅对夹具增加 1 秒有界 busy timeout，并让写入失败抛出错误；生产读取超时、259 个冻结生产输入及已公证包保持不变。等待修复后 PR/main CI，尚未发布 Release/appcast；发布证据 `dist/verification/0.9.1-build16-release/`。
+当前开发包于 2026-11-02T16:20:47.960190+08:00 重启为 Build 16 / 内部 149，PID 3444，257 输入/19 资源及实际加载路径一致，证据 `.build/release-091b16-runtime/`。正式安装与用户数据保持，未消耗真实重置卡。视觉、朋友真实 Devin 环境及升级体验仍由用户验收。发布证据 `dist/verification/0.9.1-build16-release/`；下方各批“仅本地/未发布”为当时阶段事实。
 
 ## 前序开发：0.9.1 Build 15 / 公告内容更新（2026-11-02）
 
@@ -1020,12 +1020,12 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD/main `1d10b40`，Build 8 经 PR #128 合并，PR/main CI 均通过；合并结果补记保留本地 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 8 / 内部 141 |
+| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；0.9.1 Build 16 源码经 PR #131 合入 main，PR/main CI 均通过；后续文档提交不改变冻结生产输入 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 16 / 内部 149 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-01T19:33:45.863922+08:00；PID 44534，254 输入、18 项资源、完整包与加载路径一致；模拟代码和偏好已清除 |
-| 源码与运行包 | 0.9.1 Build 8 已运行，仅显示真实一周内到期卡片，保留「即将到期」、左右排版与精简时间；视觉由用户验收。 |
-| 公开稳定版 | 0.8.6 Build 21；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 最近运行核验 | 2026-11-02T16:20:47.960190+08:00；PID 3444，257 输入、19 项资源、完整包与加载路径一致；证据 `.build/release-091b16-runtime/` |
+| 源码与运行包 | 0.9.1 Build 16 已运行，生产输入与发布源码一致；实际视觉由用户验收。 |
+| 公开稳定版 | 0.9.1 Build 16；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
