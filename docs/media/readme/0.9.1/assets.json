@@ -1,0 +1,84 @@
+{
+  "version": "0.9.1",
+  "origin": "User supplied Desktop/0.8.1 product images; copied without edits. Icon matches the current app and supplied covers.",
+  "assets": [
+    {
+      "source": "CN.jpg",
+      "file": "zh-CN/cover.jpg",
+      "bytes": 1259362,
+      "sha256": "946253276adb6637a75812071067582f8a84f3a3440fa752cbd5c90e606c3aa1"
+    },
+    {
+      "source": "中文/01-最小状态-1920.jpg",
+      "file": "zh-CN/01-compact.jpg",
+      "bytes": 137852,
+      "sha256": "0e129b33f139b3ecc741e86d5218b635aa57345731bff57b8c1634283a6bc359"
+    },
+    {
+      "source": "中文/02-展开状态-多Agent-1920.jpg",
+      "file": "zh-CN/02-expanded.jpg",
+      "bytes": 206198,
+      "sha256": "225a2d60e9d6f8b13904c59452675b2d040d6eecf97720e57703f0e5cff43148"
+    },
+    {
+      "source": "中文/03-审批-1920.jpg",
+      "file": "zh-CN/03-approval.jpg",
+      "bytes": 218165,
+      "sha256": "2d05895e707075e115789575187a5f305ee0069e18c15b3bc6d3f7c1ba829e4e"
+    },
+    {
+      "source": "中文/04-Codex用量统计-1920.jpg",
+      "file": "zh-CN/04-usage.jpg",
+      "bytes": 209933,
+      "sha256": "dc574b4bd9b6abe6e76502a5fe0c8d6446743aabb5a843cdcc20b7182de64ee8"
+    },
+    {
+      "source": "中文/05-Codex重置卡-1920.jpg",
+      "file": "zh-CN/05-reset.jpg",
+      "bytes": 170996,
+      "sha256": "4b9dd3d67571408fb81446f7d319047f430927ef873fc72d31e6abb48b207898"
+    },
+    {
+      "source": "EN.jpg",
+      "file": "en/cover.jpg",
+      "bytes": 1225280,
+      "sha256": "899f522209c0430f5d525c08061d73cfba9d545f93887c7b875a3d0f91c04964"
+    },
+    {
+      "source": "English/01-compact-1920.jpg",
+      "file": "en/01-compact.jpg",
+      "bytes": 137188,
+      "sha256": "230dbad20c4d61b854009ff9887d062f7092629acc11d21480e37d6bb843d8a0"
+    },
+    {
+      "source": "English/02-expanded-multi-agent-1920.jpg",
+      "file": "en/02-expanded.jpg",
+      "bytes": 207946,
+      "sha256": "b0e80b0e3fa26e3d0ee165f739e046473c4b94ff5f211421a278a76d5afcc026"
+    },
+    {
+      "source": "English/03-approval-1920.jpg",
+      "file": "en/03-approval.jpg",
+      "bytes": 229566,
+      "sha256": "c78a0d9845fcb9695ad7b69368cc994afa2e7e2d18bcdfb5614f8713069c8b1e"
+    },
+    {
+      "source": "English/04-codex-usage-1920.jpg",
+      "file": "en/04-usage.jpg",
+      "bytes": 212715,
+      "sha256": "9a574a7aea3e01aaefa7a55de99c213e5023b5e9313567bb6d82eb751f4f7ce2"
+    },
+    {
+      "source": "English/05-codex-reset-card-1920.jpg",
+      "file": "en/05-reset.jpg",
+      "bytes": 175639,
+      "sha256": "030f232a58af78d76514e13b901e72e5143d31ddfc743ca7d71a5b01c2abdf14"
+    },
+    {
+      "source": "current app icon / QuotaViewAppIcon.png",
+      "file": "app-icon.png",
+      "bytes": 2172425,
+      "sha256": "17ce2d1a3520204f193e614033413fe77f1300cd970b9ff76d2d3c88398f225a"
+    }
+  ]
+}

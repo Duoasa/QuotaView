@@ -8,9 +8,25 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [终态与通知修复](windows-channel.md#windows-终态与通知修复2026-10-31) · `Accepted / Verifying`：Issue #114 的轮次去重、重复日志合并和断线终态稳定，以及设置页说明精简。定向检查与原生适配通过，本地开发包已启动；反馈者现场和视觉待验收。未推送或发布，运行定位见 [Windows Handoff](../../Windows/HANDOFF.md)。
 
-## 当前开发：0.9.1 Build 12
+## 0.9.1 正式发布准备
 
-[Devin 模型与用量](agent-integrations.md#devin-当前任务模型与用量2026-11-02091-build-12) · `Implemented / User Acceptance Pending`：根据最新版 Desktop / `swe-2-max` 实测反馈补读本机会话模型、本轮输入输出 Token，兼容 SQLite/文件存储、请求去重、末次延迟写入与轮次重置。14 项定向冒烟、运行包辅助程序 1 项复验及官方 CLI 建库/迁移夹具解码通过；Build 12 / 内部 145 已重启，257 输入/19 资源与加载核对通过。朋友真实环境仍待复测，本批仅本地；原 Build 11 DMG 不含此修复。
+[发布规格](release-0.9.1.md) · `Approved / Verifying`：用户授权 0.9.1 Build 16 / 内部 149 的 main 合并、签名公证、Stable Release 及 appcast。双语 README 全部采用新产品图、CN/EN 封面和新图标；自动检查更新默认开启，正式公告名单加入 149。完整测试、产物与线上核验进行中，公开稳定版暂仍为 0.8.6 Build 21，当前运行包见 Handoff。
+
+## 前序开发：0.9.1 Build 15
+
+[公告内容更新](brand-announcement.md#091-公告更新2026-11-02build-15) · `Implemented / User Acceptance Pending`：六条精简内容同步 Devin Desktop/CLI、重置卡到期列表、中性完成底色与性能优化；六语言覆盖，3 项公告策略冒烟通过。Build 15 / 内部 148 已重启，257 输入/19 资源一致。保留三组布局与正式自动展示名单内部 102，仅本地修改，实际视觉待验收。
+
+## 前序开发：0.9.1 Build 14
+
+[首批性能优化](../design/quotaview-performance-review-2026-11-02.md#首批性能优化2026-11-02091-build-14) · `Implemented / User Acceptance Pending`：Codex 首行有界缓存、Claude 转录/标题后台读取及有序提交、圆球按需创建；31 项定向冒烟通过。24 文件 × 40 轮询的首行微基准读取 960 → 24 次，未量化整机收益。Build 14 / 内部 147 已重启，257 输入/19 资源与运行包核对一致；仅本地，保留 Build 13 完成卡片中性背景，实际体验待验收。所属契约：[Codex 信息](codex-island-information-contract.md#长会话恢复与显示元数据)、[Claude 后台读取](claude-code-support.md#后台转录读取2026-11-02091-build-14)、[渲染器](PROGRESS_EFFECT_ADAPTATION.md#1-修改边界)。
+
+## 前序开发：0.9.1 Build 13
+
+[完成卡片中性底色](../design/QUOTAVIEW_UI_RULES.md#完成卡片取消背景染色2026-11-02091-build-13) · `Implemented / User Acceptance Pending`：完成态普通/hover、选中/未选中与实体回退取消状态染色，3 项冒烟通过；Build 13 / 内部 146 开发包已重启，257 输入/19 资源核对一致。另完成[性能报告复核](../design/quotaview-performance-review-2026-11-02.md)，静态风险与实测边界分开记录，未实施整批性能建议。本批仅本地，视觉待验收。
+
+## 前序开发：0.9.1 Build 12
+
+[Devin 模型与用量](agent-integrations.md#devin-当前任务模型与用量2026-11-02091-build-12) · `Implemented / User Acceptance Pending`：根据最新版 Desktop / `swe-2-max` 实测反馈补读本机会话模型、本轮输入输出 Token，兼容 SQLite/文件存储、请求去重、末次延迟写入与轮次重置。14 项定向冒烟、运行包辅助程序 1 项复验及官方 CLI 建库/迁移夹具解码通过；Build 12 / 内部 145 已重启，257 输入/19 资源与加载核对通过。源码经 [PR #130](https://github.com/Duoasa/QuotaView/pull/130) 合入 main `0a20049`，PR/main CI 均通过（各 781 测试、7 跳过、0 失败、44 契约）。朋友真实环境仍待复测；原 Build 11 DMG 不含此修复。
 
 ## 前序开发：0.9.1 Build 11
 
@@ -300,7 +316,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
-| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 五项精简内容、六语言；正式自动展示名单仍为内部 102 |
+| `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 六项精简内容，含 Devin、重置卡到期与性能优化；六语言；正式自动展示名单仍为内部 102 |
 | `QV-WINDOWS-CHANNEL-001` | [Windows 工程与独立更新通道](windows-channel.md) | `Released / User Acceptance Pending` | 完整 Windows 源码统一维护，首个正式版发布并加入独立签名 appcast；支持用户触发下载安装，真实升级体验待验收。 |
 | `QV-SETTINGS-LIVE-PREVIEW-001` | [设置实时特效预览](settings-live-effect-preview.md) | `Accepted / Verifying` | 三个效果选项与上方卡片实时播放；24 fps / 1 像素每 pt，不可见停播；已编译运行，实机性能待验收。 |
 | `QV-ISLAND-EXPANDED-WIDTH-001` | [展开宽度与窄屏图表](island-expanded-width.md) | `Accepted / Verifying` | 任务列表/用量页 560–680 pt 调节与刘海安全下限，实时设置预览同比例联动；图表横向滚动并默认显示最近数据。当前编译/运行证据见 Handoff，实机视觉待验收。 |

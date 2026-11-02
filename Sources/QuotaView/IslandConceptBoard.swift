@@ -1226,17 +1226,15 @@ struct IslandTaskCardAppearance {
     var selected = false
     private var statusTint: NSColor { CodexActivityRippleGlowContract.statusTint(for: visualState) }
     var glassTint: Color {
-        if selected {
-            return visualState == .completed
-                ? Color(red: 0.025, green: 0.055, blue: 0.035).opacity(hovered ? 0.32 : 0.42)
-                : .black.opacity(hovered ? 0.32 : 0.42)
+        if selected || visualState == .completed {
+            return .black.opacity(hovered ? 0.32 : 0.42)
         }
         let tint = NSColor.black.blended(withFraction: hovered ? 0.18 : 0.14, of: statusTint) ?? .black
         return Color(nsColor: tint).opacity(hovered ? 0.32 : 0.42)
     }
     var solidTint: Color {
         let base = NSColor(white: 0.055, alpha: 1)
-        guard !selected else { return Color(nsColor: base) }
+        guard !selected, visualState != .completed else { return Color(nsColor: base) }
         return Color(nsColor: base.blended(withFraction: hovered ? 0.11 : 0.08, of: statusTint) ?? base)
     }
 }

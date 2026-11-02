@@ -62,7 +62,7 @@ final class CompletionOutlineFlowSmokeTests: XCTestCase {
         XCTAssertNil(host.completionOutlineFlow)
     }
 
-    func testInactiveCardsShareOrbHueAtLowIntensityIncludingSolidFallback() {
+    func testInactiveCardsShareOrbHueExceptNeutralCompletedCards() {
         let environment = EnvironmentValues()
         for state in CodexActivityVisualState.allCases {
             let orb = CodexActivityRippleGlowContract.statusTint(for: state)
@@ -71,6 +71,18 @@ final class CompletionOutlineFlowSmokeTests: XCTestCase {
             let solid = card.solidTint.resolve(in: environment)
             XCTAssertLessThan(max(tint.red, tint.green, tint.blue), 0.20)
             XCTAssertLessThan(max(solid.red, solid.green, solid.blue), 0.20)
+            if state == .completed {
+                for hovered in [false, true] {
+                    for selected in [false, true] {
+                        let completed = IslandTaskCardAppearance(visualState: state, hovered: hovered, selected: selected)
+                        for resolved in [completed.glassTint.resolve(in: environment), completed.solidTint.resolve(in: environment)] {
+                            XCTAssertEqual(resolved.red, resolved.green)
+                            XCTAssertEqual(resolved.green, resolved.blue)
+                        }
+                    }
+                }
+                continue
+            }
             // A pale state wash retains the orb's component order and hue direction.
             XCTAssertEqual(tint.red > tint.green, orb.redComponent > orb.greenComponent)
             XCTAssertEqual(tint.blue > tint.green, orb.blueComponent > orb.greenComponent)

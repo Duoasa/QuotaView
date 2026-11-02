@@ -1,8 +1,67 @@
+import Darwin
 import Foundation
 import SQLite3
 
 /// Actor-confined discovery. It does not decode activity, publish UI or modify Codex files.
 final class CodexLocalRolloutDiscovery {
+    typealias SessionMetadata = (threadID: String, sessionHash: String, workspaceName: String?,
+        kind: CodexActivitySessionKind, subagentIdentity: CodexActivitySubagentIdentity?)
+
+    /// Use live stat values, not URL's cached attributes. Same-size rewrites and
+    /// atomic replacement must invalidate the header as well as appends/truncation.
+    private struct MetadataStamp: Equatable {
+        let device: dev_t
+        let inode: ino_t
+        let size: off_t
+        let modifiedSeconds: Int
+        let modifiedNanos: Int
+        let changedSeconds: Int
+        let changedNanos: Int
+
+        init?(_ file: URL) {
+            var value = stat()
+            guard stat(file.path, &value) == 0, value.st_mode & S_IFMT == S_IFREG else { return nil }
+            device = value.st_dev; inode = value.st_ino; size = value.st_size
+            modifiedSeconds = value.st_mtimespec.tv_sec; modifiedNanos = value.st_mtimespec.tv_nsec
+            changedSeconds = value.st_ctimespec.tv_sec; changedNanos = value.st_ctimespec.tv_nsec
+        }
+    }
+
+    private struct CachedMetadata {
+        let stamp: MetadataStamp
+        let value: SessionMetadata
+        var lastUse: UInt64
+    }
+    private var metadataCache: [URL: CachedMetadata] = [:]
+    private var metadataAccess: UInt64 = 0
+    private(set) var metadataReadCount = 0
+
+    /// Shared by discovery and tail polling; mutable state stays on the client actor.
+    func sessionMetadata(from file: URL) -> SessionMetadata? {
+        guard let stamp = MetadataStamp(file) else {
+            metadataCache.removeValue(forKey: file)
+            return nil
+        }
+        metadataAccess &+= 1
+        if var cached = metadataCache[file], cached.stamp == stamp {
+            cached.lastUse = metadataAccess
+            metadataCache[file] = cached
+            return cached.value
+        }
+        metadataCache.removeValue(forKey: file)
+        metadataReadCount += 1
+        guard let value = Self.readSessionMetadata(from: file) else { return nil }
+        // Never cache a header whose file changed while it was being read.
+        if MetadataStamp(file) == stamp {
+            if metadataCache.count >= 2048,
+               let oldest = metadataCache.min(by: { $0.value.lastUse < $1.value.lastUse })?.key {
+                metadataCache.removeValue(forKey: oldest)
+            }
+            metadataCache[file] = CachedMetadata(stamp: stamp, value: value, lastUse: metadataAccess)
+        }
+        return value
+    }
+
     struct Candidate: Sendable, Equatable {
         let fileURL: URL
         let threadID: String
@@ -33,6 +92,7 @@ final class CodexLocalRolloutDiscovery {
     }
 
     func reset() {
+        metadataCache.removeAll()
         directoryEnumerator = nil
         discoveredFiles.removeAll()
         databaseInternalPaths.removeAll()
@@ -140,14 +200,14 @@ final class CodexLocalRolloutDiscovery {
             )
             guard databaseKind != .internalTask else {
                 databaseInternalPaths.insert(fileURL)
-                if let metadata = Self.readSessionMetadata(from: fileURL), metadata.sessionHash == sessionHash {
+                if let metadata = sessionMetadata(from: fileURL), metadata.sessionHash == sessionHash {
                     excludedIdentities[fileURL] = .init(threadID: metadata.threadID, sessionHash: sessionHash,
                                                          sessionKind: .internalTask)
                 }
                 continue
             }
             guard result.count < maximumCandidateCount else { continue }
-            guard let metadata = Self.readSessionMetadata(from: fileURL),
+            guard let metadata = sessionMetadata(from: fileURL),
                   metadata.sessionHash == sessionHash else { continue }
             guard metadata.kind != .internalTask else {
                 excludedIdentities[fileURL] = .init(threadID: metadata.threadID, sessionHash: sessionHash,
@@ -269,7 +329,7 @@ final class CodexLocalRolloutDiscovery {
         for (file, _) in recent {
             guard !databaseInternalPaths.contains(file) else { continue }
             guard fileManager.isReadableFile(atPath: file.path) else { readFailed = true; continue }
-            guard let metadata = Self.readSessionMetadata(from: file) else {
+            guard let metadata = sessionMetadata(from: file) else {
                 // Only a complete incompatible metadata envelope is an error;
                 // partial writes and ordinary future event types remain harmless.
                 if let line = Self.readMetadataLine(from: file),
@@ -294,8 +354,7 @@ final class CodexLocalRolloutDiscovery {
 
     static func readSessionMetadata(
         from fileURL: URL
-    ) -> (threadID: String, sessionHash: String, workspaceName: String?, kind: CodexActivitySessionKind,
-          subagentIdentity: CodexActivitySubagentIdentity?)? {
+    ) -> SessionMetadata? {
         guard let line = readMetadataLine(from: fileURL),
               let object = try? JSONSerialization.jsonObject(with: line),
               let envelope = object as? [String: Any],
