@@ -18,6 +18,9 @@ final class DevinUsageFixture {
         var pointer: OpaquePointer?
         XCTAssertEqual(sqlite3_open(directory.appendingPathComponent("sessions.db").path, &pointer), SQLITE_OK)
         db = try XCTUnwrap(pointer)
+        // Integration tests write while the real observer holds short read
+        // transactions. A zero-timeout fixture writer can fail spuriously on CI.
+        XCTAssertEqual(sqlite3_busy_timeout(db, 1_000), SQLITE_OK)
         try execute("CREATE TABLE sessions(id TEXT PRIMARY KEY, model TEXT NOT NULL)")
         try execute("CREATE TABLE message_nodes(session_id TEXT NOT NULL, node_id INTEGER NOT NULL, chat_message TEXT NOT NULL, UNIQUE(session_id,node_id))")
         try execute("INSERT INTO sessions VALUES('shared','swe-2-max')")
@@ -39,7 +42,10 @@ final class DevinUsageFixture {
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         sqlite3_bind_text(s, 1, session, -1, transient); sqlite3_bind_int(s, 2, Int32(id))
         sqlite3_bind_text(s, 3, String(decoding: data, as: UTF8.self), -1, transient)
-        XCTAssertEqual(sqlite3_step(s), SQLITE_DONE)
+        let result = sqlite3_step(s)
+        guard result == SQLITE_DONE else {
+            throw NSError(domain: "DevinFixture", code: Int(result))
+        }
     }
 }
 
