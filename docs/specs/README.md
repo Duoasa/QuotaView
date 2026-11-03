@@ -12,6 +12,8 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 [发布规格](release-0.9.1.md) · `Released / User Acceptance Pending`：0.9.1 Build 16 / 内部 149 已合入 main，PR/main CI、签名公证、公开 ZIP 回下载与在线签名 appcast 核验通过，GitHub Stable / Latest。双语 README 全部采用新产品图、CN/EN 封面和新图标；默认检查更新开启，既有偏好保留，正式公告名单为 102 / 149。开发包同步更新；不可变发布事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)，真实环境与视觉待用户验收。下方各批未发布描述保留为历史阶段。
 
+2026-11-03 README 完善：用户确认双语预览，六组 Highlights、10 个 Agent 官方图标及能力表、独立 Windows 备注已落地；全套新产品图保留，链接与资源检查通过。文档及一处既有测试夹具修正，同组 11 项冒烟通过；用户已授权提交、推送并以 PR 合入 main，应用发布保持，见[后续完善记录](release-0.9.1.md#readme-后续完善2026-11-03)。
+
 ## 前序开发：0.9.1 Build 15
 
 [公告内容更新](brand-announcement.md#091-公告更新2026-11-02build-15) · `Implemented / User Acceptance Pending`：六条精简内容同步 Devin Desktop/CLI、重置卡到期列表、中性完成底色与性能优化；六语言覆盖，3 项公告策略冒烟通过。Build 15 / 内部 148 已重启，257 输入/19 资源一致。保留三组布局与正式自动展示名单内部 102，仅本地修改，实际视觉待验收。

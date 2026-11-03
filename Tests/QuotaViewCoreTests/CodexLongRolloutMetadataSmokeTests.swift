@@ -202,8 +202,11 @@ final class CodexLongRolloutMetadataSmokeTests: XCTestCase {
         let sink = LongMetadataSink()
         let initial = expectation(description: "initial recovery")
         let progress = expectation(description: "new public append")
+        // The initial callback can resume this test before the startup poll releases
+        // its reentrancy guard. Let maintenance observe the append if the manual
+        // poll below is skipped, within the existing three-second expectation.
         let client = CodexLocalRolloutActivityClient(configuration: .init(isEnabled: true, codexHomeURL: root,
-            pollIntervalSeconds: 10, startupTailBytes: 1_048_576))
+            pollIntervalSeconds: 0.1, startupTailBytes: 1_048_576))
         let expected = CodexLocalExecutionMetadata.Execution(sessionHash: hash("user"), turnHash: hash("active"))
         await client.setActiveExecutionProvider { [expected] }
         await client.setPublicContentHandler { content in
