@@ -27,4 +27,4 @@ Spec ID：`QV-RELEASE-0.9.1-001` · `Released / User Acceptance Pending` · 2026
 
 用户确认参考 CodeIsland 的中英文 README 预览。已落地六组完整 Highlights、10 个 Agent 入口的官方原色图标网格与可展开能力表；Devin Desktop / CLI 分列，预览状态和审批范围保留。Windows 版本、功能差异、安装与下载集中到独立备注；保留 CN/EN 封面、各五张产品图和顶部产品图标。图标直接引用现有已核对官方来源的资源，未重绘或改色。
 
-本批仅更新文档，已核对预览一致性、图片、链接锚点及中英文结构；应用版本、运行包、Release 与 appcast 不变。用户随后授权提交并推送至 `codex/0.9.1-agent-announcement` 分支；本批不包含 main 合并或发布。预览与校验记录在 `.build/readme-preview-20261103/`。
+本批仅更新文档，已核对预览一致性、图片、链接锚点及中英文结构；应用版本、运行包、Release 与 appcast 不变。用户已授权提交、推送并以 PR 合入 `main`；本批不改变应用发布。源提交、PR 与实际 main CI 证据保存在 `.build/readme-preview-20261103/integration/`。预览与校验记录在 `.build/readme-preview-20261103/`。
