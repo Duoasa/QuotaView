@@ -22,3 +22,9 @@ Spec ID：`QV-RELEASE-0.9.1-001` · `Released / User Acceptance Pending` · 2026
 回滚基线为 `v0.8.6-build.21` / `3b737073d8a33b8362448d497141772629c3d989`，已发布资产不可覆盖。验证包含完整 Swift 测试、44 项契约、PR 与精确 main CI、冻结生产输入、双语图片与链接、开发运行包、Universal 架构、正式身份、签名/公证/Staple/Gatekeeper、解压启动、公开 ZIP 回下载、内置公钥验签及在线 appcast 历史条目保留。
 
 已完成源码合并、PR/main CI、签名公证、Stable / Latest Release、公开 ZIP 回下载及签名 appcast 上线核验。完整 786 测试（7 跳过、0 失败）、44 契约及修正后 14 项 Devin 专项通过；首次 CI 夹具读写锁竞争仅调整测试连接等待，生产输入与原公证包保持一致。最终包默认检查/手动安装策略已核对，12 张原图及图标来源字节一致。不可变事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)，开发运行结果见 [Handoff](../../HANDOFF.md)。证据目录 `dist/verification/0.9.1-build16-release/`；视觉、朋友真实 Devin 环境及真实升级体验由用户验收。
+
+## README 后续完善（2026-11-03）
+
+用户确认参考 CodeIsland 的中英文 README 预览。已落地六组完整 Highlights、10 个 Agent 入口的官方原色图标网格与可展开能力表；Devin Desktop / CLI 分列，预览状态和审批范围保留。Windows 版本、功能差异、安装与下载集中到独立备注；保留 CN/EN 封面、各五张产品图和顶部产品图标。图标直接引用现有已核对官方来源的资源，未重绘或改色。
+
+本批仅更新文档，已核对预览一致性、图片、链接锚点及中英文结构；应用版本、运行包、Release 与 appcast 不变。用户随后授权提交并推送至 `codex/0.9.1-agent-announcement` 分支；本批不包含 main 合并或发布。预览与校验记录在 `.build/readme-preview-20261103/`。

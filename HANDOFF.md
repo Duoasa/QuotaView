@@ -16,6 +16,10 @@
 
 公开稳定版：[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
+## README 完善（2026-11-03）
+
+用户已确认双语预览，当前 README 已采用六组完整 Highlights、10 个 Agent 的官方原色图标网格和可展开能力表，Devin Desktop / CLI 分列；Windows 版本与功能说明独立，原 CN/EN 封面和全套产品图保留。详见[README 后续完善](docs/specs/release-0.9.1.md#readme-后续完善2026-11-03)。本批仅更新文档，链接、资源与预览一致性检查通过。用户随后授权提交并推送至 `codex/0.9.1-agent-announcement` 分支；main 合并与发布不在本批范围。开发运行包继续为 0.9.1 Build 16；正式发布事实见下节。
+
 ## 0.9.1 正式发布完成（2026-11-02）
 
 [0.9.1 Build 16](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16) 已发布为 GitHub Stable / Latest，源码经 [PR #131](https://github.com/Duoasa/QuotaView/pull/131) 合入 main；PR 与精确发布提交 CI 均通过。签名公证包的公开回下载、内置公钥验签及在线签名 appcast 已核验。完整不可变事实只记录于[版本历史](VERSION_HISTORY.md#当前最新版本)，授权与边界见[发布规格](docs/specs/release-0.9.1.md)。回滚入口 `v0.8.6-build.21` / `3b737073d8a33b8362448d497141772629c3d989`；Windows 通道保持。

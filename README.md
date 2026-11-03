@@ -1,133 +1,220 @@
-<p align="center"><img src="docs/media/readme/0.9.1/app-icon.png" alt="QuotaView app icon" width="112"></p>
+<p align="center"><img src="docs/media/readme/0.9.1/app-icon.png" alt="QuotaView" width="112"></p>
 
 <h1 align="center">QuotaView</h1>
 
-<p align="center"><strong>Dynamic Island for AI agents.</strong></p>
+<p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center">Tasks, approvals, and usage, together at the top of your desktop.</p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16"><img src="https://img.shields.io/badge/macOS-v0.9.1_Build_16-blue" alt="0.9.1 Build 16"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16"><img alt="macOS 0.9.1 Build 16" src="https://img.shields.io/badge/macOS-v0.9.1_Build_16-blue"></a>
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13"><img alt="Windows 0.8.3-win.13" src="https://img.shields.io/badge/Windows-v0.8.3--win.13-blue"></a>
-  <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip"><strong>Download for macOS</strong></a>
-  · <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip"><strong>Download for Windows</strong></a>
-  · <a href="#get-started">Get started</a>
-  · <a href="#agent-support">Agent support</a>
-</p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-[![QuotaView — Dynamic Island for AI agents](docs/media/readme/0.9.1/en/cover.jpg)](docs/media/readme/0.9.1/en/cover.jpg)
+<p><img src="docs/media/readme/0.9.1/en/cover.jpg" alt="QuotaView English product cover"></p>
 
-QuotaView 0.9.1 introduces a refreshed visual identity: a blue terminal icon, updated agent marks, and a clearer desktop Island. The same QuotaView brings your agents' work and usage into one place.
+<p>QuotaView brings your AI agents’ work and usage together at the top of your desktop. See who is working, who needs a decision, and who just finished. Expand the Island for task details, supported requests, or a closer look at your remaining quota.</p>
 
-## Keep track of the work
 
-The compact Island shows the current state beside a floating usage capsule. Keep your attention on the work while tasks stay visible above it.
+<a name="highlights"></a>
+<h2>Highlights</h2>
 
-[![Compact Island with task status and usage capsule](docs/media/readme/0.9.1/en/01-compact.jpg)](docs/media/readme/0.9.1/en/01-compact.jpg)
+<p>A full feature overview of <strong>macOS 0.9.1</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
-Expand the Island to follow multiple agents, task models, Token counts, and available parent/subagent activity. Review public progress and result details when the original client provides them; missing information keeps its placeholder.
+<table class="highlights">
+<tr>
+<td width="50%" valign="top">
+<p><strong>👀 Every agent, at a glance</strong></p>
+<ul>
+<li>Follow multiple local sessions through thinking, working, waiting, completed, and failed states.</li>
+<li>See available task titles, models, Tokens, elapsed time, and active tools on each card.</li>
+<li>Expand task details and public completion content, with subagent activity when the source provides parent relationships.</li>
+<li>Archive tasks, hover to expand, or pin the Island open to keep current work in view.</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>✋ Approvals and answers in place</strong></p>
+<ul>
+<li>Review commands, working directories, reasons, and permission scopes before deciding.</li>
+<li>Allow or deny supported Codex and Claude Code permission requests from the Island.</li>
+<li>Answer supported Codex questions and Claude Code single-choice questions in place.</li>
+<li>Unsupported requests and forms return to the original client for confirmation.</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<p><strong>📊 Quota, Tokens, and cost</strong></p>
+<ul>
+<li>Switch between Codex and Claude Code to see available five-hour and weekly limits and reset times.</li>
+<li>Explore Token history, estimated model costs, and activity heatmaps.</li>
+<li>See available Codex plan and Credits data; enable Claude official limit collection when needed.</li>
+<li>Keep usage visible with a floating capsule and Small / Medium desktop widgets.</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>🎟️ Reset credits before they expire</strong></p>
+<ul>
+<li>See available Codex reset credits and a time-ordered list of those expiring within a week.</li>
+<li>Scan a compact “Expiring soon + time” row; hover for the full date and time zone.</li>
+<li>Protect credits with a usage switch, confirm each reset, and retry interrupted operations safely.</li>
+<li>Copy /limit-reset for Claude Code and run it in the original client.</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<p><strong>🎨 Make it fit your desktop</strong></p>
+<ul>
+<li>Choose liquid glass or classic solid color, with live previews of state smoke, quantum noise, and liquid waves.</li>
+<li>Adjust expanded width, capsule visibility, privacy, and auto-expand; completed cards use a neutral background.</li>
+<li>Follow the active window across displays or keep the Island on a selected screen.</li>
+<li>Use Simplified Chinese, Traditional Chinese, English, Japanese, Korean, or Spanish.</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>⚡ Local processing, work on demand</strong></p>
+<ul>
+<li>Manage 10 agent integration entries with independent switches and connection status.</li>
+<li>Process task information locally through local APIs, session records, hooks, or plugins.</li>
+<li>Reduce repeated reads, parse Claude transcripts in the background, and load effect renderers on demand.</li>
+<li>Developer ID signed and Apple notarized; update checks are on by default, with downloads and installation confirmed by you.</li>
+</ul>
+</td>
+</tr>
+</table>
 
-[![Expanded Island with multiple agent tasks](docs/media/readme/0.9.1/en/02-expanded.jpg)](docs/media/readme/0.9.1/en/02-expanded.jpg)
+<p><sub>Native liquid glass requires macOS 26+; macOS 14–15 uses translucent material. Quota and metadata depend on the source; missing data stays unknown. Costs are estimates.</sub></p>
 
-## Read the request before approving
 
-Review commands, working directories, reasons, and permission scopes before allowing or declining a request. Supported Codex and Claude Code requests can be handled in the Island. Other integrations show reminders and leave approval to the original client.
+<a name="supported-agents"></a>
+<h2>Supported agents</h2>
 
-[![Agent approval request and permission choices](docs/media/readme/0.9.1/en/03-approval.jpg)](docs/media/readme/0.9.1/en/03-approval.jpg)
+<p>Enable each integration in Settings → Connections. Every entry is managed independently.</p>
 
-## Quota, Tokens, and activity in one place
+<table class="agents">
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/CodexProviderIcon.png" alt="Codex official icon" width="44"><br><strong>Codex</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/ClaudeApplicationIcon.imageset/ClaudeApplicationIcon.png" alt="Claude Code official icon" width="44"><br><strong>Claude Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DSHProviderMark.imageset/DSHProviderMark.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/KimiCodeProviderIcon.imageset/KimiCodeProviderIcon.png" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CursorProviderMark.imageset/CursorProviderMark.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>Preview</sub></td>
+</tr>
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/GeminiCLIProviderMark.imageset/GeminiCLIProviderMark.svg" alt="Gemini CLI official icon" width="44"><br><strong>Gemini CLI</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/OpenCodeProviderMark.imageset/OpenCodeProviderMark.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CopilotCLIProviderMark.imageset/CopilotCLIProviderMark.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>Preview</sub></td>
+</tr>
+</table>
 
-Switch between Codex and Claude Code to see available quota windows, reset times, Token history, estimated cost, and activity heatmaps. The floating capsule shows a five-hour window, a weekly window, or both, depending on the account.
+<p><strong>Approvals and answers:</strong> Supported Codex and Claude Code requests can be handled in the Island. Other entries keep confirmation in their original clients. Cursor currently has no permission reminders.</p>
 
-[![Codex quota windows, Token history, and activity](docs/media/readme/0.9.1/en/04-usage.jpg)](docs/media/readme/0.9.1/en/04-usage.jpg)
+<p><strong>Devin:</strong> Desktop and CLI appear separately. Desktop covers local Devin Local sessions. Models and current-turn Tokens require compatible local records; start a new turn after updating.</p>
 
-Available fields depend on the client and collection settings. Missing values remain unknown. Costs are estimates, not bills.
+<p><strong>Compatibility:</strong> Preview integrations are still being validated across client environments. OpenCode currently covers 1.x. Available data and interactions differ by client.</p>
 
-## Check before you reset
+<details>
+<summary><strong>View integration capabilities</strong></summary>
 
-**Codex:** review available reset credits and the list expiring within a week. A protection setting can disable credit use. Using a credit requires explicit confirmation and consumes one real reset opportunity; a manual retry reuses the saved operation to avoid duplicate submissions.
+<table>
+<thead><tr><th>Agent</th><th>Task state</th><th>Approvals and replies</th><th>Models and usage</th></tr></thead>
+<tbody><tr><td>Codex</td><td>Tasks, tools, and available parent/subagent activity</td><td>Supported approvals and questions in the Island</td><td>Models, Tokens, quota, Credits, history, and estimated cost</td></tr>
+<tr><td>Claude Code</td><td>Tasks, tools, and completion content</td><td>Supported approvals and single-choice questions in the Island</td><td>Models, Tokens, history, and estimated cost; optional official limits</td></tr>
+<tr><td>DSH</td><td>Native plugin events and available child sessions</td><td>Permission reminders; confirm in the client</td><td>Models and Tokens supplied by events</td></tr>
+<tr><td>Kimi Code</td><td>Hook task, tool, and state events</td><td>Permission reminders; confirm in the client</td><td>Models supplied by events; no account quota panel</td></tr>
+<tr><td>Cursor · Preview</td><td>Local hook task and tool state</td><td>Confirm in the client; no permission reminders</td><td>Models supplied by events; no account quota panel</td></tr>
+<tr><td>Gemini CLI · Preview</td><td>Local hook task and tool state</td><td>Permission reminders; confirm in the client</td><td>Models supplied by events; no account quota panel</td></tr>
+<tr><td>OpenCode · Preview</td><td>1.x plugin tasks, tools, and child sessions</td><td>Permission reminders; confirm in the client</td><td>Models and titles supplied by events; no account quota panel</td></tr>
+<tr><td>GitHub Copilot CLI · Preview</td><td>Local hook task and tool state</td><td>Permission reminders; confirm in the client</td><td>Metadata supplied by events; no account quota panel</td></tr>
+<tr><td>Devin Desktop · Preview</td><td>Local Devin Local sessions; independent switch</td><td>Permission reminders; confirm in the client</td><td>Session model and current-turn Tokens from compatible local records</td></tr>
+<tr><td>Devin CLI · Preview</td><td>Local CLI sessions; independent switch</td><td>Permission reminders; confirm in the client</td><td>Session model and current-turn Tokens from compatible local records</td></tr>
+</tbody></table>
+<p><a href="docs/specs/agent-integrations.md">Integration details and compatibility</a></p>
+</details>
 
-[![Codex reset credit controls and expiry information](docs/media/readme/0.9.1/en/05-reset.jpg)](docs/media/readme/0.9.1/en/05-reset.jpg)
 
-**Claude Code:** copy `/limit-reset`, then run it in Claude Code to view remaining resets and deadlines. QuotaView does not perform Claude resets on your behalf.
+<a name="in-action"></a>
+<h2>In action</h2>
 
-## Make it fit your desktop
+<p><strong>Compact state: task status and the floating usage capsule</strong></p>
+<p><img src="docs/media/readme/0.9.1/en/01-compact.jpg" alt="Compact state: task status and the floating usage capsule"></p>
 
-Choose Liquid Glass or a classic solid appearance, then select State Smoke, Quantum Noise, or Liquid Wave from the live preview. Adjust width, capsule visibility, privacy mode, and automatic expansion. On multiple displays, follow the active window or choose a fixed screen.
+<p><strong>Expanded state: tasks and details across agents</strong></p>
+<p><img src="docs/media/readme/0.9.1/en/02-expanded.jpg" alt="Expanded state: tasks and details across agents"></p>
 
-Native Liquid Glass requires macOS 26 or later. macOS 14–15 uses translucent materials; classic solid mode is also available. Product images show macOS. The [earlier 0.8.5 video walkthrough](https://duoasa.github.io/QuotaView/demos/0.8.5/en/) remains available.
+<p><strong>Approvals: review the request before deciding</strong></p>
+<p><img src="docs/media/readme/0.9.1/en/03-approval.jpg" alt="Approvals: review the request before deciding"></p>
 
-## Agent support
+<p><strong>Usage: quota, Tokens, estimated cost, and activity</strong></p>
+<p><img src="docs/media/readme/0.9.1/en/04-usage.jpg" alt="Usage: quota, Tokens, estimated cost, and activity"></p>
 
-| Agent | Tasks and confirmations | Usage |
-| --- | --- | --- |
-| **Codex** | Automatic local discovery, optional activity Hook, and supported in-Island confirmations. | Available account quota, reset times, Credits, Tokens, estimated cost, and manual quota resets. |
-| **Claude Code** | Opt-in Hooks for task status and supported permission requests. | Local Token history and estimated cost; official quota windows with status-line collection enabled. |
-| **DSH** | Native plugin for sessions, tools, compaction, and permission reminders. | Task Tokens when supplied by events; no account quota dashboard. |
-| **Kimi Code** | Hooks for task status, tools, compaction, and permission reminders. | No account quota or historical cost dashboard. |
-| **Cursor / Gemini CLI / OpenCode / GitHub Copilot CLI — preview** | Optional local task status integrations; confirmations stay in the original client. | Available event metadata; no account quota dashboard. |
-| **Devin Desktop — preview** | Separate integration switch and task identity. | Current session model and current-turn Tokens when supported local records are available. |
-| **Devin CLI — preview** | Separate integration switch and task identity. | Current session model and current-turn Tokens when supported local records are available. |
+<p><strong>Reset credits: availability, protection, and expiry</strong></p>
+<p><img src="docs/media/readme/0.9.1/en/05-reset.jpg" alt="Reset credits: availability, protection, and expiry"></p>
 
-Fields depend on the client version and configuration. Preview integrations are still being tested across client environments; missing data remains unknown. See the [integration contract](docs/specs/agent-integrations.md). This table describes macOS; Windows has its own supported feature set.
 
-## Get started
+<a name="installation"></a>
+<h2>Installation and updates</h2>
 
-| Platform | Current release | Requirements and guide |
-| --- | --- | --- |
-| **macOS** | [0.9.1 Build 16](https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip) | macOS 14+; Universal Apple silicon + Intel; Developer ID signed and Apple notarized. |
-| **Windows** | [0.8.3-win.13](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip) | x64; [installation and connection guide](Windows/README.md). |
+<p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-1. Download, unzip, and open `QuotaView.app` on macOS.
-2. Open **Settings → Connections** and enable the agents you use. Install and configure the agent clients separately.
-3. Codex tasks are discovered locally. After configuring Hooks or a plugin, start a new session or restart the relevant client as indicated.
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip">QuotaView 0.9.1 Build 16</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
-macOS automatic update checks are **on by default**. Your existing preference is respected, you can turn checks off in Settings, and downloading/installing updates requires confirmation.
+<p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
-Windows is a reduced-feature adaptation with a solid-color Island, AI orb and quantum-noise effects, tasks, supported approvals, and usage statistics. Desktop widgets and native Liquid Glass are not included. Both platforms use separate update channels; this macOS release does not change the Windows version.
+<details>
+<summary><strong>New in 0.9.1</strong></summary>
+<ul>
+<li>Refreshed brand identity, app and agent icons, and a new English and Chinese product image set.</li>
+<li>Updated settings and previews, neutral completed cards, and six interface languages.</li>
+<li>Preview integrations for Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, and Devin Desktop / CLI.</li>
+<li>Devin model and current-turn Token reading; reset credit protection and a one-week expiry list.</li>
+<li>Improved background reads, Claude transcript parsing, and effect loading.</li>
+</ul>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+</details>
 
-### New in 0.9.1
 
-- A refreshed brand identity, app and agent icons, neutral completed cards, and flowing completion highlights.
-- Clearer settings, improved previews, and Japanese, Korean, Traditional Chinese, and Spanish support.
-- Preview agent integrations, including separate Devin Desktop and Devin CLI entries with model and Token reading.
-- Reset credit protection and a list of credits expiring within a week.
-- Less repeated background reading, background Claude transcript parsing, and on-demand effect loading.
+<a name="windows"></a>
+<h2>Windows · Separate edition</h2>
 
-[Release notes](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16) · [Version history](VERSION_HISTORY.md)
+<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.1.</p>
 
-## Privacy by design
+<ul>
+<li>Includes a solid-color Island, task status, approvals and answers for compatible clients, usage statistics, AI orb, and quantum noise.</li>
+<li>Features are adapted to Windows. Native macOS liquid glass and desktop widgets are not included; see the Windows documentation for its agent scope.</li>
+<li>Requires Windows x64 and WebView2 Evergreen Runtime. Extract the whole archive and run <code>QuotaView.Native.exe</code>; keep the full application folder.</li>
+</ul>
 
-Task information is processed locally. QuotaView does not send task content to a QuotaView service or collect login credentials. Connections use local APIs, bounded session records, Hooks, or native plugins.
+<p><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip"><strong>Download for Windows</strong></a> · <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13">Windows release notes</a> · <a href="Windows/README.md">Installation and connections</a></p>
 
-Enabling an integration may modify the client's configuration. QuotaView backs it up first and manages only its own entries. Codex resets save a local operation record for safe retries, without login credentials. Do not include credentials or raw session records in bug reports.
 
-## Build from source
+<a name="privacy"></a>
+<h2>Privacy and local processing</h2>
 
-```bash
-git clone https://github.com/Duoasa/QuotaView.git
+<p>Task information is processed locally. QuotaView does not send task content to a QuotaView service or collect login credentials. Integration setup backs up client configuration and manages only its own entries. Live quota queries and resets use the relevant provider service.</p>
+
+<p>Codex resets retain only a local operation record for safe retries. Please omit credentials and raw session logs from bug reports.</p>
+
+
+<a name="build"></a>
+<h2>Build from source</h2>
+
+<pre><code>git clone https://github.com/Duoasa/QuotaView.git
 cd QuotaView
 swift test
-swift run QuotaView
-```
+swift run QuotaView</code></pre>
 
-Use Swift 6 or a compatible Xcode toolchain, plus Node.js for DSH plugin tests. For the full app and widget, open `QuotaView.xcodeproj`, select **QuotaView** and **My Mac**, then run. Windows build instructions are in [Windows/README.md](Windows/README.md).
+<p>Requires Swift 6 or a compatible Xcode toolchain; DSH plugin tests also require Node.js. For the complete app and widgets, open <code>QuotaView.xcodeproj</code>, select the <strong>QuotaView</strong> scheme and <strong>My Mac</strong>, then run.</p>
 
-See the [release workflow](docs/workflow/RELEASE.md) for distribution signing, notarization, and update-key requirements.
+<p><a href="docs/workflow/RELEASE.md">Release workflow</a> · <a href="Windows/README.md">Windows build instructions</a></p>
 
-## Project and feedback
 
-- [Report an issue](https://github.com/Duoasa/QuotaView/issues/new/choose), or use **Settings → Bug Feedback**.
-- [Contributing](CONTRIBUTING.md) · [Design and behavior specifications](docs/specs/README.md) · [Development handoff](HANDOFF.md)
-- Open source under the [MIT license](LICENSE).
+<a name="feedback"></a>
+<h2>Project and feedback</h2>
 
-**QQ feedback group: 1108649282**
+<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">Report an issue</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="docs/specs/README.md">Design and behavior specs</a> · <a href="LICENSE">MIT License</a></p>
+
+<p>QQ feedback group: <strong>1108649282</strong></p>
 
 <p align="center"><img src="docs/media/readme/shared/feedback-qr.jpg" alt="QuotaView QQ feedback group QR code" width="240"></p>

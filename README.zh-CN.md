@@ -1,133 +1,220 @@
-<p align="center"><img src="docs/media/readme/0.9.1/app-icon.png" alt="QuotaView 新产品图标" width="112"></p>
+<p align="center"><img src="docs/media/readme/0.9.1/app-icon.png" alt="QuotaView" width="112"></p>
 
 <h1 align="center">QuotaView</h1>
 
-<p align="center"><strong>多 Agent 状态与用量灵动岛。</strong></p>
+<p align="center"><strong>多 Agent 状态与用量灵动岛。</strong><br>任务、审批与用量，都在桌面顶部。</p>
 
-<p align="center">任务、审批与用量，都在桌面顶部。</p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16"><img src="https://img.shields.io/badge/macOS-v0.9.1_Build_16-blue" alt="0.9.1 Build 16"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16"><img alt="macOS 0.9.1 Build 16" src="https://img.shields.io/badge/macOS-v0.9.1_Build_16-blue"></a>
-  <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13"><img alt="Windows 0.8.3-win.13" src="https://img.shields.io/badge/Windows-v0.8.3--win.13-blue"></a>
-  <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
-</p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
 
-<p align="center">
-  <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip"><strong>下载 macOS 版</strong></a>
-  · <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip"><strong>下载 Windows 版</strong></a>
-  · <a href="#快速开始">快速开始</a>
-  · <a href="#agent-支持范围">Agent 支持范围</a>
-</p>
+<p align="center"><strong>简体中文</strong> · <a href="README.md">English</a></p>
 
-<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/cover.jpg" alt="QuotaView 中文产品封面"></p>
 
-[![QuotaView：多 Agent 状态与用量灵动岛](docs/media/readme/0.9.1/zh-CN/cover.jpg)](docs/media/readme/0.9.1/zh-CN/cover.jpg)
+<p>QuotaView 把多个 AI Agent 的工作状态与用量集中在桌面顶部。谁在工作、谁需要确认、谁刚完成，抬眼就能看到；需要时展开灵动岛，查看任务详情、处理支持的请求，或了解剩余额度。</p>
 
-QuotaView 0.9.1 带来全新的品牌视觉：蓝色终端图标、更新的 Agent 标识，以及更清晰的桌面灵动岛。延续 QuotaView 的名字，让多个 Agent 的工作状态与用量集中可见。
 
-## 任务状态，抬眼就能看到
+<a name="highlights"></a>
+<h2>Highlights · 功能亮点</h2>
 
-收起时，当前状态与悬浮用量胶囊留在桌面顶部，让你专注手头工作，也能留意任务进展。
+<p>以下为 <strong>macOS 0.9.1</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
 
-[![收起态灵动岛与用量胶囊](docs/media/readme/0.9.1/zh-CN/01-compact.jpg)](docs/media/readme/0.9.1/zh-CN/01-compact.jpg)
+<table class="highlights">
+<tr>
+<td width="50%" valign="top">
+<p><strong>👀 多 Agent，统一看状态</strong></p>
+<ul>
+<li>同时追踪多个本地会话，查看思考、执行、待确认、完成和失败状态。</li>
+<li>在卡片中查看来源可提供的任务标题、模型、Token、耗时和当前工具。</li>
+<li>展开任务详情、查看公开完成内容，以及有明确父子关系的子 Agent 活动。</li>
+<li>支持任务归档、悬停展开和固定展开，让当前工作留在眼前。</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>✋ 审批与问题，就地处理</strong></p>
+<ul>
+<li>在确认之前查看命令、工作目录、原因和权限范围。</li>
+<li>支持的 Codex、Claude Code 权限请求可直接在灵动岛允许或拒绝。</li>
+<li>支持的 Codex 问题与 Claude Code 单选问题可在岛内回复。</li>
+<li>不支持的请求或表单提示回到原客户端处理，保留原生确认流程。</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<p><strong>📊 额度、Token 与成本</strong></p>
+<ul>
+<li>切换 Codex 与 Claude Code，查看可用的 5 小时、每周额度及重置时间。</li>
+<li>查看 Token 历史、按模型估算的成本和活动热图。</li>
+<li>Codex 显示账户可提供的套餐与 Credits；Claude 官方额度可按需开启采集。</li>
+<li>悬浮用量胶囊与 Small / Medium 桌面小组件，让用量随时可见。</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>🎟️ 重置卡，到期前看得见</strong></p>
+<ul>
+<li>查看 Codex 可用重置卡，按到期时间列出未来一周内到期的卡片。</li>
+<li>列表采用「即将到期 + 精简时间」；悬停可看完整日期与时区。</li>
+<li>提供使用保护开关，每次重置均需确认；中断后可手动安全重试。</li>
+<li>Claude Code 可复制 /limit-reset，回到原客户端执行重置。</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<p><strong>🎨 适配你的桌面</strong></p>
+<ul>
+<li>液态玻璃与经典纯色两种外观，实时预览状态烟雾、量子噪点和液态涌浪。</li>
+<li>调整展开宽度、胶囊显示、隐私模式与自动展开；完成卡片采用中性底色。</li>
+<li>多屏环境跟随活动窗口，或固定在指定显示器。</li>
+<li>支持简体中文、繁體中文、English、日本語、한국어 和 Español。</li>
+</ul>
+</td>
+<td width="50%" valign="top">
+<p><strong>⚡ 本地处理，按需工作</strong></p>
+<ul>
+<li>统一管理 10 个 Agent 接入入口，各自启用、停用并查看连接状态。</li>
+<li>任务信息在本机处理；通过本地接口、会话记录、Hook 或插件连接。</li>
+<li>减少后台重复读取，Claude 转录后台解析，特效渲染器按需加载。</li>
+<li>Developer ID 签名与 Apple 公证；默认自动检查更新，下载和安装由你确认。</li>
+</ul>
+</td>
+</tr>
+</table>
 
-展开后查看多个 Agent 的任务、模型、Token 数，以及可用的主任务与子 Agent 活动。公开进度和结果详情由原客户端提供，缺失或尚未同步的内容保留提示。
+<p><sub>原生液态玻璃需要 macOS 26+；macOS 14–15 使用半透明材质。额度与元数据取决于来源，缺失数据保留未知；成本为估算值。</sub></p>
 
-[![展开态多 Agent 任务列表](docs/media/readme/0.9.1/zh-CN/02-expanded.jpg)](docs/media/readme/0.9.1/zh-CN/02-expanded.jpg)
 
-## 看清请求，再决定
+<a name="supported-agents"></a>
+<h2>支持的 Agent</h2>
 
-需要审批时，先查看命令、工作目录、原因和授权范围，再允许或拒绝。支持的 Codex、Claude Code 请求可在灵动岛处理；其他接入提供提醒，确认仍在原客户端完成。
+<p>在「设置 → 连接」按需启用，各入口独立管理。</p>
 
-[![Agent 审批请求与授权选项](docs/media/readme/0.9.1/zh-CN/03-approval.jpg)](docs/media/readme/0.9.1/zh-CN/03-approval.jpg)
+<table class="agents">
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/CodexProviderIcon.png" alt="Codex official icon" width="44"><br><strong>Codex</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/ClaudeApplicationIcon.imageset/ClaudeApplicationIcon.png" alt="Claude Code official icon" width="44"><br><strong>Claude Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DSHProviderMark.imageset/DSHProviderMark.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/KimiCodeProviderIcon.imageset/KimiCodeProviderIcon.png" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CursorProviderMark.imageset/CursorProviderMark.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>预览</sub></td>
+</tr>
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/GeminiCLIProviderMark.imageset/GeminiCLIProviderMark.svg" alt="Gemini CLI official icon" width="44"><br><strong>Gemini CLI</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/OpenCodeProviderMark.imageset/OpenCodeProviderMark.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CopilotCLIProviderMark.imageset/CopilotCLIProviderMark.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>预览</sub></td>
+</tr>
+</table>
 
-## 额度、Token 与活动，一页查看
+<p><strong>审批与问题回复：</strong> Codex 与 Claude Code 的受支持请求可在灵动岛处理；其他入口在原客户端确认。Cursor 当前不提供权限提醒。</p>
 
-切换 Codex 与 Claude Code，查看可获取的额度窗口、重置时间、Token 历史、成本估算和活动热图。悬浮胶囊根据账户支持的周期显示 5 小时额度、周额度或两者。
+<p><strong>Devin：</strong> Desktop 与 CLI 分开展示。Desktop 仅接入本机 Devin Local；模型与本轮 Token 依赖兼容的本地记录，建议更新后开启新一轮任务。</p>
 
-[![Codex 额度窗口、Token 历史与活动统计](docs/media/readme/0.9.1/zh-CN/04-usage.jpg)](docs/media/readme/0.9.1/zh-CN/04-usage.jpg)
+<p><strong>兼容性：</strong> 预览接入仍在不同客户端环境中验证。OpenCode 当前覆盖 1.x；各入口不承诺相同的数据和交互能力。</p>
 
-额度字段取决于客户端和采集配置；没有数据时保留未知状态。成本是估算值，不是账单。
+<details>
+<summary><strong>查看各 Agent 的能力范围</strong></summary>
 
-## 重置之前，先确认
+<table>
+<thead><tr><th>Agent</th><th>任务状态</th><th>审批与回复</th><th>模型与用量</th></tr></thead>
+<tbody><tr><td>Codex</td><td>任务、工具与可用的父子任务</td><td>支持的审批与问题可在岛内处理</td><td>模型、Token、额度、Credits、历史与估算成本</td></tr>
+<tr><td>Claude Code</td><td>任务、工具与完成内容</td><td>支持的审批与单选问题可在岛内处理</td><td>模型、Token、历史与估算成本；官方额度按需采集</td></tr>
+<tr><td>DSH</td><td>原生插件事件与可用的子会话</td><td>权限提醒，原客户端确认</td><td>事件提供的模型与 Token</td></tr>
+<tr><td>Kimi Code</td><td>Hook 任务、工具与状态</td><td>权限提醒，原客户端确认</td><td>事件提供的模型；无账户额度面板</td></tr>
+<tr><td>Cursor · 预览</td><td>本地 Hook 任务与工具状态</td><td>原客户端确认；不提供权限提醒</td><td>事件提供的模型；无账户额度面板</td></tr>
+<tr><td>Gemini CLI · 预览</td><td>本地 Hook 任务与工具状态</td><td>权限提醒，原客户端确认</td><td>事件提供的模型；无账户额度面板</td></tr>
+<tr><td>OpenCode · 预览</td><td>1.x 插件任务、工具与子会话</td><td>权限提醒，原客户端确认</td><td>事件提供的模型与标题；无账户额度面板</td></tr>
+<tr><td>GitHub Copilot CLI · 预览</td><td>本地 Hook 任务与工具状态</td><td>权限提醒，原客户端确认</td><td>事件可提供的元数据；无账户额度面板</td></tr>
+<tr><td>Devin Desktop · 预览</td><td>本机 Devin Local，独立开关</td><td>权限提醒，原客户端确认</td><td>兼容记录格式中的会话模型与本轮 Token</td></tr>
+<tr><td>Devin CLI · 预览</td><td>本机 CLI 任务，独立开关</td><td>权限提醒，原客户端确认</td><td>兼容记录格式中的会话模型与本轮 Token</td></tr>
+</tbody></table>
+<p><a href="docs/specs/agent-integrations.md">接入说明与兼容范围</a></p>
+</details>
 
-**Codex：**查看可用重置卡，以及一周内到期的卡片列表。保护开关可禁用重置卡使用；每次使用仍需明确确认，并消耗一次真实重置机会。请求中断后，手动重试复用已保存的操作，避免重复提交。
 
-[![Codex 重置卡操作与到期信息](docs/media/readme/0.9.1/zh-CN/05-reset.jpg)](docs/media/readme/0.9.1/zh-CN/05-reset.jpg)
+<a name="in-action"></a>
+<h2>功能一览</h2>
 
-**Claude Code：**复制 `/limit-reset`，到 Claude Code 中执行并查看剩余次数与期限。QuotaView 不会替你执行 Claude 的重置。
+<p><strong>收起态：任务状态与悬浮用量胶囊</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/01-compact.jpg" alt="收起态：任务状态与悬浮用量胶囊"></p>
 
-## 按你的桌面来调整
+<p><strong>展开态：多个 Agent 的任务与详情</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/02-expanded.jpg" alt="展开态：多个 Agent 的任务与详情"></p>
 
-选择液态玻璃或经典纯色，在实时预览中切换状态烟雾、量子噪点和液态涌浪。展开宽度、胶囊显示、隐私模式和自动展开可独立设置；多屏使用时跟随活动窗口，或固定在指定显示器。
+<p><strong>审批：看清请求，再决定</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/03-approval.jpg" alt="审批：看清请求，再决定"></p>
 
-原生液态玻璃需要 macOS 26 或更新系统；macOS 14–15 使用半透明材质，也可选择经典纯色。产品图展示 macOS 版；[此前的 0.8.5 视频演示](https://duoasa.github.io/QuotaView/demos/0.8.5/zh-CN/)仍可查看。
+<p><strong>用量：额度、Token、成本与活动</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/04-usage.jpg" alt="用量：额度、Token、成本与活动"></p>
 
-## Agent 支持范围
+<p><strong>重置卡：可用次数、使用保护与到期列表</strong></p>
+<p><img src="docs/media/readme/0.9.1/zh-CN/05-reset.jpg" alt="重置卡：可用次数、使用保护与到期列表"></p>
 
-| Agent | 任务与确认 | 用量 |
-| --- | --- | --- |
-| **Codex** | 自动发现本地任务，可选活动 Hook；支持的确认可在灵动岛处理。 | 可用账户额度、重置时间、Credits、Tokens、成本估算及手动额度重置。 |
-| **Claude Code** | 启用 Hook 后显示任务状态及支持的权限请求。 | 本地 Token 历史与成本估算；开启状态栏采集后读取官方额度窗口。 |
-| **DSH** | 原生插件接收会话、工具、压缩与权限提醒。 | 事件实际提供的任务 Token 数；不提供账户额度面板。 |
-| **Kimi Code** | Hook 接收任务状态、工具、压缩与权限提醒。 | 不提供账户额度与历史成本面板。 |
-| **Cursor / Gemini CLI / OpenCode / GitHub Copilot CLI（预览）** | 可选的本地任务状态接入，确认仍在原客户端完成。 | 事件可提供的元数据；不提供账户额度面板。 |
-| **Devin Desktop（预览）** | 独立开关与任务身份。 | 本地记录格式支持时读取当前会话模型与本轮 Token。 |
-| **Devin CLI（预览）** | 独立开关与任务身份。 | 本地记录格式支持时读取当前会话模型与本轮 Token。 |
 
-字段取决于客户端版本和配置。预览接入仍在不同客户端环境中验证，缺失数据保持未知。详见[接入契约](docs/specs/agent-integrations.md)。本表描述 macOS；Windows 支持范围以其说明为准。
+<a name="installation"></a>
+<h2>安装与更新</h2>
 
-## 快速开始
+<p><strong>macOS 14+</strong> · Apple silicon + Intel 通用包 · Developer ID 签名 · Apple 公证</p>
 
-| 平台 | 当前版本 | 要求与说明 |
-| --- | --- | --- |
-| **macOS** | [0.9.1 Build 16](https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip) | macOS 14+；Apple silicon + Intel 通用包；Developer ID 签名与 Apple 公证。 |
-| **Windows** | [0.8.3-win.13](https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip) | x64；[安装与连接说明](Windows/README.md)。 |
+<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip">QuotaView 0.9.1 Build 16</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → 连接」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
 
-1. 在 macOS 下载、解压并打开 `QuotaView.app`。
-2. 进入「设置 → 连接」，启用需要的 Agent；各客户端需单独安装与配置。
-3. Codex 任务会在本地自动发现。配置 Hook 或插件后，按提示开启新会话或重启对应客户端。
+<p><strong>默认开启自动检查更新</strong>，已有用户偏好保留，可随时在设置中关闭；下载与安装仍需确认。</p>
 
-macOS **默认开启自动检查更新**；已有用户偏好保留，可在设置中关闭。下载和安装更新仍需确认。
+<details>
+<summary><strong>0.9.1 本次更新</strong></summary>
+<ul>
+<li>全新品牌视觉、应用与 Agent 图标，中英文产品图全面更新。</li>
+<li>设置与预览更新，完成卡片中性底色，六语言支持。</li>
+<li>新增 Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI 和 Devin Desktop / CLI 预览接入。</li>
+<li>Devin 模型与本轮 Token 补读；重置卡保护与一周内到期列表。</li>
+<li>后台读取、Claude 转录解析和特效加载优化。</li>
+</ul>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
+</details>
 
-Windows 是 macOS 功能降级适配版，包含纯色灵动岛、AI 球与量子噪点、任务及支持的审批、用量统计；不包含桌面小组件和原生液态玻璃。两平台使用独立更新通道，本次 macOS 发布不改变 Windows 版本。
 
-### 0.9.1 更新重点
+<a name="windows"></a>
+<h2>Windows · 单独说明</h2>
 
-- 全新品牌视觉与应用、Agent 图标；完成卡片采用中性底色，保留流动高光。
-- 整理设置与预览，新增日语、韩语、繁体中文和西班牙语。
-- 新增预览 Agent 接入，包括独立的 Devin Desktop / CLI 以及模型、Token 读取。
-- 重置保护开关与一周内到期的重置卡列表。
-- 减少后台重复读取，Claude 转录后台解析，特效按需加载。
+<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.1。</p>
 
-[完整发布说明](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16) · [版本历史](VERSION_HISTORY.md)
+<ul>
+<li>提供纯色灵动岛、任务状态、兼容客户端的审批和问题回复、用量统计、AI 球与量子噪点。</li>
+<li>功能按 Windows 能力适配；不包含 macOS 原生液态玻璃和桌面小组件，Agent 范围以 Windows 说明为准。</li>
+<li>需要 Windows x64 和 WebView2 Evergreen Runtime。完整解压后运行 <code>QuotaView.Native.exe</code>，请保留整个应用目录。</li>
+</ul>
 
-## 隐私与本地处理
+<p><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.8.3-win.13/QuotaView-Windows-0.8.3-win.13-x64.zip"><strong>下载 Windows 版</strong></a> · <a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13">Windows 发布说明</a> · <a href="Windows/README.md">安装与连接</a></p>
 
-任务信息在本机处理。QuotaView 不把任务内容发送到 QuotaView 服务，也不收集登录凭据；连接通过本地 API、有界会话记录、Hook 或原生插件完成。
 
-启用接入可能修改客户端配置，QuotaView 会先备份并只管理自己的条目。Codex 重置仅保存用于安全重试的本地操作记录，不保存登录凭据。反馈问题时请勿附带凭据或原始会话日志。
+<a name="privacy"></a>
+<h2>隐私与本地处理</h2>
 
-## 从源码构建
+<p>任务信息在本机处理。QuotaView 不把任务内容发送到 QuotaView 服务，也不收集登录凭据。启用接入时会备份客户端配置，并仅管理自身条目；真实额度查询和重置仍通过对应服务处理。</p>
 
-```bash
-git clone https://github.com/Duoasa/QuotaView.git
+<p>Codex 重置仅保存用于安全重试的本地操作记录。反馈问题时，请勿附带凭据或原始会话日志。</p>
+
+
+<a name="build"></a>
+<h2>从源码构建</h2>
+
+<pre><code>git clone https://github.com/Duoasa/QuotaView.git
 cd QuotaView
 swift test
-swift run QuotaView
-```
+swift run QuotaView</code></pre>
 
-需要 Swift 6 或兼容的 Xcode 工具链；DSH 插件测试还需要 Node.js。完整 App 与小组件使用 `QuotaView.xcodeproj`，选择 **QuotaView** Scheme 和 **My Mac** 后运行。Windows 构建见 [Windows/README.md](Windows/README.md)。
+<p>需要 Swift 6 或兼容的 Xcode 工具链；DSH 插件测试还需要 Node.js。完整 App 与小组件使用 <code>QuotaView.xcodeproj</code>，选择 <strong>QuotaView</strong> Scheme 和 <strong>My Mac</strong> 后运行。</p>
 
-分发包的签名、公证与更新密钥配置见[发布流程](docs/workflow/RELEASE.md)。
+<p><a href="docs/workflow/RELEASE.md">发布流程</a> · <a href="Windows/README.md">Windows 构建</a></p>
 
-## 项目与反馈
 
-- [提交问题](https://github.com/Duoasa/QuotaView/issues/new/choose)，也可从**设置 → Bug 反馈**进入。
-- [贡献指南](CONTRIBUTING.md) · [设计与行为规格](docs/specs/README.md) · [开发交接](HANDOFF.md)
-- 采用 [MIT 许可证](LICENSE)开源。
+<a name="feedback"></a>
+<h2>项目与反馈</h2>
 
-**QQ 反馈群：1108649282**
+<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">提交问题</a> · <a href="CONTRIBUTING.md">贡献指南</a> · <a href="docs/specs/README.md">设计与行为规格</a> · <a href="LICENSE">MIT License</a></p>
+
+<p>QQ 反馈群：<strong>1108649282</strong></p>
 
 <p align="center"><img src="docs/media/readme/shared/feedback-qr.jpg" alt="QuotaView QQ 反馈群二维码" width="240"></p>
