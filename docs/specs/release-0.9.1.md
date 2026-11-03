@@ -27,4 +27,6 @@ Spec ID：`QV-RELEASE-0.9.1-001` · `Released / User Acceptance Pending` · 2026
 
 用户确认参考 CodeIsland 的中英文 README 预览。已落地六组完整 Highlights、10 个 Agent 入口的官方原色图标网格与可展开能力表；Devin Desktop / CLI 分列，预览状态和审批范围保留。Windows 版本、功能差异、安装与下载集中到独立备注；保留 CN/EN 封面、各五张产品图和顶部产品图标。图标直接引用现有已核对官方来源的资源，未重绘或改色。
 
-本批仅更新文档，已核对预览一致性、图片、链接锚点及中英文结构；应用版本、运行包、Release 与 appcast 不变。用户已授权提交、推送并以 PR 合入 `main`；本批不改变应用发布。源提交、PR 与实际 main CI 证据保存在 `.build/readme-preview-20261103/integration/`。预览与校验记录在 `.build/readme-preview-20261103/`。
+本批更新文档，并修正 CI 暴露的一处既有测试夹具轮询竞争；已核对预览一致性、图片、链接锚点及中英文结构；应用版本、运行包、Release 与 appcast 不变。用户已授权提交、推送并以 PR 合入 `main`；本批不改变应用发布。源提交、PR 与实际 main CI 证据保存在 `.build/readme-preview-20261103/integration/`。预览与校验记录在 `.build/readme-preview-20261103/`。
+
+PR #134 首次 CI 的 `testNewPublicAppendWorksAfterMetadataTurnBinding` 发生等待超时：首次 Token 回调早于启动轮询结束，紧接着的手动轮询可能被重入保护跳过，而夹具的 10 秒维护周期长于 3 秒断言期限。仅将该测试维护周期改为 0.1 秒，保留原断言、超时与生产代码；11 项同组冒烟通过。完整 PR 与合并后 main CI 结果见上述集成证据目录，原失败日志保留。

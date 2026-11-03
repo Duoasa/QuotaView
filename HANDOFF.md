@@ -18,7 +18,7 @@
 
 ## README 完善（2026-11-03）
 
-用户已确认双语预览，当前 README 已采用六组完整 Highlights、10 个 Agent 的官方原色图标网格和可展开能力表，Devin Desktop / CLI 分列；Windows 版本与功能说明独立，原 CN/EN 封面和全套产品图保留。详见[README 后续完善](docs/specs/release-0.9.1.md#readme-后续完善2026-11-03)。本批仅更新文档，链接、资源与预览一致性检查通过。用户已授权提交、推送并合并 `main`，以 PR 交付。README 内容提交为 `3b86348aab5f98ccdf7ab4cb3db0dc01e44035e1`；后续仅更新交接记录，源提交、PR 和实际 main CI 证据保存在 `.build/readme-preview-20261103/integration/`。开发运行包继续为 0.9.1 Build 16；正式发布事实见下节。
+用户已确认双语预览，当前 README 已采用六组完整 Highlights、10 个 Agent 的官方原色图标网格和可展开能力表，Devin Desktop / CLI 分列；Windows 版本与功能说明独立，原 CN/EN 封面和全套产品图保留。详见[README 后续完善](docs/specs/release-0.9.1.md#readme-后续完善2026-11-03)。本批更新文档，并修正 CI 暴露的一处既有测试夹具轮询竞争；链接、资源与预览一致性检查通过。用户已授权提交、推送并合并 `main`，以 PR 交付。README 内容提交为 `3b86348aab5f98ccdf7ab4cb3db0dc01e44035e1`；后续补充交接记录与测试夹具修正，源提交、PR 和实际 main CI 证据保存在 `.build/readme-preview-20261103/integration/`。开发运行包继续为 0.9.1 Build 16；正式发布事实见下节。
 
 ## 0.9.1 正式发布完成（2026-11-02）
 
