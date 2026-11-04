@@ -30,6 +30,8 @@ final class NativeAgentRuntime: ObservableObject {
     private var listening = false
     private var applied: Bool?
     private var devinMetadataTask: Task<Void, Never>?
+    private var dshTitleTasks: [String: Task<Void, Never>] = [:]
+    private var dshTitleReadAt: [String: Date] = [:]
     private struct Session {
         var turn: String?
         var nativeTurn: String?
@@ -50,6 +52,12 @@ final class NativeAgentRuntime: ObservableObject {
         var updated = Date()
     }
     private var sessions: [String: Session] = [:]
+    private struct DSHRequest {
+        let session: String; let turn: String; let epoch: String; let auditID: String
+        let rpcID: IslandApprovalJSON
+        var awaitsDecision = true
+    }
+    private var dshRequests: [String: DSHRequest] = [:]
 
     init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil) {
         self.provider = provider; self.preferences = preferences; self.island = island; self.defaults = defaults
@@ -63,6 +71,18 @@ final class NativeAgentRuntime: ObservableObject {
         installer = suppliedInstaller ?? NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
         defaultDSHNamespace = CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path)
         bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
+        if provider == .dsh {
+            island.model.dshResponseCapability = { [weak self] wire in
+                guard let self, running, listening, enabled, preferences.dshInteractiveApprovals,
+                      let id = DSHApproval.eventID(of: wire), let request = dshRequests[id], request.awaitsDecision,
+                      let session = sessions[request.session] else { return false }
+                return session.active && session.turn == request.turn && session.epoch == request.epoch
+            }
+            island.model.dshRespond = { [weak self] wire, result in
+                guard let self else { throw CancellationError() }
+                try respondDSH(wire, result: result)
+            }
+        }
     }
     var enabled: Bool {
         switch provider {
@@ -116,6 +136,9 @@ final class NativeAgentRuntime: ObservableObject {
         retry()
     }
     private func reconcile(force: Bool = false) {
+        if provider == .dsh && (!enabled || !preferences.dshInteractiveApprovals) {
+            for id in Array(dshRequests.keys) { releaseDSH(id) }
+        }
         guard running, force || applied != enabled else { return }
         let enabled = enabled
         let wasConfigured = applied != nil || FileManager.default.fileExists(atPath: installer.route.path)
@@ -147,12 +170,20 @@ final class NativeAgentRuntime: ObservableObject {
                         guard let self, self.revision == current else { return }
                         self.receive(message)
                     }
-                }, onDisconnect: { _ in })
+                }, onDisconnect: { [weak self] id in
+                    Task { @MainActor in
+                        guard let self, self.revision == current else { return }
+                        self.releaseDSH(id)
+                    }
+                })
                 listening = true; status = .waiting
             } catch { self.failure = .listenerUnavailable; status = .failed }
         }
     }
     private func stopListening() {
+        for task in dshTitleTasks.values { task.cancel() }
+        dshTitleTasks.removeAll(); dshTitleReadAt.removeAll()
+        for id in Array(dshRequests.keys) { releaseDSH(id) }
         devinMetadataTask?.cancel(); devinMetadataTask = nil
         if listening { bridge.stop() }; listening = false
         for (key, value) in sessions {
@@ -162,6 +193,14 @@ final class NativeAgentRuntime: ObservableObject {
         sessions.removeAll()
     }
     private func receive(_ message: ClaudeCodeBridgeMessage) {
+        if provider == .dsh,
+           let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
+           let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") {
+            if !receiveDSH(message, payload: payload, name: name), message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
+            return
+        }
+        // Observation-only ingress never holds an interactive connection.
+        if message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
         guard running, enabled, listening,
               let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
               let sourceSession = payload["session_id"] as? String, !sourceSession.isEmpty, sourceSession.utf8.count <= 256,
@@ -189,6 +228,9 @@ final class NativeAgentRuntime: ObservableObject {
             sessions.removeValue(forKey: oldest)
         }
         var session = sessions[key] ?? Session()
+        if provider == .dsh, let epoch = payload["source_epoch"] as? String, let old = session.epoch, old != epoch {
+            for id in dshRequests.filter({ $0.value.session == key }).map(\.key) { releaseDSH(id) }
+        }
         let nativeTurn = payload["turn_id"] as? String
         // Ignore stale observations before they can change current metadata.
         if provider.isDevin, !["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted"].contains(name),
@@ -241,6 +283,12 @@ final class NativeAgentRuntime: ObservableObject {
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
+        if provider == .dsh, session.title == nil || startedTurn || name == "Stop" {
+            refreshDSHTitle(key: key, sourceID: sourceSession, namespace: payload["source_namespace"] as? String)
+        }
+        if provider == .dsh && (startedTurn || ["SessionEnd", "Stop", "StopFailure", "Interrupt"].contains(name)) {
+            for id in dshRequests.filter({ $0.value.session == key }).map(\.key) { releaseDSH(id) }
+        }
         if name == "SessionStart" || name == "Metadata" { publishMetadata(key); return }
         if name == "SessionEnd" {
             if let turn = session.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
@@ -292,6 +340,14 @@ final class NativeAgentRuntime: ObservableObject {
                 island.model.receiveLocalContent(.init(publicSessionHash: key, turnHash: turn, data: data, occurredAt: Date()))
             }
             if completion != nil {
+                if provider == .dsh, completion == .completed, session.parent == nil,
+                   let answer = payload["final_response"] as? [String: Any],
+                   let text = answer["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   text.utf8.count <= 65_536, let id = answer["id"] as? String, !id.isEmpty, id.utf8.count <= 128,
+                   let data = try? JSONSerialization.data(withJSONObject: ["type": "message", "id": "dsh-final:" + id,
+                       "channel": "final", "text": text, "sourceTruncated": answer["truncated"] as? Bool ?? false]) {
+                    island.model.receiveLocalContent(.init(publicSessionHash: key, turnHash: turn, data: data, occurredAt: Date()))
+                }
                 sessions[key]?.active = false
                 if provider.isDevin { sessions[key]?.devinCompletedAt = Date() }
             }
@@ -305,6 +361,63 @@ final class NativeAgentRuntime: ObservableObject {
                                             lastReportedTotalTokens: count, directTurnTotalTokens: session.tokens))
         }
         if provider.isDevin { refreshDevinMetadata() }
+    }
+
+    private func receiveDSH(_ message: ClaudeCodeBridgeMessage, payload: [String: Any], name: String) -> Bool {
+        guard running, enabled, listening,
+              let source = payload["session_id"] as? String, !source.isEmpty, source.utf8.count <= 256,
+              let namespace = payload["source_namespace"] as? String, namespace.count == 64,
+              namespace.allSatisfy({ "0123456789abcdef".contains($0) }),
+              let epoch = payload["source_epoch"] as? String, !epoch.isEmpty, epoch.utf8.count <= 128,
+              let nativeTurn = payload["turn_id"] as? String,
+              let id = payload["request_id"] as? String, !id.isEmpty, id.utf8.count <= 128,
+              let auditID = payload["approval_id"] as? String, !auditID.isEmpty, auditID.utf8.count <= 128 else { return false }
+        let prefix = "dsh:" + namespace + ":" + source
+        let key = CodexActivityPrivacy.hashIdentifier(prefix)
+        guard let session = sessions[key], session.active, session.parent == nil,
+              session.epoch == epoch, session.nativeTurn == nativeTurn, let turn = session.turn else { return false }
+        if name == "DSHApprovalRequest" {
+            guard message.awaitsDecision, message.eventID == id, preferences.dshInteractiveApprovals,
+                  dshRequests[id] == nil, dshRequests.count < 32,
+                  !dshRequests.values.contains(where: { $0.session == key && $0.auditID == auditID }),
+                  let call = payload["tool_use_id"] as? String, !call.isEmpty, call.utf8.count <= 256,
+                  let wire = try? DSHApproval.request(eventID: id, sessionKey: key, turnKey: turn, payload: payload) else { return false }
+            dshRequests[id] = .init(session: key, turn: turn, epoch: epoch, auditID: auditID, rpcID: wire.rpcID)
+            guard island.model.observeDSHRequest(wire, sessionKey: key, turnKey: turn,
+                    callHash: CodexActivityPrivacy.hashIdentifier(prefix + ":" + call)) else {
+                dshRequests.removeValue(forKey: id); return false
+            }
+            bridge.admit(eventID: id)
+            return true
+        }
+        guard let request = dshRequests[id], request.session == key, request.turn == turn,
+              request.epoch == epoch, request.auditID == auditID else { return false }
+        if name == "DSHApprovalSettled", let outcome = payload["outcome"] as? String,
+           ["allowed-once", "rejected", "cancelled", "unavailable"].contains(outcome) {
+            dshRequests.removeValue(forKey: id)
+            bridge.resolve(eventID: id, decision: nil)
+            island.model.resolveLocalHookRequest(sessionKey: key, rpcID: request.rpcID)
+        } else if name == "DSHApprovalReleased" { releaseDSH(id) }
+        return true
+    }
+
+    private func respondDSH(_ wire: IslandCodexApprovalRequest, result: IslandApprovalJSON) throws {
+        guard island.model.dshResponseCapability?(wire) == true, wire.permits(result),
+              let id = DSHApproval.eventID(of: wire), dshRequests[id]?.rpcID == wire.rpcID else { throw CocoaError(.userCancelled) }
+        switch result["decision"].text {
+        case "accept", "decline":
+            dshRequests[id]?.awaitsDecision = false
+            bridge.resolve(eventID: id, decision: ["outcome": result["decision"].text == "accept" ? "allowed-once" : "rejected"])
+            // Keep the pending presentation until the actual DSH audit event.
+        case "dshDelegate": releaseDSH(id)
+        default: throw CocoaError(.coderInvalidValue)
+        }
+    }
+
+    private func releaseDSH(_ id: String) {
+        guard let request = dshRequests.removeValue(forKey: id) else { return }
+        bridge.resolve(eventID: id, decision: nil)
+        island.model.returnDSHRequest(sessionKey: request.session, rpcID: request.rpcID)
     }
 
     private struct DevinRead: Sendable {
@@ -358,6 +471,52 @@ final class NativeAgentRuntime: ObservableObject {
             }
         }
     }
+    private func refreshDSHTitle(key: String, sourceID: String, namespace: String?) {
+        guard dshTitleTasks[key] == nil, dshTitleTasks.count < 32,
+              Date().timeIntervalSince(dshTitleReadAt[key] ?? .distantPast) >= 5,
+              let home = configuredHomes.first(where: { CodexActivityPrivacy.hashIdentifier($0.resolvingSymlinksInPath().standardizedFileURL.path) == namespace }),
+              let session = sessions[key], let turn = session.turn else { return }
+        let current = revision, epoch = session.epoch
+        dshTitleReadAt[key] = Date()
+        if dshTitleReadAt.count > 512, let oldest = dshTitleReadAt.min(by: { $0.value < $1.value })?.key { dshTitleReadAt.removeValue(forKey: oldest) }
+        dshTitleTasks[key] = Task { [weak self] in
+            let title = await Task.detached(priority: .utility) { Self.dshCachedTitle(home: home, sessionID: sourceID) }.value
+            guard let self, !Task.isCancelled, revision == current else { return }
+            dshTitleTasks.removeValue(forKey: key)
+            guard enabled, sessions[key]?.turn == turn, sessions[key]?.epoch == epoch,
+                  sessions[key]?.title == session.title, let title else { return }
+            sessions[key]?.title = title
+            publishMetadata(key)
+        }
+    }
+
+    /// Read only the public title projection, never derive a title from prompts.
+    nonisolated static func dshCachedTitle(home: URL, sessionID: String) -> String? {
+        guard !sessionID.isEmpty, sessionID.utf8.count <= 256,
+              sessionID.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
+        let directory = home.appendingPathComponent("storages/session_projcache/sessions").standardizedFileURL
+        let file = directory.appendingPathComponent(sessionID + ".json")
+        guard file.resolvingSymlinksInPath().path == file.path,
+              let attributes = try? FileManager.default.attributesOfItem(atPath: file.path),
+              attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? Int, size <= 2_097_152,
+              let data = try? Data(contentsOf: file), data.count <= 2_097_152 else { return nil }
+        struct Projection: Decodable {
+            struct Record: Decodable {
+                struct Rows: Decodable {
+                    struct Title: Decodable { let ver: Int; let val: String }
+                    let title: Title
+                }
+                let rows: Rows
+            }
+            let version: Int; let record: Record
+        }
+        guard let projection = try? JSONDecoder().decode(Projection.self, from: data), projection.version == 7,
+              projection.record.rows.title.ver == 1 else { return nil }
+        let title = projection.record.rows.title.val.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? nil : String(title.components(separatedBy: .newlines).joined(separator: " ").prefix(256))
+    }
+
     private func publishMetadata(_ key: String) {
         guard let session = sessions[key], let turn = session.turn else { return }
         island.model.setTitle(session.title ?? provider.displayName + " " + preferences.copy.text("任务", "task"), for: key, source: .threadTitle)

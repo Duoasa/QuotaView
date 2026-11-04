@@ -749,7 +749,7 @@ final class IslandLiveStore {
         mutating func invalidateResponses(except epoch: UInt64? = nil) {
             // Claude Code is answered over its own Hook connection.
             for i in requests.indices where requests[i].desktopIdentity == nil && (epoch == nil || requests[i].rpcEpoch != epoch)
-                && requests[i].value.protocolRequest?.isClaudeCode != true {
+                && requests[i].value.protocolRequest?.isLocalHook != true {
                 requests[i].value.canRespond = false
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
@@ -1137,6 +1137,8 @@ final class IslandLiveStore {
     var respond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     var claudeResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var claudeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
+    var dshResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
+    var dshRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     private var providers: [String: IslandAgentProvider] = [:]
     private var disabledProviders = Set<IslandAgentProvider>()
     func setProviderEnabled(_ provider: IslandAgentProvider, enabled: Bool) {
@@ -1178,9 +1180,36 @@ final class IslandLiveStore {
         tasks[i].observerReminderDismissed = false
         onChange?()
     }
-    func resolveClaudeRequest(sessionKey: String, rpcID: IslandApprovalJSON) {
+    func resolveLocalHookRequest(sessionKey: String, rpcID: IslandApprovalJSON) {
         guard let i = tasks.firstIndex(where: { $0.key == sessionKey }),
               tasks[i].requestLifecycle.resolveRPC(rpcID, epoch: 0) else { return }
+        onChange?()
+    }
+
+    @discardableResult
+    func observeDSHRequest(_ wire: IslandCodexApprovalRequest, sessionKey: String, turnKey: String, callHash: String) -> Bool {
+        guard wire.isDSH, dshResponseCapability?(wire) == true, dshRespond != nil,
+              let i = tasks.firstIndex(where: { $0.key == sessionKey && $0.turnKey == turnKey && !$0.terminal }) else { return false }
+        tasks[i].requestLifecycle.observe(.init(key: "dsh:" + wire.key, value: .init(
+            question: .init("DSH 请求审批", "DSH requests approval"),
+            impact: .init("处理后同步至 DSH。", "Send this response to DSH."), protocolRequest: wire, canRespond: true),
+            callHash: callHash, rpcEpoch: 0))
+        let admitted = tasks[i].requests.contains { $0.value.protocolRequest?.rpcID == wire.rpcID }
+        if admitted { tasks[i].observerReminderDismissed = false; onChange?() }
+        return admitted
+    }
+
+    /// Relinquish the local capability and erase arguments. The original source
+    /// is still waiting; only its actual decision/tool event settles that wait.
+    func returnDSHRequest(sessionKey: String, rpcID: IslandApprovalJSON) {
+        guard let i = tasks.firstIndex(where: { $0.key == sessionKey }),
+              let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.protocolRequest?.isDSH == true && $0.value.protocolRequest?.rpcID == rpcID }) else { return }
+        tasks[i].requestLifecycle.requests[j].value.protocolRequest = nil
+        tasks[i].requestLifecycle.requests[j].value.canRespond = false
+        tasks[i].requestLifecycle.requests[j].value.phase = .ready
+        tasks[i].requestLifecycle.requests[j].value.impact = .init("请在 DSH 中处理。", "Handle this request in DSH.")
+        tasks[i].requestLifecycle.requests[j].rpcEpoch = nil
+        tasks[i].requestLifecycle.requests[j].isGeneric = true
         onChange?()
     }
 
@@ -1488,7 +1517,7 @@ final class IslandLiveStore {
                 let channel = message ? p["channel"] as? String : nil
                 upsert(.init(text: .init(String(text.prefix(65536))), kind: channel == "final" ? .result : .progress,
                     publicItem: .init(category: message ? .message : .command,
-                    sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536, messagePhase: channel)), at: i)
+                    sourceID: id, turnID: content.turnHash, status: message || presentationRecovery ? "completed" : "inProgress", sourceTruncated: text.count > 65536 || p["sourceTruncated"] as? Bool == true, messagePhase: channel)), at: i)
                 if message { tasks[i].publicProgress = messageSummary(body); if tasks[i].status == .thinking { tasks[i].operation = tasks[i].publicProgress } }
                 else if !message && !presentationRecovery && !tasks[i].terminal {
                     let args = body.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -2002,7 +2031,7 @@ final class IslandLiveStore {
             return
         }
         guard case .reply(let result) = decision, wire.permits(result),
-              let respond = wire.isClaudeCode ? claudeRespond : self.respond else { return }
+              let respond = wire.isDSH ? dshRespond : wire.isClaudeCode ? claudeRespond : self.respond else { return }
         claimConfirmation(taskID: id, requestID: requestID)
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
@@ -2016,7 +2045,7 @@ final class IslandLiveStore {
                     guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
                           tasks[i].requestLifecycle.requests[j].value.protocolRequest?.desktopHandle == handle,
                           desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return nil }
-                } else if !wire.isClaudeCode, epoch != connectionEpoch { return nil }
+                } else if !wire.isLocalHook, epoch != connectionEpoch { return nil }
                 return (i, j)
             }
             guard let (i, j) = currentRequest() else { return }
@@ -2036,7 +2065,7 @@ final class IslandLiveStore {
         }
     }
     private func capability(for wire: IslandCodexApprovalRequest) -> Bool {
-        (wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
+        (wire.isDSH ? dshResponseCapability : wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
     }
     private func advanceProgress(at now: Date) {
         for i in tasks.indices {
@@ -2084,7 +2113,9 @@ final class IslandLiveStore {
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
             let provider = self.provider(for: task.key)
             request?.provider = provider
-            if provider.isObserverOnly {
+            // DSH task observation remains read-only, but an admitted live
+            // approval carries its own revocable response capability.
+            if provider.isObserverOnly && !(provider == .dsh && request?.protocolRequest?.isDSH == true) {
                 request?.canRespond = false
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
             }

@@ -62,6 +62,19 @@ final class ClaudeCodeBridge: @unchecked Sendable {
         queue.sync { stopOnQueue() }
     }
 
+    /// DSH waits for user input only after runtime admission, not a transport ACK.
+    func admit(eventID: String) {
+        queue.async { [weak self] in
+            guard let self, let connection = pending[eventID],
+                  var data = try? JSONSerialization.data(withJSONObject: ["eventID": eventID, "admitted": true]) else { return }
+            data.append(0x0A)
+            if !Self.write(data, to: connection.descriptor) {
+                pending.removeValue(forKey: eventID); connection.source.cancel(); Darwin.close(connection.descriptor)
+                onDisconnect?(eventID)
+            }
+        }
+    }
+
     /// Sends a decision line and closes the connection. `nil` closes without a
     /// decision, which leaves Claude Code's own terminal dialog in charge.
     func resolve(eventID: String, decision: [String: Any]?) {

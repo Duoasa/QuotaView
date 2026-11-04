@@ -134,6 +134,13 @@ struct AgentIntegrationSettings<Details: View>: View {
     private func nativeDetails(_ runtime: NativeAgentRuntime) -> some View {
         NativeSettingsCard {
             if runtime.provider == .dsh {
+                NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
+                    subtitle: copy.text("仅本次允许或拒绝；关闭后在 DSH 中处理。", "Allow once or decline; when off, handle requests in DSH.")) {
+                    Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.dshInteractiveApprovals)
+                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                        .disabled(!runtime.enabled)
+                }
+                NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("配置目录", "Configuration directories"),
                     subtitle: runtime.configuredHomes.isEmpty
                         ? copy.text("自动识别 DSH 及兼容客户端，也可添加自定义目录。", "Detects DSH and compatible clients. Custom directories can also be added.")
@@ -164,8 +171,13 @@ struct AgentIntegrationSettings<Details: View>: View {
                 NativeSettingsNote(text: copy.text("显示 Devin Local 的本机任务；请在受信任的工作区中使用。", "Shows local Devin Local tasks. Use a trusted workspace."))
             }
             NativeSettingsDivider()
-            NativeSettingsNote(text: copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",
-                            "Restart the client after enabling. Confirm permissions in the original client."))
+            if runtime.provider == .dsh {
+                NativeSettingsNote(text: copy.text("更新接入后重启 DSH。待审批动作的参数仅在本机临时显示，不保存到任务历史；不支持的请求在 DSH 中处理。",
+                    "Restart DSH after updating the integration. Pending action parameters are shown locally and never saved to task history; handle unsupported requests in DSH."))
+            } else {
+                NativeSettingsNote(text: copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",
+                                "Restart the client after enabling. Confirm permissions in the original client."))
+            }
             if runtime.status == .failed {
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("连接未完成", "Setup incomplete"),

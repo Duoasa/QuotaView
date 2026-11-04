@@ -360,6 +360,9 @@ final class AppPreferences: ObservableObject {
     @Published var codexIntegrationEnabled: Bool {
         didSet { defaults.set(codexIntegrationEnabled, forKey: "integrations.codex.enabled") }
     }
+    @Published var dshInteractiveApprovals: Bool {
+        didSet { defaults.set(dshInteractiveApprovals, forKey: "integrations.dsh.interactiveApprovals") }
+    }
     @Published var dshEnabled: Bool {
         didSet { defaults.set(dshEnabled, forKey: "integrations.dsh.enabled") }
     }
@@ -645,6 +648,7 @@ final class AppPreferences: ObservableObject {
             (defaults.object(forKey: "island.expandedWidth") as? NSNumber)?.doubleValue ?? IslandExpandedWidth.defaultValue)
         codexIntegrationEnabled = defaults.storedBool(forKey: "integrations.codex.enabled", defaultValue: true)
         dshEnabled = defaults.bool(forKey: "integrations.dsh.enabled")
+        dshInteractiveApprovals = defaults.storedBool(forKey: "integrations.dsh.interactiveApprovals", defaultValue: true)
         kimiCodeEnabled = defaults.bool(forKey: "integrations.kimiCode.enabled")
         cursorEnabled = defaults.bool(forKey: "integrations.cursor.enabled")
         geminiCLIEnabled = defaults.bool(forKey: "integrations.geminiCLI.enabled")

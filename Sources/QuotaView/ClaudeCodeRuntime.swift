@@ -257,7 +257,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         tailTimer?.invalidate(); tailTimer = nil
         usageTimer?.invalidate(); usageTimer = nil
         for approval in approvals.values {
-            island.model.resolveClaudeRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+            island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
         }
         approvals.removeAll()
         sessions.removeAll()
@@ -634,7 +634,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         }
         approvals.removeValue(forKey: eventID)
         bridge.resolve(eventID: eventID, decision: decision)
-        island.model.resolveClaudeRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+        island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
     }
 
     private func returnApprovalsToTerminal() {
@@ -648,7 +648,7 @@ final class ClaudeCodeRuntime: ObservableObject {
 
     private func helperDisconnected(_ eventID: String) {
         guard let approval = approvals.removeValue(forKey: eventID) else { return }
-        island.model.resolveClaudeRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+        island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
     }
 
     private func retireApprovals(sessionID: String, toolUseID: String?) {
@@ -656,7 +656,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         for approval in approvals.values where approval.sessionKey == key && (toolUseID == nil || approval.toolUseID == toolUseID) {
             approvals.removeValue(forKey: approval.eventID)
             if approval.awaitsDecision { bridge.resolve(eventID: approval.eventID, decision: nil) }
-            island.model.resolveClaudeRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
+            island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
         }
     }
 

@@ -316,6 +316,8 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 ## 当前跨版本规格
 
+2026-11-04：[DSH 岛内审批](dsh-interactive-approvals.md)（`QV-DSH-APPROVAL-001`，`Accepted / Complete`）已进入本地开发。本次允许、拒绝及原客户端交接；Build 17 的 33 项定向冒烟遗漏最终展示权限，实测发现完整参数到达后仍被降为只读。Build 18 修复此问题，7 项包含最终展示数据的冒烟通过；Build 19 补读恢复会话的公开标题/模型，3 项相关复验通过；当前 Build 20 / 内部 153 新增 Runtime 精确会话标题补读，2 项联动冒烟通过并重启开发包。真实客户端与视觉由用户验收，未推送或发布。
+
 | Spec ID | 文档 | 状态 | 范围 |
 |---|---|---|---|
 | `QV-BRAND-ANNOUNCEMENT-001` | [更新与公告](brand-announcement.md) | Implemented / User Acceptance Pending | 0.9.1 六项精简内容，含 Devin、重置卡到期与性能优化；六语言；正式自动展示名单为内部 102 / 149 |
@@ -394,3 +396,5 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 - 清理前完整文档及原状态见[快照](../archive/maintenance-20261008/README.md)。本轮仅维护文档和产物，无产品行为变更。
 
 - [灵动岛显示位置](island-display-placement.md)：QV-PRODUCT-ISLAND-DISPLAY-001，已实现，待用户多屏验收。
+
+2026-11-04：[DSH 最终回答](agent-integrations.md#dsh-最终回答2026-11-04build-21)已按用户授权进入 Build 21 / 内部 154。3 项联动冒烟及实际会话离线回放通过，开发包已重启；仅同步新完成轮次正文，排除思考和工具输出，真实操作与视觉待用户验收。

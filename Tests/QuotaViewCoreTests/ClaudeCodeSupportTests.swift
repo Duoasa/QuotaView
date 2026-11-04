@@ -327,7 +327,7 @@ final class ClaudeCodeSupportTests: XCTestCase {
         for _ in 0..<20 where answered.isEmpty { await Task.yield() }
         XCTAssertEqual(answered, [.object(["decision": .string("accept")])])
 
-        store.resolveClaudeRequest(sessionKey: session, rpcID: wire.rpcID)
+        store.resolveLocalHookRequest(sessionKey: session, rpcID: wire.rpcID)
         display = store.display(english: true, remaining: nil, enabled: true, privacy: true)
         XCTAssertFalse(try XCTUnwrap(display.state.tasks.first).hasPendingRequest)
         XCTAssertEqual(display.state.tasks.first?.title, "Claude Code task")
