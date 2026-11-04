@@ -3,8 +3,9 @@ import SwiftUI
 
 // Native presentation: presentation follows the supplied Codex request, never a transport.
 enum IslandApprovalLayout: String, CaseIterable {
-    case command, terminalInput, fileChange, network, permissions, connector, questions, toolApproval, form, authorization, verification
+    case dshTool, command, terminalInput, fileChange, network, permissions, connector, questions, toolApproval, form, authorization, verification
     init(_ request: IslandCodexApprovalRequest) {
+        if request.isDSH { self = .dshTool; return }
         switch request.kind {
         case .command: self = .command
         case .terminalInput: self = .terminalInput
@@ -19,6 +20,7 @@ enum IslandApprovalLayout: String, CaseIterable {
     }
     var icon: String {
         switch self {
+        case .dshTool: "checkmark.shield"
         case .command: "terminal"
         case .terminalInput: "keyboard"
         case .fileChange: "doc.badge.gearshape"
@@ -116,9 +118,9 @@ enum IslandApprovalTypedMetrics {
     static func text(_ value: String, width: CGFloat, code: Bool = false) -> CGFloat {
         IslandTaskTextMetrics.height(value, size: code ? 11 : 12, code: code, width: width)
     }
-    static func code(_ value: String, caption: String, width: CGFloat) -> CGFloat {
+    static func code(_ value: String, caption: String, width: CGFloat, complete: Bool = false) -> CGFloat {
         36 + 24 + IslandApprovalCodePreview.height(value, width: width - 24)
-            + (IslandApprovalCodePreview.isTruncated(value, width: width - 24) ? 32 : 0)
+            + (!complete && IslandApprovalCodePreview.isTruncated(value, width: width - 24) ? 32 : 0)
             + (caption.isEmpty ? 0 : 1 + 20 + IslandTaskTextMetrics.limitedHeight(caption, lines: 2, code: true, width: width - 50))
     }
     static func diffText(_ change: IslandApprovalJSON) -> String {
@@ -149,6 +151,7 @@ enum IslandApprovalTypedMetrics {
         let reason = request.params["reason"].text
         let note = reason.isEmpty ? 0 : 12 + 18 + text(reason, width: width - 22)
         switch IslandApprovalLayout(request) {
+        case .dshTool: return 24 + 12 + code(request.detail, caption: request.params["cwd"].text, width: width, complete: true) + note
         case .command: return 24 + 12 + code(request.detail, caption: request.params["cwd"].text, width: width) + note
         case .terminalInput: return 24 + 12 + 28 + 12 + code(request.detail.debugDescription, caption: "", width: width) + note
         case .fileChange:
@@ -189,6 +192,10 @@ struct IslandApprovalTypedContent<Controls: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             switch layout {
+            case .dshTool:
+                heading(text("确认工具操作", "Review tool action"), trailing: request.params["toolName"].text)
+                codePanel(text("操作参数", "Action parameters"), value: request.detail, caption: request.params["cwd"].text)
+                if !reason.isEmpty { reasonNote }
             case .command:
                 heading(text("允许执行这条命令？", "Allow this command?"))
                 codePanel(text("执行命令", "Command to run"), value: request.detail, caption: request.params["cwd"].text)
@@ -291,7 +298,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             }.font(.system(size: 10, weight: .medium)).padding(.horizontal, 12).frame(height: 36)
                 .background(IslandApprovalAppearance.raised)
             Group {
-                if showsCompleteCode {
+                if showsCompleteCode || request.isDSH {
                     ScrollView(.vertical) {
                         Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white).lineSpacing(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -305,7 +312,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                         .textSelection(.enabled)
                 }
             }.frame(height: IslandApprovalCodePreview.height(value, width: width - 24), alignment: .topLeading).padding(12)
-            if IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
+            if !request.isDSH && IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
                 HStack {
                     Button((showsCompleteCode ? text("收起完整内容", "Show preview") : text("查看完整内容", "Show full content"))) { showsCompleteCode.toggle() }
                     Spacer()

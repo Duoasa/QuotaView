@@ -12,6 +12,8 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 
 ## 参考与适配
 
+2026-11-04：用户接受方案并要求实施，[DSH 岛内审批](dsh-interactive-approvals.md)已进入本地开发 0.9.1 Build 17。支持本次允许、拒绝与交回 DSH；公开 Build 16 保持仅提醒。实际客户端交互待用户验收。
+
 - [VibeIsland 项目](https://github.com/vibeislandapp/vibe-island)以公开说明、社区内容为主；[更新记录](https://vibeisland.app/changelog/)记录 DSH 原生插件及 Kimi Hooks 接入。只读核对本机已安装适配器的事件接口与配置形式，未复制应用代码、图标或品牌资产。
 - DSH：按本机 `@deepseek-ai/dsh 0.1.7-rc.2` 的公开 TypeScript 接口实现原创 `session/event` 插件，注册至现有 profile 的 `cordis.patch.yml`。不使用 Claude 兼容 Hooks 推断 DSH 原生事件。
 - Kimi：按 [Kimi Code 官方 Hooks](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html) 实现 `~/.kimi-code/config.toml` 的 `[[hooks]]`；本机客户端为 2.1.1。兼容 `tool_call_id` 与 `tool_use_id` 字段，不将官方客户端内的审批接口替换为自动决定。
@@ -28,8 +30,8 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 
 - DSH / Kimi 首次默认关闭。启用写入本渠道配置后显示“等待会话”，只有接收到有效事件才显示“已连接”。配置失败显示原因与重试，即使开关已关闭也不隐藏清理失败。
 - 配置状态与实时在线心跳不同：“已连接”表示本次运行已收到有效事件，不能据此推断客户端仍在线。
-- DSH / Kimi 权限仅提醒，用户在原客户端确认；不展示可响应按钮。终止、失败和完成按来源实际发出的生命周期事件映射。Kimi `Stop` 是可被其他 Hook 阻止的预结束通知，不能据此宣称所有 Hook 决策之后的强一致完成。
-- 本次不增加 DSH / Kimi 的套餐额度窗口、30 日历史统计、成本估算和完整回答同步，没有来源的数值不伪造为零。完整回答在原客户端查看。
+- DSH 在 desktop/web/tui profile、根会话和完整参数匹配时支持 `bash` 与 `str_replace_editor` 修改类工具的岛内审批；仅本次允许、拒绝或交回原客户端。审批开关默认打开，DSH 总开关仍默认关闭。未知类型、详情缺失、断线或停用回原路径，完整契约见 [DSH 审批](dsh-interactive-approvals.md)。Kimi 权限仍仅提醒，用户在原客户端确认，不展示可响应按钮。终止、失败和完成按来源实际发出的生命周期事件映射。Kimi `Stop` 是可被其他 Hook 阻止的预结束通知，不能据此宣称所有 Hook 决策之后的强一致完成。
+- 不增加 DSH / Kimi 的套餐额度窗口、30 日历史统计和成本估算，没有来源的数值不伪造为零。DSH 从 Build 21 起按下方规则同步当前轮次最终正文；Kimi 的完整回答仍在原客户端查看。
 - DSH/Kimi 新接入未经过真实会话端到端验收；事件契约之外的旧版客户端、跨设备配置、断线期间的历史重放和失联回收不作为已验证能力。
 
 ## 配置、隐私与资源不变量
@@ -37,11 +39,25 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 - 各 Provider 独立私有 socket、认证令牌、支持目录和开关；会话标识以 Provider 为命名空间后哈希。DSH 额外纳入规范化数据目录的 SHA-256，父子身份、轮次和工具调用沿用同一命名空间；复制的 session ID 不会跨客户端覆盖。配置注入目录哈希，事件不传递原始目录，不增加定制客户端 Provider、名称或图标。
 - 配置修改移入 utility 任务，按修订串行执行；旧任务不能发布新状态。停用停止监听并撤下其任务，不继续读取事件。
 - 只增删本渠道标记块；保留用户及 VibeIsland 等其他工具的配置。修改前保存内容寻址备份，写前核对文件版本，原子替换单文件；保留原权限。多 profile 不构成文件系统事务，任一写入失败显示错误，重试会收敛全部 profile。
-- 转发公开会话标题、模型、工具名、有限标识、生命周期及 DSH 实际 token 数；不转发提示词、工具参数/输出、完整回答、账户凭据和完整工作目录。数据只走本机私有 socket。
-- 插件异步写入、有限队列 256、连接超时 750 ms，错误不阻塞 DSH；Kimi Helper 不输出审批决定，连接/写入/回执各至多 250 ms。无新增周期性轮询或 GPU 预览。队列溢出丢弃最旧事件，不承诺离线历史完整性。
+- 转发公开会话标题、模型、工具名、有限标识、生命周期及 DSH 实际 token 数；观察通道不转发提示词、思考过程、工具参数/输出、账户凭据和完整工作目录。用户明确授权 DSH 最终正文同步，范围见下节；另有 DSH 主动审批有限例外：仅传当前匹配动作的完整参数、cwd 与原因，经本机认证 socket 进入待审批内存，结束或交接后清除，不写历史与日志；参数上限与回退见专属规格。
+- 观察插件异步写入、有限队列 256、连接超时 750 ms，错误不阻塞 DSH；DSH 交互请求使用独立连接与有界等待，不占用观察队列。Kimi Helper 不输出审批决定，连接/写入/回执各至多 250 ms。无新增周期性轮询或 GPU 预览。队列溢出丢弃最旧事件，不承诺离线历史完整性。
 - Runtime 最多记录 512 会话，子任务展示复用现有 128 上限。DSH 按来源 epoch/seq 去重。
 
+### DSH 最终回答（2026-11-04，Build 21）
+
+用户明确选择「是，也接入最终回答」，已在 0.9.1 Build 21 / 内部 154 实施。根会话收到成功的 turn/end 时，插件最多回查当前轮次 8192 个事件，取最后一条 assistant/message 的 text 内容；遇到工具调用或 interrupted 标记不使用较早的说明文字替代。reasoning、工具输出、用户消息、失败/中断轮次不作为完成答案。正文与 Stop 使用同一事件，沿用 namespace、epoch/sequence、session 和 turn 验证及去重，不额外生成完成状态。
+
+正文最多 64 KiB UTF-8，字符边界截断并明确标记；含正文的消息包上限 512 KiB，其他观察包仍为 16 KiB。Runtime 仅在匹配轮次的成功完成事件接纳正文，复用既有 Markdown 完成结果与超长提示；下一轮清除旧答案。正文仅保留在本地任务展示内存，不新增归档、磁盘正文缓存或诊断记录。缺少正文保持占位，不从提示词或摘要拼造。新插件加载后新完成的轮次生效，不补回此前完成的历史回答；更新插件需完整重启 DSH。
+
+3 项定向冒烟通过，覆盖生产插件/真实 socket/Runtime/最终展示的正文、长文本截断、思考排除、失败轮次不返回答案及跨轮清理，并复验原审批与观察隐私路径；证据 `.build/dsh-approval-research-20261104/final-answer-smoke.log`。额外对用户反馈会话的最新成功轮次只读离线回放，232 字节正文逐字匹配原 text 内容、标题存在、思考未转发；日志只保存布尔值和字节数，见 `final-answer-replay.log`。这不等同真实客户端与视觉验收。Debug arm64 开发包运行证据 `.build/dsh-091b21-runtime/`，未推送或发布。
+
 ### DSH 定制客户端与多目录
+
+2026-11-04 Build 20：用户继续反馈 Build 19 标题缺失。只读核对实际会话索引已有正确标题，DSH Host 仍是 12:15 启动，早于 12:23 的插件补读更新，已有模块缓存并不能因文件替换自动获得新逻辑。新增 QuotaView Runtime 补读：只对已由事件接纳的会话，从已配置数据目录的匹配 namespace 定位 `storages/session_projcache/sessions/<sessionID>.json`，只解码 version 7/title ver 1 的公开标题。不根据提示词猜标题，不扫描全部会话，不读取完整回答；缺失或不兼容时保留真实未知状态。
+
+读取后台执行，文件上限 2 MiB，拒绝目录穿越和符号链接，每会话至少间隔 5 秒、最多 32 个同时读取，不增加轮询。结果需匹配当前运行代次、session、turn、epoch，且期间没有更新的标题才能应用。启用、缺少标题/新轮次或完成事件触发；停用取消并拒绝迟到结果。隔离测试沿用安装器的真实目录命名空间，验证不含标题的插件事件能使最终任务标题补齐，并继续完成审批；2 项相关冒烟通过，证据 `.build/dsh-approval-research-20261104/title-cache-final.log`。真实客户端显示待用户验收；最终回答仍未接入，用户选择待回复。
+
+2026-11-04 Build 19：修复已存在的 DSH 会话在重连后显示「DSH 任务」或缺少模型的问题。此前只监听新产生的 session/title 与 request/header；用户实测会话标题在插件接入前已写入序号 19。现在首次收到每个 session 对象的事件时，从公开 requestHeader 折叠及最多 8192 条既有事件补取最近标题/模型，只将这两项元数据发往岛内。每个适配器/会话对象仅补读一次，后续沿用实时事件；不转发正文、工具参数或输出，不补造历史 Token。超出回查范围且没有标题时保持占位。隔离恢复会话与隐私过滤冒烟见 `.build/dsh-approval-research-20261104/metadata-smoke.log`。此包包含 Build 18 的审批最终展示权限修复，真实体验待用户验收。
 
 - 只读核对本机运行 Scoder 的 `resource-locator.ts` 和独立 DeepViewer 对应源码：二者均将 `DSH_HOME` 设置为各自 `userData/harness-home`，沿用 DSH profile 与原生事件接口。兼容入口由目录结构判断，不硬编码品牌白名单，不合并用户数据。
 - 默认目录 `~/.dsh` 与非空 `$DSH_HOME` 并行支持。启动、启用、重新检查或修改自定义目录时，扫描当前用户 `Application Support/<应用目录>/{harness-home,harness,.dsh}/profiles/<profile>`；不递归搜用户目录或会话。只接入包含 `cordis.yml` 和有效 `package.json.dsh.profile`、属于当前用户的 profile，跳过备份/迁移/归档/快照路径并对符号链接规范化、去重。

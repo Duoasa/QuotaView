@@ -30,7 +30,7 @@ final class NativeAgentDSHPluginTests: XCTestCase {
           version:1,socketPath:path,authenticationToken:'fixture',interactiveApprovals:false
         }),{mode:0o600});
         try {
-          const context=()=>({on:(_,fn)=>callbacks.push(fn),effect:fn=>cleanup.push(fn())});
+          const context=()=>({on:(name,fn)=>{if(name==='session/event')callbacks.push(fn)},effect:fn=>cleanup.push(fn())});
           apply(context(),{sourceNamespace:'a'.repeat(64)});
           apply(context(),{sourceNamespace:'b'.repeat(64)});
           const session={header:{id:'same-session',origin:'subagent',parentSession:'parent'}};
@@ -62,10 +62,21 @@ final class NativeAgentDSHPluginTests: XCTestCase {
           }
           assert.ok(messages.every(m=>m.awaitDecision===false));
           assert.ok(!JSON.stringify(messages).includes('PRIVATE_'));
+          let reads=0;
+          const oldEvents=[{type:'request/header',data:{header:{config:{model:'restored-model'},apiKey:'PRIVATE_KEY'}}},
+            {type:'session/title',data:{title:'Restored public title'}},
+            {type:'tool/call',data:{arguments:'PRIVATE_ARGUMENTS'}}];
+          const restored={header:{id:'restored'},seq:oldEvents.length,eventAt:i=>{reads++;return oldEvents[i]}};
+          for(const callback of callbacks) callback(restored,{type:'turn/start',data:{turn:9},seq:3});
+          while(messages.length<26 && Date.now()-start<4000) await new Promise(r=>setTimeout(r,10));
+          assert.equal(messages.length,26);
+          assert.ok(messages.slice(-2).every(m=>m.payload.session_title==='Restored public title' && m.payload.model==='restored-model'));
+          assert.equal(reads,6,'Metadata should be read once per adapter/session');
+          assert.ok(!JSON.stringify(messages).includes('PRIVATE_'));
           cleanup.forEach(fn=>fn());
           callbacks[0](session,{type:'turn/start',data:{turn:2},seq:999});
           await new Promise(r=>setTimeout(r,30));
-          assert.equal(messages.length,24,'Disposed adapters must stop forwarding');
+          assert.equal(messages.length,26,'Disposed adapters must stop forwarding');
           console.log(JSON.stringify({events:messages.length,namespaces:2,elapsedMs:Date.now()-start}));
         } finally { cleanup.forEach(fn=>fn()); server.close(); }
         """#
@@ -83,6 +94,6 @@ final class NativeAgentDSHPluginTests: XCTestCase {
         }
         let result = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         XCTAssertEqual(status, 0, result)
-        XCTAssertTrue(result.contains("\"events\":24"), result)
+        XCTAssertTrue(result.contains("\"events\":26"), result)
     }
 }

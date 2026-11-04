@@ -3648,5 +3648,45 @@
     "ja": "バックグラウンドでの重複読み取りを減らし、Claudeのタスク解析と視覚効果の読み込みを最適化しました。",
     "ko": "백그라운드의 중복 읽기를 줄이고 Claude 작업 분석과 시각 효과 로딩을 최적화했습니다.",
     "es": "Se han reducido las lecturas repetidas en segundo plano y optimizado el análisis de tareas de Claude y la carga de efectos visuales."
+  },
+  "Continue in DSH": {
+    "ja": "DSH で処理",
+    "ko": "DSH에서 처리",
+    "es": "Continuar en DSH"
+  },
+  "DSH requests approval": {
+    "ja": "DSH が承認を求めています",
+    "ko": "DSH에서 승인을 요청합니다",
+    "es": "DSH solicita aprobación"
+  },
+  "Send this response to DSH.": {
+    "ja": "この回答を DSH に送信します。",
+    "ko": "이 응답을 DSH에 보냅니다.",
+    "es": "Enviar esta respuesta a DSH."
+  },
+  "Handle this request in DSH.": {
+    "ja": "このリクエストは DSH で処理してください。",
+    "ko": "이 요청은 DSH에서 처리하세요.",
+    "es": "Gestiona esta solicitud en DSH."
+  },
+  "Action parameters": {
+    "ja": "操作パラメータ",
+    "ko": "작업 매개변수",
+    "es": "Parámetros de la acción"
+  },
+  "Switch to the corresponding DSH client": {
+    "ja": "対応する DSH クライアントに切り替えてください",
+    "ko": "해당 DSH 클라이언트로 전환하세요",
+    "es": "Cambia al cliente DSH correspondiente"
+  },
+  "Allow once or decline; when off, handle requests in DSH.": {
+    "ja": "今回のみ許可または拒否します。オフの場合は DSH で処理します。",
+    "ko": "이번만 허용하거나 거부합니다. 끄면 DSH에서 처리합니다.",
+    "es": "Permite una vez o rechaza; si está desactivado, gestiona las solicitudes en DSH."
+  },
+  "Restart DSH after updating the integration. Pending action parameters are shown locally and never saved to task history; handle unsupported requests in DSH.": {
+    "ja": "連携の更新後に DSH を再起動してください。承認待ちの操作パラメータはローカルに一時表示され、タスク履歴には保存されません。未対応のリクエストは DSH で処理してください。",
+    "ko": "연동을 업데이트한 후 DSH를 다시 시작하세요. 승인 대기 중인 작업 매개변수는 로컬에 임시 표시되며 작업 기록에 저장되지 않습니다. 지원하지 않는 요청은 DSH에서 처리하세요.",
+    "es": "Reinicia DSH tras actualizar la integración. Los parámetros pendientes se muestran localmente y nunca se guardan en el historial; gestiona las solicitudes no compatibles en DSH."
   }
 }

@@ -328,6 +328,7 @@ struct IslandApprovalView: View {
         }
         guard var action = wire.flatMap({ IslandApprovalDecisionChoices.selected($0, id: draft.decisionID)?.action })
             ?? actions.first(where: { $0.result["decision"] == .string("accept") }) else { return nil }
+        if wire?.isDSH == true { action.label = .init("仅本次允许", "Allow once"); return action }
         if let wire, action.result["decision"] == .string("accept") {
             switch wire.kind {
             case .command: action.label = .init("允许执行", "Allow command")
@@ -393,7 +394,7 @@ struct IslandApprovalView: View {
     private var actionBar: some View {
         IslandApprovalActionLayout {
             if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
-                specialButton(isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isDSH ? text("在 DSH 中处理", "Continue in DSH") : isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
                 if showsLocalDismiss { localDismissButton }
             } else if wire?.kind == .questions {
                 if wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
@@ -407,6 +408,7 @@ struct IslandApprovalView: View {
                 }
                 if let action = primaryAction { actionButton(action, primary: true) }
             } else {
+            if let action = actions.first(where: { $0.result["decision"].text == "dshDelegate" }) { actionButton(action) }
             if let action = cancelAction { actionButton(action) }
             if let action = firstNegative { actionButton(action, destructive: true) }
             if wire?.kind == .mcpURL && !draft.openedURL {
@@ -779,11 +781,13 @@ struct IslandApprovalView: View {
         if wire == nil { onDecision(request.id, action.affirmative ? .allowOnce : .reject) }
         else { onDecision(request.id, .reply(action.result)) }
     }
+    private var isDSH: Bool { request.provider == .dsh }
     private var isClaude: Bool { request.provider == .claudeCode }
     private var agentName: String { request.provider.displayName }
-    private var handlerName: String { isClaude ? "运行 Claude Code 的终端" : " Codex " }
-    private var handlerNameEnglish: String { isClaude ? "the Claude Code terminal" : "Codex" }
+    private var handlerName: String { isDSH ? " DSH " : isClaude ? "运行 Claude Code 的终端" : " Codex " }
+    private var handlerNameEnglish: String { isDSH ? "DSH" : isClaude ? "the Claude Code terminal" : "Codex" }
     private func openCodex() {
+        if isDSH { codexJumpMessage = text("请切换到对应的 DSH 客户端处理", "Switch to the corresponding DSH client"); return }
         if isClaude {
             // Claude Code may run in any terminal or IDE; QuotaView cannot identify its window.
             codexJumpMessage = text("请切换到运行 Claude Code 的终端处理", "Switch to the terminal running Claude Code"); return

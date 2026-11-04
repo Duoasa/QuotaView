@@ -11,9 +11,11 @@ struct NativeAgentInstaller: Sendable {
     let home: URL
     let support: URL
     let bundledHelper: URL
+    private let discoversSystemHomes: Bool
 
     init(provider: IslandAgentProvider, socketURL: URL, authenticationToken: String, homeOverride: URL? = nil, supportOverride: URL? = nil, helperOverride: URL? = nil) {
         self.provider = provider; self.socketURL = socketURL; self.authenticationToken = authenticationToken
+        discoversSystemHomes = homeOverride == nil
         let environment = ProcessInfo.processInfo.environment
         let userHome = FileManager.default.homeDirectoryForCurrentUser
         let location: (key: String, folder: String)
@@ -95,7 +97,7 @@ struct NativeAgentInstaller: Sendable {
             guard fm.isExecutableFile(atPath: bundledHelper.path) else { throw Failure.missingHelper }
             try privateWrite(Data(contentsOf: bundledHelper), to: helper, mode: 0o700)
             let data = try JSONSerialization.data(withJSONObject: ["version": 1, "socketPath": socketURL.path,
-                "authenticationToken": authenticationToken, "interactiveApprovals": false, "agentProvider": provider.rawValue], options: [.sortedKeys])
+                "authenticationToken": authenticationToken, "interactiveApprovals": provider == .dsh, "agentProvider": provider.rawValue], options: [.sortedKeys])
             try privateWrite(data, to: route)
             if provider == .dsh {
                 let source = NativeAgentDSHPlugin.source.replacingOccurrences(of: "__ROUTE_PATH__", with: jsonString(route.path))
@@ -123,7 +125,7 @@ struct NativeAgentInstaller: Sendable {
                         throw Failure.invalidConfiguration
                     }
                 }
-                result += "\n" + begin + "\n" + block(home: destination.home) + "\n" + end + "\n"
+                result += "\n" + begin + "\n" + block(home: destination.home, profile: path.deletingLastPathComponent().lastPathComponent) + "\n" + end + "\n"
             }
             return (path, original, result)
         }
@@ -160,11 +162,12 @@ struct NativeAgentInstaller: Sendable {
         }
         let fm = FileManager.default
         let standardHome = fm.homeDirectoryForCurrentUser.appendingPathComponent(".dsh")
-        var homes = [home, standardHome] + additionalHomes
+        var homes = [home] + additionalHomes
+        if discoversSystemHomes { homes.append(standardHome) }
         // Desktop wrappers commonly put DSH_HOME directly under their app data
         // directory. Inspect only this bounded shape, never recursive backups,
         // sessions, credentials, or app-specific brand names.
-        if let applicationSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+        if discoversSystemHomes, let applicationSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
            let apps = try? fm.contentsOfDirectory(at: applicationSupport, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) {
             for app in apps where !Self.isArchive(app) {
                 for name in ["harness-home", "harness", ".dsh"] {
@@ -213,11 +216,12 @@ struct NativeAgentInstaller: Sendable {
         }.sorted { $0.path < $1.path }
     }
 
-    private func block(home: URL) -> String {
+    private func block(home: URL, profile: String) -> String {
         if provider == .dsh {
             let namespace = CodexActivityPrivacy.hashIdentifier(home.resolvingSymlinksInPath().standardizedFileURL.path)
             return "- insert:\n    - id: " + marker + "\n      name: " + jsonString(plugin.path)
                 + "\n      config:\n        sourceNamespace: " + jsonString(namespace)
+                + "\n        interactiveProfile: " + (["desktop", "web", "tui"].contains(profile) ? "true" : "false")
         }
         let command = quote(helper.path) + " --agent-hook --configuration " + quote(route.path)
         let events = ["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted", "PreToolUse", "PostToolUse", "PostToolUseFailure",

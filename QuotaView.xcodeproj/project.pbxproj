@@ -115,6 +115,7 @@
 		916489B01D97822C2A04FCF0 /* ClaudeCodePricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */; };
 		A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */; };
 		8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */; };
+		D58A00100000000000000001 /* DSHApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58A00100000000000000002 /* DSHApproval.swift */; };
 		10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */; };
 		097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */; };
 		B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */; };
@@ -301,6 +302,7 @@
 		40AB7B873382334984E07BD2 /* ClaudeCodePricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodePricing.swift; sourceTree = "<group>"; };
 		EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentInstaller.swift; sourceTree = "<group>"; };
 		545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentDSHPlugin.swift; sourceTree = "<group>"; };
+		D58A00100000000000000002 /* DSHApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSHApproval.swift; sourceTree = "<group>"; };
 		CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentRuntime.swift; sourceTree = "<group>"; };
 		53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIntegrationSettings.swift; sourceTree = "<group>"; };
 		439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentExternalInstaller.swift; sourceTree = "<group>"; };
@@ -395,6 +397,7 @@
 				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
 				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
 				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
+				D58A00100000000000000002 /* DSHApproval.swift */,
 				25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */,
 				EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */,
 				439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */,
@@ -804,6 +807,7 @@
 				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
 				D391B1200000000000000001 /* DevinSessionUsage.swift in Sources */,
 				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
+				D58A00100000000000000001 /* DSHApproval.swift in Sources */,
 				1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */,
 				A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */,
 				B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */,
