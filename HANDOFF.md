@@ -1,8 +1,16 @@
 # QuotaView 开发交接
 
-## DSH 源码合入授权（2026-11-04）
+## 鼠标屏幕跟随 0.9.1 Build 22（2026-11-04）
 
-用户已明确要求将当前 DSH 审批、展示权限、标题/模型补读和最终正文同步提交、推送并合并到 main。交付范围为 Build 21 / 内部 154，沿用当前开发身份；不包含正式发布或 appcast。提交前核对 Duoasa GitHub 身份、生产输入与开发包一致性，保留无关未跟踪文件。PR 及实际 main CI 证据归档于 `.build/dsh-source-integration-091b21/`，完成后补记准确提交与结果。
+用户确认方案并授权实现，新增通用设置「跟随鼠标所在屏幕」，与活动窗口跟随互斥，关闭两项恢复固定屏幕选择。跨屏连续停留 150 ms 后切换；鼠标按住/拖动、岛内指针、键盘输入及审批提交时暂缓，结束后重新计时。50 ms 轻量坐标采样仅在启用鼠标模式、多屏、未锁屏时运行；只变更屏幕几何，不重建任务内容、不抢焦点或切换会话。新开关默认关闭，既有设置保留；详见[屏幕跟随规格](docs/specs/island-screen-follow.md)。
+
+6 项隔离冒烟、719 源码模板/739 条目录文案覆盖与 Debug arm64 构建通过。初次编译的偏好初始化捕获 self 错误已修复并复验，原日志保留。2026-11-04T17:13:38.671715+08:00 已更新并重启开发包 PID 45971，Build 22 / 内部 155；258 生产输入、19 资源、App/Widget 身份、完整包及加载路径一致。证据 `.build/pointer-screen-091b22-runtime/`、`.build/pointer-screen-091b22-tests-final.log`。源码与运行包一致；用户已反馈“试用过了没问题”，本次体验验收通过，并明确授权推送合并 main；集成结果完成后补记，不发布 Release/appcast。保留前批合并记录及无关用户文件。
+
+## DSH 源码已合入 main（2026-11-04）
+
+按用户授权，当前 DSH 审批、展示权限、标题/模型补读及最终正文同步已通过 [PR #135](https://github.com/Duoasa/QuotaView/pull/135) 合入 main `dc20f05db551896989e50cc08916f527238c1ca3`，源码提交 `8f18cd80884104993efa4b95bcefafe7e35fd9e5`，账号 Duoasa。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/41790731218) 与精确 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/41791510787) 均通过：各 788 项测试、7 跳过、0 失败，另有 44 项契约检查通过。提交前 29 项冒烟与本地化检查通过；本次未涉及 Windows，路径过滤未触发 Windows CI。
+
+远端 main 已回读核验，工作区快进至合并提交；258 个生产输入与源码提交、合并提交及当前 Build 21 / 内部 154 运行包一致。证据 `.build/dsh-source-integration-091b21/`。本次仅源码交付，未发布 Release 或 appcast；用户文件与无关未跟踪内容保留。此合并结果补记留在本地，真实客户端与视觉验收边界不变。下方开发阶段的“仅本地/未推送”表示当时状态。
 
 ## DSH 最终回答 0.9.1 Build 21（2026-11-04）
 
@@ -1058,11 +1066,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD `0707199`（README PR #134 合并）；本地 DSH 审批修改尚未提交 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 21 / 内部 154 |
+| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD `dc20f05`（DSH PR #135 合并），PR 与精确 main CI 通过；本批鼠标跟随已获推送/合并授权，正在集成 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.1 / Build 22 / 内部 155 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-04T12:55:05.502339+08:00；PID 90763，258 输入、19 项资源、完整包与加载路径一致；证据 `.build/dsh-091b21-runtime/` |
-| 源码与运行包 | 0.9.1 Build 21 已运行，包含 DSH 最终正文、审批与标题修复；真实客户端与视觉由用户验收。 |
+| 最近运行核验 | 2026-11-04T17:13:38.671715+08:00；PID 45971，258 输入、19 项资源、完整包与加载路径一致；证据 `.build/pointer-screen-091b22-runtime/` |
+| 源码与运行包 | 0.9.1 Build 22 已运行，新增鼠标屏幕跟随并继承 DSH 修复；本次鼠标跨屏跟随体验用户验收通过。 |
 | 公开稳定版 | 0.9.1 Build 16；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

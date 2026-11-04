@@ -778,7 +778,7 @@ struct SettingsView: View {
             settingsSection(copy.text("灵动岛显示位置", "Island display")) {
                 NativeSettingsCard { islandScreenSettings }
                 if availableScreens.count < 2 {
-                    NativeSettingsNote(text: copy.text("连接多台显示器后，焦点跟随会自动生效。", "Focus following takes effect when multiple displays are connected."))
+                    NativeSettingsNote(text: copy.text("连接多台显示器后，屏幕跟随会自动生效。", "Display following takes effect when multiple displays are connected."))
                 }
             }
             settingsSection(copy.text("交互与隐私", "Behavior and privacy")) {
@@ -830,7 +830,14 @@ struct SettingsView: View {
                     .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
                     .accessibilityLabel(copy.text("焦点屏幕跟随", "Follow focused display"))
             }
-            if !preferences.islandFollowsFocus {
+            NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+            NativeSettingsRow(title: copy.text("跟随鼠标所在屏幕", "Follow pointer display"),
+                symbol: "cursorarrow.motionlines") {
+                Toggle("", isOn: $preferences.islandFollowsPointer).labelsHidden()
+                    .toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.mini)
+                    .accessibilityLabel(copy.text("跟随鼠标所在屏幕", "Follow pointer display"))
+            }
+            if !preferences.islandFollowsFocus && !preferences.islandFollowsPointer {
                 NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
                 NativeSettingsRow(title: copy.text("固定屏幕", "Fixed display"),
                     subtitle: copy.text("断开时暂回主屏，重新连接后恢复。", "Falls back to the main display until reconnected."),

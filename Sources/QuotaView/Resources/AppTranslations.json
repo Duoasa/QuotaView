@@ -1,4 +1,9 @@
 {
+  "Follow pointer display": {
+    "ja": "ポインタのあるディスプレイに追従",
+    "ko": "포인터가 있는 디스플레이 따라가기",
+    "es": "Seguir la pantalla del puntero"
+  },
   "Show connection settings": {
     "ja": "接続設定を表示",
     "ko": "연결 설정 표시",
@@ -2714,10 +2719,10 @@
     "ko": "아일랜드 표시 화면",
     "es": "Pantalla de la isla"
   },
-  "Focus following takes effect when multiple displays are connected.": {
-    "ja": "フォーカス追従は複数のディスプレイを接続しているときに有効です。",
-    "ko": "활성 화면 따라가기는 여러 디스플레이가 연결되었을 때 적용됩니다.",
-    "es": "El seguimiento del foco se aplica cuando hay varias pantallas conectadas."
+  "Display following takes effect when multiple displays are connected.": {
+    "ja": "ディスプレイ追従は複数のディスプレイを接続しているときに有効です。",
+    "ko": "디스플레이 따라가기는 여러 디스플레이가 연결되었을 때 적용됩니다.",
+    "es": "El seguimiento de pantalla se aplica cuando hay varias pantallas conectadas."
   },
   "Behavior and privacy": {
     "ja": "動作とプライバシー",

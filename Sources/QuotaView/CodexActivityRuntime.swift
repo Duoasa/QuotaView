@@ -1053,7 +1053,7 @@ final class CodexActivityRuntime: ObservableObject {
             islandGlassDegree: preferences.islandGlassDegree,
             islandFloatingUsageEnabled: preferences.islandFloatingUsageEnabled,
             backgroundMemorySnapshots: store.backgroundMemorySnapshots,
-            followsFocus: preferences.islandFollowsFocus, fixedScreenID: preferences.islandFixedScreenID, language: preferences.resolvedLanguage)
+            followsFocus: preferences.islandFollowsFocus, followsPointer: preferences.islandFollowsPointer, fixedScreenID: preferences.islandFixedScreenID, language: preferences.resolvedLanguage)
     }
 
     private static func defaultSocketURL() -> URL {

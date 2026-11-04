@@ -2239,6 +2239,19 @@ final class IslandBoardController {
     var onDismissConfirmation: ((Int, UUID) -> Void)?
     var isVisible: Bool { panel.isVisible }
     var frame: CGRect { panel.frame }
+    var blocksPointerScreenSwitch: Bool {
+        guard panel.isVisible else { return false }
+        if containsPointer() || (panel.isKeyWindow && panel.firstResponder is NSTextView) { return true }
+        if case .submitting = state.approval?.request.phase { return true }
+        return false
+    }
+    func move(to destination: NSScreen) {
+        guard screen != destination else { return }
+        hoverOpen?.cancel(); hoverClose?.cancel(); hoverOpen = nil; hoverClose = nil
+        pointerInside = false; suppressHoverUntilExit = false
+        screen = destination
+        syncGeometry(); refresh()
+    }
     init(presentsWindows: Bool = true) {
         self.presentsWindows = presentsWindows
         panel = IslandNotchPanel(contentRect: .init(x: 0, y: 0, width: 468, height: 352),
