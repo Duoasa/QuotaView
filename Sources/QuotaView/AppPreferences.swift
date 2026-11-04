@@ -437,7 +437,16 @@ final class AppPreferences: ObservableObject {
     }
 
     @Published var islandFollowsFocus: Bool {
-        didSet { defaults.set(islandFollowsFocus, forKey: "preferences.island.followsFocus") }
+        didSet {
+            defaults.set(islandFollowsFocus, forKey: "preferences.island.followsFocus")
+            if islandFollowsFocus && islandFollowsPointer { islandFollowsPointer = false }
+        }
+    }
+    @Published var islandFollowsPointer: Bool {
+        didSet {
+            defaults.set(islandFollowsPointer, forKey: "preferences.island.followsPointer")
+            if islandFollowsPointer && islandFollowsFocus { islandFollowsFocus = false }
+        }
     }
     @Published var islandFixedScreenID: String {
         didSet { defaults.set(islandFixedScreenID, forKey: "preferences.island.fixedScreenID") }
@@ -680,7 +689,9 @@ final class AppPreferences: ObservableObject {
                 forKey: Key.codexActivityProgressEffect
             ) ?? ""
         ) ?? .dropField
-        islandFollowsFocus = defaults.bool(forKey: "preferences.island.followsFocus")
+        let followsPointer = defaults.bool(forKey: "preferences.island.followsPointer")
+        islandFollowsPointer = followsPointer
+        islandFollowsFocus = defaults.bool(forKey: "preferences.island.followsFocus") && !followsPointer
         islandFixedScreenID = defaults.string(forKey: "preferences.island.fixedScreenID") ?? ""
         codexActivityScreenPlacement = CodexActivityScreenPlacement(
             rawValue: defaults.string(

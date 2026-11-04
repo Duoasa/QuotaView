@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 鼠标跟随屏幕：0.9.1 Build 22
+
+[屏幕跟随规格](island-screen-follow.md) · `Accepted / Complete / User Acceptance Confirmed`：增加互斥的鼠标所在屏幕跟随，150 ms 停留、交互暂缓和按需轻量采样；6 项定向冒烟及本地化检查通过。开发运行核验见 [Handoff](../../HANDOFF.md)，用户已反馈试用无问题并授权源码推送/合并；集成结果以 Handoff 为准，不发布。
+
 Windows 当前发布：**0.8.3-win.13** · Released / User Acceptance Pending。包括终态通知修复、设置精简和默认开启自动检查更新；已接入独立签名 appcast，现有关闭偏好保留。完整证据见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。下方 win.11/12 为开发阶段记录。
 
 Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题、控件和状态表达用途，详情折叠、说明按需出现。构建通过，视觉待用户验收；见 [Windows Handoff](../../Windows/HANDOFF.md)，未推送或发布。
@@ -397,4 +401,4 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 
 - [灵动岛显示位置](island-display-placement.md)：QV-PRODUCT-ISLAND-DISPLAY-001，已实现，待用户多屏验收。
 
-2026-11-04：[DSH 最终回答](agent-integrations.md#dsh-最终回答2026-11-04build-21)已按用户授权进入 Build 21 / 内部 154。3 项联动冒烟及实际会话离线回放通过，开发包已重启；仅同步新完成轮次正文，排除思考和工具输出，真实操作与视觉待用户验收。
+2026-11-04：[DSH 最终回答](agent-integrations.md#dsh-最终回答2026-11-04build-21)已按用户授权进入 Build 21 / 内部 154。3 项联动冒烟及实际会话离线回放通过，开发包已重启；仅同步新完成轮次正文，排除思考和工具输出，真实操作与视觉待用户验收。DSH 本批源码已通过 [PR #135](https://github.com/Duoasa/QuotaView/pull/135) 合入 main `dc20f05`；PR/main 各 788 测试、7 跳过、0 失败及 44 契约检查通过。未发布，完整交付证据见 Handoff。

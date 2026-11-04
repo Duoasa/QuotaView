@@ -48,6 +48,20 @@ enum IslandScreenSelection {
     }
 }
 
+/// Only commit a new display after a continuous dwell outside any interaction.
+struct IslandPointerScreenDwell {
+    private var candidate: String?
+    private var since: TimeInterval = 0
+    mutating func reset() { candidate = nil }
+    mutating func destination(pointer: String?, current: String?, blocked: Bool, now: TimeInterval) -> String? {
+        guard !blocked, let pointer, pointer != current else { reset(); return nil }
+        guard candidate == pointer else { candidate = pointer; since = now; return nil }
+        guard now - since >= 0.15 else { return nil }
+        reset()
+        return pointer
+    }
+}
+
 @MainActor
 final class IslandSession {
     var onWake: (() -> Void)?
@@ -57,6 +71,10 @@ final class IslandSession {
     private var contentRefresh: DispatchWorkItem?
     private var stateRefresh: DispatchWorkItem?
     private var followsFocus = false
+    private var followsPointer = false
+    private var pointerClock: Timer?
+    private var pointerScreens: [(screen: NSScreen, id: String)] = []
+    private var pointerDwell = IslandPointerScreenDwell()
     private var fixedScreenID = ""
     private var enabled = false
     private var english = false
@@ -119,8 +137,10 @@ final class IslandSession {
             })
         }
     }
-    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassAppearance: AppPreferences.IslandGlassAppearance = .dark, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, backgroundMemorySnapshots: [CodexActivitySnapshot] = [], followsFocus: Bool = false, fixedScreenID: String = "", language: AppPreferences.Language? = nil) {
+    func update(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, weeklyRemaining: Int? = nil, quotaResetsAt: Date? = nil, usageSnapshot: CurrentCodexPresentation? = nil, usageState: IslandUsagePresentation.State = .loading, usageOptions: IslandUsageOptions = .init(), progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField, automaticPopupEnabled: Bool = true, automaticPopupDuration: Int = AppPreferences.CodexActivityAutomaticPopupTiming.defaultDuration, expandedWidth: Double = AppPreferences.IslandExpandedWidth.defaultValue, islandMaterial: AppPreferences.IslandMaterial = .liquidGlass, islandGlassAppearance: AppPreferences.IslandGlassAppearance = .dark, islandGlassDegree: Double = AppPreferences.IslandGlassDegree.defaultValue, islandFloatingUsageEnabled: Bool = true, backgroundMemorySnapshots: [CodexActivitySnapshot] = [], followsFocus: Bool = false, followsPointer: Bool = false, fixedScreenID: String = "", language: AppPreferences.Language? = nil) {
         self.followsFocus = followsFocus
+        if self.followsPointer != followsPointer { pointerDwell.reset() }
+        self.followsPointer = followsPointer
         self.fixedScreenID = fixedScreenID
         self.backgroundMemorySnapshots = backgroundMemorySnapshots
         self.usageOptions = usageOptions
@@ -155,6 +175,32 @@ final class IslandSession {
             }; clock?.tolerance = 0.2
         } else if !enabled || locked { clock?.invalidate(); clock = nil }
     }
+    private func updatePointerTracking() {
+        // Cache topology on the existing refresh cadence, not on every sample.
+        pointerScreens = NSScreen.screens.map { ($0, IslandScreenSelection.identifier($0)) }
+        guard followsPointer, enabled, !locked, pointerScreens.count > 1 else {
+            pointerClock?.invalidate(); pointerClock = nil; pointerDwell.reset()
+            return
+        }
+        guard pointerClock == nil else { return }
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.trackPointerScreen() }
+        }
+        timer.tolerance = 0.01
+        pointerClock = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+    private func trackPointerScreen() {
+        let point = NSEvent.mouseLocation
+        let target = pointerScreens.first { $0.screen.frame.contains(point) }
+        let current = pointerScreens.first { $0.screen == board.screen }?.id
+        guard let id = pointerDwell.destination(pointer: target?.id, current: current,
+            blocked: NSEvent.pressedMouseButtons != 0 || board.blocksPointerScreenSwitch,
+            now: ProcessInfo.processInfo.systemUptime),
+            let next = pointerScreens.first(where: { $0.id == id })?.screen else { return }
+        // Moving geometry must not rebuild task data or reset the selected conversation.
+        board.move(to: next)
+    }
     private func setLocked(_ value: Bool) {
         locked = value; board.state.clearDrafts(); contentRefresh?.cancel(); contentRefresh = nil
         if !value { model.setConnection(.discovering); onWake?() }
@@ -163,9 +209,18 @@ final class IslandSession {
     private func refresh() {
         stateRefresh?.cancel(); stateRefresh = nil
         contentRefresh?.cancel(); contentRefresh = nil
+        updatePointerTracking()
         if (!enabled || locked) && !board.isVisible { return }
         model.preservedID = board.state.detailID
-        board.screen = IslandScreenSelection.target(followsFocus: followsFocus, fixedID: fixedScreenID, previous: board.screen)
+        if followsPointer {
+            if !pointerScreens.contains(where: { $0.screen == board.screen }) {
+                board.screen = pointerScreens.first { $0.screen.frame.contains(NSEvent.mouseLocation) }?.screen
+                    ?? pointerScreens.first?.screen
+                pointerDwell.reset()
+            }
+        } else {
+            board.screen = IslandScreenSelection.target(followsFocus: followsFocus, fixedID: fixedScreenID, previous: board.screen)
+        }
         var display = model.display(english: english, remaining: remaining, enabled: enabled && !locked, privacy: privacy, language: language)
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
@@ -186,6 +241,7 @@ final class IslandSession {
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
     func stop() {
+        pointerClock?.invalidate(); pointerClock = nil; pointerDwell.reset()
         stateRefresh?.cancel(); stateRefresh = nil
         clock?.invalidate(); clock = nil; contentRefresh?.cancel(); contentRefresh = nil
         observations.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }; observations.removeAll()
