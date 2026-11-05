@@ -1,8 +1,16 @@
 # QuotaView SDD 注册表
 
+## 0.9.2 发布准备
+
+[发布规格](release-0.9.2.md) · `Accepted / Verifying`：用户已授权 0.9.2 Build 1 / 内部 158 的源码合并、Release 和 appcast，增量为鼠标跟随与 DSH 审批/信息/最终回答。正在执行完整发布链路；正式状态以版本历史为准。
+
+## 公告增量范围：0.9.1 Build 24
+
+[更新与公告](brand-announcement.md#仅展示公开版后的增量2026-11-05build-24) · `Implemented / User Acceptance Pending`：按最新公开版 Build 16 到开发版的差异，仅展示鼠标跨屏跟随、DSH 审批与结果两条，移除已公开的六条。多语言与内容检查通过，开发运行核验见 [Handoff](../../HANDOFF.md)；仅本地，实际排版由用户验收。
+
 ## 鼠标跟随屏幕：0.9.1 Build 22
 
-[屏幕跟随规格](island-screen-follow.md) · `Accepted / Complete / User Acceptance Confirmed`：增加互斥的鼠标所在屏幕跟随，150 ms 停留、交互暂缓和按需轻量采样；6 项定向冒烟及本地化检查通过。开发运行核验见 [Handoff](../../HANDOFF.md)，用户已反馈试用无问题并授权源码推送/合并；集成结果以 Handoff 为准，不发布。
+[屏幕跟随规格](island-screen-follow.md) · `Accepted / Complete / User Acceptance Confirmed`：增加互斥的鼠标所在屏幕跟随，150 ms 停留、交互暂缓和按需轻量采样；6 项定向冒烟及本地化检查通过。开发运行核验见 [Handoff](../../HANDOFF.md)，用户已反馈试用无问题，源码经 [PR #136](https://github.com/Duoasa/QuotaView/pull/136) 合入 main `070333b`；PR/main CI 各 791 项测试（7 跳过、0 失败）及 44 项契约检查通过。258 生产输入与已验收 Build 22 一致；仅源码交付，不发布。
 
 Windows 当前发布：**0.8.3-win.13** · Released / User Acceptance Pending。包括终态通知修复、设置精简和默认开启自动检查更新；已接入独立签名 appcast，现有关闭偏好保留。完整证据见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。下方 win.11/12 为开发阶段记录。
 
