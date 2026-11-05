@@ -1,8 +1,8 @@
 # QuotaView SDD 注册表
 
-## 0.9.2 发布准备
+## 0.9.2 正式发布
 
-[发布规格](release-0.9.2.md) · `Accepted / Verifying`：用户已授权 0.9.2 Build 1 / 内部 158 的源码合并、Release 和 appcast，增量为鼠标跟随与 DSH 审批/信息/最终回答。正在执行完整发布链路；正式状态以版本历史为准。
+[发布规格](release-0.9.2.md) · `Released / User Acceptance Pending`：Build 1 / 内部 158 已经 PR #137 合入 main，PR/main CI、签名公证和公开 ZIP 回下载验签通过；Release 为 Stable / Latest，签名 appcast 已推送。用户要求“无需核对”后停止剩余线上检查。两组增量为鼠标跟随、DSH 审批与信息/最终回答；完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
 ## 公告增量范围：0.9.1 Build 24
 

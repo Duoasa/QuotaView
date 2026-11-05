@@ -1,8 +1,10 @@
 # QuotaView 开发交接
 
-## 0.9.2 发布准备（2026-11-05）
+## 0.9.2 已发布（2026-11-05）
 
-[当前公开稳定版与回滚事实](VERSION_HISTORY.md#当前最新版本)。用户已明确授权发布 0.9.2、源码推送合并 main、Release 与 appcast；按规则冻结为 Build 1 / 内部 158，tag `v0.9.2-build.1`，ZIP `QuotaView-v0.9.2-build.1.zip`。完整范围见[发布规格](docs/specs/release-0.9.2.md)。当前准备签名、公证、CI、不可变发布与更新渠道核验，不把候选状态写成发布成功；回滚基线为 `v0.9.1-build.16` / `f1bf0a3`。
+[0.9.2 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1) 已发布为 Stable / Latest，源码经 [PR #137](https://github.com/Duoasa/QuotaView/pull/137) 合入 main；PR 与发布 main CI 均通过。签名、公证/Staple、公开 ZIP 回下载与 EdDSA 核验已完成；签名 appcast 已推送 gh-pages。用户随后要求“无需核对”，已停止后续 Pages/线上核验，只同步发布记录。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，范围见[发布规格](docs/specs/release-0.9.2.md)。回滚 `v0.9.1-build.16` / `f1bf0a3`，Windows 通道及本机正式安装保持。
+
+本次仅鼠标跨屏跟随、DSH 审批与会话信息/最终回答两组增量，README 和公告同步，Release 简短英文。开发包 0.9.2 Build 1 / 内部 158 已更新运行；证据 `.build/release-092b1-runtime/` 与 `dist/verification/0.9.2-build1-release/`。下方开发阶段状态为历史记录。
 
 ## 公告仅展示公开版后增量 0.9.1 Build 24（2026-11-05）
 
@@ -1088,12 +1090,12 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；HEAD `070333b`（鼠标跟随 PR #136 合并），其 PR/main CI 通过；本批 0.9.2 已获推送/合并及发布授权，集成进行中 |
+| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；0.9.2 源码经 PR #137 合入 main，PR/main CI 通过；发布记录补充不改变生产输入 |
 | 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 1 / 内部 158 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-11-05T19:08:49.262602+08:00；PID 4791，258 输入、19 项资源、完整包与加载路径一致；证据 `.build/release-092b1-runtime/` |
-| 源码与运行包 | 0.9.2 Build 1 已运行，公告仅展示 0.9.1 公开版后的鼠标跟随与 DSH 两组增量；正式发布验证进行中。 |
-| 公开稳定版 | 0.9.1 Build 16；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 源码与运行包 | 0.9.2 Build 1 已运行，公告仅展示 0.9.1 公开版后的鼠标跟随与 DSH 两组增量；Release 已发布，appcast 已推送；后续核对按用户要求停止。 |
+| 公开稳定版 | 0.9.2 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。

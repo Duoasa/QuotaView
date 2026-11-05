@@ -9,9 +9,35 @@
 
 ## 当前最新版本
 
-> macOS 稳定版 **0.9.1 Build 16**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.9.2 Build 1**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
 
-### macOS 0.9.1 Build 16
+### macOS 0.9.2 Build 1
+
+2026-11-05 按用户授权发布。相对 0.9.1 Build 16 增加鼠标跨屏跟随，以及 DSH 支持的工具审批、会话标题/模型和最终回答同步。更新后需完整重启 DSH。Release 使用简短英文说明，公告仅列本轮增量。
+
+| 项目 | 当前值 |
+|---|---|
+| 版本身份 | `0.9.2 / Build 1 / 内部 158` |
+| Tag / 发布提交 | `v0.9.2-build.1` / `ebddc6056b62e6b96b121ee2e7179a0c38740aec`；[PR #137](https://github.com/Duoasa/QuotaView/pull/137) |
+| 构建源码 | `c8bba0162ea1533e0e867b9e133b173142429cc4`；258 个生产输入与合并提交及公证包一致 |
+| GitHub Release | [QuotaView 0.9.2 Build 1 · macOS](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1)，Stable / Latest；Release ID `435110137` |
+| 资产 | `QuotaView-v0.9.2-build.1.zip`，31,629,798 bytes；资产 ID `713156923` |
+| SHA-256 | `d77f6935a127c96e3ee69120cedd659861935187375f569c99bcdd56caa86d4c` |
+| 系统与架构 | macOS 14+；App / Widget / Core / Hook / Sparkle 均为 Universal arm64 + x86_64 |
+| 签名 | Developer ID Application: Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3；正式身份与 Hardened Runtime |
+| 公证 | Accepted / Stapled；`2014a5eb-0957-4f98-8014-3f27318a9059` |
+| 产物验证 | 正式身份、19 项资源、签名、Staple、Gatekeeper、隔离解压启动 15 秒及动态库路径通过；公开 ZIP 字节一致与内置公钥 EdDSA 验签通过 |
+| 本地 / CI | 791 项 Swift 测试、7 跳过、0 失败；44 契约；[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/42016841602) 与 [发布 main CI](https://github.com/Duoasa/QuotaView/actions/runs/42017597299) 均通过 |
+| appcast | 签名 feed 已推送 gh-pages `aeecd59bf6cd70337849d7149f5fc8b4158c1c7a`；序列 158 / 149 / 102，保留条目 URL、长度及签名不变。用户随后要求“无需核对”，未继续等待 Pages 结果或执行线上回读验签 |
+| Feed SHA-256 | 本地已签名且已推送文件 `df4c4cde4116c998cff94648b5b25d44efc5cb3bd2251e9ac7819a3c93a745ba` |
+| EdDSA | `alWogZpv7XgE+liyKrZ+OY7Rpcz0tl9MCBsFBigy39rszm1wFG3hDdpO77WX/wdK1+D+vaxEzrhxjjM1wqMMAQ==` |
+| 回滚 | [v0.9.1-build.16](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16) / `f1bf0a3de597a56ffa0b6f2567cd38dda540c528`；此前公开 ZIP 回下载哈希一致，旧 tag 与资产保留 |
+
+自动检查默认开启、24 小时周期，已有偏好优先，下载/安装需确认。公告名单为 102 / 149 / 158，分别确认一次。Windows 通道、本机正式安装与用户数据保持。鼠标跟随已获用户体验确认；不扩大为 DSH 全客户端验收。开发包同步为 0.9.2 Build 1。用户要求停止后续核对后，仅补齐发布记录并推送，不追加测试、线上或运行核验。证据 `dist/verification/0.9.2-build1-release/`；[发布规格](docs/specs/release-0.9.2.md)。
+
+### macOS 0.9.1 Build 16（上一 macOS 稳定版 / 回滚基线）
+
+以下保留当时发布事实；GitHub Latest 已由 0.9.2 Build 1 接替。
 
 2026-11-02 按用户授权正式发布。以新的蓝色终端图标和中英文产品图介绍 QuotaView 品牌视觉；包含新版设置、扩展 Agent 预览接入、Devin Desktop/CLI 模型与本轮 Token 补读、六语言、重置保护及到期列表、完成卡片中性背景和首批性能优化。
 
