@@ -64,23 +64,14 @@ struct AnnouncementContent {
         let version = (bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
+            // Release 0.9.2 changes since public v0.9.1-build.16.
             Section(id: "highlights", category: .highlight, items: [
-                Item(id: "appearance", title: copy.text("全新外观", "Fresh look"),
-                     body: copy.text("更新应用与 Agent 图标，优化完成态流动高光；已完成卡片使用中性底色。", "Refreshed app and agent icons and flowing completion highlights. Completed cards now use a neutral background."))
-            ]),
-            Section(id: "improvements", category: .improvement, items: [
-                Item(id: "settings", title: copy.text("设置体验", "Settings experience"),
-                     body: copy.text("重新整理设置布局与分类，优化灵动岛预览、玻璃分层和控件样式。", "Reorganized settings with a clearer layout, improved island previews, glass layers, and refined controls.")),
-                Item(id: "performance", title: copy.text("性能优化", "Performance improvements"),
-                     body: copy.text("减少后台重复读取，优化 Claude 任务解析与特效加载。", "Reduced repeated background reads and optimized Claude task parsing and visual effect loading."))
+                Item(id: "pointer-display", title: copy.text("鼠标跨屏跟随", "Follow your pointer across displays"),
+                     body: copy.text("鼠标移到另一块屏幕后，灵动岛自动跟随，无需点击窗口；拖动或岛内输入时暂缓切换。", "The island follows your pointer to another display without a click, pausing while you drag or type in the island."))
             ]),
             Section(id: "features", category: .feature, items: [
-                Item(id: "agent-integrations", title: copy.text("Agent 接入（预览）", "Agent integrations (preview)"),
-                     body: copy.text("新增 Cursor、Gemini CLI、OpenCode、GitHub Copilot CLI、Devin Desktop 与 Devin CLI 接入，并为 Devin 补充当前任务模型和 Token 用量读取。", "Added integrations for Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, Devin Desktop, and Devin CLI, with current task model and token usage reading for Devin.")),
-                Item(id: "languages", title: copy.text("多语言支持", "More languages"),
-                     body: copy.text("新增日语、韩语、繁体中文和西班牙语。", "Added Japanese, Korean, Traditional Chinese, and Spanish.")),
-                Item(id: "reset-protection", title: copy.text("重置卡管理", "Reset credit management"),
-                     body: copy.text("支持禁用重置卡使用，并列出一周内到期的重置卡。", "Disable reset credit use to prevent accidental resets, and see a list of credits expiring within a week."))
+                Item(id: "dsh-approvals-results", title: copy.text("DSH 审批与结果", "DSH approvals and results"),
+                     body: copy.text("在灵动岛允许或拒绝 DSH 支持的工具请求，补全会话标题、模型和最终回答。更新后请完整重启 DSH。", "Approve or reject supported DSH tool requests in the island, with session titles, models, and final answers. Fully restart DSH after updating."))
             ])
         ])
     }
@@ -91,8 +82,8 @@ struct BrandAnnouncementCampaign {
     let id: String
     let releaseBuilds: Set<String>
 
-    // The two approved stable releases each have an independent acknowledgement.
-    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149"])
+    // Each approved stable release has an independent acknowledgement.
+    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149", "158"])
     var storageKey: String { "announcement.\(id).acknowledgedBuilds" }
 
     func shouldPresent(build: String, acknowledged: Set<String>) -> Bool {

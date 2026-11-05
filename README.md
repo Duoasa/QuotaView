@@ -4,9 +4,9 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16"><img src="https://img.shields.io/badge/macOS-v0.9.1_Build_16-blue" alt="0.9.1 Build 16"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.2_Build_1-blue" alt="0.9.2 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights</h2>
 
-<p>A full feature overview of <strong>macOS 0.9.1</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
+<p>A full feature overview of <strong>macOS 0.9.2</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
 <table class="highlights">
 <tr>
@@ -35,7 +35,7 @@
 <p><strong>✋ Approvals and answers in place</strong></p>
 <ul>
 <li>Review commands, working directories, reasons, and permission scopes before deciding.</li>
-<li>Allow or deny supported Codex and Claude Code permission requests from the Island.</li>
+<li>Allow or deny supported Codex, Claude Code, and DSH permission requests from the Island.</li>
 <li>Answer supported Codex questions and Claude Code single-choice questions in place.</li>
 <li>Unsupported requests and forms return to the original client for confirmation.</li>
 </ul>
@@ -67,7 +67,7 @@
 <ul>
 <li>Choose liquid glass or classic solid color, with live previews of state smoke, quantum noise, and liquid waves.</li>
 <li>Adjust expanded width, capsule visibility, privacy, and auto-expand; completed cards use a neutral background.</li>
-<li>Follow the active window across displays or keep the Island on a selected screen.</li>
+<li>Follow the active window or pointer across displays, or keep the Island on a selected screen.</li>
 <li>Use Simplified Chinese, Traditional Chinese, English, Japanese, Korean, or Spanish.</li>
 </ul>
 </td>
@@ -121,7 +121,7 @@
 <thead><tr><th>Agent</th><th>Task state</th><th>Approvals and replies</th><th>Models and usage</th></tr></thead>
 <tbody><tr><td>Codex</td><td>Tasks, tools, and available parent/subagent activity</td><td>Supported approvals and questions in the Island</td><td>Models, Tokens, quota, Credits, history, and estimated cost</td></tr>
 <tr><td>Claude Code</td><td>Tasks, tools, and completion content</td><td>Supported approvals and single-choice questions in the Island</td><td>Models, Tokens, history, and estimated cost; optional official limits</td></tr>
-<tr><td>DSH</td><td>Native plugin events and available child sessions</td><td>Permission reminders; confirm in the client</td><td>Models and Tokens supplied by events</td></tr>
+<tr><td>DSH</td><td>Native plugin events, session titles, final answers, and available child sessions</td><td>Supported tool approvals in the Island; otherwise confirm in DSH</td><td>Models and Tokens supplied by events</td></tr>
 <tr><td>Kimi Code</td><td>Hook task, tool, and state events</td><td>Permission reminders; confirm in the client</td><td>Models supplied by events; no account quota panel</td></tr>
 <tr><td>Cursor · Preview</td><td>Local hook task and tool state</td><td>Confirm in the client; no permission reminders</td><td>Models supplied by events; no account quota panel</td></tr>
 <tr><td>Gemini CLI · Preview</td><td>Local hook task and tool state</td><td>Permission reminders; confirm in the client</td><td>Models supplied by events; no account quota panel</td></tr>
@@ -158,27 +158,25 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.1-build.16/QuotaView-v0.9.1-build.16.zip">QuotaView 0.9.1 Build 16</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip">QuotaView 0.9.2 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
 <details>
-<summary><strong>New in 0.9.1</strong></summary>
+<summary><strong>New in 0.9.2</strong></summary>
 <ul>
-<li>Refreshed brand identity, app and agent icons, and a new English and Chinese product image set.</li>
-<li>Updated settings and previews, neutral completed cards, and six interface languages.</li>
-<li>Preview integrations for Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, and Devin Desktop / CLI.</li>
-<li>Devin model and current-turn Token reading; reset credit protection and a one-week expiry list.</li>
-<li>Improved background reads, Claude transcript parsing, and effect loading.</li>
+<li>Follow your pointer across displays without clicking to activate a window.</li>
+<li>Approve or reject supported DSH tool requests in the Island, with session titles, model information, and final answers.</li>
+<li>Fully restart DSH after updating to load the new integration.</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.1-build.16">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · Separate edition</h2>
 
-<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.1.</p>
+<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.2.</p>
 
 <ul>
 <li>Includes a solid-color Island, task status, approvals and answers for compatible clients, usage statistics, AI orb, and quantum noise.</li>

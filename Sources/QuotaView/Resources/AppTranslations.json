@@ -1,4 +1,24 @@
 {
+  "Follow your pointer across displays": {
+    "ja": "ポインタに合わせてディスプレイを切り替え",
+    "ko": "포인터를 따라 디스플레이 이동",
+    "es": "Sigue el puntero entre pantallas"
+  },
+  "The island follows your pointer to another display without a click, pausing while you drag or type in the island.": {
+    "ja": "クリックせずに、ポインタのあるディスプレイへアイランドが移動します。ドラッグ中やアイランド内での入力中は切り替えを一時停止します。",
+    "ko": "클릭 없이 포인터가 있는 디스플레이로 아일랜드가 이동합니다. 드래그하거나 아일랜드 안에서 입력하는 동안에는 전환을 잠시 멈춥니다.",
+    "es": "La isla sigue el puntero a otra pantalla sin hacer clic y pausa el cambio mientras arrastras o escribes en la isla."
+  },
+  "DSH approvals and results": {
+    "ja": "DSH の承認と結果",
+    "ko": "DSH 승인 및 결과",
+    "es": "Aprobaciones y resultados de DSH"
+  },
+  "Approve or reject supported DSH tool requests in the island, with session titles, models, and final answers. Fully restart DSH after updating.": {
+    "ja": "対応する DSH のツールリクエストをアイランドで許可・拒否し、セッション名、モデル、最終回答を確認できます。更新後は DSH を完全に再起動してください。",
+    "ko": "아일랜드에서 지원되는 DSH 도구 요청을 승인하거나 거부하고, 세션 제목과 모델, 최종 답변을 확인하세요. 업데이트 후 DSH를 완전히 종료한 뒤 다시 실행하세요.",
+    "es": "Aprueba o rechaza solicitudes de herramientas de DSH compatibles desde la isla y consulta los títulos de sesión, modelos y respuestas finales. Reinicia DSH por completo después de actualizar."
+  },
   "Follow pointer display": {
     "ja": "ポインタのあるディスプレイに追従",
     "ko": "포인터가 있는 디스플레이 따라가기",
