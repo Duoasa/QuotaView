@@ -42,12 +42,22 @@ final class ResetDustRenderingTests: XCTestCase {
         host.configure(serial: 1, toReset: true, active: true,
             source: destination.offsetBy(dx: 0, dy: IslandResetTicketRefill.entryOffset), destination: destination, reduceMotion: false)
         XCTAssertEqual(host.cardOpacity, 1)
+        let mask = try XCTUnwrap(host.layer?.mask as? CAGradientLayer)
+        XCTAssertEqual(mask.frame, host.bounds)
+        XCTAssertEqual(mask.locations?[1].doubleValue ?? -1, Double(destination.maxY / host.bounds.height), accuracy: 0.0001)
+        XCTAssertEqual(mask.locations?[2].doubleValue ?? -1,
+            Double((destination.maxY + IslandResetTicketRefill.lowerFadeHeight) / host.bounds.height), accuracy: 0.0001)
         let animation = try XCTUnwrap(host.flightAnimation)
         let opacity = try XCTUnwrap(animation.animations?.compactMap { $0 as? CAKeyframeAnimation }.first { $0.keyPath == "opacity" })
         let values = try XCTUnwrap(opacity.values as? [NSNumber])
         XCTAssertEqual(values.first?.doubleValue, 0)
         XCTAssertEqual(values.last?.doubleValue ?? -1, 1, accuracy: 0.0001)
+        host.frame.size.height += 40
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(mask.frame, host.bounds)
+        XCTAssertEqual(mask.locations?[1].doubleValue ?? -1, Double(destination.maxY / host.bounds.height), accuracy: 0.0001)
         host.stop(); host.refillEntrance = false
+        XCTAssertNil(host.layer?.mask, "Page flights must not inherit the refill clip")
         host.configure(serial: 2, toReset: false, active: true, source: destination, destination: destination, reduceMotion: false)
         XCTAssertEqual(host.cardOpacity, 1)
         host.stop(); host.provider = .claudeCode
@@ -123,6 +133,56 @@ final class ResetDustRenderingTests: XCTestCase {
         XCTAssertEqual(texture.height, image.height)
     }
 
+    func testFullSizeDustSpreadsOutsideCardAndSoftensCanvasEdges() throws {
+        guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("Metal unavailable") }
+        let pipeline = try IslandResetDust.pipeline(device: device)
+        let queue = try XCTUnwrap(device.makeCommandQueue())
+        let sourceDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm,
+            width: 1, height: 1, mipmapped: false)
+        sourceDescriptor.storageMode = .shared
+        let source = try XCTUnwrap(device.makeTexture(descriptor: sourceDescriptor))
+        let white: [UInt8] = [255, 255, 255, 255]
+        white.withUnsafeBytes { source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0,
+            withBytes: $0.baseAddress!, bytesPerRow: 4) }
+        let size = IslandResetDust.renderCanvasSize, card = IslandResetDust.cardSize, padding = IslandResetDust.padding
+        let width = Int(ceil(size.width)), height = Int(ceil(size.height))
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
+            width: width, height: height, mipmapped: false)
+        descriptor.storageMode = .shared; descriptor.usage = [.renderTarget]
+        let output = try XCTUnwrap(device.makeTexture(descriptor: descriptor))
+        var minX = width, maxX = 0, minY = height, edgeAlpha = 0
+        for time: Float in [0.35, 0.65, 1.0, 1.3] {
+            let pass = MTLRenderPassDescriptor()
+            pass.colorAttachments[0].texture = output
+            pass.colorAttachments[0].loadAction = .clear; pass.colorAttachments[0].storeAction = .store
+            pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0)
+            let command = try XCTUnwrap(queue.makeCommandBuffer())
+            let encoder = try XCTUnwrap(command.makeRenderCommandEncoder(descriptor: pass))
+            let uniforms = [SIMD4<Float>(Float(width), Float(height), time, 1),
+                SIMD4<Float>(Float(card.width), Float(card.height), Float(padding.width), Float(padding.height)), .zero]
+            encoder.setRenderPipelineState(pipeline)
+            uniforms.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 0) }
+            encoder.setFragmentTexture(source, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6,
+                instanceCount: IslandResetDust.particleCount)
+            encoder.endEncoding(); command.commit(); command.waitUntilCompleted()
+            XCTAssertNil(command.error)
+            var pixels = [UInt8](repeating: 0, count: width * height * 4)
+            pixels.withUnsafeMutableBytes { output.getBytes($0.baseAddress!, bytesPerRow: width * 4,
+                from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0) }
+            for y in 0..<height { for x in 0..<width {
+                let alpha = Int(pixels[(y * width + x) * 4 + 3])
+                if alpha > 16 { minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y) }
+                if x < 2 || x >= width - 2 || y < 2 || y >= height - 2 { edgeAlpha = max(edgeAlpha, alpha) }
+            } }
+        }
+        XCTAssertLessThan(minX, Int(padding.width) - 12)
+        XCTAssertGreaterThan(maxX, Int(padding.width + card.width) + 12)
+        XCTAssertLessThan(minY, Int(padding.height) - 40)
+        XCTAssertLessThan(edgeAlpha, 10, "No bright hard line at the particle canvas boundary")
+        print("Reset dust spread: left=\(Int(padding.width) - minX), right=\(maxX - Int(padding.width + card.width)), up=\(Int(padding.height) - minY), edgeAlpha=\(edgeAlpha)")
+    }
+
     func testGPUKeepsSourceColorThenDispersesAndClears() throws {
         guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("Metal unavailable") }
         let pipeline = try IslandResetDust.pipeline(device: device)
@@ -139,7 +199,7 @@ final class ResetDustRenderingTests: XCTestCase {
         outputDescriptor.storageMode = .shared
         outputDescriptor.usage = [.renderTarget]
         let output = try XCTUnwrap(device.makeTexture(descriptor: outputDescriptor))
-        func frame(_ time: Float) throws -> [UInt8] {
+        func frame(_ time: Float, topFade: SIMD4<Float> = .zero) throws -> [UInt8] {
             let pass = MTLRenderPassDescriptor()
             pass.colorAttachments[0].texture = output
             pass.colorAttachments[0].loadAction = .clear
@@ -147,11 +207,11 @@ final class ResetDustRenderingTests: XCTestCase {
             pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0)
             let command = try XCTUnwrap(queue.makeCommandBuffer())
             let encoder = try XCTUnwrap(command.makeRenderCommandEncoder(descriptor: pass))
-            let uniforms = [SIMD4<Float>(128, 128, time, 1), SIMD4<Float>(32, 32, 48, 64)]
+            let uniforms = [SIMD4<Float>(128, 128, time, 1), SIMD4<Float>(32, 32, 48, 64), topFade]
             encoder.setRenderPipelineState(pipeline)
             uniforms.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 0) }
             encoder.setFragmentTexture(source, index: 0)
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1024)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: IslandResetDust.particleCount(for: CGSize(width: 32, height: 32)))
             encoder.endEncoding()
             command.commit()
             command.waitUntilCompleted()
@@ -161,6 +221,10 @@ final class ResetDustRenderingTests: XCTestCase {
                 from: MTLRegionMake2D(0, 0, 128, 128), mipmapLevel: 0) }
             return result
         }
+        let faded = try frame(0, topFade: SIMD4<Float>(64, 32, 0, 0))
+        XCTAssertLessThan(faded[(64 * 128 + 64) * 4 + 3], 10)
+        XCTAssertTrue((120...145).contains(Int(faded[(80 * 128 + 64) * 4 + 3])))
+        XCTAssertGreaterThan(faded[(95 * 128 + 64) * 4 + 3], 240)
         let initial = try frame(0), middle = try frame(0.65), end = try frame(Float(IslandResetDust.duration))
         func alpha(_ bytes: [UInt8]) -> Int { stride(from: 3, to: bytes.count, by: 4).reduce(0) { $0 + Int(bytes[$1]) } }
         XCTAssertEqual(alpha(initial), 32 * 32 * 255)

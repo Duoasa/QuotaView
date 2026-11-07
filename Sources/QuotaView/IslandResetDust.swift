@@ -9,11 +9,20 @@ import SwiftUI
 enum IslandResetDust {
     static let duration: Double = 1.7
     static let refillStartTime: Double = 1.15
-    static let padding = CGSize(width: 55, height: 80)
+    static let padding = CGSize(width: 96, height: 144)
     static let cardSize = IslandResetTicketFlight.cardSize
     static let canvasSize = CGSize(width: cardSize.width + padding.width * 2,
                                    height: cardSize.height + padding.height * 2)
-    static let particleCount = Int(ceil(cardSize.width)) * Int(ceil(cardSize.height))
+    // The particles travel upward: keep only a small safety margin below the card.
+    // Refill keeps the symmetric canvas above so its card alignment is unchanged.
+    static let renderCanvasSize = CGSize(width: canvasSize.width,
+                                         height: padding.height + cardSize.height + 8)
+    // Roughly halve the grid while keeping its cells tiled across the full artwork.
+    nonisolated static let particleSpacing: Float = Float(2).squareRoot()
+    static func particleCount(for size: CGSize) -> Int {
+        Int(ceil(Float(size.width) / particleSpacing)) * Int(ceil(Float(size.height) / particleSpacing))
+    }
+    static let particleCount = particleCount(for: cardSize)
 
     static func artwork() -> CGImage? {
         guard let face = NSImage(named: "IslandResetTicket"), let mark = NSImage(named: "IslandResetMark") else { return nil }
@@ -60,7 +69,7 @@ enum IslandResetDust {
     nonisolated static let shader = #"""
     #include <metal_stdlib>
     using namespace metal;
-    struct Uniforms { float4 canvas; float4 card; };
+    struct Uniforms { float4 canvas; float4 card; float4 viewportFade; };
     struct Fragment {
         float4 position [[position]];
         float2 uv;
@@ -78,9 +87,10 @@ enum IslandResetDust {
         const float2 corners[6] = {float2(0,0),float2(1,0),float2(0,1),
                                    float2(1,0),float2(1,1),float2(0,1)};
         float2 corner = corners[vertexIndex];
-        uint columns = uint(ceil(u.card.x));
+        float2 cells = ceil(u.card.xy / \#(particleSpacing));
+        uint columns = uint(cells.x);
         float2 grid = float2(particle % columns, particle / columns);
-        float2 tile = u.card.xy / ceil(u.card.xy);
+        float2 tile = u.card.xy / cells;
         float2 base = (grid + 0.5) * tile;
         uint seed = particle + uint(u.canvas.w) * 7919u;
         float r0 = dustRandom(seed), r1 = dustRandom(seed + 157u), r2 = dustRandom(seed + 571u);
@@ -89,11 +99,11 @@ enum IslandResetDust {
         float age = max(0.0, u.canvas.z - delay);
         float life = 0.80 + 0.40 * r2;
         float released = smoothstep(0.0, 0.12, age);
-        float2 drift = float2((r0 - 0.42) * 48.0 * age,
-                               -(28.0 + 28.0 * r1) * age - 10.0 * age * age);
+        float2 drift = float2((r0 - 0.5) * 104.0 * age,
+                               -(38.0 + 46.0 * r1) * age - 14.0 * age * age);
         float2 curl = float2(sin(age * 7.0 + r1 * 6.283) - sin(r1 * 6.283),
                               cos(age * 6.0 + r0 * 6.283) - cos(r0 * 6.283));
-        drift += curl * (6.0 * age);
+        drift += curl * (9.0 * age);
         float shrink = mix(1.0, 0.24, smoothstep(0.08, life, age));
         float2 point = u.card.zw + base + drift + (corner - 0.5) * tile * shrink;
         Fragment out;
@@ -101,7 +111,11 @@ enum IslandResetDust {
                               1.0 - point.y / u.canvas.y * 2.0, 0, 1);
         out.uv = (grid + corner) * tile / u.card.xy;
         out.local = corner * 2.0 - 1.0;
-        out.alpha = 1.0 - smoothstep(life * 0.35, life, age);
+        float canvasFade = smoothstep(0.0, 24.0, point.x) * smoothstep(0.0, 24.0, u.canvas.x - point.x)
+                         * smoothstep(0.0, 28.0, point.y);
+        float viewportFade = u.viewportFade.y > 0.0
+            ? clamp((point.y - u.viewportFade.x) / u.viewportFade.y, 0.0, 1.0) : 1.0;
+        out.alpha = (1.0 - smoothstep(life * 0.35, life, age)) * canvasFade * viewportFade;
         out.rounded = released;
         if (age >= life) { out.position = float4(-2,-2,0,1); }
         return out;
@@ -168,38 +182,20 @@ struct IslandResetAnimatedTicket: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var animating: Bool { controller.ticketDissolveInFlight || controller.ticketRefillInFlight }
     private var canAnimate: Bool { !reduceMotion && isPresented && playbackEnabled }
-    private var destination: CGRect { CGRect(origin: CGPoint(x: IslandResetDust.padding.width,
-        y: IslandResetDust.padding.height), size: IslandResetDust.cardSize) }
+    private var destination: CGRect { CGRect(origin: CGPoint(x: IslandResetTicketRefill.padding.width,
+        y: IslandResetTicketRefill.padding.height), size: IslandResetDust.cardSize) }
     var body: some View {
         IslandResetTicket(playbackEnabled: playbackEnabled && !animating,
                           size: IslandResetDust.cardSize, isEmpty: displayedEmpty)
             .opacity(controller.ticketHidden && !reduceMotion ? 0 : 1)
             .allowsHitTesting(!animating)
             .overlay {
-                IslandResetDustView(serial: controller.ticketAnimationSerial,
-                    active: controller.ticketDissolveInFlight,
-                    prepare: isPresented, reduceMotion: reduceMotion || !isPresented || !playbackEnabled,
-                    refillReady: { if canAnimate { controller.startTicketRefill(serial: $0) } },
-                    completion: { controller.finishTicketDissolve(serial: $0, animateRefill: canAnimate) })
-                    .frame(width: IslandResetDust.canvasSize.width, height: IslandResetDust.canvasSize.height)
-                    .allowsHitTesting(false).accessibilityHidden(true)
-            }
-            .overlay {
                 IslandResetTicketFlightView(serial: controller.ticketAnimationSerial, toReset: true,
                     active: controller.ticketRefillInFlight && canAnimate,
                     source: destination.offsetBy(dx: 0, dy: IslandResetTicketRefill.entryOffset),
                     destination: destination, reduceMotion: reduceMotion, refillEntrance: true,
                     isEmpty: displayedEmpty, onCompletion: controller.finishTicketRefill)
-                    .frame(width: IslandResetDust.canvasSize.width, height: IslandResetDust.canvasSize.height)
-                    // Confine only the incoming card/shadow above the title;
-                    // the independent particle canvas remains unrestricted.
-                    .mask(alignment: .top) {
-                        VStack(spacing: 0) {
-                            Color.white.frame(height: destination.maxY)
-                            LinearGradient(colors: [.white, .clear], startPoint: .top, endPoint: .bottom)
-                                .frame(height: IslandResetTicketRefill.lowerFadeHeight)
-                        }
-                    }
+                    .frame(width: IslandResetTicketRefill.canvasSize.width, height: IslandResetTicketRefill.canvasSize.height)
                     .allowsHitTesting(false).accessibilityHidden(true)
             }
             .onChange(of: canAnimate) { _, enabled in
@@ -208,17 +204,45 @@ struct IslandResetAnimatedTicket: View {
     }
 }
 
+// Keep particles outside the page ScrollView, which otherwise clips their upper
+// drift at the card's small content inset. Only this noninteractive effect escapes.
+struct IslandResetDustOverlay: View {
+    @ObservedObject var controller: CodexResetController
+    let cardRect: CGRect
+    let playbackEnabled: Bool
+    let reduceMotion: Bool
+    private var canAnimate: Bool { playbackEnabled && !reduceMotion && !cardRect.isEmpty }
+    private var topFadeInset: CGFloat {
+        max(0, IslandResetDust.padding.height - cardRect.minY - IslandChromeMetrics.buttonSize)
+    }
+    var body: some View {
+        IslandResetDustView(serial: controller.ticketAnimationSerial,
+            active: controller.ticketDissolveInFlight,
+            prepare: canAnimate, reduceMotion: !canAnimate, topFadeInset: topFadeInset,
+            refillReady: { if canAnimate { controller.startTicketRefill(serial: $0) } },
+            completion: { controller.finishTicketDissolve(serial: $0, animateRefill: canAnimate) })
+            .frame(width: IslandResetDust.renderCanvasSize.width, height: IslandResetDust.renderCanvasSize.height)
+            // Fade in the particle shader, preserving the native Metal surface.
+            // A SwiftUI mask here adds a separate compositing step over every frame.
+            .position(x: cardRect.midX,
+                      y: cardRect.minY - IslandResetDust.padding.height + IslandResetDust.renderCanvasSize.height / 2)
+            .allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
 private struct IslandResetDustView: NSViewRepresentable {
     let serial: UInt64
     let active: Bool
     let prepare: Bool
     let reduceMotion: Bool
+    let topFadeInset: CGFloat
     let refillReady: (UInt64) -> Void
     let completion: (UInt64) -> Void
     func makeNSView(context: Context) -> IslandResetDustHost { IslandResetDustHost() }
     func updateNSView(_ view: IslandResetDustHost, context: Context) {
         view.configure(serial: serial, active: active, prepare: prepare,
-                       reduceMotion: reduceMotion, refillReady: refillReady, completion: completion)
+                       reduceMotion: reduceMotion, topFadeInset: topFadeInset,
+                       refillReady: refillReady, completion: completion)
     }
     static func dismantleNSView(_ view: IslandResetDustHost, coordinator: ()) { view.stop() }
 }
@@ -236,6 +260,7 @@ final class IslandResetDustHost: MTKView, MTKViewDelegate {
     private var completion: ((UInt64) -> Void)?
     private var refillReady: ((UInt64) -> Void)?
     private var sentRefillReady = false
+    private var topFadeInset: CGFloat = 0
     private var occlusionObserver: NSObjectProtocol?
     private let inFlight = DispatchSemaphore(value: 3)
     private var displayRefresh: CADisplayLink?
@@ -278,8 +303,9 @@ final class IslandResetDustHost: MTKView, MTKViewDelegate {
         }
     }
     func configure(serial: UInt64, active: Bool, prepare: Bool, reduceMotion: Bool,
-                   refillReady: @escaping (UInt64) -> Void = { _ in },
+                   topFadeInset: CGFloat = 0, refillReady: @escaping (UInt64) -> Void = { _ in },
                    completion: @escaping (UInt64) -> Void) {
+        self.topFadeInset = topFadeInset.isFinite ? max(0, topFadeInset) : 0
         if prepare && !reduceMotion { prepareResources() }
         guard active else { stop(); return }
         if self.serial == serial {
@@ -353,7 +379,8 @@ final class IslandResetDustHost: MTKView, MTKViewDelegate {
         if startedAt == nil { startedAt = now }
         let uniforms = [SIMD4<Float>(Float(bounds.width), Float(bounds.height), Float(elapsed), Float((serial ?? 0) % 65536)),
                         SIMD4<Float>(Float(IslandResetDust.cardSize.width), Float(IslandResetDust.cardSize.height),
-                                     Float(IslandResetDust.padding.width), Float(IslandResetDust.padding.height))]
+                                     Float(IslandResetDust.padding.width), Float(IslandResetDust.padding.height)),
+                        SIMD4<Float>(Float(topFadeInset), 28, 0, 0)]
         encoder.setRenderPipelineState(pipeline)
         uniforms.withUnsafeBytes { bytes in
             encoder.setVertexBytes(bytes.baseAddress!, length: bytes.count, index: 0)

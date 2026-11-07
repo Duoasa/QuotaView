@@ -1616,6 +1616,13 @@ struct IslandBoardView: View {
                         isEmpty: state.resetTicketIsEmpty, onStart: state.didStartResetTransition, onCompletion: state.finishResetTransition)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false).accessibilityHidden(true)
+                    if let controller = state.resetController {
+                        IslandResetDustOverlay(controller: controller,
+                            cardRect: anchors[.reset].map { proxy[$0] } ?? .zero,
+                            playbackEnabled: state.showsReset && !state.compact && state.playback
+                                && state.effectiveUsageProvider == .codex && !state.resetTransitionInFlight,
+                            reduceMotion: state.reduceMotion)
+                    }
                 }
             }
     }
