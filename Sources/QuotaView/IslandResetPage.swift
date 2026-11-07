@@ -98,6 +98,7 @@ struct IslandResetPage: View {
                         if isClaude {
                             Text(Self.claudeResetCommand).font(.system(size: 14, weight: .semibold, design: .monospaced))
 
+
                         } else {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
@@ -268,6 +269,9 @@ enum IslandResetTicketFlight {
 // The next card rises straight from below at its final size and orientation.
 // A quick rise and damped rebound settle without changing the card orientation.
 enum IslandResetTicketRefill {
+    static let padding = CGSize(width: 18, height: 20)
+    static let canvasSize = CGSize(width: IslandResetTicketFlight.cardSize.width + padding.width * 2,
+                                   height: IslandResetTicketFlight.cardSize.height + padding.height * 2)
     static let duration: TimeInterval = 0.48
     static let entryOffset: CGFloat = 10
     static let lowerFadeHeight: CGFloat = 6
@@ -306,7 +310,11 @@ final class IslandResetTicketFlightHost: NSView {
     private let card = CALayer()
     private let face = CALayer()
     private let mark = CALayer()
-    var refillEntrance = false
+    private let refillMask = CAGradientLayer()
+    private var refillClipBottom: CGFloat = 0
+    var refillEntrance = false {
+        didSet { if refillEntrance != oldValue { updateRefillMask() } }
+    }
     var isEmpty = false {
         didSet { if isEmpty != oldValue { applyArtwork() } }
     }
@@ -339,6 +347,10 @@ final class IslandResetTicketFlightHost: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
+        refillMask.colors = [NSColor.white.cgColor, NSColor.white.cgColor,
+                             NSColor.clear.cgColor, NSColor.clear.cgColor]
+        refillMask.startPoint = CGPoint(x: 0.5, y: 0)
+        refillMask.endPoint = CGPoint(x: 0.5, y: 1)
         layer?.addSublayer(card)
         card.bounds = CGRect(origin: .zero, size: IslandResetTicketFlight.cardSize)
         card.isDoubleSided = true
@@ -375,11 +387,29 @@ final class IslandResetTicketFlightHost: NSView {
         if window == nil { stop() }
         else { needsLayout = true }
     }
+    private func updateRefillMask() {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        guard refillEntrance, Self.valid(bounds), refillClipBottom.isFinite else {
+            layer?.mask = nil; return
+        }
+        let start = min(1, max(0, refillClipBottom / bounds.height))
+        let end = min(1, max(start, (refillClipBottom + IslandResetTicketRefill.lowerFadeHeight) / bounds.height))
+        let locations = [NSNumber(value: 0), NSNumber(value: Double(start)), NSNumber(value: Double(end)), NSNumber(value: 1)]
+        if refillMask.frame != bounds { refillMask.frame = bounds }
+        if refillMask.locations != locations { refillMask.locations = locations }
+        if layer?.mask !== refillMask { layer?.mask = refillMask }
+    }
     override func layout() {
         super.layout()
+        updateRefillMask()
         startIfReady()
     }
     func configure(serial: UInt64, toReset: Bool, active: Bool, source: CGRect, destination: CGRect, reduceMotion: Bool) {
+        if refillClipBottom != destination.maxY {
+            refillClipBottom = destination.maxY
+            updateRefillMask()
+        }
         guard active, !reduceMotion else { stop(); return }
         pendingRequest = Request(serial: serial, toReset: toReset, source: source, destination: destination)
         startIfReady()

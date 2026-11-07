@@ -1,8 +1,24 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.2 Build 19 / 重置动效与正常接入
+## 当前开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入
 
-[当前规则](codex-quota-reset.md#build-19-恢复正常接入与共享卡片2026-11-07) · `Implemented / User Acceptance Pending`：移除生产 Demo，正常服务端成功后播放粒子/递补；共享暗色不透明 ∅ 空卡与鼠标倾斜，Claude 仅卡片共用、命令操作不变。32 项隔离检查及本地化通过，Build 19 / 内部 176 已运行并清理 Demo 偏好。用户授权源码推送与合并 main，CI/合并结果见 [Handoff](../../HANDOFF.md)；未发布。
+[当前规则](codex-quota-reset.md#build-23-采用优化动效并恢复正常接入2026-11-07) · `Implemented / Motion Accepted`：用户接受 Build 22 参数，原样保留粒子/递补实现；移除临时 Demo、恢复正常账户数据，真实重置仍需确认。33 项隔离检查与本地化通过，Build 23 / 内部 180 已运行、Demo 偏好已清理。用户已授权推送合并；PR/main CI 结果见 [Handoff](../../HANDOFF.md)，未发布 Release/appcast。
+
+## 前序开发：0.9.2 Build 22 / 粒子减量与递补交接
+
+[本批规格](codex-quota-reset.md#build-22-粒子减量与递补重叠合成2026-11-07) · `Implemented / User Acceptance Pending`：粒子由 24,240 减为 12,155；递补画布减约 76%，用原生 mask 替代 SwiftUI 外层遮罩，保留时序和卡面完整性。45 项检查通过，离屏 GPU P95 下降约 40–47%，Build 22 / 内部 179 已运行。Demo 保持、未推送/发布；实际重叠流畅度待用户复测，见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 21 / 粒子合成性能
+
+[排查与修正](codex-quota-reset.md#build-21-粒子合成路径与画布开销2026-11-07) · `Implemented / User Acceptance Pending`：移除 SwiftUI 粒子遮罩、顶部渐隐并入 shader，裁去下方空白，画布减少三分之一；原扩散与节奏保持。45 项隔离检查通过，Build 21 / 内部 178 已运行，Demo 保持。离屏 GPU 对照未证明渐隐计算是实际卡顿根因，系统合成/流畅度仍待复测。证据见 [Handoff](../../HANDOFF.md)，本批未推送/发布。
+
+## 前序开发：0.9.2 Build 20 / Demo 粒子扩散
+
+[微调规格](codex-quota-reset.md#build-20-粒子扩散与-demo-微调2026-11-07) · `Implemented / User Acceptance Pending`：恢复本地两张 Demo 与归零重进统计页补卡；粒子移出 ScrollView 裁切，扩散更宽更高并柔化边缘。45 项隔离检查/本地化通过，Build 20 / 内部 177 已运行，Demo 偏好读回；证据见 [Handoff](../../HANDOFF.md)。本批未推送/发布，main 保持 Build 19 正常接入。
+
+## 前序开发：0.9.2 Build 19 / 重置动效与正常接入
+
+[当前规则](codex-quota-reset.md#build-19-恢复正常接入与共享卡片2026-11-07) · `Implemented / User Acceptance Pending`：移除生产 Demo，正常服务端成功后播放粒子/递补；共享暗色不透明 ∅ 空卡与鼠标倾斜，Claude 仅卡片共用、命令操作不变。32 项隔离检查及本地化通过，Build 19 / 内部 176 已运行并清理 Demo 偏好。源码已通过 [PR #139](https://github.com/Duoasa/QuotaView/pull/139) 合入 main `7c93acc`，PR/main CI 均通过，合并后证据本地补记于 [Handoff](../../HANDOFF.md)；未发布。
 
 ## 前序开发：0.9.2 Build 18 / 暗色空卡
 

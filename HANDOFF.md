@@ -1,6 +1,46 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.2 Build 19 / 重置卡动效与恢复正常接入（2026-11-07）
+## 当前开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入（2026-11-07）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户已接受 Build 22 的动效，授权解除 Demo、恢复正常环境并推送 GitHub/合并 main；未授权 Release/appcast。
+
+原样保留 Build 22 粒子与原生递补实现：12,155 粒子、扩展漂移与 shader 顶部渐隐、紧凑递补画布与原生下缘渐隐。核心文件哈希/实现片段核对一致。已移除生产 Demo 注入、模拟次数与编辑入口、统计覆盖、标记及自动补卡，删除开发 Demo 偏好；正常数据来自原服务端快照，真实重置仍需用户二次确认。详见 [Build 23 规格](docs/specs/codex-quota-reset.md#build-23-采用优化动效并恢复正常接入2026-11-07)。
+
+33 项隔离检查通过，711 文案模板/743 条目录本地化通过；真实 controller 只用 FakeResetTransport 和临时 journal 验证。没有使用用户的真实重置卡；用户接受覆盖 Build 22 调试场景，不扩大为全矩阵视觉验收。
+
+Debug arm64 增量构建和开发运行包替换完成；2026-11-07T23:36:20.981400+08:00 启动 PID 61500，0.9.2 / Build 23 / 内部 180。259 输入、19 项资源、完整包/备份/加载路径一致，正式安装未改，Demo 偏好不存在。证据 `.build/reset-normal-092b23/`、`.build/reset-normal-092b23-runtime/`；备份 `.build/runtime-package-backups/reset-normal-092b23-20261107-233618/QuotaView.app`。本批源码 PR/main CI 与合并结果在完成后补记。
+
+## 前序开发：0.9.2 Build 22 / 粒子减量与递补交接（2026-11-07）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)，main 保持 PR #139 的 Build 19 正常接入；本批延续本地 Demo 调试，未推送/发布。
+
+用户反馈 Build 21 有所改善但仍在粒子/递补重叠时卡顿，并要求减粒子。已将网格从 24,240 降至 12,155，均匀铺满卡面；递补画布缩小约 76.3%，外层 SwiftUI mask 改为原生 CAGradientLayer 下缘渐隐，页间飞行不携带此 mask。粒子漂移参数、时长和递补节奏保持。详见 [Build 22 规格](docs/specs/codex-quota-reset.md#build-22-粒子减量与递补重叠合成2026-11-07)。
+
+45 项隔离检查通过。两轮离屏 GPU P95 从 0.216/0.201 ms 降至 0.114/0.120 ms；原生关键帧启动 CPU P95 约 0.024–0.025 ms，未见该步骤明显开销。不能把离屏结果当成实际系统合成/掉帧根因已完全确认；实际衔接待用户复测。未操作实际重置按钮或消费真实卡。
+
+Debug arm64 增量构建/开发包替换完成；2026-11-07T23:15:31.064489+08:00 启动 PID 58373，0.9.2 / Build 22 / 内部 179。259 输入、19 项资源、完整包/备份与加载路径一致，正式安装保持；Demo 开启，当前读回 2 张。证据 `.build/reset-overlap-092b22/`、`.build/reset-overlap-092b22-runtime/`；备份 `.build/runtime-package-backups/reset-overlap-092b22-20261107-231528/QuotaView.app`。
+
+## 前序开发：0.9.2 Build 21 / 粒子合成性能修正（2026-11-07）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)，main 保持 PR #139 的 Build 19 正常数据版本；本批延续用户本地 Demo 调试授权，未推送/发布。
+
+用户反馈 Build 20 粒子明显卡顿。离屏正反序对照未证明渐隐公式本身是瓶颈（GPU P95 约 0.14–0.18 ms），实际系统合成/显示掉帧尚未测量。已移除粒子外层 SwiftUI mask，把相同顶部线性渐隐合并到 Metal；裁去下方不用的透明画布，像素面积减少三分之一。粒子数量、漂移范围、时长和递补保持。详见 [Build 21 规格](docs/specs/codex-quota-reset.md#build-21-粒子合成路径与画布开销2026-11-07) 与[离屏对照及限制](docs/design/reset-demo-performance-2026-11-07.md#build-21扩大画布后的卡顿排查)。
+
+45 项隔离检查通过，GPU 读回确认渐隐透明度、四边无亮线与扩散范围保持；没有主动 UI 操作，未使用真实重置卡。实际流畅度由用户复测，不能将离屏检查记作整体帧率提升或根因完全确认。
+
+Debug arm64 增量构建和运行包更新完成；2026-11-07T23:04:07.408508+08:00 启动 PID 55005，0.9.2 / Build 21 / 内部 178。259 输入、19 项资源、包/备份与加载路径核对一致，正式安装未改；Demo 开启，当前读回 2 张。证据 `.build/reset-perf-092b21/`、`.build/reset-perf-092b21-runtime/`；备份 `.build/runtime-package-backups/reset-perf-092b21-20261107-230405/QuotaView.app`。
+
+## 前序开发：0.9.2 Build 20 / Demo 粒子扩散微调（2026-11-07）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。Build 19 已经 PR #139 合入 main 并通过 PR/main CI；用户随后重新要求本地 Demo 微调，本批未推送/发布，不沿用前批已完成的合并授权。
+
+恢复两张本地 Demo，支持次数编辑和归零后退出统计流程再进补卡；两页之间往返保留零态。Claude 仅卡面跟随 Demo 次数，命令操作不变。无真实重置 coordinator/journal，实际额度不参与模拟扣减。顶部显示 demo；统计页其他数据保持真实。
+
+粒子层已移出页面 ScrollView，避免顶部硬裁切；扩大画布、横向及向上漂移，顶部/画布边缘渐隐收尾。粒子数量、消散时长与递补节奏保持，页面/文字布局不变。详见 [Build 20 规格](docs/specs/codex-quota-reset.md#build-20-粒子扩散与-demo-微调2026-11-07)。45 项隔离检查与 714 模板/746 条目录本地化通过；GPU 画布探针向左/右/上越界 46/32/99 pt、外缘 alpha 0，仅为离屏证据，实际视觉由用户复测。
+
+Debug arm64 增量构建与开发包替换完成；2026-11-07T22:53:28.489569+08:00 启动 PID 49835，0.9.2 / Build 20 / 内部 177。259 输入、19 项资源、包/备份/加载路径一致，正式安装未改；Demo 开启，当前读回 2 张。证据 `.build/reset-demo-092b20/`、`.build/reset-demo-092b20-final-runtime/`；备份 `.build/runtime-package-backups/reset-demo-092b20-20261107-225326/QuotaView.app`。未操作实际 UI 或消费真实重置卡。
+
+## 前序开发：0.9.2 Build 19 / 重置卡动效与恢复正常接入（2026-11-07）
 
 公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户已授权本批源码推送 GitHub 并合并 main，未授权新 Release/appcast。
 
@@ -8,7 +48,7 @@
 
 32 项定向隔离检查通过，覆盖真实 controller 的模拟成功/非成功/取消、重叠衔接不重播、双方已知零/未知、空卡缓存/GPU/生命周期；711 文案模板、743 条目录本地化检查通过。未操作用户实际重置按钮或调用真实消费接口。实际视觉待用户验收。
 
-Debug arm64 增量构建及开发包替换完成；2026-11-07T20:26:28.966335+08:00 已启动 PID 29972，0.9.2 / Build 19 / 内部 176。259 输入、19 项资源、完整包/备份与加载路径一致，正式安装未改。运行证据 `.build/reset-live-092b19-runtime/`，检查 `.build/reset-live-092b19/`；备份 `.build/runtime-package-backups/reset-live-092b19-20261107-202626/QuotaView.app`。源码推送/PR/main CI 正在完成，最终结果在本节同步。
+Debug arm64 增量构建及开发包替换完成；2026-11-07T20:26:28.966335+08:00 已启动 PID 29972，0.9.2 / Build 19 / 内部 176。259 输入、19 项资源、完整包/备份与加载路径一致，正式安装未改。运行证据 `.build/reset-live-092b19-runtime/`，检查 `.build/reset-live-092b19/`；备份 `.build/runtime-package-backups/reset-live-092b19-20261107-202626/QuotaView.app`。源码已通过 [PR #139](https://github.com/Duoasa/QuotaView/pull/139) 合并至 main `7c93acc6e87ae74e51ffe03a54bc7fbd01c7b9bb`。PR 提交 `122e370` 的 [CI](https://github.com/Duoasa/QuotaView/actions/runs/42372659413) 和合并提交的 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/42373000345) 均通过；PR 完整测试 804 项，7 项跳过、0 失败，原生问题闭环契约检查通过。上述合并后验收记录在本地补记；应用源码与运行包一致。
 
 ## 前序开发：0.9.2 Build 18 / 暗色空卡与鼠标交互（2026-11-07）
 
@@ -1230,11 +1270,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.2-reset-card-motion`，基于最新 main `347d1ff`；本批已获推送/合并授权，具体 PR 与 CI 结果在顶部记录 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 19 / 内部 176 |
+| 分支 / 源码提交 | `codex/0.9.2-reset-card-performance`；基于 main `7c93acc`，本批已获推送/合并授权；PR/CI 结果见顶部 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 23 / 内部 180 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-07T20:26:28.966335+08:00；PID 29972，259 输入、19 项资源、完整包与加载路径一致；证据 `.build/reset-live-092b19-runtime/` |
-| 源码与运行包 | 0.9.2 Build 19 已运行；Demo 注入/偏好清理，正常数据驱动共享卡面及成功后粒子/递补，未知不伪造零。源码推送/合并 CI 进行中；未发布，视觉待用户验收。 |
+| 最近运行核验 | 2026-11-07T23:36:20.981400+08:00；PID 61500，259 输入、19 项资源、完整包与加载路径一致；证据 `.build/reset-normal-092b23-runtime/` |
+| 源码与运行包 | Build 23 已运行；采用用户接受的 Build 22 动效，Demo 清理并恢复正常数据。本批源码 PR/main CI 进行中；未发布。 |
 | 公开稳定版 | 0.9.2 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 
