@@ -5,6 +5,48 @@ import SwiftUI
 
 @MainActor
 final class CodexResetController: ObservableObject {
+    @Published private(set) var ticketAnimationSerial: UInt64 = 0
+    @Published private(set) var ticketDissolveInFlight = false
+    @Published private(set) var ticketRefillInFlight = false
+    @Published private(set) var ticketRefillStarted = false
+    var ticketHidden: Bool { ticketRefillInFlight || (ticketDissolveInFlight && !ticketRefillStarted) }
+    private var ticketDissolveTimeout: DispatchWorkItem?
+    private var ticketRefillTimeout: DispatchWorkItem?
+    func startTicketRefill(serial: UInt64) {
+        guard serial == ticketAnimationSerial, ticketDissolveInFlight,
+              !ticketRefillStarted else { return }
+        // The page retains the same card at zero. Animate that presentation too;
+        // this is only a visual handoff and never changes the account balance.
+        // Keep the static face hidden while the incoming layer takes over.
+        ticketRefillInFlight = true
+        ticketRefillStarted = true
+        let timeout = DispatchWorkItem { [weak self] in self?.finishTicketRefill(serial: serial) }
+        ticketRefillTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: timeout)
+    }
+    func finishTicketDissolve(serial: UInt64, animateRefill: Bool = true) {
+        guard serial == ticketAnimationSerial, ticketDissolveInFlight else { return }
+        ticketDissolveTimeout?.cancel()
+        ticketDissolveTimeout = nil
+        // Fallback for a renderer that could not deliver the early handoff.
+        // A completed overlapping refill must never start a second time.
+        if animateRefill { startTicketRefill(serial: serial) }
+        else { finishTicketRefill(serial: serial) }
+        ticketDissolveInFlight = false
+    }
+    func finishTicketRefill(serial: UInt64) {
+        guard serial == ticketAnimationSerial else { return }
+        ticketRefillTimeout?.cancel()
+        ticketRefillTimeout = nil
+        ticketRefillInFlight = false
+    }
+    private func cancelTicketAnimations() {
+        ticketDissolveTimeout?.cancel(); ticketDissolveTimeout = nil
+        ticketRefillTimeout?.cancel(); ticketRefillTimeout = nil
+        ticketDissolveInFlight = false
+        ticketRefillInFlight = false
+        ticketRefillStarted = false
+    }
     enum Phase: Equatable {
         case idle, preparing, confirming(CodexResetPreparation), submitting
         case finished(CodexResetOutcome), failed(CodexResetError)
@@ -18,7 +60,7 @@ final class CodexResetController: ObservableObject {
     private var coordinator: CodexRateLimitResetCoordinator?
     private var revision: UInt64 = 0
     var hasPendingAttempt: Bool { FileManager.default.fileExists(atPath: journalURL.path) }
-    var busy: Bool { phase == .preparing || phase == .submitting }
+    var busy: Bool { phase == .preparing || phase == .submitting || ticketDissolveInFlight || ticketRefillInFlight }
 
     static var defaultJournalURL: URL {
         let folder = Bundle.main.bundleIdentifier == "com.quotaview.development073" ? "QuotaView-073-Development" : "QuotaView"
@@ -56,6 +98,7 @@ final class CodexResetController: ObservableObject {
 
     func cancelConfirmation() {
         guard phase != .submitting else { return }
+        cancelTicketAnimations()
         revision &+= 1
         coordinator = nil
         phase = .idle
@@ -63,12 +106,29 @@ final class CodexResetController: ObservableObject {
 
     func confirm() async {
         guard !usageDisabled, case .confirming(let preparation) = phase, let coordinator else { return }
+        let generation = revision
         phase = .submitting
-        do { phase = .finished(try await coordinator.execute(preparation)) }
-        catch { phase = .failed(error as? CodexResetError ?? .outcomeUnknown) }
+        let result: Phase
+        do { result = .finished(try await coordinator.execute(preparation)) }
+        catch { result = .failed(error as? CodexResetError ?? .outcomeUnknown) }
         // Server truth drives all surfaces. Never synthesize 100% or decrement
         // credits locally, including after an ambiguous response.
         await refresh()
+        phase = result
+        // Animate only a newly confirmed success, after server data refresh.
+        // Unknown outcomes/retries must never imply another card was consumed.
+        if generation == revision, phase == .finished(.reset), !usageDisabled {
+            beginTicketDissolve()
+        }
+    }
+    private func beginTicketDissolve() {
+        ticketAnimationSerial &+= 1
+        ticketRefillStarted = false
+        ticketDissolveInFlight = true
+        let serial = ticketAnimationSerial
+        let timeout = DispatchWorkItem { [weak self] in self?.finishTicketDissolve(serial: serial) }
+        ticketDissolveTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: timeout)
     }
 }
 
@@ -78,9 +138,16 @@ struct IslandCodexResetControls: View {
     let copy: AppCopy
     let isCurrent: Bool
 
+    private var confirmation: (availableCount: Int, isRetry: Bool)? {
+        switch controller.phase {
+        case .confirming(let preparation): return (preparation.availableCount, preparation.isRetry)
+        default: return nil
+        }
+    }
+
     var body: some View {
         VStack(spacing: 10) {
-            if case .confirming(let preparation) = controller.phase {
+            if let preparation = confirmation {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(copy.text("确认额度重置", "Confirm quota reset"))
                         .font(AstaSans.semiBold(13)).foregroundStyle(.white)

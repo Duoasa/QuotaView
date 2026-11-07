@@ -1,5 +1,73 @@
 # QuotaView SDD 注册表
 
+## 当前开发：0.9.2 Build 19 / 重置动效与正常接入
+
+[当前规则](codex-quota-reset.md#build-19-恢复正常接入与共享卡片2026-11-07) · `Implemented / User Acceptance Pending`：移除生产 Demo，正常服务端成功后播放粒子/递补；共享暗色不透明 ∅ 空卡与鼠标倾斜，Claude 仅卡片共用、命令操作不变。32 项隔离检查及本地化通过，Build 19 / 内部 176 已运行并清理 Demo 偏好。用户授权源码推送与合并 main，CI/合并结果见 [Handoff](../../HANDOFF.md)；未发布。
+
+## 前序开发：0.9.2 Build 18 / 暗色空卡
+
+[空卡与交互](codex-quota-reset.md#build-18-暗色不透明空卡与鼠标交互)：缓存暗色不透明卡面与几何 ∅，恢复鼠标倾斜、移除高光/扫光，23 项检查通过且已运行；后由 Build 19 接回正常数据。
+
+## 前序开发：0.9.2 Build 17 / 两页空卡与 Demo 同步
+
+[统一规则](codex-quota-reset.md#build-17-两页统一空卡与统计页-demo-接管) · `Implemented / User Acceptance Pending`：统计页重置卡共用 Demo 次数，两页/页间飞行/零次递补统一 ∅ 和 45% 透明度。重置页返回统计页保留零次；退出统计流程后再进才补到 2 张。22 项定向检查、本地化与增量构建通过，Build 17 / 内部 174 已启动，Demo 开启、2 张已读回；证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 16 / 零次卡面入场
+
+[零次入场规则](codex-quota-reset.md#build-16-零次卡面也播放入场) · `Implemented / User Acceptance Pending`：零次展示卡也走淡入/上移/回弹，避免粒子结束后直接跳出；次数保持 0，重进补回 2 张。11 项状态检查及增量构建通过，Build 16 / 内部 173 已启动，Demo 开启、2 张已读回；运行证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 15 / Demo 循环补卡
+
+[循环测试规则](codex-quota-reset.md#build-15-归零后重进自动补卡) · `Implemented / User Acceptance Pending`：Demo 归零后返回用量页、重新打开重置页补到 2 张；停留/刷新保留零，正数保持。12 项 Demo/导航检查和增量构建通过，Build 15 / 内部 172 已启动，Demo 开启、2 张已读回；运行证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 14 / 取消独立空卡
+
+[样式恢复](codex-quota-reset.md#build-14-取消独立空卡) · `Implemented / User Acceptance Pending`：移除半透明与 ∅ 空卡分支，恢复原卡片；零次数禁用逻辑、粒子/递补与性能优化保持。2 项相关检查和增量构建通过，Build 14 / 内部 171 已重启，Demo 补回 2 次；运行证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 13 / Demo 默认 2 次
+
+[Demo 次数](codex-quota-reset.md#build-13-demo-默认-2-次) · `Implemented`：初始化与每次重启补到 2 次，覆盖前批 5 张规则，动效、∅ 空卡和性能优化保持。10 项状态检查及增量构建通过，Build 13 / 内部 170 已启动，Demo 开启、2 次已读回；证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 12 / 动效性能与空集标志
+
+[优化规格](codex-quota-reset.md#build-12-显示同步与资源复用空集标志) · `Implemented / User Acceptance Pending`：粒子改为视图显示同步（最高请求 120 Hz），编译/上传后台化并跨宿主复用；原动效参数保持。空卡标志改为 ∅，Demo 重启补满 5 张。18 项定向检查与增量构建通过，Build 12 / 内部 169 已运行；[离屏基准与限制](../design/reset-demo-performance-2026-11-07.md)，运行证据见 [Handoff](../../HANDOFF.md)。实际流畅度待用户验收。
+
+## 前序开发：0.9.2 Build 11 / 零次数空卡
+
+[空卡规格](codex-quota-reset.md#build-11-零次数空状态卡) · `Implemented / User Acceptance Pending`：Codex 重置页已知零次数显示半透明卡面和空托盘标志，停止扫光/倾斜；最后一张粒子消散后显示空卡，不递补。保留提前衔接与 Demo 隔离，重启补满 5 张。16 项相关检查与增量构建通过，Build 11 / 内部 168 已启动；证据见 [Handoff](../../HANDOFF.md)，实际外观由用户验收。
+
+## 前序开发：0.9.2 Build 10 / 粒子尾段提前递补
+
+[衔接规格](codex-quota-reset.md#build-10-粒子尾段提前递补) · `Implemented / User Acceptance Pending`：粒子实际渲染约 1.15 秒时新卡开始淡入，粒子持续至 1.7 秒；保持快速回弹、文字避让与独立完成交接。16 项定向检查及增量构建通过，Build 10 / 内部 167 已启动，Demo 开启并补满 5 张。运行证据见 [Handoff](../../HANDOFF.md)，实际衔接由用户验收。
+
+## 前序开发：0.9.2 Build 9 / 递补避让文字与回弹
+
+[递补修订](codex-quota-reset.md#build-9-避让文字与快速回弹) · `Implemented / User Acceptance Pending`：缩短入场位移并在递补层下缘渐隐，避让标题；0.48 秒快速入场，强化过冲与回弹，保持无旋转和消耗粒子。Demo 重启补满 5 张；10 项检查与增量构建通过，Build 9 / 内部 166 已启动。运行证据见 [Handoff](../../HANDOFF.md)，实际视觉由用户验收。
+
+## 前序开发：0.9.2 Build 8 / 新卡正下方递补
+
+[递补修订](codex-quota-reset.md#build-8-正下方直线递补) · `Implemented / User Acceptance Pending`：新卡从正下方垂直上移并渐显，无旋转、横移与缩放，保留缓入缓出、轻微过冲与收稳。消耗保持粒子消散，Demo 每次重启补满 5 张。10 项定向检查与增量构建通过，Build 8 / 内部 165 已替换启动；证据见 [Handoff](../../HANDOFF.md)，实际视觉待用户验收。
+
+## 前序开发：0.9.2 Build 7 / 新卡逆时针滑入
+
+[递补修订](codex-quota-reset.md#build-7-逆时针滑入递补) · `Implemented / User Acceptance Pending`：消耗保持粒子消散，只有下一张沿弧线逆时针滑入并淡入，采用缓入缓出、轻微过冲与错开收稳。Demo 保持隔离，重启补满 5 张。14 项定向冒烟和增量构建通过，Build 7 / 内部 164 已替换启动，运行证据见 [Handoff](../../HANDOFF.md)。实际视觉由用户验收。
+
+## 前序开发：0.9.2 Build 6 / Demo 启动补卡
+
+[启动补卡规则](codex-quota-reset.md#build-6-启动时补满-5-张) · `Implemented / User Acceptance Pending`：每次启动/重启开发版将 Demo 补满 5 张，当前运行仍支持编辑和模拟扣减；保留粒子消散、3D 递补与红色确认光晕，不触达真实消费。8 项状态冒烟通过，Build 6 / 内部 163 已启动并读回 5 张，运行证据见 [Handoff](../../HANDOFF.md)，视觉由用户验收。
+
+## 前序开发：0.9.2 Build 5 / Demo 卡片递补
+
+[递补规格](codex-quota-reset.md#build-5-下一张卡片-3d-递补) · `Implemented / User Acceptance Pending`：消散后复用原 3D 飞行动画递补下一张，独立阶段保持静态卡隐藏和重复重置保护；不额外扣次数，红色确认光晕与 Demo 隔离保持。12 项定向冒烟与 1 项共享飞行动画生命周期检查通过，Build 5 / 内部 162 已替换启动，实际节奏待用户验收，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 4 / Demo 重置特效
+
+[重置特效规格](codex-quota-reset.md#demo-卡片消散与红色确认光晕2026-11-07092-build-3) · `Implemented / User Acceptance Pending`：确认 Demo 重置时显示原色粒子消散，二次确认复用审批呼吸光晕并改为红色。Build 3 用户反馈无粒子，Build 4 修复真实卡面 16 位图片无法加载 Metal 纹理的问题，改为 RGBA8；11 项针对性检查及真实资源纹理加载通过，Build 4 / 内部 161 已启动。保持 Demo/真实消费隔离，实际显示待用户复测，运行证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 2 / 重置页 Demo
+
+[重置 Demo 规格](codex-quota-reset.md#开发版重置页-demo2026-11-07092-build-2) · `Implemented / User Acceptance Pending`：直接复用当前灵动岛前端，开发身份和显式偏好门禁下，Codex 重置页使用独立模拟数据；顶部 `demo`，点击次数编辑，确认仅扣模拟次数，页内刷新不连接 Codex。21 项隔离冒烟、本地化与 Debug arm64 编译通过，0.9.2 Build 2 / 内部 159 已替换启动；运行证据见 [Handoff](../../HANDOFF.md)。仅本地未发布，生产模拟注入须在提交/推送/发布前清理，其他页面保持。
+
 ## 0.9.2 正式发布
 
 [发布规格](release-0.9.2.md) · `Released / User Acceptance Pending`：Build 1 / 内部 158 已经 PR #137 合入 main，PR/main CI、签名公证和公开 ZIP 回下载验签通过；Release 为 Stable / Latest，签名 appcast 已推送。用户要求“无需核对”后停止剩余线上检查。两组增量为鼠标跟随、DSH 审批与信息/最终回答；完整事实见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
