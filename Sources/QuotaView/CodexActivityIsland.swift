@@ -2171,6 +2171,10 @@ final class ActivityIslandCompletionGlowView: NSView {
     // Optional satellite styling; nil preserves the existing main-island palette
     // and completion sequence.
     var completionColor: NSColor? { didSet { applyColors() } }
+    var confirmationColor: NSColor? {
+        didSet { if confirmationColor != oldValue { applyColors() } }
+    }
+    var displayedGlowColors: [CGColor] { [violetGlowLayer.shadowColor, cyanGlowLayer.shadowColor].compactMap { $0 } }
     var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
         static let reveal = "quotaview.activity.completion-glow.reveal"
@@ -2413,7 +2417,7 @@ final class ActivityIslandCompletionGlowView: NSView {
             )
         case .confirmationReminder:
             let warning =
-                CodexActivityIslandConfirmationReminderContract
+                confirmationColor ?? CodexActivityIslandConfirmationReminderContract
                 .approvalColor
             colors = (warning, warning)
         }

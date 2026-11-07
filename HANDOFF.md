@@ -1,5 +1,145 @@
 # QuotaView 开发交接
 
+## 当前开发：0.9.2 Build 19 / 重置卡动效与恢复正常接入（2026-11-07）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户已授权本批源码推送 GitHub 并合并 main，未授权新 Release/appcast。
+
+已移除生产 Demo 注入、模拟次数与编辑入口、顶部标记、统计覆盖和自动补卡；清理开发 Demo 偏好，恢复真实快照。正常 Codex 重置保留二次确认红色呼吸光晕，只有服务端明确新重置成功且刷新完成后播放原色粒子、提前递补。零次使用暗色不透明 ∅ 卡，无高光/扫光，鼠标倾斜保持。Claude 共用卡面和飞行，命令入口保持；未知次数不当成零，也不读取 Codex 余额。详见 [Build 19 规格](docs/specs/codex-quota-reset.md#build-19-恢复正常接入与共享卡片2026-11-07)。
+
+32 项定向隔离检查通过，覆盖真实 controller 的模拟成功/非成功/取消、重叠衔接不重播、双方已知零/未知、空卡缓存/GPU/生命周期；711 文案模板、743 条目录本地化检查通过。未操作用户实际重置按钮或调用真实消费接口。实际视觉待用户验收。
+
+Debug arm64 增量构建及开发包替换完成；2026-11-07T20:26:28.966335+08:00 已启动 PID 29972，0.9.2 / Build 19 / 内部 176。259 输入、19 项资源、完整包/备份与加载路径一致，正式安装未改。运行证据 `.build/reset-live-092b19-runtime/`，检查 `.build/reset-live-092b19/`；备份 `.build/runtime-package-backups/reset-live-092b19-20261107-202626/QuotaView.app`。源码推送/PR/main CI 正在完成，最终结果在本节同步。
+
+## 前序开发：0.9.2 Build 18 / 暗色空卡与鼠标交互（2026-11-07）
+
+空卡从整体 45% 透明改为暗色不透明缓存位图及几何 ∅，恢复鼠标倾斜，取消空卡高光/扫光；两页与递补/飞行材料统一。23 项检查通过，2026-11-07T20:11:36.114008+08:00 已启动 PID 20302 / 内部 175，运行证据 `.build/reset-empty-092b18-runtime/`。冷启动微基准和只读采样未证明实际卡顿的全部根因，视觉仍待复测。此版 Demo 已由 Build 19 撤销。
+
+## 前序开发：0.9.2 Build 17 / 两页统一空卡与统计页 Demo（2026-11-07）
+
+用户要求零次恢复空状态卡，统计页也一样，统计页的重置卡板块接管 Demo，装填改在重新进入统计页。本批两页和页间 3D 飞行/零次递补共用同一 ∅ 图片及 45% 透明度，消费旧卡仍原色粒子消散。统计页仅重置卡次数/样式接管为同一 Demo controller，显示 `demo` 和辅助说明；真实账户、额度、Token/图表保持，0 不回退到真实次数。
+
+补卡现仅发生在退出统计流程回任务后，再次打开 Codex 统计页且 Demo 为 0 时，补至 2 张；重置页↔统计页之间往返保留零次空卡，刷新/重复打开已显示页面不补，正数/自定义正数保持。启动仍为 2 张，性能优化与真实消费隔离保持。详见[Build 17 规格](docs/specs/codex-quota-reset.md#build-17-两页统一空卡与统计页-demo-接管)。
+
+22 项定向检查通过，覆盖 Demo 数据边界、统计页装填、空卡递补/页间透明度、GPU 与导航；715 源码文案模板、747 条目录本地化检查通过。Debug arm64 增量构建与开发包替换完成；2026-11-07T19:59:22.179441+08:00 已启动 PID 10793，0.9.2 / Build 17 / 内部 174。259 输入、19 项资源、完整包/备份及加载路径一致，Demo 开启、2 张已读回。证据 `.build/reset-shared-092b17-runtime/`、`.build/reset-shared-092b17-smoke.log`、`.build/reset-shared-092b17-localization.log`；备份 `.build/runtime-package-backups/reset-shared-092b17-20261107-195919/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；实际视觉/衔接由用户验收，未主动截图或操作实际 UI。公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 16 / 零次卡面入场修复（2026-11-07）
+
+用户反馈 0 次时卡片直接出现、缺少出场动画。原因是取消独立空卡后普通卡面保留，但递补触发仍要求次数大于零。本批让零次展示卡也走相同的粒子尾段淡入、上移与回弹，静态卡仅在入场完成后接管。次数仍为 0、重置不可用；返回用量页重进才补回 2 张。最后一张消费仍粒子消散，减少动态/取消/旧回调保护和性能优化保持。详见[Build 16 规格](docs/specs/codex-quota-reset.md#build-16-零次卡面也播放入场)。
+
+11 项 Demo 状态检查通过，新增断言覆盖零次仍入场、期间隐藏静态卡、结束不补次数及零次不可再次消费。Debug arm64 增量构建和运行包更新完成；2026-11-07T19:48:02.357898+08:00 已启动 PID 97242，0.9.2 / Build 16 / 内部 173。259 输入、19 项资源、完整包/备份及加载路径一致；Demo 开启、2 张已读回。证据 `.build/reset-zero-motion-092b16-runtime/`、`.build/reset-zero-motion-092b16-smoke.log`；备份 `.build/runtime-package-backups/reset-zero-motion-092b16-20261107-194800/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；实际衔接由用户验收，公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 15 / Demo 归零重进补回 2 张（2026-11-07）
+
+用户要求归零后回到用量页，再打开重置页自动恢复 2 张，方便循环测试。已在 Codex 重置页打开入口补卡，仅当 Demo 本地数量为 0 才设置为 2；停留、刷新、重复打开已展示页、仅返回用量页都不补卡，正数/自定义数量保持。补卡取消旧确认与动画并写回独立偏好，真实 controller 不参与。初始化与重启仍为 2 张，原动效/性能优化和取消独立空卡规则保持。详见[Build 15 规格](docs/specs/codex-quota-reset.md#build-15-归零后重进自动补卡)。
+
+12 项 Demo 与导航定向检查通过，覆盖归零前后、反复重进、正数保持、刷新不补与旧动画通知。Debug arm64 增量构建和运行包替换完成；2026-11-07T19:35:19.488827+08:00 已启动 PID 94718，0.9.2 / Build 15 / 内部 172。259 输入、19 项资源、完整包/备份及加载路径一致；Demo 开启、2 张已读回。证据 `.build/reset-cycle-092b15-runtime/`、`.build/reset-cycle-092b15-smoke.log`；备份 `.build/runtime-package-backups/reset-cycle-092b15-20261107-193517/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；实际交互由用户验收，公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 14 / 取消独立空卡、Demo 补回 2 次（2026-11-07）
+
+补卡运行更新：2026-11-07T13:54:23.767201+08:00 按用户要求重启同一 Build 14，PID 82999，Demo 已读回 2 张；未改源码或重建。证据 `.build/reset-refill-092b14-runtime/runtime-result.json`。
+
+用户取消独立空状态卡并要求重新补足 2 次。已移除半透明/∅ 视觉分支及空卡特有扫光/悬停限制，恢复原卡面与 OpenAI 标志；零次数文案、禁用重置和最后一张不递补保持。保留粒子消散、提前递补与性能优化，Demo 初始化及每次重启仍为 2 次。详见[Build 14 规格](docs/specs/codex-quota-reset.md#build-14-取消独立空卡)。
+
+2 项相关状态检查通过，Debug arm64 增量构建及运行包替换完成；2026-11-07T13:36:09.133887+08:00 已启动 PID 81238，0.9.2 / Build 14 / 内部 171。259 输入、19 项资源、完整包/备份及加载路径一致；读回 Demo 开启、2 次。证据 `.build/reset-card-092b14-runtime/`、`.build/reset-card-092b14-smoke.log`；备份 `.build/runtime-package-backups/reset-card-092b14-20261107-133607/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；视觉由用户验收，公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 13 / Demo 默认 2 次（2026-11-07）
+
+用户要求 Demo 改为 2 次。初始化与每次重启现统一补到 2 次，覆盖此前 5 张规则；运行期间仍可编辑并模拟扣减，动效、∅ 空卡、性能优化及真实消费隔离保持。详见[Build 13 规格](docs/specs/codex-quota-reset.md#build-13-demo-默认-2-次)。
+
+10 项 Demo 状态检查通过，Debug arm64 增量构建及开发运行包更新完成；2026-11-07T13:32:47.036359+08:00 已启动 PID 79320，0.9.2 / Build 13 / 内部 170。259 输入、19 项资源、完整包/备份和加载路径一致，启动后读回 Demo 开启、2 次。证据 `.build/reset-count-092b13-runtime/`、`.build/reset-count-092b13-smoke.log`；备份 `.build/runtime-package-backups/reset-count-092b13-20261107-133245/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；动画实际流畅度仍由用户验收，公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 12 / 动效性能优化与空集符号（2026-11-07）
+
+用户反馈整段动效轻微卡顿，明确空状态标志为数学 ∅。主屏检测为最高 120 Hz，原粒子固定 60 fps；离屏首个 shader/pipeline 编译约 285 ms、原在主线程。现改为视图绑定 CADisplayLink（请求最高 120 Hz、系统匹配屏幕），停播/隐藏/减少动态撤销刷新链；shader 编译与纹理上传移到后台，跨宿主共享准备任务及 GPU 资源。保留粒子数量、画质、轨迹和时间参数；零次数标志替换为 ∅，半透明卡面保持。详见[性能实测与限制](docs/design/reset-demo-performance-2026-11-07.md)和[Build 12 规格](docs/specs/codex-quota-reset.md#build-12-显示同步与资源复用空集标志)。
+
+18 项定向检查通过，含并发缓存合并、离屏宿主显示刷新启停/减少动态、粒子 GPU、Demo 交接及既有页面过渡。两轮各 408 帧离屏 GPU P95 约 0.136 / 0.215 ms，未证明 shader 变快；初始化缓存热命中 P95 约 0.00033 ms，真实呈现 FPS 未测。Debug arm64 增量构建和运行包更新完成；2026-11-07T13:30:08.589079+08:00 已启动 PID 77363，0.9.2 / Build 12 / 内部 169。259 输入、19 项资源、完整包/备份和加载路径匹配，Demo 开启、重启补满 5 张已读回。证据 `.build/reset-performance-092b12/`、`.build/reset-performance-092b12-runtime/`；备份 `.build/runtime-package-backups/reset-performance-092b12-20261107-133006/QuotaView.app`。
+
+保持 Demo/真实消费隔离，正式安装未替换；本地未推送/发布。没有主动截图或操作实际 UI，性能瓶颈的完整归因及实际流畅度仍待用户复测；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 11 / 零次数半透明空卡（2026-11-07）
+
+用户要求可用重置数为 0 时显示半透明空状态卡，并替换 OpenAI 标志。Codex 重置页已知零次数时显示原卡面 45% 不透明度、中心空托盘标志，停止扫光与悬停倾斜；未知次数、Claude 与用量页卡片保持。最后一张仍使用完整卡面粒子消散，随后露出空卡，不递补；Demo 直接编辑为 0 可查看，正数恢复正常卡。前批粒子尾段提前递补继续保留。详见[Build 11 规格](docs/specs/codex-quota-reset.md#build-11-零次数空状态卡)。
+
+15 项 Demo/GPU 定向检查与 1 项既有零/未知次数区分检查通过。Debug arm64 增量构建及开发包更新成功；2026-11-07T13:15:21.124117+08:00 已启动 PID 70627，0.9.2 / Build 11 / 内部 168。259 输入、19 项资源、完整包/备份及加载路径一致；Demo 开启、重启补满 5 张已读回。证据 `.build/reset-empty-092b11-runtime/`、`.build/reset-empty-092b11-smoke.log`、`.build/reset-empty-092b11-zero-smoke.log`；备份 `.build/runtime-package-backups/reset-empty-092b11-20261107-131519/QuotaView.app`。
+
+保持 Demo 和真实消费隔离，正式安装未替换；仅本地未推送/发布。空态实际外观和动画观感由用户验收，未主动截图或操作 UI；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 10 / 粒子尾段提前递补（2026-11-07）
+
+用户要求粒子未完全消失时下一张提前淡入，保持 Demo。现在粒子实际渲染约 1.15 秒触发新卡，粒子继续播放至 1.7 秒；新卡保持 0.48 秒快速回弹和底缘文字避让，两段重叠约半秒。独立完成状态保证新卡先落稳时静态卡立即接管，消散完成不重播递补；两段未全部结束前仍禁止再次消费。减少动态/可见性变化使用最新回调，取消/刷新与旧序号保护保持。详见[Build 10 规格](docs/specs/codex-quota-reset.md#build-10-粒子尾段提前递补)。
+
+16 项定向冒烟通过，包括 GPU 交接时间仍有粒子、两种完成顺序、重复/迟到通知及取消保护、既有飞行动画生命周期。Debug arm64 增量构建及开发包更新成功；2026-11-07T13:12:26.768802+08:00 已启动 PID 68204，0.9.2 / Build 10 / 内部 167。259 输入、19 项资源、完整包/备份及加载路径一致；Demo 开启、5 张已读回。证据 `.build/reset-overlap-092b10-runtime/`、`.build/reset-overlap-092b10-smoke.log`；最后替换备份 `.build/runtime-package-backups/reset-overlap-092b10-20261107-131225/QuotaView.app`。
+
+每次重启仍补满 5 张 Demo，真实额度和正式安装保持。仅本地未推送/发布，实际衔接观感由用户验收，未主动截图或操作 UI；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 9 / 递补避让文字与快速回弹（2026-11-07）
+
+用户反馈新卡淡入与文字冲突、节奏需更快且弹性更强。原下移 30 pt 超过卡面与标题的 12 pt 间距，现缩短至 10 pt，并只对递补层下缘增加 6 pt 渐隐遮罩；粒子画布保持。总时长缩短至 0.48 秒，约 4 pt 上冲、1 pt 回弹后减速收稳，仍无旋转/缩放/横移。消耗粒子、红色确认光晕和 Demo 隔离保持，每次重启补满 5 张。详见[Build 9 规格](docs/specs/codex-quota-reset.md#build-9-避让文字与快速回弹)。
+
+10 项定向检查通过，覆盖弹性过冲/回弹、无旋转与落位、Demo 状态和页面飞行动画生命周期。Debug arm64 增量构建与开发运行包替换成功；2026-11-07T13:07:47.664078+08:00 已启动 PID 64278，0.9.2 / Build 9 / 内部 166。259 输入、19 项资源、完整包/备份及实际加载路径一致；Demo 开启、5 张已读回。证据 `.build/reset-bounce-092b9-runtime/`、`.build/reset-bounce-092b9-smoke.log`；备份 `.build/runtime-package-backups/reset-bounce-092b9-20261107-130745/QuotaView.app`。
+
+仅本地未推送/发布，正式安装及真实额度保持。实际遮挡和节奏由用户验收，未主动截图或操作 UI；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 8 / 新卡从正下方递补（2026-11-07）
+
+用户要求递补不旋转，直接从正下方出现，保留缓入缓出、轻微过冲与收稳。已去掉逆时针倾角、横移、弧线与缩放；新卡保持最终尺寸/朝向，从下方 30 pt 垂直上移并渐显，总长 0.84 秒，轻微过冲后回到准确卡位。消耗卡片继续粒子消散，Demo 与红色二次确认光晕保持，每次重启补满 5 张。详见[Build 8 规格](docs/specs/codex-quota-reset.md#build-8-正下方直线递补)。
+
+10 项定向冒烟通过，覆盖垂直递补无旋转/缩放、透明度与落位、Demo 状态及既有页面飞行动画生命周期。Debug arm64 增量构建和运行包替换成功；2026-11-07T13:02:30.146804+08:00 已启动 PID 61978，0.9.2 / Build 8 / 内部 165。259 输入、19 项资源、完整包/备份及实际加载路径一致；Demo 开启、5 张已读回。证据 `.build/reset-rise-092b8-runtime/`、`.build/reset-rise-092b8-smoke.log`；备份 `.build/runtime-package-backups/reset-rise-092b8-20261107-130227/QuotaView.app`。
+
+仅本地未推送/发布，正式安装及真实额度保持，视觉由用户验收；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 7 / 新卡逆时针滑入淡入（2026-11-07）
+
+用户否定前版整圈 3D 递补，并明确消耗卡片继续粒子消散，只有下一张淡入滑入。已仅替换递补采样：从右下方沿弧线滑入，逆时针转正，0.84 秒缓入缓出，前 42% 时间淡入，轻微位移过冲后角度稍晚收稳。沿用共享卡面/宿主与生命周期，原页面间 3D 过渡、粒子 shader、红色确认光晕及真实消费隔离保持。每次重启 Demo 仍补满 5 张。详见[Build 7 规格](docs/specs/codex-quota-reset.md#build-7-逆时针滑入递补)。
+
+14 项定向冒烟通过，涵盖粒子 GPU、递补旋转方向/透明度/落位、Demo 状态与既有飞行动画生命周期。Debug arm64 增量编译和运行包替换成功；2026-11-07T12:52:05.923184+08:00 已启动 PID 58743，0.9.2 / Build 7 / 内部 164。259 生产输入、19 项资源、完整包/备份及实际加载路径一致，启动偏好读回 Demo 开启、5 张。证据 `.build/reset-slide-092b7-runtime/`、`.build/reset-slide-092b7-smoke.log`；备份 `.build/runtime-package-backups/reset-slide-092b7-20261107-125203/QuotaView.app`。
+
+仅本地修改，未推送/发布；正式安装与真实额度保持。动画实际观感由用户验收，未主动截图或操作 UI；公开稳定版仍为 0.9.2 Build 1。
+
+## 前序开发：0.9.2 Build 6 / 每次重启 Demo 补满 5 张（2026-11-07）
+
+用户要求每次重启开发版都补满 5 张 Demo 重置卡。现在 Demo controller 初始化固定为 5，并同步独立模拟数量偏好；同一运行期间仍可自定义及扣减，进入页面或刷新不会补卡。保持粒子消散、3D 旋转递补、红色二次确认光晕及真实消费隔离，详见[启动补卡规则](docs/specs/codex-quota-reset.md#build-6-启动时补满-5-张)。本条覆盖前批跨重启保留模拟次数的行为。
+
+8 项相关隔离状态冒烟通过，Debug arm64 增量编译及开发包替换成功；2026-11-07T12:44:35.757095+08:00 已启动 PID 54511，0.9.2 / Build 6 / 内部 163，启动后实际偏好读回 Demo 开启、5 张。259 生产输入、19 项预览/来源资源、卡面/标志、App/Widget 身份、完整包/备份及加载路径一致。证据 `.build/reset-replenish-092b6-runtime/`（含 `demo-startup.json`）、`.build/reset-replenish-092b6-smoke.log`；旧包 `.build/runtime-package-backups/reset-refill-092b6-20261107-124433/QuotaView.app`。
+
+仅本地未推送/发布，正式安装与真实额度保持；3D 递补的实际外观/节奏继续由用户验收。公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.2 Build 5 / 下一张卡片 3D 递补（2026-11-07）
+
+用户反馈消散后下一张卡片出现生硬，要求复用 3D 旋转动画。现将“消散 → 下一张递补 → 静态卡面”分为连续阶段；复用原 `IslandResetTicketFlightView/Host`，从下方 28 pt、略小尺寸旋转一周补入，沿用 0.76 秒节奏及落位缓动，增加递补专用 0.12 秒淡入。递补完成后才恢复静态卡片/扫光，期间禁止重复重置；最后一张用完、减少动态和离页不播放下一张，取消/刷新/改数量停止动画，次数只在原确认时扣一次。红色二次确认光晕与 Demo 隔离保持，模拟数量沿用用户当前值。详见[递补规格](docs/specs/codex-quota-reset.md#build-5-下一张卡片-3d-递补)。
+
+12 项 Demo/GPU/光晕冒烟与 1 项既有共享飞行动画生命周期检查通过，Debug arm64 增量编译成功。2026-11-07T12:42:18.731240+08:00 已替换启动 PID 52463，0.9.2 / Build 5 / 内部 162；259 输入、19 项预览/来源资源、卡面/标志、App/Widget 身份、完整包/备份及实际加载路径匹配。证据 `.build/reset-refill-092b5-runtime/`、`.build/reset-refill-092b5-smoke.log`、`.build/reset-refill-092b5-flight-smoke.log`；旧包 `.build/runtime-package-backups/reset-refill-092b5-20261107-124216/QuotaView.app`。
+
+仅本地未推送/发布，正式安装未替换，未消费真实卡或额度。实际递补外观与节奏由用户验收；公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.2 Build 4 / Demo 消散纹理修复（2026-11-07）
+
+用户授权 Demo 重置卡粒子消散，并要求二次确认复用审批等待光晕、改为红色。Build 3 / 内部 160 已实现并于 12:33:50 启动；用户随后反馈使用卡片没有粒子效果。实际卡面探针复现 `NSImage.lockFocus` 输出 16-bit / 64-bpp 图片，`MTKTextureLoader` 报 `Image decoding failed`；此前 GPU 冒烟使用普通测试纹理，未覆盖实际卡面解码。
+
+Build 4 改用显式 8-bit RGBA、403×240 sRGB 位图绘制现有卡面/标志，实际运行包资源已成功加载为 Metal 纹理；初始化失败记录日志并保留静态回退。单次消散 1.7 秒、GPU 原色粒子上飘；确认时沿用审批 3 秒呼吸光晕、覆盖为系统红，取消/确认/离页撤销红色覆盖。详见[重置特效规格](docs/specs/codex-quota-reset.md#demo-卡片消散与红色确认光晕2026-11-07092-build-3)。Demo 仍启用，数量保留用户当前操作结果，不重新初始化或消耗真实卡。其他页面保持。
+
+Build 3 的 27 项隔离冒烟通过；Build 4 新增 RGBA8 卡面回归，复跑 11 项 Demo/GPU/光晕检查通过，另有真实包卡面纹理加载检查通过。Debug arm64 增量编译与替换完成，2026-11-07T12:37:47+08:00 已启动 PID 49357，0.9.2 / Build 4 / 内部 161；259 生产输入、19 项预览/来源资源、重置卡面与标志、完整包/备份及 App/Core 加载路径匹配。证据 `.build/reset-dust-092b4-runtime/`、`.build/reset-dust-092b4-smoke.log`、`.build/reset-dust-092b4-artwork.log`；旧包 `.build/runtime-package-backups/reset-dust-092b4-20261107-123745/QuotaView.app`。
+
+仅本地未推送/发布；正式安装未替换。用户视觉结论仅为 Build 3 失败，Build 4 待复测，见 [Design QA](design-qa.md)。公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.2 Build 2 / 重置页 Demo（2026-11-07）
+
+用户取消独立临时 App，改为直接在真实灵动岛前端迭代。当前开发包的 Codex 重置页已切换独立 Demo：顶部显示 `demo`，点击现有次数可输入 0–9999，首次按截图使用 2 次 / 100%；确认只扣本地模拟次数，页内刷新不连接 Codex。卡面、动效、须知和按钮布局继续复用，其他页面及 Claude 保持。详见[重置 Demo 规格](docs/specs/codex-quota-reset.md#开发版重置页-demo2026-11-07092-build-2)。显式开发偏好 `debug.resetPageDemo` 已启用，数量存于独立 `debug.resetPageDemo.count`；生产模拟注入在提交、推送或发布前移除。
+
+21 项隔离冒烟（4 项 Demo、17 项既有重置）、714 源码模板/746 条目录文案检查通过；Debug arm64 增量编译完成，2026-11-07T12:08:43+08:00 已更新开发运行包并启动 PID 28980，版本 0.9.2 / Build 2 / 内部 159。258 输入、19 项资源、App/Widget 身份、完整运行包/备份及实际加载路径匹配。已正常退出此前运行的 `/Applications/QuotaView.app`，其安装文件及数据保持；当前仅开发主进程运行，未消耗真实卡或额度。
+
+证据 `.build/reset-demo-092b2-runtime/`、`.build/reset-demo-092b2-smoke.log`；运行包 `.build/DevelopmentRuntime/QuotaView.app`，旧包 `.build/runtime-package-backups/reset-demo-092b2-20261107-120840/QuotaView.app`。本轮仅本地，未提交/推送/发布，实际交互与视觉由用户验收。公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。下方发布与开发记录为对应阶段事实。
+
 ## 0.9.2 已发布（2026-11-05）
 
 [0.9.2 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1) 已发布为 Stable / Latest，源码经 [PR #137](https://github.com/Duoasa/QuotaView/pull/137) 合入 main；PR 与发布 main CI 均通过。签名、公证/Staple、公开 ZIP 回下载与 EdDSA 核验已完成；签名 appcast 已推送 gh-pages。用户随后要求“无需核对”，已停止后续 Pages/线上核验，只同步发布记录。完整不可变事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，范围见[发布规格](docs/specs/release-0.9.2.md)。回滚 `v0.9.1-build.16` / `f1bf0a3`，Windows 通道及本机正式安装保持。
@@ -1090,11 +1230,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.1-agent-announcement`；0.9.2 源码经 PR #137 合入 main，PR/main CI 通过；发布记录补充不改变生产输入 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 1 / 内部 158 |
+| 分支 / 源码提交 | `codex/0.9.2-reset-card-motion`，基于最新 main `347d1ff`；本批已获推送/合并授权，具体 PR 与 CI 结果在顶部记录 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 19 / 内部 176 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-05T19:08:49.262602+08:00；PID 4791，258 输入、19 项资源、完整包与加载路径一致；证据 `.build/release-092b1-runtime/` |
-| 源码与运行包 | 0.9.2 Build 1 已运行，公告仅展示 0.9.1 公开版后的鼠标跟随与 DSH 两组增量；Release 已发布，appcast 已推送；后续核对按用户要求停止。 |
+| 最近运行核验 | 2026-11-07T20:26:28.966335+08:00；PID 29972，259 输入、19 项资源、完整包与加载路径一致；证据 `.build/reset-live-092b19-runtime/` |
+| 源码与运行包 | 0.9.2 Build 19 已运行；Demo 注入/偏好清理，正常数据驱动共享卡面及成功后粒子/递补，未知不伪造零。源码推送/合并 CI 进行中；未发布，视觉待用户验收。 |
 | 公开稳定版 | 0.9.2 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
 

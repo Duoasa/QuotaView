@@ -281,6 +281,94 @@ final class CodexRateLimitResetTests: XCTestCase {
         XCTAssertEqual(calls.count, 1)
     }
     @MainActor
+    func testLiveControllerAnimatesOnlyNewConfirmedSuccessAfterRefresh() async throws {
+        for outcome in [CodexResetOutcome.reset, .alreadyRedeemed, .nothingToReset, .noCredit] {
+            let fake = FakeResetTransport(), url = try journal()
+            await fake.configure(outcome: outcome)
+            var refreshed = false
+            let controller = CodexResetController(journalURL: url,
+                makeCoordinator: { CodexRateLimitResetCoordinator(client: fake, journalURL: url) },
+                refresh: { refreshed = true })
+            await controller.prepare()
+            XCTAssertFalse(controller.ticketDissolveInFlight)
+            await controller.confirm()
+            XCTAssertTrue(refreshed)
+            XCTAssertEqual(controller.phase, .finished(outcome))
+            XCTAssertEqual(controller.ticketDissolveInFlight, outcome == .reset)
+            if outcome == .reset {
+                controller.startTicketRefill(serial: controller.ticketAnimationSerial)
+                XCTAssertTrue(controller.ticketRefillInFlight)
+            }
+            controller.cancelConfirmation()
+            XCTAssertFalse(controller.ticketDissolveInFlight)
+            XCTAssertFalse(controller.ticketRefillInFlight)
+        }
+        let fake = FakeResetTransport(), url = try journal()
+        await fake.configure(failure: .timeoutAfterConsumption)
+        let controller = CodexResetController(journalURL: url,
+            makeCoordinator: { CodexRateLimitResetCoordinator(client: fake, journalURL: url) }, refresh: {})
+        await controller.prepare()
+        await controller.confirm()
+        XCTAssertFalse(controller.ticketDissolveInFlight, "Ambiguous results must not imply success")
+    }
+
+    @MainActor
+    func testResetAnimationOverlapCannotReplayAndCancellationStopsBothStages() async throws {
+        for refillFinishesFirst in [true, false] {
+            let fake = FakeResetTransport(), url = try journal()
+            let controller = CodexResetController(journalURL: url,
+                makeCoordinator: { CodexRateLimitResetCoordinator(client: fake, journalURL: url) }, refresh: {})
+            await controller.prepare(); await controller.confirm()
+            let serial = controller.ticketAnimationSerial
+            XCTAssertTrue(controller.ticketHidden)
+            controller.startTicketRefill(serial: serial &+ 1)
+            XCTAssertFalse(controller.ticketRefillStarted)
+            controller.startTicketRefill(serial: serial)
+            XCTAssertTrue(controller.ticketRefillInFlight)
+            XCTAssertTrue(controller.ticketDissolveInFlight)
+            if refillFinishesFirst {
+                controller.finishTicketRefill(serial: serial)
+                XCTAssertFalse(controller.ticketHidden)
+                controller.finishTicketDissolve(serial: serial)
+                XCTAssertFalse(controller.ticketRefillInFlight)
+            } else {
+                controller.finishTicketDissolve(serial: serial)
+                XCTAssertTrue(controller.ticketHidden)
+                controller.finishTicketRefill(serial: serial)
+            }
+            XCTAssertFalse(controller.ticketHidden)
+            XCTAssertFalse(controller.busy)
+            controller.cancelConfirmation()
+            controller.startTicketRefill(serial: serial)
+            XCTAssertFalse(controller.ticketRefillInFlight)
+            let calls = await fake.calls
+            XCTAssertEqual(calls.count, 1, "Animation callbacks cannot submit consumption")
+        }
+    }
+
+    @MainActor
+    func testNormalConfirmationDrivesRedGlowWithoutConsuming() async throws {
+        let fake = FakeResetTransport(), url = try journal()
+        let controller = CodexResetController(journalURL: url,
+            makeCoordinator: { CodexRateLimitResetCoordinator(client: fake, journalURL: url) }, refresh: {})
+        let state = IslandBoardState()
+        state.resetController = controller
+        state.update(.init(state: .init(tasks: [], selectedID: 0, allCompleted: false,
+            compact: false, receiptStartedAt: nil), english: false, effect: .dropField), reduceMotion: false)
+        state.openUsage(); state.openReset()
+        await controller.prepare()
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertTrue(state.showsResetConfirmationGlow)
+        state.closeReset()
+        XCTAssertFalse(state.showsResetConfirmationGlow)
+        controller.cancelConfirmation()
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertFalse(state.resetConfirming)
+        let calls = await fake.calls
+        XCTAssertTrue(calls.isEmpty)
+    }
+
+    @MainActor
     func testDisablePreferencePersistsAndInvalidatesExistingConfirmation() async throws {
         let suite = "QuotaView.ResetProtection.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

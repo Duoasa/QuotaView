@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import CoreText
 import SwiftUI
 import QuotaViewCore
@@ -519,7 +520,32 @@ final class IslandBoardState: ObservableObject {
     var onArchive: ((Int) -> Void)?
     var onNextRequest: ((Int) -> Void)?
     var onRefreshUsage: (() async -> Void)?
-    var resetController: CodexResetController?
+    private var resetPhaseObservation: AnyCancellable?
+    @Published private(set) var resetConfirming = false
+    var resetController: CodexResetController? {
+        didSet {
+            guard resetController !== oldValue else { return }
+            resetPhaseObservation = resetController?.$phase
+                .map { phase in switch phase { case .confirming: return true; default: return false } }
+                .removeDuplicates()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] confirming in
+                    guard let self else { return }
+                    self.resetConfirming = confirming
+                    self.onChange?()
+                }
+            if resetController == nil { resetConfirming = false; onChange?() }
+        }
+    }
+    var resetTicketIsEmpty: Bool {
+        guard display?.privacyMode != true else { return false }
+        let snapshot = effectiveUsageProvider == .claudeCode ? display?.claudeUsage?.presentation : display?.usageSnapshot
+        return IslandResetPageData(snapshot: snapshot).creditAvailability == .empty
+    }
+    var showsResetConfirmationGlow: Bool {
+        resetConfirming && showsUsage && showsReset && !compact
+            && effectiveUsageProvider == .codex && display?.visible == true
+    }
     var onOpenSettings: (() -> Void)?
     @Published private(set) var isRefreshingUsage = false
     func refreshUsage() async {
@@ -599,7 +625,11 @@ final class IslandBoardState: ObservableObject {
         usageHeight = height
         if showsUsage { onChange?() }
     }
-    func openUsage() { claimManualPresentation(); showsUsage = true; if compact { presentation = .preview }; onChange?() }
+    func openUsage() {
+        claimManualPresentation(); showsUsage = true
+        if compact { presentation = .preview }
+        onChange?()
+    }
     func closeUsage() { clearResetPresentation(); showsUsage = false; onChange?() }
     func clearDrafts() { approvalDrafts.removeAll() }
     var onConfirmation: ((Int, UUID, IslandConfirmationDecision) -> Void)?
@@ -1566,6 +1596,7 @@ struct IslandBoardView: View {
                 english: state.english, playbackEnabled: !state.compact && state.playback && state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateResetHeight,
                 provider: state.effectiveUsageProvider, resetController: state.resetController,
+                ticketIsEmptyOverride: state.resetTicketIsEmpty,
                 isPresented: state.showsReset && !state.compact && !state.resetTransitionInFlight)
                 .frame(width: state.resetWidth, height: min(state.resetHeight, state.maximumPageHeight), alignment: .top)
                 .environment(\.islandGlassActive, !state.compact && state.showsReset)
@@ -1582,7 +1613,7 @@ struct IslandBoardView: View {
                         source: anchors[.usage].map { proxy[$0] } ?? .zero,
                         destination: anchors[.reset].map { proxy[$0] } ?? .zero,
                         reduceMotion: state.reduceMotion, provider: state.effectiveUsageProvider,
-                        onStart: state.didStartResetTransition, onCompletion: state.finishResetTransition)
+                        isEmpty: state.resetTicketIsEmpty, onStart: state.didStartResetTransition, onCompletion: state.finishResetTransition)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false).accessibilityHidden(true)
                 }
@@ -2106,8 +2137,9 @@ final class IslandNotchSurface: NSView {
             compact: state.compact,
             degree: state.display?.islandGlassDegree ?? AppPreferences.IslandGlassDegree.defaultValue,
             animated: animated)
+        confirmationGlow.confirmationColor = state.showsResetConfirmationGlow ? .systemRed : nil
         confirmationGlow.update(
-            edgeEmphasis: state.tasks.contains { IslandBoardState.needsAttention($0) }
+            edgeEmphasis: state.showsResetConfirmationGlow || state.tasks.contains { IslandBoardState.needsAttention($0) }
                 ? .confirmationReminder : .none,
             reduceMotion: state.reduceMotion || state.display?.playbackEnabled != true,
             playbackVisible: state.display?.visible == true && window != nil)
@@ -2412,8 +2444,51 @@ enum IslandResetTicketArtwork {
             return true
         }
     }
-    @MainActor static func mark(_ provider: IslandAgentProvider) -> NSImage? {
-        provider == .codex ? NSImage(named: "IslandResetMark") : claudeMark
+    private static let emptyFaceSize = CGSize(width: 201.29, height: 120)
+    private static let emptyMarkSize = CGSize(width: 45.3649, height: 45.302)
+    // Rasterize once at 2x. Empty cards use ordinary immutable bitmaps, not a
+    // deferred AppKit drawing handler or an opacity group containing NSViews.
+    @MainActor private static func bitmap(size: CGSize, draw: (CGContext, CGRect) -> Void) -> CGImage? {
+        let width = Int(ceil(size.width * 2)), height = Int(ceil(size.height * 2))
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width * 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+        else { return nil }
+        context.scaleBy(x: CGFloat(width) / size.width, y: CGFloat(height) / size.height)
+        draw(context, CGRect(origin: .zero, size: size))
+        return context.makeImage()
+    }
+    @MainActor static let emptyFaceCGImage = bitmap(size: emptyFaceSize) { context, rect in
+        context.addPath(CGPath(roundedRect: rect, cornerWidth: 8.625, cornerHeight: 8.625, transform: nil))
+        context.clip()
+        context.setFillColor(CGColor(red: 0.28, green: 0.28, blue: 0.28, alpha: 1))
+        context.fill(rect)
+        let colors = [CGColor(red: 0.34, green: 0.34, blue: 0.34, alpha: 1),
+                      CGColor(red: 0.25, green: 0.25, blue: 0.25, alpha: 1)] as CFArray
+        if let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: colors, locations: [0, 1]) {
+            context.drawLinearGradient(gradient, start: CGPoint(x: rect.minX, y: rect.maxY),
+                end: CGPoint(x: rect.maxX, y: rect.minY), options: [])
+        }
+    }
+    @MainActor static let emptyMarkCGImage = bitmap(size: emptyMarkSize) { context, rect in
+        // The mathematical empty-set sign ∅ as cached geometry: no font lookup
+        // or text layout on the first transition to an exhausted card.
+        context.setStrokeColor(CGColor(red: 0.60, green: 0.60, blue: 0.60, alpha: 1))
+        context.setLineWidth(2.3)
+        context.setLineCap(.round)
+        context.strokeEllipse(in: CGRect(x: rect.midX - 12.5, y: rect.midY - 12.5, width: 25, height: 25))
+        context.move(to: CGPoint(x: rect.midX - 12.5, y: rect.midY - 14))
+        context.addLine(to: CGPoint(x: rect.midX + 12.5, y: rect.midY + 14))
+        context.strokePath()
+    }
+    @MainActor static let emptyFace = emptyFaceCGImage.map { NSImage(cgImage: $0, size: emptyFaceSize) }
+        ?? NSImage(size: emptyFaceSize)
+    @MainActor static let emptyMark = emptyMarkCGImage.map { NSImage(cgImage: $0, size: emptyMarkSize) }
+        ?? NSImage(size: emptyMarkSize)
+    @MainActor static func mark(_ provider: IslandAgentProvider, isEmpty: Bool = false) -> NSImage? {
+        if isEmpty { return emptyMark }
+        return provider == .codex ? NSImage(named: "IslandResetMark") : claudeMark
     }
 }
 
@@ -2421,6 +2496,7 @@ struct IslandResetTicket: View {
     let playbackEnabled: Bool
     var size = CGSize(width: 53.6774, height: 32)
     var provider: IslandAgentProvider = .codex
+    var isEmpty = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt = CGSize.zero
     @State private var hovered = false
@@ -2429,21 +2505,29 @@ struct IslandResetTicket: View {
     var body: some View {
         ZStack {
             ZStack {
-                Image(IslandResetTicketArtwork.faceName(provider)).resizable().scaledToFit()
-                RadialGradient(colors: [.white.opacity(hovered ? 0.28 : 0), .clear],
-                    center: UnitPoint(x: 0.5 + motion.width * 0.25, y: 0.5 + motion.height * 0.25),
-                    startRadius: 0, endRadius: 42 * scale)
-                    .clipShape(RoundedRectangle(cornerRadius: 2.3 * scale))
+                if isEmpty {
+                    Image(nsImage: IslandResetTicketArtwork.emptyFace).resizable().scaledToFit()
+                } else {
+                    Image(IslandResetTicketArtwork.faceName(provider)).resizable().scaledToFit()
+                    RadialGradient(colors: [.white.opacity(hovered ? 0.28 : 0), .clear],
+                        center: UnitPoint(x: 0.5 + motion.width * 0.25, y: 0.5 + motion.height * 0.25),
+                        startRadius: 0, endRadius: 42 * scale)
+                        .clipShape(RoundedRectangle(cornerRadius: 2.3 * scale))
+                }
                 Group {
-                    if provider == .codex {
+                    if isEmpty {
+                        Image(nsImage: IslandResetTicketArtwork.emptyMark).resizable().scaledToFit()
+                    } else if provider == .codex {
                         Image("IslandResetMark").resizable().scaledToFit()
                     } else if let mark = IslandResetTicketArtwork.claudeMark {
                         Image(nsImage: mark).resizable().scaledToFit()
                     }
                 }.frame(width: 12.0973 * scale, height: 12.0805 * scale)
                     .offset(x: motion.width * 0.9 * scale, y: motion.height * 0.6 * scale)
-                IslandResetTicketSweep(active: playbackEnabled)
-                    .allowsHitTesting(false).accessibilityHidden(true)
+                if !isEmpty {
+                    IslandResetTicketSweep(active: playbackEnabled)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
             }
             .frame(width: size.width, height: size.height)
             .rotation3DEffect(.degrees(Double(-motion.height * 7)), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
@@ -2709,6 +2793,8 @@ struct IslandUsageBento: View {
     var claudeUsage: IslandClaudeUsage? = nil
     /// Owned by the board so the reset page follows the selected source.
     var provider: Binding<IslandAgentProvider> = .constant(.codex)
+    var displayedResetCredits: Int? { IslandResetPageData(snapshot: current).credits }
+    var resetCardIsEmpty: Bool { displayedResetCredits == 0 }
     private var showsClaude: Bool { provider.wrappedValue == .claudeCode && claudeUsage != nil }
     private var current: CurrentCodexPresentation? { showsClaude ? claudeUsage?.presentation : snapshot }
     private var activeUsageState: IslandUsagePresentation.State { showsClaude ? .current : usageState }
@@ -2970,16 +3056,19 @@ struct IslandUsageBento: View {
                     .padding(.horizontal, 14)
                 Button(action: onReset) {
                     HStack {
-                        IslandResetTicket(playbackEnabled: playbackEnabled, provider: showsClaude ? .claudeCode : .codex).opacity(hidesTicket ? 0 : 1)
+                        IslandResetTicket(playbackEnabled: playbackEnabled, provider: showsClaude ? .claudeCode : .codex,
+                                          isEmpty: resetCardIsEmpty).opacity(hidesTicket ? 0 : 1)
                             .anchorPreference(key: IslandResetTicketAnchors.self, value: .bounds) { [.usage: $0] }
                             .accessibilityHidden(true)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 7) {
-                            Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
+                            HStack(spacing: 4) {
+                                Text(text("额度重置", "Quota reset")).foregroundStyle(secondary)
+                            }
                             if showsClaude {
                                 Text(IslandResetPage.claudeResetCommand).font(.system(size: 10, weight: .medium, design: .monospaced))
                             } else {
-                                Text(IslandResetPageData(snapshot: current).credits.map {
+                                Text(displayedResetCredits.map {
                                     $0 == 0 ? copy.text("0次 · 暂无可用", "0 left · unavailable") : copy.text("\($0)次", "\($0) left")
                                 } ?? "—")
                             }
@@ -2994,7 +3083,7 @@ struct IslandUsageBento: View {
                     .accessibilityLabel(showsClaude ? copy.text("打开 Claude 额度重置说明", "Open Claude quota reset")
                         : copy.text("打开额度重置", "Open quota reset"))
                     .accessibilityHint(showsClaude ? copy.text("在 Claude Code 中运行 /limit-reset 使用重置", "Run /limit-reset in Claude Code to use a reset")
-                        : IslandResetPageData(snapshot: current).creditAvailability == .empty
+                        : displayedResetCredits == 0
                         ? copy.text("无可用重置卡，点击查看", "No reset credits; open for details")
                         : copy.text("额度重置演示", "Quota reset preview"))
                 }

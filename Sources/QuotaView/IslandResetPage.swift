@@ -65,6 +65,7 @@ struct IslandResetPage: View {
     let onHeightChange: (CGFloat) -> Void
     var provider: IslandAgentProvider = .codex
     var resetController: CodexResetController? = nil
+    var ticketIsEmptyOverride: Bool? = nil
     var isPresented = true
     @State private var copiedCommand = false
     private var isClaude: Bool { provider == .claudeCode }
@@ -79,7 +80,16 @@ struct IslandResetPage: View {
             VStack(spacing: 10) {
             VStack(spacing: 16) {
                 VStack(spacing: 12) {
-                    IslandResetTicket(playbackEnabled: playbackEnabled, size: IslandResetTicketFlight.cardSize, provider: provider)
+                    Group {
+                        if let resetController, !isClaude {
+                            IslandResetAnimatedTicket(controller: resetController,
+                                playbackEnabled: playbackEnabled, isPresented: isPresented,
+                                isEmpty: data.creditAvailability == .empty)
+                        } else {
+                            IslandResetTicket(playbackEnabled: playbackEnabled, size: IslandResetTicketFlight.cardSize,
+                                              provider: provider, isEmpty: ticketIsEmptyOverride ?? (data.creditAvailability == .empty))
+                        }
+                    }
                         .opacity(hidesTicket ? 0 : 1)
                         .anchorPreference(key: IslandResetTicketAnchors.self, value: .bounds) { [.reset: $0] }
                         .accessibilityHidden(true)
@@ -87,6 +97,7 @@ struct IslandResetPage: View {
                         Text(copy.text("额度重置", "Quota reset")).foregroundStyle(secondary)
                         if isClaude {
                             Text(Self.claudeResetCommand).font(.system(size: 14, weight: .semibold, design: .monospaced))
+
                         } else {
                             Text(data.credits.map { copy.text("\($0)次", "\($0) left") } ?? "—")
                         }
@@ -254,6 +265,32 @@ enum IslandResetTicketFlight {
     }
 }
 
+// The next card rises straight from below at its final size and orientation.
+// A quick rise and damped rebound settle without changing the card orientation.
+enum IslandResetTicketRefill {
+    static let duration: TimeInterval = 0.48
+    static let entryOffset: CGFloat = 10
+    static let lowerFadeHeight: CGFloat = 6
+    static func smooth(_ value: Double) -> CGFloat {
+        let t = min(1, max(0, value))
+        return CGFloat(t * t * (3 - 2 * t))
+    }
+    static func opacity(at time: Double) -> CGFloat { smooth(time / 0.30) }
+    static func sample(at time: Double, source: CGRect, destination: CGRect) -> IslandResetTicketFlight.Sample {
+        let t = min(1, max(0, time))
+        let travel: CGFloat
+        if t < 0.58 {
+            travel = 1.4 * smooth(t / 0.58)
+        } else if t < 0.80 {
+            travel = 1.4 - 0.5 * smooth((t - 0.58) / 0.22)
+        } else {
+            travel = 0.9 + 0.1 * smooth((t - 0.80) / 0.20)
+        }
+        return .init(position: CGPoint(x: destination.midX,
+            y: source.midY + (destination.midY - source.midY) * travel), transform: CATransform3DIdentity)
+    }
+}
+
 private final class IslandResetTicketFlightObserver: NSObject, CAAnimationDelegate {
     let onStart: () -> Void
     let onStop: () -> Void
@@ -269,6 +306,10 @@ final class IslandResetTicketFlightHost: NSView {
     private let card = CALayer()
     private let face = CALayer()
     private let mark = CALayer()
+    var refillEntrance = false
+    var isEmpty = false {
+        didSet { if isEmpty != oldValue { applyArtwork() } }
+    }
     var provider: IslandAgentProvider = .codex {
         didSet { if provider != oldValue { applyArtwork() } }
     }
@@ -294,6 +335,7 @@ final class IslandResetTicketFlightHost: NSView {
     var flightAnimation: CAAnimationGroup? { card.animation(forKey: Self.animationKey) as? CAAnimationGroup }
     var cardPosition: CGPoint { card.position }
     var cardTransform: CATransform3D { card.transform }
+    var cardOpacity: Float { card.opacity }
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
@@ -314,10 +356,18 @@ final class IslandResetTicketFlightHost: NSView {
     }
     required init?(coder: NSCoder) { nil }
     private func applyArtwork() {
-        var faceRect = face.bounds, markRect = mark.bounds
-        face.contents = NSImage(named: IslandResetTicketArtwork.faceName(provider))?
-            .cgImage(forProposedRect: &faceRect, context: nil, hints: nil)
-        mark.contents = IslandResetTicketArtwork.mark(provider)?.cgImage(forProposedRect: &markRect, context: nil, hints: nil)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        card.opacity = 1
+        if isEmpty {
+            face.contents = IslandResetTicketArtwork.emptyFaceCGImage
+            mark.contents = IslandResetTicketArtwork.emptyMarkCGImage
+        } else {
+            var faceRect = face.bounds, markRect = mark.bounds
+            face.contents = NSImage(named: IslandResetTicketArtwork.faceName(provider))?
+                .cgImage(forProposedRect: &faceRect, context: nil, hints: nil)
+            mark.contents = IslandResetTicketArtwork.mark(provider)?.cgImage(forProposedRect: &markRect, context: nil, hints: nil)
+        }
     }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func viewDidMoveToWindow() {
@@ -352,11 +402,12 @@ final class IslandResetTicketFlightHost: NSView {
         self.serial = serial; movingToReset = toReset
         animationGeneration &+= 1
         let generation = animationGeneration
-        startedAt = now; flightDuration = IslandResetTicketFlight.duration
+        startedAt = now; flightDuration = refillEntrance ? IslandResetTicketRefill.duration : IslandResetTicketFlight.duration
         startProgress = from; endProgress = to
         let steps = 60
         let samples = (0...steps).map { index -> IslandResetTicketFlight.Sample in
             let time = Double(index) / Double(steps)
+            if refillEntrance { return IslandResetTicketRefill.sample(at: time, source: self.source, destination: self.destination) }
             let p = IslandResetTicketFlight.progress(at: time)
             return IslandResetTicketFlight.sample(progress: from + (to - from) * p, source: self.source, destination: self.destination)
         }
@@ -368,13 +419,20 @@ final class IslandResetTicketFlightHost: NSView {
             position.values?[0] = NSValue(point: oldPosition)
             transform.values?[0] = NSValue(caTransform3D: oldTransform)
         }
-        let final = IslandResetTicketFlight.sample(progress: to, source: self.source, destination: self.destination)
+        let final = refillEntrance ? IslandResetTicketRefill.sample(at: 1, source: self.source, destination: self.destination)
+            : IslandResetTicketFlight.sample(progress: to, source: self.source, destination: self.destination)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         card.isHidden = false; card.position = final.position; card.transform = final.transform
         CATransaction.commit()
         let animation = CAAnimationGroup()
         position.duration = flightDuration; transform.duration = flightDuration
         animation.animations = [position, transform]; animation.duration = flightDuration
+        if refillEntrance {
+            let opacity = CAKeyframeAnimation(keyPath: "opacity")
+            opacity.values = (0...steps).map { NSNumber(value: Double(IslandResetTicketRefill.opacity(at: Double($0) / Double(steps))) * Double(card.opacity)) }
+            opacity.duration = flightDuration
+            animation.animations?.append(opacity)
+        }
         // Let the compositor assign the start at transaction commit. Using the
         // pre-layout wall clock would consume early frames while glass settles.
         animation.beginTime = 0
@@ -421,12 +479,16 @@ struct IslandResetTicketFlightView: NSViewRepresentable {
     let source: CGRect
     let destination: CGRect
     let reduceMotion: Bool
+    var refillEntrance = false
     var provider: IslandAgentProvider = .codex
+    var isEmpty = false
     var onStart: (UInt64) -> Void = { _ in }
     var onCompletion: (UInt64) -> Void = { _ in }
     func makeNSView(context: Context) -> IslandResetTicketFlightHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandResetTicketFlightHost, context: Context) {
         view.provider = provider
+        view.isEmpty = isEmpty
+        view.refillEntrance = refillEntrance
         view.onStart = onStart; view.onCompletion = onCompletion
         view.configure(serial: serial, toReset: toReset, active: active, source: source, destination: destination, reduceMotion: reduceMotion)
     }
