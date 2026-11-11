@@ -64,14 +64,18 @@ struct AnnouncementContent {
         let version = (bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
-            // Release 0.9.2 changes since public v0.9.1-build.16.
+            // Development changes since public v0.9.2-build.1.
             Section(id: "highlights", category: .highlight, items: [
-                Item(id: "pointer-display", title: copy.text("鼠标跨屏跟随", "Follow your pointer across displays"),
-                     body: copy.text("鼠标移到另一块屏幕后，灵动岛自动跟随，无需点击窗口；拖动或岛内输入时暂缓切换。", "The island follows your pointer to another display without a click, pausing while you drag or type in the island."))
+                Item(id: "reset-card-motion", title: copy.text("重置卡动效", "Reset card animations"),
+                     body: copy.text("重置成功后粒子消散，下一张卡片轻盈滑入。", "After a successful reset, the card dissolves into particles and the next card glides in."))
             ]),
-            Section(id: "features", category: .feature, items: [
-                Item(id: "dsh-approvals-results", title: copy.text("DSH 审批与结果", "DSH approvals and results"),
-                     body: copy.text("在灵动岛允许或拒绝 DSH 支持的工具请求，补全会话标题、模型和最终回答。更新后请完整重启 DSH。", "Approve or reject supported DSH tool requests in the island, with session titles, models, and final answers. Fully restart DSH after updating."))
+            Section(id: "improvements", category: .improvement, items: [
+                Item(id: "reset-card-status", title: copy.text("状态提示", "Status indicators"),
+                     body: copy.text("新增红色确认光晕与暗色 ∅ 空状态卡。", "Adds a red confirmation glow and a dark ∅ card for the empty state.")),
+                Item(id: "reset-card-performance", title: copy.text("性能优化", "Performance improvements"),
+                     body: copy.text("减少动画衔接卡顿，改善粒子顶部裁切。", "Reduces stutter between animations and improves particle clipping at the top.")),
+                Item(id: "settings-quit-layout", title: copy.text("设置体验", "Settings experience"),
+                     body: copy.text("退出按钮改为红色玻璃，固定右下角；优化窗口最小高度与留白。", "Adds a red glass quit button fixed at the bottom right, with improved minimum window height and spacing."))
             ])
         ])
     }

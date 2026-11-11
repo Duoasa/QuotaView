@@ -431,9 +431,11 @@ struct IslandApprovalActionStyle: ButtonStyle {
     var destructive = false
     var emphasized = false
     var followsGlassAppearance = false
+    var subtleDestructive = false
+    var cornerRadius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         Surface(configuration: configuration, primary: primary, destructive: destructive, emphasized: emphasized,
-            followsGlassAppearance: followsGlassAppearance)
+            followsGlassAppearance: followsGlassAppearance, subtleDestructive: subtleDestructive, cornerRadius: cornerRadius)
     }
     private struct Surface: View {
         let configuration: Configuration
@@ -441,6 +443,9 @@ struct IslandApprovalActionStyle: ButtonStyle {
         let destructive: Bool
         let emphasized: Bool
         let followsGlassAppearance: Bool
+        let subtleDestructive: Bool
+        let cornerRadius: CGFloat
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Environment(\.isEnabled) private var enabled
         @Environment(\.colorScheme) private var colorScheme
         @Environment(\.islandGlassColorScheme) private var glassColorScheme
@@ -456,17 +461,27 @@ struct IslandApprovalActionStyle: ButtonStyle {
             if primary && !destructive { return Color(white: 0.10) }
             return lightGlass ? Color.black.opacity(0.86) : .white
         }
+        private var destructiveOpacity: Double {
+            guard subtleDestructive else { return lightGlass ? 0.90 : 0.78 }
+            return configuration.isPressed ? 0.78 : hovered ? 0.68 : 0.42
+        }
+        private var destructiveSolidTint: Color {
+            subtleDestructive && !hovered && !configuration.isPressed
+                ? Color(red: 0.48, green: 0.23, blue: 0.25)
+                : Color(red: 0.68, green: 0.18, blue: 0.19)
+        }
         var body: some View {
             configuration.label
                 .foregroundStyle(foreground)
-                .islandGlass(RoundedRectangle(cornerRadius: 10, style: .continuous),
-                    tint: enabled && destructive ? (emphasized ? Color(red: 0.68, green: 0.10, blue: 0.12).opacity(lightGlass ? 0.90 : 0.78) : Color.red.opacity(0.22))
+                .islandGlass(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+                    tint: enabled && destructive ? (emphasized ? Color(red: 0.68, green: 0.10, blue: 0.12).opacity(destructiveOpacity) : Color.red.opacity(0.22))
                         : enabled && primary ? Color.white.opacity(0.90) : Color.white.opacity(lightGlass ? 0.22 : 0.04),
-                    solidTint: enabled && destructive ? Color(red: 0.68, green: 0.18, blue: 0.19)
+                    solidTint: enabled && destructive ? destructiveSolidTint
                         : enabled && primary ? Color(white: 0.94) : Color(white: 0.14),
                     clearSurface: !(enabled && ((primary && !destructive) || (destructive && emphasized))))
-                .brightness(configuration.isPressed && enabled ? -0.08 : hovered && enabled ? 0.04 : 0)
-                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous)).onHover { hovered = $0 }
+                .brightness(configuration.isPressed && enabled ? -0.08 : hovered && enabled && !subtleDestructive ? 0.04 : 0)
+                .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)).onHover { hovered = $0 }
+                .animation(subtleDestructive && !reduceMotion ? .easeOut(duration: 0.16) : nil, value: hovered)
                 .environment(\.colorScheme, followsGlassAppearance ? glassColorScheme : colorScheme)
         }
     }

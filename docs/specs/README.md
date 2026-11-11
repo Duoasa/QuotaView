@@ -1,8 +1,28 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入
+## 当前开发：0.9.2 Build 28 / 公告与设置源码集成
 
-[当前规则](codex-quota-reset.md#build-23-采用优化动效并恢复正常接入2026-11-07) · `Implemented / Motion Accepted`：用户接受 Build 22 参数，原样保留粒子/递补实现；移除临时 Demo、恢复正常账户数据，真实重置仍需确认。33 项隔离检查与本地化通过，Build 23 / 内部 180 已运行、Demo 偏好已清理。用户已授权推送合并；PR/main CI 结果见 [Handoff](../../HANDOFF.md)，未发布 Release/appcast。
+[公告规格](brand-announcement.md#092-设置公告与源码集成2026-11-11build-28) · `Implemented / User Acceptance Pending`：四条精简公告覆盖重置卡与设置改进，多语言同步；包含右下角柔和红色玻璃退出按钮、等距留白及 680 pt 最小高度。10 项隔离冒烟与本地化通过，Build 28 / 内部 185 已重启。用户授权本批推送合并，PR/main CI 结果见 [Handoff](../../HANDOFF.md)；未发布 Release/appcast。
+
+## 前序开发：0.9.2 Build 27 / 固定退出按钮与最小高度
+
+[界面规范](../design/QUOTAVIEW_UI_RULES.md#固定退出按钮与最小高度2026-11-11092-build-27) · `Implemented / User Acceptance Pending`：退出按钮固定在右下角，右/底各 40 pt，与内容列右缘对齐；最小窗口高度 680 pt，独立底部区域保证间隔。既有玻璃/hover/确认保持，本地化、增量编译与运行核验通过，Build 27 / 内部 184 已重启。仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 26 / 柔和红色玻璃退出按钮
+
+[界面规范](../design/QUOTAVIEW_UI_RULES.md#退出按钮复用柔和红色玻璃2026-11-11092-build-26) · `Implemented / User Acceptance Pending`：用户否定蓝底红字，改为复用重置按钮玻璃表面，默认柔和红色、hover 加深、白字，紧凑右对齐。原重置参数不变。本地化、增量编译与运行核验通过，Build 26 / 内部 183 已重启；仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 25 / 右下角玻璃退出按钮
+
+[界面规范](../design/QUOTAVIEW_UI_RULES.md#退出按钮使用液态玻璃2026-11-11092-build-25) · `Implemented / User Acceptance Pending`：退出改为内容区右下方液态玻璃胶囊，与设置卡片右缘对齐；保留红色和原生确认。本地化、增量编译与运行核验通过，Build 25 / 内部 182 已重启，精简公告保留。仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 24 / 精简更新公告
+
+[公告规格](brand-announcement.md#092-开发公告精简2026-11-11build-24) · `Implemented / User Acceptance Pending`：以公开 0.9.2 Build 1 为基线，替换为重置卡动效、状态提示、性能优化三条精简公告，多语言同步。内容与本地化检查通过，Build 24 / 内部 181 已重启；正常接入和正式提醒名单保持，仅本地未推送/发布，运行证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入
+
+[当前规则](codex-quota-reset.md#build-23-采用优化动效并恢复正常接入2026-11-07) · `Implemented / Motion Accepted`：用户接受 Build 22 参数，原样保留粒子/递补实现；移除临时 Demo、恢复正常账户数据，真实重置仍需确认。33 项隔离检查与本地化通过，Build 23 / 内部 180 已运行、Demo 偏好已清理。已通过 [PR #140](https://github.com/Duoasa/QuotaView/pull/140) 合入 main，PR/main CI 均通过（各 805 项、7 项跳过、0 失败）；合并后本地验收补记见 [Handoff](../../HANDOFF.md)，未发布 Release/appcast。
 
 ## 前序开发：0.9.2 Build 22 / 粒子减量与递补交接
 

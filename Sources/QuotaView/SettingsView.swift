@@ -6,7 +6,7 @@ enum SettingsWindowMetrics {
     // User-confirmed fixed width (2026-11-01).
     static let fixedContentWidth: CGFloat = 820
     static let defaultContentSize = NSSize(width: fixedContentWidth, height: 680)
-    static let minimumContentSize = NSSize(width: fixedContentWidth, height: 560)
+    static let minimumContentSize = NSSize(width: fixedContentWidth, height: 680)
     static let outerCornerRadius: CGFloat = 24
     static let contentMaxWidth: CGFloat = 560
     static let contentInset: CGFloat = 20
@@ -274,7 +274,23 @@ struct SettingsView: View {
 
     private func settingsDetail(for page: IslandSettingsPage) -> some View {
         Group {
-            if page == .island, #available(macOS 26.0, *) {
+            if page == .general {
+                GeometryReader { geometry in
+                    // Match the centered settings column's right edge and use
+                    // that same distance below the pinned button.
+                    let inset = max(SettingsWindowMetrics.contentInset,
+                        (geometry.size.width - SettingsWindowMetrics.contentMaxWidth) / 2)
+                    legacySettingsDetail(for: page)
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            quitButton
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .padding(.trailing, inset)
+                                .padding(.bottom, inset)
+                                .padding(.top, SettingsLayoutMetrics.itemSpacing)
+                                .background(Color(nsColor: .windowBackgroundColor))
+                        }
+                }
+            } else if page == .island, #available(macOS 26.0, *) {
                 ScrollView {
                     islandSettings
                         .frame(maxWidth: SettingsWindowMetrics.contentMaxWidth, alignment: .topLeading)
@@ -805,21 +821,24 @@ struct SettingsView: View {
                         isOn: $preferences.codexIslandPrivacy)
                 }
             }
-            Button(role: .destructive) { showsQuitConfirmation = true } label: {
-                HStack(spacing: 8) {
-                    Text(copy.text("退出 QuotaView", "Quit QuotaView"))
-                    Spacer(minLength: 8)
-                    Image(systemName: "power")
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 20, height: 20)
-                        .accessibilityHidden(true)
-                }
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, SettingsLayoutMetrics.cardInset).frame(height: SettingsLayoutMetrics.rowMinHeight)
-            }
-            .buttonStyle(SettingsQuitRowStyle())
         }
+    }
+
+    private var quitButton: some View {
+        Button(role: .destructive) { showsQuitConfirmation = true } label: {
+            HStack(spacing: 8) {
+                Text(copy.text("退出 QuotaView", "Quit QuotaView"))
+                Image(systemName: "power")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 20, height: 20)
+                    .accessibilityHidden(true)
+            }
+                .font(.system(size: 13, weight: .medium))
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+        }
+        .buttonStyle(IslandApprovalActionStyle(primary: false, destructive: true, emphasized: true,
+            subtleDestructive: true, cornerRadius: 18))
     }
 
     private var islandScreenSettings: some View {
@@ -2124,26 +2143,6 @@ enum SettingsEffectPreviewMetrics {
     static let inset: CGFloat = 3
     static let outerCornerRadius = previewCornerRadius + inset
     static let height: CGFloat = 44
-}
-
-private struct SettingsQuitRowStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var hovered = false
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.foregroundStyle(Color(nsColor: .systemRed))
-            .background {
-                RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
-                    .fill(.clear)
-                    .background { SettingsGroupSurface() }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous)
-                            .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovered ? 0.06 : 0))
-                    }
-            }
-            .contentShape(RoundedRectangle(cornerRadius: SettingsLayoutMetrics.cardCornerRadius, style: .continuous))
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
-            .onHover { hovered = $0 }.onDisappear { hovered = false }
-    }
 }
 
 private struct SettingsFeedbackRowStyle: ButtonStyle {
