@@ -1,6 +1,48 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入（2026-11-07）
+## 当前开发：0.9.2 Build 28 / 公告与设置源码集成（2026-11-11）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户授权更新公告、推送 GitHub 并合并 main；未授权 Release/appcast。在现有三条精简公告后加入「设置体验」：红色玻璃退出按钮固定右下角，优化最小高度与留白；多语言同步。详见 [公告规格](docs/specs/brand-announcement.md#092-设置公告与源码集成2026-11-11build-28)。
+
+本批包含 Build 24–27 的公告精简与退出按钮布局：复用重置玻璃样式，柔和红底白字、hover 加深，右/底等距 40 pt，按钮固定且设置区独立滚动；最小高度 680 pt。重置/审批默认样式和正常数据接入保持，正式公告名单仍为 102 / 149 / 158。用户未明确确认最终颜色与布局，不扩大为视觉验收通过。
+
+10 项公告策略、窗口尺寸与本地化隔离冒烟通过，715 模板/749 条目录 × 3 翻译检查及四条内容/唯一 ID/正式名单检查通过；未使用真实重置卡。Debug arm64 增量编译与运行核验通过，开发包已重启 PID 54611，0.9.2 / Build 28 / 内部 185；259 输入、19 项资源、完整包/备份/加载路径一致，正式安装未改。
+
+证据 `.build/settings-announcement-092b28/`、`.build/settings-announcement-092b28-runtime/`；备份 `.build/runtime-package-backups/settings-announcement-092b28-20261111-163309/QuotaView.app`。源码分支 `codex/0.9.2-settings-announcement`；PR/main CI 与合并结果完成后补记。下方各批「仅本地」为当时阶段记录，本轮源码集成涵盖上述修改。
+
+## 前序开发：0.9.2 Build 27 / 固定退出按钮与最小高度（2026-11-11）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户要求退出按钮锁定右下角、右/底间距一致，并设置最小窗口高度保证与上方设置间距。按钮已移出滚动内容，在通用页底部 safe-area 区域固定；右/底均 40 pt，右缘沿用内容列对齐。最小窗口高度 680 pt，默认高度保持，设置区独立滚动，底部预留按钮及间距。详见 [界面规范](docs/design/QUOTAVIEW_UI_RULES.md#固定退出按钮与最小高度2026-11-11092-build-27)。
+
+柔和红色玻璃、白字、hover 加深、退出确认、精简公告和正常接入保持。本地化、补丁检查与 Debug arm64 增量编译通过，未新增测试或主动 UI 验收，实际对齐/缩放由用户确认。
+
+开发包已替换重启，PID 51643，0.9.2 / Build 27 / 内部 184；259 输入、19 项资源、包/备份/加载路径一致，正式安装未改。最终证据 `.build/settings-quit-092b27/`、`.build/settings-quit-092b27-final-runtime/`；备份 `.build/runtime-package-backups/settings-quit-092b27-20261111-163017/QuotaView.app`。未使用真实重置卡，本批仅本地未推送/发布。
+
+## 前序开发：0.9.2 Build 26 / 柔和红色玻璃退出按钮（2026-11-11）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户否定 Build 25 蓝底红字，要求复用重置页红色按钮，并让默认红色淡一些、hover 加深。已直接复用 `IslandApprovalActionStyle`，退出独立启用柔和红色与胶囊圆角；白字，36 pt 高，保持内容区底部右对齐和原生退出确认。原重置与审批按钮参数保持。详见 [界面规范](docs/design/QUOTAVIEW_UI_RULES.md#退出按钮复用柔和红色玻璃2026-11-11092-build-26)。
+
+本地化与补丁检查、Debug arm64 增量编译通过；纯样式未新增测试或主动 UI 验收，实际颜色/hover 由用户确认。上一批精简公告和正常接入保持。
+
+开发包已替换重启，PID 44715，0.9.2 / Build 26 / 内部 183；259 输入、19 项资源、包/备份/加载路径一致，正式安装未改。证据 `.build/settings-quit-092b26/`、`.build/settings-quit-092b26-runtime/`；备份 `.build/runtime-package-backups/settings-quit-092b26-20261111-155249/QuotaView.app`。未使用真实重置卡，本批仅本地未推送/发布。
+
+## 前序开发：0.9.2 Build 25 / 右下角玻璃退出按钮（2026-11-11）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。按用户截图要求，通用页全宽退出行改为紧凑液态玻璃胶囊，放在内容底部右侧，与上方设置卡片右缘对齐。macOS 26 使用原生 glass，旧系统原生 bordered；保留红色文字、电源图标、原生确认和页面统一内距。详见 [界面规范](docs/design/QUOTAVIEW_UI_RULES.md#退出按钮使用液态玻璃2026-11-11092-build-25)。
+
+上一批精简公告和正常接入保持。713 模板/748 条目录本地化检查、补丁检查及 Debug arm64 增量构建通过；纯样式不新增测试，未主动 UI 验收，视觉由用户确认。
+
+开发包已替换重启，PID 39373，0.9.2 / Build 25 / 内部 182；259 输入、19 项资源、包/备份/加载路径一致，正式安装未改。证据 `.build/settings-quit-092b25/`、`.build/settings-quit-092b25-runtime/`；备份 `.build/runtime-package-backups/settings-quit-092b25-20261111-154827/QuotaView.app`。未使用真实重置卡，本批仅本地未推送/发布。
+
+## 前序开发：0.9.2 Build 24 / 精简更新公告（2026-11-11）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户要求写入公告并重启开发版，随后要求简洁文案。已用重置卡动效、状态提示、性能优化三条替换上一公开版的跨屏跟随与 DSH 公告；中英及日/韩/西翻译同步，繁中沿用模板转换。详见 [公告规格](docs/specs/brand-announcement.md#092-开发公告精简2026-11-11build-24)。
+
+正常接入、已接受的动效、窗口及回执策略保持，正式公告名单仍为 102 / 149 / 158；内部 181 不自动展示。713 源码模板、748 条目录 × 3 翻译检查通过，三条内容/唯一 ID/正式名单检查通过；未重复未变化的策略测试，实际排版由用户检查。
+
+Debug arm64 增量构建、开发运行包替换与重启完成，PID 35025，0.9.2 / Build 24 / 内部 181。259 输入、19 项资源、包/备份/加载路径一致，正式安装未改，未使用真实重置卡。证据 `.build/announcement-092b24/`、`.build/announcement-092b24-runtime/`；备份 `.build/runtime-package-backups/announcement-092b24-20261111-154224/QuotaView.app`。本批仅本地修改，未推送或发布。
+
+## 前序开发：0.9.2 Build 23 / 采用优化动效并恢复正常接入（2026-11-07）
 
 公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户已接受 Build 22 的动效，授权解除 Demo、恢复正常环境并推送 GitHub/合并 main；未授权 Release/appcast。
 
@@ -8,7 +50,7 @@
 
 33 项隔离检查通过，711 文案模板/743 条目录本地化通过；真实 controller 只用 FakeResetTransport 和临时 journal 验证。没有使用用户的真实重置卡；用户接受覆盖 Build 22 调试场景，不扩大为全矩阵视觉验收。
 
-Debug arm64 增量构建和开发运行包替换完成；2026-11-07T23:36:20.981400+08:00 启动 PID 61500，0.9.2 / Build 23 / 内部 180。259 输入、19 项资源、完整包/备份/加载路径一致，正式安装未改，Demo 偏好不存在。证据 `.build/reset-normal-092b23/`、`.build/reset-normal-092b23-runtime/`；备份 `.build/runtime-package-backups/reset-normal-092b23-20261107-233618/QuotaView.app`。本批源码 PR/main CI 与合并结果在完成后补记。
+Debug arm64 增量构建和开发运行包替换完成；2026-11-07T23:36:20.981400+08:00 启动 PID 61500，0.9.2 / Build 23 / 内部 180。259 输入、19 项资源、完整包/备份/加载路径一致，正式安装未改，Demo 偏好不存在。证据 `.build/reset-normal-092b23/`、`.build/reset-normal-092b23-runtime/`；备份 `.build/runtime-package-backups/reset-normal-092b23-20261107-233618/QuotaView.app`。本批源码已通过 [PR #140](https://github.com/Duoasa/QuotaView/pull/140) 合入 main，源码提交 `da51bc8c863d99948e5807d990b0b44701e28de9`，合并提交 `baf73cb4e0a3104f4be7fcab231ab682ff94df86`。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/42387339659) 与 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/42387725635) 均通过，各 805 项测试、7 项跳过、0 失败，原生问题关闭契约夹具通过。合并后树与运行版源码一致；没有发布 Release/appcast。此合并验收结果为本地交接补记，证据见 `.build/reset-normal-092b23/{pr-merge,pr-ci,main-ci}.json`。
 
 ## 前序开发：0.9.2 Build 22 / 粒子减量与递补交接（2026-11-07）
 

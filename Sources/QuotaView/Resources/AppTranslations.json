@@ -1,4 +1,29 @@
 {
+  "Reset card animations": {
+    "ja": "リセットカードのアニメーション",
+    "ko": "초기화 카드 애니메이션",
+    "es": "Animaciones de las tarjetas de reinicio"
+  },
+  "After a successful reset, the card dissolves into particles and the next card glides in.": {
+    "ja": "リセット成功後、カードが粒子になって消え、次のカードが滑らかに現れます。",
+    "ko": "초기화가 완료되면 카드가 입자로 흩어지고 다음 카드가 부드럽게 들어옵니다.",
+    "es": "Tras un reinicio correcto, la tarjeta se disuelve en partículas y la siguiente entra suavemente."
+  },
+  "Status indicators": {
+    "ja": "状態表示",
+    "ko": "상태 표시",
+    "es": "Indicadores de estado"
+  },
+  "Adds a red confirmation glow and a dark ∅ card for the empty state.": {
+    "ja": "確認時の赤い光と、残り回数がないときの暗い ∅ カードを追加。",
+    "ko": "확인 시 붉은 빛 효과와 남은 횟수가 없을 때 표시되는 어두운 ∅ 카드를 추가했습니다.",
+    "es": "Añade un resplandor rojo de confirmación y una tarjeta oscura con ∅ cuando no quedan usos."
+  },
+  "Reduces stutter between animations and improves particle clipping at the top.": {
+    "ja": "アニメーションの切り替わりを滑らかにし、上端で粒子が途切れる表示を改善。",
+    "ko": "애니메이션 전환 시 끊김과 상단에서 입자가 잘리는 현상을 개선했습니다.",
+    "es": "Reduce los tirones entre animaciones y mejora el recorte de partículas en la parte superior."
+  },
   "Follow your pointer across displays": {
     "ja": "ポインタに合わせてディスプレイを切り替え",
     "ko": "포인터를 따라 디스플레이 이동",
@@ -3713,5 +3738,10 @@
     "ja": "連携の更新後に DSH を再起動してください。承認待ちの操作パラメータはローカルに一時表示され、タスク履歴には保存されません。未対応のリクエストは DSH で処理してください。",
     "ko": "연동을 업데이트한 후 DSH를 다시 시작하세요. 승인 대기 중인 작업 매개변수는 로컬에 임시 표시되며 작업 기록에 저장되지 않습니다. 지원하지 않는 요청은 DSH에서 처리하세요.",
     "es": "Reinicia DSH tras actualizar la integración. Los parámetros pendientes se muestran localmente y nunca se guardan en el historial; gestiona las solicitudes no compatibles en DSH."
+  },
+  "Adds a red glass quit button fixed at the bottom right, with improved minimum window height and spacing.": {
+    "ja": "赤いガラス調の終了ボタンを右下に固定し、ウィンドウの最小高さと余白を調整。",
+    "ko": "붉은 유리 효과의 종료 버튼을 오른쪽 하단에 고정하고 창의 최소 높이와 여백을 개선했습니다.",
+    "es": "Añade un botón de salida de cristal rojo fijo abajo a la derecha y mejora la altura mínima y los márgenes de la ventana."
   }
 }
