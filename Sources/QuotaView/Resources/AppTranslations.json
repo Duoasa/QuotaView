@@ -3743,5 +3743,20 @@
     "ja": "赤いガラス調の終了ボタンを右下に固定し、ウィンドウの最小高さと余白を調整。",
     "ko": "붉은 유리 효과의 종료 버튼을 오른쪽 하단에 고정하고 창의 최소 높이와 여백을 개선했습니다.",
     "es": "Añade un botón de salida de cristal rojo fijo abajo a la derecha y mejora la altura mínima y los márgenes de la ventana."
+  },
+  "Clear card": {
+    "ja": "カードをクリア",
+    "ko": "카드 지우기",
+    "es": "Limpiar tarjeta"
+  },
+  "Task card cleanup": {
+    "ja": "タスクカードのクリア",
+    "ko": "작업 카드 정리",
+    "es": "Limpieza de tarjetas de tareas"
+  },
+  "The cleanup button now uses a brush icon. It only removes the card from the island, keeping the original task and chat.": {
+    "ja": "クリアボタンをブラシアイコンに変更。アイランドのカードだけを取り除き、元のタスクとチャットは保持します。",
+    "ko": "정리 버튼을 브러시 아이콘으로 변경했습니다. 아일랜드의 카드만 제거하며 원래 작업과 채팅은 유지됩니다.",
+    "es": "El botón de limpieza ahora usa un icono de cepillo. Solo elimina la tarjeta de la isla y conserva la tarea y el chat originales."
   }
 }

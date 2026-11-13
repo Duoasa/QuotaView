@@ -1424,7 +1424,11 @@ struct IslandTaskArchiveButton: View {
         Button(action: action) {
             Group {
                 if showsArchiveIcon || IslandProviderIcon.settingsMark(for: provider) == nil {
-                    Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
+                    Image("IslandTaskClear")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 14, height: 14)
                         .foregroundStyle(.white.opacity(hovered ? 1 : 0.55))
                 } else {
                     IslandTaskProviderIcon(provider: provider).accessibilityHidden(true)

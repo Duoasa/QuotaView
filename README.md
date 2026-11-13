@@ -4,9 +4,9 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.2_Build_1-blue" alt="0.9.2 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.3_Build_1-blue" alt="0.9.3 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights</h2>
 
-<p>A full feature overview of <strong>macOS 0.9.2</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
+<p>A full feature overview of <strong>macOS 0.9.3</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
 <table class="highlights">
 <tr>
@@ -95,16 +95,16 @@
 <tr>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/CodexProviderIcon.png" alt="Codex official icon" width="44"><br><strong>Codex</strong><br><sub></sub></td>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/ClaudeApplicationIcon.imageset/ClaudeApplicationIcon.png" alt="Claude Code official icon" width="44"><br><strong>Claude Code</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DSHProviderMark.imageset/DSHProviderMark.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/KimiCodeProviderIcon.imageset/KimiCodeProviderIcon.png" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CursorProviderMark.imageset/CursorProviderMark.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/dsh.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/kimi.svg" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/cursor.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>Preview</sub></td>
 </tr>
 <tr>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/GeminiCLIProviderMark.imageset/GeminiCLIProviderMark.svg" alt="Gemini CLI official icon" width="44"><br><strong>Gemini CLI</strong><br><sub>Preview</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/OpenCodeProviderMark.imageset/OpenCodeProviderMark.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>Preview</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CopilotCLIProviderMark.imageset/CopilotCLIProviderMark.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>Preview</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>Preview</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/opencode.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/copilot.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>Preview</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>Preview</sub></td>
 </tr>
 </table>
 
@@ -158,25 +158,26 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip">QuotaView 0.9.2 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
 <details>
-<summary><strong>New in 0.9.2</strong></summary>
+<summary><strong>New in 0.9.3</strong></summary>
 <ul>
-<li>Follow your pointer across displays without clicking to activate a window.</li>
-<li>Approve or reject supported DSH tool requests in the Island, with session titles, model information, and final answers.</li>
-<li>Fully restart DSH after updating to load the new integration.</li>
+<li>Reset cards dissolve into particles, with smoother replacement animations and clearer empty states.</li>
+<li>A red glass quit button stays at the bottom right of Settings, with improved spacing and minimum window height.</li>
+<li>Brush icons clarify card cleanup: remove a card from the Island while keeping its original task and chat.</li>
+<li>Supported-agent icons use consistent rounded backgrounds.</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · Separate edition</h2>
 
-<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.2.</p>
+<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.3.</p>
 
 <ul>
 <li>Includes a solid-color Island, task status, approvals and answers for compatible clients, usage statistics, AI orb, and quantum noise.</li>

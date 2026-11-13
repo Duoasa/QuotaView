@@ -1,8 +1,24 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.2 Build 28 / 公告与设置源码集成
+## 当前开发：0.9.3 Build 1 / 发布准备
 
-[公告规格](brand-announcement.md#092-设置公告与源码集成2026-11-11build-28) · `Implemented / User Acceptance Pending`：四条精简公告覆盖重置卡与设置改进，多语言同步；包含右下角柔和红色玻璃退出按钮、等距留白及 680 pt 最小高度。10 项隔离冒烟与本地化通过，Build 28 / 内部 185 已重启。用户授权本批推送合并，PR/main CI 结果见 [Handoff](../../HANDOFF.md)；未发布 Release/appcast。
+[发布规格](release-0.9.3.md) · `Accepted / Verifying`：用户授权推送合并、Release 与 appcast；身份冻结 0.9.3 Build 1 / 内部 189。覆盖重置动效、设置、清理图标与公告，中英 README 圆角 Agent 图标保持原始 Logo。回滚资产已核验，正式发布链路进行中，进度见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 31 / 同步任务卡清理公告
+
+[公告规格](brand-announcement.md#任务卡清理公告2026-11-13092-build-31) · `Implemented / User Acceptance Pending`：公告新增任务卡清理，共五条精简内容，多语言同步，正式提醒名单保持。内容/本地化/增量构建及运行核验通过，Build 31 / 内部 188 已重启；仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 30 / 自绘刷子清理图标
+
+[界面规范](../design/QUOTAVIEW_UI_RULES.md#自绘刷子清理图标2026-11-13092-build-30) · `Implemented / User Acceptance Pending`：按用户刷子参考自绘模板 SVG，替换系统橡皮擦；命中区、hover 与清理行为保持，无新增文字提示。SVG/资产编译及运行核验通过，Build 30 / 内部 187 已重启；仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 29 / 任务卡清理图标
+
+[界面规范](../design/QUOTAVIEW_UI_RULES.md#任务卡清理图标2026-11-13092-build-29) · `Implemented / User Acceptance Pending`：卡片 hover 操作由 archivebox 改为 eraser 清理图标，不新增可见文字或 Tooltip；辅助功能标签同步清理，底层操作不变。图标加载、本地化和增量构建/运行核验通过，Build 29 / 内部 186 已重启；仅本地未推送/发布，证据见 [Handoff](../../HANDOFF.md)。
+
+## 前序开发：0.9.2 Build 28 / 公告与设置源码集成
+
+[公告规格](brand-announcement.md#092-设置公告与源码集成2026-11-11build-28) · `Implemented / User Acceptance Pending`：四条精简公告覆盖重置卡与设置改进，多语言同步；包含右下角柔和红色玻璃退出按钮、等距留白及 680 pt 最小高度。10 项隔离冒烟与本地化通过，Build 28 / 内部 185 已重启。已通过 [PR #141](https://github.com/Duoasa/QuotaView/pull/141) 合入 main，PR/main CI 均通过（各 805 项、7 跳过、0 失败）；合并后本地验收补记见 [Handoff](../../HANDOFF.md)，未发布 Release/appcast。
 
 ## 前序开发：0.9.2 Build 27 / 固定退出按钮与最小高度
 
