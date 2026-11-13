@@ -1,12 +1,12 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.3 Build 1 / 发布准备（2026-11-13）
+## 当前版本：0.9.3 Build 1 / 正式发布完成（2026-11-13）
 
-公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户授权 0.9.3 推送合并、Release 与 appcast，身份冻结为 **0.9.3 Build 1 / 内部 189**，tag `v0.9.3-build.1`、ZIP `QuotaView-v0.9.3-build.1.zip`；授权与回滚边界见 [发布规格](docs/specs/release-0.9.3.md)。
+[0.9.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1) 已发布为 Stable / Latest，经 [PR #142](https://github.com/Duoasa/QuotaView/pull/142) 合入 main。PR 与精确 main CI 均通过；Developer ID 签名、公证/Staple、公开 ZIP 回下载、内置公钥验签和线上签名 appcast 均已核验。完整不可变事实见 [版本历史](VERSION_HISTORY.md#当前最新版本)，授权与范围见 [发布规格](docs/specs/release-0.9.3.md)。回滚为 `v0.9.2-build.1` / `ebddc605`，旧 tag/资产保留。
 
-本批包含重置动效/状态/性能、固定玻璃退出按钮、刷子清理图标与五条公告；内部 189 加入正式公告名单。中英 README 更新版本入口和说明，已有圆角图标保留，其余以原始 Logo 制作专用圆角底。正常账户接入、Windows 渠道与正式安装保持，验证不得消费真实重置卡。
+本次包含重置动效/状态/性能、固定玻璃退出按钮、刷子清理图标与五条公告；中英 README 的 Agent 图标统一圆角底，已有圆角底原图保持。完整本地、PR/main CI 各 805 测试（7 跳过、0 失败）、44 项契约通过；261 个生产输入与公证包、运行包和合并源码一致。开发包 0.9.3 Build 1 / 内部 189 已更新运行；运行证据 `.build/release-093b1-runtime/`，发布证据 `dist/verification/0.9.3-build1-release/`。
 
-上一稳定版公开 ZIP 已回下载，与不可变历史记录匹配；加密 Sparkle 密钥备份哈希已核验，Developer ID 和公证配置可用。发布证据 `dist/verification/0.9.3-build1-release/`。正在完成完整测试、构建、公证、PR/main CI 与发布核验，尚未创建新 Release/appcast；实际视觉不扩大为全矩阵验收。
+正常账户接入、Windows 渠道、本机正式安装和用户数据保持，未消费真实重置卡。实际视觉由用户验收，自动化结果不扩展为全矩阵视觉通过。发布记录已据线上验证结果同步；下方开发阶段状态为历史记录。
 
 ## 前序开发：0.9.2 Build 31 / 同步任务卡清理公告（2026-11-13）
 

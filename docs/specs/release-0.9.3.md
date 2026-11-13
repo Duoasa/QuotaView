@@ -1,6 +1,6 @@
 # QuotaView 0.9.3 发布
 
-Spec ID：`QV-RELEASE-0.9.3-001` · Accepted / Verifying · 2026-11-13
+Spec ID：`QV-RELEASE-0.9.3-001` · Released / User Acceptance Pending · 2026-11-13
 
 用户要求「版本定为0.9.3，推送合并发布release，appcast」，并要求 README 支持列表的 Agent 图标统一圆角矩形底，已有的不重复加底。按版本规则，身份冻结为 **0.9.3 Build 1 / 内部 189**，tag `v0.9.3-build.1`，资产 `QuotaView-v0.9.3-build.1.zip`。授权覆盖此身份的源码推送合并、Universal Developer ID 签名、公证/Staple、GitHub Stable/Latest、回下载与签名 appcast 发布，无需重复申请同范围许可。
 
@@ -18,4 +18,4 @@ Spec ID：`QV-RELEASE-0.9.3-001` · Accepted / Verifying · 2026-11-13
 
 完整 Swift 测试、契约夹具、PR 与精确 main CI、Universal 架构与正式身份、签名/公证/Staple/Gatekeeper、隔离解压启动、公开回下载与内置公钥 EdDSA 验签、appcast 历史条目保留及线上签名核验均须完成。实际视觉由用户验收；构建/测试不扩展为全设备视觉通过。
 
-证据目录 `dist/verification/0.9.3-build1-release/`。当前为发布准备，尚未发布；完成后将不可变事实写入 [版本历史](../../VERSION_HISTORY.md#当前最新版本)，进度见 [Handoff](../../HANDOFF.md)。
+证据目录 `dist/verification/0.9.3-build1-release/`。源码经 PR #142 合入 main，PR/main CI、签名公证、Stable/Latest Release、公开 ZIP 回下载与线上签名 appcast 均核验完成；本地/PR/main 各 805 项测试、7 跳过、0 失败，44 项契约通过。完整不可变事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)，运行与交接见 [Handoff](../../HANDOFF.md)。
