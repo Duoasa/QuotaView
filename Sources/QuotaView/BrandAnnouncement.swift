@@ -64,7 +64,7 @@ struct AnnouncementContent {
         let version = (bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
-            // Development changes since public v0.9.2-build.1.
+            // Release 0.9.3 changes since public v0.9.2-build.1.
             Section(id: "highlights", category: .highlight, items: [
                 Item(id: "reset-card-motion", title: copy.text("重置卡动效", "Reset card animations"),
                      body: copy.text("重置成功后粒子消散，下一张卡片轻盈滑入。", "After a successful reset, the card dissolves into particles and the next card glides in."))
@@ -75,7 +75,9 @@ struct AnnouncementContent {
                 Item(id: "reset-card-performance", title: copy.text("性能优化", "Performance improvements"),
                      body: copy.text("减少动画衔接卡顿，改善粒子顶部裁切。", "Reduces stutter between animations and improves particle clipping at the top.")),
                 Item(id: "settings-quit-layout", title: copy.text("设置体验", "Settings experience"),
-                     body: copy.text("退出按钮改为红色玻璃，固定右下角；优化窗口最小高度与留白。", "Adds a red glass quit button fixed at the bottom right, with improved minimum window height and spacing."))
+                     body: copy.text("退出按钮改为红色玻璃，固定右下角；优化窗口最小高度与留白。", "Adds a red glass quit button fixed at the bottom right, with improved minimum window height and spacing.")),
+                Item(id: "task-card-cleanup", title: copy.text("任务卡清理", "Task card cleanup"),
+                     body: copy.text("清理按钮改为刷子图标，仅移除灵动岛卡片，保留原任务与聊天。", "The cleanup button now uses a brush icon. It only removes the card from the island, keeping the original task and chat."))
             ])
         ])
     }
@@ -87,7 +89,7 @@ struct BrandAnnouncementCampaign {
     let releaseBuilds: Set<String>
 
     // Each approved stable release has an independent acknowledgement.
-    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149", "158"])
+    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149", "158", "189"])
     var storageKey: String { "announcement.\(id).acknowledgedBuilds" }
 
     func shouldPresent(build: String, acknowledged: Set<String>) -> Bool {

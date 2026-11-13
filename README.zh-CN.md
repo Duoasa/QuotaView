@@ -4,9 +4,9 @@
 
 <p align="center"><strong>多 Agent 状态与用量灵动岛。</strong><br>任务、审批与用量，都在桌面顶部。</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.2_Build_1-blue" alt="0.9.2 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.3_Build_1-blue" alt="0.9.3 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
 
 <p align="center"><strong>简体中文</strong> · <a href="README.md">English</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights · 功能亮点</h2>
 
-<p>以下为 <strong>macOS 0.9.2</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
+<p>以下为 <strong>macOS 0.9.3</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
 
 <table class="highlights">
 <tr>
@@ -28,7 +28,7 @@
 <li>同时追踪多个本地会话，查看思考、执行、待确认、完成和失败状态。</li>
 <li>在卡片中查看来源可提供的任务标题、模型、Token、耗时和当前工具。</li>
 <li>展开任务详情、查看公开完成内容，以及有明确父子关系的子 Agent 活动。</li>
-<li>支持任务归档、悬停展开和固定展开，让当前工作留在眼前。</li>
+<li>支持卡片清理、悬停展开和固定展开，让当前工作留在眼前。</li>
 </ul>
 </td>
 <td width="50%" valign="top">
@@ -95,16 +95,16 @@
 <tr>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/CodexProviderIcon.png" alt="Codex official icon" width="44"><br><strong>Codex</strong><br><sub></sub></td>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/ClaudeApplicationIcon.imageset/ClaudeApplicationIcon.png" alt="Claude Code official icon" width="44"><br><strong>Claude Code</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DSHProviderMark.imageset/DSHProviderMark.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/KimiCodeProviderIcon.imageset/KimiCodeProviderIcon.png" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CursorProviderMark.imageset/CursorProviderMark.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/dsh.svg" alt="DSH official icon" width="44"><br><strong>DSH</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/kimi.svg" alt="Kimi Code official icon" width="44"><br><strong>Kimi Code</strong><br><sub></sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/cursor.svg" alt="Cursor official icon" width="44"><br><strong>Cursor</strong><br><sub>预览</sub></td>
 </tr>
 <tr>
 <td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/GeminiCLIProviderMark.imageset/GeminiCLIProviderMark.svg" alt="Gemini CLI official icon" width="44"><br><strong>Gemini CLI</strong><br><sub>预览</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/OpenCodeProviderMark.imageset/OpenCodeProviderMark.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>预览</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/CopilotCLIProviderMark.imageset/CopilotCLIProviderMark.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>预览</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>预览</sub></td>
-<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/DevinProviderMark.imageset/DevinProviderMark.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/opencode.svg" alt="OpenCode official icon" width="44"><br><strong>OpenCode</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/copilot.svg" alt="GitHub Copilot CLI official icon" width="44"><br><strong>GitHub Copilot CLI</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>预览</sub></td>
+<td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>预览</sub></td>
 </tr>
 </table>
 
@@ -158,25 +158,26 @@
 
 <p><strong>macOS 14+</strong> · Apple silicon + Intel 通用包 · Developer ID 签名 · Apple 公证</p>
 
-<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.2-build.1/QuotaView-v0.9.2-build.1.zip">QuotaView 0.9.2 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → 连接」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
+<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → 连接」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
 
 <p><strong>默认开启自动检查更新</strong>，已有用户偏好保留，可随时在设置中关闭；下载与安装仍需确认。</p>
 
 <details>
-<summary><strong>0.9.2 本次更新</strong></summary>
+<summary><strong>0.9.3 本次更新</strong></summary>
 <ul>
-<li>灵动岛跟随鼠标跨屏，无需点击激活窗口。</li>
-<li>在岛内允许或拒绝 DSH 支持的工具请求，补全会话标题、模型与最终回答。</li>
-<li>更新后请完整重启 DSH，以加载新版接入。</li>
+<li>重置卡新增粒子消散与流畅递补，完善确认提示和空状态。</li>
+<li>设置页退出按钮使用红色玻璃并固定右下角，优化留白与窗口最小高度。</li>
+<li>刷子图标明确卡片清理含义，仅移除灵动岛卡片，保留原任务与聊天。</li>
+<li>支持列表中的 Agent 图标统一圆角矩形底。</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.2-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · 单独说明</h2>
 
-<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.2。</p>
+<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.3。</p>
 
 <ul>
 <li>提供纯色灵动岛、任务状态、兼容客户端的审批和问题回复、用量统计、AI 球与量子噪点。</li>

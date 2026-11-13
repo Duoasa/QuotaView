@@ -1,6 +1,38 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.2 Build 28 / 公告与设置源码集成（2026-11-11）
+## 当前开发：0.9.3 Build 1 / 发布准备（2026-11-13）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户授权 0.9.3 推送合并、Release 与 appcast，身份冻结为 **0.9.3 Build 1 / 内部 189**，tag `v0.9.3-build.1`、ZIP `QuotaView-v0.9.3-build.1.zip`；授权与回滚边界见 [发布规格](docs/specs/release-0.9.3.md)。
+
+本批包含重置动效/状态/性能、固定玻璃退出按钮、刷子清理图标与五条公告；内部 189 加入正式公告名单。中英 README 更新版本入口和说明，已有圆角图标保留，其余以原始 Logo 制作专用圆角底。正常账户接入、Windows 渠道与正式安装保持，验证不得消费真实重置卡。
+
+上一稳定版公开 ZIP 已回下载，与不可变历史记录匹配；加密 Sparkle 密钥备份哈希已核验，Developer ID 和公证配置可用。发布证据 `dist/verification/0.9.3-build1-release/`。正在完成完整测试、构建、公证、PR/main CI 与发布核验，尚未创建新 Release/appcast；实际视觉不扩大为全矩阵验收。
+
+## 前序开发：0.9.2 Build 31 / 同步任务卡清理公告（2026-11-13）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户要求更新版本更新与公告，已在四条精简内容后新增「任务卡清理」：清理按钮改为刷子图标，仅移除灵动岛卡片，保留原任务与聊天。多语言同步，公开增量基线与正式提醒名单保持。详见 [公告规格](docs/specs/brand-announcement.md#任务卡清理公告2026-11-13092-build-31)。
+
+五条内容/唯一 ID/正式名单检查、717 源码模板/752 条目录 × 3 翻译本地化检查、补丁检查及 Debug arm64 增量构建通过。纯内容不重复未变化的策略测试，实际排版由用户验收。开发包已重启 PID 95533，0.9.2 / Build 31 / 内部 188；261 输入、20 项资源、包/备份/加载路径一致，正式安装未改。
+
+证据 `.build/announcement-092b31/`、`.build/announcement-092b31-runtime/`；备份 `.build/runtime-package-backups/announcement-092b31-20261113-112047/QuotaView.app`。前序本地刷子图标与正常接入保持，本批仅本地未推送/发布，未使用真实重置卡。
+
+## 前序开发：0.9.2 Build 30 / 自绘刷子清理图标（2026-11-13）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户提供短柄刷子参考图，要求自绘 SVG 替换系统橡皮擦。已新增模板矢量资产 `IslandTaskClear`，24×24 画布/2 pt 圆端线条，卡片内按 14×14 pt 显示；保留操作命中尺寸、hover 透明度、Agent 标识切换、清理回调和辅助功能，不新增 Tooltip。详见 [界面规范](docs/design/QUOTAVIEW_UI_RULES.md#自绘刷子清理图标2026-11-13092-build-30)。
+
+SVG XML 校验、资产编译与 Debug arm64 增量构建通过，新图标已进入运行包 Assets.car；纯资产替换不新增测试或主动 UI 验收，实际视觉由用户确认。开发包已替换重启，PID 92170，0.9.2 / Build 30 / 内部 187；261 输入、20 项资源、完整包/备份/加载路径一致，正式安装未改。
+
+证据 `.build/task-brush-092b30/`、`.build/task-brush-092b30-runtime/`；备份 `.build/runtime-package-backups/task-brush-092b30-20261113-111512/QuotaView.app`。正常接入保持，本批仅本地未推送/发布，未使用真实重置卡。
+
+## 前序开发：0.9.2 Build 29 / 任务卡清理图标（2026-11-13）
+
+公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户要求任务卡右上角 hover 图标从归档换为清理，避免误认为归档 Codex 任务，并指出没有文字提示。已改用系统 `eraser` 图标，不新增可见文案或 Tooltip，保留大小/位置/hover/按压和原操作回调；VoiceOver 标签同步「清理卡片」，现有保留任务与聊天的提示不变。详见 [界面规范](docs/design/QUOTAVIEW_UI_RULES.md#任务卡清理图标2026-11-13092-build-29)。
+
+当前系统 eraser 图标加载成功，715 模板/750 条目录 × 3 翻译本地化检查、补丁检查及 Debug arm64 增量编译通过；纯图标/文案修改不新增测试，未主动 UI 验收，实际视觉由用户确认。
+
+开发包已替换重启，PID 90353，0.9.2 / Build 29 / 内部 186；259 输入、19 项资源、包/备份/加载路径一致，正式安装未改。证据 `.build/task-clear-092b29/`、`.build/task-clear-092b29-runtime/`；备份 `.build/runtime-package-backups/task-clear-092b29-20261113-111047/QuotaView.app`。正常接入和前序已合并功能保持，本批仅本地未推送/发布，未使用真实重置卡。
+
+## 前序开发：0.9.2 Build 28 / 公告与设置源码集成（2026-11-11）
 
 公开稳定版仍为 [0.9.2 Build 1](VERSION_HISTORY.md#当前最新版本)。用户授权更新公告、推送 GitHub 并合并 main；未授权 Release/appcast。在现有三条精简公告后加入「设置体验」：红色玻璃退出按钮固定右下角，优化最小高度与留白；多语言同步。详见 [公告规格](docs/specs/brand-announcement.md#092-设置公告与源码集成2026-11-11build-28)。
 
@@ -8,7 +40,7 @@
 
 10 项公告策略、窗口尺寸与本地化隔离冒烟通过，715 模板/749 条目录 × 3 翻译检查及四条内容/唯一 ID/正式名单检查通过；未使用真实重置卡。Debug arm64 增量编译与运行核验通过，开发包已重启 PID 54611，0.9.2 / Build 28 / 内部 185；259 输入、19 项资源、完整包/备份/加载路径一致，正式安装未改。
 
-证据 `.build/settings-announcement-092b28/`、`.build/settings-announcement-092b28-runtime/`；备份 `.build/runtime-package-backups/settings-announcement-092b28-20261111-163309/QuotaView.app`。源码分支 `codex/0.9.2-settings-announcement`；PR/main CI 与合并结果完成后补记。下方各批「仅本地」为当时阶段记录，本轮源码集成涵盖上述修改。
+证据 `.build/settings-announcement-092b28/`、`.build/settings-announcement-092b28-runtime/`；备份 `.build/runtime-package-backups/settings-announcement-092b28-20261111-163309/QuotaView.app`。源码分支 `codex/0.9.2-settings-announcement`；[PR #141](https://github.com/Duoasa/QuotaView/pull/141) 已合入 main，源码提交 `4c9294afd3c45aa6a62e0d2dae91f826a906f47b`，合并提交 `954af90d90be7ada8d0d5dfc5b2de73ec5c700ae`。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/42988166857) 与 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/42988926050) 均通过，各 805 项测试、7 项跳过、0 失败，原生问题关闭契约夹具通过；合并树与运行版输入一致。此最终验收为合并后本地交接补记，GitHub PR 描述同步结果。下方各批「仅本地」为当时阶段记录，本轮源码集成涵盖上述修改。
 
 ## 前序开发：0.9.2 Build 27 / 固定退出按钮与最小高度（2026-11-11）
 

@@ -863,7 +863,7 @@ final class AppPreferences: ObservableObject {
 
 struct AppCopy {
     let language: AppPreferences.Language
-    var islandArchiveTask: String { text("归档卡片", "Archive card") }
+    var islandArchiveTask: String { text("清理卡片", "Clear card") }
     var islandArchiveTaskHint: String { text("从灵动岛移除，Codex 任务与聊天保留", "Remove from the Island; keep the Codex task and chat") }
 
     /// For predefined labels already stored as strings; interpolated copy uses text(_:_:).

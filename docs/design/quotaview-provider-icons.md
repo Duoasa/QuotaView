@@ -78,3 +78,9 @@
 - `CopilotCLIProviderMark`：[官方来源](https://github.com/primer/octicons/blob/main/icons/copilot-24.svg)；原始文件 `https://raw.githubusercontent.com/primer/octicons/main/icons/copilot-24.svg`；SHA-256 `eeafb3c2f333e04ccf7d031ae215f7adafaed4c6352556b0bf79496e048bcdd7`。
 
 Cursor 为官方 light-background 2D cube；Gemini CLI 为官方全彩 CLI icon；OpenCode 为官方浅色背景标志；Copilot 为 GitHub Primer 的 copilot-24 矢量（MIT，许可证随 `ProviderIconNotices.txt` 打包）。各品牌商标仍属权利人，仅用于标识服务。资源由资产目录离线打包；本批视觉待用户验收。
+
+## README 支持列表圆角底（2026-11-13，0.9.3 Build 1）
+
+用户要求支持列表统一圆角矩形底，已有的不补。Codex、Claude、Gemini CLI 原图已有圆角底，引用不变。DSH、Cursor、OpenCode、GitHub Copilot CLI、Devin 的原始矢量 Logo 内嵌到 64×64 SVG，白色底圆角 14、标志区 44×44；Kimi 原始黑底 PNG 内嵌并裁为相同圆角，不重复加底。Devin Desktop/CLI 共用同一图标。
+
+新资产仅位于 `docs/media/readme/agents/`，中英 README 支持列表引用同步；官方原始 Logo 路径、色彩及应用内资源保持。源文件哈希和处理清单保存在发布证据 `readme-icons.json`。
