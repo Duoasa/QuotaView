@@ -1344,13 +1344,13 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.2-reset-card-performance`；基于 main `7c93acc`，本批已获推送/合并授权；PR/CI 结果见顶部 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.2 / Build 23 / 内部 180 |
+| 分支 / 源码提交 | `codex/0.9.3-release`；0.9.3 发布源码经 PR #142 合入 main `f0ee1ce`，后续发布记录仅修改文档 |
+| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.3 / Build 1 / 内部 189 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-07T23:36:20.981400+08:00；PID 61500，259 输入、19 项资源、完整包与加载路径一致；证据 `.build/reset-normal-092b23-runtime/` |
-| 源码与运行包 | Build 23 已运行；采用用户接受的 Build 22 动效，Demo 清理并恢复正常数据。本批源码 PR/main CI 进行中；未发布。 |
-| 公开稳定版 | 0.9.2 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
-| 本机正式安装 | 当前实测 `/Applications/QuotaView.app` 为 0.8.3 Build 1 / 内部 75；本轮未替换 |
+| 最近运行核验 | 2026-11-13；已启动开发包，261 输入、20 项资源及加载路径核验通过；证据 `dist/verification/0.9.3-build1-release/development-runtime.json` 与 `development-open.json` |
+| 源码与运行包 | 0.9.3 Build 1 开发包与已发布源码的生产输入一致；正常数据环境，无重置卡 Demo。发布与 CI 结果见顶部。 |
+| 公开稳定版 | 0.9.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。
 
