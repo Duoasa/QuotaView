@@ -64,20 +64,16 @@ struct AnnouncementContent {
         let version = (bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
-            // Release 0.9.3 changes since public v0.9.2-build.1.
+            // Development 0.9.4 changes since public v0.9.3-build.1.
             Section(id: "highlights", category: .highlight, items: [
-                Item(id: "reset-card-motion", title: copy.text("重置卡动效", "Reset card animations"),
-                     body: copy.text("重置成功后粒子消散，下一张卡片轻盈滑入。", "After a successful reset, the card dissolves into particles and the next card glides in."))
+                Item(id: "task-output-rate", title: copy.text("任务输出速率", "Task output rate"),
+                     body: copy.text("任务卡新增 tok/s 与四档速度图标，支持多个 Agent。", "Task cards now show tok/s and four speed icons across multiple agents."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
-                Item(id: "reset-card-status", title: copy.text("状态提示", "Status indicators"),
-                     body: copy.text("新增红色确认光晕与暗色 ∅ 空状态卡。", "Adds a red confirmation glow and a dark ∅ card for the empty state.")),
-                Item(id: "reset-card-performance", title: copy.text("性能优化", "Performance improvements"),
-                     body: copy.text("减少动画衔接卡顿，改善粒子顶部裁切。", "Reduces stutter between animations and improves particle clipping at the top.")),
-                Item(id: "settings-quit-layout", title: copy.text("设置体验", "Settings experience"),
-                     body: copy.text("退出按钮改为红色玻璃，固定右下角；优化窗口最小高度与留白。", "Adds a red glass quit button fixed at the bottom right, with improved minimum window height and spacing.")),
-                Item(id: "task-card-cleanup", title: copy.text("任务卡清理", "Task card cleanup"),
-                     body: copy.text("清理按钮改为刷子图标，仅移除灵动岛卡片，保留原任务与聊天。", "The cleanup button now uses a brush icon. It only removes the card from the island, keeping the original task and chat."))
+                Item(id: "task-rate-snapshot", title: copy.text("速率快照", "Rate snapshots"),
+                     body: copy.text("保留最近速率，随新数据更新；任务完成后显示灰色加权平均。", "Keeps the latest rate until new data arrives, then shows a gray weighted average when the task completes.")),
+                Item(id: "task-rate-layout", title: copy.text("紧凑统计", "Compact statistics"),
+                     body: copy.text("速率与累计 tok 并排显示，以细线分隔，任务详情自动避让。", "Rate and total tok sit side by side with a thin divider, leaving task details their own space."))
             ])
         ])
     }

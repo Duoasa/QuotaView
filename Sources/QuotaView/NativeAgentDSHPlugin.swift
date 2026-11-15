@@ -10,7 +10,7 @@ import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve, join } from 'node:path';
 const routePath = __ROUTE_PATH__;
-const supported = new Set(['turn/start', 'turn/end', 'tool/call', 'tool/result', 'request/header', 'assistant/message',
+const supported = new Set(['turn/start', 'turn/end', 'tool/call', 'tool/result', 'request/header', 'step/start', 'assistant/message',
   'approval/asked', 'approval/decided', 'compaction/start', 'compaction/end', 'session/title']);
 export function apply(ctx, config = {}) {
   const epoch = randomUUID();
@@ -24,7 +24,7 @@ export function apply(ctx, config = {}) {
     ? config.sourceNamespace : createHash('sha256').update(home).digest('hex');
   let stopped = false, draining;
   const pending = [], models = new Map(), approvals = new Map(), titles = new Map(), turns = new Map();
-  const decisions = new Map(), slots = new Set();
+  const decisions = new Map(), slots = new Set(), rateStarts = new Map();
   const hydrated = new WeakSet();
   const text = value => typeof value === 'string' ? value.slice(0, 256) : undefined;
   function hydrateMetadata(session, id) {
@@ -201,8 +201,13 @@ export function apply(ctx, config = {}) {
     hydrateMetadata(session, id);
     const d = event.data ?? {};
     if (event.type === 'turn/start' && Number.isSafeInteger(d.turn)) {
-      turns.set(id, d.turn);
+      turns.set(id, d.turn); rateStarts.delete(id);
       if (turns.size > 512) turns.delete(turns.keys().next().value);
+    }
+    if (event.type === 'step/start') {
+      rateStarts.set(id, Date.now());
+      if (rateStarts.size > 512) rateStarts.delete(rateStarts.keys().next().value);
+      return;
     }
     if (event.type === 'request/header') {
       models.set(id, text(d.header?.config?.model));
@@ -232,7 +237,7 @@ export function apply(ctx, config = {}) {
       approvals.delete(approvalKey);
     }
     if (event.type === 'turn/end') {
-      turns.delete(id);
+      turns.delete(id); rateStarts.delete(id);
       for (const [key, approval] of approvals) if (approval.session === session) {
         decisions.get(approval.eventID)?.(); approvals.delete(key);
       }
@@ -248,6 +253,10 @@ export function apply(ctx, config = {}) {
       payload.tokens = Number.isSafeInteger(u.totalTokens) && u.totalTokens >= 0 ? u.totalTokens
         : count(u.inputTokens) + count(u.outputTokens) + count(u.cacheReadTokens) + count(u.cacheWriteTokens);
       payload.usage_id = String(event.seq);
+      const start = rateStarts.get(id), end = Date.now(); rateStarts.delete(id);
+      if (Number.isSafeInteger(u.outputTokens) && u.outputTokens > 0 && end > start) {
+        payload.output_tokens = u.outputTokens; payload.rate_start_ms = start; payload.rate_end_ms = end;
+      }
     }
     // Only public metadata/state and the explicitly supported final answer;
     // never forward prompts, reasoning, tool outputs or account credentials.
@@ -255,7 +264,7 @@ export function apply(ctx, config = {}) {
   });
   ctx.effect(() => () => {
     stopped = true; for (const abort of [...decisions.values()]) abort();
-    pending.length = 0; models.clear(); approvals.clear(); titles.clear(); turns.clear(); slots.clear();
+    pending.length = 0; models.clear(); approvals.clear(); titles.clear(); turns.clear(); slots.clear(); rateStarts.clear();
   });
 }
 """#

@@ -807,6 +807,8 @@ final class IslandLiveStore {
         var operation = ""
         var publicProgress = ""
         var tokens: Int64?
+        var outputRate: CodexOutputRateSample?
+        var averageOutputRate: CodexOutputRateSample?
         var startedAt: Date?
         var endedAt: Date?
         var updatedAt = Date.distantPast
@@ -1442,7 +1444,18 @@ final class IslandLiveStore {
         // The first Hook observation can be much later than the actual turn
         // start. Its exact turn ID admits older same-turn cumulative display,
         // while monotonic totals prevent replay from moving the count backwards.
+        if let rate = update.outputRate,
+           rate.occurredAt > (tasks[i].outputRate?.occurredAt ?? .distantPast) {
+            tasks[i].outputRate = rate
+            tasks[i].averageOutputRate = update.averageOutputRate
+        }
         tasks[i].tokens = max(tasks[i].tokens ?? 0, update.cumulativeTotalTokens); onChange?()
+    }
+    func receiveOutputRate(session: String, turn: String, latest: CodexOutputRateSample?, average: CodexOutputRateSample?) {
+        guard let latest, let i = tasks.firstIndex(where: { $0.key == session && $0.turnKey == turn }),
+              latest.occurredAt >= (tasks[i].outputRate?.occurredAt ?? .distantPast) else { return }
+        guard tasks[i].outputRate != latest || tasks[i].averageOutputRate != average else { return }
+        tasks[i].outputRate = latest; tasks[i].averageOutputRate = average; onChange?()
     }
     func receiveLocalContent(_ content: CodexLocalPublicContent) {
         if subagents[content.sessionHash] != nil {
@@ -1590,6 +1603,8 @@ final class IslandLiveStore {
         clearItemContexts(for: tasks[i].key)
         if let old = tasks[i].turnKey { priorTurnKeys[tasks[i].key, default: []].insert(old) }
         tasks[i].turnKey = key; tasks[i].startedAt = date; tasks[i].endedAt = nil
+        tasks[i].outputRate = nil
+        tasks[i].averageOutputRate = nil
         // Devin reports usage after the prompt's saved position, so its next
         // turn starts unknown. Other providers may report session-wide totals.
         if provider(for: tasks[i].key).isDevin { tasks[i].tokens = nil }
@@ -2139,9 +2154,11 @@ final class IslandLiveStore {
                 windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (synchronizing
                     ? (appCopy.text("请求已处理", "Request handled")) : presentationStatus == .waiting
                     ? status + " · " + (request?.question.value(language) ?? "") : operation),
-                tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tokens" },
+                tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tok" },
                 accessibilityLabel: "\(title), \(status)")
-            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty, provider: provider)
+            return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty, provider: provider,
+                         outputRate: task.status == .completed ? task.averageOutputRate :
+                            (!task.terminal ? task.outputRate : nil))
         }
         let connectionCopy = AppCopy(language: language)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),

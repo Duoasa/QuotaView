@@ -435,6 +435,13 @@ enum NativeAgentHookForwarder {
                 }
             }
         }
+        if ["kimiCode", "copilotCLI"].contains(provider),
+           let session = payload["session_id"] as? String,
+           let log = AgentRateLog.locate(provider: provider, session: session, agent: payload["agent_id"] as? String ?? "main") {
+            payload["rate_log_path"] = log.path
+            if ["UserPromptSubmit", "TurnStarted"].contains(payload["hook_event_name"] as? String ?? ""),
+               let position = AgentRateLog.position(log) { payload["rate_log_position"] = position }
+        }
         _ = forward(payload, route: route)
     }
     private static func forward(_ payload: [String: Any], route: ClaudeCodeRoute) -> Bool {

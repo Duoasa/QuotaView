@@ -40,6 +40,7 @@ public enum DevinSessionUsage {
         /// Input + output reported by completed model requests after the position.
         /// Cache/context counters are not added again; missing usage stays unknown.
         public let tokens: Int64?
+        public var rates: [AgentRateObservation] = []
     }
 
     private static func validSession(_ value: String) -> Bool {
@@ -107,7 +108,8 @@ public enum DevinSessionUsage {
                    json_extract(chat_message, '$.metadata.metrics.input_tokens'),
                    json_extract(chat_message, '$.metadata.metrics.output_tokens'),
                    json_type(chat_message, '$.metadata.metrics.input_tokens'),
-                   json_type(chat_message, '$.metadata.metrics.output_tokens')
+                   json_type(chat_message, '$.metadata.metrics.output_tokens'),
+                   json_extract(chat_message, '$.metadata.metrics.total_time_ms')
             FROM message_nodes WHERE session_id = ?1 AND node_id > ?2
               AND json_extract(chat_message, '$.role') = 'assistant'
             ORDER BY node_id LIMIT 8193
@@ -115,6 +117,7 @@ public enum DevinSessionUsage {
         defer { sqlite3_finalize(query) }
         sqlite3_bind_int64(query, 2, position)
         var requests: [String: Int64] = [:]
+        var rates: [String: AgentRateObservation] = [:]
         var rows = 0
         while true {
             let result = sqlite3_step(query)
@@ -126,8 +129,12 @@ public enum DevinSessionUsage {
                   let count = total(sqlite3_column_int64(query, 3), sqlite3_column_int64(query, 4)) else { continue }
             let id = text(query, 1) ?? text(query, 2) ?? "node:\(sqlite3_column_int64(query, 0))"
             requests[id] = max(requests[id] ?? 0, count)
+            if sqlite3_column_type(query, 7) == SQLITE_INTEGER,
+               let rate = AgentRateObservation(id: id, output: sqlite3_column_int64(query, 4),
+                   durationMS: Double(sqlite3_column_int64(query, 7)), end: Date()),
+               rate.output > (rates[id]?.output ?? 0) { rates[id] = rate }
         }
-        return Snapshot(model: selectedModel, position: latest, tokens: sum(requests))
+        return Snapshot(model: selectedModel, position: latest, tokens: sum(requests), rates: Array(rates.values))
     }
 
     private static func text(_ statement: OpaquePointer, _ column: Int32) -> String? {
@@ -174,6 +181,7 @@ public enum DevinSessionUsage {
         do { try file.seek(toOffset: UInt64(position)) } catch { return metadata }
         guard let data = try? file.read(upToCount: Int(end - UInt64(position))) else { return metadata }
         var requests: [String: Int64] = [:]
+        var rates: [String: AgentRateObservation] = [:]
         let budget = Budget()
         var rows = 0
         // Ignore the unfinished final line while Devin is appending it. Re-read
@@ -192,11 +200,102 @@ public enum DevinSessionUsage {
                 ?? (message["message_id"] as? String) ?? "node:\(nodeID)"
             guard id.utf8.count <= 256 else { continue }
             requests[id] = max(requests[id] ?? 0, count)
+            if let ms = integer(metrics["total_time_ms"]),
+               let rate = AgentRateObservation(id: id, output: output, durationMS: Double(ms), end: Date()),
+               rate.output > (rates[id]?.output ?? 0) { rates[id] = rate }
         }
-        return Snapshot(model: selectedModel, position: Int64(end), tokens: sum(requests))
+        return Snapshot(model: selectedModel, position: Int64(end), tokens: sum(requests), rates: Array(rates.values))
     }
 
     private static func isRegularFile(_ url: URL) -> Bool {
         (try? FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType) == .typeRegular
+    }
+}
+
+/// Privacy-bounded output accounting shared by local file and hook adapters.
+public struct AgentRateObservation: Sendable {
+    public let id: String
+    public let output: Int64
+    public let start: Date
+    public let end: Date
+    public init?(id: String, output: Int64, durationMS: Double, end: Date) {
+        guard !id.isEmpty, id.utf8.count <= 512, (1...1_000_000_000).contains(output),
+              durationMS.isFinite, durationMS > 0, durationMS <= 86_400_000,
+              end.timeIntervalSince1970.isFinite else { return nil }
+        self.id = id; self.output = output; self.end = end
+        start = end.addingTimeInterval(-durationMS / 1000)
+    }
+    public static func integer(_ value: Any?) -> Int64? {
+        guard let n = value as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(),
+              n.doubleValue.isFinite, n.doubleValue >= 0, n.doubleValue <= 9_007_199_254_740_991,
+              n.doubleValue == Double(n.int64Value) else { return nil }
+        return n.int64Value
+    }
+}
+
+/// Bounded turn-local reads. Only official Kimi request/usage and Copilot usage
+/// records are admitted; session aggregates and incomplete JSONL tails are ignored.
+public enum AgentRateLog {
+    public static func locate(provider: String, session: String, agent: String = "main",
+                              environment: [String: String] = ProcessInfo.processInfo.environment,
+                              home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL? {
+        func safe(_ s: String) -> Bool {
+            !s.isEmpty && s.utf8.count <= 256 && s != "." && s != ".."
+                && !s.contains("/") && !s.contains("\0")
+        }
+        guard safe(session), safe(agent) else { return nil }
+        let key = provider == "kimiCode" ? "KIMI_CODE_HOME" : "COPILOT_HOME"
+        let standard = provider == "kimiCode" ? ".kimi-code" : ".copilot"
+        let base = environment[key].flatMap { $0.hasPrefix("/") ? URL(fileURLWithPath: $0) : nil }
+            ?? home.appendingPathComponent(standard)
+        if provider == "copilotCLI" { return base.appendingPathComponent("session-state/\(session)/events.jsonl") }
+        guard provider == "kimiCode",
+              let workspaces = try? FileManager.default.contentsOfDirectory(at: base.appendingPathComponent("sessions"),
+                  includingPropertiesForKeys: nil), workspaces.count <= 512 else { return nil }
+        let matches = workspaces.map { $0.appendingPathComponent("\(session)/agents/\(agent)/wire.jsonl") }
+            .filter { FileManager.default.fileExists(atPath: $0.deletingLastPathComponent().path) }
+        return matches.count == 1 ? matches[0] : nil
+    }
+    public static func position(_ url: URL) -> Int64? {
+        if !FileManager.default.fileExists(atPath: url.path) { return 0 }
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              attrs[.type] as? FileAttributeType == .typeRegular else { return nil }
+        return (attrs[.size] as? NSNumber)?.int64Value
+    }
+    public static func read(url: URL, provider: String, after: Int64, since: Date) -> [AgentRateObservation] {
+        guard after >= 0, let end = position(url), end >= after, end - after <= 16_777_216,
+              let file = try? FileHandle(forReadingFrom: url) else { return [] }
+        defer { try? file.close() }
+        do { try file.seek(toOffset: UInt64(after)) } catch { return [] }
+        guard let data = try? file.read(upToCount: Int(end - after)),
+              let newline = data.lastIndex(of: 10) else { return [] }
+        let deadline = ProcessInfo.processInfo.systemUptime + 0.08
+        var rates: [AgentRateObservation] = [], request: Double?, rows = 0
+        let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for line in data.prefix(through: newline).split(separator: 10) {
+            rows += 1
+            guard rows <= 8192, line.count <= 1_048_576, ProcessInfo.processInfo.systemUptime < deadline else { return [] }
+            guard let obj = (try? JSONSerialization.jsonObject(with: Data(line))) as? [String: Any] else { continue }
+            let type = obj["type"] as? String
+            if provider == "kimiCode" {
+                if type == "llm.request" { request = AgentRateObservation.integer(obj["time"]).map(Double.init); continue }
+                guard type == "usage.record", obj["usageScope"] as? String == "turn" else { continue }
+                let start = request; request = nil
+                guard let start, let end = AgentRateObservation.integer(obj["time"]),
+                      let usage = obj["usage"] as? [String: Any], let output = AgentRateObservation.integer(usage["output"]),
+                      let rate = AgentRateObservation(id: "kimi:\(after):\(rows)", output: output,
+                          durationMS: Double(end) - start, end: Date(timeIntervalSince1970: Double(end)/1000)),
+                      rate.start >= since.addingTimeInterval(-1) else { continue }
+                rates.append(rate)
+            } else if provider == "copilotCLI", type == "session.usage_record",
+                      let data = obj["data"] as? [String: Any], let usage = data["usage"] as? [String: Any],
+                      let output = AgentRateObservation.integer(usage["outputTokens"]),
+                      let duration = usage["duration"] as? Double, let raw = obj["timestamp"] as? String,
+                      let end = iso.date(from: raw) ?? ISO8601DateFormatter().date(from: raw),
+                      let id = obj["id"] as? String,
+                      let rate = AgentRateObservation(id: id, output: output, durationMS: duration, end: end),
+                      rate.start >= since.addingTimeInterval(-1) { rates.append(rate) }
+        }
+        return rates
     }
 }

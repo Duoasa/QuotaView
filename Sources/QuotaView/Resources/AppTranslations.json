@@ -1,4 +1,9 @@
 {
+  "Output rate": {
+    "ja": "出力速度",
+    "ko": "출력 속도",
+    "es": "Velocidad de salida"
+  },
   "Reset card animations": {
     "ja": "リセットカードのアニメーション",
     "ko": "초기화 카드 애니메이션",
@@ -3758,5 +3763,35 @@
     "ja": "クリアボタンをブラシアイコンに変更。アイランドのカードだけを取り除き、元のタスクとチャットは保持します。",
     "ko": "정리 버튼을 브러시 아이콘으로 변경했습니다. 아일랜드의 카드만 제거하며 원래 작업과 채팅은 유지됩니다.",
     "es": "El botón de limpieza ahora usa un icono de cepillo. Solo elimina la tarjeta de la isla y conserva la tarea y el chat originales."
+  },
+  "Task output rate": {
+    "ja": "タスクの出力速度",
+    "ko": "작업 출력 속도",
+    "es": "Velocidad de salida de la tarea"
+  },
+  "Task cards now show tok/s and four speed icons across multiple agents.": {
+    "ja": "複数のエージェントに対応し、タスクカードに tok/s と4段階の速度アイコンを表示します。",
+    "ko": "여러 에이전트의 작업 카드에 tok/s와 4단계 속도 아이콘을 표시합니다.",
+    "es": "Las tarjetas muestran tok/s e iconos de cuatro niveles de velocidad para varios agentes."
+  },
+  "Rate snapshots": {
+    "ja": "速度のスナップショット",
+    "ko": "속도 스냅샷",
+    "es": "Instantáneas de velocidad"
+  },
+  "Keeps the latest rate until new data arrives, then shows a gray weighted average when the task completes.": {
+    "ja": "新しいデータが届くまで直近の速度を保持し、タスク完了後は加重平均をグレーで表示します。",
+    "ko": "새 데이터가 도착할 때까지 최근 속도를 유지하고, 작업이 완료되면 가중 평균을 회색으로 표시합니다.",
+    "es": "Mantiene la última velocidad hasta recibir nuevos datos y muestra la media ponderada en gris al terminar la tarea."
+  },
+  "Compact statistics": {
+    "ja": "コンパクトな統計表示",
+    "ko": "간결한 통계",
+    "es": "Estadísticas compactas"
+  },
+  "Rate and total tok sit side by side with a thin divider, leaving task details their own space.": {
+    "ja": "速度と累計 tok を細い区切り線で並べ、タスク詳細の表示領域を確保します。",
+    "ko": "속도와 누적 tok를 얇은 구분선으로 나란히 표시하고 작업 상세 내용의 공간을 확보합니다.",
+    "es": "La velocidad y el total de tok aparecen juntos con un separador fino y espacio reservado para los detalles."
   }
 }

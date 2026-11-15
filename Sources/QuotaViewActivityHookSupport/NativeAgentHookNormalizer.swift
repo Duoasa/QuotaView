@@ -32,7 +32,8 @@ public enum NativeAgentHookNormalizer {
             case "SessionStart", "SessionEnd": name = sourceEvent
             case "BeforeAgent": name = "UserPromptSubmit"
             case "AfterAgent": name = "Stop"
-            case "BeforeModel": name = "Metadata"
+            case "BeforeModel": name = "ModelRequest"
+            case "AfterModel": name = "Usage"
             case "BeforeTool": name = "PreToolUse"
             case "AfterTool": name = "PostToolUse"
             case "PreCompress": name = "PreCompact"
@@ -71,13 +72,13 @@ public enum NativeAgentHookNormalizer {
             }
         case "kimiCode", "openCode":
             let allowed = ["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-                           "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt", "Metadata"]
+                           "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt", "Metadata", "Usage"]
             guard allowed.contains(sourceEvent) else { return nil }
             name = sourceEvent
         default: return nil
         }
         guard let name else { return nil }
-        var payload: [String: Any] = ["session_id": session, "hook_event_name": name]
+        var payload: [String: Any] = ["session_id": session, "hook_event_name": name, "rate_event_ms": Date().timeIntervalSince1970 * 1000]
         func put(_ key: String, _ value: Any?) {
             if let value = value as? String, !value.isEmpty { payload[key] = String(value.prefix(256)) }
         }
@@ -92,6 +93,21 @@ public enum NativeAgentHookNormalizer {
         if provider == "openCode" {
             for key in ["turn_id", "session_title", "parent_session_id", "source_epoch"] { put(key, object[key]) }
             if let sequence = object["source_sequence"] as? Int, sequence >= 0 { payload["source_sequence"] = sequence }
+        }
+        if provider == "geminiCLI" {
+            payload["rate_event_ms"] = Date().timeIntervalSince1970 * 1000
+            if sourceEvent == "AfterModel", let response = object["llm_response"] as? [String: Any],
+               let usage = response["usageMetadata"] as? [String: Any],
+               let output = AgentRateObservation.integer(usage["candidatesTokenCount"]), output > 0 {
+                payload["output_tokens"] = output
+                put("usage_id", response["responseId"])
+            }
+        }
+        if provider == "openCode", name == "Usage" {
+            put("usage_id", object["usage_id"])
+            for field in ["output_tokens", "rate_start_ms", "rate_end_ms"] {
+                if let value = object[field] as? NSNumber { payload[field] = value }
+            }
         }
         return payload
     }

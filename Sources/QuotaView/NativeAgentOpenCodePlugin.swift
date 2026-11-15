@@ -87,7 +87,12 @@ export const QuotaView = async () => {
         case 'session.created': case 'session.updated':
           s.title=text(info.title); s.parent=text(info.parentID); emit(id,s,'Metadata'); break;
         case 'message.updated':
-          if (info.role === 'assistant') { s.model=text(info.modelID); emit(id,s,'Metadata'); } break;
+          if (info.role === 'assistant') {
+            s.model=text(info.modelID); emit(id,s,'Metadata');
+            if (s.turn && Number.isSafeInteger(info.tokens?.output) && info.time?.completed > info.time?.created)
+              emit(id,s,'Usage',{usage_id:text(info.id), output_tokens:info.tokens.output,
+                rate_start_ms:info.time.created, rate_end_ms:info.time.completed});
+          } break;
         case 'session.status':
           if (p.status?.type === 'busy' || p.status?.type === 'retry') start(id,s);
           else if (p.status?.type === 'idle') finish(id,s,'Stop'); break;

@@ -1343,11 +1343,26 @@ struct IslandTaskCard: View {
                         HStack(spacing: 8) {
                             IslandOperationLine(renderState: task.renderState, visible: effectVisible, reduceMotion: reduceMotion)
                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                            Text(task.renderState.tokenUsageTitle ?? "— tokens")
-                                .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
-                                .foregroundStyle(IslandBoardStyle.muted).fixedSize()
-                                .accessibilityHint(AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text("会话累计", "Session total"))
-                                .padding(.trailing, showsArchiveButton ? IslandVibeLayout.taskActionOpticalInset : 0)
+                                .clipped()
+                            // Reserve the complete statistics group first. The detail
+                            // marquee only receives the remaining clipped viewport.
+                            HStack(spacing: 3) {
+                                if let rate = task.outputRate {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: rate.symbolName).accessibilityHidden(true)
+                                        Text(rate.title)
+                                    }
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel(AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text("输出速率", "Output rate") + " " + rate.title)
+                                    Rectangle().fill(Color(white: 0.24)).frame(width: 1, height: 9).accessibilityHidden(true)
+                                }
+                                Text(task.renderState.tokenUsageTitle ?? "— tok")
+                                    .accessibilityHint(AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese)).text("会话累计", "Session total"))
+                            }
+                            .font(.system(size: IslandVibeLayout.metadataFont, weight: .medium)).monospacedDigit()
+                            .foregroundStyle(IslandBoardStyle.muted)
+                            .fixedSize(horizontal: true, vertical: false).layoutPriority(1)
+                            .padding(.trailing, showsArchiveButton ? IslandVibeLayout.taskActionOpticalInset : 0)
                         }.frame(height: IslandVibeLayout.textRowHeight)
                     }
                 }.frame(height: IslandVibeLayout.rowHeight - IslandVibeLayout.contentInset * 2)
@@ -1374,7 +1389,7 @@ struct IslandTaskCard: View {
             .contentShape(IslandVibeLayout.rowShape)
             .accessibilityHint("\(task.title) · \(task.renderState.statusTitle)")
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—"), \(metadata?.subagents.map { $0.title + ", " + $0.status }.joined(separator: "; ") ?? "")")
+            .accessibilityLabel("\(task.title), \(task.renderState.statusTitle), \(task.renderState.operation), \(metadata?.modelTitle ?? ""), \(metadata?.durationTitle ?? ""), \(task.renderState.tokenUsageTitle ?? "—"), \(task.outputRate?.title ?? ""), \(metadata?.subagents.map { $0.title + ", " + $0.status }.joined(separator: "; ") ?? "")")
     }
 }
 

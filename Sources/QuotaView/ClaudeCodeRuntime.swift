@@ -16,7 +16,10 @@ struct ClaudeCodeTranscriptBatch: Sendable {
         if backfilling,
            let prompt = records.lastIndex(where: { if case .userPrompt = $0 { return true }; return false }) {
             let titles = records[..<prompt].filter { if case .customTitle = $0 { return true }; return false }
-            records = titles + records[prompt...]
+            let first: Int
+            if prompt > 0, case .requestBoundary = records[prompt - 1] { first = prompt - 1 }
+            else { first = prompt }
+            records = titles + records[first...]
         }
         return Self(tail: tail, records: records, consumedLines: !lines.isEmpty)
     }
@@ -66,6 +69,9 @@ final class ClaudeCodeRuntime: ObservableObject {
         var turnKey: String?
         var turnActive = false
         var backfilling = false
+        var rateBoundary: Date?
+        var rateStarts: [String: Date] = [:]
+        var rateLedger = AgentOutputRateLedger()
         var usageKeys: Set<String> = []
         var turnTokens: Int64? = 0
         var lastAssistant: (id: String, text: String)?
@@ -399,6 +405,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         session.turnKey = CodexActivityPrivacy.hashIdentifier("claude-turn:" + sessionID + ":" + turnID)
         session.turnActive = true
         session.usageKeys.removeAll(); session.turnTokens = 0; session.lastAssistant = nil
+        session.rateBoundary = byPrompt ? Date() : nil; session.rateStarts.removeAll(); session.rateLedger = .init()
         if let path = session.transcriptPath, session.tail == nil {
             let size = ClaudeCodeTranscriptTail.fileSize(path) ?? 0
             // A mid-turn admission backfills from the latest real prompt.
@@ -507,6 +514,8 @@ final class ClaudeCodeRuntime: ObservableObject {
             return
         case .summary:
             break
+        case .requestBoundary(let date):
+            session.rateBoundary = date
         case .userPrompt(let prompt):
             guard !session.hasTitle else { break }
             sessions[sessionID] = session
@@ -535,7 +544,17 @@ final class ClaudeCodeRuntime: ObservableObject {
             return
         case .invalidUsage:
             session.turnTokens = nil
-        case .usage(let key, let model, let usage, _):
+        case .usage(let key, let model, let usage, let timestamp):
+            if session.turnActive, let end = timestamp, let turn = session.turnKey,
+               let start = session.rateStarts[key] ?? session.rateBoundary, start < end {
+                if session.rateStarts.count < 8192 { session.rateStarts[key] = start }
+                if session.rateLedger.record(id: key, output: usage.output, start: start, end: end) {
+                    island.model.receiveOutputRate(session: session.key, turn: turn,
+                        latest: session.rateLedger.latest, average: session.rateLedger.average)
+                }
+                // An assistant continuation without tools starts after this response.
+                session.rateBoundary = max(session.rateBoundary ?? end, end)
+            }
             if !session.usageKeys.contains(key), session.usageKeys.count < 100_000 {
                 session.usageKeys.insert(key)
                 if let previous = session.turnTokens, let total = usage.total {
