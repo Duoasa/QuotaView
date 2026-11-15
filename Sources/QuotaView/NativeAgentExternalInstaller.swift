@@ -67,7 +67,7 @@ extension NativeAgentInstaller {
         // Cursor's preToolUse is a policy hook. Observe post-tool events instead
         // of supplying an allow decision that might change the permission flow.
         case .cursor: ["sessionStart", "sessionEnd", "beforeSubmitPrompt", "postToolUse", "postToolUseFailure", "preCompact", "stop"]
-        case .geminiCLI: ["SessionStart", "SessionEnd", "BeforeAgent", "AfterAgent", "BeforeTool", "AfterTool", "BeforeModel", "Notification", "PreCompress"]
+        case .geminiCLI: ["SessionStart", "SessionEnd", "BeforeAgent", "AfterAgent", "BeforeTool", "AfterTool", "BeforeModel", "AfterModel", "Notification", "PreCompress"]
         // notification reports an actual prompt; permissionRequest fires before
         // policy evaluation and does not mean the user must approve anything.
         case .copilotCLI: ["sessionStart", "sessionEnd", "userPromptSubmitted", "preToolUse", "postToolUse", "postToolUseFailure", "agentStop", "errorOccurred", "preCompact", "notification"]

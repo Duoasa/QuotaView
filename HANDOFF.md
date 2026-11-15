@@ -1,6 +1,36 @@
 # QuotaView 开发交接
 
-## 当前版本：0.9.3 Build 1 / 正式发布完成（2026-11-13）
+## 当前开发：0.9.4 Build 7 / 任务速率公告与源码集成（2026-11-15）
+
+用户确认 Build 6 的当前展示效果，授权更新公告、推送源码并合并 main；范围不包含 Release/appcast。公告以公开 `v0.9.3-build.1` 为基线，更新为「任务输出速率」「速率快照」「紧凑统计」三项，中英及日/韩/西翻译同步。正式自动提醒名单保持 102 / 149 / 158 / 189，开发内部 196 不加入。任务卡完整口径见[速率规格](docs/specs/task-output-rate.md)，内容见[公告规格](docs/specs/brand-announcement.md)。
+
+完成均值在当前卡片存续期间持续显示，只保存在内存，未新增磁盘持久化；重启不承诺恢复，新 turn 或清理卡片清除。此限制已向用户说明。此前用户确认只覆盖当前展示，不扩大为所有客户端/辅助功能全矩阵验收。
+
+7 项定向本地冒烟、三条公告 ID/正式名单、本地化（714 模板、759 条目录 × 3 翻译）和 Debug arm64 增量构建通过。开发包 0.9.4 Build 7 / 内部 196 已启动，PID 52317；261 个生产输入、包清单与实际加载路径一致，正式安装未改。证据 `.build/rate-integration-094b7/`、`.build/rate-announcement-094b7-runtime/`。源码分支 `codex/0.9.4-task-rate`，PR 与精确 main CI 尚待远端完成；此次本地冒烟不替代合并门禁。
+
+## 前序开发：0.9.4 Build 6 / 紧凑统计分隔线（2026-11-15）
+
+用户要求缩小速率与累计用量间距，并参照上方模型/耗时使用分割线。右下角统计改为同样的 1 × 9 pt、white 0.24 细竖线，两侧各 3 pt；没有速率时不显示分割线。保留 10 pt 字号、快照、完成均值和详情避让。详见[规格](docs/specs/task-output-rate.md)。
+
+纯布局调整未新增测试或重复数据链路测试；本地化、补丁检查、Debug arm64 增量构建与运行身份核验通过。开发包 0.9.4 Build 6 / 内部 195 已启动，PID 48229；261 生产输入、完整包与加载路径一致，正式安装未改。证据 `.build/rate-divider-094b6-runtime/`，实际视觉由用户验收。本批仅本地未提交/推送/发布。
+
+## 前序开发：0.9.4 Build 5 / 速率快照与右下角统计（2026-11-15）
+
+按用户反馈取消当前任务速率的 30 秒过期与等待隐藏，保留最近有效快照直到新数据更新；完成仍显示灰色加权平均，新 turn 清零。速率移到右下角累计统计之前，共用系统 10 pt Medium、灰色和等宽数字；统计单位改为 `tok`。标题恢复原可用空间。统计组固定固有宽度并优先布局，任务详情只在剩余视口滚动并裁切，保留右侧操作按钮光学内缩。见[规格](docs/specs/task-output-rate.md)。
+
+2 项定向冒烟、本地化和 Debug arm64 增量构建通过；开发运行包 0.9.4 Build 5 / 内部 194 已启动，PID 46339。261 生产输入、包清单、实际加载路径与正式安装不变检查通过。证据 `.build/rate-footer-094b5/`、`.build/rate-footer-094b5-runtime/`。没有主动视觉/交互验收，效果由用户检查；本批仅本地未提交/推送/发布。
+
+## 前序开发：0.9.4 Build 4 / 多 Agent 任务输出速率（2026-11-15）
+
+用户已接受 Build 3 的速率显示效果，要求扩展到所有 Agent、完成后灰色加权平均、仅冒烟并启动开发版。Codex 原适配保留，新增 Claude Code、DSH、Kimi Code、Gemini CLI、OpenCode、Copilot CLI、Devin Desktop/CLI，共覆盖 9 个入口；Cursor 公开 Hook 缺少输出 token 数据，本轮不伪造速率。各来源的边界与限制见[规格](docs/specs/task-output-rate.md)。
+
+共用标题原生字体、四档图标和完成态颜色。统一按请求时长加权，流式修订替换原样本，跨轮清零；本地读流支持完成后 10 秒内迟到记录，禁用即停止。Claude 使用现有 transcript 读流，DSH/OpenCode 使用插件，Gemini 使用模型 Hook，Kimi/Copilot 使用当前会话日志，Devin 复用既有只读数据库/文件读流。已运行的插件客户端需重新加载插件后才能产生新字段。
+
+36 项隔离数值/读流冒烟、DSH/OpenCode 插件事件冒烟、2 项定向 IPC/Hook 冒烟通过；包含去重、完成后追加样本、陈旧 turn 拒绝、下一轮清零和未知总量不伪造为 0。本地化与 Debug arm64 增量构建通过。证据 `.build/agents-rate-094b4/`、`.build/agents-rate-094b4-final-runtime/`；这不是各真实客户端全矩阵实测。
+
+开发运行包已更新为 0.9.4 Build 4 / 内部 193，PID 42336，261 个生产输入、包清单、实际加载路径及正式安装不变检查通过。本轮本地未提交、未推送、未发布；用户继续验收新增来源的实际表现。公开稳定版仍由版本历史定位为 0.9.3 Build 1。
+
+## 公开稳定版：0.9.3 Build 1 / 正式发布完成（2026-11-13）
 
 [0.9.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1) 已发布为 Stable / Latest，经 [PR #142](https://github.com/Duoasa/QuotaView/pull/142) 合入 main。PR 与精确 main CI 均通过；Developer ID 签名、公证/Staple、公开 ZIP 回下载、内置公钥验签和线上签名 appcast 均已核验。完整不可变事实见 [版本历史](VERSION_HISTORY.md#当前最新版本)，授权与范围见 [发布规格](docs/specs/release-0.9.3.md)。回滚为 `v0.9.2-build.1` / `ebddc605`，旧 tag/资产保留。
 

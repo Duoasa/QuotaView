@@ -80,6 +80,11 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
     private let workspaceName: String?
     private(set) var sessionKind: CodexActivitySessionKind
     private(set) var activeTurnHash: String?
+    private var rateBoundary: Date?
+    private var averageOutputRate: CodexOutputRateSample?
+    private var latestOutputRate: CodexOutputRateSample?
+    private var rateRequestStart: Date?
+    private var lastRateResponse: String?
     private var metadataRecoveryTurnHash: String?
     private(set) var isMetadataRecoveredTurn = false
     private var pendingQuestionCalls: [String] = []
@@ -135,6 +140,13 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             // start. Context alone must never manufacture a lifecycle event.
             if let thread = payload["thread_id"], Self.hashedIdentifier(thread) != sessionHash { return nil }
             let contextTurn = Self.hashedIdentifier(payload["turn_id"])
+            if contextTurn != activeTurnHash {
+                rateBoundary = nil
+                rateRequestStart = nil
+                averageOutputRate = nil
+                latestOutputRate = nil
+                lastRateResponse = nil
+            }
             if isMetadataRecoveredTurn, contextTurn != activeTurnHash {
                 activeTurnHash = nil
                 isMetadataRecoveredTurn = false
@@ -158,6 +170,26 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
             payloadType: payload["type"] as? String
         )
 
+        // Only source timestamps can establish speed. Arrival time cannot replace
+        // a missing timestamp when replaying a transcript.
+        let rateDate = Self.eventDate(from: envelope["timestamp"], fallback: .distantPast)
+        let validRateDate: Date? = rateDate == .distantPast ? nil : rateDate
+        if recordType == "event_msg", payload["type"] as? String == "task_started" {
+            rateBoundary = validRateDate
+            rateRequestStart = nil
+            lastRateResponse = nil
+            averageOutputRate = nil
+            latestOutputRate = nil
+        }
+        if recordType == "response_item", activeTurnHash != nil {
+            let kind = payload["type"] as? String ?? ""
+            if kind.hasSuffix("_output") || (kind == "message" && payload["role"] as? String == "user") {
+                rateBoundary = validRateDate
+            } else if kind == "reasoning" || kind.hasSuffix("_call") || (kind == "message" && payload["role"] as? String == "assistant") {
+                if rateRequestStart == nil { rateRequestStart = rateBoundary }
+            }
+        }
+
         if recordType == "token_usage_record" {
             guard let turnHash = activeTurnHash,
                   Self.hashedIdentifier(payload["turn_id"]) == turnHash,
@@ -170,6 +202,22 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                   let last = CodexActivityNumeric.nonnegativeInteger(usage["total_tokens"]),
                   cumulative >= direct, direct >= last
             else { return nil }
+            let response = Self.hashedIdentifier(payload["response_id"])
+            let start = rateRequestStart ?? rateBoundary
+            var rate: CodexOutputRateSample?
+            if let response, response != lastRateResponse {
+                if let start, let end = validRateDate,
+                   let output = CodexActivityNumeric.nonnegativeInteger(usage["output_tokens"]) {
+                    rate = CodexOutputRateSample(outputTokens: output, startedAt: start, endedAt: end)
+                }
+                if let rate {
+                    averageOutputRate = rate.combined(with: averageOutputRate)
+                    latestOutputRate = rate
+                }
+                lastRateResponse = response
+                rateBoundary = validRateDate
+                rateRequestStart = nil
+            }
             return CodexLocalRolloutDecodedRecord(
                 eventID: eventID,
                 update: .tokenUsage(CodexActivityTokenUsageUpdate(
@@ -178,6 +226,8 @@ public struct CodexLocalRolloutLineDecoder: Sendable {
                     cumulativeTotalTokens: cumulative,
                     lastReportedTotalTokens: last,
                     directTurnTotalTokens: direct,
+                    outputRate: latestOutputRate,
+                    averageOutputRate: averageOutputRate,
                     occurredAt: occurredAt
                 ))
             )
@@ -872,11 +922,14 @@ public actor CodexLocalRolloutActivityClient {
             state.offset = try handle.offset()
             state.pending.append(data)
             var records: [(CodexLocalRolloutDecodedRecord?, CodexLocalPublicContent?)] = []
+            var decoder = state.decoder
+            let sessionHash = state.sessionHash
             consumeCompleteLines(from: &state.pending, discarding: &state.discardingOversizedLine) { line in
-                let record = state.decoder.decode(line: line)
-                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: state.sessionHash, activeTurnHash: state.decoder.activeTurnHash, asynchronousQuestionCallIDs: state.decoder.asynchronousQuestionCallIDs)
+                let record = decoder.decode(line: line)
+                let content = publicContentHandler == nil ? nil : CodexLocalPublicContent.decode(line, sessionHash: sessionHash, activeTurnHash: decoder.activeTurnHash, asynchronousQuestionCallIDs: decoder.asynchronousQuestionCallIDs)
                 if record != nil || content != nil { records.append((record, content)) }
             }
+            state.decoder = decoder
             // Commit the cursor before any reentrant callback can stop/restart us.
             tailStates[candidate.fileURL] = state
             for (record, content) in records {

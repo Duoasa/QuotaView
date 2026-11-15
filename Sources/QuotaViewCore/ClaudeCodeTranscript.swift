@@ -8,6 +8,7 @@ public enum ClaudeCodeTranscriptRecord: Equatable, Sendable {
     /// A typed user prompt. Tool results, meta and interrupt markers are excluded.
     case userPrompt(String)
     case interrupted
+    case requestBoundary(Date)
     case assistantText(messageID: String, text: String)
     case toolUse(id: String, name: String, input: String)
     case toolResult(toolUseID: String, text: String, isError: Bool)
@@ -31,7 +32,10 @@ public enum ClaudeCodeTranscriptDecoder {
         case "summary":
             return text(object["summary"]).map { [.summary($0)] } ?? []
         case "user":
-            return userRecords(object)
+            let records = userRecords(object)
+            guard records.contains(where: { if case .userPrompt = $0 { return true }; if case .toolResult = $0 { return true }; return false }),
+                  let date = timestamp(object["timestamp"]) else { return records }
+            return [.requestBoundary(date)] + records
         case "assistant":
             return assistantRecords(object)
         default:

@@ -30,6 +30,7 @@ final class NativeAgentRuntime: ObservableObject {
     private var listening = false
     private var applied: Bool?
     private var devinMetadataTask: Task<Void, Never>?
+    private var rateLogTask: Task<Void, Never>?
     private var dshTitleTasks: [String: Task<Void, Never>] = [:]
     private var dshTitleReadAt: [String: Date] = [:]
     private struct Session {
@@ -41,6 +42,13 @@ final class NativeAgentRuntime: ObservableObject {
         var parent: String?
         var pendingPermission: String?
         var pendingPermissionTool: String?
+        var rateLedger = AgentOutputRateLedger()
+        var rateRequestStart: Date?
+        var rateRequestID: String?
+        var rateLogPath: String?
+        var rateLogPosition: Int64?
+        var turnStartedAt = Date()
+        var rateCompletedAt: Date?
         var tokens: Int64 = 0
         var sequence: Int = -1
         var epoch: String?
@@ -185,6 +193,7 @@ final class NativeAgentRuntime: ObservableObject {
         dshTitleTasks.removeAll(); dshTitleReadAt.removeAll()
         for id in Array(dshRequests.keys) { releaseDSH(id) }
         devinMetadataTask?.cancel(); devinMetadataTask = nil
+        rateLogTask?.cancel(); rateLogTask = nil
         if listening { bridge.stop() }; listening = false
         for (key, value) in sessions {
             if let turn = value.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
@@ -206,7 +215,7 @@ final class NativeAgentRuntime: ObservableObject {
               let sourceSession = payload["session_id"] as? String, !sourceSession.isEmpty, sourceSession.utf8.count <= 256,
               let name = payload["hook_event_name"] as? String else { return }
         let accepted = ["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-                        "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt", "Usage", "Metadata"]
+                        "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt", "Usage", "Metadata", "ModelRequest"]
         guard accepted.contains(name) else { return }
         var sourcePrefix = provider.rawValue + ":"
         if provider == .dsh {
@@ -267,6 +276,22 @@ final class NativeAgentRuntime: ObservableObject {
             session.nativeTurn = nativeTurn; session.active = true; session.tokens = 0; session.pendingPermission = nil; session.pendingPermissionTool = nil
             startedTurn = true
         }
+        if startedTurn {
+            session.rateLedger = .init(); session.rateRequestStart = nil; session.rateRequestID = nil
+            session.rateLogPosition = nil; session.rateLogPath = nil
+            session.turnStartedAt = (payload["rate_event_ms"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date(); session.rateCompletedAt = nil
+        }
+        if [IslandAgentProvider.kimiCode, .copilotCLI].contains(provider),
+           let path = payload["rate_log_path"] as? String, path.hasPrefix("/"), path.utf8.count <= 4096 {
+            if session.rateLogPath != path { session.rateLogPosition = nil }
+            session.rateLogPath = path
+            if session.rateLogPosition == nil { session.rateLogPosition = 0 }
+            if startedTurn { session.rateLogPosition = AgentRateObservation.integer(payload["rate_log_position"]) ?? 0 }
+        }
+        if name == "ModelRequest", provider == .geminiCLI, session.active {
+            session.rateRequestStart = (payload["rate_event_ms"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
+            session.rateRequestID = UUID().uuidString
+        }
         if provider.isDevin {
             if startedTurn {
                 session.devinStartPosition = name == "UserPromptSubmit" ? payload["devin_start_position"] as? Int64 : nil
@@ -289,7 +314,7 @@ final class NativeAgentRuntime: ObservableObject {
         if provider == .dsh && (startedTurn || ["SessionEnd", "Stop", "StopFailure", "Interrupt"].contains(name)) {
             for id in dshRequests.filter({ $0.value.session == key }).map(\.key) { releaseDSH(id) }
         }
-        if name == "SessionStart" || name == "Metadata" { publishMetadata(key); return }
+        if name == "SessionStart" || name == "Metadata" || name == "ModelRequest" { publishMetadata(key); return }
         if name == "SessionEnd" {
             if let turn = session.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
             if session.parent != nil { island.model.withdrawSubagentObservation(for: key) }
@@ -349,6 +374,7 @@ final class NativeAgentRuntime: ObservableObject {
                     island.model.receiveLocalContent(.init(publicSessionHash: key, turnHash: turn, data: data, occurredAt: Date()))
                 }
                 sessions[key]?.active = false
+                sessions[key]?.rateCompletedAt = Date()
                 if provider.isDevin { sessions[key]?.devinCompletedAt = Date() }
             }
         }
@@ -360,7 +386,19 @@ final class NativeAgentRuntime: ObservableObject {
             island.model.receiveToken(.init(sessionHash: key, turnHash: turn, cumulativeTotalTokens: session.tokens,
                                             lastReportedTotalTokens: count, directTurnTotalTokens: session.tokens))
         }
+        if name == "Usage", session.parent == nil, let output = AgentRateObservation.integer(payload["output_tokens"]) {
+            let start = (payload["rate_start_ms"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
+                ?? (provider == .geminiCLI ? session.rateRequestStart : nil)
+            let end = ((payload["rate_end_ms"] ?? payload["rate_event_ms"]) as? Double)
+                .map { Date(timeIntervalSince1970: $0 / 1000) }
+            let id = provider == .geminiCLI ? session.rateRequestID : payload["usage_id"] as? String
+            if let start, let end, let id,
+               let rate = AgentRateObservation(id: id, output: output, durationMS: end.timeIntervalSince(start) * 1000, end: end) {
+                receiveRates([rate], key: key, turn: turn)
+            }
+        }
         if provider.isDevin { refreshDevinMetadata() }
+        if provider == .kimiCode || provider == .copilotCLI { refreshRateLogs() }
     }
 
     private func receiveDSH(_ message: ClaudeCodeBridgeMessage, payload: [String: Any], name: String) -> Bool {
@@ -459,6 +497,9 @@ final class NativeAgentRuntime: ObservableObject {
                         sessions[request.key] = session
                         publishMetadata(request.key)
                     }
+                    if request.start != nil {
+                        receiveRates(snapshot.rates, key: request.key, turn: request.turn)
+                    }
                     if let tokens = snapshot.tokens, request.start != nil, tokens >= session.tokens,
                        !session.devinHasUsage || tokens != session.tokens {
                         sessions[request.key]?.tokens = tokens
@@ -466,6 +507,54 @@ final class NativeAgentRuntime: ObservableObject {
                         island.model.receiveToken(.init(sessionHash: request.key, turnHash: request.turn,
                             cumulativeTotalTokens: tokens, lastReportedTotalTokens: tokens, directTurnTotalTokens: tokens))
                     }
+                }
+                do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+            }
+        }
+    }
+    private func receiveRates(_ rates: [AgentRateObservation], key: String, turn: String) {
+        guard var session = sessions[key], session.turn == turn, session.parent == nil else { return }
+        var changed = false
+        for rate in rates {
+            if session.rateLedger.record(id: rate.id, output: rate.output, start: rate.start, end: rate.end) { changed = true }
+        }
+        guard changed else { return }
+        sessions[key] = session
+        island.model.receiveOutputRate(session: key, turn: turn,
+            latest: session.rateLedger.latest, average: session.rateLedger.average)
+    }
+    private struct RateLogRead: Sendable {
+        let key: String; let turn: String; let path: String; let position: Int64; let since: Date
+    }
+    private func refreshRateLogs() {
+        guard rateLogTask == nil else { return }
+        let current = revision, source = provider.rawValue
+        rateLogTask = Task { [weak self] in
+            defer { if self?.revision == current { self?.rateLogTask = nil } }
+            while !Task.isCancelled {
+                guard let self, running, enabled, revision == current else { return }
+                let requests = sessions.compactMap { key, s -> RateLogRead? in
+                    guard s.active || (s.rateCompletedAt.map { Date().timeIntervalSince($0) < 10 } ?? false),
+                          s.parent == nil, let turn = s.turn, let path = s.rateLogPath,
+                          let position = s.rateLogPosition else { return nil }
+                    return .init(key: key, turn: turn, path: path, position: position, since: s.turnStartedAt)
+                }
+                guard !requests.isEmpty else { return }
+                let reader = Task.detached(priority: .utility) {
+                    var result: [(RateLogRead, [AgentRateObservation])] = []
+                    for request in requests {
+                        guard !Task.isCancelled else { break }
+                        result.append((request, AgentRateLog.read(url: URL(fileURLWithPath: request.path),
+                            provider: source, after: request.position, since: request.since)))
+                    }
+                    return result
+                }
+                let result = await withTaskCancellationHandler(operation: { await reader.value }, onCancel: { reader.cancel() })
+                guard !Task.isCancelled, revision == current, enabled else { return }
+                for (request, rates) in result {
+                    guard let session = sessions[request.key], session.turn == request.turn,
+                          session.rateLogPath == request.path, session.rateLogPosition == request.position else { continue }
+                    receiveRates(rates, key: request.key, turn: request.turn)
                 }
                 do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
             }

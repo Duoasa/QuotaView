@@ -253,6 +253,65 @@ public struct CodexActivityDelivery: Equatable, Sendable {
     }
 }
 
+/// Request-average output speed, including waiting before the first output.
+public struct CodexOutputRateSample: Equatable, Sendable {
+    public let tokensPerSecond: Double
+    public let outputTokens: Int64
+    public let duration: TimeInterval
+    public let occurredAt: Date
+    public init?(outputTokens: Int64, startedAt: Date, endedAt: Date) {
+        self.init(outputTokens: outputTokens, duration: endedAt.timeIntervalSince(startedAt), occurredAt: endedAt)
+    }
+    private init?(outputTokens: Int64, duration: TimeInterval, occurredAt: Date) {
+        guard outputTokens > 0, duration > 0, duration.isFinite else { return nil }
+        let rate = Double(outputTokens) / duration
+        guard rate.isFinite else { return nil }
+        tokensPerSecond = rate
+        self.occurredAt = occurredAt
+        self.outputTokens = outputTokens
+        self.duration = duration
+    }
+    public func combined(with previous: CodexOutputRateSample?) -> CodexOutputRateSample? {
+        guard let previous else { return self }
+        let (total, overflow) = outputTokens.addingReportingOverflow(previous.outputTokens)
+        guard !overflow else { return nil }
+        return .init(outputTokens: total, duration: duration + previous.duration, occurredAt: occurredAt)
+    }
+    public var symbolName: String {
+        switch tokensPerSecond {
+        case ..<20: return "tortoise.circle"
+        case ..<60: return "hare.circle"
+        case ..<120: return "car.circle"
+        default: return "airplane.circle"
+        }
+    }
+    public var title: String { String(format: "%.0f tok/s", tokensPerSecond) }
+    public func isVisible(at now: Date) -> Bool {
+        (0..<30).contains(now.timeIntervalSince(occurredAt))
+    }
+}
+
+/// Per-turn response ledger. Streaming revisions replace a response instead of
+/// counting it again; averages are sum(output) / sum(request duration).
+public struct AgentOutputRateLedger: Sendable {
+    private var samples: [String: CodexOutputRateSample] = [:]
+    public init() {}
+    @discardableResult public mutating func record(id: String, output: Int64, start: Date, end: Date) -> Bool {
+        guard !id.isEmpty, id.utf8.count <= 512, output <= 1_000_000_000,
+              let sample = CodexOutputRateSample(outputTokens: output, startedAt: start, endedAt: end),
+              samples[id] != sample else { return false }
+        if let old = samples[id] {
+            guard sample.outputTokens > old.outputTokens, sample.occurredAt >= old.occurredAt else { return false }
+        } else if samples.count >= 8192 { return false }
+        samples[id] = sample
+        return true
+    }
+    public var latest: CodexOutputRateSample? { samples.values.max { $0.occurredAt < $1.occurredAt } }
+    public var average: CodexOutputRateSample? {
+        samples.values.sorted { $0.occurredAt < $1.occurredAt }.reduce(nil) { $1.combined(with: $0) }
+    }
+}
+
 public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
     public let sessionHash: String
     public let turnHash: String
@@ -261,6 +320,8 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
     /// Authoritative per-turn sum from Codex's response usage records.
     /// Nil keeps compatibility with legacy cumulative notifications.
     public let directTurnTotalTokens: Int64?
+    public let outputRate: CodexOutputRateSample?
+    public let averageOutputRate: CodexOutputRateSample?
     public let occurredAt: Date
 
     public init(
@@ -269,6 +330,8 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
         cumulativeTotalTokens: Int64,
         lastReportedTotalTokens: Int64,
         directTurnTotalTokens: Int64? = nil,
+        outputRate: CodexOutputRateSample? = nil,
+        averageOutputRate: CodexOutputRateSample? = nil,
         occurredAt: Date = Date()
     ) {
         self.sessionHash = sessionHash
@@ -276,6 +339,8 @@ public struct CodexActivityTokenUsageUpdate: Equatable, Sendable {
         self.cumulativeTotalTokens = cumulativeTotalTokens
         self.lastReportedTotalTokens = lastReportedTotalTokens
         self.directTurnTotalTokens = directTurnTotalTokens
+        self.outputRate = outputRate
+        self.averageOutputRate = averageOutputRate
         self.occurredAt = occurredAt
     }
 }

@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 当前开发：0.9.4 Build 7 / 任务速率公告与源码集成
+
+`QV-PRODUCT-TASK-OUTPUT-RATE-001` · [任务输出速率](task-output-rate.md) · Implemented / User Accepted（当前展示）。用户已认可快照、右下角统计与细竖线，并授权更新[公告](brand-announcement.md)、源码推送合并 main；9 个 Agent 入口，缺少输出数据时隐藏。完成均值仅保存在进程内当前卡片，未实现磁盘持久化。7 项定向冒烟、本地化与开发运行核验通过，PR/main CI 待远端完成；状态与证据见 Handoff。本轮不发布 Release/appcast。
+
 ## 当前版本：0.9.3 Build 1 / 正式发布
 
 [发布规格](release-0.9.3.md) · `Released / User Acceptance Pending`：0.9.3 Build 1 / 内部 189 经 PR #142 合入 main；PR/main CI、签名公证、公开 ZIP 回下载与在线签名 appcast 核验通过，Stable / Latest。重置动效、设置、清理图标与公告同步，中英 README Agent 图标统一圆角底。旧版回滚与 Windows 独立通道保留，开发包已同步；完整事实见 [版本历史](../../VERSION_HISTORY.md#当前最新版本)。
