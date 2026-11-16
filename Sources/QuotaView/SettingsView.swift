@@ -64,12 +64,13 @@ enum SettingsLayoutMetrics {
 }
 
 enum IslandSettingsPage: String, CaseIterable, Identifiable {
-    case general, island, usage, connections, proxy, feedback, about
+    case general, island, cards, usage, connections, proxy, feedback, about
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .general: "gearshape.fill"
         case .island: "sparkles.rectangle.stack.fill"
+        case .cards: "rectangle.stack.fill"
         case .usage: "chart.bar.fill"
         case .connections: "cpu.fill"
         case .proxy: "network"
@@ -89,6 +90,7 @@ enum IslandSettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .general: copy.text("通用", "General")
         case .island: copy.text("灵动岛", "Island")
+        case .cards: copy.text("卡片设置", "Card settings")
         case .usage: copy.text("用量显示", "Usage display")
         case .connections: copy.text("Agent 接入", "Agent integration")
         case .proxy: copy.text("网络代理", "Network proxy")
@@ -202,7 +204,7 @@ struct SettingsView: View {
     }
 
     private static let navigationGroups: [[IslandSettingsPage]] = [
-        [.general, .island, .usage], [.connections, .proxy], [.feedback, .about]
+        [.general, .island, .cards, .usage], [.connections, .proxy], [.feedback, .about]
     ]
 
     private var settingsSidebar: some View {
@@ -335,6 +337,7 @@ struct SettingsView: View {
                     switch page {
                     case .general: generalSettings
                     case .island: islandSettings
+                    case .cards: cardSettings
                     case .usage: usageSettings
                     case .connections: connectionSettings
                     case .proxy: proxySettings
@@ -786,6 +789,18 @@ struct SettingsView: View {
             options.append((preferences.islandFixedScreenID, copy.text("所选屏幕未连接", "Selected display disconnected")))
         }
         return options
+    }
+
+    private var cardSettings: some View {
+        NativeSettingsCard {
+            preferenceToggle(copy.text("速率", "Output rate"), symbol: "speedometer", isOn: $preferences.cardShowsOutputRate)
+            NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+            preferenceToggle(copy.text("任务 Token", "Task tokens"), symbol: "number", isOn: $preferences.cardShowsTokens)
+            NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+            preferenceToggle(copy.text("任务耗时", "Task duration"), symbol: "timer", isOn: $preferences.cardShowsDuration)
+            NativeSettingsDivider(leading: NativeSettingsDivider.iconLeading)
+            preferenceToggle(copy.text("模型显示", "Model display"), symbol: "cpu", isOn: $preferences.cardShowsModel)
+        }
     }
 
     private var generalSettings: some View {
@@ -1580,9 +1595,15 @@ private struct SettingsIslandPreview: View {
                     .foregroundStyle(.white)
                     .fixedSize()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("6 Sol · High").font(.system(size: 10, weight: .semibold)).fixedSize()
-                Rectangle().fill(Color(white: 61.0 / 255)).frame(width: 1, height: 9)
-                Text("2m").font(.system(size: 10, weight: .semibold)).fixedSize()
+                if preferences.cardShowsModel {
+                    Text("6 Sol · High").font(.system(size: 10, weight: .semibold)).fixedSize()
+                    if preferences.cardShowsDuration {
+                        Rectangle().fill(Color(white: 61.0 / 255)).frame(width: 1, height: 9)
+                    }
+                }
+                if preferences.cardShowsDuration {
+                    Text("2m").font(.system(size: 10, weight: .semibold)).fixedSize()
+                }
                 Image(systemName: "archivebox").font(.system(size: 12, weight: .medium))
                     .frame(width: 16, height: 16, alignment: .topLeading)
             }
@@ -1595,8 +1616,18 @@ private struct SettingsIslandPreview: View {
                     .foregroundStyle(Color(white: 0.80))
                     .fixedSize()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("128K tokens")
-                    .font(.system(size: 10, weight: .medium)).fixedSize()
+                if preferences.cardShowsOutputRate || preferences.cardShowsTokens {
+                    HStack(spacing: 3) {
+                        if preferences.cardShowsOutputRate {
+                            Image(systemName: "hare.circle")
+                            Text("34 tok/s")
+                            if preferences.cardShowsTokens {
+                                Rectangle().fill(Color(white: 0.24)).frame(width: 1, height: 9)
+                            }
+                        }
+                        if preferences.cardShowsTokens { Text("128K tok") }
+                    }.font(.system(size: 10, weight: .medium)).monospacedDigit().fixedSize()
+                }
             }
             .font(.system(size: 11)).frame(height: IslandVibeLayout.textRowHeight)
         }

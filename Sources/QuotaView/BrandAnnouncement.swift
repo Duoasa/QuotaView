@@ -67,7 +67,9 @@ struct AnnouncementContent {
             // Development 0.9.4 changes since public v0.9.3-build.1.
             Section(id: "highlights", category: .highlight, items: [
                 Item(id: "task-output-rate", title: copy.text("任务输出速率", "Task output rate"),
-                     body: copy.text("任务卡新增 tok/s 与四档速度图标，支持多个 Agent。", "Task cards now show tok/s and four speed icons across multiple agents."))
+                     body: copy.text("任务卡新增 tok/s 与四档速度图标，支持多个 Agent。", "Task cards now show tok/s and four speed icons across multiple agents.")),
+                Item(id: "task-card-settings", title: copy.text("卡片设置", "Card settings"),
+                     body: copy.text("自由选择卡片上的速率、任务 Token、耗时与模型，设置即时生效并自动保存。", "Choose whether cards show output rate, task tokens, duration, and model. Changes apply immediately and are saved automatically."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
                 Item(id: "task-rate-snapshot", title: copy.text("速率快照", "Rate snapshots"),

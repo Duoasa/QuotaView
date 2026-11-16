@@ -4,6 +4,12 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Implemented / User Acceptance Pending`
 
 2026-11-02 用户随后授权 0.9.1 正式发布：Build 16 / 内部 149 加入正式首次启动公告名单，当前 `releaseBuilds` 为 `["102", "149"]`，两个版本分别确认一次，开发包仍不自动展示。下方 Build 15 及更早章节的“名单仍为 102”为对应阶段事实；本次发布准入见[发布规格](release-0.9.1.md)。
 
+## 0.9.4 卡片设置公告与源码集成（2026-11-16，Build 9）
+
+在现有任务速率公告中新增亮点「卡片设置」：自由选择卡片上的速率、任务 Token、耗时与模型，设置即时生效并自动保存。稳定 ID 为 `task-card-settings`，共四条公告；中英模板及日/韩/西翻译同步，繁中沿用模板转换。这里的自动保存仅指显示偏好，不承诺任务均值跨重启恢复。
+
+用户授权本批卡片设置与公告源码推送、合并 main；正式提醒名单保持 `["102", "149", "158", "189"]`，开发内部 198 不加入。开发运行、定向冒烟与精确提交 CI 结果见 [Handoff](../../HANDOFF.md)；本次不发布 Release/appcast。
+
 ## 0.9.4 任务速率公告与源码集成（2026-11-15，Build 7）
 
 用户已确认当前任务卡速率布局，授权更新公告并推送/合并源码。以公开 `v0.9.3-build.1` 为增量基线，替换已发布的重置卡/设置内容为三项：
@@ -14,7 +20,7 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Implemented / User Acceptance Pending`
 
 稳定 ID 分别为 `task-output-rate`、`task-rate-snapshot`、`task-rate-layout`。标题/正文提供中英模板和日/韩/西翻译，繁中沿用模板转换。当前速率为进程内快照，公告不承诺跨重启恢复；缺少数据的 Cursor 不算已支持速率来源。正式提醒名单保持 `["102", "149", "158", "189"]`，内部 196 不加入，本轮未获 Release/appcast 授权。
 
-7 项定向冒烟、3 条公告与正式名单、本地化、开发运行核验通过；源码集成及 PR/main CI 结果见 [Handoff](../../HANDOFF.md)。
+7 项定向冒烟、3 条公告与正式名单、本地化、开发运行核验通过；源码集成及 PR/main CI 结果见 [Handoff](../../HANDOFF.md)。 [PR #143](https://github.com/Duoasa/QuotaView/pull/143) 已合并，PR 与精确 main CI 各 807 测试、7 跳过、0 失败，契约检查通过。
 
 ## 0.9.3 发布准入（2026-11-13）
 

@@ -2102,7 +2102,7 @@ final class IslandLiveStore {
             tasks[i].progressUpdatedAt = now
         }
     }
-    func display(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, at now: Date = Date(), language selectedLanguage: AppPreferences.Language? = nil) -> CodexMultitaskDisplay {
+    func display(english: Bool, remaining: Int?, enabled: Bool, privacy: Bool, at now: Date = Date(), language selectedLanguage: AppPreferences.Language? = nil, cardOptions: IslandTaskCardOptions = .init()) -> CodexMultitaskDisplay {
         let language = selectedLanguage ?? (english ? .english : .simplifiedChinese)
         let appCopy = AppCopy(language: language)
         advanceConfirmationPresentation(at: now, visible: enabled && !privacy)
@@ -2118,7 +2118,7 @@ final class IslandLiveStore {
             let duration = task.startedAt.map { max(0, Int((task.endedAt ?? now).timeIntervalSince($0))) }
             let children = privacy ? [] : childPresentations(parent: task.key, english: english, language: language, at: now)
             let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
-            metas[task.id] = .init(modelName: task.model.isEmpty ? (appCopy.text("模型未知", "Unknown model")) : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children)
+            metas[task.id] = cardOptions.applying(to: .init(modelName: task.model.isEmpty ? (appCopy.text("模型未知", "Unknown model")) : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children))
             var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
             if settlement != nil { request = nil }
             if let pending = task.requests.first(where: { $0.value.id == request?.id }) {
@@ -2154,11 +2154,11 @@ final class IslandLiveStore {
                 windowTitle: title, statusTitle: status, operation: privacy || task.status == .compacting ? "" : (synchronizing
                     ? (appCopy.text("请求已处理", "Request handled")) : presentationStatus == .waiting
                     ? status + " · " + (request?.question.value(language) ?? "") : operation),
-                tokenUsageTitle: task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tok" },
+                tokenUsageTitle: cardOptions.tokens ? task.tokens.map { CodexActivityTokenUsageFormatter.string(for: $0) + " tok" } : nil,
                 accessibilityLabel: "\(title), \(status)")
             return .init(id: task.id, renderState: render, playbackEnabled: !task.terminal || task.status == .completed, hasPendingRequest: settlement == nil && !task.requests.isEmpty, provider: provider,
-                         outputRate: task.status == .completed ? task.averageOutputRate :
-                            (!task.terminal ? task.outputRate : nil))
+                         outputRate: cardOptions.outputRate ? (task.status == .completed ? task.averageOutputRate :
+                            (!task.terminal ? task.outputRate : nil)) : nil, cardOptions: cardOptions)
         }
         let connectionCopy = AppCopy(language: language)
         return .init(state: .init(tasks: items, selectedID: selectedID, allCompleted: !visibleTasks.isEmpty && visibleTasks.allSatisfy(\.terminal), compact: true, receiptStartedAt: nil),

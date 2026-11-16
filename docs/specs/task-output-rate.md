@@ -79,3 +79,5 @@ Kimi/Copilot 在 Prompt Hook 捕获本轮日志起点并每秒只读刷新；16 
 2026-11-15 用户确认 Build 6 的展示效果，并授权更新公告、源码推送合并 main。公告三条覆盖输出速率、快照和紧凑统计，不承诺磁盘持久化：完成均值目前只在进程内的当前卡片持续显示，应用重启不保证恢复，新 turn/清理卡片清除。
 
 7 项定向本地冒烟与本地化通过；开发包 0.9.4 Build 7 / 内部 196 已启动，PID 52317。精确源码与 PR/main CI 证据见 Handoff；不发布 Release/appcast。
+
+2026-11-15 源码经 [PR #143](https://github.com/Duoasa/QuotaView/pull/143) 合入 main `4e248150b8a2eaef0d0c0da8881be9486631856d`。PR 与精确 main CI 均通过，各 807 测试、7 跳过、0 失败及原生问题关闭契约；合并树与当前运行输入一致。此交付补记保留本地，PR 描述同步最终结果。未发布 Release/appcast。
