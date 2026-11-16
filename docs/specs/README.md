@@ -1,8 +1,12 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 7 / 任务速率公告与源码集成
+## 当前开发：0.9.4 Build 9 / 卡片设置与公告
 
-`QV-PRODUCT-TASK-OUTPUT-RATE-001` · [任务输出速率](task-output-rate.md) · Implemented / User Accepted（当前展示）。用户已认可快照、右下角统计与细竖线，并授权更新[公告](brand-announcement.md)、源码推送合并 main；9 个 Agent 入口，缺少输出数据时隐藏。完成均值仅保存在进程内当前卡片，未实现磁盘持久化。7 项定向冒烟、本地化与开发运行核验通过，PR/main CI 待远端完成；状态与证据见 Handoff。本轮不发布 Release/appcast。
+`QV-PRODUCT-TASK-CARD-SETTINGS-001` · [任务卡片显示设置](task-card-settings.md) · Accepted / Verifying。新增独立设置页，速率、任务 Token、耗时、模型四项默认开启、独立保存、即时生效。隐藏后释放布局空间，数据保留；4 项定向冒烟、本地化、增量构建与开发运行核验通过，视觉由用户验收。本批授权同步公告、推送源码并合并 main；最新运行与验证结果见 Handoff。
+
+## 前序开发：0.9.4 Build 7 / 任务速率公告与源码集成
+
+`QV-PRODUCT-TASK-OUTPUT-RATE-001` · [任务输出速率](task-output-rate.md) · Implemented / User Accepted（当前展示）。用户已认可快照、右下角统计与细竖线，并授权更新[公告](brand-announcement.md)、源码推送合并 main；9 个 Agent 入口，缺少输出数据时隐藏。完成均值仅保存在进程内当前卡片，未实现磁盘持久化。7 项定向冒烟、本地化与开发运行核验通过，[PR #143](https://github.com/Duoasa/QuotaView/pull/143) 已合并 main，PR 与精确 main CI 均通过（各 807 测试、7 跳过、0 失败）；状态与证据见 Handoff。本轮不发布 Release/appcast。
 
 ## 当前版本：0.9.3 Build 1 / 正式发布
 

@@ -342,6 +342,18 @@ final class AppPreferences: ObservableObject {
         didSet { defaults.set(IslandExpandedWidth.normalized(codexIslandExpandedWidth), forKey: "island.expandedWidth") }
     }
 
+    @Published var cardShowsOutputRate: Bool {
+        didSet { defaults.set(cardShowsOutputRate, forKey: "island.card.outputRate") }
+    }
+    @Published var cardShowsTokens: Bool {
+        didSet { defaults.set(cardShowsTokens, forKey: "island.card.tokens") }
+    }
+    @Published var cardShowsDuration: Bool {
+        didSet { defaults.set(cardShowsDuration, forKey: "island.card.duration") }
+    }
+    @Published var cardShowsModel: Bool {
+        didSet { defaults.set(cardShowsModel, forKey: "island.card.model") }
+    }
     @Published var islandFloatingUsageEnabled: Bool {
         didSet { defaults.set(islandFloatingUsageEnabled, forKey: "island.floatingUsageEnabled") }
     }
@@ -648,6 +660,10 @@ final class AppPreferences: ObservableObject {
             forKey: Key.showResetAction,
             defaultValue: true
         )
+        cardShowsOutputRate = defaults.storedBool(forKey: "island.card.outputRate", defaultValue: true)
+        cardShowsTokens = defaults.storedBool(forKey: "island.card.tokens", defaultValue: true)
+        cardShowsDuration = defaults.storedBool(forKey: "island.card.duration", defaultValue: true)
+        cardShowsModel = defaults.storedBool(forKey: "island.card.model", defaultValue: true)
         codexIslandPrivacy = defaults.bool(forKey: "island.privacyMode")
         islandFloatingUsageEnabled = defaults.object(forKey: "island.floatingUsageEnabled") as? Bool ?? true
         islandGlassDegree = IslandGlassDegree.normalized((defaults.object(forKey: "island.glassDegree") as? Double) ?? IslandGlassDegree.defaultValue)

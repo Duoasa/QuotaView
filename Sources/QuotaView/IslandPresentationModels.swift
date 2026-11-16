@@ -21,6 +21,30 @@ struct IslandUsageOptions: Equatable {
     }
 }
 
+/// Display preferences do not discard the underlying task observations.
+struct IslandTaskCardOptions: Equatable {
+    var outputRate = true
+    var tokens = true
+    var duration = true
+    var model = true
+    init() {}
+    @MainActor init(preferences: AppPreferences) {
+        outputRate = preferences.cardShowsOutputRate
+        tokens = preferences.cardShowsTokens
+        duration = preferences.cardShowsDuration
+        model = preferences.cardShowsModel
+    }
+    func applying(to value: IslandSessionMetadata) -> IslandSessionMetadata {
+        .init(modelName: model ? value.modelName : "", reasoningEffort: model ? value.reasoningEffort : "",
+              elapsedSeconds: duration ? value.elapsedSeconds : nil,
+              subagents: value.subagents.map { child in
+                  .init(id: child.id, title: child.title, status: child.status, visualState: child.visualState,
+                        model: model ? child.model : "", duration: duration ? child.duration : "", detail: child.detail,
+                        avatar: child.avatar, provider: child.provider)
+              })
+    }
+}
+
 // Real metadata; nil duration and absent model remain unknown.
 struct IslandSessionMetadata: Equatable {
     var modelName: String

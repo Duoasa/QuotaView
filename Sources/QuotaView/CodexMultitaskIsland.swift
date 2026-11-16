@@ -366,6 +366,7 @@ struct CodexMultitaskRenderTask: Equatable {
     var hasPendingRequest = false
     var provider: IslandAgentProvider = .codex
     var outputRate: CodexOutputRateSample?
+    var cardOptions = IslandTaskCardOptions()
     var title: String { renderState.windowTitle }
     var color: NSColor {
         renderState.visualState == .completed ? .systemGreen : renderState.visualState.activityAccentColor

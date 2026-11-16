@@ -3793,5 +3793,30 @@
     "ja": "速度と累計 tok を細い区切り線で並べ、タスク詳細の表示領域を確保します。",
     "ko": "속도와 누적 tok를 얇은 구분선으로 나란히 표시하고 작업 상세 내용의 공간을 확보합니다.",
     "es": "La velocidad y el total de tok aparecen juntos con un separador fino y espacio reservado para los detalles."
+  },
+  "Card settings": {
+    "ja": "カード設定",
+    "ko": "카드 설정",
+    "es": "Ajustes de tarjetas"
+  },
+  "Task tokens": {
+    "ja": "タスクのトークン数",
+    "ko": "작업 토큰",
+    "es": "Tokens de la tarea"
+  },
+  "Task duration": {
+    "ja": "タスクの所要時間",
+    "ko": "작업 소요 시간",
+    "es": "Duración de la tarea"
+  },
+  "Model display": {
+    "ja": "モデル表示",
+    "ko": "모델 표시",
+    "es": "Mostrar modelo"
+  },
+  "Choose whether cards show output rate, task tokens, duration, and model. Changes apply immediately and are saved automatically.": {
+    "ja": "カードに表示する出力速度、タスクのトークン数、所要時間、モデルを選択できます。変更はすぐに反映され、自動保存されます。",
+    "ko": "카드에 표시할 출력 속도, 작업 토큰, 소요 시간, 모델을 선택하세요. 변경 사항은 즉시 적용되고 자동으로 저장됩니다.",
+    "es": "Elige si las tarjetas muestran la velocidad de salida, los tokens de la tarea, la duración y el modelo. Los cambios se aplican al instante y se guardan automáticamente."
   }
 }
