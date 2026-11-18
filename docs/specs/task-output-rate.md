@@ -81,3 +81,11 @@ Kimi/Copilot 在 Prompt Hook 捕获本轮日志起点并每秒只读刷新；16 
 7 项定向本地冒烟与本地化通过；开发包 0.9.4 Build 7 / 内部 196 已启动，PID 52317。精确源码与 PR/main CI 证据见 Handoff；不发布 Release/appcast。
 
 2026-11-15 源码经 [PR #143](https://github.com/Duoasa/QuotaView/pull/143) 合入 main `4e248150b8a2eaef0d0c0da8881be9486631856d`。PR 与精确 main CI 均通过，各 807 测试、7 跳过、0 失败及原生问题关闭契约；合并树与当前运行输入一致。此交付补记保留本地，PR 描述同步最终结果。未发布 Release/appcast。
+
+## Antigravity（0.9.4 Build 10）
+
+按会话 UUID、调用序号和起始步骤配对 PreInvocation 与 PostInvocation。从相应客户端目录的 transcript_full.jsonl 匹配同一步骤的 PLANNER_RESPONSE。速率取输出 token 除以两次 Hook 的时间差，任务 Token 累加匹配记录中的输入与输出。读取日志末尾最多 2 MiB，短暂重试等待日志写入。缺少记录时沿用上次快照。完成后按各调用耗时加权显示。
+
+Build 11 允许系统或工具步骤插在调用起点和回复之间，按会话、调用时间窗及起始步骤匹配唯一回复。Hook 缺少路径时只在三个已知客户端根目录中取唯一会话日志。读数最长等待约 10 秒，按本轮回复步骤去重。
+
+Build 15 将 Antigravity 单次调用的缓存读取 Token 计入任务与用量页的总量，输出速率仍仅用输出 Token 和调用耗时计算。

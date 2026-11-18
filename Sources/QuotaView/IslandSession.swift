@@ -99,6 +99,9 @@ final class IslandSession {
     private var lockObservations: [NSObjectProtocol] = []
     private var privacy = false
     private var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+    var antigravityUsage: AntigravityUsage? {
+        didSet { if oldValue != antigravityUsage { refresh() } }
+    }
     var claudeUsage: IslandClaudeUsage? {
         didSet {
             guard claudeUsage != oldValue, stateRefresh == nil else { return }
@@ -227,6 +230,7 @@ final class IslandSession {
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot
+        display.antigravityUsage = privacy ? nil : antigravityUsage
         display.claudeUsage = privacy ? nil : claudeUsage
         display.usageState = usageState
         display.usageOptions = usageOptions

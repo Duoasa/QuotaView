@@ -27,3 +27,5 @@ Spec ID `QV-PRODUCT-TASK-CARD-SETTINGS-001` · Accepted / Verifying · 2026-11-1
 ## 公告与源码集成（2026-11-16，Build 9）
 
 用户授权把卡片设置加入 0.9.4 公告并推送、合并源码。四项开关行为保持 Build 8 实现，公告明确即时生效与偏好自动保存，中文/English 及日/韩/西翻译同步。最新开发包、定向冒烟和 PR/main CI 结果见 [Handoff](../../HANDOFF.md)；本次不发布 Release/appcast。上述 Build 8 未推送状态为当时阶段事实。
+
+[PR #144](https://github.com/Duoasa/QuotaView/pull/144) 已合并 main `4d48e739ffdd97e7937aa60ba29c12d715d6f4cf`。8 项本地定向检查、PR 与精确 main CI 均通过（各 809 测试、7 跳过、0 失败及契约），证据见 Handoff。Build 9 / 内部 198 已运行，261 个生产输入与合并源码一致；本段为合并后本地补记。

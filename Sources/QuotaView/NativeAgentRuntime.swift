@@ -28,8 +28,16 @@ final class NativeAgentRuntime: ObservableObject {
     private var revision = UUID()
     private var running = false
     private var listening = false
+    private var approvalRouteEnabled: Bool?
     private var applied: Bool?
     private var devinMetadataTask: Task<Void, Never>?
+    private let readsInstalledAccount: Bool
+    private var antigravityAccountTimer: Task<Void, Never>?
+    private var antigravityAccountRead: Task<AntigravityAccount?, Never>?
+    private let antigravityScanner = AntigravityUsageScanner()
+    private var antigravityDetailTasks: [String: Task<Void, Never>] = [:]
+    private var antigravityScan: Task<Void, Never>?
+    private var antigravityScanDirty = false
     private var rateLogTask: Task<Void, Never>?
     private var dshTitleTasks: [String: Task<Void, Never>] = [:]
     private var dshTitleReadAt: [String: Date] = [:]
@@ -43,6 +51,10 @@ final class NativeAgentRuntime: ObservableObject {
         var pendingPermission: String?
         var pendingPermissionTool: String?
         var rateLedger = AgentOutputRateLedger()
+        var antigravityTurnStep: Int?
+        var antigravityClient: String?
+        var antigravityFirstStep: Int?
+        var antigravityCountedSteps: Set<Int> = []
         var rateRequestStart: Date?
         var rateRequestID: String?
         var rateLogPath: String?
@@ -65,9 +77,17 @@ final class NativeAgentRuntime: ObservableObject {
         let rpcID: IslandApprovalJSON
         var awaitsDecision = true
     }
+    private struct AntigravityRequest {
+        let key: String
+        let turn: String
+        let step: Int
+        let rpcID: IslandApprovalJSON
+    }
+    private var antigravityRequests: [String: AntigravityRequest] = [:]
     private var dshRequests: [String: DSHRequest] = [:]
 
     init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil) {
+        readsInstalledAccount = suppliedInstaller == nil
         self.provider = provider; self.preferences = preferences; self.island = island; self.defaults = defaults
         additionalHomes = (provider == .dsh ? defaults.stringArray(forKey: "integrations.dsh.additionalHomes") ?? [] : []).prefix(32)
             .filter { $0.hasPrefix("/") }.map { URL(fileURLWithPath: $0) }
@@ -79,6 +99,25 @@ final class NativeAgentRuntime: ObservableObject {
         installer = suppliedInstaller ?? NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
         defaultDSHNamespace = CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path)
         bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
+        if provider == .antigravity {
+            island.model.antigravityResponseCapability = { [weak self] wire in
+                guard let self, wire.isAntigravity, enabled, listening, antigravityApprovalsEnabled,
+                      let live = antigravityRequests[String(wire.rpcID.text.dropFirst("antigravity:".count))] else { return false }
+                return live.key == wire.threadID && live.turn == wire.turnID && sessions[live.key]?.active == true
+                    && sessions[live.key]?.turn == live.turn
+            }
+            island.model.antigravityRespond = { [weak self] wire, result in
+                guard let self, island.model.antigravityResponseCapability?(wire) == true, wire.permits(result) else { throw CocoaError(.userCancelled) }
+                let outcome: String
+                switch result["decision"].text {
+                case "accept": outcome = "allowed-once"
+                case "decline": outcome = "rejected"
+                case "antigravityDelegate": outcome = "delegate"
+                default: throw CocoaError(.coderInvalidValue)
+                }
+                finishAntigravityRequest(String(wire.rpcID.text.dropFirst("antigravity:".count)), outcome: outcome)
+            }
+        }
         if provider == .dsh {
             island.model.dshResponseCapability = { [weak self] wire in
                 guard let self, running, listening, enabled, preferences.dshInteractiveApprovals,
@@ -92,6 +131,9 @@ final class NativeAgentRuntime: ObservableObject {
             }
         }
     }
+    private var antigravityApprovalsEnabled: Bool {
+        preferences.antigravityInteractiveApprovals && preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy
+    }
     var enabled: Bool {
         switch provider {
         case .dsh: preferences.dshEnabled
@@ -99,6 +141,7 @@ final class NativeAgentRuntime: ObservableObject {
         case .cursor: preferences.cursorEnabled
         case .geminiCLI: preferences.geminiCLIEnabled
         case .openCode: preferences.openCodeEnabled
+        case .antigravity: preferences.antigravityEnabled
         case .copilotCLI: preferences.copilotCLIEnabled
         case .devinDesktop: preferences.devinDesktopEnabled
         case .devinCLI: preferences.devinCLIEnabled
@@ -144,8 +187,17 @@ final class NativeAgentRuntime: ObservableObject {
         retry()
     }
     private func reconcile(force: Bool = false) {
+        if provider == .antigravity && !antigravityApprovalsEnabled {
+            for id in Array(antigravityRequests.keys) { finishAntigravityRequest(id) }
+        }
         if provider == .dsh && (!enabled || !preferences.dshInteractiveApprovals) {
             for id in Array(dshRequests.keys) { releaseDSH(id) }
+        }
+        if running, enabled, listening, provider == .antigravity, approvalRouteEnabled != antigravityApprovalsEnabled {
+            do {
+                try installer.writeExternalRoute(interactiveApprovals: antigravityApprovalsEnabled)
+                approvalRouteEnabled = antigravityApprovalsEnabled
+            } catch { failure = .invalidConfiguration; status = .failed }
         }
         guard running, force || applied != enabled else { return }
         let enabled = enabled
@@ -153,16 +205,29 @@ final class NativeAgentRuntime: ObservableObject {
         applied = enabled; revision = UUID()
         let current = revision
         stopListening()
+        if provider == .antigravity, enabled {
+            island.antigravityUsage = .init()
+            if readsInstalledAccount {
+                antigravityAccountTimer = Task { [weak self] in
+                    while !Task.isCancelled {
+                        await self?.refreshAntigravityAccount()
+                        try? await Task.sleep(nanoseconds: 300_000_000_000)
+                    }
+                }
+            }
+            Task { await refreshAntigravityUsage() }
+        }
         failure = nil; configuredHomes = []
         guard enabled || wasConfigured else { status = .disabled; return }
         status = .configuring
         let previous = configurationTask
         let installer = installer
         let additionalHomes = additionalHomes
+        let approvals = antigravityApprovalsEnabled
         configurationTask = Task { [weak self] in
             await previous?.value
             let result = await Task.detached(priority: .utility) { () -> Result<[URL], NativeAgentInstaller.Failure> in
-                do { return .success(try installer.configure(enabled: enabled, additionalHomes: additionalHomes)) }
+                do { return .success(try installer.configure(enabled: enabled, additionalHomes: additionalHomes, interactiveApprovals: approvals)) }
                 catch let error as NativeAgentInstaller.Failure { return .failure(error) }
                 catch { return .failure(.invalidConfiguration) }
             }.value
@@ -181,14 +246,28 @@ final class NativeAgentRuntime: ObservableObject {
                 }, onDisconnect: { [weak self] id in
                     Task { @MainActor in
                         guard let self, self.revision == current else { return }
+                        self.finishAntigravityRequest(id)
                         self.releaseDSH(id)
                     }
                 })
                 listening = true; status = .waiting
+                if provider == .antigravity {
+                    approvalRouteEnabled = approvals
+                    reconcile()
+                }
             } catch { self.failure = .listenerUnavailable; status = .failed }
         }
     }
     private func stopListening() {
+        if provider == .antigravity {
+            for id in Array(antigravityRequests.keys) { finishAntigravityRequest(id) }
+            for task in antigravityDetailTasks.values { task.cancel() }
+            antigravityDetailTasks.removeAll()
+            antigravityScan?.cancel(); antigravityScan = nil; antigravityScanDirty = false
+            antigravityAccountTimer?.cancel(); antigravityAccountTimer = nil
+            antigravityAccountRead?.cancel(); antigravityAccountRead = nil
+            island.antigravityUsage = nil
+        }
         for task in dshTitleTasks.values { task.cancel() }
         dshTitleTasks.removeAll(); dshTitleReadAt.removeAll()
         for id in Array(dshRequests.keys) { releaseDSH(id) }
@@ -206,6 +285,24 @@ final class NativeAgentRuntime: ObservableObject {
            let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
            let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") {
             if !receiveDSH(message, payload: payload, name: name), message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
+            return
+        }
+        if provider == .antigravity, var payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
+           payload["hook_event_name"] as? String == "AntigravityApproval" {
+            guard running, enabled, listening, let source = payload["session_id"] as? String,
+                  let session = sessions[CodexActivityPrivacy.hashIdentifier("antigravity:" + source)],
+                  session.active, let step = (payload["tool_call_id"] as? String).flatMap(Int.init),
+                  step >= (session.antigravityTurnStep ?? 0) else {
+                bridge.resolve(eventID: message.eventID, decision: nil); return
+            }
+            let input = payload.removeValue(forKey: "tool_input") as? [String: Any]
+            payload["hook_event_name"] = "PreToolUse"
+            if let data = try? JSONSerialization.data(withJSONObject: payload) {
+                receive(.init(eventID: message.eventID, kind: "hook", awaitsDecision: false, payload: data))
+            }
+            if !admitAntigravityRequest(message, payload: payload, input: input), message.awaitsDecision {
+                bridge.resolve(eventID: message.eventID, decision: nil)
+            }
             return
         }
         // Observation-only ingress never holds an interactive connection.
@@ -277,6 +374,8 @@ final class NativeAgentRuntime: ObservableObject {
             startedTurn = true
         }
         if startedTurn {
+            session.antigravityCountedSteps.removeAll()
+            session.antigravityTurnStep = payload["first_step"] as? Int
             session.rateLedger = .init(); session.rateRequestStart = nil; session.rateRequestID = nil
             session.rateLogPosition = nil; session.rateLogPath = nil
             session.turnStartedAt = (payload["rate_event_ms"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date(); session.rateCompletedAt = nil
@@ -287,6 +386,13 @@ final class NativeAgentRuntime: ObservableObject {
             session.rateLogPath = path
             if session.rateLogPosition == nil { session.rateLogPosition = 0 }
             if startedTurn { session.rateLogPosition = AgentRateObservation.integer(payload["rate_log_position"]) ?? 0 }
+        }
+        if provider == .antigravity, let client = payload["log_client"] as? String,
+           AntigravityHistory.clients.contains(client) { session.antigravityClient = client }
+        if provider == .antigravity, name == "TurnStarted", let ms = payload["rate_event_ms"] as? Double {
+            session.antigravityFirstStep = payload["first_step"] as? Int
+            session.rateRequestStart = Date(timeIntervalSince1970: ms / 1000)
+            session.rateRequestID = UUID().uuidString
         }
         if name == "ModelRequest", provider == .geminiCLI, session.active {
             session.rateRequestStart = (payload["rate_event_ms"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
@@ -308,12 +414,24 @@ final class NativeAgentRuntime: ObservableObject {
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
+        if provider == .antigravity && (startedTurn || ["Stop", "StopFailure", "Interrupt", "SessionEnd", "PostToolUse", "PostToolUseFailure"].contains(name)) {
+            let toolFinished = ["PostToolUse", "PostToolUseFailure"].contains(name)
+            let step = (payload["tool_call_id"] as? String).flatMap(Int.init)
+            for (id, request) in antigravityRequests where request.key == key && (!toolFinished || request.step == step) {
+                finishAntigravityRequest(id)
+            }
+        }
         if provider == .dsh, session.title == nil || startedTurn || name == "Stop" {
             refreshDSHTitle(key: key, sourceID: sourceSession, namespace: payload["source_namespace"] as? String)
         }
         if provider == .dsh && (startedTurn || ["SessionEnd", "Stop", "StopFailure", "Interrupt"].contains(name)) {
             for id in dshRequests.filter({ $0.value.session == key }).map(\.key) { releaseDSH(id) }
         }
+        if provider == .antigravity, let turn = session.turn, session.active,
+           ["TurnStarted", "Usage", "Stop", "Interrupt", "StopFailure"].contains(name) {
+            refreshAntigravityDetail(key: key, source: sourceSession, turn: turn, session: session, event: name)
+        }
+        if provider == .antigravity, name == "TurnStarted", !startedTurn { publishMetadata(key); return }
         if name == "SessionStart" || name == "Metadata" || name == "ModelRequest" { publishMetadata(key); return }
         if name == "SessionEnd" {
             if let turn = session.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
@@ -378,6 +496,39 @@ final class NativeAgentRuntime: ObservableObject {
                 if provider.isDevin { sessions[key]?.devinCompletedAt = Date() }
             }
         }
+        if provider == .antigravity, ["Usage", "Stop"].contains(name), let id = session.rateRequestID,
+           let start = session.rateRequestStart, let endMS = payload["rate_event_ms"] as? Double,
+           UUID(uuidString: sourceSession) != nil {
+            sessions[key]?.rateRequestStart = nil
+            let root = installer.home.deletingLastPathComponent()
+            let hint = session.antigravityClient
+            let step = session.antigravityFirstStep
+            let end = Date(timeIntervalSince1970: endMS / 1000)
+            let version = revision
+            Task { [weak self] in
+                for _ in 0..<40 {
+                    guard let self, running, enabled, revision == version, sessions[key]?.turn == turn else { return }
+                    if let usage = await Task.detached(priority: .utility, operation: {
+                        guard let logs = AntigravityHistory.logs(root: root, session: sourceSession, client: hint) else { return nil as (step: Int, output: Int64, total: Int64?)? }
+                        return Self.antigravityUsage(logs.appendingPathComponent("transcript_full.jsonl"), step: step, start: start, end: end)
+                    }).value {
+                        guard revision == version, enabled, sessions[key]?.turn == turn,
+                              sessions[key]?.antigravityCountedSteps.insert(usage.step).inserted == true else { return }
+                        if let rate = AgentRateObservation(id: id, output: usage.output, durationMS: end.timeIntervalSince(start) * 1000, end: end) {
+                            receiveRates([rate], key: key, turn: turn)
+                        }
+                        if let total = usage.total {
+                            sessions[key]?.tokens += total
+                            let sum = sessions[key]?.tokens ?? total
+                            island.model.receiveToken(.init(sessionHash: key, turnHash: turn, cumulativeTotalTokens: sum, lastReportedTotalTokens: total, directTurnTotalTokens: sum))
+                        }
+                        await refreshAntigravityUsage()
+                        return
+                    }
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                }
+            }
+        }
         // DSH's epoch/sequence above deduplicates usage before aggregation.
         if name == "Usage", provider == .dsh, session.active, session.parent == nil,
            payload["source_sequence"] is Int, let count = payload["tokens"] as? Int64, (0...1_000_000_000).contains(count) {
@@ -401,6 +552,41 @@ final class NativeAgentRuntime: ObservableObject {
         if provider == .kimiCode || provider == .copilotCLI { refreshRateLogs() }
     }
 
+    private func admitAntigravityRequest(_ message: ClaudeCodeBridgeMessage, payload: [String: Any], input: [String: Any]?) -> Bool {
+        let id = message.eventID
+        guard running, enabled, listening, antigravityApprovalsEnabled, message.awaitsDecision,
+              UUID(uuidString: id) != nil, antigravityRequests[id] == nil, antigravityRequests.count < 32,
+              let source = payload["session_id"] as? String, UUID(uuidString: source) != nil,
+              let tool = payload["tool_name"] as? String, let input,
+              NativeAgentHookNormalizer.antigravityReviewable(tool: tool, arguments: input),
+              let call = payload["tool_call_id"] as? String, let step = Int(call), step >= 0,
+              let args = try? JSONSerialization.data(withJSONObject: input, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
+              args.count <= 65_536 else { return false }
+        let key = CodexActivityPrivacy.hashIdentifier("antigravity:" + source)
+        guard let session = sessions[key], session.active, let turn = session.turn,
+              step >= (session.antigravityTurnStep ?? 0),
+              !antigravityRequests.values.contains(where: { $0.key == key && $0.step == step }) else { return false }
+        let params: [String: Any] = ["antigravity": true, "threadId": key, "turnId": turn, "itemId": call,
+            "toolName": tool, "command": String(decoding: args, as: UTF8.self), "cwd": input["Cwd"] as? String ?? "",
+            "availableDecisions": ["accept", "decline", "antigravityDelegate"]]
+        guard let data = try? JSONSerialization.data(withJSONObject: ["id": "antigravity:" + id,
+            "method": "item/commandExecution/requestApproval", "params": params]),
+              let wire = try? IslandCodexApprovalRequest(data: data) else { return false }
+        antigravityRequests[id] = .init(key: key, turn: turn, step: step, rpcID: wire.rpcID)
+        guard island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
+            callHash: CodexActivityPrivacy.hashIdentifier("antigravity:" + source + ":" + call)) else {
+            antigravityRequests.removeValue(forKey: id); return false
+        }
+        bridge.admit(eventID: id)
+        return true
+    }
+
+    private func finishAntigravityRequest(_ id: String, outcome: String = "delegate") {
+        guard let request = antigravityRequests.removeValue(forKey: id) else { return }
+        bridge.resolve(eventID: id, decision: ["outcome": outcome])
+        island.model.resolveLocalHookRequest(sessionKey: request.key, rpcID: request.rpcID)
+    }
+
     private func receiveDSH(_ message: ClaudeCodeBridgeMessage, payload: [String: Any], name: String) -> Bool {
         guard running, enabled, listening,
               let source = payload["session_id"] as? String, !source.isEmpty, source.utf8.count <= 256,
@@ -421,7 +607,7 @@ final class NativeAgentRuntime: ObservableObject {
                   let call = payload["tool_use_id"] as? String, !call.isEmpty, call.utf8.count <= 256,
                   let wire = try? DSHApproval.request(eventID: id, sessionKey: key, turnKey: turn, payload: payload) else { return false }
             dshRequests[id] = .init(session: key, turn: turn, epoch: epoch, auditID: auditID, rpcID: wire.rpcID)
-            guard island.model.observeDSHRequest(wire, sessionKey: key, turnKey: turn,
+            guard island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
                     callHash: CodexActivityPrivacy.hashIdentifier(prefix + ":" + call)) else {
                 dshRequests.removeValue(forKey: id); return false
             }
@@ -523,8 +709,107 @@ final class NativeAgentRuntime: ObservableObject {
         island.model.receiveOutputRate(session: key, turn: turn,
             latest: session.rateLedger.latest, average: session.rateLedger.average)
     }
+    func refreshAntigravityAccount() async {
+        guard provider == .antigravity, readsInstalledAccount, running, enabled else { return }
+        if let read = antigravityAccountRead { _ = await read.value; return }
+        let version = revision
+        let read = Task.detached(priority: .utility) { AntigravityAccount.read() }
+        antigravityAccountRead = read
+        let account = await read.value
+        guard revision == version, enabled else { return }
+        antigravityAccountRead = nil
+        island.antigravityUsage?.account = account
+    }
+
+    func refreshAntigravityUsage() async {
+        guard provider == .antigravity, running, enabled else { return }
+        if let antigravityScan {
+            antigravityScanDirty = true
+            await antigravityScan.value
+            return
+        }
+        let version = revision, root = installer.home.deletingLastPathComponent()
+        let task = Task {
+            repeat {
+                antigravityScanDirty = false
+                var usage = await antigravityScanner.scan(root: root)
+                guard !Task.isCancelled, revision == version, enabled else { return }
+                usage.account = island.antigravityUsage?.account
+                island.antigravityUsage = usage
+            } while antigravityScanDirty
+            antigravityScan = nil
+        }
+        antigravityScan = task
+        await task.value
+    }
+
+    private func refreshAntigravityDetail(key: String, source: String, turn: String, session: Session, event: String) {
+        antigravityDetailTasks[key]?.cancel()
+        let version = revision, root = installer.home.deletingLastPathComponent()
+        let client = session.antigravityClient, first = session.antigravityTurnStep, start = session.turnStartedAt
+        let end = Date(), finished = event == "Stop"
+        antigravityDetailTasks[key] = Task { [weak self] in
+            var receivedFinal = false
+            for attempt in 0..<(finished ? 17 : 3) {
+                if attempt > 0 {
+                    try? await Task.sleep(nanoseconds: attempt < 10 ? 400_000_000 : 8_000_000_000)
+                }
+                guard !Task.isCancelled else { return }
+                let needsReplies = !receivedFinal
+                let (title, replies) = await Task.detached(priority: .utility) {
+                    guard let logs = AntigravityHistory.logs(root: root, session: source, client: client) else {
+                        return (nil as String?, [AntigravityHistory.Reply]())
+                    }
+                    let database = logs.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                        .deletingLastPathComponent().appendingPathComponent("conversation_summaries.db")
+                    return (AntigravityHistory.title(database: database, session: source),
+                            needsReplies ? AntigravityHistory.replies(logs: logs, firstStep: first, start: start, end: end) : [])
+                }.value
+                guard let self, !Task.isCancelled, revision == version, enabled, sessions[key]?.turn == turn else { return }
+                if let title, sessions[key]?.title != title { sessions[key]?.title = title; publishMetadata(key) }
+                let finalIndex = replies.last.flatMap { last in
+                    finished && !last.hasTools && last.index >= (session.antigravityFirstStep ?? 0) ? last.index : nil
+                }
+                for reply in replies {
+                    let final = reply.index == finalIndex
+                    let row: [String: Any] = ["type": "message", "id": "antigravity-step-" + String(reply.index),
+                        "channel": final ? "final" : "commentary", "text": reply.text, "sourceTruncated": reply.truncated]
+                    if let data = try? JSONSerialization.data(withJSONObject: row) {
+                        island.model.receiveLocalContent(.init(publicSessionHash: key, turnHash: turn, data: data, occurredAt: reply.date))
+                    }
+                }
+                receivedFinal = receivedFinal || finalIndex != nil
+                if title != nil && (event == "TurnStarted" || receivedFinal || (!finished && !replies.isEmpty)) { break }
+            }
+            self?.antigravityDetailTasks[key] = nil
+        }
+    }
+
     private struct RateLogRead: Sendable {
         let key: String; let turn: String; let path: String; let position: Int64; let since: Date
+    }
+    nonisolated static func antigravityUsage(_ file: URL, step: Int?, start: Date, end: Date) -> (step: Int, output: Int64, total: Int64?)? {
+        guard file.resolvingSymlinksInPath().standardizedFileURL == file.standardizedFileURL,
+              let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? handle.close() }
+        guard let length = try? handle.seekToEnd() else { return nil }
+        let size = min(length, 2_097_152)
+        guard (try? handle.seek(toOffset: length - size)) != nil, let data = try? handle.read(upToCount: Int(size)) else { return nil }
+        // created_at has one-second resolution in desktop logs. Intermediate
+        // system and tool steps can precede the actual planner response.
+        let clock = ISO8601DateFormatter()
+        var matches: [(step: Int, output: Int64, total: Int64?)] = []
+        for line in data.split(separator: 10) {
+            guard let row = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
+                  row["type"] as? String == "PLANNER_RESPONSE", let index = row["step_index"] as? Int,
+                  let timestamp = row["created_at"] as? String, let date = clock.date(from: timestamp),
+                  date.timeIntervalSince1970 >= floor(start.timeIntervalSince1970) - 1, date <= end,
+                  let output = AgentRateObservation.integer(row["output_tokens"]), (0...1_000_000_000).contains(output) else { continue }
+            matches.append((index, output, AntigravityHistory.tokens(row)))
+        }
+        let candidates = matches.filter { candidate in step.map { candidate.step >= $0 } ?? true }
+        guard let selected = candidates.first, candidates.count == 1 || selected.step == step else { return nil }
+        return selected
     }
     private func refreshRateLogs() {
         guard rateLogTask == nil else { return }

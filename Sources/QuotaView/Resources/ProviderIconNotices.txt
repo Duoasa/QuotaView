@@ -56,3 +56,5 @@ SOFTWARE.
 
 Devin icon: official website favicon, https://devin.ai/favicon.svg
 Devin and its brand mark belong to Cognition.
+
+Antigravity application icon: extracted from the installed Google Antigravity macOS app (Contents/Resources/icon.icns), for identification of the connected app.

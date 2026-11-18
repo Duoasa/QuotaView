@@ -6,10 +6,34 @@ import Foundation
 public enum NativeAgentHookNormalizer {
     public static func normalize(_ object: [String: Any], provider: String, event override: String? = nil) -> [String: Any]? {
         let sourceEvent = override ?? object["hook_event_name"] as? String ?? ""
-        let sessionKey = provider == "cursor" ? "conversation_id" : provider == "copilotCLI" ? "sessionId" : "session_id"
+        let sessionKey = provider == "antigravity" ? "conversationId" : provider == "cursor" ? "conversation_id" : provider == "copilotCLI" ? "sessionId" : "session_id"
         guard let session = object[sessionKey] as? String, !session.isEmpty, session.utf8.count <= 256 else { return nil }
         var name: String?
         switch provider {
+        case "antigravity":
+            guard UUID(uuidString: session) != nil else { return nil }
+            switch sourceEvent {
+            case "SessionStart": name = sourceEvent
+            case "PreToolUse":
+                name = (object["toolCall"] as? [String: Any])?["name"] as? String == "ask_permission" ? "PermissionRequest" : "PreToolUse"
+            case "PostToolUse": name = (object["error"] as? String ?? "").isEmpty ? "PostToolUse" : "PostToolUseFailure"
+            case "PreInvocation": name = "TurnStarted"
+            case "PostInvocation": name = "Usage"
+            case "Stop":
+                guard object["fullyIdle"] as? Bool == true else { return nil }
+                let reason = (object["terminationReason"] as? String ?? "").lowercased()
+                    .replacingOccurrences(of: "executor_termination_reason_", with: "")
+                if !(object["error"] as? String ?? "").isEmpty { name = "StopFailure" }
+                else {
+                    switch reason {
+                    case "model_stop", "no_tool_call", "terminal_step_type": name = "Stop"
+                    case "error", "max_steps_exceeded", "max_invocations", "max_forced_invocations", "max_token_budget_exceeded": name = "StopFailure"
+                    case "user_canceled", "user_cancelled", "cancelled", "canceled": name = "Interrupt"
+                    default: return nil
+                    }
+                }
+            default: return nil
+            }
         case "cursor":
             switch sourceEvent {
             case "sessionStart": name = "SessionStart"
@@ -87,6 +111,22 @@ public enum NativeAgentHookNormalizer {
         if provider == "devinDesktop" || provider == "devinCLI" { put("turn_id", object["prompt_id"]) }
         if provider == "cursor" { put("turn_id", object["generation_id"]); put("model", object["model_id"] ?? object["model"]) }
         if provider == "geminiCLI" { put("model", (object["llm_request"] as? [String: Any])?["model"]) }
+        if provider == "antigravity" {
+            put("model", object["modelName"])
+            put("tool_name", (object["toolCall"] as? [String: Any])?["name"])
+            if let step = object["stepIdx"] as? Int { put("tool_call_id", String(step)) }
+            if let invocation = object["invocationNum"] as? Int, let step = object["initialNumSteps"] as? Int, step >= 0 {
+                payload["usage_id"] = "\(step):\(invocation)"
+                payload["first_step"] = step
+            }
+            if let path = object["transcriptPath"] as? String {
+                let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".gemini")
+                for client in ["antigravity", "antigravity-cli", "antigravity-ide"] {
+                    let file = root.appendingPathComponent(client + "/brain/" + session + "/.system_generated/logs/transcript.jsonl")
+                    if file.path == (path as NSString).expandingTildeInPath { payload["log_client"] = client }
+                }
+            }
+        }
         if provider == "kimiCode" {
             for key in ["turn_id", "prompt_id", "agent_id", "session_title", "source", "reason"] { put(key, object[key]) }
         }
@@ -112,11 +152,27 @@ public enum NativeAgentHookNormalizer {
         return payload
     }
 
+    /// Antigravity runs PreToolUse before its own policy. Only present calls with the arguments needed to identify the operation.
+    public static func antigravityReviewable(tool: String, arguments: [String: Any]) -> Bool {
+        func hasText(_ key: String) -> Bool { (arguments[key] as? String)?.isEmpty == false }
+        switch tool {
+        case "read_file": return hasText("Path")
+        case "view_file": return hasText("AbsolutePath")
+        case "run_command": return hasText("CommandLine") && hasText("Cwd")
+        case "write_to_file": return hasText("TargetFile") && arguments["CodeContent"] is String
+        case "replace_file_content": return hasText("TargetFile") && hasText("TargetContent") && arguments["ReplacementContent"] is String
+        case "multi_replace_file_content": return hasText("TargetFile") && (arguments["ReplacementChunks"] as? [[String: Any]])?.isEmpty == false
+        default: return false
+        }
+    }
+
     /// No tool or permission decision. Cursor's prompt hook requires `continue`;
     /// this only declines to veto sending the prompt, never grants tool access.
     public static func neutralOutput(provider: String, event: String?) -> Data? {
+        // Antigravity delegates "allow" to subsequent hooks and the normal approval policy.
+        if provider == "antigravity", event == "PreToolUse" { return Data(#"{"decision":"allow"}"#.utf8) }
         if provider == "cursor", event == "beforeSubmitPrompt" { return Data("{\"continue\":true}\n".utf8) }
-        if ["cursor", "geminiCLI", "copilotCLI"].contains(provider) { return Data("{}\n".utf8) }
+        if ["cursor", "geminiCLI", "copilotCLI", "antigravity"].contains(provider) { return Data("{}\n".utf8) }
         return nil
     }
 }

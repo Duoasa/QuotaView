@@ -4,6 +4,10 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Implemented / User Acceptance Pending`
 
 2026-11-02 用户随后授权 0.9.1 正式发布：Build 16 / 内部 149 加入正式首次启动公告名单，当前 `releaseBuilds` 为 `["102", "149"]`，两个版本分别确认一次，开发包仍不自动展示。下方 Build 15 及更早章节的“名单仍为 102”为对应阶段事实；本次发布准入见[发布规格](release-0.9.1.md)。
 
+## 0.9.4 Antigravity 公告（2026-11-18，Build 19）
+
+新增亮点「Antigravity 接入」，一句话说明任务、用量与岛内工具审批。稳定 ID 为 `antigravity-integration`，本版共七项。
+
 ## 0.9.4 任务完成动效公告（2026-11-18，Build 14）
 
 亮点新增「任务卡完成冲击波」和「AI 球完成动效」，正文各用一句话说明卡片中心的冲击波和球内极光化为对号。稳定 ID 为 `task-completion-shockwave` 和 `task-completion-orb`。现有四条公告继续显示，正式提醒名单保持原配置。

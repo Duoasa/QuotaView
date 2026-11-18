@@ -24,6 +24,7 @@ struct NativeAgentInstaller: Sendable {
         case .kimiCode: location = ("KIMI_CODE_HOME", ".kimi-code")
         case .cursor: location = ("CURSOR_CONFIG_DIR", ".cursor")
         case .geminiCLI: location = ("GEMINI_CLI_HOME", ".gemini")
+        case .antigravity: location = ("", ".gemini/config")
         case .openCode: location = ("OPENCODE_CONFIG_DIR", ".config/opencode")
         case .copilotCLI: location = ("COPILOT_HOME", ".copilot")
         case .devinDesktop, .devinCLI: location = ("", ".config/devin")
@@ -56,7 +57,7 @@ struct NativeAgentInstaller: Sendable {
 
     /// Returns the homes configured during this pass. The ledger also remembers
     /// earlier profiles so disabling can remove our block after a client moves.
-    func configure(enabled: Bool, additionalHomes: [URL] = []) throws -> [URL] {
+    func configure(enabled: Bool, additionalHomes: [URL] = [], interactiveApprovals: Bool = true) throws -> [URL] {
         let fm = FileManager.default
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
         chmod(support.path, 0o700)
@@ -77,7 +78,7 @@ struct NativeAgentInstaller: Sendable {
             guard !Task.isCancelled, ProcessInfo.processInfo.systemUptime < deadline else { throw Failure.configurationChanged }
             usleep(10_000)
         }
-        if provider.usesExternalHooks { return try configureExternal(enabled: enabled) }
+        if provider.usesExternalHooks { return try configureExternal(enabled: enabled, interactiveApprovals: interactiveApprovals) }
         let discovered = configurationFiles(additionalHomes: additionalHomes)
         let ledger = support.appendingPathComponent("installed-profiles.json")
         let recorded: [String]

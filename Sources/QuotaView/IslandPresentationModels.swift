@@ -183,12 +183,12 @@ struct CodexPublicTraceItem: Equatable {
     var messagePhase: String? = nil
 }
 enum IslandAgentProvider: String, Equatable, Sendable {
-    case codex, claudeCode, dsh, kimiCode, cursor, geminiCLI, openCode, copilotCLI, devinDesktop, devinCLI
+    case codex, claudeCode, dsh, kimiCode, cursor, geminiCLI, openCode, antigravity, copilotCLI, devinDesktop, devinCLI
     var isObserverOnly: Bool { self != .codex && self != .claudeCode }
     var isDevin: Bool { self == .devinDesktop || self == .devinCLI }
-    var usesExternalHooks: Bool { [.cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI].contains(self) }
+    var usesExternalHooks: Bool { [.cursor, .geminiCLI, .openCode, .antigravity, .copilotCLI, .devinDesktop, .devinCLI].contains(self) }
     var displayName: String {
-        switch self { case .codex: "Codex"; case .claudeCode: "Claude Code"; case .dsh: "DSH"; case .kimiCode: "Kimi Code"; case .cursor: "Cursor"; case .geminiCLI: "Gemini CLI"; case .openCode: "OpenCode"; case .copilotCLI: "GitHub Copilot CLI"; case .devinDesktop: "Devin Desktop"; case .devinCLI: "Devin CLI" }
+        switch self { case .codex: "Codex"; case .claudeCode: "Claude Code"; case .dsh: "DSH"; case .kimiCode: "Kimi Code"; case .cursor: "Cursor"; case .geminiCLI: "Gemini CLI"; case .antigravity: "Antigravity"; case .openCode: "OpenCode"; case .copilotCLI: "GitHub Copilot CLI"; case .devinDesktop: "Devin Desktop"; case .devinCLI: "Devin CLI" }
     }
 }
 enum IslandConfirmationDecision: Equatable { case allowOnce, reject, skipQuestion, reply(IslandApprovalJSON) }

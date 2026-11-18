@@ -9,6 +9,7 @@ struct AgentIntegrationSettings<Details: View>: View {
     @ObservedObject var cursor: NativeAgentRuntime
     @ObservedObject var geminiCLI: NativeAgentRuntime
     @ObservedObject var openCode: NativeAgentRuntime
+    @ObservedObject var antigravity: NativeAgentRuntime
     @ObservedObject var copilotCLI: NativeAgentRuntime
     @ObservedObject var devinDesktop: NativeAgentRuntime
     @ObservedObject var devinCLI: NativeAgentRuntime
@@ -19,7 +20,7 @@ struct AgentIntegrationSettings<Details: View>: View {
     init(preferences: AppPreferences, runtime: CodexActivityRuntime, @ViewBuilder codexDetails: @escaping () -> Details) {
         self.preferences = preferences; codex = runtime; claude = runtime.claudeCode
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
-        cursor = runtime.cursor; geminiCLI = runtime.geminiCLI; openCode = runtime.openCode; copilotCLI = runtime.copilotCLI
+        cursor = runtime.cursor; geminiCLI = runtime.geminiCLI; openCode = runtime.openCode; antigravity = runtime.antigravity; copilotCLI = runtime.copilotCLI
         devinDesktop = runtime.devinDesktop; devinCLI = runtime.devinCLI
     }
     var body: some View {
@@ -31,6 +32,7 @@ struct AgentIntegrationSettings<Details: View>: View {
             providerGroup(.cursor, isOn: $preferences.cursorEnabled)
             providerGroup(.geminiCLI, isOn: $preferences.geminiCLIEnabled)
             providerGroup(.openCode, isOn: $preferences.openCodeEnabled)
+            providerGroup(.antigravity, isOn: $preferences.antigravityEnabled)
             providerGroup(.copilotCLI, isOn: $preferences.copilotCLIEnabled)
             providerGroup(.devinDesktop, isOn: $preferences.devinDesktopEnabled)
             providerGroup(.devinCLI, isOn: $preferences.devinCLIEnabled)
@@ -49,6 +51,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                     case .cursor: nativeDetails(cursor)
                     case .geminiCLI: nativeDetails(geminiCLI)
                     case .openCode: nativeDetails(openCode)
+                    case .antigravity: nativeDetails(antigravity)
                     case .copilotCLI: nativeDetails(copilotCLI)
                     case .devinDesktop: nativeDetails(devinDesktop)
                     case .devinCLI: nativeDetails(devinCLI)
@@ -103,7 +106,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         case .claudeCode:
             switch claude.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
-        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI:
+        case .dsh, .kimiCode, .cursor, .geminiCLI, .openCode, .antigravity, .copilotCLI, .devinDesktop, .devinCLI:
             let runtime = nativeRuntime(provider)!
             switch runtime.status { case .connected: return connected; case .configuring: return configuring
             case .failed: return failed; default: return waiting }
@@ -115,6 +118,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         case .cursor: cursor
         case .geminiCLI: geminiCLI
         case .openCode: openCode
+        case .antigravity: antigravity
         case .copilotCLI: copilotCLI
         case .devinDesktop: devinDesktop
         case .devinCLI: devinCLI
@@ -133,6 +137,15 @@ struct AgentIntegrationSettings<Details: View>: View {
     }
     private func nativeDetails(_ runtime: NativeAgentRuntime) -> some View {
         NativeSettingsCard {
+            if runtime.provider == .antigravity {
+                NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
+                    subtitle: copy.text("运行命令或读写文件前，可在岛内允许一次、拒绝或交回 Antigravity。", "Review commands, file reads, and edits before execution, or hand them back to Antigravity.")) {
+                    Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.antigravityInteractiveApprovals)
+                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                        .disabled(!runtime.enabled)
+                }
+                NativeSettingsDivider()
+            }
             if runtime.provider == .dsh {
                 NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
                     subtitle: copy.text("仅本次允许或拒绝；关闭后在 DSH 中处理。", "Allow once or decline; when off, handle requests in DSH.")) {
@@ -199,7 +212,7 @@ private struct AgentSettingsIcon: View {
     var body: some View {
         ZStack {
             background
-            if (provider == .codex || provider == .claudeCode),
+            if ([IslandAgentProvider.codex, .claudeCode, .antigravity].contains(provider)),
                let icon = IslandProviderIcon.settingsMark(for: provider) {
                 // Official macOS app icons include about 10% transparent canvas on each edge.
                 Image(nsImage: icon).resizable().scaledToFit().frame(width: 27.5, height: 27.5)

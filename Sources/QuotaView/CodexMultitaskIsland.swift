@@ -428,6 +428,7 @@ struct CodexMultitaskDisplay: Equatable {
     var weeklyRemainingPercent: Int? = nil
     var quotaResetsAt: Date? = nil
     var usageSnapshot: CurrentCodexPresentation? = nil
+    var antigravityUsage: AntigravityUsage? = nil
     var claudeUsage: IslandClaudeUsage? = nil
     var usageState: IslandUsagePresentation.State = .loading
     var usageOptions = IslandUsageOptions()

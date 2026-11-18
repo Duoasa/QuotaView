@@ -387,6 +387,12 @@ final class AppPreferences: ObservableObject {
     @Published var geminiCLIEnabled: Bool {
         didSet { defaults.set(geminiCLIEnabled, forKey: "integrations.geminiCLI.enabled") }
     }
+    @Published var antigravityInteractiveApprovals: Bool {
+        didSet { defaults.set(antigravityInteractiveApprovals, forKey: "integrations.antigravity.interactiveApprovals") }
+    }
+    @Published var antigravityEnabled: Bool {
+        didSet { defaults.set(antigravityEnabled, forKey: "integrations.antigravity.enabled") }
+    }
     @Published var openCodeEnabled: Bool {
         didSet { defaults.set(openCodeEnabled, forKey: "integrations.openCode.enabled") }
     }
@@ -677,6 +683,8 @@ final class AppPreferences: ObservableObject {
         kimiCodeEnabled = defaults.bool(forKey: "integrations.kimiCode.enabled")
         cursorEnabled = defaults.bool(forKey: "integrations.cursor.enabled")
         geminiCLIEnabled = defaults.bool(forKey: "integrations.geminiCLI.enabled")
+        antigravityInteractiveApprovals = defaults.storedBool(forKey: "integrations.antigravity.interactiveApprovals", defaultValue: true)
+        antigravityEnabled = defaults.bool(forKey: "integrations.antigravity.enabled")
         openCodeEnabled = defaults.bool(forKey: "integrations.openCode.enabled")
         devinDesktopEnabled = defaults.bool(forKey: "integrations.devinDesktop.enabled")
         devinCLIEnabled = defaults.bool(forKey: "integrations.devinCLI.enabled")
