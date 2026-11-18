@@ -1,4 +1,24 @@
 {
+  "Task completion shockwave": {
+    "ja": "タスク完了時の衝撃波",
+    "ko": "작업 완료 파동",
+    "es": "Onda de finalización"
+  },
+  "A wave spreads from the center of the card when a task finishes.": {
+    "ja": "タスクが完了すると、カードの中心から波が広がります。",
+    "ko": "작업이 끝나면 카드 중앙에서 파동이 퍼집니다.",
+    "es": "Al terminar una tarea, una onda se expande desde el centro de la tarjeta."
+  },
+  "AI orb checkmark": {
+    "ja": "AI オーブのチェックマーク",
+    "ko": "AI 구체의 완료 표시",
+    "es": "Marca de verificación del orbe de IA"
+  },
+  "A ribbon of light inside the AI orb turns into a checkmark.": {
+    "ja": "AI オーブの光がチェックマークに変わります。",
+    "ko": "AI 구체 안의 빛줄기가 체크 표시로 바뀝니다.",
+    "es": "La luz del orbe de IA forma una marca de verificación."
+  },
   "Output rate": {
     "ja": "出力速度",
     "ko": "출력 속도",

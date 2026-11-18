@@ -69,7 +69,11 @@ struct AnnouncementContent {
                 Item(id: "task-output-rate", title: copy.text("任务输出速率", "Task output rate"),
                      body: copy.text("任务卡新增 tok/s 与四档速度图标，支持多个 Agent。", "Task cards now show tok/s and four speed icons across multiple agents.")),
                 Item(id: "task-card-settings", title: copy.text("卡片设置", "Card settings"),
-                     body: copy.text("自由选择卡片上的速率、任务 Token、耗时与模型，设置即时生效并自动保存。", "Choose whether cards show output rate, task tokens, duration, and model. Changes apply immediately and are saved automatically."))
+                     body: copy.text("自由选择卡片上的速率、任务 Token、耗时与模型，设置即时生效并自动保存。", "Choose whether cards show output rate, task tokens, duration, and model. Changes apply immediately and are saved automatically.")),
+                Item(id: "task-completion-shockwave", title: copy.text("任务卡完成冲击波", "Task completion shockwave"),
+                     body: copy.text("任务完成时，冲击波从卡片中心扩散。", "A wave spreads from the center of the card when a task finishes.")),
+                Item(id: "task-completion-orb", title: copy.text("AI 球完成动效", "AI orb checkmark"),
+                     body: copy.text("AI 球内的极光化为对号。", "A ribbon of light inside the AI orb turns into a checkmark."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
                 Item(id: "task-rate-snapshot", title: copy.text("速率快照", "Rate snapshots"),
