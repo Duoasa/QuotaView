@@ -1,6 +1,26 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 14 / 完成动效公告
+## 当前开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
+
+用户已验收 Antigravity 读取文件审批。[应用内公告](brand-announcement.md)新增 Antigravity 任务、用量和工具审批。本批为本地开发测试包，稳定版见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.4 Build 18 / Antigravity 读取文件审批
+
+[工具审批](agent-integrations.md)补入桌面客户端实际发出的 read_file 和文档中的 view_file。带目标路径的新读取调用可在现有确认卡处理。
+
+## 前序开发：0.9.4 Build 17 / Antigravity 用量页排布
+
+[用量页](agent-integrations.md)左侧依次显示 Gemini、Claude/GPT 额度，右侧显示精简套餐名。
+
+## 前序开发：0.9.4 Build 16 / Antigravity 账户额度与工具审批
+
+[Antigravity 接入](agent-integrations.md)补齐圆形来源图标、套餐、分模型组额度和工具确认卡。本机 CodexBar 返回 Starter Quota、Gemini 和 Claude/GPT 周额度及各自重置时间。
+
+## 前序开发：0.9.4 Build 15 / Antigravity 任务与用量
+
+[Antigravity 接入](agent-integrations.md)已支持会话标题、公开回复和独立用量页，并修正了工具调用前的回执。
+
+## 前序开发：0.9.4 Build 14 / 完成动效公告
 
 用户已验收实际任务卡的冲击波和 AI 球。应用内公告新增两条亮点，覆盖中心扩散、边缘呼吸和绿色 AI 球的对号保持。见[公告规格](brand-announcement.md)。
 
@@ -11,6 +31,10 @@
 ## 前序开发：0.9.4 Build 12 / 任务卡完成动效
 
 [进度效果适配协议](PROGRESS_EFFECT_ADAPTATION.md)记录了中心冲击波和原生高光渐入的时序。实际任务卡的视觉验收由用户完成。
+
+## 前序开发：0.9.4 Build 11 / Antigravity
+
+[Agent 接入](agent-integrations.md)新增 Antigravity，速率口径见[任务输出速率](task-output-rate.md)。运行与验证见 Handoff。
 
 ## 前序开发：0.9.4 Build 9 / 卡片设置与公告
 

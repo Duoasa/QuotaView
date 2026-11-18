@@ -134,7 +134,8 @@ struct IslandCodexApprovalRequest: Equatable {
     /// over that Hook's own connection, never through a Codex transport.
     var isClaudeCode: Bool { params["claudeCode"].boolean }
     var isDSH: Bool { params["dsh"].boolean }
-    var isLocalHook: Bool { isClaudeCode || isDSH }
+    var isAntigravity: Bool { params["antigravity"].boolean && rpcID.text.hasPrefix("antigravity:") }
+    var isLocalHook: Bool { isClaudeCode || isDSH || isAntigravity }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -321,6 +322,9 @@ struct IslandCodexApprovalRequest: Equatable {
                 case "acceptAlways": label = .init("始终允许", "Always allow"); positive = true
                 case "decline": label = .init("拒绝", "Decline"); positive = false
                 case "cancel": label = .init("取消本次", "Cancel"); positive = false
+                case "antigravityDelegate":
+                    guard isAntigravity else { return nil }
+                    label = .init("在 Antigravity 中处理", "Continue in Antigravity"); positive = false
                 case "dshDelegate":
                     guard isDSH else { return nil }
                     label = .init("在 DSH 中处理", "Continue in DSH"); positive = false

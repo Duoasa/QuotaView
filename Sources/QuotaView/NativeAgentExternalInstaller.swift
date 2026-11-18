@@ -5,7 +5,14 @@ import QuotaViewCore
 extension NativeAgentInstaller {
     /// Called under the per-channel/provider installation lock. Only our exact
     /// commands are removed; another application's hooks and preferences survive.
-    func configureExternal(enabled: Bool) throws -> [URL] {
+    func writeExternalRoute(interactiveApprovals: Bool) throws {
+        let fields: [String: Any] = ["version": 1, "socketPath": socketURL.path,
+            "authenticationToken": authenticationToken, "interactiveApprovals": provider == .antigravity && interactiveApprovals,
+            "agentProvider": provider.rawValue]
+        try privateWrite(JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]), to: route)
+    }
+
+    func configureExternal(enabled: Bool, interactiveApprovals: Bool) throws -> [URL] {
         let fm = FileManager.default
         guard fm.fileExists(atPath: home.path) else {
             if enabled { throw Failure.missingInstallation }
@@ -14,7 +21,7 @@ extension NativeAgentInstaller {
         let destination: URL
         switch provider {
         case .devinDesktop, .devinCLI: destination = home.appendingPathComponent("config.json")
-        case .cursor: destination = home.appendingPathComponent("hooks.json")
+        case .antigravity, .cursor: destination = home.appendingPathComponent("hooks.json")
         case .geminiCLI: destination = home.appendingPathComponent("settings.json")
         case .copilotCLI: destination = home.appendingPathComponent("hooks/" + marker + ".json")
         case .openCode: destination = home.appendingPathComponent("plugins/" + marker + ".js")
@@ -42,9 +49,7 @@ extension NativeAgentInstaller {
         if enabled {
             guard fm.isExecutableFile(atPath: bundledHelper.path) else { throw Failure.missingHelper }
             try privateWrite(Data(contentsOf: bundledHelper), to: helper, mode: 0o700)
-            try privateWrite(JSONSerialization.data(withJSONObject: ["version": 1, "socketPath": socketURL.path,
-                "authenticationToken": authenticationToken, "interactiveApprovals": false,
-                "agentProvider": provider.rawValue], options: [.sortedKeys]), to: route)
+            try writeExternalRoute(interactiveApprovals: interactiveApprovals)
         }
         guard original != result else { return enabled ? [home] : [] }
         guard try read(destination) == original else { throw Failure.configurationChanged }
@@ -79,6 +84,21 @@ extension NativeAgentInstaller {
         quote(helper.path) + " --agent-hook --configuration " + quote(route.path) + " --event " + quote(event)
     }
     private func externalJSON(_ original: Data?, enabled: Bool) throws -> Data? {
+        if provider == .antigravity {
+            var groups: [String: Any] = [:]
+            if let original {
+                guard let existing = try JSONSerialization.jsonObject(with: original) as? [String: Any] else { throw Failure.invalidConfiguration }
+                groups = existing
+            }
+            var group: [String: Any] = ["enabled": true]
+            for event in ["SessionStart", "PreInvocation", "PostInvocation", "PreToolUse", "PostToolUse", "Stop"] {
+                let handler: [String: Any] = ["type": "command", "command": hookCommand(event), "timeout": event == "PreToolUse" ? 120 : 2]
+                group[event] = event.contains("ToolUse") ? [["matcher": "*", "hooks": [handler]]] : [handler]
+            }
+            if enabled { groups[marker] = group } else if groups.removeValue(forKey: marker) == nil { return original }
+            if groups.isEmpty { return nil }
+            return try JSONSerialization.data(withJSONObject: groups, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        }
         if provider.isDevin {
             return try DevinHookConfiguration.update(original, commands: Dictionary(uniqueKeysWithValues: externalEvents.map { ($0, hookCommand($0)) }), enabled: enabled)
         }

@@ -322,6 +322,7 @@ enum IslandProviderIcon {
     static let claudeApplicationIcon = bundle.image(forResource: NSImage.Name("ClaudeApplicationIcon"))
     private static let dshBrandMark = bundle.image(forResource: NSImage.Name("DSHProviderMark"))
     private static let kimiApplicationIcon = bundle.image(forResource: NSImage.Name("KimiCodeProviderIcon"))
+    private static let antigravityIcon = bundle.image(forResource: NSImage.Name("AntigravityApplicationIcon"))
     static func settingsMark(for provider: IslandAgentProvider) -> NSImage? {
         switch provider {
         case .codex: image
@@ -330,6 +331,7 @@ enum IslandProviderIcon {
         case .kimiCode: kimiApplicationIcon
         case .cursor: bundle.image(forResource: NSImage.Name("CursorProviderMark"))
         case .geminiCLI: bundle.image(forResource: NSImage.Name("GeminiCLIProviderMark"))
+        case .antigravity: antigravityIcon
         case .openCode: bundle.image(forResource: NSImage.Name("OpenCodeProviderMark"))
         case .copilotCLI: bundle.image(forResource: NSImage.Name("CopilotCLIProviderMark"))
         case .devinDesktop, .devinCLI: bundle.image(forResource: NSImage.Name("DevinProviderMark"))
@@ -339,7 +341,7 @@ enum IslandProviderIcon {
     static let kimiImage = NSImage(systemSymbolName: "k.circle.fill", accessibilityDescription: "Kimi Code")
     static func image(for provider: IslandAgentProvider) -> NSImage? {
         switch provider { case .codex: image; case .claudeCode: claudeApplicationIcon; case .dsh: dshImage; case .kimiCode: kimiImage
-        case .cursor, .geminiCLI, .openCode, .copilotCLI, .devinDesktop, .devinCLI: settingsMark(for: provider)
+        case .cursor, .geminiCLI, .openCode, .antigravity, .copilotCLI, .devinDesktop, .devinCLI: settingsMark(for: provider)
         }
     }
     static func usageMark(for provider: IslandAgentProvider) -> NSImage? {
@@ -353,8 +355,10 @@ private struct IslandUsageProviderIcon: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(provider == .codex ? Color.white : Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255))
-            if let mark = IslandProviderIcon.usageMark(for: provider) {
+            Circle().fill(provider != .claudeCode ? Color.white : Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255))
+            if provider == .antigravity, let icon = IslandProviderIcon.settingsMark(for: provider) {
+                Image(nsImage: icon).renderingMode(.original).resizable().scaledToFill().clipShape(Circle())
+            } else if let mark = IslandProviderIcon.usageMark(for: provider) {
                 Image(nsImage: mark).renderingMode(.template).resizable().scaledToFit()
                     .foregroundStyle(provider == .codex ? Color.black : Color.white)
                     .frame(width: 11, height: 11)
@@ -376,7 +380,7 @@ private struct IslandTaskProviderIcon: View {
     var body: some View {
         Group {
             if let icon = IslandProviderIcon.settingsMark(for: provider) {
-                if provider == .codex || provider == .claudeCode {
+                if [IslandAgentProvider.codex, .claudeCode, .antigravity].contains(provider) {
                     Image(nsImage: icon).renderingMode(.original).resizable().scaledToFit()
                 } else {
                     ZStack {
@@ -560,7 +564,8 @@ final class IslandBoardState: ObservableObject {
     /// Usage page source; Claude Code applies only while its usage exists.
     @Published var usageProvider: IslandAgentProvider = .codex
     var effectiveUsageProvider: IslandAgentProvider {
-        usageProvider == .claudeCode && display?.claudeUsage != nil ? .claudeCode : .codex
+        if usageProvider == .antigravity, display?.antigravityUsage != nil { return .antigravity }
+        return usageProvider == .claudeCode && display?.claudeUsage != nil ? .claudeCode : .codex
     }
     @Published private(set) var resetHeight: CGFloat = 434
     @Published private(set) var resetTransitionInFlight = false
@@ -584,7 +589,7 @@ final class IslandBoardState: ObservableObject {
         if showsReset { onChange?() }
     }
     func openReset() {
-        guard showsUsage, !showsReset else { return }
+        guard showsUsage, !showsReset, effectiveUsageProvider != .antigravity else { return }
         cancelAutomaticPreview(); showsReset = true; beginResetTransition()
     }
     func closeReset() {
@@ -1658,7 +1663,7 @@ struct IslandBoardView: View {
                 playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
                 utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight,
-                claudeUsage: state.display?.claudeUsage, provider: $state.usageProvider)
+                claudeUsage: state.display?.claudeUsage, antigravityUsage: state.display?.antigravityUsage, provider: $state.usageProvider)
                 .frame(width: state.expandedWidth, height: min(state.usageHeight, state.maximumPageHeight), alignment: .top)
                 .environment(\.islandGlassActive, !state.compact && !state.showsReset)
                 .opacity(state.showsReset ? 0 : 1)
@@ -2873,12 +2878,17 @@ struct IslandUsageBento: View {
     var maximumHeight: CGFloat? = nil
     let onHeightChange: (CGFloat) -> Void
     var claudeUsage: IslandClaudeUsage? = nil
+    var antigravityUsage: AntigravityUsage? = nil
+    private var providers: [IslandAgentProvider] {
+        [.codex] + (claudeUsage == nil ? [] : [.claudeCode]) + (antigravityUsage == nil ? [] : [.antigravity])
+    }
+    private var showsAntigravity: Bool { provider.wrappedValue == .antigravity && antigravityUsage != nil }
     /// Owned by the board so the reset page follows the selected source.
     var provider: Binding<IslandAgentProvider> = .constant(.codex)
     var displayedResetCredits: Int? { IslandResetPageData(snapshot: current).credits }
     var resetCardIsEmpty: Bool { displayedResetCredits == 0 }
     private var showsClaude: Bool { provider.wrappedValue == .claudeCode && claudeUsage != nil }
-    private var current: CurrentCodexPresentation? { showsClaude ? claudeUsage?.presentation : snapshot }
+    private var current: CurrentCodexPresentation? { showsAntigravity ? nil : showsClaude ? claudeUsage?.presentation : snapshot }
     private var activeUsageState: IslandUsagePresentation.State { showsClaude ? .current : usageState }
     private var activeOptions: IslandUsageOptions {
         guard showsClaude else { return options }
@@ -2902,8 +2912,8 @@ struct IslandUsageBento: View {
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: copy.language.localeIdentifier))) } ?? "—" }
     private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     private var charts: IslandUsageChartCache.Models {
-        chartCache.models(activity: current?.tokenActivity ?? [],
-                          lifetimeTokens: current?.lifetimeTokens, endingAt: Date())
+        chartCache.models(activity: showsAntigravity ? antigravityUsage?.days ?? [] : current?.tokenActivity ?? [],
+                          lifetimeTokens: showsAntigravity ? antigravityUsage?.total : current?.lifetimeTokens, endingAt: Date())
     }
     private var chart: EstimatedCostChartModel { charts.cost }
     private func surface<Content: View>(highlightBottom: Bool = false, contentInset: CGFloat = 14, @ViewBuilder content: () -> Content) -> some View {
@@ -2934,7 +2944,7 @@ struct IslandUsageBento: View {
             pageContent
         } footer: {
                 IslandChromeFooter {
-                    if let date = current?.lastUpdatedAt {
+                    if let date = showsAntigravity ? antigravityUsage?.account?.updatedAt ?? antigravityUsage?.updatedAt : current?.lastUpdatedAt {
                         Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
                     } else { Text(text("等待数据", "Waiting for data")) }
                 } trailing: { utilities }
@@ -2946,8 +2956,40 @@ struct IslandUsageBento: View {
     }
     private var pageContent: some View {
         VStack(spacing: 10) {
-                if claudeUsage != nil && !privacy { providerSwitch }
-                if privacy || current == nil {
+                if providers.count > 1 && !privacy { providerSwitch }
+                if !privacy, showsAntigravity, let usage = antigravityUsage {
+                    if options.quota {
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(spacing: 10) {
+                                if let windows = usage.account?.windows, !windows.isEmpty {
+                                    ForEach(windows.indices, id: \.self) { index in
+                                        let window = windows[index]
+                                        quotaSurface(title: antigravityQuotaTitle(window.title), percent: window.remaining, status: quotaCountdown(window.resetsAt))
+                                    }
+                                } else {
+                                    quotaSurface(title: text("额度剩余", "Quota remaining"), percent: nil, status: text("等待数据", "Waiting for data"))
+                                }
+                            }.frame(maxWidth: .infinity)
+                            Color.clear.frame(width: min(204, max(168, contentWidth * 0.327)))
+                                .overlay { antigravitySubscription(usage.account) }
+                        }.fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        antigravitySubscription(usage.account).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if options.hasTokenMetrics {
+                        HStack(spacing: 10) {
+                            if options.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(usage.days.last?.tokens)) }
+                            if options.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
+                            if options.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(usage.total)) }
+                        }
+                    }
+                    if options.activity && !usage.days.isEmpty { activityCard }
+                    if usage.days.isEmpty && usage.account == nil {
+                        card(text("用量数据", "Usage data")) {
+                            Text(text("等待数据", "Waiting for data"))
+                        }
+                    }
+                } else if privacy || current == nil {
                     card(text("用量数据", "Usage data")) {
                         Text(privacy ? text("隐私模式已开启", "Privacy mode is on") : activeUsageState.message(copy: copy))
                             .font(.system(size: 14, weight: .medium))
@@ -3005,8 +3047,8 @@ struct IslandUsageBento: View {
     }
     private var providerSwitch: some View {
         HStack(spacing: 6) {
-            ForEach([IslandAgentProvider.codex, .claudeCode], id: \.self) { value in
-                let selected = (showsClaude ? IslandAgentProvider.claudeCode : .codex) == value
+            ForEach(providers, id: \.self) { value in
+                let selected = (showsAntigravity ? IslandAgentProvider.antigravity : showsClaude ? .claudeCode : .codex) == value
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
                     HStack(spacing: 6) {
                         IslandUsageProviderIcon(provider: value)
@@ -3032,6 +3074,24 @@ struct IslandUsageBento: View {
         }.accessibilityElement(children: .contain)
             .accessibilityLabel(text("用量来源", "Usage source"))
     }
+    private func antigravitySubscription(_ account: AntigravityAccount?) -> some View {
+        surface {
+            VStack(alignment: .leading, spacing: 10) {
+                heading(text("账户", "Account"))
+                Text(account?.displayPlan ?? "—").font(.system(size: 16, weight: .semibold))
+                    .help(text("通过本机 CodexBar 读取 Antigravity 套餐与额度。", "Antigravity plan and quotas are read through the local CodexBar app."))
+            }.frame(maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private func antigravityQuotaTitle(_ title: String) -> String {
+        switch title {
+        case "Gemini weekly": text("Gemini 周额度", "Gemini weekly")
+        case "Claude/GPT weekly": text("Claude/GPT 周额度", "Claude/GPT weekly")
+        default: title
+        }
+    }
+
     private func quotaCard(_ window: CodexQuotaWindowPresentation?) -> some View {
         let title: String
         switch window?.windowDurationMinutes {
@@ -3196,7 +3256,7 @@ struct IslandUsageBento: View {
     private var costPlotViewportWidth: CGFloat { min(costPlotWidth, max(104, contentWidth - 28 - 208 - 28)) }
     private var costSummaryWidth: CGFloat { max(1, (contentWidth - 28 - costPlotViewportWidth - 28) / 2) }
     private var activityPlotWidth: CGFloat { max(contentWidth - 28, 53 * 10 + 52 * IslandActivityHeatmap.gap) }
-    private var recentChartID: String { "\(showsClaude)-\(chart.days.last?.date.timeIntervalSinceReferenceDate ?? 0)" }
+    private var recentChartID: String { "\(provider.wrappedValue.rawValue)-\(chart.days.last?.date.timeIntervalSinceReferenceDate ?? 0)" }
     private var costCard: some View {
         let chart = self.chart
         let selectedCost = chart.days.first { $0.date == selectedDay }

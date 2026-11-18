@@ -1,10 +1,34 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.4 Build 14 / 完成动效公告
+## 当前开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
+
+用户已验收 Antigravity 读取文件审批。[应用内公告](docs/specs/brand-announcement.md)新增 Antigravity 任务、用量和工具审批。本批为本地开发测试包，稳定版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.4 Build 18 / Antigravity 读取文件审批
+
+[工具审批](docs/specs/agent-integrations.md)补入桌面客户端实际发出的 read_file 和文档中的 view_file。带目标路径的新读取调用可在现有确认卡处理。 开发包和定向冒烟记录见 `.build/anti-094b18/`。
+
+## 前序开发：0.9.4 Build 17 / Antigravity 用量页排布
+
+[用量页](docs/specs/agent-integrations.md)左侧依次显示 Gemini、Claude/GPT 额度，右侧显示精简套餐名。开发运行和定向冒烟记录在 `.build/anti-094b17/`。
+
+## 前序开发：0.9.4 Build 16 / Antigravity 账户额度与工具审批
+
+[Antigravity 接入](docs/specs/agent-integrations.md)补齐圆形来源图标、套餐、分模型组额度和工具确认卡。本机 CodexBar 返回 Starter Quota、Gemini 和 Claude/GPT 周额度及各自重置时间。
+
+开发运行与定向冒烟证据见 `.build/anti-094b16-final/runtime-result.json` 与 `.build/anti-094b16/final-smoke.log`。真实审批交互和实际视觉由用户验收。
+
+## 前序开发：0.9.4 Build 15 / Antigravity 任务与用量
+
+[Antigravity 接入](docs/specs/agent-integrations.md)已支持会话标题、公开回复和独立用量页，并修正了工具调用前的回执。
+
+3 项定向冒烟通过，涵盖 Hook 至任务详情、用量来源选择、历史去重与本机只读回放。4 个会话的 14 条调用合计 249,938 tok，与独立汇总一致。开发运行包为 0.9.4 Build 15 / 内部 204，证据见 `.build/anti-094b15/final-smoke.log` 和 `.build/anti-094b15-final/runtime-result.json`。实机交互由用户验收。
+
+## 前序开发：0.9.4 Build 14 / 完成动效公告
 
 用户已验收实际任务卡的冲击波和 AI 球。应用内公告各用一句话说明中心冲击波和 AI 球内极光化为对号。见[公告规格](docs/specs/brand-announcement.md)。
 
-本地开发运行包已更新为 0.9.4 Build 14 / 内部 203，加载路径已核验。公告共有六条，四项新增翻译键已覆盖日、韩、西语。运行与冒烟记录见 `.build/card-announcement-094b14-final/`。源码集成见 [PR #145](https://github.com/Duoasa/QuotaView/pull/145)。
+本地开发运行包已更新为 0.9.4 Build 14 / 内部 203，加载路径已核验。公告共有六条，四项新增翻译键已覆盖日、韩、西语。运行与冒烟记录见 `.build/card-announcement-094b14-final/`。[PR #145](https://github.com/Duoasa/QuotaView/pull/145) 已合入 main（ae38b8d）。9 项本地冒烟、[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/44245507182) 和[合并后 CI](https://github.com/Duoasa/QuotaView/actions/runs/44246180149) 均通过。
 
 ## 前序开发：0.9.4 Build 13 / 实际任务卡完成态 AI 球（2026-11-18）
 
@@ -17,6 +41,14 @@
 开发台视觉方案已由用户认可，现接入实际任务卡。聚焦卡填充淡出后，冲击波默认从中心向外扩散。原生高光以第一次呼吸的 1.2 秒上升段渐入，随后按 3 秒周期呼吸。可见非聚焦卡完成时直接起波。当前轮次去重，滚回完成记录不会重播冲击波。见[进度效果适配协议](docs/specs/PROGRESS_EFFECT_ADAPTATION.md)。
 
 五项定向冒烟通过。Debug arm64 开发包 0.9.4 Build 12 / 内部 201 已启动，PID 34267。264 个构建输入、运行包清单和加载路径一致，证据位于 `.build/card-completion-094b12-delivery/`。实际任务卡视觉待用户验收。
+
+## 前序开发：0.9.4 Build 11 / Antigravity 完成状态、用量与图标（2026-11-18）
+
+修复普通模型回复被错误映射为中断，按客户端的执行结束枚举区分正常完成、用户取消和错误。用量按调用时间、起始步骤和会话匹配，允许中间出现系统/工具步骤，短暂等待日志落盘，重复回报按回复步骤去重。设置与卡片使用从本机 Antigravity 官方图标包导出的原彩图标。两项定向冒烟通过，覆盖完整 Hook 转发、完成均值、后台 Stop 和中间步骤。开发 Build 11 / 内部 200；运行证据见 `.build/antigravity-094b11-delivery/`。实际新会话表现由用户验收。
+
+## 前序开发：0.9.4 Build 10 / Antigravity（2026-11-18）
+
+连接页已加入 Antigravity，开发渠道开关已在本机打开。开发包为 0.9.4 Build 10 / 内部 199，261 个构建输入及加载路径核对一致。六个观察 Hook 已写入全局配置。任务卡显示模型、工具状态及可配对的用量和速率。实际客户端新任务留待用户验收。运行证据位于 `.build/antigravity-094b10-final/`，定向检查见 `.build/antigravity-smoke.log`。
 
 ## 前序开发：0.9.4 Build 9 / 卡片设置公告与源码集成（2026-11-16）
 

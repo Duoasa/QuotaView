@@ -1,4 +1,54 @@
 {
+  "Antigravity integration": {
+    "ja": "Antigravity 連携",
+    "ko": "Antigravity 연동",
+    "es": "Integración con Antigravity"
+  },
+  "View Antigravity tasks and usage, and review tool requests in the island.": {
+    "ja": "アイランドで Antigravity のタスクと使用状況を確認し、ツールのリクエストを承認できます。",
+    "ko": "아일랜드에서 Antigravity 작업과 사용량을 확인하고 도구 승인 요청을 처리할 수 있습니다.",
+    "es": "Consulta las tareas y el uso de Antigravity y revisa las solicitudes de herramientas en la isla."
+  },
+  "Review commands, file reads, and edits before execution, or hand them back to Antigravity.": {
+    "ja": "コマンドの実行やファイルの読み書きを確認するか、Antigravity に戻します。",
+    "ko": "명령 실행과 파일 읽기 및 변경을 확인하거나 Antigravity에서 처리합니다.",
+    "es": "Revisa los comandos, las lecturas y los cambios de archivos antes de ejecutarlos o devuélvelos a Antigravity."
+  },
+  "Continue in Antigravity": {
+    "ja": "Antigravity で続ける",
+    "ko": "Antigravity에서 계속",
+    "es": "Continuar en Antigravity"
+  },
+  "Handle this request in Antigravity.": {
+    "ja": "Antigravity でこのリクエストを処理してください。",
+    "ko": "Antigravity에서 이 요청을 처리하세요.",
+    "es": "Gestiona esta solicitud en Antigravity."
+  },
+  "Antigravity requests approval": {
+    "ja": "Antigravity が承認を求めています",
+    "ko": "Antigravity에서 승인을 요청합니다",
+    "es": "Antigravity solicita aprobación"
+  },
+  "Send this response to Antigravity.": {
+    "ja": "この応答を Antigravity に送信します。",
+    "ko": "이 응답을 Antigravity로 보냅니다.",
+    "es": "Envía esta respuesta a Antigravity."
+  },
+  "Antigravity plan and quotas are read through the local CodexBar app.": {
+    "ja": "この Mac の CodexBar から Antigravity のプランと利用枠を取得します。",
+    "ko": "이 Mac의 CodexBar에서 Antigravity 요금제와 한도를 읽습니다.",
+    "es": "El plan y las cuotas de Antigravity se consultan mediante la aplicación local CodexBar."
+  },
+  "Gemini weekly": {
+    "ja": "Gemini の週間利用枠",
+    "ko": "Gemini 주간 한도",
+    "es": "Cuota semanal de Gemini"
+  },
+  "Claude/GPT weekly": {
+    "ja": "Claude/GPT の週間利用枠",
+    "ko": "Claude/GPT 주간 한도",
+    "es": "Cuota semanal de Claude/GPT"
+  },
   "Task completion shockwave": {
     "ja": "タスク完了時の衝撃波",
     "ko": "작업 완료 파동",

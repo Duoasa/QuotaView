@@ -2,6 +2,24 @@
 
 Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-10-09。
 
+## Antigravity（0.9.4 Build 18）
+
+左栏按 Gemini、Claude/GPT 的顺序纵向展示额度，右栏账户卡与额度区等高，套餐只显示档位名（例如 Starter）。关闭额度显示时，账户卡独占一行。
+
+用量页沿用账户卡、额度卡与活动图。账户与额度读取本机已安装的 CodexBar 应用内 CLI 的 Antigravity JSON，每五分钟或手动刷新。优先显示具名模型组、剩余百分比和该组的重置时间；未返回的字段显示占位符。历史 Token 仍从 Antigravity 本机日志计算。三款用量来源的图标共用圆形容器。
+
+岛内审批复用工具确认卡。开启后，命令执行、文件读取（桌面版 `read_file.Path`、`view_file.AbsolutePath`）和三种文件写入在 PreToolUse 阶段展示完整参数；只对当前步骤回传一次允许、拒绝，或交回客户端。客户端的显式策略仍有效。官方 Hook 位于原生策略判定之前，因此这些工具也可能在默认策略原本允许时出现。ask_permission 的资源授权在原生客户端处理，岛内跟随待确认和结束事件。关闭设置或开启隐私模式后，后续调用使用客户端策略。等待中的连接超时、断开或开关关闭时退回客户端。
+
+## Build 15 任务与本地统计
+
+卡片按会话 UUID 读取客户端摘要库的标题，标题为空时使用同一行的预览名。任务详情接收本轮公开的模型回复和工具名称，完成后显示最终回答。日志与标题索引可延迟写入，读取会短暂重试；新一轮任务会取消旧一轮的回填。私有思考、系统消息及工具参数不进入详情。
+
+灵动岛「用量统计」在连接开启后提供 Antigravity 来源，按本地会话历史显示最近一天、30 天和累计 Token 及活动图。输入、缓存读取和输出按会话 UUID 与步骤计数，镜像日志和分块只计一次。缺少读数时显示等待；隐私模式隐藏来源与内容。本地历史未提供的账户额度、重置及价格不展示。
+
+PreToolUse 按官方契约返回 `{"decision":"allow"}`，交由后续 Hook 及客户端原有审批策略处理。PostToolUse 继续返回空对象。
+
+连接开关管理官方全局配置 `~/.gemini/config/hooks.json` 中的渠道专属组，关闭时移除该组。SessionStart、PreInvocation、PostInvocation、PreToolUse、PostToolUse、Stop 经现有本地 helper 转发任务状态和模型。后台任务尚未完全空闲时忽略 Stop。完全空闲时按终止原因区分完成、失败和中断。Hook 使用中性回执。配置格式见 [Antigravity Hooks](https://antigravity.google/docs/hooks)。
+
 ## 授权与目标
 
 用户要求修复设置停留在用量页的问题；连接页采用 VibeIsland 的 Agent 列表，新增 DSH 和 Kimi Code，并明确允许参考 VibeIsland 的多 Agent 接入。沿用本轮查看实际效果的开发运行授权，不包含发布、推送或版本身份变化。
@@ -167,3 +185,5 @@ Kimi 采用 TOML 专用字符串转义，检查 hooks 赋值/普通表冲突并�
 官方数据库关闭且 WAL 辅助文件缺失时，系统 SQLite 的只读连接可能返回不可读；运行中的写连接/WAL 存在时已验证可读。生产代码不为绕过此状态开启可写连接或忽略活跃 WAL，暂时不可读时保留最后有效显示；格式核对使用保持隔离连接的合成库模拟运行状态。
 
 Debug arm64 开发包已更新重启为 Build 12 / 内部 145，257 输入与实际加载核对通过；详见 Handoff。未安装或登录真实 Devin Desktop，本机检查不代表朋友环境已修复，仍待其复测。此前已交付的 Build 11 DMG 不包含本批修复。源码经 [PR #130](https://github.com/Duoasa/QuotaView/pull/130) 合入 main `0a20049`，PR/main CI 均通过，各 781 测试、7 跳过、0 失败及 44 契约；本批未打包或发布。
+
+Build 11 接受桌面执行器的 NO_TOOL_CALL 与 TERMINAL_STEP_TYPE 等正常终止枚举，仅明确的取消事件显示中断。连接页及任务卡采用原彩图标及原始透明画布。

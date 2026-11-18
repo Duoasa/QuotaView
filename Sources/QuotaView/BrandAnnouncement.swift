@@ -66,6 +66,8 @@ struct AnnouncementContent {
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
             // Development 0.9.4 changes since public v0.9.3-build.1.
             Section(id: "highlights", category: .highlight, items: [
+                Item(id: "antigravity-integration", title: copy.text("Antigravity 接入", "Antigravity integration"),
+                     body: copy.text("在灵动岛查看 Antigravity 任务与用量，处理工具审批。", "View Antigravity tasks and usage, and review tool requests in the island.")),
                 Item(id: "task-output-rate", title: copy.text("任务输出速率", "Task output rate"),
                      body: copy.text("任务卡新增 tok/s 与四档速度图标，支持多个 Agent。", "Task cards now show tok/s and four speed icons across multiple agents.")),
                 Item(id: "task-card-settings", title: copy.text("卡片设置", "Card settings"),

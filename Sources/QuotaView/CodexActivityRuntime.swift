@@ -55,6 +55,7 @@ final class CodexActivityRuntime: ObservableObject {
     private(set) lazy var cursor = NativeAgentRuntime(provider: .cursor, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var geminiCLI = NativeAgentRuntime(provider: .geminiCLI, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var openCode = NativeAgentRuntime(provider: .openCode, preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var antigravity = NativeAgentRuntime(provider: .antigravity, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var copilotCLI = NativeAgentRuntime(provider: .copilotCLI, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var devinDesktop = NativeAgentRuntime(provider: .devinDesktop, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var devinCLI = NativeAgentRuntime(provider: .devinCLI, preferences: preferences, island: liveIsland, defaults: defaults)
@@ -222,8 +223,11 @@ final class CodexActivityRuntime: ObservableObject {
         }
         if let quotaStatusStore {
             liveIsland.board.state.resetController = quotaStatusStore.resetController
-            liveIsland.board.state.onRefreshUsage = { [weak quotaStatusStore] in
-                await quotaStatusStore?.refresh()
+            liveIsland.board.state.onRefreshUsage = { [weak self, weak quotaStatusStore] in
+                if let self, liveIsland.board.state.effectiveUsageProvider == .antigravity {
+                    await antigravity.refreshAntigravityAccount()
+                    await antigravity.refreshAntigravityUsage()
+                } else { await quotaStatusStore?.refresh() }
             }
             islandUsage = quotaStatusStore.islandUsage
             quotaStatusCancellable = quotaStatusStore.$islandUsage
@@ -334,7 +338,7 @@ final class CodexActivityRuntime: ObservableObject {
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
         claudeCode.start()
-        dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); copilotCLI.start(); devinDesktop.start(); devinCLI.start()
+        dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); antigravity.start(); copilotCLI.start(); devinDesktop.start(); devinCLI.start()
     }
 
     private func startDesktopObservation() {
@@ -689,7 +693,7 @@ final class CodexActivityRuntime: ObservableObject {
     func stop() async {
         isRunning = false
         claudeCode.stop()
-        dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); copilotCLI.stop(); devinDesktop.stop(); devinCLI.stop()
+        dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); antigravity.stop(); copilotCLI.stop(); devinDesktop.stop(); devinCLI.stop()
         desktopRunGeneration &+= 1
         desktopObservationTask?.cancel(); desktopObservationTask = nil
         desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()
