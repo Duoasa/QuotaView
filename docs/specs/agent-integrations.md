@@ -4,9 +4,9 @@ Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-
 
 ## Antigravity（0.9.4 Build 18）
 
-左栏按 Gemini、Claude/GPT 的顺序纵向展示额度，右栏账户卡与额度区等高，套餐只显示档位名（例如 Starter）。关闭额度显示时，账户卡独占一行。
+Antigravity 用量页使用全宽汇总卡（0.9.4 Build 23）。上排并列显示 Gemini 和 Claude/GPT 周额度，额外窗口每行两组续排；下排依次显示最近一天、30 天、累计 Token 和订阅套餐。套餐取账户快照中的简短档位名，缺失时显示「—」。
 
-用量页沿用账户卡、额度卡与活动图。账户与额度读取本机已安装的 CodexBar 应用内 CLI 的 Antigravity JSON，每五分钟或手动刷新。优先显示具名模型组、剩余百分比和该组的重置时间；未返回的字段显示占位符。历史 Token 仍从 Antigravity 本机日志计算。三款用量来源的图标共用圆形容器。
+用量页沿用额度、统计指标和活动图组件。账户与额度读取本机已安装的 CodexBar 应用内 CLI 的 Antigravity JSON，每五分钟或手动刷新。优先显示具名模型组、剩余百分比和该组的重置时间；未返回的字段显示占位符。历史 Token 仍从 Antigravity 本机日志计算。三款用量来源的图标共用圆形容器。
 
 岛内审批复用工具确认卡。开启后，命令执行、文件读取（桌面版 `read_file.Path`、`view_file.AbsolutePath`）和三种文件写入在 PreToolUse 阶段展示完整参数；只对当前步骤回传一次允许、拒绝，或交回客户端。客户端的显式策略仍有效。官方 Hook 位于原生策略判定之前，因此这些工具也可能在默认策略原本允许时出现。ask_permission 的资源授权在原生客户端处理，岛内跟随待确认和结束事件。关闭设置或开启隐私模式后，后续调用使用客户端策略。等待中的连接超时、断开或开关关闭时退回客户端。
 

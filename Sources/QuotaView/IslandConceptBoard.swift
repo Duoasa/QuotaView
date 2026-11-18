@@ -2899,6 +2899,7 @@ struct IslandUsageBento: View {
         return value
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var resetHovered = false
     @State private var selectedDay: Date?
     @State private var hoveredCost: Date?
@@ -2912,7 +2913,7 @@ struct IslandUsageBento: View {
     private func money(_ value: Double?) -> String { value.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: copy.language.localeIdentifier))) } ?? "—" }
     private var copy: AppCopy { .init(language: appLanguage ?? (english ? .english : .simplifiedChinese)) }
     private var charts: IslandUsageChartCache.Models {
-        chartCache.models(activity: showsAntigravity ? antigravityUsage?.days ?? [] : current?.tokenActivity ?? [],
+        chartCache.models(provider: provider.wrappedValue, activity: showsAntigravity ? antigravityUsage?.days ?? [] : current?.tokenActivity ?? [],
                           lifetimeTokens: showsAntigravity ? antigravityUsage?.total : current?.lifetimeTokens, endingAt: Date())
     }
     private var chart: EstimatedCostChartModel { charts.cost }
@@ -2958,31 +2959,7 @@ struct IslandUsageBento: View {
         VStack(spacing: 10) {
                 if providers.count > 1 && !privacy { providerSwitch }
                 if !privacy, showsAntigravity, let usage = antigravityUsage {
-                    if options.quota {
-                        HStack(alignment: .top, spacing: 10) {
-                            VStack(spacing: 10) {
-                                if let windows = usage.account?.windows, !windows.isEmpty {
-                                    ForEach(windows.indices, id: \.self) { index in
-                                        let window = windows[index]
-                                        quotaSurface(title: antigravityQuotaTitle(window.title), percent: window.remaining, status: quotaCountdown(window.resetsAt))
-                                    }
-                                } else {
-                                    quotaSurface(title: text("额度剩余", "Quota remaining"), percent: nil, status: text("等待数据", "Waiting for data"))
-                                }
-                            }.frame(maxWidth: .infinity)
-                            Color.clear.frame(width: min(204, max(168, contentWidth * 0.327)))
-                                .overlay { antigravitySubscription(usage.account) }
-                        }.fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        antigravitySubscription(usage.account).fixedSize(horizontal: false, vertical: true)
-                    }
-                    if options.hasTokenMetrics {
-                        HStack(spacing: 10) {
-                            if options.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(usage.days.last?.tokens)) }
-                            if options.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
-                            if options.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(usage.total)) }
-                        }
-                    }
+                    summaryCard.fixedSize(horizontal: false, vertical: true)
                     if options.activity && !usage.days.isEmpty { activityCard }
                     if usage.days.isEmpty && usage.account == nil {
                         card(text("用量数据", "Usage data")) {
@@ -3001,43 +2978,7 @@ struct IslandUsageBento: View {
                             .font(.system(size: 10)).foregroundStyle(secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                     }
-                    HStack(alignment: .top, spacing: 10) {
-                        VStack(spacing: 10) {
-                            if activeOptions.quota {
-                                if showsClaude, let claude = claudeUsage {
-                                    HStack(spacing: 10) {
-                                        claudeQuotaCard(claude.fiveHour, title: text("5 小时额度", "5-hour quota"), state: claude.quotaState)
-                                        claudeQuotaCard(claude.sevenDay, title: text("每周额度", "Weekly quota"), state: claude.quotaState)
-                                    }
-                                } else if let windows = current?.quotaWindows, !windows.isEmpty {
-                                    HStack(spacing: 10) {
-                                        ForEach(windows) { window in quotaCard(window) }
-                                    }
-                                } else { quotaCard(nil) }
-                            }
-                            if activeOptions.spark, let spark = current?.sparkQuota {
-                                card(text("Spark 周额度", "Spark weekly quota")) {
-                                    Text("\(spark.remainingPercent)%").font(AstaSans.semiBold(21)).monospacedDigit()
-                                }
-                            }
-                            if activeOptions.hasTokenMetrics {
-                                HStack(spacing: 10) {
-                                    if activeOptions.dailyTokens { metric(text("最近一天 Tokens", "Latest day tokens"), value: tokens(current?.recentDailyTokens)) }
-                                    if activeOptions.monthlyTokens { metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens)) }
-                                    if activeOptions.lifetimeTokens { metric(text("累计 Tokens", "Total tokens"), value: tokens(current?.lifetimeTokens)) }
-                                }
-                            }
-                            if !activeOptions.quota && !activeOptions.hasTokenMetrics && !(activeOptions.spark && current?.sparkQuota != nil) {
-                                // The account surface retains its natural size when every left card is hidden.
-                                accountCard
-                            }
-                        }.frame(maxWidth: .infinity)
-
-                        // Match the left stack naturally without a second height-measurement loop.
-                        if activeOptions.quota || activeOptions.hasTokenMetrics || (activeOptions.spark && current?.sparkQuota != nil) {
-                            Color.clear.frame(width: min(204, max(168, contentWidth * 0.327))).overlay { accountCard }
-                        }
-                    }.fixedSize(horizontal: false, vertical: true)
+                    overview
                     // Elevate at the sibling-card boundary: a chart-local zIndex cannot
                     // place its tooltip above a different card's surface.
                     if activeOptions.cost { costCard.zIndex(hoveredCost == nil ? 0 : 1) }
@@ -3045,6 +2986,112 @@ struct IslandUsageBento: View {
                 }
         }.padding(.horizontal, IslandVibeLayout.listInset).padding(.top, 10)
     }
+    @ViewBuilder private var overview: some View {
+        let hasSpark = activeOptions.spark && current?.sparkQuota != nil
+        if activeOptions.quota || hasSpark || activeOptions.hasTokenMetrics {
+            HStack(alignment: .top, spacing: 10) {
+                summaryCard
+                accountCard.frame(width: min(204, max(168, contentWidth * 0.327)))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            accountCard
+        }
+    }
+
+    private var sectionDivider: some View {
+        Rectangle().fill(Color(white: 0.21)).frame(height: 0.5).accessibilityHidden(true)
+    }
+
+    private var columnDivider: some View {
+        Rectangle().fill(Color(white: 0.21)).frame(width: 0.5).accessibilityHidden(true)
+    }
+
+    private var summaryCard: some View {
+        surface {
+            VStack(alignment: .leading, spacing: 12) {
+                if activeOptions.quota { quotaWindows }
+                if activeOptions.spark, let spark = current?.sparkQuota {
+                    if activeOptions.quota { sectionDivider }
+                    metric(text("Spark 周额度", "Spark weekly quota"), value: "\(spark.remainingPercent)%")
+                }
+                if activeOptions.hasTokenMetrics || showsAntigravity {
+                    if activeOptions.quota || (activeOptions.spark && current?.sparkQuota != nil) { sectionDivider }
+                    summaryMetrics
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private func quotaRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .top, spacing: 10, content: content)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func antigravityQuota(_ window: AntigravityAccount.Window) -> some View {
+        quotaContent(title: antigravityQuotaTitle(window.title), percent: window.remaining,
+                     status: quotaCountdown(window.resetsAt))
+    }
+
+    @ViewBuilder private var quotaWindows: some View {
+        if showsAntigravity {
+            if let windows = antigravityUsage?.account?.windows, !windows.isEmpty {
+                ForEach(0..<((windows.count + 1) / 2), id: \.self) { row in
+                    if row > 0 { sectionDivider }
+                    quotaRow {
+                        antigravityQuota(windows[row * 2])
+                        if row * 2 + 1 < windows.count {
+                            columnDivider
+                            antigravityQuota(windows[row * 2 + 1])
+                        }
+                    }
+                }
+            } else {
+                quotaContent(title: text("额度剩余", "Quota remaining"), percent: nil, status: text("等待数据", "Waiting for data"))
+            }
+        } else if showsClaude, let claude = claudeUsage {
+            quotaRow {
+                claudeQuotaCard(claude.fiveHour, title: text("5 小时额度", "5-hour quota"), state: claude.quotaState)
+                columnDivider
+                claudeQuotaCard(claude.sevenDay, title: text("每周额度", "Weekly quota"), state: claude.quotaState)
+            }
+        } else if let windows = current?.quotaWindows, let first = windows.first {
+            quotaRow {
+                ForEach(windows) { window in
+                    if window.id != first.id { columnDivider }
+                    quotaCard(window)
+                }
+            }
+        } else {
+            quotaCard(nil)
+        }
+    }
+
+    private var summaryMetrics: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if activeOptions.dailyTokens {
+                metric(text("最近一天 Tokens", "Latest day tokens"),
+                       value: tokens(showsAntigravity ? antigravityUsage?.days.last?.tokens : current?.recentDailyTokens))
+            }
+            if activeOptions.monthlyTokens {
+                if activeOptions.dailyTokens { columnDivider }
+                metric(text("30 天 Tokens", "30-day tokens"), value: tokens(chart.periodTokens))
+            }
+            if activeOptions.lifetimeTokens {
+                if activeOptions.dailyTokens || activeOptions.monthlyTokens { columnDivider }
+                metric(text("累计 Tokens", "Total tokens"),
+                       value: tokens(showsAntigravity ? antigravityUsage?.total : current?.lifetimeTokens))
+            }
+            if showsAntigravity {
+                if activeOptions.hasTokenMetrics { columnDivider }
+                metric(text("订阅套餐", "Subscription plan"), value: antigravityUsage?.account?.displayPlan ?? "—")
+                    .accessibilityElement(children: .combine)
+                    .help(text("通过本机 CodexBar 读取 Antigravity 套餐与额度。", "Antigravity plan and quotas are read through the local CodexBar app."))
+            }
+        }.fixedSize(horizontal: false, vertical: true)
+    }
+
     private var providerSwitch: some View {
         HStack(spacing: 6) {
             ForEach(providers, id: \.self) { value in
@@ -3074,16 +3121,6 @@ struct IslandUsageBento: View {
         }.accessibilityElement(children: .contain)
             .accessibilityLabel(text("用量来源", "Usage source"))
     }
-    private func antigravitySubscription(_ account: AntigravityAccount?) -> some View {
-        surface {
-            VStack(alignment: .leading, spacing: 10) {
-                heading(text("账户", "Account"))
-                Text(account?.displayPlan ?? "—").font(.system(size: 16, weight: .semibold))
-                    .help(text("通过本机 CodexBar 读取 Antigravity 套餐与额度。", "Antigravity plan and quotas are read through the local CodexBar app."))
-            }.frame(maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-
     private func antigravityQuotaTitle(_ title: String) -> String {
         switch title {
         case "Gemini weekly": text("Gemini 周额度", "Gemini weekly")
@@ -3100,7 +3137,7 @@ struct IslandUsageBento: View {
         case .some(let minutes): title = text("\(minutes)分钟额度", "\(minutes)-minute quota")
         case .none: title = text("额度剩余", "Quota remaining")
         }
-        return quotaSurface(title: title, percent: window?.remainingPercent ?? current?.remainingPercent,
+        return quotaContent(title: title, percent: window?.remainingPercent ?? current?.remainingPercent,
                             status: quotaCountdown(window?.resetsAt ?? current?.resetsAt))
     }
     /// Unknown Claude windows keep the card and say why the value is missing.
@@ -3117,57 +3154,56 @@ struct IslandUsageBento: View {
             status = text("等待刷新", "Waiting")
             help = text("Claude Code 刷新状态栏后显示。", "Appears after Claude Code refreshes its status line.")
         }
-        return quotaSurface(title: title, percent: window?.remainingPercent, status: status)
+        return quotaContent(title: title, percent: window?.remainingPercent, status: status)
             .help(help ?? "")
             .accessibilityElement(children: .combine)
             .accessibilityHint(help ?? "")
     }
-    private func quotaSurface(title: String, percent: Int?, status: String) -> some View {
-        surface {
-            VStack(alignment: .leading, spacing: 10) {
-                ViewThatFits(in: .horizontal) {
-                    HStack {
-                        heading(title).fixedSize()
-                        Spacer(minLength: 4)
-                        Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).fixedSize()
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        heading(title)
-                        Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+    private func quotaContent(title: String, percent: Int?, status: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    heading(title).fixedSize()
+                    Spacer(minLength: 4)
+                    Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).fixedSize()
                 }
-                VStack(spacing: 9) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .lastTextBaseline) {
-                            quotaPercent(percent)
-                            if percent != nil {
-                                Text(text("剩余", "left")).font(AstaSans.regular(10.5)).foregroundStyle(secondary).fixedSize()
-                            }
-                            Spacer(minLength: 4)
-                            quotaUsed(percent)
-                        }
-                        HStack(alignment: .lastTextBaseline) {
-                            quotaPercent(percent)
-                            Spacer(minLength: 4)
-                            quotaUsed(percent)
-                        }
-                        VStack(alignment: .leading, spacing: 4) { quotaPercent(percent); quotaUsed(percent) }
-                    }
-                    GeometryReader { proxy in
-                        let fraction = CGFloat(min(100, max(0, percent ?? 0))) / 100
-                        HStack(spacing: fraction > 0 && fraction < 1 ? 1 : 0) {
-                            if fraction > 0 {
-                                RoundedRectangle(cornerRadius: 2).fill(Color(nsColor: CodexActivityQuotaRingContract.color(for: percent)))
-                                    .frame(width: max(0, proxy.size.width * fraction - (fraction < 1 ? 0.5 : 0)))
-                            }
-                            if fraction < 1 { RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.32)) }
-                        }.clipShape(RoundedRectangle(cornerRadius: 4))
-                            .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(Color(white: 0.22), lineWidth: 0.5) }
-                    }.frame(height: 8).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    heading(title)
+                    Text(status).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            VStack(spacing: 9) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .lastTextBaseline) {
+                        quotaPercent(percent)
+                        if percent != nil {
+                            Text(text("剩余", "left")).font(AstaSans.regular(10.5)).foregroundStyle(secondary).fixedSize()
+                        }
+                        Spacer(minLength: 4)
+                        quotaUsed(percent)
+                    }
+                    HStack(alignment: .lastTextBaseline) {
+                        quotaPercent(percent)
+                        Spacer(minLength: 4)
+                        quotaUsed(percent)
+                    }
+                    VStack(alignment: .leading, spacing: 4) { quotaPercent(percent); quotaUsed(percent) }
+                }
+                GeometryReader { proxy in
+                    let fraction = CGFloat(min(100, max(0, percent ?? 0))) / 100
+                    HStack(spacing: fraction > 0 && fraction < 1 ? 1 : 0) {
+                        if fraction > 0 {
+                            RoundedRectangle(cornerRadius: 2).fill(Color(nsColor: CodexActivityQuotaRingContract.color(for: percent)))
+                                .frame(width: max(0, proxy.size.width * fraction - (fraction < 1 ? 0.5 : 0)))
+                        }
+                        if fraction < 1 { RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.32)) }
+                    }.clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(Color(white: 0.22), lineWidth: 0.5) }
+                }.frame(height: 8).accessibilityHidden(true)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     private func quotaPercent(_ percent: Int?) -> some View {
         Text(percent.map { "\($0)%" } ?? "—").font(AstaSans.semiBold(21)).tracking(-0.21).fixedSize()
@@ -3242,12 +3278,11 @@ struct IslandUsageBento: View {
         }
     }
     private func metric(_ title: String, value: String) -> some View {
-        surface {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).lineLimit(1).minimumScaleFactor(0.8)
-                Text(value).font(AstaSans.semiBold(21)).tracking(-0.21).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
-            }
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).lineLimit(1).minimumScaleFactor(0.8)
+            Text(value).font(AstaSans.semiBold(21)).tracking(-0.21).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     private var chartCellWidth: CGFloat { max(8, IslandActivityHeatmap.cellSize(width: contentWidth - 28)) }
     private var costPlotWidth: CGFloat {
@@ -3348,31 +3383,11 @@ struct IslandUsageBento: View {
                 let gap = IslandActivityHeatmap.gap
                 let pitch = size + gap
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top, spacing: gap) {
-                        ForEach(0..<53, id: \.self) { column in
-                            VStack(spacing: gap) {
-                                ForEach(0..<grid.rows, id: \.self) { row in
-                                    let index = grid.cellIndex(column: column, row: row)
-                                    let cell = grid.cells[index]
-                                    Button { selectedActivity = cell.date } label: {
-                                        RoundedRectangle(cornerRadius: min(2, size / 4))
-                                            .fill(activityMode == .daily ? heatColor(cell.tokens, maximum: grid.maximum) : (grid.isFilled(column: column, row: row) ? (hoveredActivity == index || cell.date == selectedActivity ? Color(red: 0.39, green: 0.71, blue: 1) : Color(red: 0.02, green: 0.53, blue: 0.92)) : Color(white: 0.13)))
-                                            .frame(width: size, height: size)
-                                            .overlay { if activityMode == .daily && (cell.date == selectedActivity || hoveredActivity == index) { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
-                                    }.buttonStyle(.plain).disabled(cell.future)
-                                        .onHover { inside in
-                                            if inside && !cell.future {
-                                                if hoveredActivity != index { hoveredActivity = index }
-                                            } else if hoveredActivity == index { hoveredActivity = nil }
-                                        }
-                                        .opacity(cell.future ? 0 : 1)
-                                        .accessibilityLabel(cell.date.formatted(date: .abbreviated, time: .omitted) + ": " + tokens(cell.tokens))
-                                        .anchorPreference(key: IslandChartHoverAnchor.self, value: .bounds) {
-                                            hoveredActivity == index && (activityMode == .daily || row == 0) ? $0 : nil
-                                        }
-                                }
-                            }
-                        }
+                    if voiceOverEnabled || NSApp.isFullKeyboardAccessEnabled {
+                        activityButtons(grid, size: size)
+                    } else {
+                        activityCanvas(grid, size: size)
+                            .accessibilityRepresentation { activityButtons(grid, size: size) }
                     }
                     ZStack(alignment: .topLeading) {
                         ForEach(grid.months, id: \.column) { month in
@@ -3395,6 +3410,88 @@ struct IslandUsageBento: View {
             }
         }
     }
+    private func activityCanvas(_ grid: IslandActivityHeatmap, size: CGFloat) -> some View {
+        let pitch = size + IslandActivityHeatmap.gap
+        let height = CGFloat(grid.rows) * pitch - IslandActivityHeatmap.gap
+        let hovered = hoveredActivity
+        let selected = selectedActivity
+        return Canvas { context, _ in
+            for column in 0..<53 {
+                for row in 0..<grid.rows {
+                    let index = grid.cellIndex(column: column, row: row)
+                    let cell = grid.cells[index]
+                    guard !cell.future else { continue }
+                    let highlighted = hovered == index || selected == cell.date
+                    let rect = CGRect(x: CGFloat(column) * pitch, y: CGFloat(row) * pitch, width: size, height: size)
+                    let path = Path(roundedRect: rect, cornerRadius: min(2, size / 4))
+                    context.fill(path, with: .color(activityColor(grid, column: column, row: row, highlighted: highlighted)))
+                    if grid.mode == .daily && highlighted {
+                        context.stroke(Path(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 1.5),
+                                       with: .color(.white), lineWidth: 1)
+                    }
+                }
+            }
+        }
+        .frame(width: activityPlotWidth, height: height)
+        .contentShape(Rectangle())
+        .onContinuousHover { phase in
+            let index: Int?
+            switch phase {
+            case .active(let point): index = grid.cellIndex(at: point, size: size)
+            case .ended: index = nil
+            }
+            if index != hoveredActivity { hoveredActivity = index }
+        }
+        .onTapGesture { point in
+            if let index = grid.cellIndex(at: point, size: size) { selectedActivity = grid.cells[index].date }
+        }
+        .overlay(alignment: .topLeading) {
+            if let index = hoveredActivity, grid.cells.indices.contains(index) {
+                let column = grid.mode == .daily ? index / grid.rows : index
+                let row = grid.mode == .daily ? index % grid.rows : 0
+                Color.clear.frame(width: size, height: size)
+                    .anchorPreference(key: IslandChartHoverAnchor.self, value: .bounds) { $0 }
+                    .offset(x: CGFloat(column) * pitch, y: CGFloat(row) * pitch)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func activityColor(_ grid: IslandActivityHeatmap, column: Int, row: Int, highlighted: Bool) -> Color {
+        if grid.mode == .daily { return heatColor(grid.cells[grid.cellIndex(column: column, row: row)].tokens, maximum: grid.maximum) }
+        guard grid.isFilled(column: column, row: row) else { return Color(white: 0.13) }
+        return highlighted ? Color(red: 0.39, green: 0.71, blue: 1) : Color(red: 0.02, green: 0.53, blue: 0.92)
+    }
+
+    private func activityButtons(_ grid: IslandActivityHeatmap, size: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: IslandActivityHeatmap.gap) {
+            ForEach(0..<53, id: \.self) { column in
+                VStack(spacing: IslandActivityHeatmap.gap) {
+                    ForEach(0..<grid.rows, id: \.self) { row in
+                        let index = grid.cellIndex(column: column, row: row)
+                        let cell = grid.cells[index]
+                        Button { selectedActivity = cell.date } label: {
+                            RoundedRectangle(cornerRadius: min(2, size / 4))
+                                .fill(activityColor(grid, column: column, row: row, highlighted: hoveredActivity == index || cell.date == selectedActivity))
+                                .frame(width: size, height: size)
+                                .overlay { if activityMode == .daily && (cell.date == selectedActivity || hoveredActivity == index) { RoundedRectangle(cornerRadius: 2).strokeBorder(.white, lineWidth: 1) } }
+                        }.buttonStyle(.plain).disabled(cell.future)
+                            .onHover { inside in
+                                if inside && !cell.future {
+                                    if hoveredActivity != index { hoveredActivity = index }
+                                } else if hoveredActivity == index { hoveredActivity = nil }
+                            }
+                            .opacity(cell.future ? 0 : 1)
+                            .accessibilityLabel(cell.date.formatted(date: .abbreviated, time: .omitted) + ": " + tokens(cell.tokens))
+                            .anchorPreference(key: IslandChartHoverAnchor.self, value: .bounds) {
+                                hoveredActivity == index && (activityMode == .daily || row == 0) ? $0 : nil
+                            }
+                    }
+                }
+            }
+        }
+    }
+
     private func chartTooltip<Content: View>(anchor: Anchor<CGRect>?, height: CGFloat,
                                             @ViewBuilder content: @escaping () -> Content) -> some View {
         GeometryReader { proxy in
@@ -3459,47 +3556,43 @@ struct IslandUsageBento: View {
     }
 }
 
-/// One data generation per visible usage page. Hover/selection never invalidates
-/// the models; real data, provider totals and UTC day changes do. No published
-/// state is needed: the owning view is already invalidated by those inputs.
+/// Keep one generation per provider while the page is open. Only build a heatmap
+/// when its mode is displayed; hover and selection reuse the same model.
 final class IslandUsageChartCache: ObservableObject {
-    private struct Key: Equatable {
+    fileprivate struct Key: Equatable {
         let activity: [DailyTokenActivity]
         let lifetimeTokens: Int64?
         let utcDay: Double
     }
 
-    struct Models {
-        let cost: EstimatedCostChartModel
-        let daily: IslandActivityHeatmap
-        let weekly: IslandActivityHeatmap
-        let cumulative: IslandActivityHeatmap
+    final class Models {
+        fileprivate let key: Key
+        private let endingAt: Date
+        private var heatmaps: [IslandActivityHeatmap.Mode: IslandActivityHeatmap] = [:]
+        lazy var cost = EstimatedCostChartModel(activity: key.activity, endingAt: endingAt)
+
+        fileprivate init(key: Key, endingAt: Date) {
+            self.key = key
+            self.endingAt = endingAt
+        }
 
         func activity(mode: IslandActivityHeatmap.Mode) -> IslandActivityHeatmap {
-            switch mode {
-            case .daily: daily
-            case .weekly: weekly
-            case .cumulative: cumulative
-            }
+            if let cached = heatmaps[mode] { return cached }
+            let model = IslandActivityHeatmap(activity: key.activity, endingAt: endingAt,
+                                             mode: mode, lifetimeTokens: key.lifetimeTokens)
+            heatmaps[mode] = model
+            return model
         }
     }
 
-    private var cachedKey: Key?
-    private var cachedModels: Models?
+    private var generations: [IslandAgentProvider: Models] = [:]
 
-    func models(activity: [DailyTokenActivity], lifetimeTokens: Int64?, endingAt: Date) -> Models {
+    func models(provider: IslandAgentProvider, activity: [DailyTokenActivity], lifetimeTokens: Int64?, endingAt: Date) -> Models {
         let key = Key(activity: activity, lifetimeTokens: lifetimeTokens,
                       utcDay: floor(endingAt.timeIntervalSince1970 / 86_400))
-        if key == cachedKey, let cachedModels { return cachedModels }
-
-        let models = Models(
-            cost: .init(activity: activity, endingAt: endingAt),
-            daily: .init(activity: activity, endingAt: endingAt, mode: .daily, lifetimeTokens: lifetimeTokens),
-            weekly: .init(activity: activity, endingAt: endingAt, mode: .weekly, lifetimeTokens: lifetimeTokens),
-            cumulative: .init(activity: activity, endingAt: endingAt, mode: .cumulative, lifetimeTokens: lifetimeTokens)
-        )
-        cachedKey = key
-        cachedModels = models
+        if let cached = generations[provider], key == cached.key { return cached }
+        let models = Models(key: key, endingAt: endingAt)
+        generations[provider] = models
         return models
     }
 }
@@ -3517,6 +3610,14 @@ struct IslandActivityHeatmap {
     let rows = 7
     let mode: Mode
     func cellIndex(column: Int, row: Int) -> Int { mode == .daily ? column * 7 + row : column }
+    func cellIndex(at point: CGPoint, size: CGFloat) -> Int? {
+        let pitch = size + Self.gap
+        guard point.x >= 0, point.y >= 0, point.x < 53 * pitch, point.y < CGFloat(rows) * pitch else { return nil }
+        let column = Int(point.x / pitch), row = Int(point.y / pitch)
+        guard point.x - CGFloat(column) * pitch < size, point.y - CGFloat(row) * pitch < size else { return nil }
+        let index = cellIndex(column: column, row: row)
+        return cells[index].future ? nil : index
+    }
     func isFilled(column: Int, row: Int) -> Bool {
         guard let value = cells[cellIndex(column: column, row: row)].tokens, value > 0, maximum > 0 else { return false }
         let count = max(1, min(7, Int(ceil(Double(value) / Double(maximum) * 7))))

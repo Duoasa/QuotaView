@@ -323,6 +323,39 @@ final class Island073SmokeTests: XCTestCase {
             XCTAssertEqual(IslandActivityHeatmap.cellSize(width: width) * 53 + IslandActivityHeatmap.gap * 52, width, accuracy: 0.001)
         }
     }
+    func testHeatmapHitTestingMatchesVisibleCellsAndSkipsGaps() {
+        let day = Date(timeIntervalSince1970: 1790812800)
+        let daily = IslandActivityHeatmap(activity: [], endingAt: day, mode: .daily)
+        let weekly = IslandActivityHeatmap(activity: [], endingAt: day, mode: .weekly)
+        for column in 0..<53 {
+            for row in 0..<7 {
+                let point = CGPoint(x: column * 13 + 5, y: row * 13 + 5)
+                let index = column * 7 + row
+                XCTAssertEqual(daily.cellIndex(at: point, size: 10), daily.cells[index].future ? nil : index)
+                XCTAssertEqual(weekly.cellIndex(at: point, size: 10), column)
+            }
+        }
+        for point in [CGPoint(x: -1, y: 0), CGPoint(x: 10, y: 2), CGPoint(x: 1, y: 12), CGPoint(x: 689, y: 0)] {
+            XCTAssertNil(daily.cellIndex(at: point, size: 10))
+        }
+    }
+
+    func testUsageChartCachePreservesProviderAndInvalidatesOnInputChanges() {
+        let cache = IslandUsageChartCache()
+        let date = Date(timeIntervalSince1970: 1790812800)
+        let days = [DailyTokenActivity(date: date, tokens: 123)]
+        let first = cache.models(provider: .codex, activity: days, lifetimeTokens: 123, endingAt: date)
+        let other = cache.models(provider: .claudeCode, activity: [], lifetimeTokens: nil, endingAt: date)
+        XCTAssertNil(other.cost.periodTokens)
+        XCTAssertTrue(first === cache.models(provider: .codex, activity: days, lifetimeTokens: 123, endingAt: date))
+        let updated = cache.models(provider: .codex, activity: days, lifetimeTokens: 223, endingAt: date)
+        XCTAssertEqual(updated.activity(mode: .cumulative).cells.last?.tokens, 223)
+        let empty = cache.models(provider: .codex, activity: [], lifetimeTokens: 223, endingAt: date)
+        XCTAssertNil(empty.cost.periodTokens)
+        let tomorrow = cache.models(provider: .codex, activity: [], lifetimeTokens: 223, endingAt: date.addingTimeInterval(86400))
+        XCTAssertNotEqual(tomorrow.cost.days.last?.date, empty.cost.days.last?.date)
+    }
+
     func testWeeklyAndCumulativeUseSevenStackedCells() {
         let day = Date(timeIntervalSince1970: 1790812800)
         let previousWeek = day.addingTimeInterval(-7 * 86400)

@@ -78,6 +78,8 @@ struct AnnouncementContent {
                      body: copy.text("AI 球内的极光化为对号。", "A ribbon of light inside the AI orb turns into a checkmark."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
+                Item(id: "usage-page-layout-performance", title: copy.text("用量页优化", "Usage page improvements"),
+                     body: copy.text("额度和 Token 统计集中展示，打开用量页和切换 Agent 更流畅。", "Quotas and token totals are grouped together, and opening the usage page or switching agents is smoother.")),
                 Item(id: "task-rate-snapshot", title: copy.text("速率快照", "Rate snapshots"),
                      body: copy.text("保留最近速率，随新数据更新；任务完成后显示灰色加权平均。", "Keeps the latest rate until new data arrives, then shows a gray weighted average when the task completes.")),
                 Item(id: "task-rate-layout", title: copy.text("紧凑统计", "Compact statistics"),

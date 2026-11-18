@@ -112,6 +112,10 @@ Swift build 与定向窗口选择测试通过；Debug arm64 开发包更新重�
 
 Debug arm64 编译通过，定向 testRippleGlowProductionContractAndRendererResource 通过（包含真实 Metal pipeline 创建），没有截图或视觉验收。效果由用户检查，本地修改未推送。
 
+## 用量统计汇总卡
+
+Codex、Claude Code、Antigravity 的用量页左上共用一张深灰玻璃卡。额度和 Token 行之间用 0.5 pt 横线，各 Token 指标间用 0.5 pt 竖线，分隔线只出现在可见内容之间。Codex 与 Claude Code 的多个额度窗口横排，Antigravity 同样将 Gemini 与 Claude/GPT 额度并排展示。Codex 和 Claude Code 的账户卡位于右栏，与左栏等高。Antigravity 汇总卡占满宽度，订阅套餐位于底行最右侧，与三项 Token 统计以细竖线分隔。
+
 ## 用量页数据卡统一深灰背景（2026-10-11）
 
 用户明确要求修改所有数据卡片背景而非重置券。用量/账户/Tokens/成本/活动卡片共用 surface 改为中性深灰（white 0.075、原生玻璃 tint alpha 0.75），收敛壁纸透色与明暗差异；账户重置入口悬停为 white 0.12，经典/减少透明度回退同色。卡片轮廓为 14 pt continuous。额度条、热力图语义色、文字和重置券原图保持。只做本地开发更新，未沿用上一轮合并授权。
