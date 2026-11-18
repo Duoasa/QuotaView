@@ -1114,9 +1114,10 @@ private struct IslandQuotaRing: View {
 private struct IslandActivityOrb: NSViewRepresentable {
     let visualState: CodexActivityVisualState
     let playback: Bool
+    var completionPhase: IslandCardCompletionPhase? = nil
     func makeNSView(context: Context) -> IslandActivityOrbHost { .init(state: visualState) }
     func updateNSView(_ view: IslandActivityOrbHost, context: Context) {
-        view.configure(state: visualState, playback: playback)
+        view.configure(state: visualState, playback: playback, completionPhase: completionPhase)
     }
     static func dismantleNSView(_ view: IslandActivityOrbHost, coordinator: ()) { view.stop() }
 }
@@ -1136,11 +1137,14 @@ private struct IslandQuantumProgress: NSViewRepresentable {
     let renderState: CodexActivityRenderState
     let visible: Bool
     let reduceMotion: Bool
+    let defersCompletionSkin: Bool
+    let completionRiseStart: CFTimeInterval?
     let primaryContentHeight: CGFloat
     func makeNSView(context: Context) -> IslandQuantumProgressHost { .init(frame: .zero) }
     func updateNSView(_ view: IslandQuantumProgressHost, context: Context) {
         view.configure(renderState: renderState, visible: visible, reduceMotion: reduceMotion,
-            progressEffect: effect, primaryContentHeight: primaryContentHeight)
+            progressEffect: effect, primaryContentHeight: primaryContentHeight, defersCompletionSkin: defersCompletionSkin,
+            completionRiseStart: completionRiseStart)
     }
     static func dismantleNSView(_ view: IslandQuantumProgressHost, coordinator: ()) { view.stop() }
 }
@@ -1281,6 +1285,9 @@ extension VerticalAlignment {
 struct IslandTaskCard: View {
     @Environment(\.appLanguage) private var appLanguage
     var progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField
+    var playsCompletionTransition = true
+    @State private var completionPhase = IslandCardCompletionPhase.resting
+    @State private var fillTimer: Task<Void, Never>?
     let task: CodexMultitaskRenderTask
     let selected: Bool
     let metadata: IslandSessionMetadata?
@@ -1301,7 +1308,47 @@ struct IslandTaskCard: View {
     private var primaryContentHeight: CGFloat {
         max(minimumCardHeight, metadata?.primaryContentHeight(width: cardWidth) ?? IslandVibeLayout.rowHeight)
     }
+    private var completionInput: IslandCardCompletionInput {
+        .init(id: task.id, identity: task.renderState.taskIdentity, state: task.renderState.visualState,
+              visible: playsCompletionTransition && effectVisible)
+    }
+
     var body: some View {
+        cardSurface
+            .overlay {
+                if completionPhase == .wave {
+                    IslandCardCompletionWave(content: cardSurface, reduceMotion: reduceMotion) {
+                        if completionPhase == .wave { completionPhase = .revealed(riseStart: CACurrentMediaTime()) }
+                    }
+                    .allowsHitTesting(false).accessibilityHidden(true)
+                }
+            }
+            .onChange(of: completionInput) { previous, current in
+                fillTimer?.cancel()
+                fillTimer = nil
+                guard current.startsCompletion(after: previous) else {
+                    completionPhase = .resting
+                    return
+                }
+                if selected && !reduceMotion {
+                    completionPhase = .filling
+                    fillTimer = Task { @MainActor in
+                        do { try await Task.sleep(for: .seconds(Double(CodexActivityStateSmokeContract.completionFillDuration))) }
+                        catch { return }
+                        completionPhase = .wave
+                    }
+                } else {
+                    completionPhase = .wave
+                }
+            }
+            .onDisappear {
+                fillTimer?.cancel()
+                fillTimer = nil
+                completionPhase = .resting
+            }
+    }
+
+    private var cardSurface: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: IslandVibeLayout.lineGap) {
                 HStack(spacing: IslandVibeLayout.contentGap) {
@@ -1315,7 +1362,7 @@ struct IslandTaskCard: View {
                     VStack(alignment: .leading, spacing: IslandVibeLayout.lineGap) {
                         HStack(spacing: 6) {
                             if task.renderState.visualState == .completed {
-                                IslandActivityOrb(visualState: .completed, playback: playback)
+                                IslandActivityOrb(visualState: .completed, playback: playback, completionPhase: completionPhase)
                                     .frame(width: 18, height: 18).accessibilityHidden(true)
                             }
                             IslandScrollingText(text: task.title,
@@ -1387,9 +1434,10 @@ struct IslandTaskCard: View {
             }
         }.frame(width: cardWidth)
             .background {
-                if selected {
+                if completionPhase != .wave && (selected || completionPhase.riseStart != nil) {
                     IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible,
-                        reduceMotion: reduceMotion, primaryContentHeight: primaryContentHeight)
+                        reduceMotion: reduceMotion, defersCompletionSkin: completionPhase == .filling,
+                        completionRiseStart: completionPhase.riseStart, primaryContentHeight: primaryContentHeight)
                         .allowsHitTesting(false).accessibilityHidden(true)
                 }
             }

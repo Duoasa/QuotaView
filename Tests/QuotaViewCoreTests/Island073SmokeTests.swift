@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Metal
 import SwiftUI
 import XCTest
 @testable import QuotaView
@@ -609,6 +610,56 @@ final class Island073SmokeTests: XCTestCase {
         XCTAssertTrue(board.compact)
     }
     @MainActor
+    func testLiveCardCompletionPlaysOnceForVisibleTurn() throws {
+        let store = IslandLiveStore()
+        start(store, "a", "one", at: Date())
+        func input(visible: Bool = true) throws -> IslandCardCompletionInput {
+            let task = try XCTUnwrap(store.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks.first)
+            return .init(id: task.id, identity: task.renderState.taskIdentity, state: task.renderState.visualState, visible: visible)
+        }
+        let working = try input()
+        let hidden = try input(visible: false)
+        store.receive(json("turn/completed", ["threadId": "a", "turn": ["id": "one", "status": "completed"]]))
+        let completed = try input()
+        XCTAssertTrue(completed.startsCompletion(after: working))
+        XCTAssertFalse(completed.startsCompletion(after: completed))
+        XCTAssertFalse(completed.startsCompletion(after: hidden))
+        XCTAssertFalse(try input(visible: false).startsCompletion(after: working))
+        start(store, "a", "two", at: Date())
+        XCTAssertFalse(completed.startsCompletion(after: try input()))
+
+        var fill = CodexActivityStateSmokeCompletionTransition()
+        fill.usesCardCompletion = true
+        fill.enter()
+        _ = fill.advance(elapsed: 0.25)
+        let fading = fill.advance(elapsed: 0.10)
+        XCTAssertGreaterThan(fading.smokeOpacity, 0)
+        XCTAssertLessThan(fading.smokeOpacity, 1)
+        XCTAssertEqual(fill.advance(elapsed: 0.08).smokeOpacity, 0, accuracy: 0.0001)
+        XCTAssertEqual(IslandConfirmationPulse.riseDuration, 1.2, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testCardCompletionWaveRunsOnLocalCardAndFinishes() async throws {
+        guard MTLCreateSystemDefaultDevice() != nil else { throw XCTSkip("Metal unavailable") }
+        let frame = NSRect(x: 0, y: 0, width: 450, height: 62)
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        let wave = IslandCardWaveView()
+        let end = expectation(description: "Wave ends once")
+        let clock = ContinuousClock()
+        let start = clock.now
+        wave.prepare(card: NSHostingView(rootView: Text("Fixture").frame(width: 450, height: 62)),
+                     reduceMotion: false) { end.fulfill() }
+        window.contentView = wave
+        wave.frame = frame
+        wave.layoutSubtreeIfNeeded()
+        await fulfillment(of: [end], timeout: 8)
+        XCTAssertGreaterThanOrEqual(start.duration(to: clock.now), .milliseconds(950))
+        XCTAssertTrue(wave.isPaused)
+        XCTAssertTrue(wave.subviews.isEmpty)
+    }
+
+    @MainActor
     func testCompletedGlowStaysAttachedAcrossScrollAndRelayout() throws {
         _ = NSApplication.shared
         let model = IslandLiveStore(); start(model, "a", "one", at: Date())
@@ -667,6 +718,40 @@ final class Island073SmokeTests: XCTestCase {
             XCTAssertNil(text.shimmerAnimation)
         }
     }
+    @MainActor
+    func testCardOrbHoldsOneBreathAndSharesItsOwnGlowStart() throws {
+        let start = CACurrentMediaTime()
+        let phase = IslandCardCompletionPhase.revealed(riseStart: start)
+        let later = IslandCardCompletionPhase.revealed(riseStart: start + 2)
+        XCTAssertEqual(phase.orbFold(at: start + 0.6, reduceMotion: false), 0.5, accuracy: 0.001)
+        for cycle in 0..<3 {
+            let peak = start + Double(cycle) * 6 + 1.2
+            for frame in 0...180 {
+                XCTAssertEqual(phase.orbFold(at: peak + Double(frame) / 60, reduceMotion: false), 1, accuracy: 0.0001)
+            }
+        }
+        XCTAssertEqual(phase.orbFold(at: start + 4.8, reduceMotion: false), 0.5, accuracy: 0.001)
+        XCTAssertEqual(phase.orbFold(at: start + 5.7, reduceMotion: false), 0)
+        XCTAssertEqual(later.orbFold(at: start + 1.2, reduceMotion: false), 0)
+        XCTAssertEqual(IslandCardCompletionPhase.wave.orbFold(at: start, reduceMotion: false), 0)
+        XCTAssertEqual(phase.orbFold(at: start, reduceMotion: true), 1)
+
+        let store = IslandLiveStore()
+        self.start(store, "a", "one", at: Date())
+        store.receive(json("turn/completed", ["threadId": "a", "turn": ["id": "one", "status": "completed"]]))
+        let render = try XCTUnwrap(store.display(english: false, remaining: nil, enabled: true, privacy: false).state.tasks.first?.renderState)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 62), styleMask: .borderless, backing: .buffered, defer: false)
+        let host = IslandQuantumProgressHost(frame: .zero)
+        window.contentView = host
+        host.configure(renderState: render, visible: true, reduceMotion: false, completionRiseStart: phase.riseStart)
+        let pulse = try XCTUnwrap(host.completionPulse)
+        XCTAssertEqual(pulse.beginTime + pulse.duration * IslandConfirmationPulse.peakFraction,
+                       start + 1.2, accuracy: 0.0001)
+        let orb = IslandActivityOrbHost(state: .completed)
+        orb.configure(state: .completed, playback: true, completionPhase: phase)
+        XCTAssertTrue(orb.usesRippleGlow)
+    }
+
     @MainActor
     func testCompletedCardKeepsOrbPlaybackAndStopsWhenHidden() throws {
         _ = NSApplication.shared

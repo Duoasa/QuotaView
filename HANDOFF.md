@@ -1,10 +1,28 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.4 Build 9 / 卡片设置公告与源码集成（2026-11-16）
+## 当前开发：0.9.4 Build 14 / 完成动效公告
+
+用户已验收实际任务卡的冲击波和 AI 球。应用内公告新增两条亮点，覆盖中心扩散、边缘呼吸和绿色 AI 球的对号保持。见[公告规格](docs/specs/brand-announcement.md)。
+
+本地开发运行包已更新为 0.9.4 Build 14 / 内部 203，加载路径已核验。公告共有六条，四项新增翻译键已覆盖日、韩、西语。运行与冒烟记录见 `.build/card-announcement-094b14-delivery/`。
+
+## 前序开发：0.9.4 Build 13 / 实际任务卡完成态 AI 球（2026-11-18）
+
+用户已认可单卡开发台的绿色玻璃 AI 球。实际卡片现在从同一张卡的冲击波结束时刻起，与边缘呼吸同步弯折球内极光。对号在峰值成形后保持完整一轮 3 秒，回落后舒展，整个小球循环为 6 秒。详见[进度效果适配协议](docs/specs/PROGRESS_EFFECT_ADAPTATION.md)。
+
+5 项定向冒烟通过，另对比开发台与应用 Metal 渲染的 5 个形变进度，离屏 RGBA8 结果一致。Debug arm64 开发包 0.9.4 Build 13 / 内部 202 已启动，PID 72416，264 个生产输入、包清单与实际加载路径一致。证据位于 `.build/card-orb-094b13-delivery/`。实际视觉待用户验收。
+
+## 前序开发：0.9.4 Build 12 / 实际任务卡完成动效（2026-11-18）
+
+开发台视觉方案已由用户认可，现接入实际任务卡。聚焦卡填充淡出后，冲击波默认从中心向外扩散。原生高光以第一次呼吸的 1.2 秒上升段渐入，随后按 3 秒周期呼吸。可见非聚焦卡完成时直接起波。当前轮次去重，滚回完成记录不会重播冲击波。见[进度效果适配协议](docs/specs/PROGRESS_EFFECT_ADAPTATION.md)。
+
+五项定向冒烟通过。Debug arm64 开发包 0.9.4 Build 12 / 内部 201 已启动，PID 34267。264 个构建输入、运行包清单和加载路径一致，证据位于 `.build/card-completion-094b12-delivery/`。实际任务卡视觉待用户验收。
+
+## 前序开发：0.9.4 Build 9 / 卡片设置公告与源码集成（2026-11-16）
 
 用户授权将卡片设置加入公告并推送、合并源码。公告新增「卡片设置」，说明速率、任务 Token、耗时与模型可独立选择、即时生效并自动保存；共四条公告，中英及日/韩/西翻译同步。四项开关行为保持 Build 8 实现；正式提醒名单保持 102 / 149 / 158 / 189，开发内部 198 不加入，本批不发布 Release/appcast。
 
-8 项定向冒烟（卡片设置、速率、公告策略和设置导航）、四条公告 ID/正式名单、本地化（719 模板、764 条目录 × 3 翻译）、补丁检查与 Debug arm64 增量构建通过。开发包 0.9.4 Build 9 / 内部 198 已启动，PID 41982；261 个生产输入、完整包和加载路径一致，正式安装未改。证据 `.build/card-settings-094b9/`、`.build/card-settings-094b9-runtime/`。视觉由用户验收；源码已推送至 [PR #144](https://github.com/Duoasa/QuotaView/pull/144)。首次 CI 发现旧设置导航列表漏纳入 cards，已更新该测试预期并通过单项复验；应用代码与运行包无需变更。PR/main CI 正在完成，完成后补记结果。
+8 项定向冒烟（卡片设置、速率、公告策略和设置导航）、四条公告 ID/正式名单、本地化（719 模板、764 条目录 × 3 翻译）、补丁检查与 Debug arm64 增量构建通过。开发包 0.9.4 Build 9 / 内部 198 已启动，PID 41982；261 个生产输入、完整包和加载路径一致，正式安装未改。证据 `.build/card-settings-094b9/`、`.build/card-settings-094b9-runtime/`。视觉由用户验收；源码已推送至 [PR #144](https://github.com/Duoasa/QuotaView/pull/144)。首次 CI 发现旧设置导航列表漏纳入 cards，已更新该测试预期并通过单项复验；应用代码与运行包无需变更。[PR #144](https://github.com/Duoasa/QuotaView/pull/144) 已合并，源码提交 `b6c46acb2a4f956314bd2f2ec14a45f6b464bc66`，main 合并提交 `4d48e739ffdd97e7937aa60ba29c12d715d6f4cf`。PR CI `43825641120` 通过（809 测试、7 跳过、0 失败及原生问题关闭契约）；[精确 main CI](https://github.com/Duoasa/QuotaView/actions/runs/43826283559) 同样通过（809 测试、7 跳过、0 失败及原生问题关闭契约）。合并源码与运行包输入一致；本段为合并后本地交接补记。
 
 ## 开发环境清理与启动（2026-11-16）
 
@@ -1392,11 +1410,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.3-release`；0.9.3 发布源码经 PR #142 合入 main `f0ee1ce`，后续发布记录仅修改文档 |
-| 开发身份 | `com.quotaview.development073`；源码与运行包均为 0.9.3 / Build 1 / 内部 189 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `b6c46ac`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.4 Build 14 / 内部 203 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-13；已启动开发包，261 输入、20 项资源及加载路径核验通过；证据 `dist/verification/0.9.3-build1-release/development-runtime.json` 与 `development-open.json` |
-| 源码与运行包 | 0.9.3 Build 1 开发包与已发布源码的生产输入一致；正常数据环境，无重置卡 Demo。发布与 CI 结果见顶部。 |
+| 最近运行核验 | 2026-11-18，实际加载路径见 `.build/card-announcement-094b14-delivery/runtime-result.json` |
+| 源码与运行包 | 本地 Build 14 的 264 个生产输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

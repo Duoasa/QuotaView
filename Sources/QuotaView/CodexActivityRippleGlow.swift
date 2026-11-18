@@ -43,6 +43,7 @@ private enum RippleGlowUniformLayout {
     static let shellEdge = 60
     static let completionAmount = 128
     static let completionPhase = 129
+    static let cardCompletion = 130
 }
 
 private let rippleGlowUniformSeed: [Float] = [
@@ -316,10 +317,35 @@ private enum RippleGlowCompletionShader {
         guard source.contains(fields), source.contains(entry), source.contains(output) else {
             throw RippleGlowRendererError.invalidShader
         }
-        return source.replacingOccurrences(of: fields, with: fields + "\n    metal::float4 completion;")
+        let bend = "    float mainY_1 = (mainAmplitude * envelope_1) * metal::sin((q_5.x * 1.1) + drift_1);"
+        let core = "(_e191.xyz * whiteCore) * (0.18 + (0.1 * low))"
+        guard source.contains(bend), source.contains(core) else { throw RippleGlowRendererError.invalidShader }
+        return source.replacingOccurrences(of: bend, with: bend + "\n" + cardFold)
+            .replacingOccurrences(of: core, with: "(_e191.xyz * whiteCore) * metal::mix(0.18 + 0.1 * low, 0.84, foldAmount)")
+            .replacingOccurrences(of: fields, with: fields + "\n    metal::float4 completion;")
             .replacingOccurrences(of: entry, with: function + "\n" + entry)
             .replacingOccurrences(of: output, with: "metal::float4(qvCompletionLight(_e2.xyz, uv_4 / rad_3, u) * fit, metal::clamp(alpha, 0.0, 1.0) * fit)")
     }
+
+    private static let cardFold = #"""
+    // Deform the four existing glass-fluid bands before their colors and refraction
+    // are evaluated. Their central ridge becomes the highlight inside the check.
+        float foldAmount = metal::saturate(u.completion.x * u.completion.y * u.completion.z);
+        if (foldAmount > 0.0) {
+            // Smooth maximum rounds the junction where the two slopes meet.
+            float x = metal::clamp(p_5.x, -0.43, 0.44) + 0.12;
+            float down = -0.97 * x;
+            float up = 1.11 * x;
+            float checkY = -0.28 + 0.5 * (down + up + metal::sqrt((down-up)*(down-up) + 0.0036));
+            float overhang = metal::max(-0.43 - p_5.x, p_5.x - 0.44);
+            float ends = 1.0 - metal::smoothstep(-0.014, 0.067, overhang);
+
+            q_5.y -= foldAmount * checkY / scale_1;
+            mainY_1 *= 1.0 - foldAmount;
+            bandAmplitude *= 1.0 - 0.96 * foldAmount;
+            envelope_1 = metal::mix(envelope_1, ends, foldAmount);
+        }
+    """#
 
     private static let function = #"""
     float qvCheckSegment(metal::float2 p, metal::float2 a, metal::float2 b) {
@@ -330,7 +356,7 @@ private enum RippleGlowCompletionShader {
 
     metal::float3 qvCompletionLight(metal::float3 base, metal::float2 p, constant Uniforms& u) {
         float amount = metal::clamp(u.completion.x, 0.0, 1.0);
-        if (amount < 0.001) return base;
+        if (amount < 0.001 || u.completion.z > 0.5) return base;
         float phase = u.completion.y;
         // Eight seconds: flowing ridge, 0.8 s fade in, 4 s hold, 1 s fade out.
         float check = metal::smoothstep(0.25, 0.35, phase)
@@ -433,6 +459,7 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
     private var transitionStartedAt = CACurrentMediaTime()
     private var lastFrameAt = CACurrentMediaTime()
     private var motionPhase: Float = 0
+    var cardCompletionPhase: IslandCardCompletionPhase?
     private var completionElapsed: Double = 0
     private var reduceMotion = false
 
@@ -543,8 +570,13 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
         uniforms[RippleGlowUniformLayout.sizeY] =
             Float(view.drawableSize.height)
         uniforms[RippleGlowUniformLayout.time] = motionPhase / speed
-        completionElapsed = (completionElapsed + frameDelta).truncatingRemainder(dividingBy: 8)
-        uniforms[RippleGlowUniformLayout.completionPhase] = reduceMotion ? 0.45 : Float(completionElapsed / 8)
+        if let cardCompletionPhase {
+            uniforms[RippleGlowUniformLayout.cardCompletion] = 1
+            uniforms[RippleGlowUniformLayout.completionPhase] = cardCompletionPhase.orbFold(at: now, reduceMotion: reduceMotion)
+        } else {
+            completionElapsed = (completionElapsed + frameDelta).truncatingRemainder(dividingBy: 8)
+            uniforms[RippleGlowUniformLayout.completionPhase] = reduceMotion ? 0.45 : Float(completionElapsed / 8)
+        }
 
         encoder.setRenderPipelineState(pipeline)
         uniforms.withUnsafeBytes { bytes in
@@ -587,6 +619,15 @@ private final class RippleGlowRenderer: NSObject, MTKViewDelegate {
 
 final class ActivityRippleGlowMetalView: MTKView {
     private var rippleRenderer: RippleGlowRenderer?
+
+    var cardCompletionPhase: IslandCardCompletionPhase? {
+        get { rippleRenderer?.cardCompletionPhase }
+        set {
+            guard rippleRenderer?.cardCompletionPhase != newValue else { return }
+            rippleRenderer?.cardCompletionPhase = newValue
+            redrawIfPaused()
+        }
+    }
 
     var isRendererAvailable: Bool {
         rippleRenderer != nil

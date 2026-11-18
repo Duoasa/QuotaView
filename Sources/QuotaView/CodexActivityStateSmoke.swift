@@ -415,6 +415,7 @@ struct CodexActivityStateSmokeCompletionSnapshot: Equatable {
 }
 
 struct CodexActivityStateSmokeCompletionTransition {
+    var usesCardCompletion = false
     private(set) var elapsed: Float = 0
     private(set) var isActive = false
 
@@ -457,13 +458,12 @@ struct CodexActivityStateSmokeCompletionTransition {
         )
         let darkenProgress =
             darkenLinear * darkenLinear * (3 - 2 * darkenLinear)
+        let fillDuration = CodexActivityStateSmokeContract.completionFillDuration
+        let fadeDelay = usesCardCompletion ? fillDuration * 0.65 : CodexActivityStateSmokeContract.completionSmokeFadeDelay
+        let fadeDuration = usesCardCompletion ? fillDuration - fadeDelay : CodexActivityStateSmokeContract.completionSmokeFadeDuration
         let fadeLinear = min(
             max(
-                (elapsed
-                    - CodexActivityStateSmokeContract
-                        .completionSmokeFadeDelay)
-                    / CodexActivityStateSmokeContract
-                        .completionSmokeFadeDuration,
+                (elapsed - fadeDelay) / fadeDuration,
                 0
             ),
             1
@@ -1634,7 +1634,7 @@ float4 activityStateSmokeSample(VertexOut in, ActivityStateSmokeUniforms u) {
     float horizontalOpacity = fullSurface ? 1.0 : mix(
         normalHorizontalOpacity,
         1.0,
-        clamp(u.completionActive, 0.0, 1.0)
+        clamp(u.quantumEnabled.z, 0.0, 1.0)
     );
     float smokeOpacity =
         clamp(u.completionSmokeOpacity, 0.0, 1.0)
@@ -1765,7 +1765,8 @@ private final class ActivityStateSmokeRenderer:
     private var playbackEnabled = true
     private var fullSurface = false
 
-    init(view: MTKView) throws {
+    init(view: MTKView, taskCard: Bool) throws {
+        completionTransition.usesCardCompletion = taskCard
         guard let device = MTLCreateSystemDefaultDevice() else {
             throw ActivityStateSmokeRendererError.unavailableMetal
         }
@@ -1845,7 +1846,7 @@ private final class ActivityStateSmokeRenderer:
             completionTransition.reset()
         }
         targetProfile = CodexActivityStateSmokeProfile.profile(
-            for: newState,
+            for: completionTransition.usesCardCompletion && newState == .completed ? previousState : newState,
             effect: effect
         )
         if reduceMotion {
@@ -1946,7 +1947,8 @@ private final class ActivityStateSmokeRenderer:
             )
         }
         lastFrameAt = now
-        quantumMotion.advance(state: state, elapsed: elapsed, reduceMotion: reduceMotion)
+        let completingCard = completionTransition.usesCardCompletion && state == .completed
+        quantumMotion.advance(state: completingCard ? .working : state, elapsed: elapsed, reduceMotion: reduceMotion)
 
         let resolvedApproximateProgress = fullSurface ? nil : progressResolver.resolve(
             state: state,
@@ -1989,7 +1991,7 @@ private final class ActivityStateSmokeRenderer:
             completionFillProgress:
                 completionSnapshot.fillProgress,
             completionEffectHighlight:
-                completionSnapshot.effectHighlight
+                completingCard ? 0 : completionSnapshot.effectHighlight
                 * CodexActivityStateSmokeContract
                     .completionHighlightIntensity(for: effect),
             completionDarkening: completionSnapshot.darkening,
@@ -1999,7 +2001,7 @@ private final class ActivityStateSmokeRenderer:
             quantumClock: SIMD4<Float>(quantumMotion.displacement.x,
                 quantumMotion.displacement.y, quantumMotion.phase, quantumMotion.profile.failure),
             quantumEnabled: SIMD4<Float>(1, quantumMotion.profile.visibility,
-                state == .completed ? 1 : 0, fullSurface ? 1 : 0),
+                state == .completed && !completingCard ? 1 : 0, fullSurface ? 1 : 0),
             opacityStopPositions: currentProfile.opacityCurve.stopPositions,
             opacityStopOpacities: currentProfile.opacityCurve.stopOpacities,
             background: currentProfile.background,
@@ -2068,9 +2070,9 @@ final class ActivityStateSmokeMetalView: MTKView {
         smokeRenderer != nil
     }
 
-    init(frame: NSRect) {
+    init(frame: NSRect, taskCard: Bool = false) {
         super.init(frame: frame, device: nil)
-        smokeRenderer = try? ActivityStateSmokeRenderer(view: self)
+        smokeRenderer = try? ActivityStateSmokeRenderer(view: self, taskCard: taskCard)
     }
 
     @available(*, unavailable)

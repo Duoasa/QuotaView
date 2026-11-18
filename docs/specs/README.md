@@ -1,8 +1,20 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 9 / 卡片设置与公告
+## 当前开发：0.9.4 Build 14 / 完成动效公告
 
-`QV-PRODUCT-TASK-CARD-SETTINGS-001` · [任务卡片显示设置](task-card-settings.md) · Accepted / Verifying。新增独立设置页，速率、任务 Token、耗时、模型四项默认开启、独立保存、即时生效。隐藏后释放布局空间，数据保留；4 项定向冒烟、本地化、增量构建与开发运行核验通过，视觉由用户验收。本批授权同步公告、推送源码并合并 main；最新运行与验证结果见 Handoff。
+用户已验收实际任务卡的冲击波和 AI 球。应用内公告新增两条亮点，覆盖中心扩散、边缘呼吸和绿色 AI 球的对号保持。见[公告规格](brand-announcement.md)。
+
+## 前序开发：0.9.4 Build 13 / 完成态 AI 球
+
+[进度效果适配协议](PROGRESS_EFFECT_ADAPTATION.md)记录了球内极光成形、对号保持一轮呼吸和舒展的时序。开发台方案已获用户认可，实际任务卡待验收。
+
+## 前序开发：0.9.4 Build 12 / 任务卡完成动效
+
+[进度效果适配协议](PROGRESS_EFFECT_ADAPTATION.md)记录了中心冲击波和原生高光渐入的时序。实际任务卡的视觉验收由用户完成。
+
+## 前序开发：0.9.4 Build 9 / 卡片设置与公告
+
+`QV-PRODUCT-TASK-CARD-SETTINGS-001` · [任务卡片显示设置](task-card-settings.md) · Accepted / Verifying。新增独立设置页，速率、任务 Token、耗时、模型四项默认开启、独立保存、即时生效。隐藏后释放布局空间，数据保留；4 项定向冒烟、本地化、增量构建与开发运行核验通过，视觉由用户验收。公告及源码已通过 [PR #144](https://github.com/Duoasa/QuotaView/pull/144) 合并 main；Build 9 已运行，8 项本地定向检查、PR 及精确 main CI 均通过（各 809 测试、7 跳过、0 失败及契约），见 Handoff。
 
 ## 前序开发：0.9.4 Build 7 / 任务速率公告与源码集成
 

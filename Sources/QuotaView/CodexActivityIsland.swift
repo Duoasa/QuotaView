@@ -2003,6 +2003,10 @@ final class ActivitySelectableOrbView: NSView {
         return view
     }
 
+    func setCardCompletionPhase(_ phase: IslandCardCompletionPhase?) {
+        rippleGlowView?.cardCompletionPhase = phase
+    }
+
     func setState(_ newState: CodexActivityVisualState) {
         state = newState
         particleView?.setState(newState)
@@ -2457,6 +2461,7 @@ final class ActivityIslandCompletionOutlineView: NSView {
             applyState(delaysReveal: false)
         }
     }
+    var completionRiseStart: CFTimeInterval?
     var completionRevealDelay: CFTimeInterval?
     private enum AnimationKey {
         static let flow = "quotaview.activity.completion-outline.flow"
@@ -2610,6 +2615,11 @@ final class ActivityIslandCompletionOutlineView: NSView {
             : CodexActivityStateSmokeContract.completionGlowFadeDuration
         reveal.fillMode = .backwards
         reveal.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        if edgeEmphasis == .completion, let completionRiseStart {
+            reveal.beginTime = outlineGradientLayer.convertTime(completionRiseStart, from: nil)
+            reveal.duration = IslandConfirmationPulse.riseDuration
+            reveal.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        }
         outlineGradientLayer.add(
             reveal,
             forKey: AnimationKey.reveal
@@ -3934,7 +3944,8 @@ final class IslandActivityOrbHost: NSView {
         orb.layoutSubtreeIfNeeded()
         synchronizeResolution()
     }
-    func configure(state: CodexActivityVisualState, playback: Bool) {
+    func configure(state: CodexActivityVisualState, playback: Bool, completionPhase: IslandCardCompletionPhase? = nil) {
+        orb.setCardCompletionPhase(completionPhase)
         if configuredState != state {
             configuredState = state; orb.setState(state)
         }
@@ -3978,13 +3989,18 @@ final class IslandActivityOrbHost: NSView {
 
 // One compositor clock and envelope for the waiting card and whole-island glow.
 // Newly mounted/resumed layers join the current phase instead of starting over.
-@MainActor
 enum IslandConfirmationPulse {
     static let key = "console.confirmation-glow.pulse"
     static let duration: CFTimeInterval = 3
+    static let riseStartFraction = 0.12
+    static let peakFraction = 0.52
+    static var riseDuration: CFTimeInterval { duration * (peakFraction - riseStartFraction) }
     private static let epoch = CACurrentMediaTime()
+    static var restingRiseStart: CFTimeInterval { epoch + duration * riseStartFraction }
 
-    static func update(_ layer: CALayer?, animated: Bool, includesRadius: Bool = false, minimumOpacity: Double = 0) {
+    @MainActor
+    static func update(_ layer: CALayer?, animated: Bool, includesRadius: Bool = false, minimumOpacity: Double = 0,
+                       riseStart: CFTimeInterval? = nil) {
         guard let layer else { return }
         guard animated else { layer.removeAnimation(forKey: key); return }
         guard layer.animation(forKey: key) == nil else { return }
@@ -3998,7 +4014,7 @@ enum IslandConfirmationPulse {
             animations.append(radius)
         }
         for animation in animations {
-            animation.keyTimes = [0, 0.12, 0.52, 0.92, 1]
+            animation.keyTimes = [0, NSNumber(value: riseStartFraction), NSNumber(value: peakFraction), 0.92, 1]
             animation.duration = duration
             animation.timingFunctions = Array(repeating: CAMediaTimingFunction(name: .easeInEaseOut), count: 4)
         }
@@ -4006,7 +4022,8 @@ enum IslandConfirmationPulse {
         pulse.animations = animations
         pulse.duration = duration
         pulse.repeatCount = .infinity
-        pulse.beginTime = layer.convertTime(epoch, from: nil)
+        let cycleStart = riseStart.map { $0 - duration * riseStartFraction } ?? epoch
+        pulse.beginTime = layer.convertTime(cycleStart, from: nil)
         layer.add(pulse, forKey: key)
     }
 }
@@ -4015,10 +4032,12 @@ enum IslandConfirmationPulse {
 @MainActor
 final class IslandQuantumProgressHost: NSView {
     private let surface = ActivityIslandSurfaceView()
-    private let effect = ActivityStateSmokeMetalView(frame: .zero)
+    private let effect = ActivityStateSmokeMetalView(frame: .zero, taskCard: true)
     private let glow = ActivityIslandCompletionGlowView(frame: .zero)
     private let outline = ActivityIslandCompletionOutlineView(frame: .zero)
     private var renderState: CodexActivityRenderState?
+    private var defersCompletionSkin = false
+    private var completionRiseStart: CFTimeInterval?
     private var requestedVisible = false
     private var reduceMotion = false
     private var primaryContentHeight: CGFloat?
@@ -4076,7 +4095,10 @@ final class IslandQuantumProgressHost: NSView {
     }
     func configure(renderState: CodexActivityRenderState, visible: Bool, reduceMotion: Bool,
                    progressEffect: AppPreferences.CodexActivityProgressEffect = .dropField,
-                   primaryContentHeight: CGFloat? = nil) {
+                   primaryContentHeight: CGFloat? = nil, defersCompletionSkin: Bool = false,
+                   completionRiseStart: CFTimeInterval? = nil) {
+        self.defersCompletionSkin = defersCompletionSkin
+        self.completionRiseStart = completionRiseStart
         if self.primaryContentHeight != primaryContentHeight {
             self.primaryContentHeight = primaryContentHeight
             needsLayout = true
@@ -4084,7 +4106,7 @@ final class IslandQuantumProgressHost: NSView {
         effect.setEffect(progressEffect)
         let newlyBound = self.renderState == nil || self.renderState?.taskIdentity != renderState.taskIdentity
         // Selecting an already completed receipt should not replay its fill.
-        let completedReceipt = self.renderState == nil && renderState.visualState == .completed
+        let completedReceipt = newlyBound && renderState.visualState == .completed
         self.renderState = renderState
         self.requestedVisible = visible
         self.reduceMotion = reduceMotion
@@ -4103,6 +4125,14 @@ final class IslandQuantumProgressHost: NSView {
         let visible = requestedVisible && window != nil
         guard let renderState else { return }
         let confirming = renderState.visualState == .awaitingConfirmation
+        if defersCompletionSkin && renderState.visualState == .completed {
+            outline.completionRiseStart = nil
+            effect.setPlaybackEnabled(visible)
+            glow.update(edgeEmphasis: .none, reduceMotion: true, playbackVisible: false)
+            outline.update(edgeEmphasis: .none, reduceMotion: true, playbackVisible: false)
+            glow.updateIslandConfirmationPulse(animated: false)
+            return
+        }
         // Waiting keeps the selected progress effect at its current position.
         // Confirmation emphasis is an independent outline/glow, not a replacement.
         effect.setPlaybackEnabled(visible)
@@ -4111,10 +4141,15 @@ final class IslandQuantumProgressHost: NSView {
             visualState: renderState.visualState,
             reminderActive: renderState.isConfirmationReminderActive,
             completionEffectAvailable: effect.isRendererAvailable)
+        if visible && !reduceMotion && emphasis == .completion {
+            outline.completionRiseStart = completionRiseStart
+        } else {
+            outline.completionRiseStart = nil
+        }
         glow.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion, playbackVisible: visible)
         outline.update(edgeEmphasis: emphasis, reduceMotion: reduceMotion || confirming, playbackVisible: visible)
         let completionBreathing = visible && !reduceMotion && (renderState.visualState == .completed || confirming)
-        glow.updateIslandConfirmationPulse(animated: completionBreathing)
+        glow.updateIslandConfirmationPulse(animated: completionBreathing, riseStart: outline.completionRiseStart)
         // The outline circulates without pulsing its brightness; only the bloom breathes.
         IslandConfirmationPulse.update(outline.layer, animated: false)
     }
@@ -4126,11 +4161,11 @@ final class IslandQuantumProgressHost: NSView {
 // Notch-only contour and breathing overrides; production sources stay intact.
 extension ActivityIslandCompletionGlowView {
     var islandPulse: CAAnimationGroup? { violetGlowLayer.animation(forKey: IslandConfirmationPulse.key) as? CAAnimationGroup }
-    func updateIslandConfirmationPulse(animated: Bool) {
+    func updateIslandConfirmationPulse(animated: Bool, riseStart: CFTimeInterval? = nil) {
         for layer in [violetGlowLayer, cyanGlowLayer] {
             layer.removeAnimation(forKey: AnimationKey.reveal)
             layer.removeAnimation(forKey: AnimationKey.breathRadius)
-            IslandConfirmationPulse.update(layer, animated: !isHidden && animated, includesRadius: true)
+            IslandConfirmationPulse.update(layer, animated: !isHidden && animated, includesRadius: true, riseStart: riseStart)
         }
     }
 
