@@ -2,9 +2,9 @@
 
 ## 当前开发：0.9.4 Build 14 / 完成动效公告
 
-用户已验收实际任务卡的冲击波和 AI 球。应用内公告新增两条亮点，覆盖中心扩散、边缘呼吸和绿色 AI 球的对号保持。见[公告规格](docs/specs/brand-announcement.md)。
+用户已验收实际任务卡的冲击波和 AI 球。应用内公告各用一句话说明中心冲击波和 AI 球内极光化为对号。见[公告规格](docs/specs/brand-announcement.md)。
 
-本地开发运行包已更新为 0.9.4 Build 14 / 内部 203，加载路径已核验。公告共有六条，四项新增翻译键已覆盖日、韩、西语。运行与冒烟记录见 `.build/card-announcement-094b14-delivery/`。
+本地开发运行包已更新为 0.9.4 Build 14 / 内部 203，加载路径已核验。公告共有六条，四项新增翻译键已覆盖日、韩、西语。运行与冒烟记录见 `.build/card-announcement-094b14-final/`。源码集成见 [PR #145](https://github.com/Duoasa/QuotaView/pull/145)。
 
 ## 前序开发：0.9.4 Build 13 / 实际任务卡完成态 AI 球（2026-11-18）
 
@@ -1413,7 +1413,7 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `b6c46ac`，当前开发修改保留在工作区 |
 | 开发身份 | `com.quotaview.development073`，0.9.4 Build 14 / 内部 203 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-18，实际加载路径见 `.build/card-announcement-094b14-delivery/runtime-result.json` |
+| 最近运行核验 | 2026-11-18，实际加载路径见 `.build/card-announcement-094b14-final/runtime-result.json` |
 | 源码与运行包 | 本地 Build 14 的 264 个生产输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
