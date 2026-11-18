@@ -6,7 +6,7 @@ Spec ID：`QV-BRAND-ANNOUNCEMENT-001` · `Implemented / User Acceptance Pending`
 
 ## 0.9.4 任务完成动效公告（2026-11-18，Build 14）
 
-亮点新增「任务卡完成冲击波」和「AI 球完成动效」，分别说明中心扩散、边缘呼吸，以及球内极光成形后保持一轮呼吸（3 秒）。稳定 ID 为 `task-completion-shockwave` 和 `task-completion-orb`。现有四条公告继续显示，正式提醒名单保持原配置。
+亮点新增「任务卡完成冲击波」和「AI 球完成动效」，正文各用一句话说明卡片中心的冲击波和球内极光化为对号。稳定 ID 为 `task-completion-shockwave` 和 `task-completion-orb`。现有四条公告继续显示，正式提醒名单保持原配置。
 
 ## 0.9.4 卡片设置公告与源码集成（2026-11-16，Build 9）
 

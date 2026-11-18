@@ -4,20 +4,20 @@
     "ko": "작업 완료 파동",
     "es": "Onda de finalización"
   },
-  "When a task finishes, a wave spreads from the center of its card. The edges then light up and begin to pulse.": {
-    "ja": "タスクが完了すると、カードの中心から波が広がり、続いて縁がやわらかく明滅します。",
-    "ko": "작업이 끝나면 카드 중앙에서 파동이 퍼지고, 이어서 가장자리가 숨 쉬듯 밝아졌다 어두워집니다.",
-    "es": "Al terminar una tarea, una onda se expande desde el centro de la tarjeta. Después, los bordes se iluminan y empiezan a latir."
+  "A wave spreads from the center of the card when a task finishes.": {
+    "ja": "タスクが完了すると、カードの中心から波が広がります。",
+    "ko": "작업이 끝나면 카드 중앙에서 파동이 퍼집니다.",
+    "es": "Al terminar una tarea, una onda se expande desde el centro de la tarjeta."
   },
   "AI orb checkmark": {
     "ja": "AI オーブのチェックマーク",
     "ko": "AI 구체의 완료 표시",
     "es": "Marca de verificación del orbe de IA"
   },
-  "Inside the green AI orb, a ribbon of light bends into a checkmark as the card brightens. It holds for one full pulse (3 seconds), then unfolds.": {
-    "ja": "カードが明るくなるにつれて、緑の AI オーブの光がチェックマークに変わります。明滅の 1 周期（3 秒間）その形を保ち、再び光の帯に戻ります。",
-    "ko": "카드가 밝아지면 초록색 AI 구체 안의 빛줄기가 체크 표시로 휘어집니다. 한 번의 호흡 주기(3초) 동안 그 모양을 유지한 뒤 다시 펼쳐집니다.",
-    "es": "Al iluminarse la tarjeta, una cinta de luz forma una marca de verificación dentro del orbe verde de IA. La mantiene durante un latido completo (3 segundos) y luego se despliega."
+  "A ribbon of light inside the AI orb turns into a checkmark.": {
+    "ja": "AI オーブの光がチェックマークに変わります。",
+    "ko": "AI 구체 안의 빛줄기가 체크 표시로 바뀝니다.",
+    "es": "La luz del orbe de IA forma una marca de verificación."
   },
   "Output rate": {
     "ja": "出力速度",
