@@ -1,4 +1,19 @@
 {
+  "Usage page improvements": {
+    "ja": "使用量ページの改善",
+    "ko": "사용량 페이지 개선",
+    "es": "Mejoras en la página de uso"
+  },
+  "Quotas and token totals are grouped together, and opening the usage page or switching agents is smoother.": {
+    "ja": "クォータとトークン数をまとめて表示し、使用量ページを開く操作やエージェントの切り替えがよりスムーズになりました。",
+    "ko": "할당량과 토큰 사용량을 한곳에 모았고, 사용량 페이지를 열거나 에이전트를 전환할 때 더 부드럽게 표시됩니다.",
+    "es": "Las cuotas y los totales de tokens aparecen juntos. Abrir la página de uso y cambiar de agente es más fluido."
+  },
+  "Subscription plan": {
+    "ja": "契約プラン",
+    "ko": "구독 플랜",
+    "es": "Plan de suscripción"
+  },
   "Antigravity integration": {
     "ja": "Antigravity 連携",
     "ko": "Antigravity 연동",

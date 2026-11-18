@@ -1,8 +1,34 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
+## 当前开发：0.9.4 Build 25 / 用量页优化公告
+
+用户已验收用量页布局和切换性能；应用内公告加入一条简短说明。开发版已启动（内部 214），9 项定向冒烟与本地化检查通过，记录见 `.build/usage-notes-094b25/`。
+
+## 前序开发：0.9.4 Build 24 / 用量页切换性能
+
+日/周/累计热力图改为按需计算，每个来源保留一份当前数据的图表缓存。常规热力图共用画布和指针命中处理，辅助功能与全键盘控制沿用逐格按钮。371 天夹具的 Debug 离屏布局基准，五轮中位数（毫秒），首次进入 195 → 48，依次切 Claude 74 → 30、Antigravity 213 → 31、回 Codex 225 → 44。开发包已启动（内部 213），五项定向冒烟通过。夹具与结果在 `.build/usage-perf-094b24/`，实机切换体感待用户验收。
+
+## 前序开发：0.9.4 Build 23 / Antigravity 套餐并入汇总卡
+
+Antigravity 的两组额度使用完整行宽，底行依次展示三项 Token 统计与订阅套餐。开发版已启动（内部 212），两项定向冒烟与本地化检查通过。证据在 `.build/anti-summary-094b23/`，视觉待用户验收。
+
+## 前序开发：0.9.4 Build 22 / Antigravity 紧凑用量页
+
+移除白底套餐小卡，左侧复用 Claude 的额度横排行，下方为 Token 统计，右侧只显示账户和套餐名。开发版已启动（内部 211），两项定向冒烟通过。证据在 `.build/anti-layout-094b22/`，视觉待用户验收。
+
+## 前序开发：0.9.4 Build 21 / Antigravity 订阅卡
+
+Antigravity 账户信息下方新增白底订阅卡，左上官方 Logo，中央为账户套餐。套餐解析冒烟通过，开发运行包已启动（内部 210）。证据在 `.build/anti-plan-094b21/`，视觉待用户验收。
+
+## 前序开发：0.9.4 Build 20 / 用量统计合并卡片
+
+三个 Agent 的用量页共用左上统计卡，额度和 Token 分区，账户在右。本地开发版已启动（内部 209），用量设置定向冒烟通过。证据在 `.build/usage-094b20/`，视觉待用户验收。
+
+## 前序开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
 
 用户已验收 Antigravity 读取文件审批。[应用内公告](docs/specs/brand-announcement.md)新增 Antigravity 任务、用量和工具审批。本批为本地开发测试包，稳定版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+本地交付 `~/Downloads/QuotaView-0.9.4-Build19-Universal-Test.zip`，SHA-256 `906e1767e88e8b48af24e2d9521f8ee4152e75fe870c541ba53d4e4215b99ea9`。解压后已验证双架构、签名与 Hook 冒烟，记录见 `.build/anti-094b19-local/`。源码经 [PR #146](https://github.com/Duoasa/QuotaView/pull/146) 合入 main 的 `ae7ba6b`，与打包提交 `5bb387d` 文件树一致。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/44261059064) 和 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/44261758945) 均通过。
 
 ## 前序开发：0.9.4 Build 18 / Antigravity 读取文件审批
 

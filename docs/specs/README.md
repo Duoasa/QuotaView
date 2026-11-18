@@ -1,6 +1,30 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
+## 当前开发：0.9.4 Build 25 / 用量页优化公告
+
+用户已验收用量页布局与切换性能，[公告](brand-announcement.md)新增对应改进。
+
+## 前序开发：0.9.4 Build 24 / 用量页切换性能
+
+[用量图表](island-expanded-width.md#用量适配)按来源缓存，活动热力图统一绘制。
+
+## 前序开发：0.9.4 Build 23 / Antigravity 套餐并入汇总卡
+
+[用量页](agent-integrations.md)将套餐放入全宽汇总卡底行末列。
+
+## 前序开发：0.9.4 Build 22 / Antigravity 紧凑用量页
+
+[Antigravity 用量页](agent-integrations.md)沿用 Claude Code 的双栏布局，右侧仅展示套餐信息。
+
+## 前序开发：0.9.4 Build 21 / Antigravity 订阅卡
+
+[Antigravity 账户栏](agent-integrations.md)在账户信息下方展示白底套餐卡，视觉待验收。
+
+## 前序开发：0.9.4 Build 20 / 用量统计合并卡片
+
+三款 Agent 的[额度与 Token 汇总卡](../design/QUOTAVIEW_UI_RULES.md#用量统计汇总卡)已接入开发版，视觉待验收。
+
+## 前序开发：0.9.4 Build 19 / Antigravity 公告与跨机测试
 
 用户已验收 Antigravity 读取文件审批。[应用内公告](brand-announcement.md)新增 Antigravity 任务、用量和工具审批。本批为本地开发测试包，稳定版见[版本历史](../../VERSION_HISTORY.md#当前最新版本)。
 
