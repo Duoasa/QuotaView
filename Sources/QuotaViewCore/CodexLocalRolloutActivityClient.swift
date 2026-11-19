@@ -16,10 +16,12 @@ public struct CodexLocalRolloutThreadMetadata: Equatable, Sendable {
     public let titleIsExplicitName: Bool
     public let model: String?
     public let reasoningEffort: String?
+    public let desktopThreadID: UUID?
     public let cumulativeTotalTokens: Int64?
     public init(title: String? = nil, titleIsExplicitName: Bool = false,
                 model: String? = nil, reasoningEffort: String? = nil,
-                cumulativeTotalTokens: Int64? = nil) {
+                cumulativeTotalTokens: Int64? = nil, desktopThreadID: UUID? = nil) {
+        self.desktopThreadID = desktopThreadID
         func bounded(_ value: String?, _ limit: Int) -> String? {
             guard let value else { return nil }
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -31,7 +33,7 @@ public struct CodexLocalRolloutThreadMetadata: Equatable, Sendable {
         self.reasoningEffort = bounded(reasoningEffort, 64)
         self.cumulativeTotalTokens = cumulativeTotalTokens.flatMap { $0 >= 0 ? $0 : nil }
     }
-    var isEmpty: Bool { title == nil && model == nil && reasoningEffort == nil && cumulativeTotalTokens == nil }
+    var isEmpty: Bool { title == nil && model == nil && reasoningEffort == nil && cumulativeTotalTokens == nil && desktopThreadID == nil }
 }
 
 /// Transient read-only discovery identity from validated session metadata.

@@ -2127,7 +2127,7 @@ final class CodexActivityStore: ObservableObject {
         threadMetadataBySession[session] = .init(title: title,
             titleIsExplicitName: preservesName || (value.title != nil ? value.titleIsExplicitName : previous?.titleIsExplicitName == true),
             model: value.model ?? previous?.model, reasoningEffort: value.reasoningEffort ?? previous?.reasoningEffort,
-            cumulativeTotalTokens: total)
+            cumulativeTotalTokens: total, desktopThreadID: value.desktopThreadID ?? previous?.desktopThreadID)
         threadMetadataOrder.removeAll { $0 == session }; threadMetadataOrder.append(session)
         while threadMetadataOrder.count > 128 {
             threadMetadataBySession.removeValue(forKey: threadMetadataOrder.removeFirst())

@@ -962,6 +962,40 @@ final class Island073SmokeTests: XCTestCase {
         XCTAssertTrue(model.tasks[0].requests.isEmpty, "Previous turn cannot install an approval on a newer turn")
     }
     @MainActor
+    func testApprovalConversationHeaderTracksSelectedCardAndPreservesDraft() throws {
+        let model = IslandLiveStore()
+        let wire = try IslandApprovalFixtures.request("command")
+        model.receive(wire.raw)
+        var display = model.display(english: false, remaining: nil, enabled: true, privacy: false)
+        let task = try XCTUnwrap(display.state.tasks.first)
+        let request = try XCTUnwrap(display.taskDetails[task.id]?.confirmation)
+        let board = IslandBoardState()
+        board.update(display, reduceMotion: true)
+        if board.approval == nil { board.select(task.id) }
+        XCTAssertEqual(board.approval?.request.id, request.id)
+        let original = board.approvalMetrics(request: request)
+        XCTAssertNil(original.conversationURL)
+        var draft = IslandApprovalDraft()
+        draft.values["answer"] = "preserved"
+        board.approvalDraftBinding(for: request.id).wrappedValue = draft
+
+        let id = UUID()
+        display.taskDetails[task.id]?.desktopThreadID = id
+        board.update(display, reduceMotion: true)
+        let metrics = board.approvalMetrics(request: request)
+        XCTAssertEqual(metrics.conversationURL?.lastPathComponent, id.uuidString.lowercased())
+        XCTAssertEqual(metrics.contentHeight, original.contentHeight, "The command title and navigation share one row")
+        XCTAssertEqual(board.approval?.request, request)
+        XCTAssertEqual(board.approvalDraftBinding(for: request.id).wrappedValue.values, draft.values)
+        let view = IslandApprovalView(task: task, metadata: display.sessionMetadata[task.id],
+            request: request, metrics: metrics, english: false, visible: false, playbackEnabled: false,
+            reduceMotion: true, scrollLink: .init(), draft: .constant(draft), onDecision: { _, _ in XCTFail() })
+        let host = NSHostingView(rootView: view.requestContent.frame(width: metrics.contentWidth).fixedSize(horizontal: false, vertical: true))
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(host.fittingSize.height, metrics.contentHeight - IslandVibeLayout.rowSpacing, accuracy: 3)
+    }
+
+    @MainActor
     func testTenTypedRequestsReachPresentationAndAdaptiveContent() throws {
         _ = NSApplication.shared
         for (name, _) in IslandApprovalFixtures.names {

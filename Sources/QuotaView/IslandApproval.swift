@@ -80,7 +80,9 @@ struct IslandApprovalMetrics {
     static let footerHeight: CGFloat = IslandChromeMetrics.footerHeight
     static let actionFooterGap: CGFloat = 20
     static var fixedHeight: CGFloat { gap + buttonHeight + actionFooterGap + footerHeight }
+    let conversationURL: URL?
     let maximumViewportHeight: CGFloat
+    let questionHeadingWidth: CGFloat
     let questionHeight: CGFloat
     let impactHeight: CGFloat
     let failureHeight: CGFloat
@@ -120,10 +122,20 @@ struct IslandApprovalMetrics {
             ? CGFloat(field.choices.count) * 32 + CGFloat(max(0, field.choices.count - 1)) * 6 : inputHeight
         return max(label, control) + 24
     }
-    init(request: IslandConfirmation, width: CGFloat, english: Bool, maximumViewportHeight: CGFloat, cardHeight: CGFloat = IslandVibeLayout.rowHeight, language: AppPreferences.Language? = nil) {
+    init(request: IslandConfirmation, width: CGFloat, english: Bool, maximumViewportHeight: CGFloat, cardHeight: CGFloat = IslandVibeLayout.rowHeight, language: AppPreferences.Language? = nil, conversationURL: URL? = nil) {
+        self.conversationURL = conversationURL
         self.maximumViewportHeight = max(0, min(Self.maximumContentViewport, maximumViewportHeight))
         contentWidth = width
-        questionHeight = IslandTaskTextMetrics.height(request.question.value(language ?? (english ? .english : .simplifiedChinese)), size: 13, semibold: true, width: width)
+        let copy = AppCopy(language: language ?? (english ? .english : .simplifiedChinese))
+        let needsInlineLink = conversationURL != nil && (request.protocolRequest.map { IslandApprovalLayout($0) == .questions } ?? true)
+        if needsInlineLink {
+            let font = NSFont.systemFont(ofSize: 13, weight: .medium)
+            let labels = [copy.text("前往对话", "Open conversation"), copy.text("打开失败，重试", "Couldn’t open. Retry")]
+            let labelWidth = labels.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+            questionHeadingWidth = max(40, width - ceil(labelWidth) - 16 - 4 - 8)
+        } else { questionHeadingWidth = width }
+        let measuredQuestion = IslandTaskTextMetrics.height(request.question.value(language ?? (english ? .english : .simplifiedChinese)), size: 13, semibold: true, width: questionHeadingWidth)
+        questionHeight = needsInlineLink ? max(IslandTaskDetailMetrics.headerHeight, measuredQuestion) : measuredQuestion
         impactHeight = IslandTaskTextMetrics.height(request.impact.value(language ?? (english ? .english : .simplifiedChinese)), size: 12, width: width - Self.inset * 2)
         let failure: String
         switch request.phase {
@@ -135,8 +147,8 @@ struct IslandApprovalMetrics {
         if let wire = request.protocolRequest {
             switch wire.kind {
             case .questions:
-                for q in wire.questions {
-                    var group = Self.questionHeader(q, width: width)
+                for (index, q) in wire.questions.enumerated() {
+                    var group = Self.questionHeader(q, width: index == 0 ? questionHeadingWidth : width)
                     if !q.options.isEmpty {
                         if IslandApprovalLayout(wire) == .connector {
                             let optionWidth = (width - CGFloat(max(0, q.options.count - 1)) * 8) / CGFloat(max(1, q.options.count))
@@ -453,14 +465,26 @@ struct IslandApprovalView: View {
                 .modifier(IslandApprovalElementFade())
             if let wire {
                 IslandApprovalTypedContent(request: wire, width: metrics.contentWidth, english: english,
-                    openedURL: draft.openedURL, handoffMessage: codexJumpMessage,
+                    openedURL: draft.openedURL, handoffMessage: codexJumpMessage, conversationURL: metrics.conversationURL,
                     controls: controls(wire).disabled(wire.kind == .questions
                         ? !questionInteraction.canEdit : !request.canRespond || !request.phase.canSubmit))
+                    .overlay(alignment: .topTrailing) {
+                        if IslandApprovalLayout(wire) == .questions {
+                            questionConversationButton
+                                .frame(height: wire.questions.first.map {
+                                    IslandApprovalMetrics.questionHeader($0, width: metrics.questionHeadingWidth)
+                                } ?? IslandTaskDetailMetrics.headerHeight)
+                        }
+                    }
             } else {
-            Text(request.question.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
-                .foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).frame(height: metrics.questionHeight, alignment: .topLeading)
-                .textSelection(.enabled)
+            HStack(spacing: 0) {
+                Text(request.question.value(appLanguage ?? (english ? .english : .simplifiedChinese))).font(.system(size: 13, weight: .semibold)).lineSpacing(2)
+                    .foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
+                    .frame(width: metrics.questionHeadingWidth, alignment: .leading)
+                    .textSelection(.enabled)
+                Spacer(minLength: 0)
+                questionConversationButton
+            }.frame(height: metrics.questionHeight)
             if !request.impact.value(appLanguage ?? (english ? .english : .simplifiedChinese)).isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(wire == nil ? text("请求状态", "Request status") : text("请求内容与范围", "Request and scope"))
@@ -485,6 +509,12 @@ struct IslandApprovalView: View {
             }
         }
     }
+    @ViewBuilder private var questionConversationButton: some View {
+        if let url = metrics.conversationURL {
+            IslandConversationButton(url: url, language: appLanguage ?? (english ? .english : .simplifiedChinese), fontSize: 13)
+                .fixedSize().id(url)
+        }
+    }
     private var failureMessage: String? {
         switch request.phase {
         case .failed(_, let message): message.value(appLanguage ?? (english ? .english : .simplifiedChinese))
@@ -497,7 +527,9 @@ struct IslandApprovalView: View {
             VStack(alignment: .leading, spacing: 20) {
                 ForEach(Array(request.questions.enumerated()), id: \.offset) { index, q in
                     VStack(alignment: .leading, spacing: 8) {
-                        IslandApprovalQuestionHeading(question: q, number: index + 1, width: metrics.contentWidth)
+                        IslandApprovalQuestionHeading(question: q, number: index + 1, width: index == 0 ? metrics.questionHeadingWidth : metrics.contentWidth)
+                            .frame(width: index == 0 ? metrics.questionHeadingWidth : metrics.contentWidth, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         if IslandApprovalLayout(request) == .connector {
                             HStack(spacing: 8) {
                                 let optionWidth = (metrics.contentWidth - CGFloat(max(0, q.options.count - 1)) * 8) / CGFloat(max(1, q.options.count))

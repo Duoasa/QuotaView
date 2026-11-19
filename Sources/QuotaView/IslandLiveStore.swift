@@ -778,6 +778,7 @@ final class IslandLiveStore {
         let id: Int
         let key: String
         var threadID: String?
+        var desktopThreadID: UUID?
         var turnKey: String?
         var title = ""
         var titleSource: IslandTaskTitleSource = .fallback
@@ -1279,6 +1280,7 @@ final class IslandLiveStore {
         }
         desktopScopes[key] = .init(owner: snapshot.ownerClientID, epoch: snapshot.connectionEpoch, streamGeneration: snapshot.streamGeneration, revision: snapshot.revision)
         tasks[i].threadID = snapshot.conversationID
+        if snapshot.hostID == "local" { tasks[i].desktopThreadID = UUID(uuidString: snapshot.conversationID) }
         applyTitle(projection.title, source: .explicitName, at: i)
         guard !tasks[i].terminal, projection.status == "inProgress" else { onChange?(); return }
         func handle(_ id: CodexDesktopIPCRequestID, method: String, turn: String) -> CodexDesktopIPCRequestHandle? {
@@ -1564,6 +1566,9 @@ final class IslandLiveStore {
         }
         guard let i = tasks.firstIndex(where: { $0.key == identity.sessionHash }), tasks[i].turnKey == turn,
               ![.memoryConsolidation, .internalTask, .subagent].contains(presentationKind(for: identity.sessionHash)) else { return }
+        if let id = value.desktopThreadID, CodexActivityPrivacy.hashIdentifier(id.uuidString.lowercased()) == identity.sessionHash {
+            tasks[i].desktopThreadID = id
+        }
         applyTitle(value.title, source: value.titleIsExplicitName ? .explicitName : .threadTitle, at: i)
         // The thread row may lag a just-started turn. Exact-turn metadata is
         // stronger, so database fields only fill missing execution labels.
@@ -2138,7 +2143,8 @@ final class IslandLiveStore {
                 request?.canRespond = false
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
             }
-            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider)
+            details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider,
+                desktopThreadID: enabled && !privacy ? task.desktopThreadID : nil)
             let title = privacy ? provider.displayName + (appCopy.text(" 任务", " task")) : (task.title.isEmpty ? (appCopy.text("未命名任务", "Untitled task")) : task.title)
             let status: String
             if synchronizing { status = appCopy.text("同步中", "Syncing") }

@@ -57,6 +57,33 @@ final class DesktopIngressBoundarySmokeTests: XCTestCase {
             "currentTurn": ["id": "turn", "status": "inProgress", "startedAtMs": base.timeIntervalSince1970 * 1_000]]])
     }
 
+    func testCompletedConversationRequiresMatchingLocalDesktopSnapshot() throws {
+        let model = IslandLiveStore()
+        model.setDesktopConnection(connected: true, epoch: 9)
+        let id = UUID().uuidString.lowercased()
+        let session = hash(id)
+        for event in [CodexActivityHookEvent.userPromptSubmit, .stop] {
+            model.receiveLegacy(.init(event: event, sessionHash: session, turnHash: hash("turn"),
+                                      sessionKind: .user, source: .appServer))
+        }
+        let card = try XCTUnwrap(model.tasks.first)
+        func target() -> URL? {
+            model.display(english: true, remaining: nil, enabled: true, privacy: false)
+                .taskDetails[card.id]?.conversationURL
+        }
+        let stale = try pair(conversation: id, turn: "other", status: "completed")
+        model.receiveDesktopProjection(stale.0, snapshot: stale.1)
+        XCTAssertNil(target())
+        let local = try pair(conversation: id, status: "completed", revision: 2)
+        let remote = CodexDesktopConversationSnapshot(conversationID: id, hostID: "remote", ownerClientID: "owner",
+            connectionEpoch: 9, revision: 1, conversationState: local.1.conversationState,
+            supportsUntrustedAppInput: false, requests: [])
+        model.receiveDesktopProjection(local.0, snapshot: remote)
+        XCTAssertNil(target())
+        model.receiveDesktopProjection(local.0, snapshot: local.1)
+        XCTAssertEqual(target()?.absoluteString, "codex://threads/\(id)")
+    }
+
     func testDesktopLeadingCurrentProofReleasesOnlyMatchingBufferedLocalDetail() async throws {
         let store = makeStore(); var localTurns: [String] = []; var callbacks = 0
         store.localPublicContentDidReceive = { localTurns.append($0.turnHash) }

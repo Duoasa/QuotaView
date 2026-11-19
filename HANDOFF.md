@@ -1,8 +1,34 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.4 Build 25 / 用量页优化公告
+## 当前开发：0.9.4 Build 30 / 审批标题行跳转
+
+「前往对话」并入具体审批标题行右侧，与标题同为 13 pt、垂直居中。移除原有独立状态行，普通问题在首题右侧显示入口。定向布局与交互冒烟、本地化和开发包加载路径核对通过，记录见 `.build/approval-title-094b30/`。本地 Build 30（内部 219）已启动。用户在真实网络访问审批中确认「前往对话」与标题对齐，审批按钮正常；该次只读请求获准后返回 HTTP 200。
+
+## 前序开发：0.9.4 Build 29 / Codex 网络审批兼容
+
+16:56 的网络审批仅收到 Hook 提醒。已修复 Codex Desktop v13 状态广播被 v11 检查拒绝。开发版 Build 29（内部 218）已运行，实机收到连续权威快照且 owner 允许输入。13 项隔离冒烟通过，包含 v13 网络审批、应答、请求消退与版本边界。记录在 `.build/network-approval-094b29/`，真实审批按钮待用户验收。
+
+## 前序开发：0.9.4 Build 28 / Codex 各状态详情跳转
+
+能定位本机 Codex 原对话的任务均在详情右上角显示「前往对话」，包括待确认和等待回答。保留请求队列、原审批与回答按钮以及草稿。见[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md#codex-各状态详情跳转build-28-本地测试)。
+
+本地开发版 Build 28（内部 217）已运行，包和实际加载路径核对通过。13 项定向冒烟及本地化检查通过，证据在 `.build/session-jump-094b28/`。实机跳转与视觉待用户验收。
+
+## 前序开发：0.9.4 Build 27 / 完成结果标题栏
+
+「前往对话」与「完成结果」共用首行基线和 12 pt 字号，按钮改用圆圈右转箭头。本地 Build 27（内部 216）已启动，实际加载路径、系统图标与两项跳转冒烟已核对。证据在 `.build/session-jump-094b27/`，视觉效果待用户验收。
+
+## 前序开发：0.9.4 Build 26 / Codex 完成结果跳转
+
+本机 Codex 已完成任务的详情右上角显示「前往对话」，按桌面会话 UUID 定位，再点任务卡可收起。没有可信目标或开启隐私模式时保留关闭按钮。见[生产交互规格](docs/design/quotaview-island-production-interaction-review-2026-09-30.md#codex-完成结果跳转build-26-本地测试)。
+
+本地 Build 26（内部 215）已启动并核对实际加载路径。9 项定向冒烟、本地化检查通过，证据在 `.build/session-jump-094b26/`。实际点击、客户端选中对话与视觉待用户验收。
+
+## 前序开发：0.9.4 Build 25 / 用量页优化公告
 
 用户已验收用量页布局和切换性能；应用内公告加入一条简短说明。开发版已启动（内部 214），9 项定向冒烟与本地化检查通过，记录见 `.build/usage-notes-094b25/`。
+
+源码经 [PR #147](https://github.com/Duoasa/QuotaView/pull/147) 合入 main 的 `ddcd670`。打包源码与合并提交的文件树一致；[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/44267927380) 和 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/44268430230) 均通过。
 
 ## 前序开发：0.9.4 Build 24 / 用量页切换性能
 
