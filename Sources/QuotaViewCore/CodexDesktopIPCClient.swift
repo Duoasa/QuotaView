@@ -145,6 +145,12 @@ public enum CodexDesktopIPCError: Error, Equatable, LocalizedError {
 /// Version-specific desktop follower adapter, separate from app-server JSON-RPC.
 /// It observes existing owners and never claims thread ownership or starts turns.
 public actor CodexDesktopIPCClient {
+    // Both versions use the same revisioned snapshot/patch envelope. Follower
+    // approval RPCs have their own independent method versions.
+    private static func supportsStateBroadcast(version: Int64?) -> Bool {
+        version == 11 || version == 13
+    }
+
     public struct Configuration: Sendable {
         public let isEnabled: Bool
         public let socketURL: URL
@@ -608,7 +614,7 @@ public actor CodexDesktopIPCClient {
         guard follows.contains(key), !resourceBlockedFollows.contains(key) else { return }
         guard let owner = owners[key] else { throw CodexDesktopIPCError.resourceLimit }
         guard source == owner.clientID else { return }
-        guard message["version"]?.integer == 11 else {
+        guard Self.supportsStateBroadcast(version: message["version"]?.integer) else {
             incompatible = true; await closeConnection(); return
         }
         await invalidateResourceLimit(key, epoch: run, diagnosticCode: diagnosticCode)
@@ -664,7 +670,7 @@ public actor CodexDesktopIPCClient {
             removeLedger(key)
             scheduleFollowRecovery(key, candidateOwner: source); return
         }
-        guard message["version"]?.integer == 11 else {
+        guard Self.supportsStateBroadcast(version: message["version"]?.integer) else {
             incompatible = true; await closeConnection(); return
         }
         guard let change = params["change"], let revision = change["revision"]?.integer, revision >= 0 else {

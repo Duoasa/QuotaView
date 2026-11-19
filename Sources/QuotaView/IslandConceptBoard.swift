@@ -499,6 +499,7 @@ final class IslandBoardState: ObservableObject {
         let language: AppPreferences.Language
         let maximumViewportHeight: CGFloat
         let cardHeight: CGFloat
+        let conversationURL: URL?
     }
     private var approvalMetricsCache: [CGFloat: (ApprovalMetricsKey, IslandApprovalMetrics)] = [:]
     @Published private var approvalDrafts: [UUID: IslandApprovalDraft] = [:]
@@ -727,10 +728,11 @@ final class IslandBoardState: ObservableObject {
             width: expandedWidth - IslandVibeLayout.listInset - IslandVibeLayout.scrollingListTrailingInset) : metrics
     }
     private func measuredApproval(request: IslandConfirmation, width: CGFloat) -> IslandApprovalMetrics {
-        let key = ApprovalMetricsKey(request: request, english: english, language: language, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.taskGroupHeight(width: width) ?? IslandVibeLayout.rowHeight)
+        let key = ApprovalMetricsKey(request: request, english: english, language: language, maximumViewportHeight: maximumApprovalViewportHeight, cardHeight: approval.flatMap { display?.sessionMetadata[$0.task.id] }?.taskGroupHeight(width: width) ?? IslandVibeLayout.rowHeight,
+            conversationURL: approval.flatMap { detailData(for: $0.task).conversationURL })
         if let cached = approvalMetricsCache[width], cached.0 == key { return cached.1 }
         let result = IslandApprovalMetrics(request: request, width: width, english: english,
-            maximumViewportHeight: key.maximumViewportHeight, cardHeight: key.cardHeight, language: language)
+            maximumViewportHeight: key.maximumViewportHeight, cardHeight: key.cardHeight, language: language, conversationURL: key.conversationURL)
         if approvalMetricsCache[width] == nil && approvalMetricsCache.count >= 2 { approvalMetricsCache.removeAll() }
         approvalMetricsCache[width] = (key, result)
         return result

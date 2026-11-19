@@ -20,7 +20,7 @@ Spec ID：`QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` · `Accepted / Verifying` · 
 
 ## 协议与来源边界
 
-所选 Codex 数据目录的 `ipc/ipc.sock` 为当前端点。UInt32 小端帧长 + UTF-8 JSON；已适配 initialize v0、owner/follower v1、state-changed v11。这是版本相关的 Desktop 私有接口，未来更新需重新核对能力。
+所选 Codex 数据目录的 `ipc/ipc.sock` 为当前端点。UInt32 小端帧长 + UTF-8 JSON；已适配 initialize v0、owner/follower v1、state-changed v11 和 v13。这是版本相关的 Desktop 私有接口，未来更新需重新核对能力。
 
 - 普通审批/同步问题使用原 owner 的 command/file/permissions/elicitation/user-input 方法及原 typed RPC ID；可用决定/扩展范围由真实协议与请求约束。
 - 异步问题保留 `JSON.stringify(["request_user_input_async", agentMessage.id, questionIndex])` 身份，经 `thread-follower-steer-turn` 回传原问题与答案。发送前重核 owner、轮次及未回答状态，不暴露任意 steering API。
@@ -80,3 +80,9 @@ Unfollow 撤销正在进行的 owner discovery 尝试，旧响应不能覆盖新
 成功初始化后迅速断线也使用 250 ms 起、最高 5 秒退避。Shared 握手连接/写入/读取共用绝对期限并传播取消，前后验证 socket/目录属主权限及对端 UID。请求计时任务随完成取消。Island 仅保留有界审批字段，上下文每项 32 KiB、总计 2 MiB、最多 200 项，换轮/清理时回收；超限/缺失的文件变更上下文不产生批准能力。owner/epoch/轮次、未知结果不重放和 Desktop 能力来源规则保持。
 
 107 项相关隔离测试与开发包构建/重启通过；具体范围、证据和未改条目见[复核与修复记录](../design/quotaview-bug-fixes-2026-11-01.md)。本批仅本地；真实客户端及视觉由用户验收。
+
+## Build 29 · Codex Desktop v13 网络审批
+
+本机 Codex Desktop 26.1111.71025 的会话状态广播为 v13。普通帧与超限帧的归属检查使用同一组已核验的版本。命令及网络审批仍走 v1 的决策请求。只读来源、过期请求及未知版本沿用原有降级。
+
+本机已验证接收连续的权威 v13 快照更新；隔离冒烟覆盖 v13 的网络审批选项、向原请求发送一次决定、收到后续变化并清除已处理的请求。用户在 Build 30 的真实网络访问审批中确认审批按钮正常。

@@ -676,13 +676,17 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     private var supportsInput: Bool
     private var continuation: AsyncStream<Data>.Continuation?
     private var messages: [[String: Any]] = []
+    private let stateVersion: Int
     private var automaticSnapshots = true
     private var acknowledgeSubmissions = true
     private var acknowledgementOwner = "fixture-owner"
     private var steerResultTurn = "turn"
     private var host = "local"
     private var ownerDiscoveryReady = true
-    init(state: [String: Any], supportsInput: Bool = true) { self.state = state; self.supportsInput = supportsInput; conversationID = state["id"] as? String ?? "conversation" }
+    init(state: [String: Any], supportsInput: Bool = true, stateVersion: Int = 11) {
+        self.state = state; self.supportsInput = supportsInput; self.stateVersion = stateVersion
+        conversationID = state["id"] as? String ?? "conversation"
+    }
     var submissions: [[String: Any]] { lock.withLock { messages.filter { ($0["method"] as? String)?.hasPrefix("thread-follower-") == true } } }
     var followingCount: Int { lock.withLock { messages.filter { $0["method"] as? String == "thread-stream-following-changed" }.count } }
     var initializeCount: Int { lock.withLock { messages.filter { $0["method"] as? String == "initialize" }.count } }
@@ -722,7 +726,7 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     }
     func emitState(version: Int = 11) { lock.withLock { emitStateLocked(version: version) } }
     func patch(_ patches: [[String: Any]], baseRevision: Int64, revision: Int64) {
-        lock.withLock { emitLocked(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner", "version": 11,
+        lock.withLock { emitLocked(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner", "version": stateVersion,
             "params": ["conversationId": conversationID, "hostId": host, "change": ["type": "patches", "baseRevision": baseRevision, "revision": revision, "patches": patches]]]) }
     }
     func client(timeout: TimeInterval = 0.2, maximumFrameBytes: Int = 9_437_184,
@@ -774,11 +778,11 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     private func response(id: String, method: String, owner: String, result: [String: Any]) {
         emitLocked(["type": "response", "requestId": id, "resultType": "success", "method": method, "handledByClientId": owner, "result": result])
     }
-    private func emitStateLocked(version: Int = 11, conversationID requested: String? = nil) {
+    private func emitStateLocked(version: Int? = nil, conversationID requested: String? = nil) {
         let selected = requested ?? conversationID
         let content: (state: [String: Any], revision: Int64)? = selected == conversationID ? (state: state, revision: revision) : additionalStates[selected]
         guard let content else { return }
-        emitLocked(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner", "version": version,
+        emitLocked(["type": "broadcast", "method": "thread-stream-state-changed", "sourceClientId": "fixture-owner", "version": version ?? stateVersion,
             "params": ["conversationId": selected, "hostId": host, "change": ["type": "snapshot", "revision": content.revision, "conversationState": content.state]]])
     }
     private func emitLocked(_ message: [String: Any]) {

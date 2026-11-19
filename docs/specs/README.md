@@ -1,6 +1,26 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 25 / 用量页优化公告
+## 当前开发：0.9.4 Build 30 / 审批标题行跳转
+
+[审批详情](../design/quotaview-island-production-interaction-review-2026-09-30.md#codex-各状态详情跳转build-28-本地测试)将跳转入口并入审批标题行右端。用户已在实际网络审批中确认标题对齐与审批按钮表现。
+
+## 前序开发：0.9.4 Build 29 / Codex 网络审批兼容
+
+[Codex 桌面审批同步](codex-desktop-confirmation-sync.md#build-29--codex-desktop-v13-网络审批)已适配本机 v13 状态广播。
+
+## 前序开发：0.9.4 Build 28 / Codex 各状态详情跳转
+
+[详情右上角的「前往对话」](../design/quotaview-island-production-interaction-review-2026-09-30.md#codex-各状态详情跳转build-28-本地测试)已覆盖所有可定位的 Codex 任务，审批与回答沿用原有操作。
+
+## 前序开发：0.9.4 Build 27 / 完成结果标题栏
+
+[完成结果详情](../design/quotaview-island-production-interaction-review-2026-09-30.md#codex-完成结果跳转build-26-本地测试)统一标题与跳转按钮的文字基线，按钮使用圆圈右转箭头。
+
+## 前序开发：0.9.4 Build 26 / Codex 完成结果跳转
+
+[完成结果详情](../design/quotaview-island-production-interaction-review-2026-09-30.md#codex-完成结果跳转build-26-本地测试)右上角可前往对应 Codex 桌面对话。实机交互待验收。
+
+## 前序开发：0.9.4 Build 25 / 用量页优化公告
 
 用户已验收用量页布局与切换性能，[公告](brand-announcement.md)新增对应改进。
 

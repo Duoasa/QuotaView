@@ -182,6 +182,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
     let english: Bool
     let openedURL: Bool
     let handoffMessage: String?
+    var conversationURL: URL? = nil
     let controls: Controls
     @State private var showsCompleteCode = false
     private var layout: IslandApprovalLayout { .init(request) }
@@ -267,7 +268,11 @@ struct IslandApprovalTypedContent<Controls: View>: View {
         HStack(spacing: 8) {
             Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
             Spacer(minLength: 8)
-            if !trailing.isEmpty { Text(trailing).font(.system(size: 10)).foregroundStyle(muted) }
+            if !trailing.isEmpty { Text(trailing).font(.system(size: 10)).foregroundStyle(muted).lineLimit(1) }
+            if let url = conversationURL {
+                IslandConversationButton(url: url, language: appLanguage ?? (english ? .english : .simplifiedChinese), fontSize: 13)
+                    .fixedSize().id(url)
+            }
         }.frame(height: 24).modifier(IslandApprovalElementFade())
     }
     private func note(_ value: String, code: Bool = false) -> some View {

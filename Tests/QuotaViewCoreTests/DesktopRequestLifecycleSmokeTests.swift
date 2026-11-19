@@ -38,6 +38,41 @@ final class DesktopRequestLifecycleSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testV13NetworkApprovalBecomesInteractiveUntilOwnerResolves() async throws {
+        let raw: [String: Any] = ["id": 17, "method": "item/commandExecution/requestApproval",
+            "params": ["threadId": "conversation", "turnId": "turn", "itemId": "tool",
+                       "networkApprovalContext": ["host": "example.com", "protocol": "https"],
+                       "availableDecisions": ["accept", "acceptForSession", "decline"]]]
+        var state = CodexDesktopIPCClientTests.state(requests: [raw])
+        let turn = try XCTUnwrap((state["turns"] as? [[String: Any]])?.first)
+        state["turns"] = []
+        state["turnHistory"] = ["kind": "canonical", "history": [
+            "entitiesByKey": ["t": turn], "islands": [["newerBoundary": ["status": "exhausted"],
+                "entries": [["key": "t", "value": "t"]]]]]]
+        let fixture = CodexDesktopIPCFixture(state: state, stateVersion: 13)
+        let (client, recorder, snapshot) = try await fixture.connectedClient()
+        let model = model(snapshot, client: client)
+        try apply(model, snapshot)
+        let pending = try XCTUnwrap(model.tasks.first?.requests.first)
+        let wire = try XCTUnwrap(pending.value.protocolRequest)
+        XCTAssertTrue(pending.value.canRespond)
+        XCTAssertEqual(wire.kind, .network)
+        XCTAssertEqual(wire.actions.map { $0.result["decision"].text }, ["accept", "acceptForSession", "decline"])
+        model.submit(model.tasks[0].id, requestID: pending.value.id,
+                     decision: .reply(.object(["decision": .string("decline")])))
+        try await wait { model.tasks[0].requests.first?.value.phase == .sent }
+        XCTAssertEqual(fixture.submissions.count, 1)
+        XCTAssertEqual(fixture.submissions.first?["version"] as? Int, 1)
+        let count = await recorder.count
+        fixture.patch([["op": "replace", "path": ["requests"], "value": []]], baseRevision: snapshot.revision, revision: snapshot.revision + 1)
+        let resolved = try await recorder.wait(after: count)
+        try apply(model, resolved)
+        XCTAssertTrue(resolved.requests.isEmpty)
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+        await client.stop()
+    }
+
+    @MainActor
     func testNativeCommandWithoutAvailableDecisionsExposesSchemaActionsAndDispatches() async throws {
         let raw: [String: Any] = ["id": 42, "method": "item/commandExecution/requestApproval",
             "params": ["threadId": "conversation", "turnId": "turn", "itemId": "command", "kind": "command",

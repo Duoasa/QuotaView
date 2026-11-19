@@ -167,6 +167,40 @@ struct IslandTaskDetailMetrics {
 
 }
 
+struct IslandConversationButton: View {
+    let url: URL
+    let language: AppPreferences.Language
+    var fontSize: CGFloat = 12
+    @State private var failed = false
+
+    var body: some View {
+        let copy = AppCopy(language: language)
+        let title = failed ? copy.text("打开失败，重试", "Couldn’t open. Retry") : copy.text("前往对话", "Open conversation")
+        Button {
+            let workspace = NSWorkspace.shared
+            guard let app = workspace.urlForApplication(withBundleIdentifier: "com.openai.codex") else {
+                failed = true
+                return
+            }
+            workspace.open([url], withApplicationAt: app, configuration: .init()) { _, error in
+                DispatchQueue.main.async { failed = error != nil }
+            }
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(title)
+                Image(systemName: "arrowshape.turn.up.right.circle")
+                    .accessibilityHidden(true)
+            }
+            .font(.system(size: fontSize, weight: .medium))
+            .foregroundStyle(Color(nsColor: IslandTextPalette.secondary))
+            .frame(height: IslandTaskDetailMetrics.headerHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+}
+
 struct IslandTaskDetailView: View {
     @Environment(\.appLanguage) private var appLanguage
     let data: IslandTaskDetailData
@@ -191,15 +225,20 @@ struct IslandTaskDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: IslandTaskDetailMetrics.bodyGap) {
-            HStack(spacing: 8) {
+            HStack(alignment: data.conversationURL == nil ? .center : .firstTextBaseline, spacing: 8) {
                 Image(systemName: metrics.mode.symbol).font(.system(size: 12))
                 Text(metrics.mode.title(data: data, english: english, language: appLanguage)).font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(secondary).frame(width: 24, height: 24).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityHint(text("关闭详情", "Close details"))
-                    .accessibilityLabel(text("关闭详情", "Close details"))
+                if let url = data.conversationURL {
+                    IslandConversationButton(url: url, language: appLanguage ?? (english ? .english : .simplifiedChinese))
+                        .id(url)
+                } else {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(secondary).frame(width: 24, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityHint(text("关闭详情", "Close details"))
+                        .accessibilityLabel(text("关闭详情", "Close details"))
+                }
             }.foregroundStyle(accent).frame(height: IslandTaskDetailMetrics.headerHeight)
             ScrollView(.vertical) {
                 Group {

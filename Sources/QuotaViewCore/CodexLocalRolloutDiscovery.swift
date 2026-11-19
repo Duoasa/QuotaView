@@ -5,7 +5,7 @@ import SQLite3
 /// Actor-confined discovery. It does not decode activity, publish UI or modify Codex files.
 final class CodexLocalRolloutDiscovery {
     typealias SessionMetadata = (threadID: String, sessionHash: String, workspaceName: String?,
-        kind: CodexActivitySessionKind, subagentIdentity: CodexActivitySubagentIdentity?)
+        kind: CodexActivitySessionKind, subagentIdentity: CodexActivitySubagentIdentity?, desktopThreadID: UUID?)
 
     /// Use live stat values, not URL's cached attributes. Same-size rewrites and
     /// atomic replacement must invalidate the header as well as appends/truncation.
@@ -232,7 +232,7 @@ final class CodexLocalRolloutDiscovery {
                 ? sqlite3_column_int64(statement, 9) : nil
             let displayMetadata = CodexLocalRolloutThreadMetadata(
                 title: hasExplicitName ? explicitName : text(5), titleIsExplicitName: hasExplicitName,
-                model: text(7), reasoningEffort: text(8), cumulativeTotalTokens: total
+                model: text(7), reasoningEffort: text(8), cumulativeTotalTokens: total, desktopThreadID: kind == .user ? metadata.desktopThreadID : nil
             )
             result.append(
                 Candidate(
@@ -346,7 +346,8 @@ final class CodexLocalRolloutDiscovery {
             }
             result.append(Candidate(fileURL: file, threadID: metadata.threadID, sessionHash: metadata.sessionHash,
                                     workspaceName: metadata.workspaceName, sessionKind: metadata.kind, metadataKind: metadata.kind,
-                                    title: metadata.subagentIdentity?.title, threadMetadata: nil))
+                                    title: metadata.subagentIdentity?.title,
+                                    threadMetadata: metadata.desktopThreadID.map { .init(desktopThreadID: $0) }))
             if result.count == maximumCandidateCount { break }
         }
         return result
@@ -372,7 +373,8 @@ final class CodexLocalRolloutDiscovery {
                 from: payload["cwd"] as? String
             ),
             CodexActivitySessionKind.classify(metadata: payload),
-            CodexActivitySubagentIdentity.decode(payload, expectedThreadID: id)
+            CodexActivitySubagentIdentity.decode(payload, expectedThreadID: id),
+            payload["originator"] as? String == "Codex Desktop" ? UUID(uuidString: id) : nil
         )
     }
 

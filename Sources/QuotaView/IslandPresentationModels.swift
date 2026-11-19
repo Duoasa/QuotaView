@@ -210,6 +210,11 @@ struct IslandTaskDetailData: Equatable {
     var entries: [IslandTraceEntry]; var confirmation: IslandConfirmation?; var status: IslandTaskStatus
     var removedEntryCount = 0
     var provider: IslandAgentProvider = .codex
+    var desktopThreadID: UUID?
+    var conversationURL: URL? {
+        guard provider == .codex, let desktopThreadID else { return nil }
+        return URL(string: "codex://threads/\(desktopThreadID.uuidString.lowercased())")
+    }
     var visibleEntries: [IslandTraceEntry] { entries }
     // Older native protocols omit phase. Use their last assistant message only
     // when no explicit final exists; a known commentary/tool is never a result.

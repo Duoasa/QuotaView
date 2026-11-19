@@ -33,6 +33,58 @@ final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
         store.localPublicContentDidReceive = { model.receiveLocalContent($0) }
     }
 
+    func testConversationUsesExactDesktopIDForSameNamedCards() async throws {
+        let store = store(), model = IslandLiveStore()
+        connect(store, model)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for origin in ["Codex Desktop", "Codex Desktop", "codex_cli_rs"] {
+            let id = UUID().uuidString.lowercased()
+            let file = directory.appendingPathComponent(id)
+            let header = ["type": "session_meta", "payload": ["id": id, "originator": origin, "source": "vscode"]] as [String: Any]
+            var bytes = try JSONSerialization.data(withJSONObject: header)
+            bytes.append(0x0a)
+            try bytes.write(to: file)
+            let parsed = try XCTUnwrap(CodexLocalRolloutDiscovery.readSessionMetadata(from: file))
+            let fields = CodexLocalRolloutThreadMetadata(title: "Same title", desktopThreadID: parsed.desktopThreadID)
+            await store.receiveLocalRecord(metadata(fields, id: id), replay: true)
+            func send(_ event: CodexActivityHookEvent) {
+                store.receive(.init(event: event, sessionHash: hash(id), turnHash: hash("turn"),
+                    sessionKind: .user, source: .hook))
+            }
+            send(.userPromptSubmit)
+            let card = try XCTUnwrap(model.tasks.first { $0.key == hash(id) })
+            func detail(privacy: Bool = false) -> IslandTaskDetailData? {
+                model.display(english: true, remaining: nil, enabled: true, privacy: privacy).taskDetails[card.id]
+            }
+            XCTAssertEqual(card.title, "Same title")
+            let expected = origin == "Codex Desktop" ? "codex://threads/\(id)" : nil
+            XCTAssertEqual(detail()?.conversationURL?.absoluteString, expected)
+            send(.stop)
+            let completed = try XCTUnwrap(detail())
+            XCTAssertEqual(completed.status, .completed)
+            XCTAssertEqual(completed.conversationURL?.absoluteString, expected)
+            XCTAssertNil(detail(privacy: true)?.conversationURL)
+        }
+        let targets = model.display(english: true, remaining: nil, enabled: true, privacy: false)
+            .taskDetails.values.compactMap(\.conversationURL)
+        XCTAssertEqual(Set(targets).count, 2)
+        _ = await store.stop()
+    }
+
+    func testConversationNavigationAcrossTaskStatesAndProviders() {
+        let id = UUID()
+        for status in IslandTaskStatus.allCases {
+            var data = IslandTaskDetailData(entries: [], confirmation: nil, status: status, desktopThreadID: id)
+            XCTAssertEqual(data.conversationURL?.lastPathComponent, id.uuidString.lowercased())
+            data.confirmation = .init(question: .init("Q"), impact: .init(""))
+            XCTAssertEqual(data.conversationURL?.lastPathComponent, id.uuidString.lowercased())
+            data.provider = .claudeCode
+            XCTAssertNil(data.conversationURL)
+        }
+    }
+
     func testThreadMetadataEnrichesHookTaskWithoutCreatingExecutionOrTurnUsage() async throws {
         let store = store(), model = IslandLiveStore(); connect(store, model)
         let fields = CodexLocalRolloutThreadMetadata(title: "QuotaView development", titleIsExplicitName: true,

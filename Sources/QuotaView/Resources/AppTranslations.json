@@ -2144,6 +2144,16 @@
     "ko": "활동을 확인할 수 없음",
     "es": "Actividad no disponible"
   },
+  "Open conversation": {
+    "ja": "会話を開く",
+    "ko": "대화 열기",
+    "es": "Abrir conversación"
+  },
+  "Couldn’t open. Retry": {
+    "ja": "開けませんでした。再試行",
+    "ko": "열지 못했습니다. 재시도",
+    "es": "No se pudo abrir. Reintentar"
+  },
   "Close details": {
     "ja": "詳細を閉じる",
     "ko": "세부 정보 닫기",
