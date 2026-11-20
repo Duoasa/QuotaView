@@ -482,6 +482,11 @@ struct IslandNotchShape: Shape {
 final class IslandBoardState: ObservableObject {
     @Published private(set) var display: CodexMultitaskDisplay?
     @Published private(set) var detailID: Int?
+    @Published var availableConversation: (source: IslandConversationTarget, target: IslandConversationTarget)?
+    var selectedConversation: IslandConversationTarget? {
+        guard !compact, !showsUsage, let detail else { return nil }
+        return display?.taskDetails[detail.id]?.nativeConversation
+    }
     let taskScrollLink = IslandTaskScrollLink()
     @Published private(set) var expandedTraceEntries: Set<UUID> = []
     private struct DetailMetricsKey: Equatable {
@@ -707,7 +712,9 @@ final class IslandBoardState: ObservableObject {
         return min(rows + detail + IslandVibeLayout.listVerticalInset * 2 - IslandVibeLayout.rowSpacing, max(60, availableIslandHeight - headerHeight - IslandVibeLayout.footerHeight))
     }
     func detailData(for task: CodexMultitaskRenderTask) -> IslandTaskDetailData {
-        display?.taskDetails[task.id] ?? .init(entries: [], confirmation: nil, status: .unknown)
+        var data = display?.taskDetails[task.id] ?? .init(entries: [], confirmation: nil, status: .unknown)
+        data.nativeConversation = data.nativeConversation == availableConversation?.source ? availableConversation?.target : nil
+        return data
     }
     private var unrailedDetailHeight: CGFloat {
         guard let detail = inlineDetail else { return 0 }
@@ -1631,6 +1638,14 @@ struct IslandBoardView: View {
                     }
                 }
             }
+        }
+        .task(id: compactContent ? nil : state.selectedConversation) {
+            guard !compactContent else { return }
+            let target = state.selectedConversation
+            state.availableConversation = nil
+            guard let target, let resolved = await IslandConversationNavigation.resolve(target),
+                  !Task.isCancelled, state.selectedConversation == target else { return }
+            state.availableConversation = (target, resolved)
         }
         .environment(\.appLanguage, state.language)
         .environment(\.locale, Locale(identifier: state.language.localeIdentifier))

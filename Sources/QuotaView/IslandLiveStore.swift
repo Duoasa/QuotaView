@@ -779,6 +779,7 @@ final class IslandLiveStore {
         let key: String
         var threadID: String?
         var desktopThreadID: UUID?
+        var nativeConversation: IslandConversationTarget?
         var turnKey: String?
         var title = ""
         var titleSource: IslandTaskTitleSource = .fallback
@@ -1162,6 +1163,12 @@ final class IslandLiveStore {
         if providers.count > 512, let stale = providers.keys.first(where: { key in !tasks.contains { $0.key == key } }) {
             providers.removeValue(forKey: stale)
         }
+    }
+    func setConversation(_ target: IslandConversationTarget?, for key: String, provider: IslandAgentProvider) {
+        guard self.provider(for: key) == provider, let i = tasks.firstIndex(where: { $0.key == key }),
+              tasks[i].nativeConversation != target else { return }
+        tasks[i].nativeConversation = target
+        onChange?()
     }
     func provider(for key: String) -> IslandAgentProvider { providers[key] ?? .codex }
 
@@ -2144,7 +2151,8 @@ final class IslandLiveStore {
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")
             }
             details[task.id] = .init(entries: privacy ? [] : task.entries, confirmation: privacy ? nil : request, status: presentationStatus, removedEntryCount: task.removedEntryCount, provider: provider,
-                desktopThreadID: enabled && !privacy ? task.desktopThreadID : nil)
+                desktopThreadID: enabled && !privacy ? task.desktopThreadID : nil,
+                nativeConversation: enabled && !privacy ? task.nativeConversation : nil)
             let title = privacy ? provider.displayName + (appCopy.text(" 任务", " task")) : (task.title.isEmpty ? (appCopy.text("未命名任务", "Untitled task")) : task.title)
             let status: String
             if synchronizing { status = appCopy.text("同步中", "Syncing") }

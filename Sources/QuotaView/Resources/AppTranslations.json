@@ -1,4 +1,29 @@
 {
+  "Accessibility permission": {
+    "ja": "アクセシビリティ権限",
+    "ko": "손쉬운 사용 권한",
+    "es": "Permiso de accesibilidad"
+  },
+  "Granted": {
+    "ja": "許可済み",
+    "ko": "허용됨",
+    "es": "Concedido"
+  },
+  "Not granted": {
+    "ja": "未許可",
+    "ko": "허용되지 않음",
+    "es": "Sin conceder"
+  },
+  "Manage permission in System Settings": {
+    "ja": "システム設定で権限を管理",
+    "ko": "시스템 설정에서 권한 관리",
+    "es": "Gestionar el permiso en Ajustes del Sistema"
+  },
+  "Go to conversation requires this permission in the official DSH and Antigravity apps.": {
+    "ja": "公式の DSH と Antigravity で「会話に移動」を使うには、この権限が必要です。",
+    "ko": "공식 DSH 및 Antigravity 앱에서 대화로 이동하려면 이 권한이 필요합니다.",
+    "es": "Para ir a una conversación en las aplicaciones oficiales de DSH y Antigravity se necesita este permiso."
+  },
   "Usage page improvements": {
     "ja": "使用量ページの改善",
     "ko": "사용량 페이지 개선",

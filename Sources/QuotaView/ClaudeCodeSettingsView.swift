@@ -9,7 +9,7 @@ struct ClaudeCodeConnectionSettings: View {
     private var copy: AppCopy { preferences.copy }
 
     var body: some View {
-        NativeSettingsCard {
+        VStack(alignment: .leading, spacing: 0) {
             if case .failed(let message) = runtime.status {
                 NativeSettingsRow(title: copy.text("连接未完成", "Setup incomplete"), subtitle: message) {
                     Button(copy.text("重试", "Retry")) { runtime.retry() }.controlSize(.small)

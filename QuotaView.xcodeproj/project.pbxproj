@@ -92,6 +92,7 @@
 		B09200000000000000000003 /* IslandResetDust.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09200000000000000000003 /* IslandResetDust.swift */; };
 		B07300000000000000000005 /* IslandLiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000005 /* IslandLiveStore.swift */; };
 		B07300000000000000000006 /* IslandPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000006 /* IslandPresentationModels.swift */; };
+		B09400000000000000000321 /* IslandConversationNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09400000000000000000321 /* IslandConversationNavigation.swift */; };
 		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
 		B07300000000000000000008 /* IslandSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000008 /* IslandSession.swift */; };
 		B2AA26A2AB20474F17057C4A /* ClaudeCodeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */; };
@@ -283,6 +284,7 @@
 		F09200000000000000000003 /* IslandResetDust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandResetDust.swift; sourceTree = "<group>"; };
 		F07300000000000000000005 /* IslandLiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandLiveStore.swift; sourceTree = "<group>"; };
 		F07300000000000000000006 /* IslandPresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPresentationModels.swift; sourceTree = "<group>"; };
+		F09400000000000000000321 /* IslandConversationNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandConversationNavigation.swift; sourceTree = "<group>"; };
 		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
 		F07300000000000000000008 /* IslandSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandSession.swift; sourceTree = "<group>"; };
 		66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeSettingsView.swift; sourceTree = "<group>"; };
@@ -414,6 +416,7 @@
 				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
 				F07300000000000000000007 /* IslandScrollingText.swift */,
 				F07300000000000000000006 /* IslandPresentationModels.swift */,
+				F09400000000000000000321 /* IslandConversationNavigation.swift */,
 				F07300000000000000000005 /* IslandLiveStore.swift */,
 				F07300000000000000000004 /* IslandConceptBoard.swift */,
 				F094000000000000000000B1 /* IslandCardCompletion.swift */,
@@ -828,6 +831,7 @@
 				7BAC727FCD13404E2C8C907B /* ClaudeCodeBridge.swift in Sources */,
 				B07300000000000000000007 /* IslandScrollingText.swift in Sources */,
 				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,
+				B09400000000000000000321 /* IslandConversationNavigation.swift in Sources */,
 				B07300000000000000000005 /* IslandLiveStore.swift in Sources */,
 				B07300000000000000000004 /* IslandConceptBoard.swift in Sources */,
 				B094000000000000000000B1 /* IslandCardCompletion.swift in Sources */,

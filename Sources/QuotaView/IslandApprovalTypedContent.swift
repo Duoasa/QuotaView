@@ -324,7 +324,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                     Button(text("复制完整内容", "Copy full text")) {
                         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
                     }
-                }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(IslandUtilityButtonStyle())
+                }.font(.system(size: 10, weight: .medium)).foregroundStyle(secondary).buttonStyle(.plain)
                     .frame(height: 24).padding(.horizontal, 12).padding(.bottom, 8)
             }
             if !caption.isEmpty {

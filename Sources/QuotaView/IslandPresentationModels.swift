@@ -211,7 +211,9 @@ struct IslandTaskDetailData: Equatable {
     var removedEntryCount = 0
     var provider: IslandAgentProvider = .codex
     var desktopThreadID: UUID?
+    var nativeConversation: IslandConversationTarget?
     var conversationURL: URL? {
+        if let nativeConversation, nativeConversation.provider == provider { return nativeConversation.url }
         guard provider == .codex, let desktopThreadID else { return nil }
         return URL(string: "codex://threads/\(desktopThreadID.uuidString.lowercased())")
     }

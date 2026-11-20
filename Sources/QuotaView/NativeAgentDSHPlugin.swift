@@ -2,6 +2,45 @@ import Foundation
 
 /// Original adapter against DSH's public session/event API. No VibeIsland code or assets are bundled.
 enum NativeAgentDSHPlugin {
+    // The official desktop client exposes session rows through this public slot.
+    // Give its existing actionable row an accessibility identifier for exact lookup.
+    static let desktopClient = #"""
+window.__ModuleLoader__.load({
+  id: "__PACKAGE__",
+  factory(require) {
+    const React = require("react");
+    function SessionIdentity({sessionId}) {
+      const ref = React.useRef(null);
+      React.useLayoutEffect(() => {
+        const row = ref.current?.closest('[role="treeitem"]');
+        if (!row || row.dataset.rowKey !== "session:" + sessionId ||
+            !/^[A-Za-z0-9_-]{1,128}$/.test(sessionId) || row.hasAttribute("aria-description")) return;
+        const id = "quotaview-session-" + sessionId;
+        if (row.id && row.id !== id) return;
+        const owners = Symbol.for("quotaview.session-row.owners");
+        row[owners] ??= new Set();
+        row[owners].add(ref);
+        row.id = id;
+        return () => {
+          row[owners].delete(ref);
+          if (!row[owners].size && row.id === id) row.removeAttribute("id");
+        };
+      }, [sessionId]);
+      return React.createElement("span", {hidden:true, ref});
+    }
+    return {inject:["slots"], apply(ctx) {
+      if (location.protocol !== "dsh-app:" || location.hostname !== "app") return;
+      const name = "sidebar.session.row.trailing";
+      ctx.slots.inject(name, () => ctx.slots.register({name, key:"__PACKAGE__", id:"__PACKAGE__"}, SessionIdentity));
+    }};
+  }
+});
+"""#
+
+    static let desktopManifest = #"""
+{"name":"__PACKAGE__","version":"1.0.0","type":"module","exports":{".":"./host.mjs","./client":"./client.js","./package.json":"./package.json"},"dsh":{"client":{"platform":"web","inject":["@deepseek-ai/dsh-client-ui-workspace"]}}}
+"""#
+
     static let source = #"""
 import { connect } from 'node:net';
 import { readFile, stat } from 'node:fs/promises';
@@ -176,7 +215,7 @@ export function apply(ctx, config = {}) {
     if (matches.length !== 1 || matches[0].eventID) return next();
     const approval = matches[0], eventID = randomUUID();
     approval.eventID = eventID;
-    const identity = {session_id:id, turn_id:String(turn), source_namespace:namespace, source_epoch:epoch,
+    const identity = {session_id:id, turn_id:String(turn), source_namespace:namespace, official_desktop_navigation:config.officialDesktopNavigation === true, source_epoch:epoch,
       request_id:eventID, approval_id:approval.id, tool_use_id:request.callId};
     slots.add(eventID);
     let outcome, syncTimer;
@@ -227,12 +266,12 @@ export function apply(ctx, config = {}) {
       'approval/asked':'PermissionRequest', 'approval/decided':'PermissionResult', 'compaction/start':'PreCompact',
       'compaction/end':'PostCompact', 'assistant/message':'Usage', 'request/header':'Metadata', 'session/title':'Metadata'};
     const payload = {hook_event_name:map[event.type], session_id:id, turn_id:d.turn == null ? undefined : String(d.turn),
-      source_namespace:namespace, source_epoch:epoch, source_sequence:event.seq, model:models.get(id), session_title:titles.get(id),
+      source_namespace:namespace, official_desktop_navigation:config.officialDesktopNavigation === true, source_epoch:epoch, source_sequence:event.seq, model:models.get(id), session_title:titles.get(id),
       tool_name:approval?.tool ?? text(d.name), tool_use_id:approval?.call ?? text(d.callId ?? d.message?.toolCallId),
       parent_session_id:header.origin === 'subagent' ? text(header.parentSession) : undefined};
     if (event.type === 'approval/decided') {
       if (approval?.eventID) enqueue({hook_event_name:'DSHApprovalSettled', session_id:id, turn_id:String(approval.turn),
-        source_namespace:namespace, source_epoch:epoch, request_id:approval.eventID, approval_id:approval.id, outcome:d.outcome});
+        source_namespace:namespace, official_desktop_navigation:config.officialDesktopNavigation === true, source_epoch:epoch, request_id:approval.eventID, approval_id:approval.id, outcome:d.outcome});
       decisions.get(approval?.eventID)?.();
       approvals.delete(approvalKey);
     }

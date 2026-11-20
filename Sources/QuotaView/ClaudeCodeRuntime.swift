@@ -445,6 +445,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         island.model.receiveLegacy(CodexActivityEvent(event: event, sessionHash: session.key, turnHash: session.turnKey,
             workspaceName: CodexActivityPrivacy.workspaceName(from: session.cwd), toolCategory: Self.category(tool),
             source: .hook, turnCompletionStatus: completion, toolCallHash: call, toolName: tool))
+        island.model.setConversation(UUID(uuidString: sessionID).map(IslandConversationTarget.claudeHook), for: session.key, provider: .claudeCode)
         if let pending = session.pendingTitle { setTitle(pending.text, explicit: pending.explicit, sessionID: sessionID) }
     }
 

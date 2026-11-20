@@ -1,3 +1,4 @@
+import ApplicationServices
 import SwiftUI
 
 struct AgentIntegrationSettings<Details: View>: View {
@@ -25,6 +26,7 @@ struct AgentIntegrationSettings<Details: View>: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
+            ConversationAccessibilitySettings(copy: copy)
             providerGroup(.codex, isOn: $preferences.codexIntegrationEnabled)
             providerGroup(.claudeCode, isOn: $preferences.claudeCodeEnabled)
             providerGroup(.dsh, isOn: $preferences.dshEnabled)
@@ -39,9 +41,10 @@ struct AgentIntegrationSettings<Details: View>: View {
         }
     }
     private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
-        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
-            NativeSettingsCard { row(provider, isOn: isOn) }
+        NativeSettingsCard {
+            row(provider, isOn: isOn)
             if expanded == provider {
+                NativeSettingsDivider()
                 Group {
                     switch provider {
                     case .codex: codexDetails().disabled(!preferences.codexIntegrationEnabled)
@@ -56,7 +59,9 @@ struct AgentIntegrationSettings<Details: View>: View {
                     case .devinDesktop: nativeDetails(devinDesktop)
                     case .devinCLI: nativeDetails(devinCLI)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.leading, 22)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -71,14 +76,14 @@ struct AgentIntegrationSettings<Details: View>: View {
                     AgentSettingsIcon(provider: provider)
                     Text(provider.displayName).font(.system(size: 13, weight: .medium))
                     Spacer(minLength: 8)
+                    Label(state.title, systemImage: state.symbol)
+                        .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
+                        .fixedSize()
+                        .frame(width: preferences.resolvedLanguage.usesLatinLayout ? 126 : 90, alignment: .leading)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .help(copy.text("显示连接设置", "Show connection settings"))
                 .accessibilityValue(expanded == provider ? copy.text("已展开", "Expanded") : copy.text("已收起", "Collapsed"))
-            Label(state.title, systemImage: state.symbol)
-                .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
-                .fixedSize()
-                .frame(width: preferences.resolvedLanguage.usesLatinLayout ? 126 : 90, alignment: .leading)
             Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                 .tint(Color(nsColor: .secondaryLabelColor))
         }
@@ -136,7 +141,7 @@ struct AgentIntegrationSettings<Details: View>: View {
         }
     }
     private func nativeDetails(_ runtime: NativeAgentRuntime) -> some View {
-        NativeSettingsCard {
+        VStack(alignment: .leading, spacing: 0) {
             if runtime.provider == .antigravity {
                 NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
                     subtitle: copy.text("运行命令或读写文件前，可在岛内允许一次、拒绝或交回 Antigravity。", "Review commands, file reads, and edits before execution, or hand them back to Antigravity.")) {
@@ -198,6 +203,45 @@ struct AgentIntegrationSettings<Details: View>: View {
                     Button(copy.text("重试", "Retry")) { runtime.retry() }.controlSize(.small)
                 }
             }
+        }
+    }
+}
+
+private struct ConversationAccessibilitySettings: View {
+    let copy: AppCopy
+    @State private var authorized = false
+
+    var body: some View {
+        let title = copy.text("辅助功能权限", "Accessibility permission")
+        let status = authorized ? copy.text("已授权", "Granted") : copy.text("未授权", "Not granted")
+        let hint = copy.text("在系统设置中管理权限", "Manage permission in System Settings")
+        NativeSettingsCard {
+            NativeSettingsRow(title: title,
+                subtitle: copy.text("在官方 DSH 和 Antigravity 中使用「前往对话」需要此权限。",
+                                    "Go to conversation requires this permission in the official DSH and Antigravity apps."),
+                symbol: "accessibility") {
+                HStack(spacing: 8) {
+                    Text(status).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Toggle(title, isOn: Binding(get: { authorized }, set: managePermission))
+                        .labelsHidden().toggleStyle(.switch)
+                        .accessibilityHint(hint).help(hint)
+                }
+            }
+        }
+        .onAppear { authorized = AXIsProcessTrusted() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            authorized = AXIsProcessTrusted()
+        }
+    }
+
+    private func managePermission(_ requested: Bool) {
+        if requested && !AXIsProcessTrusted() {
+            let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+            _ = AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
+        }
+        if let pane = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(pane)
         }
     }
 }

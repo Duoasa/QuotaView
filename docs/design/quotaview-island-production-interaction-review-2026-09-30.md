@@ -10,6 +10,12 @@ Spec ID：`QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` · `Accepted / Verifying` 
 - 已有实现与用户体验验收分别记录。远程/云端应答、可靠原生前台聊天选择、原生异步问题组关闭均不由本规格宣称已支持。
 - 真实额度重置保持演示；退出 QuotaView 不结束 Codex 或 Claude 中的任务。
 
+## 多客户端原对话跳转（Build 32）
+
+Codex、Claude Code 桌面会话、官方 DeepSeek Harness、Antigravity App、Cursor 和 Devin Desktop 共用「前往对话」。普通详情在标题右上角使用 12 pt 文字和圆圈右转箭头，审批与回答页在审批标题或首题右侧使用 13 pt。导航与审批、回答、收起各自独立。
+
+只在用户展开详情后解析原会话。隐私模式、连接关闭、客户端缺失或无法确认会话时沿用原有详情控件。DSH 和 Antigravity 依赖用户已授予 QuotaView 的 macOS 辅助功能权限和客户端当前侧栏中的对应行。切换卡片时重新解析，点击时按原 ID 再定位。各客户端的定位条件见[接入规格](../specs/agent-integrations.md#桌面会话导航)。
+
 ## Codex 各状态详情跳转（Build 28 本地测试）
 
 可精确定位本机 Codex 桌面对话时，各状态详情的右上角均显示「前往对话」。审批与回答使用独立详情页，入口位于具体审批标题或首个问题的右侧，与 13 pt 标题垂直居中对齐，和底部的审批、跳过及提交按钮独立。导航只打开该会话，草稿与请求沿用原有生命周期。隐私模式、其他 Agent 和缺少可信映射的任务沿用各自详情布局。

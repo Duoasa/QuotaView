@@ -44,6 +44,7 @@ final class NativeAgentRuntime: ObservableObject {
     private struct Session {
         var turn: String?
         var nativeTurn: String?
+        var conversation: IslandConversationTarget?
         var active = false
         var model: String?
         var title: String?
@@ -236,7 +237,11 @@ final class NativeAgentRuntime: ObservableObject {
             case .success(let homes): configuredHomes = homes
             case .failure(let error): failure = error; status = .failed; return
             }
-            guard enabled else { status = .disabled; return }
+            guard enabled else {
+                status = .disabled
+                await installer.configureConversationEditor(enabled: false)
+                return
+            }
             do {
                 try bridge.start(onMessage: { [weak self] message in
                     Task { @MainActor in
@@ -255,7 +260,8 @@ final class NativeAgentRuntime: ObservableObject {
                     approvalRouteEnabled = approvals
                     reconcile()
                 }
-            } catch { self.failure = .listenerUnavailable; status = .failed }
+            } catch { self.failure = .listenerUnavailable; status = .failed; return }
+            await installer.configureConversationEditor(enabled: true)
         }
     }
     private func stopListening() {
@@ -412,6 +418,22 @@ final class NativeAgentRuntime: ObservableObject {
                 session.devinStore = store; session.devinSourceSession = sourceSession
             }
         }
+        if !preferences.codexIslandPrivacy, session.parent == nil {
+            if provider == .devinDesktop, session.devinStore != nil, IslandConversationTarget.isSessionID(sourceSession) {
+                session.conversation = .devin(sourceSession)
+            } else if provider == .cursor, let id = UUID(uuidString: sourceSession) {
+                session.conversation = .cursor(id)
+            } else if provider == .antigravity, let id = UUID(uuidString: sourceSession) {
+                switch session.antigravityClient {
+                case "antigravity": session.conversation = .antigravity(id)
+                case nil: session.conversation = .antigravityHook(id)
+                default: session.conversation = nil
+                }
+            } else if provider == .dsh {
+                session.conversation = payload["official_desktop_navigation"] as? Bool == true && IslandConversationTarget.isSessionID(sourceSession)
+                    ? .dsh(sourceSession) : nil
+            }
+        }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
         if provider == .antigravity && (startedTurn || ["Stop", "StopFailure", "Interrupt", "SessionEnd", "PostToolUse", "PostToolUseFailure"].contains(name)) {
@@ -471,7 +493,10 @@ final class NativeAgentRuntime: ObservableObject {
                 toolCategory: category(tool), source: .hook, turnCompletionStatus: completion,
                 toolCallHash: call, toolName: tool)
             if session.parent != nil { island.model.receiveSubagentActivity(activity) }
-            else { island.model.receiveLegacy(activity) }
+            else {
+                island.model.receiveLegacy(activity)
+                island.model.setConversation(session.conversation, for: key, provider: provider)
+            }
             publishMetadata(key)
             if name == "PreToolUse", let tool, (!provider.usesExternalHooks || call != nil),
                let data = try? JSONSerialization.data(withJSONObject: ["type": "tool", "id": call ?? UUID().uuidString, "name": tool, "text": ""]) {
