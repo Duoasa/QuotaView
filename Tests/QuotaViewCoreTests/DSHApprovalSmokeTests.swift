@@ -82,6 +82,7 @@ final class DSHApprovalSmokeTests: XCTestCase {
             try await waitFor { island.model.tasks.contains { $0.title == "Recovered session title" } }
             let (id, _) = try XCTUnwrap(pending(call))
             let display = island.model.display(english: false, remaining: nil, enabled: true, privacy: false)
+            XCTAssertEqual(display.taskDetails[id]?.nativeConversation, .dsh("same-session"))
             let request = try XCTUnwrap(display.taskDetails[id]?.confirmation)
             XCTAssertEqual(request.provider, .dsh)
             XCTAssertTrue(request.canRespond, "Final presentation must preserve the live DSH approval capability")
@@ -103,10 +104,13 @@ final class DSHApprovalSmokeTests: XCTestCase {
         XCTAssertEqual(Set(parallel.map { $0.0 }).count, 2, "Copied session/call IDs in different DSH homes must remain separate")
         for (task, request) in parallel {
             let decision = request.protocolRequest?.detail.contains("echo A") == true ? "accept" : "decline"
+            let detail = island.model.display(english: false, remaining: nil, enabled: true, privacy: false).taskDetails[task]
+            XCTAssertEqual(detail?.nativeConversation, decision == "accept" ? .dsh("same-session") : nil)
             island.model.submit(task, requestID: request.id, decision: .reply(.object(["decision": .string(decision)])))
         }
         try await waitFor { island.model.display(english: false, remaining: nil, enabled: true, privacy: false).taskDetails.values.contains { $0.finalResponse != nil } }
         let completed = island.model.display(english: false, remaining: nil, enabled: true, privacy: false)
+        XCTAssertEqual(completed.taskDetails.values.first { $0.finalResponse != nil }?.nativeConversation, .dsh("same-session"))
         let results = completed.taskDetails.values.compactMap(\.finalResponse)
         XCTAssertEqual(results.count, 1, "Failed peer turn must not publish an answer")
         let answer = try XCTUnwrap(results.first)
@@ -179,7 +183,7 @@ final class DSHApprovalSmokeTests: XCTestCase {
     ctx.on('approval/request',(req,next)=>req.callId==='policy'?'rejected':next());
     const adapter={on:ctx.on.bind(ctx),effect:fn=>cleanup.push(fn())};
     const namespace=readFileSync(new URL('namespace',base),'utf8');
-    apply(adapter,{sourceNamespace:namespace,interactiveProfile:true});
+    apply(adapter,{sourceNamespace:namespace,interactiveProfile:true,officialDesktopNavigation:true});
     let fallbacks=0;
     const fallback=async()=>{fallbacks++;await pause(100);return 'rejected'};
     let removeFallback=ctx.on('approval/request',fallback);
@@ -231,7 +235,7 @@ final class DSHApprovalSmokeTests: XCTestCase {
     assert.equal(await run('large','bash',{command:'x'.repeat(70000)}),'rejected');
     assert.equal(await run('dispose'),'rejected');
     removeFallback();
-    apply(adapter,{sourceNamespace:namespace,interactiveProfile:true});
+    apply(adapter,{sourceNamespace:namespace,interactiveProfile:true,officialDesktopNavigation:true});
     removeFallback=ctx.on('approval/request',fallback);
     turn=3;session.append('turn/start',{turn});
     assert.equal(await run('shutdown'),'rejected');

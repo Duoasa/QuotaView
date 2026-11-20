@@ -49,6 +49,12 @@ struct NativeAgentInstaller: Sendable {
     var route: URL { support.appendingPathComponent("route.json") }
     var helper: URL { support.appendingPathComponent("QuotaViewActivityHook") }
     var plugin: URL { support.appendingPathComponent("quotaview-dsh.mjs") }
+    private var desktopPlugin: URL { support.appendingPathComponent("official-desktop-navigation") }
+
+    private func isOfficialDesktopProfile(home: URL, profile: String) -> Bool {
+        let standard = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".dsh")
+        return profile == "desktop" && home.resolvingSymlinksInPath().standardizedFileURL.path == standard.resolvingSymlinksInPath().standardizedFileURL.path
+    }
     var marker: String { "quotaview-" + ClaudeCodeChannel.identifier + "-" + provider.rawValue }
     private var begin: String { "# >>> " + marker + " >>>" }
     private var end: String { "# <<< " + marker + " <<<" }
@@ -103,6 +109,15 @@ struct NativeAgentInstaller: Sendable {
             if provider == .dsh {
                 let source = NativeAgentDSHPlugin.source.replacingOccurrences(of: "__ROUTE_PATH__", with: jsonString(route.path))
                 try privateWrite(Data(source.utf8), to: plugin)
+                if discovered.contains(where: { isOfficialDesktopProfile(home: $0.home, profile: $0.path.deletingLastPathComponent().lastPathComponent) }) {
+                    try fm.createDirectory(at: desktopPlugin, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                    let package = "quotaview-navigation-" + ClaudeCodeChannel.identifier
+                    let client = NativeAgentDSHPlugin.desktopClient.replacingOccurrences(of: "__PACKAGE__", with: package)
+                    let manifest = NativeAgentDSHPlugin.desktopManifest.replacingOccurrences(of: "__PACKAGE__", with: package)
+                    try privateWrite(Data(client.utf8), to: desktopPlugin.appendingPathComponent("client.js"))
+                    try privateWrite(Data(manifest.utf8), to: desktopPlugin.appendingPathComponent("package.json"))
+                    try privateWrite(Data("export { apply } from '../quotaview-dsh.mjs';".utf8), to: desktopPlugin.appendingPathComponent("host.mjs"))
+                }
             }
         }
         // Prepare every edit before changing a profile. No partial update for malformed input.
@@ -152,6 +167,14 @@ struct NativeAgentInstaller: Sendable {
             try privateWrite(JSONEncoder().encode(Set(unavailable).union(enabled ? currentPaths : []).sorted()), to: ledger)
         }
         return enabled ? Array(Set(discovered.map(\.home))).sorted { $0.path < $1.path } : []
+    }
+
+    func configureConversationEditor(enabled: Bool) async {
+        guard discoversSystemHomes, provider == .cursor || provider == .devinDesktop else { return }
+        await Task.detached(priority: .utility) {
+            // Optional navigation is reconciled after the activity listener is ready.
+            try? IslandConversationEditor.configure(provider, enabled: enabled)
+        }.value
     }
 
     private struct Destination { let path: URL; let home: URL }
@@ -220,8 +243,11 @@ struct NativeAgentInstaller: Sendable {
     private func block(home: URL, profile: String) -> String {
         if provider == .dsh {
             let namespace = CodexActivityPrivacy.hashIdentifier(home.resolvingSymlinksInPath().standardizedFileURL.path)
-            return "- insert:\n    - id: " + marker + "\n      name: " + jsonString(plugin.path)
+            let official = isOfficialDesktopProfile(home: home, profile: profile)
+            let entry = official ? desktopPlugin.appendingPathComponent("host.mjs") : plugin
+            return "- insert:\n    - id: " + marker + "\n      name: " + jsonString(entry.path)
                 + "\n      config:\n        sourceNamespace: " + jsonString(namespace)
+                + (official ? "\n        officialDesktopNavigation: true" : "")
                 + "\n        interactiveProfile: " + (["desktop", "web", "tui"].contains(profile) ? "true" : "false")
         }
         let command = quote(helper.path) + " --agent-hook --configuration " + quote(route.path)

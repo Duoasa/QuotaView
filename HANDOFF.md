@@ -1,8 +1,34 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.4 Build 30 / 审批标题行跳转
+## 当前开发：0.9.4 Build 35 / Agent 连接详情原位展开
+
+「Agent 接入」各标题行可原位展开连接设置，权限入口在顶部，右侧开关独立操作。开发版 Build 35（内部 224）已启动。9 项定向冒烟与本地化检查通过，记录在 `.build/agent-disclosure-094b35/`，展开效果待用户验收。
+
+## 前序开发：0.9.4 Build 34 / Agent 接入顶部的辅助功能权限
+
+开发版 Build 34（内部 223）已启动。「Agent 接入」在 Codex 之前显示辅助功能授权状态，可进入 macOS 系统设置管理。适用于官方 DSH 和 Antigravity 的会话跳转。21 项定向冒烟和本地化检查通过，实际授权与跳转待用户验收。证据见 `.build/agent-accessibility-094b34/`。
+
+## 前序开发：0.9.4 Build 33 / 修复 DSH 普通任务的会话跳转
+
+本地开发版 Build 33（内部 222）已启动。26 项定向冒烟通过，其中 DSH 插件经套接字传入的审批和完成事件均生成原对话目标，另一来源的同 ID 任务没有跳转目标。266 个生产输入、运行包与加载路径已核对。记录在 `.build/dsh-navigation-094b33/`，官方客户端实际点击待用户验收。
+
+2026-11-20 用户重启官方 DSH 后，新卡片仍显示关闭。12:09:01 的 macOS TCC 日志显示开发版进程查询辅助功能权限时连续两次返回 Unknown。Build 33 会在该步骤停止侧栏定位。用户为当前开发包授权后可重新展开同一卡片复测。
+
+## 前序开发：0.9.4 Build 32 / 多客户端原对话跳转
+
+Claude Code 桌面会话、官方 DeepSeek Harness、Antigravity App、Cursor 和 Devin Desktop 复用 Codex 的详情标题、审批标题及首题右侧的「前往对话」。各来源的 ID、权限和可用条件见[接入规格](docs/specs/agent-integrations.md#桌面会话导航)。
+
+本地开发版 Build 32（内部 221）已启动，266 个生产输入、包清单和实际加载路径核对通过。27 项定向冒烟及本地化检查通过，另在隔离目录使用 Cursor 和 Devin 官方 CLI 安装生成的 VSIX 并检查导航处理器。证据在 `.build/conversation-094b32/`，最终运行记录在 `verified-runtime/runtime-result.json`。五个客户端的实机点击与交互待用户验收。
+
+## 前序开发：0.9.4 Build 31 / 命令预览文字按钮
+
+长终端命令的查看、收起和复制操作采用纯文字按钮，沿用原有交互。Build 31（内部 220）已在本机运行。定向冒烟和加载路径记录在 `.build/command-text-094b31/`，视觉待验收。
+
+## 前序开发：0.9.4 Build 30 / 审批标题行跳转
 
 「前往对话」并入具体审批标题行右侧，与标题同为 13 pt、垂直居中。移除原有独立状态行，普通问题在首题右侧显示入口。定向布局与交互冒烟、本地化和开发包加载路径核对通过，记录见 `.build/approval-title-094b30/`。本地 Build 30（内部 219）已启动。用户在真实网络访问审批中确认「前往对话」与标题对齐，审批按钮正常；该次只读请求获准后返回 HTTP 200。
+
+Build 30 的源码经 [PR #149](https://github.com/Duoasa/QuotaView/pull/149) 合入 main 的 `4d3d575`。开发包的 265 个构建输入与 PR 提交一致，合并提交和 PR 文件树一致。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/44495287045) 和 [main CI](https://github.com/Duoasa/QuotaView/actions/runs/44496144889) 均通过。Build 31 的命令预览样式保留在本地。
 
 ## 前序开发：0.9.4 Build 29 / Codex 网络审批兼容
 
@@ -1494,11 +1520,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `b6c46ac`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.4 Build 14 / 内部 203 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `ccd9bb0`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.4 Build 35 / 内部 224 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-18，实际加载路径见 `.build/card-announcement-094b14-final/runtime-result.json` |
-| 源码与运行包 | 本地 Build 14 的 264 个生产输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-20，实际加载路径见 `.build/agent-disclosure-094b35/runtime/runtime-result.json` |
+| 源码与运行包 | 本地 Build 35 的 266 个生产输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

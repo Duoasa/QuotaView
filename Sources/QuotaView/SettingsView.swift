@@ -630,7 +630,7 @@ struct SettingsView: View {
     }
 
     private var codexConnectionSettings: some View {
-        NativeSettingsCard {
+        VStack(alignment: .leading, spacing: 0) {
             NativeSettingsRow(
                 title: copy.text("连接 Codex", "Connect Codex"),
                 subtitle: activityRuntime.connectionPresentation.automaticSubtitle(copy)

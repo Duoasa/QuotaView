@@ -1,6 +1,26 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 30 / 审批标题行跳转
+## 当前开发：0.9.4 Build 35 / Agent 连接详情原位展开
+
+[Agent 接入设置](agent-integrations.md#agent-接入设置)定义展开栏、标题行和接入开关的交互。
+
+## 前序开发：0.9.4 Build 34 / Agent 接入顶部的辅助功能权限
+
+[桌面会话导航](agent-integrations.md#桌面会话导航)记录系统权限的适用范围和开关行为。
+
+## 前序开发：0.9.4 Build 33 / 修复 DSH 普通任务的会话跳转
+
+官方 DSH 普通任务按原会话 ID 生成跳转目标，审批与完成详情均经过插件事件冒烟验证。
+
+## 前序开发：0.9.4 Build 32 / 多客户端原对话跳转
+
+Claude Code、官方 DSH、Antigravity App、Cursor 和 Devin Desktop 沿用 Codex 的详情入口。精确定位条件见[接入规格](agent-integrations.md#桌面会话导航)，标题行规则见[交互规格](../design/quotaview-island-production-interaction-review-2026-09-30.md#多客户端原对话跳转build-32)。
+
+## 前序开发：0.9.4 Build 31 / 命令预览文字按钮
+
+命令预览底部的查看、收起和复制操作使用纯文字按钮。
+
+## 前序开发：0.9.4 Build 30 / 审批标题行跳转
 
 [审批详情](../design/quotaview-island-production-interaction-review-2026-09-30.md#codex-各状态详情跳转build-28-本地测试)将跳转入口并入审批标题行右端。用户已在实际网络审批中确认标题对齐与审批按钮表现。
 

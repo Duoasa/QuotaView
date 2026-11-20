@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import SQLite3
 @testable import QuotaView
 @testable import QuotaViewCore
 
@@ -71,6 +72,97 @@ final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
             .taskDetails.values.compactMap(\.conversationURL)
         XCTAssertEqual(Set(targets).count, 2)
         _ = await store.stop()
+    }
+
+    func testNativeTargetsRemainProviderScopedAcrossAllDetailStates() throws {
+        let id = UUID(), text = id.uuidString.lowercased()
+        let rows: [(IslandConversationTarget, IslandAgentProvider, String, String)] = [
+            (.claude(id), .claudeCode, "claude://claude.ai/epitaxy/local_" + text, "com.anthropic.claudefordesktop"),
+            (.cursor(id), .cursor, "cursor.composer:" + text, "com.todesktop.230313mzl4w4u92"),
+            (.devin(text), .devinDesktop, "vscode-cascade-editor:/cascade-devin-acp/devin-cli/" + text, "com.exafunction.windsurf"),
+            (.dsh(text), .dsh, "quotaview-dsh-row://session/" + text, "com.deepseek.dsh"),
+            (.antigravity(id), .antigravity, "quotaview-antigravity-row://session/" + text, "com.google.antigravity")
+        ]
+        for (target, provider, expected, bundle) in rows {
+            for status in IslandTaskStatus.allCases {
+                var data = IslandTaskDetailData(entries: [], confirmation: nil, status: status, provider: provider, nativeConversation: target)
+                let url = try XCTUnwrap(data.conversationURL)
+                XCTAssertEqual(url.absoluteString, expected)
+                XCTAssertEqual(IslandConversationNavigation.bundleID(for: url), bundle)
+                data.provider = .devinCLI
+                XCTAssertNil(data.conversationURL)
+            }
+            let model = IslandLiveStore(), key = hash(expected)
+            model.setProvider(provider, for: key)
+            model.receiveLegacy(.init(event: .userPromptSubmit, sessionHash: key, turnHash: hash("turn"), source: .hook))
+            model.setConversation(target, for: key, provider: provider)
+            let card = try XCTUnwrap(model.tasks.first)
+            XCTAssertEqual(model.display(english: true, remaining: nil, enabled: true, privacy: false).taskDetails[card.id]?.nativeConversation, target)
+            XCTAssertNil(model.display(english: true, remaining: nil, enabled: true, privacy: true).taskDetails[card.id]?.nativeConversation)
+        }
+        XCTAssertNil(IslandConversationTarget.claudeHook(id).url)
+        XCTAssertNil(IslandConversationTarget.dsh("../elsewhere").url)
+        XCTAssertNil(IslandConversationTarget.devin("id?query").url)
+        XCTAssertNil(IslandConversationNavigation.bundleID(for: URL(string: "https://example.org")!))
+    }
+
+    func testClaudeMappingRequiresUniqueUnarchivedDesktopMetadata() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let directory = root.appendingPathComponent("account/org")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let hook = UUID(), a = UUID(), b = UUID()
+        func write(_ local: UUID, cli: UUID, archived: Bool) throws {
+            let name = "local_" + local.uuidString.lowercased()
+            let bytes = try JSONSerialization.data(withJSONObject: ["sessionId": name, "cliSessionId": cli.uuidString,
+                "title": "Same title", "isArchived": archived])
+            try bytes.write(to: directory.appendingPathComponent(name + ".json"))
+        }
+        try write(a, cli: hook, archived: false)
+        try write(b, cli: UUID(), archived: false)
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, root: root), a)
+        try write(b, cli: hook, archived: false)
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: hook, root: root))
+        try write(a, cli: hook, archived: true)
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, root: root), b)
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: UUID(), root: root))
+    }
+
+    func testCursorLocalComposerIndexAndAntigravityExactLink() throws {
+        let dbURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let id = UUID(), text = id.uuidString.lowercased()
+        XCTAssertFalse(IslandConversationTarget.cursorHasComposer(id, database: dbURL))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dbURL.path))
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(dbURL.path, &db), SQLITE_OK)
+        defer { sqlite3_close(db); try? FileManager.default.removeItem(at: dbURL) }
+        XCTAssertEqual(sqlite3_exec(db, "CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY); INSERT INTO cursorDiskKV VALUES ('composerData:" + text + "')", nil, nil, nil), SQLITE_OK)
+        XCTAssertTrue(IslandConversationTarget.cursorHasComposer(id, database: dbURL))
+        XCTAssertFalse(IslandConversationTarget.cursorHasComposer(UUID(), database: dbURL))
+        let local = "https://127.0.0.1:43210"
+        XCTAssertTrue(IslandConversationSidebar.matchesAntigravity(URL(string: local + "/c/" + text), session: text))
+        for address in [local + "/c/" + UUID().uuidString, local + "/other/" + text, "https://example.org/c/" + text] {
+            XCTAssertFalse(IslandConversationSidebar.matchesAntigravity(URL(string: address), session: text))
+        }
+    }
+
+    func testEditorPackageContainsChannelScopedHandlerAndManifest() throws {
+        for provider in [IslandAgentProvider.cursor, .devinDesktop] {
+            let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: temp) }
+            let client = try XCTUnwrap(IslandConversationEditor.client(provider))
+            let archive = try IslandConversationEditor.package(for: client, in: temp)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: archive.path))
+            let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: temp.appendingPathComponent("extension/package.json"))) as? [String: Any]
+            XCTAssertEqual(manifest?["activationEvents"] as? [String], ["onUri"])
+            XCTAssertEqual(manifest?["extensionKind"] as? [String], ["ui"])
+            let config = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: temp.appendingPathComponent("extension/navigation.json")))
+            XCTAssertEqual(config["scheme"], client.scheme)
+            XCTAssertEqual(config["support"], client.support.path)
+            let actual = try String(contentsOf: temp.appendingPathComponent("extension/extension.js"), encoding: .utf8)
+            XCTAssertEqual(actual, IslandConversationEditor.handler)
+        }
+        XCTAssertNil(IslandConversationEditor.client(.devinCLI))
     }
 
     func testConversationNavigationAcrossTaskStatesAndProviders() {

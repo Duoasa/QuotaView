@@ -172,18 +172,20 @@ struct IslandConversationButton: View {
     let language: AppPreferences.Language
     var fontSize: CGFloat = 12
     @State private var failed = false
+    @State private var opening: UUID?
 
     var body: some View {
         let copy = AppCopy(language: language)
         let title = failed ? copy.text("打开失败，重试", "Couldn’t open. Retry") : copy.text("前往对话", "Open conversation")
         Button {
-            let workspace = NSWorkspace.shared
-            guard let app = workspace.urlForApplication(withBundleIdentifier: "com.openai.codex") else {
-                failed = true
-                return
-            }
-            workspace.open([url], withApplicationAt: app, configuration: .init()) { _, error in
-                DispatchQueue.main.async { failed = error != nil }
+            guard opening == nil else { return }
+            let request = UUID(), target = url
+            opening = request
+            Task {
+                let success = await IslandConversationNavigation.open(target)
+                guard opening == request else { return }
+                failed = !success
+                opening = nil
             }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -198,6 +200,7 @@ struct IslandConversationButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+        .onChange(of: url) { _, _ in opening = nil; failed = false }
     }
 }
 

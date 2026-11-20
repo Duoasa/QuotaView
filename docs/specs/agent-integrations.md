@@ -2,6 +2,28 @@
 
 Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-10-09。
 
+## Agent 接入设置
+
+辅助功能权限位于列表顶部。点击 Agent 标题行，在该行下方展开连接详情，标题和设置共用同一背景，以分隔线区分。一次展开一个 Agent，再点同一行可收起。行末开关独立控制接入。
+
+## 桌面会话导航
+
+「Agent 接入」顶部、Codex 之前显示 QuotaView 的辅助功能权限开关。说明点名官方 DSH 和 Antigravity 的「前往对话」。开关显示 macOS 当前授权状态，点击进入系统设置管理授权，返回 QuotaView 时刷新。
+
+| 来源 | 任务与原对话的对应关系 |
+|---|---|
+| Claude Code | 用 Hook 的 CLI UUID 匹配 Claude 桌面元数据中的 `cliSessionId`。文件名须与 `sessionId` 相符，且只有一条未归档记录。按该桌面 ID 打开 Claude 的本地 Code 页面。 |
+| 官方 DSH | 标准桌面 profile 加载 QuotaView 的界面插件，通过官方侧栏扩展位置为现有会话行标记原始 ID。通过 macOS 辅助功能定位并点击该行，仅操作 `com.deepseek.dsh`。 |
+| Antigravity App | 通过 Hook 的桌面来源或唯一的桌面日志目录确认来源。只在官方应用内定位同源、同端口、路径为 `/c/<UUID>` 的侧栏链接。 |
+| Cursor | 查询本机索引中与 Hook UUID 对应的 `composerData` 键。官方编辑器内的 QuotaView 扩展按原始 ID 打开本机 Composer。 |
+| Devin Desktop | 接受来自桌面进程的 Devin Local Hook 和本地会话存储标识。扩展通过 Devin Local 的连接器及原始会话 ID 打开对应编辑器。 |
+
+Build 33 修复原生任务事件的处理顺序。普通任务在读取客户端来源和会话元数据后生成跳转目标，DSH 的审批和完成事件使用同一个官方会话 ID。
+
+Cursor 和 Devin Desktop 启用连接时，通过本机官方编辑器的扩展安装命令注册渠道专属的本地 VSIX。点击后，编辑器扩展读取本次有时限的请求，打开指定会话并回传结果。关闭连接时移除该渠道的导航扩展。DSH 和 Antigravity 按已有辅助功能权限工作。折叠工作区、归档会话或侧栏未挂载相应行时，入口可能隐藏。
+
+已检查 Claude 3.6556.2、DeepSeek Harness 0.2.2-rc.1、Antigravity 2.33.0、Cursor 3.30.14 和 Devin 3.14.30825。Cursor、Devin 的官方 CLI 已在隔离扩展目录完成真实安装测试。原客户端实际选中会话的效果由用户验收。
+
 ## Antigravity（0.9.4 Build 18）
 
 Antigravity 用量页使用全宽汇总卡（0.9.4 Build 23）。上排并列显示 Gemini 和 Claude/GPT 周额度，额外窗口每行两组续排；下排依次显示最近一天、30 天、累计 Token 和订阅套餐。套餐取账户快照中的简短档位名，缺失时显示「—」。
