@@ -1,4 +1,14 @@
 {
+  "Forward": {
+    "ja": "進む",
+    "ko": "앞으로",
+    "es": "Adelante"
+  },
+  "Enable integration": {
+    "ja": "連携を有効にする",
+    "ko": "연동 활성화",
+    "es": "Activar integración"
+  },
   "Accessibility permission": {
     "ja": "アクセシビリティ権限",
     "ko": "손쉬운 사용 권한",
@@ -2584,10 +2594,10 @@
     "ko": "한도 초기화 검토 및 확인",
     "es": "Revisar y confirmar el restablecimiento de cuota"
   },
-  "General": {
-    "ja": "一般",
-    "ko": "일반",
-    "es": "General"
+  "General & Display": {
+    "ja": "一般と表示",
+    "ko": "일반 및 디스플레이",
+    "es": "General y pantalla"
   },
   "Island": {
     "ja": "アイランド",
@@ -3938,5 +3948,25 @@
     "ja": "カードに表示する出力速度、タスクのトークン数、所要時間、モデルを選択できます。変更はすぐに反映され、自動保存されます。",
     "ko": "카드에 표시할 출력 속도, 작업 토큰, 소요 시간, 모델을 선택하세요. 변경 사항은 즉시 적용되고 자동으로 저장됩니다.",
     "es": "Elige si las tarjetas muestran la velocidad de salida, los tokens de la tarea, la duración y el modelo. Los cambios se aplican al instante y se guardan automáticamente."
+  },
+  "Open the original conversation from task details in six desktop clients, including Codex.": {
+    "ja": "Codex など6つのデスクトップクライアントで、タスクの詳細から元の会話を開けます。",
+    "ko": "Codex를 포함한 데스크톱 클라이언트 6개에서 작업 세부 정보로부터 원래 대화를 열 수 있습니다.",
+    "es": "Abre la conversación original desde los detalles de la tarea en seis clientes de escritorio, incluido Codex."
+  },
+  "Check Accessibility permission at the top of the list, then select an agent to manage its connection.": {
+    "ja": "リスト上部でアクセシビリティの許可状況を確認でき、Agent を選ぶと接続を管理できます。",
+    "ko": "목록 상단에서 손쉬운 사용 권한을 확인하고 Agent를 선택해 연결을 관리하세요.",
+    "es": "Consulta el permiso de accesibilidad en la parte superior de la lista y selecciona un agente para gestionar su conexión."
+  },
+  "Settings layout": {
+    "ja": "設定のレイアウト",
+    "ko": "설정 레이아웃",
+    "es": "Diseño de los ajustes"
+  },
+  "Choose Light, Dark, or Auto in General & Display. Quit QuotaView is now at the bottom of the sidebar.": {
+    "ja": "「一般と表示」でライト、ダーク、自動を切り替えられます。終了ボタンはサイドバーの下部に移動しました。",
+    "ko": "‘일반 및 디스플레이’에서 라이트, 다크 또는 자동 모드를 선택하세요. 종료 버튼은 사이드바 하단에 있습니다.",
+    "es": "Elige el aspecto claro, oscuro o automático en «General y pantalla». El botón para salir de QuotaView está al pie de la barra lateral."
   }
 }

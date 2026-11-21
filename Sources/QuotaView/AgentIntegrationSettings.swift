@@ -14,87 +14,92 @@ struct AgentIntegrationSettings<Details: View>: View {
     @ObservedObject var copilotCLI: NativeAgentRuntime
     @ObservedObject var devinDesktop: NativeAgentRuntime
     @ObservedObject var devinCLI: NativeAgentRuntime
-    @State private var expanded: IslandAgentProvider?
+    let selected: IslandAgentProvider?
+    let openAgent: (IslandAgentProvider) -> Void
     let codexDetails: () -> Details
     private var copy: AppCopy { preferences.copy }
 
-    init(preferences: AppPreferences, runtime: CodexActivityRuntime, @ViewBuilder codexDetails: @escaping () -> Details) {
+    init(preferences: AppPreferences, runtime: CodexActivityRuntime, selected: IslandAgentProvider?,
+         openAgent: @escaping (IslandAgentProvider) -> Void, @ViewBuilder codexDetails: @escaping () -> Details) {
+        self.selected = selected; self.openAgent = openAgent
         self.preferences = preferences; codex = runtime; claude = runtime.claudeCode
         dsh = runtime.dsh; kimi = runtime.kimiCode; self.codexDetails = codexDetails
         cursor = runtime.cursor; geminiCLI = runtime.geminiCLI; openCode = runtime.openCode; antigravity = runtime.antigravity; copilotCLI = runtime.copilotCLI
         devinDesktop = runtime.devinDesktop; devinCLI = runtime.devinCLI
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: SettingsLayoutMetrics.itemSpacing) {
-            ConversationAccessibilitySettings(copy: copy)
-            providerGroup(.codex, isOn: $preferences.codexIntegrationEnabled)
-            providerGroup(.claudeCode, isOn: $preferences.claudeCodeEnabled)
-            providerGroup(.dsh, isOn: $preferences.dshEnabled)
-            providerGroup(.kimiCode, isOn: $preferences.kimiCodeEnabled)
-            providerGroup(.cursor, isOn: $preferences.cursorEnabled)
-            providerGroup(.geminiCLI, isOn: $preferences.geminiCLIEnabled)
-            providerGroup(.openCode, isOn: $preferences.openCodeEnabled)
-            providerGroup(.antigravity, isOn: $preferences.antigravityEnabled)
-            providerGroup(.copilotCLI, isOn: $preferences.copilotCLIEnabled)
-            providerGroup(.devinDesktop, isOn: $preferences.devinDesktopEnabled)
-            providerGroup(.devinCLI, isOn: $preferences.devinCLIEnabled)
-        }
-    }
-    private func providerGroup(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
-        NativeSettingsCard {
-            row(provider, isOn: isOn)
-            if expanded == provider {
+        if let selected {
+            let enabled = integrationBinding(selected)
+            let title = copy.text("启用接入", "Enable integration")
+            NativeSettingsCard {
+                NativeSettingsRow(title: title, subtitle: presentation(selected, enabled: enabled.wrappedValue)) {
+                    Toggle(title, isOn: enabled).labelsHidden().toggleStyle(.switch)
+                }
                 NativeSettingsDivider()
-                Group {
-                    switch provider {
-                    case .codex: codexDetails().disabled(!preferences.codexIntegrationEnabled)
-                    case .claudeCode: ClaudeCodeConnectionSettings(runtime: claude, preferences: preferences)
-                    case .dsh: nativeDetails(dsh)
-                    case .kimiCode: nativeDetails(kimi)
-                    case .cursor: nativeDetails(cursor)
-                    case .geminiCLI: nativeDetails(geminiCLI)
-                    case .openCode: nativeDetails(openCode)
-                    case .antigravity: nativeDetails(antigravity)
-                    case .copilotCLI: nativeDetails(copilotCLI)
-                    case .devinDesktop: nativeDetails(devinDesktop)
-                    case .devinCLI: nativeDetails(devinCLI)
+                if selected == .codex {
+                    codexDetails().disabled(!enabled.wrappedValue)
+                } else if selected == .claudeCode {
+                    ClaudeCodeConnectionSettings(runtime: claude, preferences: preferences)
+                } else if let runtime = nativeRuntime(selected) {
+                    nativeDetails(runtime)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: SettingsLayoutMetrics.sectionSpacing) {
+                ConversationAccessibilitySettings(copy: copy)
+                VStack(alignment: .leading, spacing: SettingsLayoutMetrics.headingSpacing) {
+                    Text("Agent").font(.system(size: 13, weight: .semibold))
+                        .padding(.leading, SettingsLayoutMetrics.cardInset)
+                        .accessibilityAddTraits(.isHeader)
+                    NativeSettingsCard {
+                        ForEach(IslandAgentProvider.allCases, id: \.self) { provider in
+                            if provider != IslandAgentProvider.allCases.first {
+                                NativeSettingsDivider()
+                            }
+                            row(provider)
+                        }
                     }
                 }
-                .padding(.leading, 22)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
-    private func row(_ provider: IslandAgentProvider, isOn: Binding<Bool>) -> some View {
-        let state = presentation(provider, enabled: isOn.wrappedValue)
-        return HStack(spacing: 12) {
-            Button { expanded = expanded == provider ? nil : provider } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: expanded == provider ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
-                        .frame(width: 12, height: 22).accessibilityHidden(true)
-                    AgentSettingsIcon(provider: provider)
-                    Text(provider.displayName).font(.system(size: 13, weight: .medium))
-                    Spacer(minLength: 8)
-                    Label(state.title, systemImage: state.symbol)
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(state.color)
-                        .fixedSize()
-                        .frame(width: preferences.resolvedLanguage.usesLatinLayout ? 126 : 90, alignment: .leading)
-                }.contentShape(Rectangle())
-            }.buttonStyle(.plain)
-                .help(copy.text("显示连接设置", "Show connection settings"))
-                .accessibilityValue(expanded == provider ? copy.text("已展开", "Expanded") : copy.text("已收起", "Collapsed"))
-            Toggle(provider.displayName, isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.mini)
-                .tint(Color(nsColor: .secondaryLabelColor))
+
+    private func row(_ provider: IslandAgentProvider) -> some View {
+        let status = presentation(provider, enabled: integrationBinding(provider).wrappedValue)
+        return Button { openAgent(provider) } label: {
+            SettingsListRow(title: provider.displayName, subtitle: status) {
+                AgentSettingsIcon(provider: provider)
+            } control: {
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
         }
-        .frame(minHeight: SettingsLayoutMetrics.rowMinHeight)
-        .padding(.horizontal, SettingsLayoutMetrics.cardInset)
+        .buttonStyle(.plain)
+        .help(copy.text("显示连接设置", "Show connection settings"))
     }
-    private func presentation(_ provider: IslandAgentProvider, enabled: Bool) -> (title: String, symbol: String, color: Color) {
-        let connected = (copy.text("已连接", "Connected"), "checkmark.circle.fill", Color(nsColor: .systemGreen))
-        let waiting = (copy.text("等待会话", "Waiting"), "clock", Color(nsColor: .secondaryLabelColor))
-        let configuring = (copy.text("配置中", "Configuring"), "arrow.triangle.2.circlepath", Color(nsColor: .systemOrange))
-        let failed = (copy.text("需要处理", "Needs attention"), "exclamationmark.circle.fill", Color(nsColor: .systemOrange))
+
+    private func integrationBinding(_ provider: IslandAgentProvider) -> Binding<Bool> {
+        switch provider {
+        case .codex: $preferences.codexIntegrationEnabled
+        case .claudeCode: $preferences.claudeCodeEnabled
+        case .dsh: $preferences.dshEnabled
+        case .kimiCode: $preferences.kimiCodeEnabled
+        case .cursor: $preferences.cursorEnabled
+        case .geminiCLI: $preferences.geminiCLIEnabled
+        case .openCode: $preferences.openCodeEnabled
+        case .antigravity: $preferences.antigravityEnabled
+        case .copilotCLI: $preferences.copilotCLIEnabled
+        case .devinDesktop: $preferences.devinDesktopEnabled
+        case .devinCLI: $preferences.devinCLIEnabled
+        }
+    }
+
+    private func presentation(_ provider: IslandAgentProvider, enabled: Bool) -> String {
+        let connected = copy.text("已连接", "Connected")
+        let waiting = copy.text("等待会话", "Waiting")
+        let configuring = copy.text("配置中", "Configuring")
+        let failed = copy.text("需要处理", "Needs attention")
         if let runtime = nativeRuntime(provider) {
             if runtime.status == .failed { return failed }
             if runtime.status == .configuring { return configuring }
@@ -103,7 +108,7 @@ struct AgentIntegrationSettings<Details: View>: View {
             if case .failed = claude.status { return failed }
             if case .configuring = claude.status { return configuring }
         }
-        if !enabled { return (copy.text("已停用", "Disabled"), "minus.circle", .secondary) }
+        if !enabled { return copy.text("已停用", "Disabled") }
         switch provider {
         case .codex:
             if codex.isNativeActivityConnected { return connected }
@@ -146,7 +151,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                 NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
                     subtitle: copy.text("运行命令或读写文件前，可在岛内允许一次、拒绝或交回 Antigravity。", "Review commands, file reads, and edits before execution, or hand them back to Antigravity.")) {
                     Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.antigravityInteractiveApprovals)
-                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
                         .disabled(!runtime.enabled)
                 }
                 NativeSettingsDivider()
@@ -155,7 +160,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                 NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
                     subtitle: copy.text("仅本次允许或拒绝；关闭后在 DSH 中处理。", "Allow once or decline; when off, handle requests in DSH.")) {
                     Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.dshInteractiveApprovals)
-                        .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
                         .disabled(!runtime.enabled)
                 }
                 NativeSettingsDivider()
@@ -254,19 +259,19 @@ private struct AgentSettingsIcon: View {
         provider == .claudeCode ? .clear : .white
     }
     var body: some View {
+        let size = SettingsLayoutMetrics.agentIconSize
         ZStack {
             background
-            if ([IslandAgentProvider.codex, .claudeCode, .antigravity].contains(provider)),
-               let icon = IslandProviderIcon.settingsMark(for: provider) {
-                // Official macOS app icons include about 10% transparent canvas on each edge.
-                Image(nsImage: icon).resizable().scaledToFit().frame(width: 27.5, height: 27.5)
-            } else if let icon = IslandProviderIcon.settingsMark(for: provider) {
+            if let icon = IslandProviderIcon.settingsMark(for: provider) {
+                // Official app artwork has a transparent margin around its tile.
+                let isAppIcon = [IslandAgentProvider.codex, .claudeCode, .antigravity].contains(provider)
+                let markSize = isAppIcon ? size * 1.25 : (provider == .kimiCode ? size : 19)
                 Image(nsImage: icon).resizable().scaledToFit()
-                    .frame(width: provider == .kimiCode ? 22 : 16, height: provider == .kimiCode ? 22 : 16)
+                    .frame(width: markSize, height: markSize)
             }
         }
-        .frame(width: 22, height: 22)
-        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .accessibilityHidden(true)
         .allowsHitTesting(false)
     }

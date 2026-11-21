@@ -182,7 +182,7 @@ struct CodexPublicTraceItem: Equatable {
     var status: String?; var output: String?; var sourceTruncated = false; var exitCode: Int?
     var messagePhase: String? = nil
 }
-enum IslandAgentProvider: String, Equatable, Sendable {
+enum IslandAgentProvider: String, CaseIterable, Equatable, Sendable {
     case codex, claudeCode, dsh, kimiCode, cursor, geminiCLI, openCode, antigravity, copilotCLI, devinDesktop, devinCLI
     var isObserverOnly: Bool { self != .codex && self != .claudeCode }
     var isDevin: Bool { self == .devinDesktop || self == .devinCLI }
