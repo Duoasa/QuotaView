@@ -2,7 +2,7 @@
 
 ## 当前开发：0.9.7 Build 1 / 内部 238
 
-用户授权发布 macOS `v0.9.7-build.1`、`QuotaView-v0.9.7-build.1.zip` 并纳入签名 appcast。发布前稳定及回滚基线为 `v0.9.3-build.1`。当前公开版本见[版本历史](VERSION_HISTORY.md#当前最新版本)。用户已同意新的 Apple 开发者协议，公证服务访问已恢复。发布进度见[规格](docs/specs/release-0.9.7.md)。
+macOS [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1) 已合并 main 并发布为 Stable / Latest，签名 appcast 已上线且公开回下载验证通过。回滚基线为 `v0.9.3-build.1`。本地开发运行包已同步。完整发布、签名、CI 和资产事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，范围见[发布规格](docs/specs/release-0.9.7.md)。
 
 ## 前序开发：0.9.4 Build 48 / 简要更新公告
 
@@ -1583,7 +1583,7 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
 | 最近运行核验 | 2026-11-21，实际加载路径见 `.build/release-097/runtime/runtime-result.json` |
 | 源码与运行包 | 本地 0.9.7 Build 1 的 266 个生产输入、开发包清单与运行身份已核对 |
-| 公开稳定版 | 0.9.3 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
+| 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 
 PID 仅是这次核验记录；继续任务先核对 `git worktree list`、目标 Git 状态及实际进程，不按目录名、版本号或历史 PID 推断源码。

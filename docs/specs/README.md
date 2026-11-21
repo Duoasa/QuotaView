@@ -2,7 +2,7 @@
 
 ## 当前开发：0.9.7 Build 1 / macOS 发布
 
-[发布规格](release-0.9.7.md)记录版本身份、准入和回滚基线。
+[0.9.7 Build 1](release-0.9.7.md) 已发布为 macOS Stable / Latest，公开 ZIP 与在线签名 appcast 已核验。
 
 ## 前序开发：0.9.4 Build 48 / 更新与公告
 
