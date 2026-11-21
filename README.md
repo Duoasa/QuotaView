@@ -4,9 +4,9 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.3_Build_1-blue" alt="0.9.3 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.7_Build_1-blue" alt="0.9.7 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights</h2>
 
-<p>A full feature overview of <strong>macOS 0.9.7 release candidate</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
+<p>A full feature overview of <strong>macOS 0.9.7</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
 <table class="highlights">
 <tr>
@@ -163,7 +163,7 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip">QuotaView 0.9.7 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
@@ -175,7 +175,7 @@
 <li>Choose output rate, tokens, duration, and model in Card settings. A ripple and orb checkmark mark task completion.</li>
 <li>Choose Light, Dark, or Auto in General & Display and manage individual connections in Agent integration. Quit QuotaView sits at the bottom of the sidebar.</li>
 </ul>
-<p><a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 

@@ -2,7 +2,7 @@
 
 ## 当前开发：0.9.7 Build 1 / 内部 238
 
-用户授权发布 macOS `v0.9.7-build.1`、`QuotaView-v0.9.7-build.1.zip` 并纳入签名 appcast。发布前稳定及回滚基线为 `v0.9.3-build.1`。当前公开版本见[版本历史](VERSION_HISTORY.md#当前最新版本)。Apple 公证接口预检返回 403，提示团队协议待处理。发布进度见[规格](docs/specs/release-0.9.7.md)。
+用户授权发布 macOS `v0.9.7-build.1`、`QuotaView-v0.9.7-build.1.zip` 并纳入签名 appcast。发布前稳定及回滚基线为 `v0.9.3-build.1`。当前公开版本见[版本历史](VERSION_HISTORY.md#当前最新版本)。用户已同意新的 Apple 开发者协议，公证服务访问已恢复。发布进度见[规格](docs/specs/release-0.9.7.md)。
 
 ## 前序开发：0.9.4 Build 48 / 简要更新公告
 

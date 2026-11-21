@@ -4,9 +4,9 @@
 
 <p align="center"><strong>多 Agent 状态与用量灵动岛。</strong><br>任务、审批与用量，都在桌面顶部。</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.3_Build_1-blue" alt="0.9.3 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.7_Build_1-blue" alt="0.9.7 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
 
 <p align="center"><strong>简体中文</strong> · <a href="README.md">English</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights · 功能亮点</h2>
 
-<p>以下为 <strong>macOS 0.9.7 候选版</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
+<p>以下为 <strong>macOS 0.9.7</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
 
 <table class="highlights">
 <tr>
@@ -163,7 +163,7 @@
 
 <p><strong>macOS 14+</strong> · Apple silicon + Intel 通用包 · Developer ID 签名 · Apple 公证</p>
 
-<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → Agent 接入」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
+<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip">QuotaView 0.9.7 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → Agent 接入」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
 
 <p><strong>默认开启自动检查更新</strong>，已有用户偏好保留，可随时在设置中关闭；下载与安装仍需确认。</p>
 
@@ -175,7 +175,7 @@
 <li>在「卡片设置」选择显示输出速率、Token、耗时和模型。任务完成时会显示冲击波和对号动效。</li>
 <li>在「通用与显示」切换浅色、深色或自动外观，在「Agent 接入」逐项管理连接。退出按钮位于设置左栏底部。</li>
 </ul>
-<p><a href="VERSION_HISTORY.md">版本历史</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
 </details>
 
 
