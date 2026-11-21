@@ -70,10 +70,7 @@ final class QuotaViewSettingsWindowController {
                 .resizable,
                 .fullSizeContentView
             ]
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.titlebarSeparatorStyle = .none
-            window.toolbar = nil
+            SettingsWindowMetrics.configureTitlebar(of: window)
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
             SettingsWindowMetrics.applySizingPolicy(to: window)
@@ -825,10 +822,7 @@ final class MenuBarPanelController: NSObject {
                 .resizable,
                 .fullSizeContentView
             ]
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.titlebarSeparatorStyle = .none
-            window.toolbar = nil
+            SettingsWindowMetrics.configureTitlebar(of: window)
             window.isMovableByWindowBackground = true
             SettingsWindowMetrics.applyOuterShape(to: window)
             SettingsWindowMetrics.applySizingPolicy(to: window)

@@ -64,8 +64,10 @@ struct AnnouncementContent {
         let version = (bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.isEmpty ? nil : VersionTransition(previous: nil, current: $0) }
         return Self(title: copy.text("更新与公告", "Updates & announcements"), version: version, sections: [
-            // Development 0.9.4 changes since public v0.9.3-build.1.
+            // 0.9.7 changes since public v0.9.3-build.1.
             Section(id: "highlights", category: .highlight, items: [
+                Item(id: "open-conversation", title: copy.text("前往对话", "Open conversation"),
+                     body: copy.text("从任务详情一键回到对应的桌面对话，支持 Codex 等六个客户端。", "Open the original conversation from task details in six desktop clients, including Codex.")),
                 Item(id: "antigravity-integration", title: copy.text("Antigravity 接入", "Antigravity integration"),
                      body: copy.text("在灵动岛查看 Antigravity 任务与用量，处理工具审批。", "View Antigravity tasks and usage, and review tool requests in the island.")),
                 Item(id: "task-output-rate", title: copy.text("任务输出速率", "Task output rate"),
@@ -78,6 +80,10 @@ struct AnnouncementContent {
                      body: copy.text("AI 球内的极光化为对号。", "A ribbon of light inside the AI orb turns into a checkmark."))
             ]),
             Section(id: "improvements", category: .improvement, items: [
+                Item(id: "agent-connection-settings", title: copy.text("Agent 接入", "Agent integration"),
+                     body: copy.text("在列表顶部查看辅助功能权限，点选 Agent 管理其连接。", "Check Accessibility permission at the top of the list, then select an agent to manage its connection.")),
+                Item(id: "settings-appearance-layout", title: copy.text("设置布局", "Settings layout"),
+                     body: copy.text("在「通用与显示」切换浅色、深色或自动外观。退出按钮移至左栏底部。", "Choose Light, Dark, or Auto in General & Display. Quit QuotaView is now at the bottom of the sidebar.")),
                 Item(id: "usage-page-layout-performance", title: copy.text("用量页优化", "Usage page improvements"),
                      body: copy.text("额度和 Token 统计集中展示，打开用量页和切换 Agent 更流畅。", "Quotas and token totals are grouped together, and opening the usage page or switching agents is smoother.")),
                 Item(id: "task-rate-snapshot", title: copy.text("速率快照", "Rate snapshots"),
@@ -95,7 +101,7 @@ struct BrandAnnouncementCampaign {
     let releaseBuilds: Set<String>
 
     // Each approved stable release has an independent acknowledgement.
-    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149", "158", "189"])
+    static let current = Self(id: "brand-refresh-2026", releaseBuilds: ["102", "149", "158", "189", "238"])
     var storageKey: String { "announcement.\(id).acknowledgedBuilds" }
 
     func shouldPresent(build: String, acknowledged: Set<String>) -> Bool {

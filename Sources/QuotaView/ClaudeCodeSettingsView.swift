@@ -32,7 +32,7 @@ struct ClaudeCodeConnectionSettings: View {
             ) {
                 Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
                        isOn: $preferences.claudeCodeInteractiveApprovals)
-                    .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small)
                     .disabled(!preferences.claudeCodeEnabled)
             }
             NativeSettingsDivider()
@@ -42,7 +42,7 @@ struct ClaudeCodeConnectionSettings: View {
                                     "5-hour and weekly usage; keeps your status line output.")
             ) {
                 Toggle(copy.text("读取官方用量窗口", "Read official usage windows"), isOn: $preferences.claudeCodeStatusLineEnabled)
-                    .labelsHidden().toggleStyle(.switch).tint(Color(nsColor: .secondaryLabelColor)).controlSize(.small)
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small)
                     .disabled(!preferences.claudeCodeEnabled)
             }
             NativeSettingsDivider()

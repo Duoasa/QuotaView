@@ -1,6 +1,62 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.4 Build 35 / Agent 连接详情原位展开
+## 当前开发：0.9.7 Build 1 / macOS 发布
+
+[发布规格](release-0.9.7.md)记录版本身份、准入和回滚基线。
+
+## 前序开发：0.9.4 Build 48 / 更新与公告
+
+[公告](brand-announcement.md)新增三条简述，介绍会话跳转、Agent 接入及设置布局。
+
+## 前序开发：0.9.4 Build 47 / 退出按钮同心圆角
+
+[退出按钮](../design/QUOTAVIEW_UI_RULES.md#设置侧栏退出入口build-46)的左下角与窗口左下角采用同心连续圆角。
+
+## 前序开发：0.9.4 Build 46 / 设置侧栏退出入口
+
+[退出按钮](../design/QUOTAVIEW_UI_RULES.md#设置侧栏退出入口build-46)固定于设置左栏底部，点击后弹出退出确认框。
+
+## 前序开发：0.9.4 Build 45 / 原生窗口控制按钮
+
+[设置窗口控制按钮](../design/QUOTAVIEW_UI_RULES.md#设置窗口控制按钮build-45)交由 AppKit 排列，与系统设置标题栏对齐。
+
+## 前序开发：0.9.4 Build 44 / 通用与显示
+
+[外观](island-glass-appearance.md)移至「通用与显示」首行，经典纯色下仍可调整设置窗口的浅色、深色或自动外观。
+
+## 前序开发：0.9.4 Build 43 / 设置详情行图标
+
+[常规设置行图标](../design/QUOTAVIEW_UI_RULES.md#设置详情行图标build-43)采用系统「聚焦」应用列表的 20 pt 尺寸，「Agent 接入」沿用 26 pt。
+
+## 前序开发：0.9.4 Build 42 / 统一设置列表排版
+
+八个页面及 Agent 二级页共用[设置列表排版](../design/QUOTAVIEW_UI_RULES.md#设置列表排版build-42)。行高、图标、标题与说明间距、分隔线沿用 Agent 列表的系统实测值。
+
+## 前序开发：0.9.4 Build 41 / 设置标题栏与滚动分隔线
+
+[设置标题栏](../design/QUOTAVIEW_UI_RULES.md#设置标题栏build-41)采用系统设置的标题栏尺寸和纯色背景，内容滚动后显示底部分隔线。
+
+## 前序开发：0.9.4 Build 40 / Agent 接入行尺寸
+
+[Agent 接入列表](agent-integrations.md#agent-接入设置)采用本机系统设置通知列表的行高、图标尺寸与内边距。
+
+## 前序开发：0.9.4 Build 39 / 预览区滚动分隔线
+
+[固定预览区](../design/QUOTAVIEW_UI_RULES.md#灵动岛设置预览区纯色背景build-38)滚动时显示底部分隔线。
+
+## 前序开发：0.9.4 Build 38 / 设置预览区纯色背景
+
+[预览区背景](../design/QUOTAVIEW_UI_RULES.md#灵动岛设置预览区纯色背景build-38)与标题栏同色，滚动时固定。
+
+## 前序开发：0.9.4 Build 37 / 设置窗口配色
+
+[设置窗口配色与玻璃外观联动](../design/QUOTAVIEW_UI_RULES.md#设置窗口与外观联动build-44)记录浅色、深色、自动模式和蓝色选中态。
+
+## 前序开发：0.9.4 Build 36 / Agent 接入二级页面
+
+[Agent 接入设置](agent-integrations.md#agent-接入设置)采用分组列表、独立详情和设置窗口双向导航。
+
+## 前序开发：0.9.4 Build 35 / Agent 连接详情原位展开
 
 [Agent 接入设置](agent-integrations.md#agent-接入设置)定义展开栏、标题行和接入开关的交互。
 

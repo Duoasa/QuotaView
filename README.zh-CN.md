@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights · 功能亮点</h2>
 
-<p>以下为 <strong>macOS 0.9.3</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
+<p>以下为 <strong>macOS 0.9.7 候选版</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
 
 <table class="highlights">
 <tr>
@@ -35,7 +35,7 @@
 <p><strong>✋ 审批与问题，就地处理</strong></p>
 <ul>
 <li>在确认之前查看命令、工作目录、原因和权限范围。</li>
-<li>支持的 Codex、Claude Code、DSH 权限请求可直接在灵动岛允许或拒绝。</li>
+<li>支持的 Codex、Claude Code、DSH 和 Antigravity 权限请求可直接在灵动岛允许或拒绝。</li>
 <li>支持的 Codex 问题与 Claude Code 单选问题可在岛内回复。</li>
 <li>不支持的请求或表单提示回到原客户端处理，保留原生确认流程。</li>
 </ul>
@@ -74,7 +74,7 @@
 <td width="50%" valign="top">
 <p><strong>⚡ 本地处理，按需工作</strong></p>
 <ul>
-<li>统一管理 10 个 Agent 接入入口，各自启用、停用并查看连接状态。</li>
+<li>统一管理 11 个 Agent 接入入口，各自启用、停用并查看连接状态。</li>
 <li>任务信息在本机处理；通过本地接口、会话记录、Hook 或插件连接。</li>
 <li>减少后台重复读取，Claude 转录后台解析，特效渲染器按需加载。</li>
 <li>Developer ID 签名与 Apple 公证；默认自动检查更新，下载和安装由你确认。</li>
@@ -89,7 +89,7 @@
 <a name="supported-agents"></a>
 <h2>支持的 Agent</h2>
 
-<p>在「设置 → 连接」按需启用，各入口独立管理。</p>
+<p>在「设置 → Agent 接入」按需启用，各入口独立管理。</p>
 
 <table class="agents">
 <tr>
@@ -106,9 +106,13 @@
 <td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>预览</sub></td>
 <td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>预览</sub></td>
 </tr>
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/AntigravityApplicationIcon.imageset/Antigravity.png" alt="Antigravity" width="44"><br><strong>Antigravity</strong></td>
+</tr>
 </table>
 
-<p><strong>审批与问题回复：</strong> Codex 与 Claude Code 的受支持请求可在灵动岛处理；其他入口在原客户端确认。Cursor 当前不提供权限提醒。</p>
+<p><strong>审批与回答：</strong>Codex、Claude Code、DSH 和 Antigravity 支持在岛内处理部分审批。Codex 和 Claude Code 还支持回答部分问题。</p>
+<p><strong>前往对话：</strong>能定位原会话时，可从任务详情返回 Codex、Claude Code 桌面会话、官方 DSH、Antigravity、Cursor 或 Devin Desktop。DSH 和 Antigravity 需要辅助功能权限，可在「Agent 接入」顶部查看授权状态。</p>
 
 <p><strong>Devin：</strong> Desktop 与 CLI 分开展示。Desktop 仅接入本机 Devin Local；模型与本轮 Token 依赖兼容的本地记录，建议更新后开启新一轮任务。</p>
 
@@ -121,6 +125,7 @@
 <thead><tr><th>Agent</th><th>任务状态</th><th>审批与回复</th><th>模型与用量</th></tr></thead>
 <tbody><tr><td>Codex</td><td>任务、工具与可用的父子任务</td><td>支持的审批与问题可在岛内处理</td><td>模型、Token、额度、Credits、历史与估算成本</td></tr>
 <tr><td>Claude Code</td><td>任务、工具与完成内容</td><td>支持的审批与单选问题可在岛内处理</td><td>模型、Token、历史与估算成本；官方额度按需采集</td></tr>
+<tr><td>Antigravity</td><td>本地会话与工具活动</td><td>支持岛内工具审批</td><td>本机日志提供 Token 历史，已安装的 CodexBar 可提供账户额度</td></tr>
 <tr><td>DSH</td><td>原生插件事件、会话标题、最终回答与可用的子会话</td><td>支持的工具请求可在岛内审批，其余回 DSH 处理</td><td>事件提供的模型与 Token</td></tr>
 <tr><td>Kimi Code</td><td>Hook 任务、工具与状态</td><td>权限提醒，原客户端确认</td><td>事件提供的模型；无账户额度面板</td></tr>
 <tr><td>Cursor · 预览</td><td>本地 Hook 任务与工具状态</td><td>原客户端确认；不提供权限提醒</td><td>事件提供的模型；无账户额度面板</td></tr>
@@ -158,26 +163,26 @@
 
 <p><strong>macOS 14+</strong> · Apple silicon + Intel 通用包 · Developer ID 签名 · Apple 公证</p>
 
-<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → 连接」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
+<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → Agent 接入」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
 
 <p><strong>默认开启自动检查更新</strong>，已有用户偏好保留，可随时在设置中关闭；下载与安装仍需确认。</p>
 
 <details>
-<summary><strong>0.9.3 本次更新</strong></summary>
+<summary><strong>0.9.7 本次更新</strong></summary>
 <ul>
-<li>重置卡新增粒子消散与流畅递补，完善确认提示和空状态。</li>
-<li>设置页退出按钮使用红色玻璃并固定右下角，优化留白与窗口最小高度。</li>
-<li>刷子图标明确卡片清理含义，仅移除灵动岛卡片，保留原任务与聊天。</li>
-<li>支持列表中的 Agent 图标统一圆角矩形底。</li>
+<li>从任务详情返回六款桌面客户端中的原对话，审批与回答入口仍在原处。</li>
+<li>新增 Antigravity 接入，用量页集中展示额度和 Token 统计。</li>
+<li>在「卡片设置」选择显示输出速率、Token、耗时和模型。任务完成时会显示冲击波和对号动效。</li>
+<li>在「通用与显示」切换浅色、深色或自动外观，在「Agent 接入」逐项管理连接。退出按钮位于设置左栏底部。</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
+<p><a href="VERSION_HISTORY.md">版本历史</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · 单独说明</h2>
 
-<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.3。</p>
+<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.7。</p>
 
 <ul>
 <li>提供纯色灵动岛、任务状态、兼容客户端的审批和问题回复、用量统计、AI 球与量子噪点。</li>

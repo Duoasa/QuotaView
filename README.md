@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights</h2>
 
-<p>A full feature overview of <strong>macOS 0.9.3</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
+<p>A full feature overview of <strong>macOS 0.9.7 release candidate</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
 <table class="highlights">
 <tr>
@@ -35,7 +35,7 @@
 <p><strong>✋ Approvals and answers in place</strong></p>
 <ul>
 <li>Review commands, working directories, reasons, and permission scopes before deciding.</li>
-<li>Allow or deny supported Codex, Claude Code, and DSH permission requests from the Island.</li>
+<li>Allow or deny supported Codex, Claude Code, DSH, and Antigravity permission requests from the Island.</li>
 <li>Answer supported Codex questions and Claude Code single-choice questions in place.</li>
 <li>Unsupported requests and forms return to the original client for confirmation.</li>
 </ul>
@@ -74,7 +74,7 @@
 <td width="50%" valign="top">
 <p><strong>⚡ Local processing, work on demand</strong></p>
 <ul>
-<li>Manage 10 agent integration entries with independent switches and connection status.</li>
+<li>Manage 11 agent integration entries with independent switches and connection status.</li>
 <li>Process task information locally through local APIs, session records, hooks, or plugins.</li>
 <li>Reduce repeated reads, parse Claude transcripts in the background, and load effect renderers on demand.</li>
 <li>Developer ID signed and Apple notarized; update checks are on by default, with downloads and installation confirmed by you.</li>
@@ -89,7 +89,7 @@
 <a name="supported-agents"></a>
 <h2>Supported agents</h2>
 
-<p>Enable each integration in Settings → Connections. Every entry is managed independently.</p>
+<p>Enable each integration in Settings → Agent integration. Every entry is managed independently.</p>
 
 <table class="agents">
 <tr>
@@ -106,9 +106,13 @@
 <td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin Desktop official icon" width="44"><br><strong>Devin Desktop</strong><br><sub>Preview</sub></td>
 <td align="center" width="20%" valign="top"><img src="docs/media/readme/agents/devin.svg" alt="Devin CLI official icon" width="44"><br><strong>Devin CLI</strong><br><sub>Preview</sub></td>
 </tr>
+<tr>
+<td align="center" width="20%" valign="top"><img src="Sources/QuotaView/Resources/ProviderIcons.xcassets/AntigravityApplicationIcon.imageset/Antigravity.png" alt="Antigravity" width="44"><br><strong>Antigravity</strong></td>
+</tr>
 </table>
 
-<p><strong>Approvals and answers:</strong> Supported Codex and Claude Code requests can be handled in the Island. Other entries keep confirmation in their original clients. Cursor currently has no permission reminders.</p>
+<p><strong>Approvals and replies:</strong> Handle supported approvals from Codex, Claude Code, DSH, and Antigravity in the Island. Codex and Claude Code also support answering some questions.</p>
+<p><strong>Open conversation:</strong> When QuotaView can identify the original session, open it from task details in Codex, Claude Code desktop sessions, official DSH, Antigravity, Cursor, or Devin Desktop. DSH and Antigravity require Accessibility permission. Check its status at the top of Agent integration.</p>
 
 <p><strong>Devin:</strong> Desktop and CLI appear separately. Desktop covers local Devin Local sessions. Models and current-turn Tokens require compatible local records; start a new turn after updating.</p>
 
@@ -121,6 +125,7 @@
 <thead><tr><th>Agent</th><th>Task state</th><th>Approvals and replies</th><th>Models and usage</th></tr></thead>
 <tbody><tr><td>Codex</td><td>Tasks, tools, and available parent/subagent activity</td><td>Supported approvals and questions in the Island</td><td>Models, Tokens, quota, Credits, history, and estimated cost</td></tr>
 <tr><td>Claude Code</td><td>Tasks, tools, and completion content</td><td>Supported approvals and single-choice questions in the Island</td><td>Models, Tokens, history, and estimated cost; optional official limits</td></tr>
+<tr><td>Antigravity</td><td>Local sessions and tool activity</td><td>Supported tool approvals in the Island</td><td>Token history from local logs, account quotas when available through an installed copy of CodexBar</td></tr>
 <tr><td>DSH</td><td>Native plugin events, session titles, final answers, and available child sessions</td><td>Supported tool approvals in the Island; otherwise confirm in DSH</td><td>Models and Tokens supplied by events</td></tr>
 <tr><td>Kimi Code</td><td>Hook task, tool, and state events</td><td>Permission reminders; confirm in the client</td><td>Models supplied by events; no account quota panel</td></tr>
 <tr><td>Cursor · Preview</td><td>Local hook task and tool state</td><td>Confirm in the client; no permission reminders</td><td>Models supplied by events; no account quota panel</td></tr>
@@ -158,26 +163,26 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Connections and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.3-build.1/QuotaView-v0.9.3-build.1.zip">QuotaView 0.9.3 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
 <details>
-<summary><strong>New in 0.9.3</strong></summary>
+<summary><strong>New in 0.9.7</strong></summary>
 <ul>
-<li>Reset cards dissolve into particles, with smoother replacement animations and clearer empty states.</li>
-<li>A red glass quit button stays at the bottom right of Settings, with improved spacing and minimum window height.</li>
-<li>Brush icons clarify card cleanup: remove a card from the Island while keeping its original task and chat.</li>
-<li>Supported-agent icons use consistent rounded backgrounds.</li>
+<li>Return to the original conversation in six desktop clients and handle supported approvals and replies from task details.</li>
+<li>Connect Antigravity and review quotas alongside token totals on the usage page.</li>
+<li>Choose output rate, tokens, duration, and model in Card settings. A ripple and orb checkmark mark task completion.</li>
+<li>Choose Light, Dark, or Auto in General & Display and manage individual connections in Agent integration. Quit QuotaView sits at the bottom of the sidebar.</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · Separate edition</h2>
 
-<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.3.</p>
+<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.7.</p>
 
 <ul>
 <li>Includes a solid-color Island, task status, approvals and answers for compatible clients, usage statistics, AI orb, and quantum noise.</li>
