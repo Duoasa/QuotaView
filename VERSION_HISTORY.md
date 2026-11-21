@@ -9,9 +9,30 @@
 
 ## 当前最新版本
 
-> macOS 稳定版 **0.9.3 Build 1**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
+> macOS 稳定版 **0.9.7 Build 1**（GitHub Latest）；Windows 稳定版 **0.8.3-win.13**。两平台使用独立签名 appcast。开发入口见 [HANDOFF.md](HANDOFF.md)。
 
-### macOS 0.9.3 Build 1
+### macOS 0.9.7 Build 1
+
+2026-11-21 发布。新增 Antigravity、六款桌面客户端会话跳转、任务输出速率与卡片设置、完成动效。设置页提供逐项 Agent 接入、辅助功能权限状态和通用外观选择。中英文 README 同步下载链接和支持范围。
+
+| 项目 | 核验结果 |
+|---|---|
+| 发布身份 | 0.9.7 Build 1，Sparkle 内部序号 238 |
+| 源码 | `v0.9.7-build.1` / `8109feb4dffaf6087692aa77e8ff412adcc7892e`，[PR #151](https://github.com/Duoasa/QuotaView/pull/151)。冻结源码 `4a5b3a4857263a677a2d1fe52c73daf3e91e6975` 的 277 个生产输入与发布提交一致 |
+| GitHub Stable / Latest | [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1)，Release ID `453563731` |
+| 公开资产 | `QuotaView-v0.9.7-build.1.zip`，32,500,791 bytes，资产 ID `775000155` |
+| SHA-256 | `8d16a373952774a9b205b24b5c460e167d22c9f4c57ee0adfbce94d04988cb91`，公开回下载字节一致 |
+| 签名与公证 | Developer ID Application: Chenchen Xu (BUUH229D5Q)，证书 E52D0A9C7C377AF77C484155CC0CFCFB27D949D3。Apple Accepted / Stapled，ID `09cbf3bc-5f1a-4204-b5f4-f67fb015a1d7`。Gatekeeper 通过 |
+| 兼容性与启动 | macOS 14+，App、Widget、Core、Hook 和 Sparkle 均为 arm64 + x86_64。隔离解压启动 15 秒与加载路径核对通过 |
+| 测试 | 本地 827 项、8 项跳过、0 失败。44 项契约通过。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/44886696593)、[发布 main CI](https://github.com/Duoasa/QuotaView/actions/runs/44887088044) 均通过 |
+| macOS appcast | [线上签名 feed](https://duoasa.github.io/QuotaView/appcast.xml)，序列 238 / 189 / 158，保留条目与旧 feed 匹配。[Pages 部署](https://github.com/Duoasa/QuotaView/actions/runs/44887480262)，gh-pages 提交 `9b48e8cbeb106fcdd6d9fa1317005973ec3aa4c0` |
+| Feed SHA-256 | `94899891fbdaf161ae06f695887948b6a9eb0c3fd3368fbecd5a24916d23e9ad`，线上字节与内置公钥验签通过 |
+| ZIP EdDSA | `j8ozKIswAw4mwrr86qXRwdujDDRU2BxttncLPrMaAyYTL/XS6nhh46ruPxoFlrDepUYV8lTq8YHsHPFfFdx4Bg==` |
+| 回滚 | [0.9.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1)，tag `v0.9.3-build.1`，提交 `f0ee1ceb4372ba1b4a9e1df3b38f842a17d37985`。公开 ZIP 已回下载核对原始 SHA-256 |
+
+完整证据位于 `dist/verification/0.9.7-build1-release/`。Windows 使用独立更新通道。
+
+### macOS 0.9.3 Build 1（上一 macOS 稳定版 / 回滚基线）
 
 2026-11-13 按用户授权正式发布。相对 0.9.2 Build 1，加入重置卡粒子消散/提前递补/空状态与性能优化、红色确认光晕、设置页固定玻璃退出按钮与最小高度、刷子清理图标和五条增量公告；中英 README 同步下载/说明并统一缺少圆角底的 Agent 图标，已有圆角底保持原图。
 
@@ -35,7 +56,7 @@
 
 自动检查默认开启、24 小时周期，已有偏好优先，下载/安装需确认。正式公告名单 102 / 149 / 158 / 189，分别确认一次；开发身份不自动展示。Windows 0.8.3-win.13 与独立更新 feed 保持，本机正式安装和用户数据未替换，未消耗真实重置卡。开发包同步为 0.9.3 Build 1。构建、测试和验签不扩展为全设备视觉验收。证据 `dist/verification/0.9.3-build1-release/`；[发布规格](docs/specs/release-0.9.3.md)。
 
-### macOS 0.9.2 Build 1（上一 macOS 稳定版 / 回滚基线）
+### macOS 0.9.2 Build 1（历史发布）
 
 以下保留当时发布事实；GitHub Latest 已由上方 0.9.3 Build 1 接替。
 
