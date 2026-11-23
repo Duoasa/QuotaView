@@ -1,6 +1,14 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.7 Build 1 / 内部 238
+## 当前开发：0.9.7 Build 3 / 设置导航按钮材质
+
+设置标题栏中，前进与后退按钮共用原生液态玻璃胶囊，旧系统使用常规材质。开发版 Build 3（内部 240）已启动，4 项窗口冒烟测试通过。记录见 `.build/settings-nav-glass-097b3/`。公开版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+## 前序开发：0.9.7 Build 2 / 设置标题栏
+
+正式版 Build 1 的设置窗口截图显示顶部导航不可见。本机已安装包的可执行文件与发布包哈希一致，辅助功能树仍包含两枚导航按钮和页标题。Build 2（内部 239）改用原生标题栏附件承载导航和标题，开发包已启动。Release 配置下 4 项窗口测试通过，包含原生标题栏的几何位置、点击区域和重复更新检查。公开稳定版与上次发布记录见[版本历史](VERSION_HISTORY.md#当前最新版本)。实机外观待用户验收。
+
+## 前序开发：0.9.7 Build 1 / 内部 238
 
 macOS [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1) 已合并 main 并发布为 Stable / Latest，签名 appcast 已上线且公开回下载验证通过。回滚基线为 `v0.9.3-build.1`。本地开发运行包已同步。完整发布、签名、CI 和资产事实见[版本历史](VERSION_HISTORY.md#当前最新版本)，范围见[发布规格](docs/specs/release-0.9.7.md)。
 
@@ -1579,10 +1587,10 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
 | 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `ccd9bb0`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.7 Build 1 / 内部 238 |
+| 开发身份 | `com.quotaview.development073`，0.9.7 Build 3 / 内部 240 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-21，实际加载路径见 `.build/release-097/runtime/runtime-result.json` |
-| 源码与运行包 | 本地 0.9.7 Build 1 的 266 个生产输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-23，实际加载路径见 `.build/settings-nav-glass-097b3/runtime/runtime-result.json` |
+| 源码与运行包 | 本地 0.9.7 Build 3 的 266 个生产输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

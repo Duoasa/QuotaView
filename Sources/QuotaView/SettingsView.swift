@@ -206,6 +206,7 @@ struct SettingsView: View {
     @ObservedObject var activityRuntime: CodexActivityRuntime
     @ObservedObject var updateController: AppUpdateController
 
+    @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var navigation = SettingsNavigationHistory()
     @FocusState private var focusedPage: IslandSettingsPage?
@@ -228,7 +229,8 @@ struct SettingsView: View {
                 settingsSidebar
                     .frame(width: SettingsWindowMetrics.sidebarWidth)
                 VStack(alignment: .leading, spacing: 0) {
-                    navigationHeader
+                    SettingsPalette.canvas.frame(height: SettingsWindowMetrics.headerHeight)
+                        .accessibilityHidden(true)
                     settingsDetail(for: navigation.current.page)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -272,7 +274,11 @@ struct SettingsView: View {
             feedbackQRCode
         }
         .background {
-            SettingsWindowConfigurator(glassAppearance: preferences.islandGlassAppearance)
+            SettingsWindowConfigurator(glassAppearance: preferences.islandGlassAppearance) {
+                navigationHeader
+                    .environment(\.locale, preferences.locale)
+                    .environment(\.layoutDirection, layoutDirection)
+            }
         }
     }
 
@@ -432,10 +438,16 @@ struct SettingsView: View {
                 }
                 .keyboardShortcut("]", modifiers: .command)
             }
-            .background(SettingsPalette.group, in: Capsule())
-            .overlay {
-                Capsule().strokeBorder(.quaternary, lineWidth: 0.5)
-                    .allowsHitTesting(false)
+            .background {
+                if #available(macOS 26, *) {
+                    Color.clear
+                        .glassEffect(.regular, in: Capsule())
+                        .allowsHitTesting(false)
+                } else {
+                    Capsule().fill(.regularMaterial)
+                        .overlay { Capsule().strokeBorder(.quaternary, lineWidth: 0.5) }
+                        .allowsHitTesting(false)
+                }
             }
             Text(navigation.current.agent?.displayName ?? navigation.current.page.title(copy))
                 .font(.system(size: 16, weight: .semibold))
@@ -1832,11 +1844,51 @@ private extension View {
 
 }
 
-private struct SettingsWindowConfigurator: NSViewRepresentable {
-    let glassAppearance: AppPreferences.IslandGlassAppearance
+/// Keep the navigation controls in the native title bar, above the full-size content view.
+@MainActor
+final class SettingsTitlebarHeader<Header: View> {
+    private let accessory = NSTitlebarAccessoryViewController()
+    private var hostingView: NSHostingView<Header>?
+    private(set) weak var window: NSWindow?
 
-    final class Coordinator {
-        weak var configuredWindow: NSWindow?
+    func update(_ header: Header, in window: NSWindow) {
+        if let hostingView {
+            hostingView.rootView = header
+        } else {
+            let view = NSHostingView(rootView: header)
+            view.frame.size = NSSize(width: SettingsWindowMetrics.fixedContentWidth - SettingsWindowMetrics.sidebarWidth,
+                                     height: SettingsWindowMetrics.headerHeight)
+            accessory.layoutAttribute = .right
+            accessory.view = view
+            hostingView = view
+        }
+        guard self.window !== window else { return }
+        detach()
+        window.addTitlebarAccessoryViewController(accessory)
+        self.window = window
+    }
+
+    func detach() {
+        if let window, let index = window.titlebarAccessoryViewControllers.firstIndex(of: accessory) {
+            window.removeTitlebarAccessoryViewController(at: index)
+        }
+        window = nil
+    }
+}
+
+private struct SettingsWindowConfigurator<Header: View>: NSViewRepresentable {
+    let glassAppearance: AppPreferences.IslandGlassAppearance
+    let header: Header
+
+    init(glassAppearance: AppPreferences.IslandGlassAppearance, @ViewBuilder header: () -> Header) {
+        self.glassAppearance = glassAppearance
+        self.header = header()
+    }
+
+    typealias Coordinator = SettingsTitlebarHeader<Header>
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.detach()
     }
 
     func makeCoordinator() -> Coordinator {
@@ -1877,10 +1929,10 @@ private struct SettingsWindowConfigurator: NSViewRepresentable {
         window.hasShadow = true
         SettingsWindowMetrics.applySizingPolicy(to: window)
 
-        if coordinator.configuredWindow !== window {
-            coordinator.configuredWindow = window
+        if coordinator.window !== window {
             window.setContentSize(SettingsWindowMetrics.defaultContentSize)
         }
+        coordinator.update(header, in: window)
     }
 }
 

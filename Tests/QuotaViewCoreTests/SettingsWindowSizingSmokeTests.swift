@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 @testable import QuotaView
 
@@ -22,6 +23,33 @@ final class SettingsWindowSizingSmokeTests: XCTestCase {
         history.forward()
         XCTAssertEqual(history.current, .page(.cards))
         XCTAssertTrue(history.next.isEmpty)
+    }
+
+    @MainActor func testNavigationHeaderOccupiesNativeTitlebarAfterSidebar() throws {
+        _ = NSApplication.shared
+        let window = QuotaViewSettingsWindow(contentRect: NSRect(origin: .zero, size: SettingsWindowMetrics.defaultContentSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        SettingsWindowMetrics.configureTitlebar(of: window)
+        let header = SettingsTitlebarHeader<Text>()
+        header.update(Text("General"), in: window)
+        header.update(Text("Agent integration"), in: window)
+        window.contentView?.superview?.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(window.titlebarAccessoryViewControllers.count, 1)
+        let view = try XCTUnwrap(window.titlebarAccessoryViewControllers.first?.view)
+        XCTAssertTrue(view.window === window)
+        let frame = view.convert(view.bounds, to: nil)
+        XCTAssertEqual(frame.minX, SettingsWindowMetrics.sidebarWidth, accuracy: 1)
+        XCTAssertEqual(frame.maxY, window.frame.height, accuracy: 1)
+        XCTAssertEqual(frame.height, SettingsWindowMetrics.headerHeight, accuracy: 1)
+        XCTAssertEqual(frame.maxX, window.frame.width, accuracy: 1)
+        let frameView = try XCTUnwrap(window.contentView?.superview)
+        let backButtonCenter = NSPoint(x: frame.minX + 26, y: frame.midY)
+        let hit = try XCTUnwrap(frameView.hitTest(frameView.convert(backButtonCenter, from: nil)))
+        XCTAssertTrue(hit === view || hit.isDescendant(of: view))
+        header.detach()
+        XCTAssertTrue(window.titlebarAccessoryViewControllers.isEmpty)
     }
 
     @MainActor func testSettingsWindowFollowsGlassAppearanceAndRestoresInheritance() {
