@@ -1,6 +1,14 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.7 Build 1 / macOS 发布
+## 当前开发：0.9.7 Build 3 / 设置导航按钮
+
+[设置标题栏](../design/QUOTAVIEW_UI_RULES.md#设置标题栏build-41)的前进和后退按钮共用液态玻璃胶囊。
+
+## 前序开发：0.9.7 Build 2 / 设置标题栏
+
+[设置页标题与历史导航](../design/QUOTAVIEW_UI_RULES.md#设置页标题与历史导航097-build-2)改由原生标题栏承载。
+
+## 前序开发：0.9.7 Build 1 / macOS 发布
 
 [0.9.7 Build 1](release-0.9.7.md) 已发布为 macOS Stable / Latest，公开 ZIP 与在线签名 appcast 已核验。
 
