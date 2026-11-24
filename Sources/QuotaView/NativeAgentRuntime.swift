@@ -16,6 +16,29 @@ final class NativeAgentRuntime: ObservableObject {
     @Published private(set) var configuredHomes: [URL] = []
     @Published private(set) var additionalHomes: [URL]
     @Published private(set) var directorySelectionFailed = false
+    enum AGYInstallation { case missing, installing, installed, failed }
+    @Published private(set) var agyInstallation: AGYInstallation = .missing
+
+    func checkAGYInstallation() {
+        guard provider == .antigravity, agyInstallation != .installing else { return }
+        if AntigravityCLI.executable() != nil {
+            agyInstallation = .installed
+        } else if agyInstallation != .failed {
+            agyInstallation = .missing
+        }
+    }
+
+    func installAGY() {
+        checkAGYInstallation()
+        guard provider == .antigravity, agyInstallation == .missing || agyInstallation == .failed else { return }
+        agyInstallation = .installing
+        Task {
+            let installed = await Task.detached(priority: .utility) { AntigravityCLI.install() }.value
+            agyInstallation = installed ? .installed : .failed
+            if installed { await refreshAntigravityAccount() }
+        }
+    }
+
     let provider: IslandAgentProvider
     let installer: NativeAgentInstaller
     private let preferences: AppPreferences
@@ -81,13 +104,35 @@ final class NativeAgentRuntime: ObservableObject {
     private struct AntigravityRequest {
         let key: String
         let turn: String
-        let step: Int
+        let card: AntigravityDesktopApproval.Card
         let rpcID: IslandApprovalJSON
     }
     private var antigravityRequests: [String: AntigravityRequest] = [:]
+    private var antigravityApprovalPoll: Task<Void, Never>?
+    private var handledAntigravityCards: [UUID: AntigravityDesktopApproval.Card] = [:]
+    private let readApprovalCards: (Set<UUID>) async -> [UUID: AntigravityDesktopApproval.Card]
+    private let pressApprovalButton: (AntigravityDesktopApproval.Card, Bool) -> Bool
+    private struct OpenCodeRequest {
+        let wire: IslandCodexApprovalRequest
+        let epoch: String
+        let nativeTurn: String
+        var waiting = true
+    }
+    private var openCodeRequests: [String: OpenCodeRequest] = [:]
+    private var openCodeInteractive: Bool {
+        provider == .openCode && preferences.openCodeInteractionsEnabled &&
+            preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy
+    }
     private var dshRequests: [String: DSHRequest] = [:]
 
-    init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil) {
+    init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil,
+         readApprovalCards: ((Set<UUID>) async -> [UUID: AntigravityDesktopApproval.Card])? = nil,
+         pressApprovalButton: @escaping (AntigravityDesktopApproval.Card, Bool) -> Bool = AntigravityDesktopApproval.press) {
+        self.readApprovalCards = readApprovalCards ?? { ids in
+            guard suppliedInstaller == nil else { return [:] }
+            return await Task.detached(priority: .utility) { AntigravityDesktopApproval.scan(ids) }.value
+        }
+        self.pressApprovalButton = pressApprovalButton
         readsInstalledAccount = suppliedInstaller == nil
         self.provider = provider; self.preferences = preferences; self.island = island; self.defaults = defaults
         additionalHomes = (provider == .dsh ? defaults.stringArray(forKey: "integrations.dsh.additionalHomes") ?? [] : []).prefix(32)
@@ -100,6 +145,35 @@ final class NativeAgentRuntime: ObservableObject {
         installer = suppliedInstaller ?? NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
         defaultDSHNamespace = CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path)
         bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
+        if provider == .openCode {
+            island.model.openCodeResponseCapability = { [weak self] wire in
+                guard let self, openCodeInteractive, enabled, running, listening,
+                      let request = openCodeRequests[wire.rpcID.text], request.wire.raw == wire.raw, request.waiting,
+                      let session = sessions[wire.threadID] else { return false }
+                return session.active && session.epoch == request.epoch && session.turn == wire.turnID
+            }
+            island.model.openCodeRespond = { [weak self] wire, result in
+                guard let self, island.model.openCodeResponseCapability?(wire) == true, wire.permits(result)
+                else { throw CocoaError(.userCancelled) }
+                let decision: [String: Any]
+                if wire.kind == .questions {
+                    decision = ["answers": wire.questions.map { result["answers"][$0.id]["answers"].array.map(\.text) }]
+                } else {
+                    switch result["decision"].text {
+                    case "accept": decision = ["reply": "once"]
+                    case "decline": decision = ["reply": "reject"]
+                    default: throw CocoaError(.coderInvalidValue)
+                    }
+                }
+                openCodeRequests[wire.rpcID.text]?.waiting = false
+                bridge.resolve(eventID: String(wire.rpcID.text.dropFirst("openCode:".count)), decision: decision)
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(8))
+                    guard let self, openCodeRequests[wire.rpcID.text]?.waiting == false else { return }
+                    island.model.markOpenCodeDeliveryUnknown(wire)
+                }
+            }
+        }
         if provider == .antigravity {
             island.model.antigravityResponseCapability = { [weak self] wire in
                 guard let self, wire.isAntigravity, enabled, listening, antigravityApprovalsEnabled,
@@ -109,14 +183,24 @@ final class NativeAgentRuntime: ObservableObject {
             }
             island.model.antigravityRespond = { [weak self] wire, result in
                 guard let self, island.model.antigravityResponseCapability?(wire) == true, wire.permits(result) else { throw CocoaError(.userCancelled) }
-                let outcome: String
+                let id = String(wire.rpcID.text.dropFirst("antigravity:".count))
+                guard let request = antigravityRequests[id] else { throw CancellationError() }
+                let session = request.card.conversation
+                let current = await self.readApprovalCards([session])
+                guard island.model.antigravityResponseCapability?(wire) == true,
+                      current[session] == request.card else {
+                    removeAntigravityRequest(id)
+                    throw CancellationError()
+                }
+                let allow: Bool
                 switch result["decision"].text {
-                case "accept": outcome = "allowed-once"
-                case "decline": outcome = "rejected"
-                case "antigravityDelegate": outcome = "delegate"
+                case "accept": allow = true
+                case "decline": allow = false
                 default: throw CocoaError(.coderInvalidValue)
                 }
-                finishAntigravityRequest(String(wire.rpcID.text.dropFirst("antigravity:".count)), outcome: outcome)
+                guard self.pressApprovalButton(request.card, allow) else { throw CocoaError(.userCancelled) }
+                handledAntigravityCards[session] = request.card
+                removeAntigravityRequest(id)
             }
         }
         if provider == .dsh {
@@ -188,16 +272,18 @@ final class NativeAgentRuntime: ObservableObject {
         retry()
     }
     private func reconcile(force: Bool = false) {
-        if provider == .antigravity && !antigravityApprovalsEnabled {
-            for id in Array(antigravityRequests.keys) { finishAntigravityRequest(id) }
-        }
+        if provider == .antigravity { refreshAntigravityApprovalMonitor() }
         if provider == .dsh && (!enabled || !preferences.dshInteractiveApprovals) {
             for id in Array(dshRequests.keys) { releaseDSH(id) }
         }
-        if running, enabled, listening, provider == .antigravity, approvalRouteEnabled != antigravityApprovalsEnabled {
+        if !openCodeInteractive {
+            for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
+        }
+        let interactive = provider == .openCode && openCodeInteractive
+        if running, enabled, listening, provider == .openCode, approvalRouteEnabled != interactive {
             do {
-                try installer.writeExternalRoute(interactiveApprovals: antigravityApprovalsEnabled)
-                approvalRouteEnabled = antigravityApprovalsEnabled
+                try installer.writeExternalRoute(interactiveApprovals: interactive)
+                approvalRouteEnabled = interactive
             } catch { failure = .invalidConfiguration; status = .failed }
         }
         guard running, force || applied != enabled else { return }
@@ -224,7 +310,7 @@ final class NativeAgentRuntime: ObservableObject {
         let previous = configurationTask
         let installer = installer
         let additionalHomes = additionalHomes
-        let approvals = antigravityApprovalsEnabled
+        let approvals = interactive
         configurationTask = Task { [weak self] in
             await previous?.value
             let result = await Task.detached(priority: .utility) { () -> Result<[URL], NativeAgentInstaller.Failure> in
@@ -251,12 +337,12 @@ final class NativeAgentRuntime: ObservableObject {
                 }, onDisconnect: { [weak self] id in
                     Task { @MainActor in
                         guard let self, self.revision == current else { return }
-                        self.finishAntigravityRequest(id)
                         self.releaseDSH(id)
+                        self.closeOpenCode("openCode:" + id)
                     }
                 })
                 listening = true; status = .waiting
-                if provider == .antigravity {
+                if provider == .openCode {
                     approvalRouteEnabled = approvals
                     reconcile()
                 }
@@ -265,8 +351,12 @@ final class NativeAgentRuntime: ObservableObject {
         }
     }
     private func stopListening() {
+        for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
         if provider == .antigravity {
-            for id in Array(antigravityRequests.keys) { finishAntigravityRequest(id) }
+            antigravityApprovalPoll?.cancel()
+            antigravityApprovalPoll = nil
+            handledAntigravityCards.removeAll()
+            for id in Array(antigravityRequests.keys) { removeAntigravityRequest(id) }
             for task in antigravityDetailTasks.values { task.cancel() }
             antigravityDetailTasks.removeAll()
             antigravityScan?.cancel(); antigravityScan = nil; antigravityScanDirty = false
@@ -286,37 +376,83 @@ final class NativeAgentRuntime: ObservableObject {
         }
         sessions.removeAll()
     }
+    private func closeOpenCode(_ id: String) {
+        guard let request = openCodeRequests.removeValue(forKey: id) else { return }
+        bridge.resolve(eventID: String(id.dropFirst("openCode:".count)), decision: nil)
+        island.model.resolveLocalHookRequest(sessionKey: request.wire.threadID, rpcID: request.wire.rpcID)
+    }
+
+    private func receiveOpenCode(_ message: ClaudeCodeBridgeMessage, payload: [String: Any]) {
+        defer { if message.awaitsDecision && openCodeRequests["openCode:" + message.eventID] == nil {
+            bridge.resolve(eventID: message.eventID, decision: nil)
+        } }
+        guard let source = payload["session_id"] as? String, let epoch = payload["source_epoch"] as? String,
+              let nativeTurn = payload["turn_id"] as? String, let eventID = payload["interaction_id"] as? String,
+              UUID(uuidString: eventID) != nil else { return }
+        let key = CodexActivityPrivacy.hashIdentifier("openCode:" + source)
+        let id = "openCode:" + eventID
+        if payload["hook_event_name"] as? String == "OpenCodeDeliveryFailed" {
+            if let request = openCodeRequests[id], !request.waiting, request.wire.threadID == key,
+               request.nativeTurn == nativeTurn, request.epoch == epoch {
+                island.model.markOpenCodeDeliveryUnknown(request.wire)
+            }
+            return
+        }
+        if payload["hook_event_name"] as? String == "OpenCodeReleased" {
+            if let request = openCodeRequests[id], request.wire.threadID == key,
+               request.nativeTurn == nativeTurn, request.epoch == epoch { closeOpenCode(id) }
+            return
+        }
+        guard running, enabled, listening, openCodeInteractive, message.awaitsDecision, message.eventID == eventID,
+              openCodeRequests.count < 32, openCodeRequests[id] == nil,
+              let session = sessions[key], session.active, session.parent == nil, session.nativeTurn == nativeTurn,
+              session.epoch == epoch, let turn = session.turn, let nativeID = payload["native_id"] as? String,
+              !nativeID.isEmpty, nativeID.utf8.count <= 128, message.payload.count <= 65536,
+              !openCodeRequests.values.contains(where: { $0.wire.threadID == key && $0.wire.params["itemId"].text == nativeID }) else { return }
+        var params: [String: Any] = ["openCode": true, "threadId": key, "turnId": turn, "itemId": nativeID]
+        let method: String
+        switch payload["interaction_type"] as? String {
+        case "question":
+            guard let questions = payload["questions"] as? [[String: Any]] else { return }
+            params["questions"] = questions
+            method = "item/tool/requestUserInput"
+        case "permission":
+            guard let command = payload["command"] as? String, !command.isEmpty else { return }
+            params["command"] = command
+            params["availableDecisions"] = ["accept", "decline"]
+            method = "item/commandExecution/requestApproval"
+        default: return
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: ["id": id, "method": method, "params": params]),
+              let wire = try? IslandCodexApprovalRequest(data: data), wire.kind != .questions || wire.supportedQuestions else { return }
+        openCodeRequests[id] = .init(wire: wire, epoch: epoch, nativeTurn: nativeTurn)
+        if island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
+            callHash: CodexActivityPrivacy.hashIdentifier("openCode:" + source + ":" + nativeID)) {
+            bridge.admit(eventID: eventID)
+        } else { closeOpenCode(id) }
+    }
+
     private func receive(_ message: ClaudeCodeBridgeMessage) {
+        if provider == .openCode, let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
+           let name = payload["hook_event_name"] as? String, ["OpenCodeInteraction", "OpenCodeReleased", "OpenCodeDeliveryFailed"].contains(name) {
+            receiveOpenCode(message, payload: payload)
+            return
+        }
         if provider == .dsh,
            let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
            let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") {
             if !receiveDSH(message, payload: payload, name: name), message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
             return
         }
-        if provider == .antigravity, var payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
-           payload["hook_event_name"] as? String == "AntigravityApproval" {
-            guard running, enabled, listening, let source = payload["session_id"] as? String,
-                  let session = sessions[CodexActivityPrivacy.hashIdentifier("antigravity:" + source)],
-                  session.active, let step = (payload["tool_call_id"] as? String).flatMap(Int.init),
-                  step >= (session.antigravityTurnStep ?? 0) else {
-                bridge.resolve(eventID: message.eventID, decision: nil); return
-            }
-            let input = payload.removeValue(forKey: "tool_input") as? [String: Any]
-            payload["hook_event_name"] = "PreToolUse"
-            if let data = try? JSONSerialization.data(withJSONObject: payload) {
-                receive(.init(eventID: message.eventID, kind: "hook", awaitsDecision: false, payload: data))
-            }
-            if !admitAntigravityRequest(message, payload: payload, input: input), message.awaitsDecision {
-                bridge.resolve(eventID: message.eventID, decision: nil)
-            }
-            return
-        }
+        defer { if provider == .antigravity { refreshAntigravityApprovalMonitor() } }
         // Observation-only ingress never holds an interactive connection.
         if message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
         guard running, enabled, listening,
               let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
               let sourceSession = payload["session_id"] as? String, !sourceSession.isEmpty, sourceSession.utf8.count <= 256,
-              let name = payload["hook_event_name"] as? String else { return }
+              let eventName = payload["hook_event_name"] as? String else { return }
+        // Older helpers may still report ask_permission before the client evaluates it.
+        let name = provider == .antigravity && eventName == "PermissionRequest" ? "PreToolUse" : eventName
         let accepted = ["SessionStart", "SessionEnd", "UserPromptSubmit", "TurnStarted", "PreToolUse", "PostToolUse", "PostToolUseFailure",
                         "PermissionRequest", "PermissionResult", "PreCompact", "PostCompact", "Stop", "StopFailure", "Interrupt", "Usage", "Metadata", "ModelRequest"]
         guard accepted.contains(name) else { return }
@@ -436,11 +572,10 @@ final class NativeAgentRuntime: ObservableObject {
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
-        if provider == .antigravity && (startedTurn || ["Stop", "StopFailure", "Interrupt", "SessionEnd", "PostToolUse", "PostToolUseFailure"].contains(name)) {
-            let toolFinished = ["PostToolUse", "PostToolUseFailure"].contains(name)
-            let step = (payload["tool_call_id"] as? String).flatMap(Int.init)
-            for (id, request) in antigravityRequests where request.key == key && (!toolFinished || request.step == step) {
-                finishAntigravityRequest(id)
+        if provider == .openCode {
+            for (id, request) in openCodeRequests where request.wire.threadID == key {
+                if request.epoch != session.epoch || request.wire.turnID != session.turn ||
+                    ["Stop", "StopFailure", "Interrupt", "SessionEnd"].contains(name) { closeOpenCode(id) }
             }
         }
         if provider == .dsh, session.title == nil || startedTurn || name == "Stop" {
@@ -577,38 +712,72 @@ final class NativeAgentRuntime: ObservableObject {
         if provider == .kimiCode || provider == .copilotCLI { refreshRateLogs() }
     }
 
-    private func admitAntigravityRequest(_ message: ClaudeCodeBridgeMessage, payload: [String: Any], input: [String: Any]?) -> Bool {
-        let id = message.eventID
-        guard running, enabled, listening, antigravityApprovalsEnabled, message.awaitsDecision,
-              UUID(uuidString: id) != nil, antigravityRequests[id] == nil, antigravityRequests.count < 32,
-              let source = payload["session_id"] as? String, UUID(uuidString: source) != nil,
-              let tool = payload["tool_name"] as? String, let input,
-              NativeAgentHookNormalizer.antigravityReviewable(tool: tool, arguments: input),
-              let call = payload["tool_call_id"] as? String, let step = Int(call), step >= 0,
-              let args = try? JSONSerialization.data(withJSONObject: input, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
-              args.count <= 65_536 else { return false }
-        let key = CodexActivityPrivacy.hashIdentifier("antigravity:" + source)
-        guard let session = sessions[key], session.active, let turn = session.turn,
-              step >= (session.antigravityTurnStep ?? 0),
-              !antigravityRequests.values.contains(where: { $0.key == key && $0.step == step }) else { return false }
-        let params: [String: Any] = ["antigravity": true, "threadId": key, "turnId": turn, "itemId": call,
-            "toolName": tool, "command": String(decoding: args, as: UTF8.self), "cwd": input["Cwd"] as? String ?? "",
-            "availableDecisions": ["accept", "decline", "antigravityDelegate"]]
-        guard let data = try? JSONSerialization.data(withJSONObject: ["id": "antigravity:" + id,
-            "method": "item/commandExecution/requestApproval", "params": params]),
-              let wire = try? IslandCodexApprovalRequest(data: data) else { return false }
-        antigravityRequests[id] = .init(key: key, turn: turn, step: step, rpcID: wire.rpcID)
-        guard island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
-            callHash: CodexActivityPrivacy.hashIdentifier("antigravity:" + source + ":" + call)) else {
-            antigravityRequests.removeValue(forKey: id); return false
-        }
-        bridge.admit(eventID: id)
-        return true
+    private struct AntigravityTurn: Equatable {
+        let key: String
+        let turn: String
     }
 
-    private func finishAntigravityRequest(_ id: String, outcome: String = "delegate") {
+    private var antigravityApprovalTurns: [UUID: AntigravityTurn] {
+        guard running, enabled, listening, antigravityApprovalsEnabled else { return [:] }
+        var targets: [UUID: AntigravityTurn] = [:]
+        for (key, session) in sessions where session.active && session.parent == nil {
+            guard let turn = session.turn else { continue }
+            switch session.conversation {
+            case .antigravity(let id), .antigravityHook(let id): targets[id] = .init(key: key, turn: turn)
+            default: break
+            }
+        }
+        return targets
+    }
+
+    private func refreshAntigravityApprovalMonitor() {
+        let turns = antigravityApprovalTurns
+        for (id, request) in antigravityRequests where turns[request.card.conversation]?.turn != request.turn {
+            removeAntigravityRequest(id)
+        }
+        handledAntigravityCards = handledAntigravityCards.filter { turns[$0.key] != nil }
+        guard !turns.isEmpty else {
+            antigravityApprovalPoll?.cancel()
+            antigravityApprovalPoll = nil
+            return
+        }
+        guard antigravityApprovalPoll == nil else { return }
+        antigravityApprovalPoll = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let turns = self?.antigravityApprovalTurns, !turns.isEmpty else { return }
+                let cards = await self?.readApprovalCards(Set(turns.keys)) ?? [:]
+                guard !Task.isCancelled else { return }
+                self?.updateAntigravityCards(cards, scannedTurns: turns)
+                do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
+            }
+        }
+    }
+
+    private func updateAntigravityCards(_ cards: [UUID: AntigravityDesktopApproval.Card], scannedTurns: [UUID: AntigravityTurn]) {
+        let turns = antigravityApprovalTurns
+        for (id, request) in antigravityRequests where cards[request.card.conversation] != request.card {
+            removeAntigravityRequest(id)
+        }
+        for (conversation, card) in cards {
+            guard conversation == card.conversation, let scope = turns[conversation], scope == scannedTurns[conversation],
+                  handledAntigravityCards[conversation] != card,
+                  !antigravityRequests.values.contains(where: { $0.card == card }) else { continue }
+            let key = scope.key, turn = scope.turn
+            let id = UUID().uuidString
+            let params: [String: Any] = ["antigravity": true, "threadId": key, "turnId": turn, "itemId": id,
+                "command": card.content, "nativeScope": card.scope.rawValue, "availableDecisions": ["accept", "decline"]]
+            guard let data = try? JSONSerialization.data(withJSONObject: ["id": "antigravity:" + id,
+                "method": "item/commandExecution/requestApproval", "params": params]),
+                  let wire = try? IslandCodexApprovalRequest(data: data) else { continue }
+            antigravityRequests[id] = .init(key: key, turn: turn, card: card, rpcID: wire.rpcID)
+            if !island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn, callHash: id) {
+                removeAntigravityRequest(id)
+            }
+        }
+    }
+
+    private func removeAntigravityRequest(_ id: String) {
         guard let request = antigravityRequests.removeValue(forKey: id) else { return }
-        bridge.resolve(eventID: id, decision: ["outcome": outcome])
         island.model.resolveLocalHookRequest(sessionKey: request.key, rpcID: request.rpcID)
     }
 
@@ -734,16 +903,23 @@ final class NativeAgentRuntime: ObservableObject {
         island.model.receiveOutputRate(session: key, turn: turn,
             latest: session.rateLedger.latest, average: session.rateLedger.average)
     }
-    func refreshAntigravityAccount() async {
+    func refreshAntigravityAccount(manual: Bool = false) async {
         guard provider == .antigravity, readsInstalledAccount, running, enabled else { return }
         if let read = antigravityAccountRead { _ = await read.value; return }
         let version = revision
-        let read = Task.detached(priority: .utility) { AntigravityAccount.read() }
+        let read = Task.detached(priority: .utility) { AntigravityAccount.read(manual: manual) }
         antigravityAccountRead = read
         let account = await read.value
         guard revision == version, enabled else { return }
         antigravityAccountRead = nil
-        island.antigravityUsage?.account = account
+        if var usage = island.antigravityUsage {
+            if !usage.didCheckAccount || (usage.account?.windows.isEmpty == false) != (account?.windows.isEmpty == false) {
+                objectWillChange.send()
+            }
+            usage.account = account
+            usage.didCheckAccount = true
+            island.antigravityUsage = usage
+        }
     }
 
     func refreshAntigravityUsage() async {
@@ -760,6 +936,7 @@ final class NativeAgentRuntime: ObservableObject {
                 var usage = await antigravityScanner.scan(root: root)
                 guard !Task.isCancelled, revision == version, enabled else { return }
                 usage.account = island.antigravityUsage?.account
+                usage.didCheckAccount = island.antigravityUsage?.didCheckAccount ?? false
                 island.antigravityUsage = usage
             } while antigravityScanDirty
             antigravityScan = nil

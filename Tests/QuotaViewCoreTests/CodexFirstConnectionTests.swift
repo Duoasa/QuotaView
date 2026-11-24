@@ -6,6 +6,55 @@ import XCTest
 
 @MainActor
 final class CodexFirstConnectionTests: XCTestCase {
+    func testDaemonLaunchLimitationIsScopedToVerifiedDesktopBuild() {
+        XCTAssertTrue(CodexAnswerLaunchState.ignoresDaemonPreference(version: "26.1117.41037", build: "29803"))
+        XCTAssertFalse(CodexAnswerLaunchState.ignoresDaemonPreference(version: "26.1117.41037", build: "29804"))
+        XCTAssertFalse(CodexAnswerLaunchState.ignoresDaemonPreference(version: nil, build: nil))
+    }
+
+    func testSharedLaunchWaitsForUserQuitAndConsumesOneExplicitRequest() {
+        var state = CodexAnswerLaunchState.idle
+        XCTAssertFalse(state.claimLaunch(eligible: true, desktopRunning: false))
+        state = .requested
+        XCTAssertFalse(state.claimLaunch(eligible: true, desktopRunning: true))
+        XCTAssertEqual(state, .waitingForQuit)
+        XCTAssertFalse(state.claimLaunch(eligible: false, desktopRunning: false))
+        XCTAssertEqual(state, .idle)
+        state = .requested
+        XCTAssertFalse(state.claimLaunch(eligible: true, desktopRunning: true))
+        XCTAssertTrue(state.claimLaunch(eligible: true, desktopRunning: false))
+        XCTAssertFalse(state.claimLaunch(eligible: true, desktopRunning: false))
+        state = .opened(123)
+        XCTAssertFalse(state.claimLaunch(eligible: true, desktopRunning: false))
+    }
+
+    func testSharedServiceUsesDesktopCLIAndSelectedHookDirectory() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cli = root.appendingPathComponent("codex-fixture")
+        let fixture = """
+        #!/bin/sh
+        cd "$CODEX_HOME" || exit 1
+        echo "$*" >> calls
+        case "$*" in
+          "app-server daemon start") exit 0 ;;
+          "app-server daemon version") cat version ;;
+          *) exit 2 ;;
+        esac
+        """
+        try fixture.write(to: cli, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: cli.path)
+        let inspector = CodexActivityEnvironmentInspector(executablePath: cli.path, dataDirectoryURL: root)
+        let version = root.appendingPathComponent("version")
+        try #"{"appServerVersion":"0.171.0"}"#.write(to: version, atomically: true, encoding: .utf8)
+        try inspector.prepareSharedAnswerService()
+        let calls = try String(contentsOf: root.appendingPathComponent("calls"), encoding: .utf8)
+        XCTAssertEqual(calls.split(separator: "\n"), ["app-server daemon start", "app-server daemon version"])
+        try "{}".write(to: version, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try inspector.prepareSharedAnswerService())
+    }
+
     private let hookStates: [CodexActivityConnectionStatus] = [
         .notInstalled, .awaitingTrust, .installedNeedsRestart,
         .awaitingFirstEvent, .connected, .abnormal("Hook setup failed")

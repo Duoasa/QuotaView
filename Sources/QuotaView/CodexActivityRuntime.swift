@@ -4,6 +4,25 @@ import Darwin
 import Foundation
 import QuotaViewCore
 
+enum CodexAnswerLaunchState: Equatable {
+    case idle, requested, waitingForQuit, opening, opened(pid_t), failed
+
+    // This desktop always adds a local plugin override. Its native daemon
+    // preference requires an empty override list, even when a daemon is ready.
+    static func ignoresDaemonPreference(version: String?, build: String?) -> Bool {
+        version == "26.1117.41037" && build == "29803"
+    }
+
+    /// A status refresh may finish an explicit request exactly once.
+    mutating func claimLaunch(eligible: Bool, desktopRunning: Bool) -> Bool {
+        guard self == .requested || self == .waitingForQuit else { return false }
+        guard eligible else { self = .idle; return false }
+        if desktopRunning { self = .waitingForQuit; return false }
+        self = .opening
+        return true
+    }
+}
+
 @MainActor
 final class CodexActivityRuntime: ObservableObject {
     @Published private(set) var hookConnectionStatus:
@@ -36,6 +55,11 @@ final class CodexActivityRuntime: ObservableObject {
     private let preferences: AppPreferences
     private let defaults: UserDefaults
     private var bridge: CodexActivityUnixBridge
+    private var decisionBridge: ClaudeCodeBridge?
+    private var permissionRequests: [String: IslandCodexApprovalRequest] = [:]
+    private var sharedQuestionRefreshTask: Task<Void, Never>?
+    private var sharedQuestionRefreshID: UUID?
+    private var lastSharedQuestionRefresh = Date.distantPast
     private var fileBridge: CodexActivityFileBridge
     private var installer: CodexActivityHookInstaller
     private var environmentInspector: CodexActivityEnvironmentInspector
@@ -45,11 +69,72 @@ final class CodexActivityRuntime: ObservableObject {
     // Configuration trust is established only by Codex native metadata. A
     // delivery proves receipt, but cannot reinstate revoked configuration trust.
     private var nativeHookTrusted = false
+    @Published private(set) var answerLaunchState: CodexAnswerLaunchState = .idle
+    @Published private(set) var desktopIgnoresDaemonPreference = false
+    private var answerLaunchTask: Task<Void, Never>?
+    var canConfigureSharedAnswers: Bool {
+        isRunning && preferences.codexIntegrationEnabled && nativeHookTrusted
+            && hasCompatibilityHook && compatibilityHookAdmissionEnabled && !isChangingDataDirectory
+            && !liveIsland.model.usesLegacyDesktopAnswers
+    }
+
+    func requestSharedAnswers() {
+        guard canConfigureSharedAnswers, !desktopIgnoresDaemonPreference, hookOperation == .idle else { return }
+        answerLaunchState = .requested
+        reconcileHook(install: false)
+    }
+
+    func cancelAnswerLaunch() {
+        answerLaunchTask?.cancel()
+        answerLaunchTask = nil
+        answerLaunchState = .idle
+    }
+
+    /// Called only after fresh native Hook inspection. Ordinary status checks can
+    /// finish an explicit pending request but never create one.
+    private func continueAnswerLaunch() {
+        guard answerLaunchState == .requested || answerLaunchState == .waitingForQuit else { return }
+        let bundleID = "com.openai.codex"
+        func codexIsRunning() -> Bool {
+            NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains { !$0.isTerminated }
+        }
+        guard answerLaunchState.claimLaunch(eligible: canConfigureSharedAnswers && !desktopIgnoresDaemonPreference, desktopRunning: codexIsRunning()) else { return }
+        guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID),
+              Bundle(url: app)?.bundleIdentifier == bundleID else { answerLaunchState = .failed; return }
+        let cli = app.appendingPathComponent("Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex")
+        let root = dataDirectoryURL
+        let inspector = CodexActivityEnvironmentInspector(executablePath: cli.path, dataDirectoryURL: root)
+        answerLaunchTask = Task { [weak self] in
+            do {
+                try Task.checkCancellation()
+                let prepare = Task.detached(priority: .utility) { try inspector.prepareSharedAnswerService() }
+                try await withTaskCancellationHandler { try await prepare.value } onCancel: { prepare.cancel() }
+                guard let self, !Task.isCancelled else { return }
+                guard canConfigureSharedAnswers, dataDirectoryURL == root else { cancelAnswerLaunch(); return }
+                // If the user has opened another desktop in the meantime,
+                // keep that process intact and allow an explicit retry.
+                guard !codexIsRunning() else { answerLaunchState = .failed; return }
+                let config = NSWorkspace.OpenConfiguration()
+                config.environment = ["CODEX_APP_SERVER_USE_LOCAL_DAEMON": "1", "CODEX_HOME": root.path]
+                let launched = try await NSWorkspace.shared.openApplication(at: app, configuration: config)
+                guard !Task.isCancelled else { return }
+                guard !launched.isTerminated else { answerLaunchState = .failed; return }
+                answerLaunchState = .opened(launched.processIdentifier)
+                try await Task.sleep(nanoseconds: 40_000_000_000)
+                if answerLaunchState == .opened(launched.processIdentifier),
+                   automaticConnection.sharedState != .connected { answerLaunchState = .failed }
+            } catch {
+                if !Task.isCancelled { self?.answerLaunchState = .failed }
+            }
+        }
+    }
+
     private var currentRunDeliveredInstallation: String?
     private var bridgeRunStartedAt = Date()
     private var configurationClient: CodexAppServerClient?
     let liveIsland = IslandSession()
     private(set) lazy var claudeCode = ClaudeCodeRuntime(preferences: preferences, island: liveIsland, defaults: defaults)
+    private(set) lazy var agentQuotas = AgentQuotaStore(preferences: preferences, defaults: defaults, island: liveIsland)
     private(set) lazy var dsh = NativeAgentRuntime(provider: .dsh, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var kimiCode = NativeAgentRuntime(provider: .kimiCode, preferences: preferences, island: liveIsland, defaults: defaults)
     private(set) lazy var cursor = NativeAgentRuntime(provider: .cursor, preferences: preferences, island: liveIsland, defaults: defaults)
@@ -72,7 +157,13 @@ final class CodexActivityRuntime: ObservableObject {
     private var observationsEnabled = false
     private var accessibilityCancellable: AnyCancellable?
     private var quotaStatusCancellable: AnyCancellable?
-    private var islandUsage: IslandUsagePresentation = .loading
+    @Published private(set) var islandUsage: IslandUsagePresentation = .loading
+    private weak var integrationQuotaStore: CodexStatusStore?
+    var hookExplicitlyDisabled: Bool { defaults.object(forKey: DefaultsKey.automaticHook) as? Bool == false }
+    func refreshIntegrationQuota() {
+        guard preferences.codexIntegrationEnabled, !preferences.codexIslandPrivacy else { return }
+        Task { await integrationQuotaStore?.refresh() }
+    }
     private var workspaceCancellables: Set<AnyCancellable> = []
     private var setupTask: Task<Void, Never>?
     private var setupIslandRequested = false
@@ -164,7 +255,10 @@ final class CodexActivityRuntime: ObservableObject {
         environmentInspector = hookEnvironmentInspector ?? CodexActivityEnvironmentInspector(dataDirectoryURL: root)
 
         liveIsland.onWake = { [weak self] in self?.recheckAutomaticConnection() }
-        store.localPublicContentDidReceive = { [weak self] content in self?.liveIsland.model.receiveLocalContent(content) }
+        store.localPublicContentDidReceive = { [weak self] content in
+            self?.liveIsland.model.receiveLocalContent(content)
+            self?.refreshSharedQuestionsIfNeeded()
+        }
         store.threadMetadataDidReceive = { [weak self] identity, metadata in
             self?.liveIsland.model.receiveThreadMetadata(metadata, identity: identity)
         }
@@ -188,11 +282,33 @@ final class CodexActivityRuntime: ObservableObject {
             liveIsland.model.receiveDesktopProjection(projection, snapshot: snapshot)
         }
         liveIsland.model.responseCapability = { [weak self] wire in
-            guard let self, isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
+            guard let self else { return false }
+            if wire.isCodexPermissionHook { return self.canAnswerPermissionHook(wire) }
+            if wire.sharedQuestionHandle != nil {
+                return canConfigureSharedAnswers && !preferences.codexIslandPrivacy
+                    && !isChangingDataDirectory && !liveIsland.model.usesLegacyDesktopAnswers
+                    && automaticConnection.sharedState == .connected
+            }
+            guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
             return handle.conversationID == wire.threadID && handle.turnID == wire.turnID
         }
         liveIsland.model.respond = { [weak self] wire, result in
-            guard let self, isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else {
+            guard let self else { throw CodexDesktopIPCError.staleRequest }
+            if wire.isCodexPermissionHook {
+                try self.answerPermissionHook(wire, result: result)
+                return
+            }
+            if let handle = wire.sharedQuestionHandle {
+                guard canConfigureSharedAnswers, !preferences.codexIslandPrivacy,
+                      !isChangingDataDirectory, !liveIsland.model.usesLegacyDesktopAnswers,
+                      automaticConnection.sharedState == .connected, wire.permits(result) else {
+                    throw CodexDesktopIPCError.staleRequest
+                }
+                let answers = wire.questions.map { result["answers"][$0.id]["answers"].array.first?.text ?? "" }
+                try await store.submitSharedQuestion(handle: handle, answers: answers)
+                return
+            }
+            guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else {
                 throw CodexDesktopIPCError.staleRequest
             }
             _ = try await self.desktopIPCClient.submit(handle: handle, result: result.data)
@@ -221,12 +337,15 @@ final class CodexActivityRuntime: ObservableObject {
         store.automaticConnectionDidChange = { [weak self] state in
             self?.handleAutomaticConnection(state)
         }
+        integrationQuotaStore = quotaStatusStore
         if let quotaStatusStore {
             liveIsland.board.state.resetController = quotaStatusStore.resetController
             liveIsland.board.state.onRefreshUsage = { [weak self, weak quotaStatusStore] in
                 if let self, liveIsland.board.state.effectiveUsageProvider == .antigravity {
-                    await antigravity.refreshAntigravityAccount()
+                    await antigravity.refreshAntigravityAccount(manual: true)
                     await antigravity.refreshAntigravityUsage()
+                } else if let self, liveIsland.board.state.effectiveUsageProvider.quotaSource != nil {
+                    await agentQuotas.refresh(liveIsland.board.state.effectiveUsageProvider)
                 } else { await quotaStatusStore?.refresh() }
             }
             islandUsage = quotaStatusStore.islandUsage
@@ -272,6 +391,10 @@ final class CodexActivityRuntime: ObservableObject {
                 return
             }
             Task { @MainActor in
+                if notification.name == NSWorkspace.didTerminateApplicationNotification,
+                   self?.answerLaunchState == .opened(application.processIdentifier) {
+                    self?.cancelAnswerLaunch()
+                }
                 self?.refreshConnectionStatus()
             }
         }
@@ -333,16 +456,102 @@ final class CodexActivityRuntime: ObservableObject {
             failures.append(error.localizedDescription)
         }
 
+        let socket = installer.socketURL.deletingLastPathComponent().appendingPathComponent("codex-decision.sock")
+        let decisions = ClaudeCodeBridge(socketURL: socket, authenticationToken: authenticationToken)
+        do {
+            try decisions.start(onMessage: { [weak self] message in
+                Task { @MainActor in
+                    guard let self, self.bridgeRunGeneration == bridgeRun else { return }
+                    self.receivePermissionHook(message)
+                }
+            }, onDisconnect: { [weak self] id in
+                Task { @MainActor in
+                    guard let self, self.bridgeRunGeneration == bridgeRun else { return }
+                    self.removePermissionHook(id)
+                }
+            })
+            decisionBridge = decisions
+        } catch { failures.append(error.localizedDescription) }
+
         bridgeStatus = isListening
             ? .listening
             : .failed(failures.joined(separator: " "))
         reconcileOnLaunch()
         claudeCode.start()
+        agentQuotas.start()
         dsh.start(); kimiCode.start(); cursor.start(); geminiCLI.start(); openCode.start(); antigravity.start(); copilotCLI.start(); devinDesktop.start(); devinCLI.start()
+    }
+
+    private var permissionHookEnabled: Bool {
+        isRunning && !isChangingDataDirectory && preferences.codexIntegrationEnabled
+            && !preferences.codexIslandPrivacy && compatibilityHookAdmissionEnabled
+            && nativeHookTrusted && hookOperation != .removing
+    }
+
+    private func receivePermissionHook(_ message: ClaudeCodeBridgeMessage) {
+        guard message.awaitsDecision, let bridge = decisionBridge else { return }
+        guard permissionHookEnabled, UUID(uuidString: message.eventID) != nil,
+              let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
+              payload["installation"] as? String == installer.installationIdentifier,
+              let session = payload["session"] as? String, let turn = payload["turn"] as? String,
+              let command = payload["command"] as? String, !command.isEmpty else {
+            bridge.resolve(eventID: message.eventID, decision: nil)
+            return
+        }
+        var params: [String: Any] = ["threadId": session, "turnId": turn, "itemId": message.eventID,
+            "codexPermissionHook": true, "command": command, "availableDecisions": ["accept", "decline"]]
+        params["cwd"] = payload["cwd"] as? String
+        params["reason"] = payload["reason"] as? String
+        let envelope: [String: Any] = ["id": "codex-hook:" + message.eventID,
+            "method": "item/commandExecution/requestApproval", "params": params]
+        guard let data = try? JSONSerialization.data(withJSONObject: envelope),
+              let wire = try? IslandCodexApprovalRequest(data: data) else {
+            bridge.resolve(eventID: message.eventID, decision: nil)
+            return
+        }
+        permissionRequests[message.eventID] = wire
+        if liveIsland.model.observeCodexPermissionHook(wire, callHash: payload["call"] as? String) {
+            bridge.admit(eventID: message.eventID)
+        } else {
+            permissionRequests.removeValue(forKey: message.eventID)
+            bridge.resolve(eventID: message.eventID, decision: nil)
+        }
+    }
+
+    private func canAnswerPermissionHook(_ wire: IslandCodexApprovalRequest) -> Bool {
+        guard permissionHookEnabled, let pending = permissionRequests[wire.params["itemId"].text] else { return false }
+        return pending.raw == wire.raw
+    }
+
+    private func answerPermissionHook(_ wire: IslandCodexApprovalRequest, result: IslandApprovalJSON) throws {
+        let id = wire.params["itemId"].text
+        guard canAnswerPermissionHook(wire), let bridge = decisionBridge else { throw CodexDesktopIPCError.staleRequest }
+        let behavior: String
+        switch result["decision"].text {
+        case "accept": behavior = "allow"
+        case "decline": behavior = "deny"
+        default: throw CodexDesktopIPCError.invalidResponse
+        }
+        bridge.resolve(eventID: id, decision: ["behavior": behavior])
+        removePermissionHook(id)
+    }
+
+    private func removePermissionHook(_ id: String) {
+        guard let wire = permissionRequests.removeValue(forKey: id) else { return }
+        liveIsland.model.resolveLocalHookRequest(sessionKey: wire.threadID, rpcID: wire.rpcID)
+    }
+
+    private func returnPendingPermissionHooks() {
+        for id in Array(permissionRequests.keys) {
+            decisionBridge?.resolve(eventID: id, decision: nil)
+            removePermissionHook(id)
+        }
     }
 
     private func startDesktopObservation() {
         desktopDiagnosticStates.removeAll()
+        sharedQuestionRefreshTask?.cancel(); sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+        liveIsland.model.updateSharedQuestionCapabilities(handles: [])
         desktopRunGeneration &+= 1
         let run = desktopRunGeneration
         let client = desktopIPCClient
@@ -493,6 +702,7 @@ final class CodexActivityRuntime: ObservableObject {
 
     func enableCompatibilityHook() {
         guard hookOperation == .idle, !isChangingDataDirectory else { return }
+        answerLaunchState = .requested
         defaults.set(true, forKey: DefaultsKey.automaticHook)
         reconcileHook(install: true)
     }
@@ -500,12 +710,14 @@ final class CodexActivityRuntime: ObservableObject {
     /// Consent is scoped to QuotaView's exact user Hook definitions, never trust-all.
     func openCodexSecurityReview() {
         guard hookOperation == .idle, !isChangingDataDirectory else { return }
+        answerLaunchState = .requested
         defaults.set(true, forKey: DefaultsKey.automaticHook)
         reconcileHook(install: true, authorize: true)
     }
 
     func disableCompatibilityHook() {
         guard hookOperation == .idle, !isChangingDataDirectory else { return }
+        cancelAnswerLaunch()
         // User intent is independent of best-effort filesystem cleanup. A failed
         // removal must never grant the repair path permission to reinstall.
         defaults.set(false, forKey: DefaultsKey.setupEnabled)
@@ -624,11 +836,15 @@ final class CodexActivityRuntime: ObservableObject {
             }
         }
         directorySelectionFailed = false
+        cancelAnswerLaunch()
         isChangingDataDirectory = true
+        returnPendingPermissionHooks()
         fileBridge.setDeliveryReady(false)
         directoryTask = Task { [weak self] in
             guard let self else { return }
             // Revoke callbacks and actions before Store resets its admission scope.
+            sharedQuestionRefreshTask?.cancel(); sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+            liveIsland.model.updateSharedQuestionCapabilities(handles: [])
             desktopRunGeneration &+= 1
             desktopObservationTask?.cancel(); desktopObservationTask = nil
             desktopFollowedThreads.removeAll(); desktopFollowSources.removeAll()
@@ -652,6 +868,7 @@ final class CodexActivityRuntime: ObservableObject {
                 socketURL: target.appendingPathComponent("ipc/ipc.sock")))
             dataDirectoryURL = target
             hookEventGeneration &+= 1
+            decisionBridge?.stop(); decisionBridge = nil
             bridge.stop()
             fileBridge.stop()
             installer = CodexActivityHookInstaller(socketURL: Self.defaultSocketURL(),
@@ -691,7 +908,13 @@ final class CodexActivityRuntime: ObservableObject {
     }
 
     func stop() async {
+        cancelAnswerLaunch()
         isRunning = false
+        sharedQuestionRefreshTask?.cancel(); sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+        liveIsland.model.updateSharedQuestionCapabilities(handles: [])
+        returnPendingPermissionHooks()
+        decisionBridge?.stop(); decisionBridge = nil
+        agentQuotas.stop()
         claudeCode.stop()
         dsh.stop(); kimiCode.stop(); cursor.stop(); geminiCLI.stop(); openCode.stop(); antigravity.stop(); copilotCLI.stop(); devinDesktop.stop(); devinCLI.stop()
         desktopRunGeneration &+= 1
@@ -869,6 +1092,11 @@ final class CodexActivityRuntime: ObservableObject {
                         command: installer.hookCommand, expectedEvents: events, cwds: [root])
                 }
                 guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
+                let desktop = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex").flatMap(Bundle.init(url:))
+                desktopIgnoresDaemonPreference = CodexAnswerLaunchState.ignoresDaemonPreference(
+                    version: desktop?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                    build: desktop?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+                )
                 nativeHookTrusted = state.isTrusted
                 if authorize, state.isTrusted {
                     defaults.set(1, forKey: DefaultsKey.consentVersion)
@@ -879,6 +1107,11 @@ final class CodexActivityRuntime: ObservableObject {
                 defaults.removeObject(forKey: DefaultsKey.restartProcessIdentifier)
                 hookOperation = .idle
                 updateConnectionStatusFromInstalledState()
+                if state.isTrusted {
+                    continueAnswerLaunch()
+                } else if answerLaunchState != .requested {
+                    cancelAnswerLaunch()
+                }
             } catch {
                 guard !Task.isCancelled, hookOperationRevision == operation else { await client.stop(); return }
                 nativeHookTrusted = false
@@ -887,6 +1120,7 @@ final class CodexActivityRuntime: ObservableObject {
                 if case CodexActivityEnvironmentInspector.InspectionError.hooksFeatureDisabled = error {
                     hooksFeatureStatus = .disabled
                 } else if hooksFeatureStatus == .checking { hooksFeatureStatus = .unavailable }
+                cancelAnswerLaunch()
                 hookConnectionStatus = .abnormal(hookFailureDescription(error))
                 hookOperation = .idle
                 render()
@@ -1012,12 +1246,60 @@ final class CodexActivityRuntime: ObservableObject {
         set { liveIsland.board.state.onOpenSettings = newValue }
     }
 
+    private func refreshSharedQuestionsIfNeeded() {
+        guard canConfigureSharedAnswers, !preferences.codexIslandPrivacy,
+              !isChangingDataDirectory, !liveIsland.model.usesLegacyDesktopAnswers,
+              automaticConnection.sharedState == .connected else {
+            sharedQuestionRefreshTask?.cancel(); sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+            liveIsland.model.updateSharedQuestionCapabilities(handles: [])
+            return
+        }
+        guard sharedQuestionRefreshTask == nil, Date().timeIntervalSince(lastSharedQuestionRefresh) >= 1 else { return }
+        let candidates = liveIsland.model.tasks.filter { task in
+            !task.terminal && task.requests.contains {
+                $0.value.protocolRequest?.localObservation?.asynchronous == true
+                    && $0.value.protocolRequest?.sharedQuestionHandle == nil && $0.value.phase.canSubmit
+            }
+        }.prefix(8).compactMap { task -> (String, String)? in
+            guard let turn = task.turnKey,
+                  let identity = store.localDesktopFollowIdentities.first(where: {
+                      CodexActivityPrivacy.hashIdentifier($0.threadID) == task.key
+                  }) else { return nil }
+            return (identity.threadID, turn)
+        }
+        guard !candidates.isEmpty else { return }
+        lastSharedQuestionRefresh = Date()
+        let run = desktopRunGeneration
+        let refreshID = UUID()
+        sharedQuestionRefreshID = refreshID
+        sharedQuestionRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if sharedQuestionRefreshID == refreshID {
+                    sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+                    if !Task.isCancelled { refreshSharedQuestionsIfNeeded() }
+                }
+            }
+            for (thread, turn) in candidates {
+                let handles = (try? await store.sharedQuestionHandles(threadID: thread, turnHash: turn)) ?? []
+                guard !Task.isCancelled, isRunning, desktopRunGeneration == run, !isChangingDataDirectory,
+                      canConfigureSharedAnswers, !preferences.codexIslandPrivacy,
+                      automaticConnection.sharedState == .connected else { return }
+                liveIsland.model.updateSharedQuestionCapabilities(threadID: thread, handles: handles)
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+    }
+
     private func render() {
         guard isRunning else { return }
+        refreshSharedQuestionsIfNeeded()
         // The primary interface stays available for the application's lifetime.
         // Retired menu-bar/standalone-island visibility preferences do not hide it.
+        if !permissionHookEnabled { returnPendingPermissionHooks() }
         let enabled = true
         let observesCodex = preferences.codexIntegrationEnabled
+        if !observesCodex, answerLaunchState != .idle { cancelAnswerLaunch() }
         liveIsland.model.setProviderEnabled(.codex, enabled: observesCodex)
         liveIsland.model.setProviderEnabled(.claudeCode, enabled: preferences.claudeCodeEnabled)
         if observationsEnabled != observesCodex {
@@ -1030,6 +1312,8 @@ final class CodexActivityRuntime: ObservableObject {
                     store.startNativeActivityNotifications()
                     startDesktopObservation()
                 } else {
+                    sharedQuestionRefreshTask?.cancel(); sharedQuestionRefreshTask = nil; sharedQuestionRefreshID = nil
+                    liveIsland.model.updateSharedQuestionCapabilities(handles: [])
                     desktopRunGeneration &+= 1
                     desktopObservationTask?.cancel()
                     await desktopIPCClient.stop()

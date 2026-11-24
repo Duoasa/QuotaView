@@ -66,6 +66,7 @@
 		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		B1000000000000000000002B /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000030 /* AppUpdateController.swift */; };
 		B1000000000000000000002C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000001 /* Sparkle */; };
+		B1D500000000000000000026 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* Yams */; };
 		B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000031 /* CodexActivityRippleGlow.swift */; };
 		B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */; };
 		B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* CodexActivityStateSmoke.swift */; };
@@ -121,12 +122,20 @@
 		D58A00100000000000000001 /* DSHApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58A00100000000000000002 /* DSHApproval.swift */; };
 		10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */; };
 		F124AA046A000A1231449201 /* AntigravityHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F124AA046A000A1231449202 /* AntigravityHistory.swift */; };
+		F124AA046A000A1231449301 /* AntigravityDesktopApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */; };
+		A047AE046A000A1231449201 /* AgentQuota.swift in Sources */ = {isa = PBXBuildFile; fileRef = A047AE046A000A1231449202 /* AgentQuota.swift */; };
+		B047AE046A000A1231449201 /* NativeQuotaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B047AE046A000A1231449202 /* NativeQuotaClient.swift */; };
+		AD26CA070000009701000001 /* ClaudeTerminalNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD26CA070000009701000002 /* ClaudeTerminalNavigation.swift */; };
+		C047AE046A000A1231449201 /* NativeQuotaResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = C047AE046A000A1231449202 /* NativeQuotaResponse.swift */; };
 		097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */; };
 		B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */; };
 		1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */; };
 		42AB862663C04DE29160BCF6 /* NativeAgentHookNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */; };
+		AD26CA070000009701000003 /* ClaudeConversationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD26CA070000009701000005 /* ClaudeConversationHost.swift */; };
 		5C56C929A6ED683B94977A0D /* NativeAgentHookNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */; };
+		AD26CA070000009701000004 /* ClaudeConversationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD26CA070000009701000005 /* ClaudeConversationHost.swift */; };
 		B08730000000000000000001 /* ProviderIconNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = F08730000000000000000001 /* ProviderIconNotices.txt */; };
+		B1D500000000000000000027 /* YamsNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1D500000000000000000027 /* YamsNotices.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -313,11 +322,18 @@
 		D58A00100000000000000002 /* DSHApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSHApproval.swift; sourceTree = "<group>"; };
 		CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentRuntime.swift; sourceTree = "<group>"; };
 		F124AA046A000A1231449202 /* AntigravityHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityHistory.swift; sourceTree = "<group>"; };
+		F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityDesktopApproval.swift; sourceTree = "<group>"; };
+		A047AE046A000A1231449202 /* AgentQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentQuota.swift; sourceTree = "<group>"; };
+		B047AE046A000A1231449202 /* NativeQuotaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeQuotaClient.swift; sourceTree = "<group>"; };
+		AD26CA070000009701000002 /* ClaudeTerminalNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTerminalNavigation.swift; sourceTree = "<group>"; };
+		C047AE046A000A1231449202 /* NativeQuotaResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeQuotaResponse.swift; sourceTree = "<group>"; };
 		53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIntegrationSettings.swift; sourceTree = "<group>"; };
 		439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentExternalInstaller.swift; sourceTree = "<group>"; };
 		25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentOpenCodePlugin.swift; sourceTree = "<group>"; };
 		477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentHookNormalizer.swift; sourceTree = "<group>"; };
+		AD26CA070000009701000005 /* ClaudeConversationHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeConversationHost.swift; sourceTree = "<group>"; };
 		F08730000000000000000001 /* ProviderIconNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/ProviderIconNotices.txt; sourceTree = "<group>"; };
+		F1D500000000000000000027 /* YamsNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/YamsNotices.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -327,6 +343,7 @@
 			files = (
 				B10000000000000000000004 /* QuotaViewCore.framework in Frameworks */,
 				B1000000000000000000002C /* Sparkle in Frameworks */,
+				B1D500000000000000000026 /* Yams in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,6 +414,7 @@
 				F07700000000000000000010 /* SettingsIslandPreview.xcassets */,
 				F07700000000000000000011 /* ProviderIcons.xcassets */,
 				F08730000000000000000001 /* ProviderIconNotices.txt */,
+				F1D500000000000000000027 /* YamsNotices.txt */,
 				F0730000000000000000000A /* IslandTaskScrolling.swift */,
 				F07300000000000000000009 /* IslandTaskDetail.swift */,
 				F07500000000000000000031 /* IslandMarkdownResult.swift */,
@@ -406,6 +424,11 @@
 				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
 				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
 				F124AA046A000A1231449202 /* AntigravityHistory.swift */,
+				F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */,
+				A047AE046A000A1231449202 /* AgentQuota.swift */,
+				B047AE046A000A1231449202 /* NativeQuotaClient.swift */,
+				AD26CA070000009701000002 /* ClaudeTerminalNavigation.swift */,
+				C047AE046A000A1231449202 /* NativeQuotaResponse.swift */,
 				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
 				D58A00100000000000000002 /* DSHApproval.swift */,
 				25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */,
@@ -525,6 +548,7 @@
 			children = (
 				F10000000000000000000034 /* PlanProgressParser.swift */,
 				477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */,
+				AD26CA070000009701000005 /* ClaudeConversationHost.swift */,
 				D391B1200000000000000003 /* DevinSessionUsage.swift */,
 			);
 			path = QuotaViewActivityHookSupport;
@@ -609,6 +633,7 @@
 			name = QuotaView;
 			packageProductDependencies = (
 				P20000000000000000000001 /* Sparkle */,
+				P20000000000000000000002 /* Yams */,
 			);
 			productName = QuotaView;
 			productReference = F1000000000000000000000F /* QuotaView.app */;
@@ -738,6 +763,7 @@
 			mainGroup = G10000000000000000000001;
 			packageReferences = (
 				P10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				P10000000000000000000002 /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			productRefGroup = G10000000000000000000008 /* Products */;
 			projectDirPath = "";
@@ -765,6 +791,7 @@
 				B08725000000000000000002 /* AppTranslations.json in Resources */,
 				B07700000000000000000011 /* ProviderIcons.xcassets in Resources */,
 				B08730000000000000000001 /* ProviderIconNotices.txt in Resources */,
+				B1D500000000000000000027 /* YamsNotices.txt in Resources */,
 				B10000000000000000000005 /* Assets.xcassets in Resources */,
 				B10000000000000000000013 /* Fonts in Resources */,
 				B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */,
@@ -819,7 +846,13 @@
 				097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */,
 				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
 				F124AA046A000A1231449201 /* AntigravityHistory.swift in Sources */,
+				F124AA046A000A1231449301 /* AntigravityDesktopApproval.swift in Sources */,
+				A047AE046A000A1231449201 /* AgentQuota.swift in Sources */,
+				B047AE046A000A1231449201 /* NativeQuotaClient.swift in Sources */,
+				AD26CA070000009701000001 /* ClaudeTerminalNavigation.swift in Sources */,
+				C047AE046A000A1231449201 /* NativeQuotaResponse.swift in Sources */,
 				42AB862663C04DE29160BCF6 /* NativeAgentHookNormalizer.swift in Sources */,
+				AD26CA070000009701000003 /* ClaudeConversationHost.swift in Sources */,
 				D391B1200000000000000001 /* DevinSessionUsage.swift in Sources */,
 				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
 				D58A00100000000000000001 /* DSHApproval.swift in Sources */,
@@ -936,6 +969,7 @@
 				B10000000000000000000029 /* main.swift in Sources */,
 				B10000000000000000000030 /* PlanProgressParser.swift in Sources */,
 				5C56C929A6ED683B94977A0D /* NativeAgentHookNormalizer.swift in Sources */,
+				AD26CA070000009701000004 /* ClaudeConversationHost.swift in Sources */,
 				D391B1200000000000000002 /* DevinSessionUsage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1141,6 +1175,14 @@
 				version = 2.9.2;
 			};
 		};
+		P10000000000000000000002 /* XCRemoteSwiftPackageReference "Yams" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpsim/Yams";
+			requirement = {
+				kind = exactVersion;
+				version = 6.2.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1148,6 +1190,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = P10000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		P20000000000000000000002 /* Yams */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P10000000000000000000002 /* XCRemoteSwiftPackageReference "Yams" */;
+			productName = Yams;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

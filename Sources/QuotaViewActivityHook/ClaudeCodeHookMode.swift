@@ -237,6 +237,12 @@ struct ClaudeCodeHookForwarder {
         }
         payload["hook_process_id"] = Int(getppid())
 
+        let host = ClaudeConversationHost.current()
+        if host.desktop != nil || host.terminal != nil,
+           let data = try? JSONEncoder().encode(host), let fields = try? JSONSerialization.jsonObject(with: data) {
+            payload["claude_host"] = fields
+        }
+
         let awaitsDecision = event == "PermissionRequest" && route.interactiveApprovals != false
         let eventID = UUID().uuidString.lowercased()
         let envelope: [String: Any] = [
@@ -397,7 +403,7 @@ enum NativeAgentHookForwarder {
         if provider == "devinDesktop" || provider == "devinCLI" {
             guard DevinHookSource.currentProvider() == provider else { return }
         }
-        var response = NativeAgentHookNormalizer.neutralOutput(provider: provider, event: event)
+        let response = NativeAgentHookNormalizer.neutralOutput(provider: provider, event: event)
         defer {
             if let output = response {
                 ClaudeCodeHookIO.writeStandardOutput(output)
@@ -422,16 +428,6 @@ enum NativeAgentHookForwarder {
         }
         guard let object = decoded as? [String: Any],
               var payload = NativeAgentHookNormalizer.normalize(object, provider: provider, event: event) else { return }
-        if provider == "antigravity", event == "PreToolUse", route.interactiveApprovals == true,
-           let tool = payload["tool_name"] as? String, let step = object["stepIdx"] as? Int, step >= 0,
-           let args = (object["toolCall"] as? [String: Any])?["args"] as? [String: Any],
-           NativeAgentHookNormalizer.antigravityReviewable(tool: tool, arguments: args),
-           let full = try? JSONSerialization.data(withJSONObject: args), full.count <= 48_000 {
-            payload["tool_input"] = args
-            payload["hook_event_name"] = "AntigravityApproval"
-            response = try? JSONSerialization.data(withJSONObject: ["decision": antigravityDecision(payload, route: route)])
-            return
-        }
         if provider == "devinDesktop" || provider == "devinCLI",
            let session = payload["session_id"] as? String,
            let store = DevinSessionUsage.Store.current(session: session) {
@@ -455,27 +451,6 @@ enum NativeAgentHookForwarder {
         }
         _ = forward(payload, route: route)
     }
-    private static func antigravityDecision(_ payload: [String: Any], route: ClaudeCodeRoute) -> String {
-        let eventID = UUID().uuidString
-        let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": eventID,
-                                       "kind": "hook", "awaitDecision": true, "payload": payload]
-        guard var data = try? JSONSerialization.data(withJSONObject: envelope) else { return "allow" }
-        data.append(10)
-        let client = ClaudeCodeSocketClient()
-        guard client.connect(path: route.socketPath, timeout: 0.5), client.send(data, timeout: 1),
-              let ack = client.readLine(until: Date().addingTimeInterval(1)), ack["eventID"] as? String == eventID,
-              ack["pending"] as? Bool == true,
-              let admitted = client.readLine(until: Date().addingTimeInterval(2)), admitted["eventID"] as? String == eventID,
-              admitted["admitted"] as? Bool == true else { return "allow" }
-        guard let reply = client.readLine(until: Date().addingTimeInterval(110)), reply["eventID"] as? String == eventID,
-              let result = (reply["decision"] as? [String: Any])?["outcome"] as? String else { return "ask" }
-        switch result {
-        case "allowed-once": return "auto_approve"
-        case "rejected": return "deny"
-        default: return "ask"
-        }
-    }
-
     private static func forward(_ payload: [String: Any], route: ClaudeCodeRoute) -> Bool {
         let eventID = UUID().uuidString
         let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": eventID,

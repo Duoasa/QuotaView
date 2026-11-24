@@ -553,6 +553,52 @@ else {
     exit(0)
 }
 
+// The command and reason travel only on a live, authenticated decision socket.
+// Queue replay retains the sanitized activity and can never answer a prompt.
+private func interactiveCommandDecision(input: Data, activity: SanitizedActivity,
+                                        arguments: Arguments, eventID: String) -> Bool {
+    guard activity.event == .permissionRequest, activity.toolCategory == .shell,
+          let turn = activity.turnHash,
+          let event = (try? JSONSerialization.jsonObject(with: input)) as? [String: Any],
+          let toolInput = event["tool_input"] as? [String: Any],
+          let command = toolInput["command"] as? String, !command.isEmpty else { return false }
+    // Unknown argument fields can change what is being authorized. Defer them
+    // to Codex until their semantics can be rendered in full.
+    guard Set(toolInput.keys).isSubset(of: ["command", "description"]),
+          toolInput["description"] == nil || toolInput["description"] is NSNull || toolInput["description"] is String
+    else { return false }
+    var details: [String: Any] = ["installation": arguments.installationIdentifier,
+        "session": activity.sessionHash, "turn": turn, "command": command]
+    details["cwd"] = event["cwd"] as? String
+    details["reason"] = toolInput["description"] as? String
+    details["call"] = activity.toolCallHash
+    let envelope: [String: Any] = ["authenticationToken": arguments.authenticationToken,
+        "kind": "hook", "awaitDecision": true, "eventID": eventID, "payload": details]
+    guard var data = try? JSONSerialization.data(withJSONObject: envelope), data.count <= 65_536 else { return false }
+    data.append(10)
+    let client = ClaudeCodeSocketClient()
+    let path = URL(fileURLWithPath: arguments.socketPath).deletingLastPathComponent()
+        .appendingPathComponent("codex-decision.sock").path
+    guard client.connect(path: path, timeout: 0.3), client.send(data, timeout: 0.5),
+          let ack = client.readLine(until: Date().addingTimeInterval(1)),
+          ack["eventID"] as? String == eventID, ack["pending"] as? Bool == true,
+          let admission = client.readLine(until: Date().addingTimeInterval(2)),
+          admission["eventID"] as? String == eventID, admission["admitted"] as? Bool == true,
+          let reply = client.readLine(until: Date().addingTimeInterval(55)),
+          reply["eventID"] as? String == eventID,
+          let decision = reply["decision"] as? [String: Any], let behavior = decision["behavior"] as? String,
+          ["allow", "deny"].contains(behavior) else { return false }
+    let output = ["hookSpecificOutput": ["hookEventName": "PermissionRequest", "decision": ["behavior": behavior]]] as [String: Any]
+    guard var json = try? JSONSerialization.data(withJSONObject: output) else { return false }
+    json.append(10)
+    ClaudeCodeHookIO.writeStandardOutput(json)
+    return true
+}
+
+if interactiveCommandDecision(input: input, activity: activity, arguments: arguments, eventID: eventID) {
+    exit(0)
+}
+
 switch send(payload, eventID: eventID, to: arguments.socketPath) {
 case .delivered:
     appendDiagnostic(

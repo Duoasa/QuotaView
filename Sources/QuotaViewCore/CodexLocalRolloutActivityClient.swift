@@ -1007,7 +1007,8 @@ public actor CodexLocalRolloutActivityClient {
                         // replay cap without retaining additional user content.
                         latestPublicMetadata = content
                     } else {
-                        publicReplay.append(content, isAssistantMessage: fields?["type"] as? String == "message")
+                        publicReplay.append(content, isAssistantMessage: fields?["type"] as? String == "message",
+                                            isAcceptedReply: fields?["type"] as? String == "questionReply")
                     }
                 }
                 guard let record = decoded else { return }
@@ -1057,7 +1058,7 @@ public actor CodexLocalRolloutActivityClient {
                 if let content = latestPublicMetadata, content.turnHash == decoder.activeTurnHash {
                     await publicContentHandler?(content)
                 }
-                for content in publicReplay.contents {
+                for content in publicReplay.contentsForDelivery {
                     guard isStarted, generation == run else { return }
                     await publicContentHandler?(content)
                 }
@@ -1156,12 +1157,53 @@ struct CodexLocalPublicReplayBuffer {
     private var currentTurn: String?
     private var protectedMessageIndex: Int?
 
+    private var containsReplies = false
+
+    /// A single startup read can contain both a question and its accepted reply.
+    /// Deliver the receipt, but never publish a transient form for that pair.
+    var contentsForDelivery: [CodexLocalPublicContent] {
+        guard containsReplies else { return contents }
+        var answers: [String: Set<String>] = [:]
+        return contents.reversed().map { content in
+            guard let fields = try? JSONSerialization.jsonObject(with: content.data) as? [String: Any] else { return content }
+            let scope = content.sessionHash + ":" + content.turnHash
+            switch fields["type"] as? String {
+            case "questionReply":
+                for proof in fields["replies"] as? [[String: String]] ?? [] {
+                    if let id = proof["questionItemHash"], let title = proof["questionHash"] {
+                        answers[scope, default: []].insert(id + ":" + title)
+                    }
+                }
+            case "questionRequest":
+                guard let answered = answers[scope], fields["asynchronous"] as? Bool == true,
+                      let call = fields["id"] as? String, let questions = fields["questions"] as? [[String: Any]],
+                      !questions.isEmpty else { return content }
+                var matched: [[String: String]] = []
+                for (index, question) in questions.enumerated() {
+                    guard let id = CodexLocalAsyncReplyContent.identityHash(source: call, index: index),
+                          let title = question["question"] as? String else { return content }
+                    let questionHash = CodexActivityPrivacy.hashIdentifier(title)
+                    guard answered.contains(id + ":" + questionHash) else { return content }
+                    matched.append(["questionItemHash": id, "questionHash": questionHash])
+                }
+                // The original and every matching later receipt are both in this
+                // bounded replay. An owner snapshot may still arrive after them.
+                let receipt: [String: Any] = ["type": "questionReply", "verifiedReplay": true, "replies": matched]
+                guard let data = try? JSONSerialization.data(withJSONObject: receipt) else { return content }
+                return .init(sessionHash: content.sessionHash, turnHash: content.turnHash, data: data, occurredAt: content.occurredAt)
+            default: break
+            }
+            return content
+        }.reversed()
+    }
+
     mutating func selectTurn(_ turn: String?) {
         if currentTurn != turn { protectedMessageIndex = nil }
         currentTurn = turn
     }
 
-    mutating func append(_ content: CodexLocalPublicContent, isAssistantMessage: Bool) {
+    mutating func append(_ content: CodexLocalPublicContent, isAssistantMessage: Bool, isAcceptedReply: Bool = false) {
+        if isAcceptedReply { containsReplies = true }
         selectTurn(content.turnHash)
         contents.append(content)
         byteCount += content.data.count

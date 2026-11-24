@@ -211,6 +211,7 @@ final class AppPreferences: ObservableObject {
     }
 
     private enum Key {
+        static let agentSettingsOrder = "preferences.settings.agentOrder"
         static let proxyConfiguration = "preferences.network.proxyConfiguration"
         static let showStatusIcon = "preferences.menuBar.showStatusIcon"
         static let showRemainingQuota = "preferences.menuBar.showRemainingQuota"
@@ -369,6 +370,19 @@ final class AppPreferences: ObservableObject {
     }
 
     // Claude Code writes the user's ~/.claude/settings.json, so it is opt-in.
+    @Published private(set) var agentSettingsOrder: [IslandAgentProvider] {
+        didSet { defaults.set(agentSettingsOrder.map(\.rawValue), forKey: Key.agentSettingsOrder) }
+    }
+
+    func moveAgentInSettings(_ agent: IslandAgentProvider, to target: IslandAgentProvider) {
+        guard agent != target, let source = agentSettingsOrder.firstIndex(of: agent),
+              let destination = agentSettingsOrder.firstIndex(of: target) else { return }
+        var order = agentSettingsOrder
+        order.remove(at: source)
+        order.insert(agent, at: destination)
+        agentSettingsOrder = order
+    }
+
     @Published var codexIntegrationEnabled: Bool {
         didSet { defaults.set(codexIntegrationEnabled, forKey: "integrations.codex.enabled") }
     }
@@ -392,6 +406,9 @@ final class AppPreferences: ObservableObject {
     }
     @Published var antigravityEnabled: Bool {
         didSet { defaults.set(antigravityEnabled, forKey: "integrations.antigravity.enabled") }
+    }
+    @Published var openCodeInteractionsEnabled: Bool {
+        didSet { defaults.set(openCodeInteractionsEnabled, forKey: "integrations.openCode.interactions") }
     }
     @Published var openCodeEnabled: Bool {
         didSet { defaults.set(openCodeEnabled, forKey: "integrations.openCode.enabled") }
@@ -598,6 +615,10 @@ final class AppPreferences: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let savedAgents = (defaults.stringArray(forKey: Key.agentSettingsOrder) ?? [])
+            .compactMap(IslandAgentProvider.init(rawValue:))
+        var seen = Set<IslandAgentProvider>()
+        agentSettingsOrder = (savedAgents + IslandAgentProvider.allCases).filter { seen.insert($0).inserted }
         proxyConfiguration = defaults.data(forKey: Key.proxyConfiguration)
             .flatMap { try? JSONDecoder().decode(ProxyConfiguration.self, from: $0) }
             ?? .default
@@ -685,6 +706,7 @@ final class AppPreferences: ObservableObject {
         geminiCLIEnabled = defaults.bool(forKey: "integrations.geminiCLI.enabled")
         antigravityInteractiveApprovals = defaults.storedBool(forKey: "integrations.antigravity.interactiveApprovals", defaultValue: true)
         antigravityEnabled = defaults.bool(forKey: "integrations.antigravity.enabled")
+        openCodeInteractionsEnabled = defaults.bool(forKey: "integrations.openCode.interactions")
         openCodeEnabled = defaults.bool(forKey: "integrations.openCode.enabled")
         devinDesktopEnabled = defaults.bool(forKey: "integrations.devinDesktop.enabled")
         devinCLIEnabled = defaults.bool(forKey: "integrations.devinCLI.enabled")

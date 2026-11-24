@@ -1,6 +1,106 @@
 # QuotaView SDD 注册表
 
-## 当前开发：0.9.7 Build 3 / 设置导航按钮
+## 0.9.7 Build 30 / 后台完成任务卡高亮
+
+[进度效果适配协议](PROGRESS_EFFECT_ADAPTATION.md#097-build-30-任务列表单卡高亮)记录当前选中项与完成动画的关系。
+
+## 0.9.7 Build 29 / Antigravity 命令审批
+
+[Agent 接入](agent-integrations.md#antigravity-原生审批)记录网络命令等选择式权限表单的识别、授权范围与原卡回传。
+
+## 0.9.7 Build 28 / Antigravity 原生审批
+
+[Agent 接入](agent-integrations.md#antigravity-原生审批)记录真实权限卡识别、批准范围和原生按钮回传。
+
+## 0.9.7 Build 27 / 桌面任务跳转
+
+[Agent 接入](agent-integrations.md#桌面会话导航)记录授权或侧栏变化后的入口刷新。用户已验证 Antigravity 和 DSH 新会话的实际跳转。
+
+## 0.9.7 Build 26 / DeepSeek 余额
+
+[Agent 接入](agent-integrations.md)记录 DSH 已保存凭据的读取顺序和官方余额查询。
+
+## 0.9.7 Build 25 / 整行拖动与弹性避让
+
+[Agent 接入](agent-integrations.md)支持拖动整行预览落点，其他行随指针位置让位，松手后保存。
+
+## 0.9.7 Build 23 / Agent 列表排序
+
+[Agent 接入](agent-integrations.md)支持通过左侧手柄调整列表顺序，并在本机保存。
+
+## 0.9.7 Build 22 / Agent 列表留白与详情标题
+
+[Agent 接入](agent-integrations.md)恢复原来的列表行高，并在二级页标题中复用品牌图标。
+
+## 0.9.7 Build 21 / Agent 品牌图标
+
+[Agent 接入](agent-integrations.md)的单行列表在名称左侧使用原有的 26 pt 品牌图标。
+
+## 0.9.7 Build 20 / Agent 接入开关
+
+[Agent 接入](agent-integrations.md)记录一级列表的开关、状态图标和进入二级页检查连接的方式。
+
+## 0.9.7 Build 19 / 终端自动化授权
+
+[Agent 接入](agent-integrations.md)支持从设置页发起 Terminal 或 iTerm2 的首次系统授权。
+
+## 0.9.7 Build 18 / Agent 列表导航
+
+[Agent 接入](agent-integrations.md)列表的详情箭头位于连接按钮右侧。
+
+## 0.9.7 Build 17 / Agent 接入状态点
+
+[Agent 接入](agent-integrations.md)说明名称后状态点的颜色及异常优先级。
+
+## 0.9.7 Build 16 / 统一接入
+
+[Agent 接入](agent-integrations.md)记录 11 个设置入口、按能力显示状态、账户读取和 OpenCode 1.x 原生问答。[Codex 确认同步](codex-desktop-confirmation-sync.md)记录本机共享服务已加载会话的只读探测。
+
+## 0.9.7 Build 15 / 本地会话只读实测
+
+11 月 24 日 08:52 用户实测，岛内为只读，橙色是在 Codex 原生界面选择。桌面 26.1117.41037（29803）的本地 host 在 08:50 通过 stdio 完成握手，WebSocket 属于 durable host。桌面为本地 host 添加配置覆盖项，而原生 daemon 启动分支要求覆盖列表为空。Build 15 对该精确构建停止提供无效的共享重启，保留命令 Hook、旧版桌面回答，以及对确实匹配同一服务的题目的处理。这个版本的普通本地会话仍需在 Codex 内作答。
+
+## 前序开发：0.9.7 Build 14 / Hook 授权联动选择题回答
+
+设置现可在 Hook 授权后准备共享启动。已授权用户在同一页连接回答，当前 Codex 由用户自行退出后重开一次。开发运行包与隔离原生回答已验证，真实桌面交互待测。详见[确认同步](codex-desktop-confirmation-sync.md)。
+
+## 前序开发：0.9.7 Build 13 / 新版 Codex 回答通道
+
+[确认同步](codex-desktop-confirmation-sync.md)记录同一原生共享服务的异步题目能力、带轮次核对的单次回答、断线处理与旧版兼容。开发运行包已更新；生产客户端对本机原生隔离服务的回答与接受回执验证通过。真实桌面仍需通过共享模式脚本重启，岛内交互待用户验收。
+
+## 前序开发：0.9.7 Build 12 / Codex 命令审批
+
+[确认同步](codex-desktop-confirmation-sync.md)记录原生 PermissionRequest 回传与旧版桌面通道兼容条件。11 月 23 日用户确认命令确认类审批正常；当时异步选择题只能查看，随后授权的兼容实现见 Build 13。
+
+## 前序开发：0.9.7 Build 11 / Codex 审批断线提示
+
+[确认同步](codex-desktop-confirmation-sync.md)记录网络审批的实际断线证据及只读占位在重连前后的展示。
+
+## 前序开发：0.9.7 Build 10 / Claude Code 前往对话
+
+[Agent 接入](agent-integrations.md#桌面会话导航)记录 Claude 桌面普通及第三方模式、Terminal 标签页、iTerm2 分屏和各终端自动化权限。
+
+## 前序开发：0.9.7 Build 9 / 原生额度读取
+
+[Agent 接入](agent-integrations.md)记录七个来源的原生额度读取、登录要求和离线行为。
+
+## 前序开发：0.9.7 Build 8 / Codex 回答通道与内嵌额度读取
+
+[确认同步](codex-desktop-confirmation-sync.md)记录重启、断线与题目身份的联合处理。[Agent 接入](agent-integrations.md)记录可选后台额度、账户来源与内嵌读取程序。
+
+## 前序开发：0.9.7 Build 7 / Antigravity 后台额度
+
+[Antigravity 用量](agent-integrations.md)优先读取已安装的 agy，详情页提供可选安装，桌面端继续作为备用来源。
+
+## 前序开发：0.9.7 Build 6 / 直接读取 Antigravity 桌面端额度
+
+[Antigravity 用量](agent-integrations.md)优先读取桌面端，使用已有的 macOS 辅助功能权限，无需安装额度工具。
+
+## 前序开发：0.9.7 Build 5 / 异步问题回放与实时额度
+
+[确认同步](codex-desktop-confirmation-sync.md)记录已回答问题的跨启动恢复。[Antigravity 用量](agent-integrations.md)补充离线展示和官方 CLI 的实测结果。
+
+## 前序开发：0.9.7 Build 3 / 设置导航按钮
 
 [设置标题栏](../design/QUOTAVIEW_UI_RULES.md#设置标题栏build-41)的前进和后退按钮共用液态玻璃胶囊。
 
@@ -634,7 +734,7 @@ Windows 设置精简后续：本地开发版 `0.8.3-win.12` 已改为以标题�
 | `QV-ISLAND-GLASS-APPEARANCE-001` | [底部玻璃与胶囊统一外观](island-glass-appearance.md) | `Accepted / Verifying` | 仅液态玻璃显示浅色/深色/自动三选项，底栏与胶囊统一；设置分组、自动跟随和偏好持久化，视觉待用户验收。 |
 | `QV-ISLAND-EXPANDED-GLASS-001` | [展开态玻璃](island-expanded-glass.md) | `Accepted / Verifying` | 外观页持久化玻璃/经典纯色切换；55%–80% 渐变、连续曲率任务卡与无框图标；依据 DroppyKit 修正祖先遮罩，完整 Droppy 16.0.1 源码不可得，视觉/性能仍待验收。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-BACKGROUND-MEMORY-001` | [记忆整理的来源、生命周期与底栏展示](../design/quotaview-background-memory-2026-10-03.md) | `Accepted / Verifying` | 依据原生来源和精确轮次识别记忆，独立底栏展示；真实场景待持续验收。 |
-| `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 当前 owner 回传、草稿与资源边界；本地 0.7.9 Build 2 已修复重订阅序号重置，真实交互待验收；ACK 不等于原生界面关闭。 |
+| `QV-CODEX-DESKTOP-CONFIRMATION-SYNC-001` | [Desktop 确认详情与双向同步](codex-desktop-confirmation-sync.md) | `Accepted / Verifying` | 新版共享服务回答、旧版 Desktop 兼容与 PermissionRequest 命令审批；命令审批获用户验证，共享模式真实桌面交互待验收；ACK 不等于原生界面关闭。 |
 | `QV-PRODUCT-ACTIVITY-ISLAND-PRODUCTION-003` | [刘海生产交互与显示规则](../design/quotaview-island-production-interaction-review-2026-09-30.md) | `Accepted / Verifying` | 生产多任务、请求与归档；详情一/两格、内部滚动和紧凑排版，子 Agent 纳入父卡第三行，实际效果待用户验收。 |
 
 ## 保留的独立开发台

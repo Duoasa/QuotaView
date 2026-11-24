@@ -193,6 +193,42 @@ final class HookInstallerRoutingTests: XCTestCase {
         XCTAssertFalse(String(decoding: try Data(contentsOf: events[0]), as: UTF8.self).contains("PRIVATE INPUT"))
     }
 
+    func testLiveCodexPermissionHookReturnsOnlyAdmittedDecision() throws {
+        let helper = try actualBuiltHelper()
+        let root = URL(fileURLWithPath: "/private/tmp/qv-permission-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let installer = makeInstaller(root: root, hooks: root.appendingPathComponent("hooks.json"),
+                                     bundled: helper, channel: "fixture")
+        _ = try installer.install()
+        let hook: [String: Any] = ["hook_event_name": "PermissionRequest", "session_id": "test-thread",
+            "turn_id": "test-turn", "cwd": "/test", "tool_name": "Bash",
+            "tool_input": ["command": "printf fixture", "description": "fixture only"]]
+        for behavior in ["allow", "deny", "no-decision"] {
+            let bridge = ClaudeCodeBridge(socketURL: root.appendingPathComponent("codex-decision.sock"),
+                                          authenticationToken: installer.authenticationToken)
+            try bridge.start(onMessage: { message in
+                let details = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any]
+                XCTAssertEqual(details?["session"] as? String, CodexActivityPrivacy.hashIdentifier("test-thread"))
+                XCTAssertEqual(details?["command"] as? String, "printf fixture")
+                XCTAssertTrue(message.awaitsDecision)
+                if behavior == "no-decision" { bridge.resolve(eventID: message.eventID, decision: nil); return }
+                bridge.admit(eventID: message.eventID)
+                bridge.resolve(eventID: message.eventID, decision: ["behavior": behavior])
+            }, onDisconnect: { _ in })
+            defer { bridge.stop() }
+            let output = try runHelper(helper, configuration: installer.configurationURL, input: hook)
+            if behavior == "no-decision" {
+                XCTAssertTrue(output.isEmpty)
+            } else {
+                let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: output) as? [String: Any])
+                let body = try XCTUnwrap(json["hookSpecificOutput"] as? [String: Any])
+                XCTAssertEqual(body["hookEventName"] as? String, "PermissionRequest")
+                XCTAssertEqual(body["decision"] as? [String: String], ["behavior": behavior])
+            }
+        }
+    }
+
     func testHelperRejectsReadableOrSymlinkedRouteConfiguration() throws {
         let helper = try actualBuiltHelper()
         let root = try makeRoot()

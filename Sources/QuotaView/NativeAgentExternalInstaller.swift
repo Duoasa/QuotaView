@@ -7,7 +7,7 @@ extension NativeAgentInstaller {
     /// commands are removed; another application's hooks and preferences survive.
     func writeExternalRoute(interactiveApprovals: Bool) throws {
         let fields: [String: Any] = ["version": 1, "socketPath": socketURL.path,
-            "authenticationToken": authenticationToken, "interactiveApprovals": provider == .antigravity && interactiveApprovals,
+            "authenticationToken": authenticationToken, "interactiveApprovals": provider == .openCode && interactiveApprovals,
             "agentProvider": provider.rawValue]
         try privateWrite(JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]), to: route)
     }

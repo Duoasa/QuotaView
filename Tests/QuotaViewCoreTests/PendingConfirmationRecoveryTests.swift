@@ -43,6 +43,27 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
     }
 
     @MainActor
+    func testCodexPermissionHookRequiresCurrentTurnAndDefersToConnectedDesktop() throws {
+        let model = IslandLiveStore()
+        start(model)
+        let wire = try IslandCodexApprovalRequest(data: json("item/commandExecution/requestApproval",
+            ["threadId": hash("dsh"), "turnId": hash("turn"), "itemId": "fixture", "codexPermissionHook": true,
+             "command": "printf fixture", "availableDecisions": ["accept", "decline"]], id: "codex-hook:fixture"))
+        XCTAssertFalse(model.observeCodexPermissionHook(wire, callHash: nil))
+        model.responseCapability = { $0.raw == wire.raw }
+        model.setDesktopConnection(connected: true, epoch: 1)
+        XCTAssertFalse(model.observeCodexPermissionHook(wire, callHash: nil))
+        model.setDesktopConnection(connected: false, epoch: nil)
+        XCTAssertTrue(model.observeCodexPermissionHook(wire, callHash: nil))
+        XCTAssertEqual(model.tasks[0].requests.first?.value.canRespond, true)
+        XCTAssertFalse(wire.permits(.object(["decision": .string("acceptForSession")])))
+        model.resolveLocalHookRequest(sessionKey: wire.threadID, rpcID: wire.rpcID)
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+        start(model, turn: "later")
+        XCTAssertFalse(model.observeCodexPermissionHook(wire, callHash: nil))
+    }
+
+    @MainActor
     func testQuestionToolPreservesTypeContentAndNeverInventsResponseOwnership() async throws {
         var decoder = CodexLocalRolloutLineDecoder(sessionHash: hash("dsh"), sessionKind: .user)
         _ = decoder.decode(line: line("event_msg", ["type": "task_started", "turn_id": "turn"], at: date))
@@ -128,6 +149,29 @@ final class PendingConfirmationRecoveryTests: XCTestCase {
         XCTAssertEqual(model.tasks[0].status, .thinking)
         model.receiveLocalContent(try content(questionLine(call: "new-call", at: date.addingTimeInterval(4))))
         XCTAssertEqual(model.tasks[0].requests.count, 1, "A genuinely new request remains available")
+    }
+
+    @MainActor
+    func testObserverOnlyApprovalExplainsDisconnectAndTracksReconnection() throws {
+        let model = IslandLiveStore()
+        start(model)
+        model.receiveLegacy(.init(event: .permissionRequest, sessionHash: hash("dsh"), turnHash: hash("turn"),
+            sessionKind: .user, source: .hook, occurredAt: date.addingTimeInterval(1)))
+        func shown() throws -> IslandConfirmation {
+            let card = try XCTUnwrap(model.tasks.first)
+            return try XCTUnwrap(model.display(english: true, remaining: nil, enabled: true, privacy: false)
+                .taskDetails[card.id]?.confirmation)
+        }
+        let disconnected = try shown()
+        XCTAssertTrue(disconnected.impact.english.contains("disconnected"))
+        XCTAssertFalse(disconnected.canRespond)
+        model.setDesktopConnection(connected: true, epoch: 7)
+        let reconnect = try shown()
+        XCTAssertEqual(reconnect.id, disconnected.id)
+        XCTAssertFalse(reconnect.impact.english.contains("disconnected"))
+        XCTAssertFalse(reconnect.canRespond)
+        model.setDesktopConnection(connected: false, epoch: nil)
+        XCTAssertEqual(try shown().impact, disconnected.impact)
     }
 
     @MainActor

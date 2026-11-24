@@ -120,6 +120,7 @@ struct IslandCodexApprovalRequest: Equatable {
     /// An opaque capability minted by the Desktop owner stream, never decoded
     /// from a public JSON envelope or a local rollout projection.
     private(set) var desktopHandle: CodexDesktopIPCRequestHandle? = nil
+    private(set) var sharedQuestionHandle: CodexSharedQuestionHandle? = nil
     struct LocalObservation: Equatable {
         let sessionHash: String; let turnHash: String; let callID: String
         let mode: CodexUserInputMode
@@ -128,14 +129,16 @@ struct IslandCodexApprovalRequest: Equatable {
     var userInputMode: CodexUserInputMode? {
         method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
     }
-    var observationOnly: Bool { localObservation != nil || contextUnavailable }
+    var observationOnly: Bool { (localObservation != nil && sharedQuestionHandle == nil) || contextUnavailable }
     var contextUnavailable = false
     /// Built by QuotaView from a Claude Code PermissionRequest Hook; answered
     /// over that Hook's own connection, never through a Codex transport.
     var isClaudeCode: Bool { params["claudeCode"].boolean }
+    var isOpenCode: Bool { params["openCode"].boolean && rpcID.text.hasPrefix("openCode:") }
     var isDSH: Bool { params["dsh"].boolean }
     var isAntigravity: Bool { params["antigravity"].boolean && rpcID.text.hasPrefix("antigravity:") }
-    var isLocalHook: Bool { isClaudeCode || isDSH || isAntigravity }
+    var isCodexPermissionHook: Bool { params["codexPermissionHook"].boolean && rpcID.text.hasPrefix("codex-hook:") }
+    var isLocalHook: Bool { isClaudeCode || isDSH || isOpenCode || isAntigravity || isCodexPermissionHook }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -181,6 +184,19 @@ struct IslandCodexApprovalRequest: Equatable {
         ], options: [.sortedKeys])
         self = try Self(data: data)
         localObservation = .init(sessionHash: sessionHash, turnHash: turnHash, callID: callID, mode: asynchronous ? .asynchronous : .synchronous)
+    }
+    func attachingSharedQuestionHandle(_ handle: CodexSharedQuestionHandle?) -> Self {
+        var copy = self
+        copy.sharedQuestionHandle = nil
+        guard let handle, desktopHandle == nil, let local = localObservation, local.asynchronous,
+              local.sessionHash == CodexActivityPrivacy.hashIdentifier(handle.threadID),
+              local.turnHash == CodexActivityPrivacy.hashIdentifier(handle.turnID),
+              local.callID == handle.sourceItemID, questions.count == handle.questions.count,
+              zip(questions, handle.questions).allSatisfy({ local, native in
+                  local.title == native.title && local.options.map { $0["label"].text } == native.options
+              }) else { return copy }
+        copy.sharedQuestionHandle = handle
+        return copy
     }
     func attachingDesktopHandle(_ handle: CodexDesktopIPCRequestHandle?) -> Self {
         var copy = self
@@ -241,7 +257,7 @@ struct IslandCodexApprovalRequest: Equatable {
     /// Native synchronous Skip responds with an empty answer collection.
     /// Async Skip is only a local dismissal and must never send an empty answer.
     var questionSkipResult: IslandApprovalJSON? {
-        guard kind == .questions, method == "item/tool/requestUserInput", supportedQuestions else { return nil }
+        guard !isOpenCode, kind == .questions, method == "item/tool/requestUserInput", supportedQuestions else { return nil }
         return .object(["answers": .object([:])])
     }
     var fields: [IslandApprovalField] {
@@ -317,14 +333,16 @@ struct IslandCodexApprovalRequest: Equatable {
             return decisions.enumerated().compactMap { i, d in
                 let label: IslandDetailText; let positive: Bool
                 switch d.text {
-                case "accept": label = .init("允许一次", "Allow once"); positive = true
+                case "accept":
+                    if isAntigravity {
+                        guard let scope = AntigravityDesktopApproval.Scope(rawValue: params["nativeScope"].text) else { return nil }
+                        label = scope.label
+                    } else { label = .init("允许一次", "Allow once") }
+                    positive = true
                 case "acceptForSession": label = .init("本会话允许", "Allow for session"); positive = true
                 case "acceptAlways": label = .init("始终允许", "Always allow"); positive = true
                 case "decline": label = .init("拒绝", "Decline"); positive = false
                 case "cancel": label = .init("取消本次", "Cancel"); positive = false
-                case "antigravityDelegate":
-                    guard isAntigravity else { return nil }
-                    label = .init("在 Antigravity 中处理", "Continue in Antigravity"); positive = false
                 case "dshDelegate":
                     guard isDSH else { return nil }
                     label = .init("在 DSH 中处理", "Continue in DSH"); positive = false

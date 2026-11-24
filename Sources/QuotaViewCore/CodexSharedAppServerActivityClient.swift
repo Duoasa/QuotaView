@@ -9,6 +9,23 @@ public enum CodexSharedAppServerConnectionState: String, Sendable {
     case connected
 }
 
+/// An opaque, same-server capability for one complete asynchronous question group.
+/// Public rollout content can correlate it, but cannot mint it or change its scope.
+public struct CodexSharedQuestionHandle: Equatable, Sendable {
+    public struct Question: Equatable, Sendable {
+        public let id: String
+        public let title: String
+        public let options: [String]
+    }
+    public let threadID: String
+    public let turnID: String
+    public let sourceItemID: String
+    public let questions: [Question]
+    public let connectionEpoch: UInt64
+    fileprivate let nonce: UUID
+    fileprivate var key: String { [threadID, turnID, sourceItemID].map { Data($0.utf8).base64EncodedString() }.joined(separator: ":") }
+}
+
 public actor CodexSharedAppServerActivityClient {
     public nonisolated static let contentNotificationOptOutMethods = [
         "turn/diff/updated",
@@ -122,7 +139,8 @@ public actor CodexSharedAppServerActivityClient {
                 ),
                 launchServerIfNeeded: Self.isSharedDaemonEnabled(
                     environment: environment
-                )
+                ),
+                maximumMessageBytes: 8 * 1_048_576
             )
         }
 
@@ -182,6 +200,10 @@ public actor CodexSharedAppServerActivityClient {
     private var pending: [Int: PendingRequest] = [:]
     private var nextRequestID = 1
     private var connectionGeneration: UInt64 = 0
+    private var questionPaginationUnavailable = false
+    private var questionHandles: [String: CodexSharedQuestionHandle] = [:]
+    // Retained across transient disconnects: unknown delivery must never auto-retry.
+    private var attemptedQuestionGroups: Set<String> = []
     private var initialized = false
     private var isStarted = false
     private var runGeneration: UInt64 = 0
@@ -656,6 +678,166 @@ public actor CodexSharedAppServerActivityClient {
         }
     }
 
+    /// Only an already-loaded, active user thread on this very socket can grant
+    /// a capability. This never resumes a stored thread or creates a new turn.
+    public func questionHandles(threadID: String, turnHash: String) async throws -> [CodexSharedQuestionHandle] {
+        guard initialized else { throw CodexDesktopIPCError.unavailable }
+        let generation = connectionGeneration
+        let state = try await readQuestionState(threadID: threadID, turnHash: turnHash)
+        guard initialized, generation == connectionGeneration else { throw CodexDesktopIPCError.staleRequest }
+        let groups = Dictionary(grouping: state.asyncQuestions, by: \.sourceItemID)
+        var result: [CodexSharedQuestionHandle] = []
+        var activeKeys: Set<String> = []
+        for (source, questions) in groups {
+            // A partially answered group stays in Codex; never send an answer
+            // again just because another member of the group remains unanswered.
+            guard !questions.isEmpty, questions.allSatisfy({ $0.resolvedAnswer == nil }),
+                  let turn = state.currentTurnID else { continue }
+            let values = questions.sorted { $0.questionIndex < $1.questionIndex }.map {
+                CodexSharedQuestionHandle.Question(id: $0.questionItemID, title: $0.question, options: $0.options)
+            }
+            var handle = CodexSharedQuestionHandle(threadID: threadID, turnID: turn, sourceItemID: source,
+                questions: values, connectionEpoch: generation, nonce: UUID())
+            activeKeys.insert(handle.key)
+            guard !attemptedQuestionGroups.contains(handle.key), attemptedQuestionGroups.count < 1024 else { continue }
+            if let old = questionHandles[handle.key], old.connectionEpoch == generation, old.questions == values { handle = old }
+            guard questionHandles[handle.key] != nil || questionHandles.count < 256 else { continue }
+            questionHandles[handle.key] = handle
+            result.append(handle)
+        }
+        questionHandles = questionHandles.filter { $0.value.threadID != threadID || activeKeys.contains($0.key) }
+        return result
+    }
+
+    public func isCurrentQuestionHandle(_ handle: CodexSharedQuestionHandle) -> Bool {
+        initialized && handle.connectionEpoch == connectionGeneration && questionHandles[handle.key] == handle
+            && !attemptedQuestionGroups.contains(handle.key)
+    }
+
+    public func submitQuestion(handle: CodexSharedQuestionHandle, answers: [String]) async throws {
+        guard isCurrentQuestionHandle(handle) else { throw CodexDesktopIPCError.staleRequest }
+        guard answers.count == handle.questions.count, !answers.isEmpty,
+              answers.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= 65_536 })
+        else { throw CodexDesktopIPCError.invalidResponse }
+        let refreshed = try await questionHandles(threadID: handle.threadID,
+            turnHash: CodexActivityPrivacy.hashIdentifier(handle.turnID))
+        guard refreshed.contains(handle), isCurrentQuestionHandle(handle) else { throw CodexDesktopIPCError.staleRequest }
+        let replies = zip(handle.questions, answers).map { question, answer in
+            ["questionItemId": question.id, "question": question.title, "answer": answer]
+        }
+        let body = try JSONSerialization.data(withJSONObject: replies, options: [.sortedKeys, .withoutEscapingSlashes])
+        guard body.count <= 262_144 else { throw CodexDesktopIPCError.resourceLimit }
+        let text = CodexDesktopRequestProjector.asyncReplyOpeningTag + "\n" + String(decoding: body, as: UTF8.self)
+            + "\n" + CodexDesktopRequestProjector.asyncReplyClosingTag
+        // No suspension between recording the attempt and dispatch. Never fall
+        // back to turn/start or a second transport after any attempted write.
+        attemptedQuestionGroups.insert(handle.key)
+        questionHandles.removeValue(forKey: handle.key)
+        do {
+            let data = try await requestData(method: "turn/steer", params: [
+                "threadId": handle.threadID, "expectedTurnId": handle.turnID,
+                "clientUserMessageId": UUID().uuidString,
+                "input": [["type": "text", "text": text, "text_elements": []]]
+            ])
+            guard handle.connectionEpoch == connectionGeneration,
+                  let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  result["turnId"] as? String == handle.turnID else { throw CodexDesktopIPCError.outcomeUnknown }
+        } catch { throw CodexDesktopIPCError.outcomeUnknown }
+    }
+
+    private func readQuestionState(threadID: String, turnHash: String) async throws -> CodexDesktopInteractionProjection {
+        let generation = connectionGeneration
+        var cursor: String?
+        var loaded = false
+        for _ in 0..<10 {
+            var params: [String: Any] = ["limit": 100]
+            if let cursor { params["cursor"] = cursor }
+            let page: LoadedThreadListResponse = try await request(method: "thread/loaded/list", params: params)
+            if page.data.contains(threadID) { loaded = true; break }
+            cursor = page.nextCursor
+            if cursor == nil { break }
+        }
+        guard loaded, initialized, generation == connectionGeneration else { throw CodexDesktopIPCError.staleRequest }
+        let metadata = try await requestData(method: "thread/read", params: ["threadId": threadID, "includeTurns": false])
+        guard let reply = try JSONSerialization.jsonObject(with: metadata) as? [String: Any],
+              let thread = reply["thread"] as? [String: Any], thread["id"] as? String == threadID,
+              CodexActivitySessionKind.classify(metadata: thread) == .user,
+              (thread["status"] as? [String: Any])?["type"] as? String == "active"
+        else { throw CodexDesktopIPCError.staleRequest }
+        if !questionPaginationUnavailable {
+            do { return try await readPagedQuestionState(thread: thread, threadID: threadID, turnHash: turnHash, generation: generation) }
+            catch ClientError.server(let code, _) where code == -32601 { questionPaginationUnavailable = true }
+        }
+        // The bundled 0.171 runtime advertises pagination but can return -32601.
+        // Read its bounded authoritative thread snapshot; never use a disk guess.
+        let data = try await requestData(method: "thread/read", params: ["threadId": threadID, "includeTurns": true])
+        guard initialized, generation == connectionGeneration, data.count <= 8 * 1_048_576,
+              let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let fresh = result["thread"] as? [String: Any], fresh["id"] as? String == threadID,
+              CodexActivitySessionKind.classify(metadata: fresh) == .user,
+              (fresh["status"] as? [String: Any])?["type"] as? String == "active",
+              let turns = fresh["turns"] as? [[String: Any]], let turn = turns.last,
+              turns.filter({ $0["status"] as? String == "inProgress" }).count == 1,
+              turn["status"] as? String == "inProgress", let turnID = turn["id"] as? String,
+              CodexActivityPrivacy.hashIdentifier(turnID) == turnHash,
+              let rawItems = turn["items"] as? [[String: Any]], rawItems.count <= 2000
+        else { throw CodexDesktopIPCError.staleRequest }
+        var ids: Set<String> = []
+        for item in rawItems {
+            guard let id = item["id"] as? String, !id.isEmpty, ids.insert(id).inserted else { throw CodexDesktopIPCError.invalidMessage }
+        }
+        let items = rawItems.filter { ["agentMessage", "userMessage", "steeringUserMessage"].contains($0["type"] as? String ?? "") }
+            .map { $0.filter { ["id", "type", "questions", "content", "input", "status"].contains($0.key) } }
+        return try questionProjection(thread: fresh, threadID: threadID, turnID: turnID, items: items)
+    }
+
+    private func readPagedQuestionState(thread: [String: Any], threadID: String, turnHash: String,
+                                        generation: UInt64) async throws -> CodexDesktopInteractionProjection {
+        guard let turn = try await currentTurn(threadID: threadID), let turnID = turn["id"] as? String,
+              CodexActivityPrivacy.hashIdentifier(turnID) == turnHash else { throw CodexDesktopIPCError.staleRequest }
+        var items: [[String: Any]] = []
+        var bytes = 0
+        var itemCursor: String?
+        var cursors: Set<String> = []
+        var complete = false
+        var itemIDs: Set<String> = []
+        for _ in 0..<20 {
+            var params: [String: Any] = ["threadId": threadID, "turnId": turnID, "limit": 100, "sortDirection": "asc"]
+            if let itemCursor { params["cursor"] = itemCursor }
+            let data = try await requestData(method: "thread/items/list", params: params)
+            bytes += data.count
+            guard bytes <= 2_097_152, generation == connectionGeneration,
+                  let page = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let entries = page["data"] as? [[String: Any]], entries.count <= 100 else { throw CodexDesktopIPCError.resourceLimit }
+            for entry in entries {
+                guard entry["turnId"] as? String == turnID, entry["outputDeferred"] as? Bool != true,
+                      let item = entry["item"] as? [String: Any], let id = item["id"] as? String,
+                      !id.isEmpty, itemIDs.insert(id).inserted else { throw CodexDesktopIPCError.invalidMessage }
+                if ["agentMessage", "userMessage", "steeringUserMessage"].contains(item["type"] as? String ?? "") {
+                    // Reasoning and unrelated tool payloads never leave this actor.
+                    items.append(item.filter { ["id", "type", "questions", "content", "input", "status"].contains($0.key) })
+                }
+            }
+            itemCursor = page["nextCursor"] as? String
+            if itemCursor == nil { complete = true; break }
+            guard cursors.insert(itemCursor!).inserted else { throw CodexDesktopIPCError.invalidMessage }
+        }
+        guard complete, let latest = try await currentTurn(threadID: threadID), latest["id"] as? String == turnID,
+              initialized, generation == connectionGeneration else { throw CodexDesktopIPCError.staleRequest }
+        return try questionProjection(thread: thread, threadID: threadID, turnID: turnID, items: items)
+    }
+
+    private func questionProjection(thread: [String: Any], threadID: String, turnID: String,
+                                    items: [[String: Any]]) throws -> CodexDesktopInteractionProjection {
+        // Reuse the question identity/accepted-reply parser only. The empty RPC
+        // set below is never published as proof that command approvals settled.
+        var state: [String: Any] = ["id": threadID, "requests": [],
+            "turns": [["turnId": turnID, "status": "inProgress", "items": items]]]
+        for key in ["source", "threadSource", "thread_source"] { state[key] = thread[key] }
+        return try CodexDesktopRequestProjector.project(conversationID: threadID,
+            conversationStateData: JSONSerialization.data(withJSONObject: state))
+    }
+
     private func request<Response: Decodable>(
         method: String,
         params: [String: Any]
@@ -906,6 +1088,8 @@ public actor CodexSharedAppServerActivityClient {
     private func closeConnection(error: Error) {
         connectionGeneration &+= 1
         initialized = false
+        questionHandles.removeAll()
+        questionPaginationUnavailable = false
         subscribedThreadHashes.removeAll(keepingCapacity: true)
         threadKinds.removeAll(keepingCapacity: true)
         threadSubagents.removeAll(keepingCapacity: true)
@@ -993,13 +1177,41 @@ public actor CodexSharedAppServerActivityClient {
         let remainingData: Data
     }
 
+    /// Current Codex publishes a private symlink to its short daemon socket.
+    /// Accept one owned link only; both directories remain non-writable by
+    /// other users. Never resolve an arbitrary chain or weaken peer UID checks.
+    nonisolated static func sharedSocketTarget(_ url: URL, expectedUID: uid_t = getuid()) throws -> URL {
+        var parent = stat(), entry = stat()
+        guard lstat(url.deletingLastPathComponent().path, &parent) == 0,
+              parent.st_mode & S_IFMT == S_IFDIR, parent.st_uid == expectedUID,
+              parent.st_mode & 0o022 == 0, lstat(url.path, &entry) == 0,
+              entry.st_uid == expectedUID else { throw CodexDesktopIPCError.peerMismatch }
+        if entry.st_mode & S_IFMT == S_IFSOCK {
+            try CodexDesktopIPCTransport.verifyPeer(url, expectedUID: expectedUID)
+            return url
+        }
+        guard entry.st_mode & S_IFMT == S_IFLNK,
+              let target = try? FileManager.default.destinationOfSymbolicLink(atPath: url.path),
+              target.hasPrefix("/"), target.utf8.count < 104 else { throw CodexDesktopIPCError.peerMismatch }
+        let destination = URL(fileURLWithPath: target)
+        // verifyPeer uses lstat: another link, a file, or a public parent fails.
+        try CodexDesktopIPCTransport.verifyPeer(destination, expectedUID: expectedUID)
+        return destination
+    }
+
     nonisolated static func openSocket(
         path: String,
         maximumMessageBytes: Int,
         deadline: TimeInterval
     ) throws -> OpenedSocket {
         try Task.checkCancellation()
-        try CodexDesktopIPCTransport.verifyPeer(URL(fileURLWithPath: path))
+        let publishedURL = URL(fileURLWithPath: path)
+        let targetURL = try sharedSocketTarget(publishedURL)
+        let path = targetURL.path
+        var socketIdentity = stat(), publishedIdentity = stat()
+        guard lstat(path, &socketIdentity) == 0, lstat(publishedURL.path, &publishedIdentity) == 0 else {
+            throw CodexDesktopIPCError.peerMismatch
+        }
         let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard descriptor >= 0 else {
             throw ClientError.connectionFailed(
@@ -1075,12 +1287,17 @@ public actor CodexSharedAppServerActivityClient {
         }
         var uid: uid_t = 0, gid: gid_t = 0
         guard getpeereid(descriptor, &uid, &gid) == 0, uid == getuid() else { throw ClientError.connectionClosed }
-        try CodexDesktopIPCTransport.verifyPeer(URL(fileURLWithPath: path))
+        var currentSocket = stat(), currentPublished = stat()
+        guard try sharedSocketTarget(publishedURL) == targetURL,
+              lstat(path, &currentSocket) == 0, lstat(publishedURL.path, &currentPublished) == 0,
+              currentSocket.st_dev == socketIdentity.st_dev, currentSocket.st_ino == socketIdentity.st_ino,
+              currentPublished.st_dev == publishedIdentity.st_dev, currentPublished.st_ino == publishedIdentity.st_ino
+        else { throw CodexDesktopIPCError.peerMismatch }
 
         let keyData = Data(UUID().uuidString.utf8.prefix(16))
         let key = keyData.base64EncodedString()
         let request = """
-        GET / HTTP/1.1\r
+        GET /rpc HTTP/1.1\r
         Host: localhost\r
         Upgrade: websocket\r
         Connection: Upgrade\r

@@ -12,6 +12,8 @@
 开发身份与用户数据。不重复 Universal / Distribution 构建、正式包装、
 Developer ID 签名、公证或正式安装替换。交付说明分别记录源码和当前运行包。
 
+本机 DevelopmentRuntime 使用 Xcode 的 Apple Development 签名。增量构建沿用同一开发证书与开发 Bundle ID，App 和 Widget 的 App Group 均取开发配置的 `QUOTAVIEW_APP_GROUP_ID`。替换前用 `codesign --verify --deep --strict` 核验开发包，并用 `codesign -dr -` 检查主程序的指定要求包含开发标识及 Apple 证书条件。仅有链接器临时签名的开发包会导致原有辅助功能授权随代码哈希变化而失效。
+
 ## 按变更选择
 
 | 变更 | 必要检查 |

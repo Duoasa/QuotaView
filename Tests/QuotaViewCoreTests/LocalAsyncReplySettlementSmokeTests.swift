@@ -8,8 +8,8 @@ import XCTest
 @MainActor
 final class LocalAsyncReplySettlementSmokeTests: XCTestCase {
     private let session = CodexActivityPrivacy.hashIdentifier("conversation")
-    private func makeModel(turn: String = "turn") -> IslandLiveStore {
-        let model = IslandLiveStore()
+    private func makeModel(turn: String = "turn", defaults: UserDefaults? = nil) -> IslandLiveStore {
+        let model = IslandLiveStore(archiveDefaults: defaults)
         model.receiveLegacy(.init(event: .userPromptSubmit, sessionHash: session,
             turnHash: CodexActivityPrivacy.hashIdentifier(turn), sessionKind: .user, source: .appServer))
         return model
@@ -52,6 +52,39 @@ final class LocalAsyncReplySettlementSmokeTests: XCTestCase {
         model.setDesktopConnection(connected: true, epoch: snapshot.connectionEpoch)
         model.responseCapability = { $0.desktopHandle != nil }
         model.respond = { _, _ in XCTFail("Settlement observation must not submit an answer") }
+    }
+
+    func testFreshReadOnlyQuestionUpgradesThenStaysSettledAcrossRestart() async throws {
+        let suite = "QuotaViewTests." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let local = try localQuestion(titles: ["Choose?"])
+        let model = makeModel(defaults: defaults)
+        model.receiveLocalContent(local)
+        XCTAssertEqual(model.tasks[0].requests.map(\.value.canRespond), [false])
+        let fixture = CodexDesktopIPCFixture(state: CodexDesktopIPCClientTests.state(requests: [],
+            items: [nativeItem(titles: ["Choose?"])]))
+        let (client, _, snapshot) = try await fixture.connectedClient()
+        enableDesktop(snapshot, in: model)
+        try apply(snapshot, to: model)
+        XCTAssertEqual(model.tasks[0].requests.map(\.value.canRespond), [true])
+        model.invalidateDesktopResponses(conversationID: snapshot.conversationID, epoch: snapshot.connectionEpoch)
+        model.receiveLocalContent(try acceptedReply(questions: [(0, "Choose?")]))
+        let restarted = makeModel(defaults: defaults)
+        restarted.receiveLocalContent(local)
+        enableDesktop(snapshot, in: restarted)
+        try apply(snapshot, to: restarted)
+        XCTAssertTrue(restarted.tasks[0].requests.isEmpty)
+        restarted.setDesktopConnection(connected: false, epoch: nil)
+        let other = try localQuestion(source: "new-call", titles: ["Choose?"])
+        restarted.receiveLocalContent(other)
+        XCTAssertTrue(restarted.tasks[0].requests.isEmpty, "Historical rollout data cannot overrule the last owner snapshot")
+        let fresh = CodexLocalPublicContent(publicSessionHash: other.sessionHash, turnHash: other.turnHash,
+                                            data: other.data, occurredAt: Date().addingTimeInterval(1))
+        restarted.receiveLocalContent(fresh)
+        XCTAssertEqual(restarted.tasks[0].requests.count, 1)
+        XCTAssertTrue(fixture.submissions.isEmpty)
+        await client.stop()
     }
 
     func testReadonlyNativeReplySettlesExactQuestionWithoutSendingOrPublishingAnswer() async throws {
@@ -132,6 +165,58 @@ final class LocalAsyncReplySettlementSmokeTests: XCTestCase {
         model.receiveLocalContent(reply)
         XCTAssertTrue(model.tasks[0].requestLifecycle.requests.isEmpty)
         XCTAssertTrue(model.tasks[0].entries.isEmpty)
+    }
+
+    func testAnsweredQuestionStaysHiddenAfterRelaunchAndNativeReplay() async throws {
+        let suite = "QuotaViewTests." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let request = try localQuestion(titles: ["Restart?"])
+        let first = makeModel(defaults: defaults)
+        first.receiveLocalContent(request)
+        first.receiveLocalContent(try acceptedReply(questions: [(0, "Restart?")]))
+        let second = makeModel(defaults: defaults)
+        second.receiveLocalContent(request)
+        XCTAssertTrue(second.tasks[0].requests.isEmpty)
+        let fixture = CodexDesktopIPCFixture(state: CodexDesktopIPCClientTests.state(requests: [],
+            items: [nativeItem(titles: ["Restart?", "Another question?"])]))
+        let (client, _, snapshot) = try await fixture.connectedClient()
+        enableDesktop(snapshot, in: second)
+        try apply(snapshot, to: second)
+        XCTAssertEqual(second.tasks[0].requests.map { $0.value.question.chinese }, ["Another question?"])
+        XCTAssertTrue(fixture.submissions.isEmpty)
+        await client.stop()
+    }
+
+    func testReadonlyAsyncQuestionStillExpiresAfterDraftInteraction() throws {
+        let model = makeModel()
+        model.receiveLocalContent(try localQuestion(titles: ["Restart?"]))
+        let task = try XCTUnwrap(model.tasks.first)
+        let request = try XCTUnwrap(task.requests.first?.value)
+        XCTAssertFalse(request.canRespond)
+        let now = Date()
+        _ = model.display(english: true, remaining: nil, enabled: true, privacy: false, at: now)
+        model.claimConfirmation(taskID: task.id, requestID: request.id)
+        _ = model.display(english: true, remaining: nil, enabled: true, privacy: false, at: now.addingTimeInterval(31))
+        XCTAssertTrue(model.tasks[0].requests.isEmpty)
+    }
+
+    func testStartupReplayShowsOnlyQuestionsStillAwaitingAnAnswer() throws {
+        var replay = CodexLocalPublicReplayBuffer()
+        let first = try localQuestion(titles: ["Restart?", "Proceed?"])
+        let other = try localQuestion(source: "another-call", titles: ["Restart?"])
+        replay.append(first, isAssistantMessage: false)
+        replay.append(other, isAssistantMessage: false)
+        replay.append(try acceptedReply(questions: [(0, "Restart?")]), isAssistantMessage: false, isAcceptedReply: true)
+        XCTAssertEqual(replay.contentsForDelivery.first?.data, first.data)
+        replay.append(try acceptedReply(questions: [(1, "Proceed?")]), isAssistantMessage: false, isAcceptedReply: true)
+        let delivered = replay.contentsForDelivery.map(\.data)
+        XCTAssertFalse(delivered.contains(first.data))
+        let model = makeModel()
+        for content in replay.contentsForDelivery { model.receiveLocalContent(content) }
+        model.receiveLocalContent(first)
+        XCTAssertEqual(model.tasks[0].requests.count, 1)
+        XCTAssertEqual(model.tasks[0].requests.first?.value.protocolRequest?.localObservation?.callID, "another-call")
     }
 
     func testHistoricalTurnReplyAndReplayedRequestCannotAffectCurrentTurn() throws {

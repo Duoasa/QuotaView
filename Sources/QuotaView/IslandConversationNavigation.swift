@@ -4,21 +4,33 @@ import SQLite3
 
 /// Targets are assembled from native identifiers. No incoming hook supplies an executable or URL.
 enum IslandConversationTarget: Equatable {
-    case claudeHook(UUID), claude(UUID), cursor(UUID), devin(String), dsh(String), antigravity(UUID), antigravityHook(UUID)
+    case claudeHook(UUID, desktop: UUID? = nil, terminal: Bool = false), claudeTerminal(UUID), claude(UUID), cursor(UUID), devin(String), dsh(String), antigravity(UUID), antigravityHook(UUID)
 
     var provider: IslandAgentProvider {
         switch self {
         case .dsh: .dsh
         case .antigravity, .antigravityHook: .antigravity
-        case .claudeHook, .claude: .claudeCode
+        case .claudeHook, .claudeTerminal, .claude: .claudeCode
         case .cursor: .cursor
         case .devin: .devinDesktop
+        }
+    }
+
+    /// These destinations depend on live permissions, sidebar rows or a terminal session.
+    func needsRecheck(after resolved: Self?) -> Bool {
+        switch self {
+        case .dsh, .antigravity, .antigravityHook: return true
+        case .claudeHook(_, _, true):
+            if case .claude = resolved { return false }
+            return true
+        default: return false
         }
     }
 
     var url: URL? {
         switch self {
         case .claudeHook, .antigravityHook: return nil
+        case .claudeTerminal(let id): return ClaudeTerminalNavigation.link(for: id)
         case .claude(let id):
             return URL(string: "claude://claude.ai/epitaxy/local_" + id.uuidString.lowercased())
         case .cursor(let id):
@@ -53,8 +65,8 @@ enum IslandConversationTarget: Equatable {
         }
     }
 
-    static func claudeSession(for cliID: UUID, root: URL) -> UUID? {
-        struct Metadata: Decodable { let sessionId: String; let cliSessionId: UUID?; let isArchived: Bool? }
+    static func claudeSession(for cliID: UUID, roots: [URL], desktop: UUID? = nil) -> UUID? {
+        struct Metadata: Decodable { let sessionId: String; let cliSessionId: UUID?; let lastAssistantCliSessionId: UUID?; let isArchived: Bool? }
         let manager = FileManager.default
         let keys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
         func children(_ directory: URL) -> [URL]? {
@@ -65,21 +77,23 @@ enum IslandConversationTarget: Equatable {
             return info?.isDirectory == true && info?.isSymbolicLink == false
         }
         var match: UUID?
-        guard let accounts = children(root) else { return nil }
-        for account in accounts where isDirectory(account) {
-            guard let organizations = children(account) else { return nil }
-            for org in organizations where isDirectory(org) {
-                guard let files = children(org) else { return nil }
-                for file in files where file.lastPathComponent.hasPrefix("local_") && file.pathExtension == "json" {
-                    let name = file.deletingPathExtension().lastPathComponent
-                    guard let id = UUID(uuidString: String(name.dropFirst(6))) else { continue }
-                    guard let info = try? file.resourceValues(forKeys: Set(keys)), info.isRegularFile == true,
-                          info.isSymbolicLink == false, let size = info.fileSize, size <= 4_194_304,
-                          let bytes = try? Data(contentsOf: file, options: .mappedIfSafe),
-                          let row = try? JSONDecoder().decode(Metadata.self, from: bytes) else { return nil }
-                    guard row.cliSessionId == cliID, row.isArchived != true, row.sessionId == name else { continue }
-                    guard match == nil else { return nil }
-                    match = id
+        for root in roots {
+            guard isDirectory(root.deletingLastPathComponent()), isDirectory(root), let accounts = children(root) else { continue }
+            for account in accounts where isDirectory(account) {
+                guard let organizations = children(account) else { continue }
+                for org in organizations where isDirectory(org) {
+                    guard let files = children(org) else { continue }
+                    for file in files where file.lastPathComponent.hasPrefix("local_") && file.pathExtension == "json" {
+                        let name = file.deletingPathExtension().lastPathComponent
+                        guard let id = UUID(uuidString: String(name.dropFirst(6))) else { continue }
+                        guard let info = try? file.resourceValues(forKeys: Set(keys)), info.isRegularFile == true,
+                              info.isSymbolicLink == false, let size = info.fileSize, size <= 4_194_304,
+                              let bytes = try? Data(contentsOf: file, options: .mappedIfSafe),
+                              let row = try? JSONDecoder().decode(Metadata.self, from: bytes) else { continue }
+                        guard desktop == nil || desktop == id, row.cliSessionId == cliID || row.lastAssistantCliSessionId == cliID, row.isArchived != true, row.sessionId == name else { continue }
+                        guard match == nil else { return nil }
+                        match = id
+                    }
                 }
             }
         }
@@ -101,11 +115,22 @@ enum IslandConversationNavigation {
     }
 
     static func resolve(_ candidate: IslandConversationTarget) async -> IslandConversationTarget? {
-        if case .claudeHook(let cliID) = candidate {
-            guard NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") != nil else { return nil }
-            let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Claude/claude-code-sessions")
-            let local = await Task.detached(priority: .utility) { IslandConversationTarget.claudeSession(for: cliID, root: root) }.value
-            return local.map(IslandConversationTarget.claude)
+        if case let .claudeHook(cliID, desktop, terminal) = candidate {
+            let hasDesktop = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") != nil
+            let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+            let roots = ["Claude", "Claude-3p"].map { support.appendingPathComponent($0 + "/claude-code-sessions") }
+            func mappedDesktop(_ hint: UUID?) async -> IslandConversationTarget? {
+                guard hasDesktop else { return nil }
+                let local = await Task.detached(priority: .utility) {
+                    IslandConversationTarget.claudeSession(for: cliID, roots: roots, desktop: hint)
+                }.value
+                return local.map(IslandConversationTarget.claude)
+            }
+            if let desktop, let mapped = await mappedDesktop(desktop) { return mapped }
+            if terminal {
+                return await ClaudeTerminalNavigation.perform(cliID, select: false) ? .claudeTerminal(cliID) : nil
+            }
+            return await mappedDesktop(nil)
         }
         if case .antigravityHook(let id) = candidate {
             let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".gemini")
@@ -122,6 +147,7 @@ enum IslandConversationNavigation {
     }
 
     static func available(_ url: URL) async -> Bool {
+        if let id = ClaudeTerminalNavigation.session(in: url) { return await ClaudeTerminalNavigation.perform(id, select: false) }
         guard let bundle = bundleID(for: url) else { return false }
         if isSidebar(url) {
             return await Task.detached(priority: .userInitiated) { IslandConversationSidebar.perform(url, press: false) }.value
@@ -144,6 +170,7 @@ enum IslandConversationNavigation {
     }
 
     @MainActor static func open(_ url: URL) async -> Bool {
+        if let id = ClaudeTerminalNavigation.session(in: url) { return await ClaudeTerminalNavigation.perform(id, select: true) }
         if isSidebar(url) {
             return await Task.detached(priority: .userInitiated) { IslandConversationSidebar.perform(url, press: true) }.value
         }
