@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.quotaview.agent-settings-item</string>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+		</dict>
+	</array>
 	<key>CFBundleLocalizations</key>
 	<array><string>zh-Hans</string><string>en</string><string>ja</string><string>ko</string><string>zh-Hant</string><string>es</string></array>
 	<key>CFBundleDevelopmentRegion</key>
@@ -21,7 +30,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>0.9.7</string>
 	<key>CFBundleVersion</key>
-	<string>240</string>
+	<string>267</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
@@ -32,12 +41,14 @@
 	<string>© 2026 Duoasa</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>QuotaView 需要切换到运行 Claude Code 的终端标签页。QuotaView needs to select the terminal tab running Claude Code.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>QuotaViewAppGroupIdentifier</key>
 	<string>$(QUOTAVIEW_APP_GROUP_ID)</string>
 	<key>QuotaViewDisplayBuildNumber</key>
-	<string>3</string>
+	<string>30</string>
 	<key>QuotaViewUpdateTeamIdentifier</key>
 	<string>BUUH229D5Q</string>
 	<key>SUAllowsAutomaticUpdates</key>

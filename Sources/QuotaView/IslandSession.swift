@@ -99,6 +99,9 @@ final class IslandSession {
     private var lockObservations: [NSObjectProtocol] = []
     private var privacy = false
     private var backgroundMemorySnapshots: [CodexActivitySnapshot] = []
+    var agentQuotas: [IslandAgentProvider: AgentQuotaState] = [:] {
+        didSet { if oldValue != agentQuotas { refresh() } }
+    }
     var antigravityUsage: AntigravityUsage? {
         didSet { if oldValue != antigravityUsage { refresh() } }
     }
@@ -230,6 +233,7 @@ final class IslandSession {
         display.weeklyRemainingPercent = weeklyRemaining
         display.quotaResetsAt = quotaResetsAt
         display.usageSnapshot = privacy ? nil : usageSnapshot
+        display.agentQuotas = privacy ? [:] : agentQuotas
         display.antigravityUsage = privacy ? nil : antigravityUsage
         display.claudeUsage = privacy ? nil : claudeUsage
         display.usageState = usageState

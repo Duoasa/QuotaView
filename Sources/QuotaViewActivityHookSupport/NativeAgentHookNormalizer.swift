@@ -14,8 +14,7 @@ public enum NativeAgentHookNormalizer {
             guard UUID(uuidString: session) != nil else { return nil }
             switch sourceEvent {
             case "SessionStart": name = sourceEvent
-            case "PreToolUse":
-                name = (object["toolCall"] as? [String: Any])?["name"] as? String == "ask_permission" ? "PermissionRequest" : "PreToolUse"
+            case "PreToolUse": name = "PreToolUse"
             case "PostToolUse": name = (object["error"] as? String ?? "").isEmpty ? "PostToolUse" : "PostToolUseFailure"
             case "PreInvocation": name = "TurnStarted"
             case "PostInvocation": name = "Usage"
@@ -152,20 +151,6 @@ public enum NativeAgentHookNormalizer {
         return payload
     }
 
-    /// Antigravity runs PreToolUse before its own policy. Only present calls with the arguments needed to identify the operation.
-    public static func antigravityReviewable(tool: String, arguments: [String: Any]) -> Bool {
-        func hasText(_ key: String) -> Bool { (arguments[key] as? String)?.isEmpty == false }
-        switch tool {
-        case "read_file": return hasText("Path")
-        case "view_file": return hasText("AbsolutePath")
-        case "run_command": return hasText("CommandLine") && hasText("Cwd")
-        case "write_to_file": return hasText("TargetFile") && arguments["CodeContent"] is String
-        case "replace_file_content": return hasText("TargetFile") && hasText("TargetContent") && arguments["ReplacementContent"] is String
-        case "multi_replace_file_content": return hasText("TargetFile") && (arguments["ReplacementChunks"] as? [[String: Any]])?.isEmpty == false
-        default: return false
-        }
-    }
-
     /// No tool or permission decision. Cursor's prompt hook requires `continue`;
     /// this only declines to veto sending the prompt, never grants tool access.
     public static func neutralOutput(provider: String, event: String?) -> Data? {
@@ -182,6 +167,14 @@ public enum NativeAgentHookNormalizer {
 public enum BoundedStatusLineCommand {
     public static func run(command: String, input: Data, timeoutSeconds: TimeInterval = 5,
                            maximumOutputBytes: Int = 65_536) -> Data? {
+        execute("/bin/sh", arguments: ["-c", command], input: input, timeoutSeconds: timeoutSeconds,
+                maximumOutputBytes: maximumOutputBytes, requireSuccess: false)
+    }
+
+    public static func execute(_ executable: String, arguments: [String], input: Data = Data(),
+                               timeoutSeconds: TimeInterval, maximumOutputBytes: Int = 65_536,
+                               requireSuccess: Bool = true, environmentOverrides: [String: String] = [:],
+                               directory: URL? = nil) -> Data? {
         let deadline = ProcessInfo.processInfo.systemUptime + max(0.01, timeoutSeconds)
         var inputPipe: [Int32] = [-1, -1], outputPipe: [Int32] = [-1, -1]
         guard pipe(&inputPipe) == 0 else { return nil }
@@ -203,6 +196,7 @@ public enum BoundedStatusLineCommand {
         }
         defer { posix_spawnattr_destroy(&attributes) }
         let prepared = [
+            directory.map { posix_spawn_file_actions_addchdir_np(&actions, $0.path) } ?? 0,
             posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP)),
             posix_spawnattr_setpgroup(&attributes, 0),
             posix_spawn_file_actions_adddup2(&actions, inputPipe[0], STDIN_FILENO),
@@ -211,15 +205,16 @@ public enum BoundedStatusLineCommand {
             posix_spawn_file_actions_addclose(&actions, inputPipe[1]),
             posix_spawn_file_actions_addclose(&actions, outputPipe[0])
         ].allSatisfy { $0 == 0 }
-        let commandArguments: [String] = ["/bin/sh", "-c", command]
+        let commandArguments = [executable] + arguments
         var arguments: [UnsafeMutablePointer<CChar>?] = commandArguments.map { strdup($0) }
         arguments.append(nil)
-        var environment = ProcessInfo.processInfo.environment.map { strdup($0.key + "=" + $0.value) } + [nil]
+        let childEnvironment = ProcessInfo.processInfo.environment.merging(environmentOverrides) { _, override in override }
+        var environment = childEnvironment.map { strdup($0.key + "=" + $0.value) } + [nil]
         defer { arguments.forEach { free($0) }; environment.forEach { free($0) } }
         var pid: pid_t = 0
         let spawned = prepared ? arguments.withUnsafeMutableBufferPointer { argv in
             environment.withUnsafeMutableBufferPointer { env in
-                posix_spawn(&pid, "/bin/sh", &actions, &attributes, argv.baseAddress!, env.baseAddress!)
+                posix_spawn(&pid, executable, &actions, &attributes, argv.baseAddress!, env.baseAddress!)
             }
         } : EINVAL
         Darwin.close(inputPipe[0]); Darwin.close(outputPipe[1])
@@ -244,7 +239,7 @@ public enum BoundedStatusLineCommand {
                 if result == pid { exited = true }
                 else if result < 0 && errno != EINTR { return nil }
             }
-            if exited && eof { return output }
+            if exited && eof { return !requireSuccess || status == 0 ? output : nil }
             var descriptors = [pollfd(fd: eof ? -1 : outputPipe[0], events: Int16(POLLIN), revents: 0),
                                pollfd(fd: inputOpen ? inputPipe[1] : -1, events: Int16(POLLOUT), revents: 0)]
             let remaining = max(1, (deadline - ProcessInfo.processInfo.systemUptime) * 1_000)

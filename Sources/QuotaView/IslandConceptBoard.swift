@@ -356,7 +356,9 @@ private struct IslandUsageProviderIcon: View {
     var body: some View {
         ZStack {
             Circle().fill(provider != .claudeCode ? Color.white : Color(red: 217 / 255, green: 119 / 255, blue: 87 / 255))
-            if provider == .antigravity, let icon = IslandProviderIcon.settingsMark(for: provider) {
+            if provider.quotaSource != nil {
+                IslandTaskProviderIcon(provider: provider, size: IslandChromeMetrics.providerIconDiameter)
+            } else if provider == .antigravity, let icon = IslandProviderIcon.settingsMark(for: provider) {
                 Image(nsImage: icon).renderingMode(.original).resizable().scaledToFill().clipShape(Circle())
             } else if let mark = IslandProviderIcon.usageMark(for: provider) {
                 Image(nsImage: mark).renderingMode(.template).resizable().scaledToFit()
@@ -570,6 +572,7 @@ final class IslandBoardState: ObservableObject {
     /// Usage page source; Claude Code applies only while its usage exists.
     @Published var usageProvider: IslandAgentProvider = .codex
     var effectiveUsageProvider: IslandAgentProvider {
+        if display?.agentQuotas[usageProvider] != nil { return usageProvider }
         if usageProvider == .antigravity, display?.antigravityUsage != nil { return .antigravity }
         return usageProvider == .claudeCode && display?.claudeUsage != nil ? .claudeCode : .codex
     }
@@ -595,7 +598,7 @@ final class IslandBoardState: ObservableObject {
         if showsReset { onChange?() }
     }
     func openReset() {
-        guard showsUsage, !showsReset, effectiveUsageProvider != .antigravity else { return }
+        guard showsUsage, !showsReset, [.codex, .claudeCode].contains(effectiveUsageProvider) else { return }
         cancelAutomaticPreview(); showsReset = true; beginResetTransition()
     }
     func closeReset() {
@@ -1448,7 +1451,7 @@ struct IslandTaskCard: View {
             }
         }.frame(width: cardWidth)
             .background {
-                if completionPhase != .wave && (selected || completionPhase.riseStart != nil) {
+                if selected && completionPhase != .wave {
                     IslandQuantumProgress(effect: progressEffect, renderState: task.renderState, visible: effectVisible,
                         reduceMotion: reduceMotion, defersCompletionSkin: completionPhase == .filling,
                         completionRiseStart: completionPhase.riseStart, primaryContentHeight: primaryContentHeight)
@@ -1643,9 +1646,16 @@ struct IslandBoardView: View {
             guard !compactContent else { return }
             let target = state.selectedConversation
             state.availableConversation = nil
-            guard let target, let resolved = await IslandConversationNavigation.resolve(target),
-                  !Task.isCancelled, state.selectedConversation == target else { return }
-            state.availableConversation = (target, resolved)
+            guard let target else { return }
+            repeat {
+                let resolved = await IslandConversationNavigation.resolve(target)
+                guard !Task.isCancelled, state.selectedConversation == target else { return }
+                if let resolved {
+                    if state.availableConversation?.target != resolved { state.availableConversation = (target, resolved) }
+                } else if state.availableConversation != nil { state.availableConversation = nil }
+                guard target.needsRecheck(after: resolved) else { return }
+                do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            } while !Task.isCancelled
         }
         .environment(\.appLanguage, state.language)
         .environment(\.locale, Locale(identifier: state.language.localeIdentifier))
@@ -1680,7 +1690,7 @@ struct IslandBoardView: View {
                 playbackEnabled: !state.compact && state.playback && !state.showsReset && !state.resetTransitionInFlight,
                 hidesTicket: state.resetTransitionInFlight, onReset: state.openReset,
                 utilities: IslandUtilityActions(state: state), maximumHeight: state.maximumPageHeight, onHeightChange: state.updateUsageHeight,
-                claudeUsage: state.display?.claudeUsage, antigravityUsage: state.display?.antigravityUsage, provider: $state.usageProvider)
+                claudeUsage: state.display?.claudeUsage, antigravityUsage: state.display?.antigravityUsage, agentQuotas: state.display?.agentQuotas ?? [:], provider: $state.usageProvider)
                 .frame(width: state.expandedWidth, height: min(state.usageHeight, state.maximumPageHeight), alignment: .top)
                 .environment(\.islandGlassActive, !state.compact && !state.showsReset)
                 .opacity(state.showsReset ? 0 : 1)
@@ -2896,8 +2906,11 @@ struct IslandUsageBento: View {
     let onHeightChange: (CGFloat) -> Void
     var claudeUsage: IslandClaudeUsage? = nil
     var antigravityUsage: AntigravityUsage? = nil
+    var agentQuotas: [IslandAgentProvider: AgentQuotaState] = [:]
+    private var externalQuota: AgentQuotaState? { agentQuotas[provider.wrappedValue] }
     private var providers: [IslandAgentProvider] {
         [.codex] + (claudeUsage == nil ? [] : [.claudeCode]) + (antigravityUsage == nil ? [] : [.antigravity])
+            + IslandAgentProvider.allCases.filter { agentQuotas[$0] != nil }
     }
     private var showsAntigravity: Bool { provider.wrappedValue == .antigravity && antigravityUsage != nil }
     /// Owned by the board so the reset page follows the selected source.
@@ -2905,7 +2918,7 @@ struct IslandUsageBento: View {
     var displayedResetCredits: Int? { IslandResetPageData(snapshot: current).credits }
     var resetCardIsEmpty: Bool { displayedResetCredits == 0 }
     private var showsClaude: Bool { provider.wrappedValue == .claudeCode && claudeUsage != nil }
-    private var current: CurrentCodexPresentation? { showsAntigravity ? nil : showsClaude ? claudeUsage?.presentation : snapshot }
+    private var current: CurrentCodexPresentation? { externalQuota != nil || showsAntigravity ? nil : showsClaude ? claudeUsage?.presentation : snapshot }
     private var activeUsageState: IslandUsagePresentation.State { showsClaude ? .current : usageState }
     private var activeOptions: IslandUsageOptions {
         guard showsClaude else { return options }
@@ -2962,7 +2975,7 @@ struct IslandUsageBento: View {
             pageContent
         } footer: {
                 IslandChromeFooter {
-                    if let date = showsAntigravity ? antigravityUsage?.account?.updatedAt ?? antigravityUsage?.updatedAt : current?.lastUpdatedAt {
+                    if let date = externalQuota != nil ? externalQuota?.report?.updatedAt : showsAntigravity ? antigravityUsage?.account?.updatedAt ?? antigravityUsage?.updatedAt : current?.lastUpdatedAt {
                         Text(text("更新于 ", "Updated ") + date.formatted(date: .omitted, time: .shortened))
                     } else { Text(text("等待数据", "Waiting for data")) }
                 } trailing: { utilities }
@@ -2974,8 +2987,22 @@ struct IslandUsageBento: View {
     }
     private var pageContent: some View {
         VStack(spacing: 10) {
-                if providers.count > 1 && !privacy { providerSwitch }
-                if !privacy, showsAntigravity, let usage = antigravityUsage {
+                if providers.count > 3 && !privacy {
+                    ScrollView(.horizontal) { providerSwitch }.scrollIndicators(.hidden)
+                } else if providers.count > 1 && !privacy { providerSwitch }
+                if !privacy, let externalQuota {
+                    card(provider.wrappedValue.quotaName) {
+                        if let report = externalQuota.report {
+                            if let balance = report.balance { Text(balance).font(.headline) }
+                            ForEach(report.windows, id: \.title) { window in
+                                quotaContent(title: window.title, percent: window.remaining, status: quotaCountdown(window.resetsAt))
+                            }
+                        } else {
+                            Text(externalQuota == .loading ? text("等待数据", "Waiting for data")
+                                : text("额度暂不可用，请检查 Agent 接入中的账号设置。", "Quota unavailable. Check the account in Agent integrations."))
+                        }
+                    }
+                } else if !privacy, showsAntigravity, let usage = antigravityUsage {
                     summaryCard.fixedSize(horizontal: false, vertical: true)
                     if options.activity && !usage.days.isEmpty { activityCard }
                     if usage.days.isEmpty && usage.account == nil {
@@ -3065,7 +3092,10 @@ struct IslandUsageBento: View {
                     }
                 }
             } else {
-                quotaContent(title: text("额度剩余", "Quota remaining"), percent: nil, status: text("等待数据", "Waiting for data"))
+                let status = antigravityUsage?.didCheckAccount == true
+                    ? text("实时额度暂不可用", "Live quota unavailable")
+                    : text("等待数据", "Waiting for data")
+                quotaContent(title: text("额度剩余", "Quota remaining"), percent: nil, status: status)
             }
         } else if showsClaude, let claude = claudeUsage {
             quotaRow {
@@ -3104,7 +3134,7 @@ struct IslandUsageBento: View {
                 if activeOptions.hasTokenMetrics { columnDivider }
                 metric(text("订阅套餐", "Subscription plan"), value: antigravityUsage?.account?.displayPlan ?? "—")
                     .accessibilityElement(children: .combine)
-                    .help(text("通过本机 CodexBar 读取 Antigravity 套餐与额度。", "Antigravity plan and quotas are read through the local CodexBar app."))
+                    .help(text("仅在额度来源提供套餐名称时显示。", "Shown when the quota source reports a plan name."))
             }
         }.fixedSize(horizontal: false, vertical: true)
     }
@@ -3112,11 +3142,11 @@ struct IslandUsageBento: View {
     private var providerSwitch: some View {
         HStack(spacing: 6) {
             ForEach(providers, id: \.self) { value in
-                let selected = (showsAntigravity ? IslandAgentProvider.antigravity : showsClaude ? .claudeCode : .codex) == value
+                let selected = (providers.contains(provider.wrappedValue) ? provider.wrappedValue : .codex) == value
                 Button { provider.wrappedValue = value; selectedDay = nil; hoveredCost = nil; selectedActivity = nil; hoveredActivity = nil } label: {
                     HStack(spacing: 6) {
                         IslandUsageProviderIcon(provider: value)
-                        Text(value.displayName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
+                        Text(value.quotaName).font(IslandChromeMetrics.navigationFont).lineLimit(1)
                     }
                         .fixedSize(horizontal: true, vertical: false)
                         .padding(.leading, IslandChromeMetrics.providerLeadingInset)
@@ -3131,7 +3161,7 @@ struct IslandUsageBento: View {
                         }
                         .contentShape(Capsule())
                 }.buttonStyle(.plain)
-                    .accessibilityLabel(value.displayName)
+                    .accessibilityLabel(value.quotaName)
                     .accessibilityAddTraits(selected ? .isSelected : [])
             }
             Spacer(minLength: 0)

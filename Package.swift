@@ -25,6 +25,7 @@ let package = Package(
         .executable(name: "QuotaViewProbe", targets: ["QuotaViewProbe"])
     ],
     dependencies: [
+        .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
         .package(
             url: "https://github.com/sparkle-project/Sparkle",
             exact: "2.9.2"
@@ -47,6 +48,7 @@ let package = Package(
         .executableTarget(
             name: "QuotaView",
             dependencies: [
+                .product(name: "Yams", package: "Yams"),
                 "QuotaViewCore",
                 "QuotaViewWidgetContract",
                 "QuotaViewActivityHookSupport",
@@ -61,6 +63,7 @@ let package = Package(
                 .copy("Resources/QuotaViewFeedbackQQ.jpg"),
                 .process("Resources/ProviderIcons.xcassets"),
                 .copy("Resources/ProviderIconNotices.txt"),
+                .copy("Resources/YamsNotices.txt"),
                 .process("Resources/SettingsIslandPreview.xcassets")
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]

@@ -1,3 +1,5 @@
+import AppKit
+import OSLog
 import Foundation
 import QuotaViewCore
 import SQLite3
@@ -85,6 +87,7 @@ enum AntigravityHistory {
 
 struct AntigravityUsage: Equatable, Sendable {
     var account: AntigravityAccount?
+    var didCheckAccount = false
     var days: [DailyTokenActivity] = []
     var updatedAt: Date?
     var total: Int64? { days.isEmpty ? nil : days.reduce(0) { $0 + $1.tokens } }
@@ -155,7 +158,103 @@ actor AntigravityUsageScanner {
     }
 }
 
-/// Read only the account label and quota windows from the installed provider's public JSON output.
+enum AntigravityCLI {
+    static func executable(home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                           path: String = ProcessInfo.processInfo.environment["PATH"] ?? "",
+                           systemBins: [String] = ["/opt/homebrew/bin", "/usr/local/bin"],
+                           systemApplications: URL = URL(fileURLWithPath: "/Applications")) -> URL? {
+        let directories = [home.appendingPathComponent(".local/bin").path] + systemBins
+            + path.split(separator: ":").filter { $0.hasPrefix("/") }.map(String.init)
+        let bundled = [systemApplications, home.appendingPathComponent("Applications")]
+            .map { $0.appendingPathComponent("Gemini.app/Contents/Helpers/agy") }
+        let candidates = directories.map { URL(fileURLWithPath: $0).appendingPathComponent("agy") } + bundled
+        return candidates.first { url in
+            FileManager.default.isExecutableFile(atPath: url.path)
+                && (try? url.resolvingSymlinksInPath().resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+        }
+    }
+
+    static func install() -> Bool {
+        if executable() != nil { return true }
+        let manager = FileManager.default
+        let directory = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        do {
+            try manager.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        } catch { return false }
+        defer { try? manager.removeItem(at: directory) }
+        let script = directory.appendingPathComponent("install.sh").path
+        guard BoundedStatusLineCommand.execute("/usr/bin/curl", arguments: [
+            "--disable", "--fail", "--silent", "--show-error", "--location", "--proto", "=https",
+            "--proto-redir", "=https", "--output", script, "https://antigravity.google/cli/install.sh"
+        ], timeoutSeconds: 45) != nil else { return false }
+        let target = manager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin")
+        return BoundedStatusLineCommand.execute("/bin/bash", arguments: [script, "--dir", target.path],
+                                                timeoutSeconds: 600, maximumOutputBytes: 1_048_576) != nil
+            && executable() != nil
+    }
+
+    static func read() -> AntigravityAccount? {
+        guard let executable = executable() else { return nil }
+        return read(executable: executable)
+    }
+
+    static func read(executable: URL) -> AntigravityAccount? {
+        let manager = FileManager.default
+        let directory = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        do {
+            try manager.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        } catch { return nil }
+        defer { try? manager.removeItem(at: directory) }
+        // agy uses either BROWSER or PATH to launch its OAuth UI. These overrides
+        // belong only to the passive probe and its descendants.
+        for name in ["open", "xdg-open"] {
+            do { try manager.createSymbolicLink(atPath: directory.appendingPathComponent(name).path,
+                                                withDestinationPath: "/usr/bin/false") } catch { return nil }
+        }
+        let environment = ["BROWSER": directory.appendingPathComponent("open").path,
+                           "PATH": directory.path + ":" + (ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin"),
+                           "AGY_CLI_DISABLE_AUTO_UPDATE": "true"]
+        guard let version = BoundedStatusLineCommand.execute(executable.path, arguments: ["--version"],
+                timeoutSeconds: 3, environmentOverrides: environment, directory: directory),
+              let number = String(decoding: version, as: UTF8.self).range(of: #"\b[0-9]+\.[0-9]+\.[0-9]+\b"#, options: .regularExpression),
+              String(decoding: version, as: UTF8.self)[number].compare("1.1.11", options: .numeric) != .orderedAscending,
+              let data = BoundedStatusLineCommand.execute(executable.path, arguments: ["-p", "/usage", "--output-format", "json"],
+                timeoutSeconds: 30, environmentOverrides: environment, directory: directory) else { return nil }
+        return decode(data)
+    }
+
+    static func decode(_ data: Data) -> AntigravityAccount? {
+        guard let report = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              report["status"] as? String == "SUCCESS", let command = report["command"] as? [String: Any],
+              command["name"] as? String == "usage", let summary = command["data"] as? [String: Any],
+              let groups = summary["groups"] as? [[String: Any]] else { return nil }
+        var windows: [AntigravityAccount.Window] = []
+        let clock = ISO8601DateFormatter()
+        for group in groups {
+            guard let name = group["name"] as? String, !name.isEmpty,
+                  let buckets = group["buckets"] as? [[String: Any]] else { continue }
+            let family = switch name {
+            case "Gemini Models": "Gemini"
+            case "Claude and GPT models": "Claude/GPT"
+            default: name
+            }
+            for bucket in buckets {
+                guard bucket["disabled"] as? Bool != true, let fraction = bucket["remaining_fraction"] as? NSNumber,
+                      CFGetTypeID(fraction) != CFBooleanGetTypeID(), (0...1).contains(fraction.doubleValue),
+                      let period = bucket["window"] as? String, !period.isEmpty else { continue }
+                let reset = (bucket["reset_time"] as? String).flatMap {
+                    clock.date(from: $0) ?? (try? Date($0, strategy: .iso8601.time(includingFractionalSeconds: true)))
+                }
+                let title = family + " " + (period == "5h" ? "5-hour" : period)
+                windows.append(.init(title: title, remaining: Int((fraction.doubleValue * 100).rounded()), resetsAt: reset))
+            }
+        }
+        guard !windows.isEmpty else { return nil }
+        return .init(plan: summary["plan"] as? String, windows: windows, updatedAt: Date())
+    }
+}
+
+/// Measured quota windows and subscription metadata for the active account.
 struct AntigravityAccount: Equatable, Sendable {
     struct Window: Equatable, Sendable {
         let title: String
@@ -174,12 +273,18 @@ struct AntigravityAccount: Equatable, Sendable {
     let windows: [Window]
     let updatedAt: Date
 
-    static func read() -> Self? {
-        let helper = "/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI"
-        guard FileManager.default.isExecutableFile(atPath: helper),
-              let data = BoundedStatusLineCommand.run(command: helper + " usage --provider antigravity --json --no-color",
-                                                     input: Data(), timeoutSeconds: 10) else { return nil }
-        return decode(data)
+    static func read(manual: Bool = false, cli: () -> Self? = AntigravityCLI.read,
+                     desktop: (Bool) -> Self? = AntigravityDesktopQuota.read) -> Self? {
+        if let account = cli() {
+            Logger(subsystem: "com.quotaview", category: "AntigravityQuota").info("Read agy quota windows: \(account.windows.count, privacy: .public)")
+            return account
+        }
+
+        if let desktop = desktop(manual) {
+            Logger(subsystem: "com.quotaview", category: "AntigravityQuota").info("Read desktop quota windows: \(desktop.windows.count, privacy: .public)")
+            return desktop
+        }
+        return nil
     }
 
     static func decode(_ data: Data) -> Self? {
@@ -192,13 +297,21 @@ struct AntigravityAccount: Equatable, Sendable {
             return clock.date(from: raw) ?? (try? Date(raw, strategy: .iso8601.time(includingFractionalSeconds: true)))
         }
         func window(_ value: Any?, title: String) -> Window? {
-            guard let row = value as? [String: Any], let used = row["usedPercent"] as? Double,
+            guard let row = value as? [String: Any], row["usageKnown"] as? Bool != false,
+                  let used = row["usedPercent"] as? Double,
                   used.isFinite, (0...100).contains(used) else { return nil }
             return .init(title: title, remaining: Int((100 - used).rounded()), resetsAt: date(row["resetsAt"]))
         }
+        guard let stamp = date(usage["updatedAt"]) else { return nil }
+        let plan = (usage["loginMethod"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = rows[0]["source"] as? String
+        if source?.lowercased() == "offline" || plan?.lowercased() == "offline" {
+            return .init(plan: nil, windows: [], updatedAt: stamp)
+        }
         let extra = usage["extraRateWindows"] as? [[String: Any]] ?? []
         var windows = extra.compactMap { row -> Window? in
-            guard let title = row["title"] as? String, !title.isEmpty else { return nil }
+            guard row["usageKnown"] as? Bool != false, row["id"] as? String != "antigravity-offline-conversations",
+                  let title = row["title"] as? String, !title.isEmpty else { return nil }
             return window(row["window"], title: title)
         }
         if windows.isEmpty {
@@ -211,8 +324,207 @@ struct AntigravityAccount: Equatable, Sendable {
             return 2
         }
         windows.sort { groupOrder($0) < groupOrder($1) }
-        let plan = (usage["loginMethod"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard plan?.isEmpty == false || !windows.isEmpty, let stamp = date(usage["updatedAt"]) else { return nil }
+        guard plan?.isEmpty == false || !windows.isEmpty || !extra.isEmpty else { return nil }
         return .init(plan: plan?.isEmpty == false ? plan : nil, windows: windows, updatedAt: stamp)
+    }
+}
+
+/// Read the model settings in the official desktop app using macOS Accessibility.
+enum AntigravityDesktopQuota {
+    struct PageItem {
+        let heading: Bool
+        let text: String
+    }
+
+    static func parse(_ items: [PageItem], at now: Date) -> AntigravityAccount? {
+        var family: String?
+        var cadence: String?
+        var reset: Date?
+        var plan: String?
+        var nextIsPlan = false
+        var windows: [AntigravityAccount.Window] = []
+        for item in items {
+            let text = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if item.heading {
+                switch text.lowercased() {
+                case "gemini models", "gemini 模型": family = "Gemini"
+                case "claude and gpt models", "claude 和 gpt 模型": family = "Claude/GPT"
+                default: family = text.range(of: #"^Gemini [0-9]"#, options: .regularExpression) == nil ? nil : text
+                }
+                cadence = nil; nextIsPlan = false
+                continue
+            }
+            if nextIsPlan {
+                if !text.isEmpty, text.count <= 64 { plan = text }
+                nextIsPlan = false
+            }
+            if ["Your Plan:", "你的套餐：", "您的套餐："].contains(text) { nextIsPlan = true; continue }
+            guard let family else { continue }
+            if family.hasPrefix("Gemini "), text == family + " Weekly Limit" {
+                cadence = "weekly"; reset = nil
+                continue
+            }
+            switch text.lowercased() {
+            case "weekly limit remaining", "每周剩余额度": cadence = "weekly"; reset = nil
+            case "five hour limit remaining", "5 小时剩余额度": cadence = "5-hour"; reset = nil
+            default:
+                guard let period = cadence else { continue }
+                if text.hasPrefix("You have used "), let range = text.range(of: "fully refresh in ") {
+                    let duration = String(text[range.upperBound...]).trimmingCharacters(in: CharacterSet(charactersIn: "."))
+                    let units = ["day": 86400, "hour": 3600, "minute": 60, "second": 1]
+                    var seconds = 0
+                    for part in duration.components(separatedBy: ",") {
+                        let words = part.split(separator: " ")
+                        guard words.count == 2, let n = Int(words[0]), (0...366).contains(n),
+                              let unit = units[String(words[1].hasSuffix("s") ? words[1].dropLast() : words[1])] else { seconds = 0; break }
+                        seconds += n * unit
+                    }
+                    if seconds > 0 { reset = now.addingTimeInterval(Double(seconds)) }
+                } else {
+                    if text.hasSuffix("%"), let value = Int(text.dropLast()), (0...100).contains(value) {
+                        let title = family + " " + period
+                        guard !windows.contains(where: { $0.title == title }) else { return nil }
+                        windows.append(.init(title: title, remaining: value, resetsAt: reset))
+                    }
+                    cadence = nil
+                }
+            }
+        }
+        guard !windows.isEmpty else { return nil }
+        return .init(plan: plan, windows: windows, updatedAt: now)
+    }
+
+    private static func value(_ node: AXUIElement, _ key: String) -> CFTypeRef? {
+        var result: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(node, key as CFString, &result) == .success else { return nil }
+        return result
+    }
+
+    private static func children(_ node: AXUIElement) -> [AXUIElement] {
+        value(node, kAXChildrenAttribute) as? [AXUIElement] ?? []
+    }
+
+    private static func label(_ node: AXUIElement) -> String {
+        for key in [kAXTitleAttribute, kAXDescriptionAttribute] {
+            if let s = value(node, key) as? String, !s.isEmpty { return s }
+        }
+        return ""
+    }
+
+    /// Search control names only. Skip conversation messages, editor content and text fields.
+    private static func find(_ root: AXUIElement, role: String, names: [String]) -> AXUIElement? {
+        var stack = [root]
+        let deadline = ProcessInfo.processInfo.systemUptime + 1
+        for _ in 0..<1600 {
+            guard let node = stack.popLast(), ProcessInfo.processInfo.systemUptime < deadline else { break }
+            let kind = value(node, kAXRoleAttribute) as? String
+            if kind == role, names.contains(label(node)) { return node }
+            if ["AXStaticText", "AXTextArea", "AXTextField", "AXLink", "AXButton", "AXImage"].contains(kind ?? "") { continue }
+            stack.append(contentsOf: children(node).reversed())
+        }
+        return nil
+    }
+
+    private static func settings(_ window: AXUIElement) -> AXUIElement? {
+        find(window, role: "AXGroup", names: ["Settings", "设置"])
+    }
+    private static func button(_ root: AXUIElement, _ names: [String]) -> AXUIElement? {
+        find(root, role: kAXButtonRole, names: names)
+    }
+    private static func press(_ button: AXUIElement) -> Bool {
+        AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+    }
+    private static func page(_ settings: AXUIElement) -> AXUIElement? {
+        guard let heading = find(settings, role: "AXHeading", names: [
+            "Models & Usage Refresh quota and credits data", "Models & Usage", "模型与用量", "模型与用量 刷新额度和点数数据"
+        ]), let parent = value(heading, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID() else { return nil }
+        return (parent as! AXUIElement)
+    }
+    private static func readPage(_ page: AXUIElement) -> AntigravityAccount? {
+        var items: [PageItem] = []
+        var stack = Array(children(page).reversed())
+        let deadline = ProcessInfo.processInfo.systemUptime + 1
+        for _ in 0..<500 {
+            guard let node = stack.popLast() else { return parse(items, at: Date()) }
+            guard ProcessInfo.processInfo.systemUptime < deadline else { return nil }
+            switch value(node, kAXRoleAttribute) as? String {
+            case "AXHeading": items.append(.init(heading: true, text: label(node)))
+            case "AXStaticText":
+                if let s = value(node, kAXValueAttribute) as? String { items.append(.init(heading: false, text: s)) }
+            case "AXGroup": stack.append(contentsOf: children(node).reversed())
+            default: break
+            }
+        }
+        return nil
+    }
+
+    private static func refreshedAccount(in sheet: AXUIElement, page models: AXUIElement) -> AntigravityAccount? {
+        let labels = ["Refresh quota and credits data", "刷新额度和点数数据"]
+        guard let refresh = button(models, labels) else { return nil }
+        if (value(refresh, kAXEnabledAttribute) as? Bool) == true, !press(refresh) { return nil }
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        repeat {
+            Thread.sleep(forTimeInterval: 0.15)
+            guard !Task.isCancelled, let current = page(sheet) else { return nil }
+            if let control = button(current, labels), (value(control, kAXEnabledAttribute) as? Bool) == true,
+               let result = readPage(current) { return result }
+        } while ProcessInfo.processInfo.systemUptime < deadline
+        return nil
+    }
+
+    static func read(manual: Bool = false) -> AntigravityAccount? {
+        guard AXIsProcessTrusted() else { return nil }
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.google.antigravity")
+        guard apps.count == 1, let app = apps.first else { return nil }
+        let root = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(root, 0.15)
+        AXUIElementSetAttributeValue(root, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        let windows = value(root, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        for window in windows {
+            if let sheet = settings(window), let models = page(sheet), let account = refreshedAccount(in: sheet, page: models) { return account }
+        }
+        // When the user is working in the desktop app, never switch its page on a timer.
+        guard manual || !app.isActive else { return nil }
+        for window in windows {
+            let minimized = (value(window, kAXMinimizedAttribute) as? Bool) == true
+            var open = button(window, ["Settings", "设置"])
+            // Some desktop versions retain their accessible controls while
+            // minimized. Only an explicit refresh may restore a dormant window.
+            let restoreWindow = minimized && manual && open == nil
+            if restoreWindow {
+                guard AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse) == .success else { continue }
+                Thread.sleep(forTimeInterval: 0.35)
+                open = button(window, ["Settings", "设置"])
+            }
+            defer {
+                if restoreWindow { AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
+            }
+            if let sheet = settings(window) {
+                if let models = page(sheet) { return refreshedAccount(in: sheet, page: models) }
+                continue
+            }
+            guard let open, press(open) else { continue }
+            var ownedSheet: AXUIElement?
+            defer {
+                if let ownedSheet, let current = settings(window), CFEqual(ownedSheet, current),
+                   let close = button(current, ["Close", "关闭"]) { _ = press(close) }
+            }
+            var selected = false
+            let deadline = ProcessInfo.processInfo.systemUptime + 4
+            repeat {
+                guard !Task.isCancelled else { return nil }
+                if let sheet = settings(window) {
+                    ownedSheet = sheet
+                    if let models = page(sheet) {
+                        return refreshedAccount(in: sheet, page: models)
+                    } else if !selected, let models = button(sheet, ["Models", "模型"]) {
+                        selected = press(models)
+                    }
+                }
+                Thread.sleep(forTimeInterval: 0.12)
+            } while ProcessInfo.processInfo.systemUptime < deadline
+            return nil
+        }
+        return nil
     }
 }

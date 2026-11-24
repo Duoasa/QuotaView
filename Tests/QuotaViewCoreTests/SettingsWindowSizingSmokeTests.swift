@@ -4,6 +4,65 @@ import XCTest
 @testable import QuotaView
 
 final class SettingsWindowSizingSmokeTests: XCTestCase {
+    @MainActor func testAgentOrderPersistsMovesAndAppendsMissingAgents() throws {
+        let suite = "AgentOrder-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let prefs = AppPreferences(defaults: defaults)
+        let initial = IslandAgentProvider.allCases
+        XCTAssertEqual(prefs.agentSettingsOrder, initial)
+        prefs.moveAgentInSettings(.devinCLI, to: .codex)
+        XCTAssertEqual(prefs.agentSettingsOrder, [.devinCLI] + initial.dropLast())
+        XCTAssertEqual(AppPreferences(defaults: defaults).agentSettingsOrder, prefs.agentSettingsOrder)
+        prefs.moveAgentInSettings(.devinCLI, to: .devinDesktop)
+        prefs.moveAgentInSettings(.codex, to: .codex)
+        XCTAssertEqual(prefs.agentSettingsOrder, initial)
+        XCTAssertEqual(AppPreferences(defaults: defaults).agentSettingsOrder, initial)
+
+        defaults.set(["dsh", "retired-agent", "dsh", "codex"], forKey: "preferences.settings.agentOrder")
+        let restored = AppPreferences(defaults: defaults).agentSettingsOrder
+        XCTAssertEqual(restored, [.dsh, .codex] + initial.filter { $0 != .dsh && $0 != .codex })
+    }
+
+    func testAgentDragPreviewCrossesMidpointsAndHoldsItsGapUntilReversed() {
+        let order: [IslandAgentProvider] = [.codex, .claudeCode, .dsh, .kimiCode]
+        let heights: [IslandAgentProvider: CGFloat] = [.claudeCode: 72]
+        var preview = AgentReorderPreview(agent: .codex, order: order)
+
+        preview.update(at: 88, heights: heights)
+        XCTAssertEqual(preview.order, order)
+        preview.update(at: 90, heights: heights)
+        XCTAssertEqual(preview.order, [.claudeCode, .codex, .dsh, .kimiCode])
+        preview.update(at: 87, heights: heights)
+        XCTAssertEqual(preview.target, .claudeCode)
+        preview.update(at: 36, heights: heights)
+        XCTAssertEqual(preview.target, .claudeCode)
+        preview.update(at: 35, heights: heights)
+        XCTAssertEqual(preview.order, order)
+        preview.update(at: 1_000, heights: heights)
+        XCTAssertEqual(preview.order, [.claudeCode, .dsh, .kimiCode, .codex])
+        XCTAssertEqual(preview.target, .kimiCode)
+        XCTAssertEqual(preview.original, order)
+        preview.update(at: 0, heights: heights)
+        XCTAssertEqual(preview.order, order)
+    }
+
+    @MainActor func testAgentHoverChangesOnlyPreviewAndDropSavesThatOrder() throws {
+        let suite = "AgentHover-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults)
+        let original = preferences.agentSettingsOrder
+        var preview = AgentReorderPreview(agent: .devinCLI, order: original)
+        preview.update(at: 0, heights: [:])
+        XCTAssertEqual(preferences.agentSettingsOrder, original)
+        XCTAssertNil(defaults.object(forKey: "preferences.settings.agentOrder"))
+        preferences.moveAgentInSettings(preview.agent, to: try XCTUnwrap(preview.target))
+        XCTAssertEqual(preferences.agentSettingsOrder, preview.order)
+        XCTAssertEqual(AppPreferences(defaults: defaults).agentSettingsOrder, preview.order)
+    }
+
     func testNavigationAcrossAgentAndSidebarPages() {
         var history = SettingsNavigationHistory()
         history.back()

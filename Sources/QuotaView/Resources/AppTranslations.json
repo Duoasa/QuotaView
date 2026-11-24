@@ -1,4 +1,129 @@
 {
+  "This Codex version opens local chats in exclusive mode. Answer in the original chat.": {
+    "ja": "このバージョンの Codex はローカルチャットを専用モードで開きます。元のチャットで回答してください。",
+    "ko": "이 Codex 버전은 로컬 채팅을 전용 모드로 엽니다. 원래 채팅에서 답하세요.",
+    "es": "Esta versión de Codex abre los chats locales en modo exclusivo. Responde en el chat original."
+  },
+  "Shared service available. A question can be answered when its choices become interactive in the island.": {
+    "ja": "共有サービスは利用可能です。アイランドで選択肢が有効になった質問に回答できます。",
+    "ko": "공유 서비스를 사용할 수 있습니다. 아일랜드에서 선택지가 활성화된 질문에 답할 수 있습니다.",
+    "es": "Servicio compartido disponible. Puedes responder cuando se activen las opciones en la isla."
+  },
+  "Choose an answer in the original Codex chat": {
+    "ja": "元の Codex チャットで選択してください",
+    "ko": "원래 Codex 채팅에서 답을 선택하세요",
+    "es": "Elige una respuesta en el chat original de Codex"
+  },
+  "Question replies": {
+    "ja": "質問への回答",
+    "ko": "질문 답변",
+    "es": "Respuestas a preguntas"
+  },
+  "Connect replies": {
+    "ja": "回答を接続",
+    "ko": "답변 연결",
+    "es": "Conectar respuestas"
+  },
+  "Open Codex in shared mode to answer questions in the island during this launch.": {
+    "ja": "Codex を共有モードで開くと、今回の起動中はアイランドから質問に回答できます。",
+    "ko": "Codex를 공유 모드로 열면 이번 실행 중에 아일랜드에서 질문에 답할 수 있습니다.",
+    "es": "Abre Codex en modo compartido para responder desde la isla durante esta sesión."
+  },
+  "Preparing the shared reply connection…": {
+    "ja": "共有回答接続を準備中…",
+    "ko": "공유 답변 연결 준비 중…",
+    "es": "Preparando la conexión compartida…"
+  },
+  "Save your work and quit Codex. QuotaView will reopen it in shared mode.": {
+    "ja": "作業を保存して Codex を終了してください。QuotaView が共有モードで開き直します。",
+    "ko": "작업을 저장하고 Codex를 종료하면 QuotaView가 공유 모드로 다시 엽니다.",
+    "es": "Guarda tu trabajo y cierra Codex. QuotaView lo volverá a abrir en modo compartido."
+  },
+  "Shared service connected. You can answer questions matched to the original chat.": {
+    "ja": "共有サービスに接続しました。元のチャットと一致する質問に回答できます。",
+    "ko": "공유 서비스에 연결했습니다. 원래 채팅과 일치하는 질문에 답할 수 있습니다.",
+    "es": "Servicio compartido conectado. Puedes responder preguntas vinculadas al chat original."
+  },
+  "Codex is open. Waiting for the shared service.": {
+    "ja": "Codex を開きました。共有サービスを待っています。",
+    "ko": "Codex가 열렸습니다. 공유 서비스를 기다리는 중입니다.",
+    "es": "Codex está abierto. Esperando al servicio compartido."
+  },
+  "Shared launch did not finish. Check the Codex desktop app and retry.": {
+    "ja": "共有モードでの起動に失敗しました。Codex デスクトップアプリを確認して再試行してください。",
+    "ko": "공유 모드로 열지 못했습니다. Codex 데스크톱 앱을 확인하고 다시 시도하세요.",
+    "es": "No se completó el inicio compartido. Comprueba la aplicación de escritorio de Codex y vuelve a intentarlo."
+  },
+  "Authorize to receive task events and prepare to open Codex in shared mode for question replies.": {
+    "ja": "承認するとタスクイベントを受信し、質問に回答できるよう Codex の共有起動を準備します。",
+    "ko": "승인하면 작업 이벤트를 수신하고 질문에 답하도록 Codex의 공유 모드 실행을 준비합니다.",
+    "es": "Autoriza los eventos de tareas y prepara el inicio de Codex en modo compartido para responder preguntas."
+  },
+  "QuotaView is disconnected from Codex desktop approvals. Respond in the original conversation.": {
+    "ja": "QuotaView は Codex デスクトップの承認に接続できていません。元の会話で対応してください。",
+    "ko": "QuotaView가 Codex 데스크톱 승인에 연결되지 않았습니다. 원래 대화에서 처리하세요.",
+    "es": "QuotaView no está conectado al canal de aprobaciones de Codex de escritorio. Responde en la conversación original."
+  },
+  "Automation lets QuotaView select the tab running Claude Code.": {
+    "ja": "オートメーションで Claude Code を実行中のタブに切り替えます。",
+    "ko": "자동화 권한을 사용해 Claude Code가 실행 중인 탭으로 전환합니다.",
+    "es": "La automatización permite a QuotaView seleccionar la pestaña donde se ejecuta Claude Code."
+  },
+  "Ask on first use": {
+    "ja": "初回使用時に確認",
+    "ko": "처음 사용할 때 묻기",
+    "es": "Preguntar al usar por primera vez"
+  },
+  "Terminal is not running": {
+    "ja": "ターミナルが起動していません",
+    "ko": "터미널이 실행 중이지 않음",
+    "es": "El terminal no está en ejecución"
+  },
+  "Cannot submit to Codex right now": {
+    "ja": "現在 Codex に回答を送信できません",
+    "ko": "현재 Codex에 답변을 제출할 수 없습니다",
+    "es": "Ahora no se puede enviar la respuesta a Codex"
+  },
+  "Account region": {
+    "ja": "アカウントの地域",
+    "ko": "계정 지역",
+    "es": "Región de la cuenta"
+  },
+  "Quota unavailable. Check the account in Agent integrations.": {
+    "ja": "利用枠を取得できません。Agent 連携のアカウントを確認してください。",
+    "ko": "할당량을 확인할 수 없습니다. Agent 연동 계정을 확인하세요.",
+    "es": "Cuota no disponible. Revisa la cuenta en Integraciones de agentes."
+  },
+  "Read quota in the background": {
+    "ja": "バックグラウンドで利用枠を取得",
+    "ko": "백그라운드에서 할당량 조회",
+    "es": "Consultar cuota en segundo plano"
+  },
+  "Organization": {
+    "ja": "組織",
+    "ko": "조직",
+    "es": "Organización"
+  },
+  "Credentials are stored in your Mac keychain.": {
+    "ja": "認証情報は Mac のキーチェーンに保存されます。",
+    "ko": "인증 정보는 Mac 키체인에 저장됩니다.",
+    "es": "Las credenciales se guardan en el llavero del Mac."
+  },
+  "Removed": {
+    "ja": "削除済み",
+    "ko": "삭제됨",
+    "es": "Eliminado"
+  },
+  "Saved": {
+    "ja": "保存済み",
+    "ko": "저장됨",
+    "es": "Guardado"
+  },
+  "Could not update the keychain.": {
+    "ja": "キーチェーンを更新できませんでした。",
+    "ko": "키체인을 업데이트할 수 없습니다.",
+    "es": "No se pudo actualizar el llavero."
+  },
   "Forward": {
     "ja": "進む",
     "ko": "앞으로",
@@ -29,10 +154,10 @@
     "ko": "시스템 설정에서 권한 관리",
     "es": "Gestionar el permiso en Ajustes del Sistema"
   },
-  "Go to conversation requires this permission in the official DSH and Antigravity apps.": {
-    "ja": "公式の DSH と Antigravity で「会話に移動」を使うには、この権限が必要です。",
-    "ko": "공식 DSH 및 Antigravity 앱에서 대화로 이동하려면 이 권한이 필요합니다.",
-    "es": "Para ir a una conversación en las aplicaciones oficiales de DSH y Antigravity se necesita este permiso."
+  "Accessibility lets QuotaView open DSH and Antigravity conversations and read quotas from the Antigravity desktop app.": {
+    "ja": "アクセシビリティを使って DSH と Antigravity の会話を開き、Antigravity デスクトップアプリの利用枠を読み取ります。",
+    "ko": "손쉬운 사용 권한으로 DSH 및 Antigravity 대화를 열고 Antigravity 데스크톱 앱의 할당량을 읽습니다.",
+    "es": "Accesibilidad permite abrir conversaciones de DSH y Antigravity y leer las cuotas de la app de escritorio Antigravity."
   },
   "Usage page improvements": {
     "ja": "使用量ページの改善",
@@ -59,10 +184,20 @@
     "ko": "아일랜드에서 Antigravity 작업과 사용량을 확인하고 도구 승인 요청을 처리할 수 있습니다.",
     "es": "Consulta las tareas y el uso de Antigravity y revisa las solicitudes de herramientas en la isla."
   },
-  "Review commands, file reads, and edits before execution, or hand them back to Antigravity.": {
-    "ja": "コマンドの実行やファイルの読み書きを確認するか、Antigravity に戻します。",
-    "ko": "명령 실행과 파일 읽기 및 변경을 확인하거나 Antigravity에서 처리합니다.",
-    "es": "Revisa los comandos, las lecturas y los cambios de archivos antes de ejecutarlos o devuélvelos a Antigravity."
+  "Allow in project": {
+    "ja": "このプロジェクトで許可",
+    "ko": "이 프로젝트에서 허용",
+    "es": "Permitir en el proyecto"
+  },
+  "Allow in workspace": {
+    "ja": "このワークスペースで許可",
+    "ko": "이 작업 공간에서 허용",
+    "es": "Permitir en el espacio de trabajo"
+  },
+  "Approve the selected scope or deny when a permission card is open in the Antigravity desktop conversation. Requires Accessibility permission.": {
+    "ja": "Antigravity のデスクトップ会話に権限カードが表示されたとき、選択中の範囲で許可するか拒否できます。アクセシビリティ権限が必要です。",
+    "ko": "Antigravity 데스크톱 대화에 권한 카드가 표시되면 선택된 범위로 허용하거나 거부할 수 있습니다. 손쉬운 사용 권한이 필요합니다.",
+    "es": "Aprueba el alcance seleccionado o deniega cuando aparezca una tarjeta de permisos en la conversación de escritorio de Antigravity. Requiere el permiso de accesibilidad."
   },
   "Continue in Antigravity": {
     "ja": "Antigravity で続ける",
@@ -84,10 +219,35 @@
     "ko": "이 응답을 Antigravity로 보냅니다.",
     "es": "Envía esta respuesta a Antigravity."
   },
-  "Antigravity plan and quotas are read through the local CodexBar app.": {
-    "ja": "この Mac の CodexBar から Antigravity のプランと利用枠を取得します。",
-    "ko": "이 Mac의 CodexBar에서 Antigravity 요금제와 한도를 읽습니다.",
-    "es": "El plan y las cuotas de Antigravity se consultan mediante la aplicación local CodexBar."
+  "Shown when the quota source reports a plan name.": {
+    "ja": "取得した利用枠にプラン名が含まれる場合に表示します。",
+    "ko": "할당량 정보에 요금제 이름이 있으면 표시합니다.",
+    "es": "Se muestra cuando la fuente de cuotas indica el nombre del plan."
+  },
+  "Install to refresh quotas in the background. Without agy, QuotaView reads from the desktop app.": {
+    "ja": "インストールすると利用枠をバックグラウンドで更新します。未インストール時はデスクトップアプリから取得します。",
+    "ko": "설치하면 백그라운드에서 할당량을 갱신합니다. 미설치 시 데스크톱 앱에서 읽습니다.",
+    "es": "Instala agy para actualizar las cuotas en segundo plano. Sin agy, QuotaView las consulta en la aplicación de escritorio."
+  },
+  "Install agy": {
+    "ja": "agy をインストール",
+    "ko": "agy 설치",
+    "es": "Instalar agy"
+  },
+  "Installing agy": {
+    "ja": "agy をインストール中",
+    "ko": "agy 설치 중",
+    "es": "Instalando agy"
+  },
+  "Installed": {
+    "ja": "インストール済み",
+    "ko": "설치됨",
+    "es": "Instalado"
+  },
+  "Could not install agy. Try again later.": {
+    "ja": "agy をインストールできませんでした。しばらくしてから再試行してください。",
+    "ko": "agy를 설치하지 못했습니다. 잠시 후 다시 시도하세요.",
+    "es": "No se pudo instalar agy. Vuelve a intentarlo más tarde."
   },
   "Gemini weekly": {
     "ja": "Gemini の週間利用枠",
@@ -203,6 +363,16 @@
     "ja": "設定中",
     "ko": "설정 중",
     "es": "Configurando"
+  },
+  "Drag to reorder agents": {
+    "ja": "ドラッグしてエージェントの順序を変更",
+    "ko": "드래그하여 에이전트 순서 변경",
+    "es": "Arrastra para reordenar los agentes"
+  },
+  "Active": {
+    "ja": "有効",
+    "ko": "활성",
+    "es": "Activo"
   },
   "Needs attention": {
     "ja": "確認が必要",
@@ -1718,6 +1888,11 @@
     "ja": "更新 ",
     "ko": "업데이트 ",
     "es": "Actualizado "
+  },
+  "Live quota unavailable": {
+    "ja": "現在のクォータを取得できません",
+    "ko": "실시간 할당량을 확인할 수 없습니다",
+    "es": "Cuota en tiempo real no disponible"
   },
   "Waiting for data": {
     "ja": "データ待機中",
@@ -3968,5 +4143,190 @@
     "ja": "「一般と表示」でライト、ダーク、自動を切り替えられます。終了ボタンはサイドバーの下部に移動しました。",
     "ko": "‘일반 및 디스플레이’에서 라이트, 다크 또는 자동 모드를 선택하세요. 종료 버튼은 사이드바 하단에 있습니다.",
     "es": "Elige el aspecto claro, oscuro o automático en «General y pantalla». El botón para salir de QuotaView está al pie de la barra lateral."
+  },
+  "Connect": {
+    "ja": "接続",
+    "ko": "연결",
+    "es": "Conectar"
+  },
+  "Check connection": {
+    "ja": "接続を確認",
+    "ko": "연결 확인",
+    "es": "Comprobar conexión"
+  },
+  "Connect local tasks and read quota using existing sign-ins. The system asks for permission when needed.": {
+    "ja": "ローカルのタスクを接続し、既存のログインで利用枠を読み取ります。必要な場合はシステムが許可を求めます。",
+    "ko": "로컬 작업을 연결하고 기존 로그인으로 사용량을 읽습니다. 필요하면 시스템에서 권한을 요청합니다.",
+    "es": "Conecta tareas locales y consulta la cuota con las sesiones existentes. El sistema pedirá permiso cuando sea necesario."
+  },
+  "Configured, waiting for a new session": {
+    "ja": "設定済み、新しいセッションを待機中",
+    "ko": "설정 완료, 새 세션 대기 중",
+    "es": "Configurado, esperando una sesión nueva"
+  },
+  "Authorization required": {
+    "ja": "許可が必要",
+    "ko": "권한 필요",
+    "es": "Se requiere autorización"
+  },
+  "New sessions connect automatically. Permission requests follow the setting above.": {
+    "ja": "新しいセッションは自動的に接続されます。権限リクエストは上の設定に従います。",
+    "ko": "새 세션은 자동으로 연결됩니다. 권한 요청은 위 설정을 따릅니다.",
+    "es": "Las sesiones nuevas se conectan automáticamente. Los permisos siguen el ajuste anterior."
+  },
+  "Use local sign-in": {
+    "ja": "ローカルのログインを使用",
+    "ko": "로컬 로그인 사용",
+    "es": "Usar sesión local"
+  },
+  "Manual configuration": {
+    "ja": "手動設定",
+    "ko": "수동 설정",
+    "es": "Configuración manual"
+  },
+  "Expand": {
+    "ja": "展開",
+    "ko": "펼치기",
+    "es": "Expandir"
+  },
+  "Reads the account balance using a DeepSeek API key from the environment or DSH. You can also add one manually.": {
+    "ja": "環境変数または DSH に保存された DeepSeek API キーで残高を取得します。手動でも追加できます。",
+    "ko": "환경 변수 또는 DSH에 저장된 DeepSeek API 키로 계정 잔액을 조회합니다. 키를 직접 추가할 수도 있습니다.",
+    "es": "Consulta el saldo con una clave de API de DeepSeek del entorno o de DSH. También puedes añadir una manualmente."
+  },
+  "Devin quota requires an organization and access credential in Manual configuration.": {
+    "ja": "Devin の利用枠には、手動設定で組織とアクセス認証情報が必要です。",
+    "ko": "Devin 사용량을 보려면 수동 설정에 조직과 접근 인증 정보를 입력하세요.",
+    "es": "La cuota de Devin requiere una organización y una credencial en Configuración manual."
+  },
+  "Uses a valid Kimi Code sign-in. Renew it in Kimi when it expires.": {
+    "ja": "有効な Kimi Code のログインを使用します。期限切れの場合は Kimi で更新してください。",
+    "ko": "유효한 Kimi Code 로그인을 사용합니다. 만료되면 Kimi에서 갱신하세요.",
+    "es": "Usa una sesión válida de Kimi Code. Renuévala en Kimi cuando caduque."
+  },
+  "Keeps saved credentials first, otherwise reads the client's existing sign-in. Recheck after signing in.": {
+    "ja": "保存済みの認証情報を優先し、なければクライアントのログインを読み取ります。ログイン後に再確認してください。",
+    "ko": "저장된 인증 정보를 우선 사용하며, 없으면 클라이언트의 기존 로그인을 읽습니다. 로그인 후 다시 확인하세요.",
+    "es": "Prioriza las credenciales guardadas; si no las hay, usa la sesión del cliente. Vuelve a comprobar después de iniciar sesión."
+  },
+  "Quota reading is off": {
+    "ja": "利用枠の読み取りはオフ",
+    "ko": "사용량 읽기 꺼짐",
+    "es": "Lectura de cuota desactivada"
+  },
+  "Checking quota": {
+    "ja": "利用枠を確認中",
+    "ko": "사용량 확인 중",
+    "es": "Comprobando cuota"
+  },
+  "Quota connected": {
+    "ja": "利用枠に接続済み",
+    "ko": "사용량 연결됨",
+    "es": "Cuota conectada"
+  },
+  "Quota needs sign-in or permission": {
+    "ja": "利用枠にはログインまたは許可が必要",
+    "ko": "사용량에 로그인 또는 권한 필요",
+    "es": "La cuota requiere iniciar sesión o dar permiso"
+  },
+  "Quota temporarily unavailable": {
+    "ja": "利用枠は一時的に利用不可",
+    "ko": "사용량을 일시적으로 확인할 수 없음",
+    "es": "Cuota no disponible temporalmente"
+  },
+  "Connect quota and tasks and enable supported approvals and replies in the island.": {
+    "ja": "使用量とタスクを接続し、対応する承認と回答をアイランドで有効にします。",
+    "ko": "할당량과 작업을 연결하고 지원되는 승인과 답변을 아일랜드에서 활성화합니다.",
+    "es": "Conecta la cuota y las tareas y activa las aprobaciones y respuestas compatibles en la isla."
+  },
+  "Use original chat": {
+    "ja": "元のチャットで対応",
+    "ko": "원래 대화에서 처리",
+    "es": "Usar el chat original"
+  },
+  "Handle supported requests in the island": {
+    "ja": "対応するリクエストをアイランドで処理",
+    "ko": "지원되는 요청을 아일랜드에서 처리",
+    "es": "Gestionar solicitudes compatibles en la isla"
+  },
+  "Waiting for connection": {
+    "ja": "接続待ち",
+    "ko": "연결 대기 중",
+    "es": "Esperando conexión"
+  },
+  "Supported OpenCode plugin sessions": {
+    "ja": "対応する OpenCode プラグインセッション",
+    "ko": "지원되는 OpenCode 플러그인 세션",
+    "es": "Sesiones compatibles del complemento OpenCode"
+  },
+  "Reply in the same shared session": {
+    "ja": "同じ共有セッションで回答",
+    "ko": "같은 공유 세션에서 답변",
+    "es": "Responder en la misma sesión compartida"
+  },
+  "Quota": {
+    "ja": "使用量",
+    "ko": "할당량",
+    "es": "Cuota"
+  },
+  "Approvals": {
+    "ja": "承認",
+    "ko": "승인",
+    "es": "Aprobaciones"
+  },
+  "Questions and answers": {
+    "ja": "質問と回答",
+    "ko": "질문 및 답변",
+    "es": "Preguntas y respuestas"
+  },
+  "Island approvals and replies": {
+    "ja": "アイランドで承認・回答",
+    "ko": "아일랜드에서 승인 및 답변",
+    "es": "Aprobaciones y respuestas en la isla"
+  },
+  "Handle permissions and single-choice questions in new OpenCode sessions.": {
+    "ja": "新しい OpenCode セッションの承認と単一選択の質問に対応します。",
+    "ko": "새 OpenCode 세션에서 권한 요청과 단일 선택 질문을 처리합니다.",
+    "es": "Gestiona permisos y preguntas de opción única en nuevas sesiones de OpenCode."
+  },
+  "Continue in OpenCode": {
+    "ja": "OpenCode で対応",
+    "ko": "OpenCode에서 처리",
+    "es": "Continuar en OpenCode"
+  },
+  "Use the original OpenCode session.": {
+    "ja": "元の OpenCode セッションを開いてください。",
+    "ko": "원래 OpenCode 세션에서 처리하세요.",
+    "es": "Usa la sesión original de OpenCode."
+  },
+  "Send this response to OpenCode.": {
+    "ja": "回答を OpenCode に送信します。",
+    "ko": "답변을 OpenCode에 보냅니다.",
+    "es": "Envía la respuesta a OpenCode."
+  },
+  "Requesting permission": {
+    "ja": "許可を要求中",
+    "ko": "권한 요청 중",
+    "es": "Solicitando permiso"
+  },
+  "Not granted · Open Settings": {
+    "ja": "未許可 · 設定を開く",
+    "ko": "허용되지 않음 · 설정 열기",
+    "es": "Sin permiso · Abrir ajustes"
+  },
+  "Request permission": {
+    "ja": "許可をリクエスト",
+    "ko": "권한 요청",
+    "es": "Solicitar permiso"
+  },
+  "Launch and request permission": {
+    "ja": "起動して許可をリクエスト",
+    "ko": "실행 후 권한 요청",
+    "es": "Abrir y solicitar permiso"
+  },
+  "Status unavailable · Retry": {
+    "ja": "状態不明 · 再試行",
+    "ko": "상태 확인 불가 · 재시도",
+    "es": "Estado no disponible · Reintentar"
   }
 }

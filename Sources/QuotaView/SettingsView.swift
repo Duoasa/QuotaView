@@ -449,9 +449,14 @@ struct SettingsView: View {
                         .allowsHitTesting(false)
                 }
             }
-            Text(navigation.current.agent?.displayName ?? navigation.current.page.title(copy))
-                .font(.system(size: 16, weight: .semibold))
-                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: SettingsLayoutMetrics.iconGap) {
+                if let agent = navigation.current.agent {
+                    AgentSettingsIcon(provider: agent)
+                }
+                Text(navigation.current.agent?.displayName ?? navigation.current.page.title(copy))
+                    .font(.system(size: 16, weight: .semibold))
+                    .accessibilityAddTraits(.isHeader)
+            }
             Spacer()
         }
         .padding(.horizontal, 8)
@@ -752,6 +757,26 @@ struct SettingsView: View {
                     codexHookAction
                 }
             }
+            if activityRuntime.canConfigureSharedAnswers {
+                NativeSettingsDivider()
+                NativeSettingsRow(title: copy.text("选择题回答", "Question replies"), subtitle: answerLaunchSubtitle) {
+                    if !activityRuntime.desktopIgnoresDaemonPreference {
+                        switch activityRuntime.answerLaunchState {
+                        case .waitingForQuit:
+                            Button(copy.text("取消", "Cancel")) { activityRuntime.cancelAnswerLaunch() }
+                                .nativeSettingsActionStyle().controlSize(.small)
+                        case .requested, .opening:
+                            ProgressView().controlSize(.small)
+                        case .opened:
+                            EmptyView()
+                        case .idle, .failed:
+                            Button(copy.text("连接回答", "Connect replies")) { activityRuntime.requestSharedAnswers() }
+                                .nativeSettingsActionStyle().controlSize(.small)
+                                .disabled(activityRuntime.hookOperation != .idle)
+                        }
+                    }
+                }
+            }
             if activityRuntime.hasCompatibilityHook,
                activityRuntime.hookConnectionStatus != .connected,
                activityRuntime.hookConnectionStatus != .awaitingFirstEvent {
@@ -788,6 +813,26 @@ struct SettingsView: View {
             }
         }
         .onAppear { activityRuntime.refreshConnectionStatus() }
+    }
+
+    private var answerLaunchSubtitle: String {
+        if activityRuntime.desktopIgnoresDaemonPreference {
+            return copy.text("当前 Codex 版本以独占模式打开本地会话，请在原对话中回答。", "This Codex version opens local chats in exclusive mode. Answer in the original chat.")
+        }
+        return switch activityRuntime.answerLaunchState {
+        case .idle:
+            copy.text("以共享模式打开 Codex，可在灵动岛回答本次会话中的选择题。", "Open Codex in shared mode to answer questions in the island during this launch.")
+        case .requested, .opening:
+            copy.text("正在准备共享回答连接…", "Preparing the shared reply connection…")
+        case .waitingForQuit:
+            copy.text("保存工作并退出 Codex，QuotaView 会以共享模式重新打开它。", "Save your work and quit Codex. QuotaView will reopen it in shared mode.")
+        case .opened:
+            activityRuntime.automaticConnection.sharedState == .connected
+                ? copy.text("共享服务可用。岛内出现可选按钮时，才可回答该题。", "Shared service available. A question can be answered when its choices become interactive in the island.")
+                : copy.text("Codex 已打开，正在等待共享服务。", "Codex is open. Waiting for the shared service.")
+        case .failed:
+            copy.text("共享启动未完成。请检查 Codex 桌面版后重试。", "Shared launch did not finish. Check the Codex desktop app and retry.")
+        }
     }
 
     private var codexHookAction: some View {
@@ -1301,7 +1346,7 @@ struct SettingsView: View {
         return switch activityRuntime.hookConnectionStatus {
         case .notInstalled: copy.text("Hook 已停用，可随时重新启用。", "Hooks are off. Enable them at any time.")
         case .installedNeedsRestart, .awaitingTrust:
-            copy.text("已自动配置。授权后即可接收任务事件，无需终端配置。", "Configured automatically. Authorize to receive task events without terminal setup.")
+            copy.text("授权后可接收任务事件，并准备以共享模式打开 Codex 以回答选择题。", "Authorize to receive task events and prepare to open Codex in shared mode for question replies.")
         case .awaitingFirstEvent: copy.text("Codex 已确认授权，等待新的任务事件。", "Authorization verified by Codex; waiting for task activity.")
         case .connected: copy.text("已接收任务事件，补充任务与上下文压缩状态。", "Receiving task events for task and context compaction updates.")
         case .abnormal(let message): message
@@ -2346,7 +2391,7 @@ private struct SettingsChoiceRow<Choices: View>: View {
     }
 }
 
-private enum SettingsPalette {
+enum SettingsPalette {
     // sRGB surfaces sampled from the supplied macOS Settings reference.
     static let canvas = adaptive(light: NSColor(srgbRed: 0.96, green: 0.96, blue: 0.97, alpha: 1),
                                  dark: NSColor(srgbRed: 34/255, green: 35/255, blue: 46/255, alpha: 1))

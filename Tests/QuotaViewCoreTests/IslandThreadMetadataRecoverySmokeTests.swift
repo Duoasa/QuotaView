@@ -3,6 +3,9 @@ import XCTest
 import SQLite3
 @testable import QuotaView
 @testable import QuotaViewCore
+#if SWIFT_PACKAGE
+@testable import QuotaViewActivityHookSupport
+#endif
 
 @MainActor
 final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
@@ -74,6 +77,19 @@ final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
         _ = await store.stop()
     }
 
+    func testOpenDetailRechecksLiveDestinationAfterBothMissAndMatch() {
+        let id = UUID()
+        for target in [IslandConversationTarget.dsh("dsh-session"), .antigravity(id), .antigravityHook(id)] {
+            XCTAssertTrue(target.needsRecheck(after: nil))
+            XCTAssertTrue(target.needsRecheck(after: target == .antigravityHook(id) ? .antigravity(id) : target))
+        }
+        let terminal = IslandConversationTarget.claudeHook(id, terminal: true)
+        XCTAssertTrue(terminal.needsRecheck(after: nil))
+        XCTAssertTrue(terminal.needsRecheck(after: .claudeTerminal(id)))
+        XCTAssertFalse(terminal.needsRecheck(after: .claude(id)))
+        XCTAssertFalse(IslandConversationTarget.cursor(id).needsRecheck(after: nil))
+    }
+
     func testNativeTargetsRemainProviderScopedAcrossAllDetailStates() throws {
         let id = UUID(), text = id.uuidString.lowercased()
         let rows: [(IslandConversationTarget, IslandAgentProvider, String, String)] = [
@@ -120,12 +136,117 @@ final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
         }
         try write(a, cli: hook, archived: false)
         try write(b, cli: UUID(), archived: false)
-        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, root: root), a)
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, roots: [root]), a)
         try write(b, cli: hook, archived: false)
-        XCTAssertNil(IslandConversationTarget.claudeSession(for: hook, root: root))
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: hook, roots: [root]))
         try write(a, cli: hook, archived: true)
-        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, root: root), b)
-        XCTAssertNil(IslandConversationTarget.claudeSession(for: UUID(), root: root))
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: hook, roots: [root]), b)
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: UUID(), roots: [root]))
+    }
+
+    func testClaudeThirdPartyProfileAndNestedSessionDisambiguation() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let roots = ["Claude", "Claude-3p"].map { base.appendingPathComponent($0 + "/claude-code-sessions") }
+        let cli = UUID(), desktop = UUID(), other = UUID()
+        func write(_ local: UUID, at root: URL) throws {
+            let dir = root.appendingPathComponent("account/org")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let name = "local_" + local.uuidString.lowercased()
+            let row = ["sessionId": name, "lastAssistantCliSessionId": cli.uuidString]
+            try JSONEncoder().encode(row).write(to: dir.appendingPathComponent(name + ".json"))
+        }
+        try write(desktop, at: roots[1])
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: cli, roots: roots), desktop)
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: UUID(), roots: roots, desktop: desktop))
+        try write(other, at: roots[0])
+        XCTAssertNil(IslandConversationTarget.claudeSession(for: cli, roots: roots))
+        XCTAssertEqual(IslandConversationTarget.claudeSession(for: cli, roots: roots, desktop: desktop), desktop)
+    }
+
+    func testClaudeTerminalStampAndSessionOwnership() throws {
+        typealias Terminal = ClaudeConversationHost.Terminal
+        let fixture = #"{"application":"com.apple.Terminal","appPID":72,"pid":321,"started":123,"tty":"ttys003"}"#
+        let target = try JSONDecoder().decode(Terminal.self, from: Data(fixture.utf8))
+        XCTAssertTrue(target.valid)
+        let nativePath = "/Users/test/.local/share/claude/versions/2.1.292"
+        func matches(pid: Int32 = 321, started: Int64 = 123, tty: String = "ttys003",
+                     path: String? = nil, foreground: Bool = true) -> Bool {
+            target.matches(.init(pid: pid, parent: 3, started: started, tty: tty, path: path ?? nativePath, foreground: foreground))
+        }
+        XCTAssertTrue(matches())
+        XCTAssertFalse(matches(started: 456))
+        XCTAssertFalse(matches(pid: 322))
+        XCTAssertFalse(matches(tty: "ttys004"))
+        XCTAssertFalse(matches(path: "/bin/zsh"))
+        XCTAssertFalse(matches(foreground: false))
+        let old = UUID(), current = UUID()
+        defer { ClaudeTerminalNavigation.bind(nil, to: current) }
+        ClaudeTerminalNavigation.bind(target, to: old)
+        ClaudeTerminalNavigation.bind(target, to: current)
+        XCTAssertNil(ClaudeTerminalNavigation.binding(for: old))
+        XCTAssertEqual(ClaudeTerminalNavigation.binding(for: current), target)
+        let url = ClaudeTerminalNavigation.link(for: current)
+        XCTAssertEqual(ClaudeTerminalNavigation.session(in: url), current)
+        XCTAssertNil(ClaudeTerminalNavigation.session(in: url.appending(queryItems: [.init(name: "tty", value: "ttys001")])))
+        let malformed = fixture.replacingOccurrences(of: "ttys003", with: "ttys/100")
+        XCTAssertFalse(try JSONDecoder().decode(Terminal.self, from: Data(malformed.utf8)).valid)
+    }
+
+    func testSettingsRequestsTerminalAutomationWithoutAChat() async {
+        let running = await ClaudeTerminalNavigation.requestPermission(.terminal, startIfNeeded: false,
+            launch: { _ in XCTFail("Already running") },
+            authorize: { app, prompt in
+                XCTAssertEqual(app, .terminal)
+                XCTAssertTrue(prompt)
+                return .granted
+            })
+        XCTAssertEqual(running, .granted)
+
+        var launches = 0
+        let stopped = await ClaudeTerminalNavigation.requestPermission(.iTerm, startIfNeeded: true,
+            launch: { app in XCTAssertEqual(app, .iTerm); launches += 1 },
+            authorize: { app, prompt in
+                XCTAssertEqual(app, .iTerm)
+                XCTAssertTrue(prompt)
+                return .denied
+            })
+        XCTAssertEqual(launches, 1)
+        XCTAssertEqual(stopped, .denied)
+
+        let missing = await ClaudeTerminalNavigation.requestPermission(.terminal, startIfNeeded: true,
+            launch: { _ in throw CocoaError(.fileNoSuchFile) },
+            authorize: { _, _ in XCTFail("Launch failed"); return .granted })
+        XCTAssertEqual(missing, .unavailable)
+    }
+
+    func testTerminalPermissionIsPromptedOnlyOnClickAndDenialStopsSelection() async throws {
+        let id = UUID()
+        let row = #"{"application":"com.googlecode.iterm2","pid":41,"started":12,"tty":"ttys041","pane":"00000000-0011-0022-0033-000000000044"}"#
+        let target = try JSONDecoder().decode(ClaudeConversationHost.Terminal.self, from: Data(row.utf8))
+        XCTAssertTrue(target.valid)
+        ClaudeTerminalNavigation.bind(target, to: id)
+        defer { ClaudeTerminalNavigation.bind(nil, to: id) }
+        for (select, permission, expected): (Bool, ClaudeTerminalNavigation.Permission, Bool) in [
+            (false, .firstUse, true), (true, .denied, false), (false, .denied, false),
+            (false, .granted, true), (true, .granted, true)
+        ] {
+            let result = await ClaudeTerminalNavigation.perform(id, select: select, inspect: { $0 == target },
+                authorize: { app, prompt in
+                    XCTAssertEqual(app, .iTerm)
+                    XCTAssertEqual(prompt, select)
+                    return permission
+                }, runScript: { _, focus in
+                    XCTAssertEqual(permission, .granted)
+                    XCTAssertEqual(focus, select)
+                    return true
+                })
+            XCTAssertEqual(result, expected)
+        }
+        let expired = await ClaudeTerminalNavigation.perform(id, select: true, inspect: { _ in false },
+            authorize: { _, _ in XCTFail("Expired session requested permission"); return .granted },
+            runScript: { _, _ in XCTFail("Expired session attempted selection"); return true })
+        XCTAssertFalse(expired)
     }
 
     func testCursorLocalComposerIndexAndAntigravityExactLink() throws {

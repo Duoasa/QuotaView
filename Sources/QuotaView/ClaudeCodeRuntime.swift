@@ -2,6 +2,9 @@ import AppKit
 import Combine
 import Foundation
 import QuotaViewCore
+#if SWIFT_PACKAGE
+import QuotaViewActivityHookSupport
+#endif
 
 /// A value-only result crossing from the I/O worker to the UI actor.
 struct ClaudeCodeTranscriptBatch: Sendable {
@@ -62,6 +65,7 @@ final class ClaudeCodeRuntime: ObservableObject {
     private struct Session {
         let id: String
         let key: String
+        var host: ClaudeConversationHost?
         var cwd: String?
         var transcriptPath: String?
         var tail: ClaudeCodeTranscriptTail?
@@ -266,6 +270,7 @@ final class ClaudeCodeRuntime: ObservableObject {
             island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
         }
         approvals.removeAll()
+        ClaudeTerminalNavigation.removeAll()
         sessions.removeAll()
         connectedThisRun = false
         rateLimits = nil; usage = nil; profile = nil
@@ -303,6 +308,13 @@ final class ClaudeCodeRuntime: ObservableObject {
             return
         }
         var session = sessions[sessionID] ?? Session(id: sessionID, key: Self.sessionKey(sessionID))
+        if (payload["agent_id"] as? String ?? "").isEmpty, let id = UUID(uuidString: sessionID) {
+            let fields = payload["claude_host"] as? [String: Any]
+            let data = fields.flatMap { try? JSONSerialization.data(withJSONObject: $0) }
+            session.host = data.flatMap { $0.count <= 2048 ? try? JSONDecoder().decode(ClaudeConversationHost.self, from: $0) : nil }
+            ClaudeTerminalNavigation.bind(event == "SessionEnd" ? nil : session.host?.terminal, to: id)
+            if event == "SessionEnd" { session.host?.terminal = nil }
+        }
         session.updatedAt = Date()
         if let cwd = payload["cwd"] as? String, !cwd.isEmpty { session.cwd = cwd }
         if let effort = payload["effort"] as? String, !effort.isEmpty { session.effort = effort }
@@ -445,7 +457,7 @@ final class ClaudeCodeRuntime: ObservableObject {
         island.model.receiveLegacy(CodexActivityEvent(event: event, sessionHash: session.key, turnHash: session.turnKey,
             workspaceName: CodexActivityPrivacy.workspaceName(from: session.cwd), toolCategory: Self.category(tool),
             source: .hook, turnCompletionStatus: completion, toolCallHash: call, toolName: tool))
-        island.model.setConversation(UUID(uuidString: sessionID).map(IslandConversationTarget.claudeHook), for: session.key, provider: .claudeCode)
+        island.model.setConversation(UUID(uuidString: sessionID).map { .claudeHook($0, desktop: session.host?.desktop, terminal: session.host?.terminal?.valid == true) }, for: session.key, provider: .claudeCode)
         if let pending = session.pendingTitle { setTitle(pending.text, explicit: pending.explicit, sessionID: sessionID) }
     }
 
@@ -484,7 +496,11 @@ final class ClaudeCodeRuntime: ObservableObject {
                 guard await runtime.drainTranscript(id) else { return }
             }
             // Idle sessions are forgotten after a day without hooks.
-            runtime.sessions = runtime.sessions.filter { $0.value.turnActive || $0.value.updatedAt.timeIntervalSinceNow > -86_400 }
+            runtime.sessions = runtime.sessions.filter { key, session in
+                if session.turnActive || session.updatedAt.timeIntervalSinceNow > -86_400 { return true }
+                if let id = UUID(uuidString: key) { ClaudeTerminalNavigation.bind(nil, to: id) }
+                return false
+            }
             runtime.scheduleTailTimer()
         }
     }

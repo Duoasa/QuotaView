@@ -62,6 +62,20 @@ final class IslandLiveStore {
         var requests: [Pending] = []
         var requestIndex = 0
         private(set) var desktopAsyncQuestionsAuthoritative = false
+        private var lastAuthoritativeQuestionSnapshot: Date?
+
+        mutating func desktopDisconnected() {
+            desktopAsyncQuestionsAuthoritative = false
+            invalidateDesktopResponses()
+        }
+
+        func acceptsLocalAsyncQuestion(_ pending: Pending, occurredAt: Date) -> Bool {
+            guard !desktopAsyncQuestionsAuthoritative else { return false }
+            guard let cutoff = lastAuthoritativeQuestionSnapshot else { return true }
+            guard occurredAt > cutoff else { return false }
+            let nativeIDs = Set(requests.filter { $0.desktopIdentity != nil }.flatMap(Self.asyncQuestionProofs).map(\.0))
+            return Self.asyncQuestionProofs(pending).allSatisfy { !nativeIDs.contains($0.0) }
+        }
         // Native async Skip dismisses a prompt without answering the task. Keep
         // this per-turn presentation preference separate from settlement proof.
         private(set) var skippedAsyncQuestionIDs: Set<String> = []
@@ -363,7 +377,7 @@ final class IslandLiveStore {
             requests.append(replacement)
             bindUnidentifiedSourceWait(to: replacement); clampSelection()
         }
-        private static func asyncQuestionProofs(_ pending: Pending) -> [(String, String)] {
+        static func asyncQuestionProofs(_ pending: Pending) -> [(String, String)] {
             guard pending.mode == .asynchronous, let wire = pending.value.protocolRequest,
                   wire.kind == .questions else { return [] }
             if case .asynchronousQuestion(let identity)? = pending.desktopIdentity, wire.questions.count == 1 {
@@ -383,11 +397,12 @@ final class IslandLiveStore {
             let identities = asyncQuestionProofs(pending)
             return !identities.isEmpty && identities.allSatisfy { proofs[$0.0] == $0.1 }
         }
-        @discardableResult mutating func receiveAcceptedAsyncReplies(_ proofs: [(String, String)]) -> Bool {
+        mutating func receiveAcceptedAsyncReplies(_ proofs: [(String, String)]) -> [(String, String)] {
             let observed = Set(requests.flatMap(Self.asyncQuestionProofs).map { $0.0 + ":" + $0.1 })
             // A reply preceding the original request, another question's text,
             // or an unobserved call cannot create a future-answer tombstone.
-            for (identity, question) in proofs where observed.contains(identity + ":" + question) {
+            let matched = proofs.filter { observed.contains($0.0 + ":" + $0.1) }
+            for (identity, question) in matched {
                 acceptedAsyncReplyProofs[identity] = question
                 acceptedAsyncReplyOrder.removeAll { $0 == identity }; acceptedAsyncReplyOrder.append(identity)
             }
@@ -408,7 +423,7 @@ final class IslandLiveStore {
             // Async replies settle their questions only, never unrelated native
             // blocking RPCs, anonymous source waits, or runtime compaction.
             clampSelection()
-            return !settled.isEmpty
+            return matched
         }
         @discardableResult mutating func skipAsyncQuestion(_ requestID: UUID) -> Bool {
             guard let pending = requests.first(where: { $0.value.id == requestID }),
@@ -510,7 +525,8 @@ final class IslandLiveStore {
             clampSelection()
             return !matching.isEmpty
         }
-        mutating func admitAuthoritativeDesktopQuestions() {
+        mutating func admitAuthoritativeDesktopQuestions(at date: Date) {
+            lastAuthoritativeQuestionSnapshot = date
             // Native async questionItemIDs and rollout tool callIDs have no
             // identity mapping. The full current-owner question set supersedes
             // only this turn's read-only async source; text is never correlation.
@@ -878,6 +894,7 @@ final class IslandLiveStore {
     private var nextID = 1
     private var nativeConnectionEpoch: UInt64?
     private var desktopConnected = false
+    var usesLegacyDesktopAnswers: Bool { desktopConnected }
     private var desktopConnectionEpoch: UInt64?
     private struct DesktopScope { let owner: String; let epoch: UInt64; let streamGeneration: UInt64; let revision: Int64 }
     private var desktopScopes: [String: DesktopScope] = [:]
@@ -1143,6 +1160,8 @@ final class IslandLiveStore {
     var claudeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     var antigravityResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var antigravityRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
+    var openCodeResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
+    var openCodeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     var dshResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var dshRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     private var providers: [String: IslandAgentProvider] = [:]
@@ -1192,20 +1211,43 @@ final class IslandLiveStore {
         tasks[i].observerReminderDismissed = false
         onChange?()
     }
+    func markOpenCodeDeliveryUnknown(_ wire: IslandCodexApprovalRequest) {
+        guard wire.isOpenCode, let i = tasks.firstIndex(where: { $0.key == wire.threadID && $0.turnKey == wire.turnID }),
+              let j = tasks[i].requestLifecycle.requests.firstIndex(where: { $0.value.protocolRequest?.rpcID == wire.rpcID })
+        else { return }
+        tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
+        tasks[i].requestLifecycle.requests[j].value.canRespond = false
+        onChange?()
+    }
+
     func resolveLocalHookRequest(sessionKey: String, rpcID: IslandApprovalJSON) {
         guard let i = tasks.firstIndex(where: { $0.key == sessionKey }),
               tasks[i].requestLifecycle.resolveRPC(rpcID, epoch: 0) else { return }
         onChange?()
     }
 
+    func observeCodexPermissionHook(_ wire: IslandCodexApprovalRequest, callHash: String?) -> Bool {
+        guard wire.isCodexPermissionHook, !desktopConnected, capability(for: wire),
+              let i = tasks.firstIndex(where: { $0.key == wire.threadID && $0.turnKey == wire.turnID && !$0.terminal }),
+              !isArchived(tasks[i]), provider(for: wire.threadID) == .codex else { return false }
+        let question = IslandDetailText("允许执行这条命令？", "Allow this command?")
+        tasks[i].requestLifecycle.observe(.init(key: wire.rpcID.text, value: .init(question: question,
+            impact: .init("处理后同步至 Codex。", "Send this response to Codex."), protocolRequest: wire, canRespond: true),
+            callHash: callHash, rpcEpoch: 0))
+        guard tasks[i].requests.contains(where: { $0.value.protocolRequest?.rpcID == wire.rpcID }) else { return false }
+        tasks[i].observerReminderDismissed = false
+        onChange?()
+        return true
+    }
+
     @discardableResult
     func observeNativeToolRequest(_ wire: IslandCodexApprovalRequest, sessionKey: String, turnKey: String, callHash: String) -> Bool {
-        guard wire.isDSH || wire.isAntigravity, capability(for: wire),
-              wire.isDSH ? dshRespond != nil : antigravityRespond != nil,
+        let agent: IslandAgentProvider = wire.isOpenCode ? .openCode : wire.isDSH ? .dsh : .antigravity
+        guard wire.isDSH || wire.isAntigravity || wire.isOpenCode, provider(for: sessionKey) == agent, capability(for: wire),
               let i = tasks.firstIndex(where: { $0.key == sessionKey && $0.turnKey == turnKey && !$0.terminal }) else { return false }
-        tasks[i].requestLifecycle.observe(.init(key: (wire.isDSH ? "dsh:" : "antigravity:") + wire.key, value: .init(
-            question: wire.isDSH ? .init("DSH 请求审批", "DSH requests approval") : .init("Antigravity 请求审批", "Antigravity requests approval"),
-            impact: wire.isDSH ? .init("处理后同步至 DSH。", "Send this response to DSH.") : .init("处理后同步至 Antigravity。", "Send this response to Antigravity."), protocolRequest: wire, canRespond: true),
+        tasks[i].requestLifecycle.observe(.init(key: (agent.rawValue + ":") + wire.key, value: .init(
+            question: wire.isOpenCode ? wire.kind.title : wire.isDSH ? .init("DSH 请求审批", "DSH requests approval") : .init("Antigravity 请求审批", "Antigravity requests approval"),
+            impact: wire.isOpenCode ? .init("处理后同步至 OpenCode。", "Send this response to OpenCode.") : wire.isDSH ? .init("处理后同步至 DSH。", "Send this response to DSH.") : .init("处理后同步至 Antigravity。", "Send this response to Antigravity."), protocolRequest: wire, canRespond: true),
             callHash: callHash, rpcEpoch: 0))
         let admitted = tasks[i].requests.contains { $0.value.protocolRequest?.rpcID == wire.rpcID }
         if admitted { tasks[i].observerReminderDismissed = false; onChange?() }
@@ -1249,12 +1291,45 @@ final class IslandLiveStore {
         }
         connection = state; onChange?()
     }
+    /// Upgrade the existing local question in place. Keep request UUID, drafts,
+    /// receipts and visibility; never synthesize another question from a poll.
+    func updateSharedQuestionCapabilities(threadID: String? = nil, handles: [CodexSharedQuestionHandle]) {
+        let session = threadID.map(CodexActivityPrivacy.hashIdentifier)
+        var changed = false
+        for i in tasks.indices where session == nil || tasks[i].key == session {
+            for j in tasks[i].requestLifecycle.requests.indices {
+                guard let wire = tasks[i].requestLifecycle.requests[j].value.protocolRequest,
+                      wire.localObservation?.asynchronous == true, wire.desktopHandle == nil else { continue }
+                if threadID != nil, !tasks[i].requestLifecycle.requests[j].value.phase.canSubmit {
+                    continue // An in-flight/unknown action cannot be replaced by a polling refresh.
+                }
+                let matching = handles.first {
+                    wire.localObservation?.callID == $0.sourceItemID
+                        && tasks[i].key == CodexActivityPrivacy.hashIdentifier($0.threadID)
+                        && tasks[i].turnKey == CodexActivityPrivacy.hashIdentifier($0.turnID)
+                }
+                let updated = wire.attachingSharedQuestionHandle(tasks[i].terminal || desktopConnected ? nil : matching)
+                let canRespond = updated.sharedQuestionHandle != nil && respond != nil && capability(for: updated)
+                if updated != wire || canRespond != tasks[i].requestLifecycle.requests[j].value.canRespond {
+                    tasks[i].requestLifecycle.requests[j].value.protocolRequest = updated
+                    tasks[i].requestLifecycle.requests[j].value.canRespond = canRespond
+                    if !canRespond && !tasks[i].requestLifecycle.requests[j].value.phase.canSubmit {
+                        tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
+                    }
+                    changed = true
+                }
+            }
+        }
+        if changed { onChange?() }
+    }
+
     func setDesktopConnection(connected: Bool, epoch: UInt64?) {
         let changedEpoch = epoch != nil && desktopConnectionEpoch != epoch
         if !connected || changedEpoch {
-            for i in tasks.indices { tasks[i].requestLifecycle.invalidateDesktopResponses() }
+            for i in tasks.indices { tasks[i].requestLifecycle.desktopDisconnected() }
         }
         desktopConnected = connected
+        if connected { updateSharedQuestionCapabilities(handles: []) }
         if !connected { desktopConnectionEpoch = nil; desktopScopes.removeAll() }
         else if let epoch { desktopConnectionEpoch = epoch }
         onChange?()
@@ -1322,7 +1397,7 @@ final class IslandLiveStore {
         }
         let wasWaiting = tasks[i].requestLifecycle.waitingOnSource || tasks[i].requestLifecycle.hasBlockingRequest
         if projection.pendingRequestsAreAuthoritative {
-            tasks[i].requestLifecycle.admitAuthoritativeDesktopQuestions()
+            tasks[i].requestLifecycle.admitAuthoritativeDesktopQuestions(at: observedAt)
             tasks[i].requestLifecycle.observeDesktopRuntimeWait(projection, owner: snapshot.ownerClientID,
                 epoch: snapshot.connectionEpoch, at: observedAt)
         }
@@ -1334,6 +1409,10 @@ final class IslandLiveStore {
             tasks[i].requestLifecycle.observe(pending(wire, identity: .server(request.identity),
                 call: item.isEmpty ? nil : CodexActivityPrivacy.hashIdentifier(item), mode: request.userInputMode))
         }
+        let answered = projection.asyncQuestions.filter { $0.turnID == turn && $0.resolvedAnswer != nil }
+        rememberAnsweredPresentations(answered.map {
+            (CodexActivityPrivacy.hashIdentifier($0.questionItemID), CodexActivityPrivacy.hashIdentifier($0.question))
+        }, task: tasks[i], at: observedAt)
         for question in projection.asyncQuestions where question.turnID == turn && question.resolvedAnswer == nil {
             guard var wire = try? IslandCodexApprovalRequest(desktopAsyncQuestion: question, conversationID: snapshot.conversationID) else { continue }
             wire = wire.attachingDesktopHandle(handle(.string(question.questionItemID), method: wire.method, turn: turn))
@@ -1496,7 +1575,12 @@ final class IslandLiveStore {
                 return (identity, question)
             }
             guard proofs.count == raw.count else { return }
-            if tasks[i].requestLifecycle.receiveAcceptedAsyncReplies(proofs) { onChange?() }
+            let matched = tasks[i].requestLifecycle.receiveAcceptedAsyncReplies(proofs)
+            let confirmed = p["verifiedReplay"] as? Bool == true ? proofs : matched
+            if !confirmed.isEmpty {
+                rememberAnsweredPresentations(confirmed, task: tasks[i], at: Date())
+                onChange?()
+            }
             return
         }
         if type == "questionRequest", let id = p["id"] as? String,
@@ -1640,6 +1724,7 @@ final class IslandLiveStore {
         let pending = Pending(key: "local:\(content.turnHash):\(callID)", value: .init(
             question: .init(wire.questions[0].title), impact: .init("请在 Codex 回答。", "Answer in Codex."),
             protocolRequest: wire, canRespond: false), callHash: call, mode: mode)
+        if mode == .asynchronous, !tasks[i].requestLifecycle.acceptsLocalAsyncQuestion(pending, occurredAt: content.occurredAt) { return }
         if !isRetiredAsync(pending, task: tasks[i]) { tasks[i].requestLifecycle.observe(pending) }
         onChange?()
     }
@@ -1961,28 +2046,41 @@ final class IslandLiveStore {
         else { return nil }
         return CodexActivityPrivacy.hashIdentifier(task.key + ":" + turn + ":" + identity)
     }
+    private func answeredPresentationKey(_ proof: (String, String), task: TaskRecord) -> String {
+        CodexActivityPrivacy.hashIdentifier([task.key, task.turnKey ?? "", "answered", proof.0, proof.1].joined(separator: ":"))
+    }
+    private func rememberAnsweredPresentations(_ proofs: [(String, String)], task: TaskRecord, at now: Date) {
+        recordRetiredPresentations(proofs.map { answeredPresentationKey($0, task: task) }, at: now)
+    }
     private func isRetiredAsync(_ pending: Pending, task: TaskRecord) -> Bool {
-        asyncPresentationKey(pending, task: task).map { retiredAsyncPresentations[$0] != nil } ?? false
+        if let key = asyncPresentationKey(pending, task: task), retiredAsyncPresentations[key] != nil { return true }
+        let proofs = RequestLifecycle.asyncQuestionProofs(pending)
+        return !proofs.isEmpty && proofs.allSatisfy { retiredAsyncPresentations[answeredPresentationKey($0, task: task)] != nil }
     }
     private func retireAsyncPresentation(taskIndex i: Int, requestID: UUID, at now: Date) -> Bool {
         guard let pending = tasks[i].requestLifecycle.requests.first(where: { $0.value.id == requestID }),
               let key = asyncPresentationKey(pending, task: tasks[i]) else { return false }
         if case .submitting = pending.value.phase { return false }
-        retiredAsyncPresentations[key] = now.timeIntervalSince1970
-        if retiredAsyncPresentations.count > 4096 {
-            for old in retiredAsyncPresentations.sorted(by: { $0.value < $1.value })
-                .prefix(retiredAsyncPresentations.count - 4096) { retiredAsyncPresentations.removeValue(forKey: old.key) }
-        }
-        archiveDefaults?.set(retiredAsyncPresentations, forKey: Self.retiredAsyncKey)
+        recordRetiredPresentations([key], at: now)
         asyncPresentations.removeValue(forKey: key)
         tasks[i].requestLifecycle.requests.removeAll { $0.value.id == requestID }
         tasks[i].requestIndex = min(tasks[i].requestIndex, max(0, tasks[i].requests.count - 1))
         // Do not emit an accepted reply, serverRequest/resolved, or wait settlement.
         return true
     }
+    private func recordRetiredPresentations(_ keys: [String], at now: Date) {
+        let newKeys = keys.filter { retiredAsyncPresentations[$0] == nil }
+        guard !newKeys.isEmpty else { return }
+        for key in newKeys { retiredAsyncPresentations[key] = now.timeIntervalSince1970 }
+        if retiredAsyncPresentations.count > 4096 {
+            for old in retiredAsyncPresentations.sorted(by: { $0.value < $1.value })
+                .prefix(retiredAsyncPresentations.count - 4096) { retiredAsyncPresentations.removeValue(forKey: old.key) }
+        }
+        archiveDefaults?.set(retiredAsyncPresentations, forKey: Self.retiredAsyncKey)
+    }
     func claimConfirmation(taskID: Int, requestID: UUID) {
         guard let task = tasks.first(where: { $0.id == taskID }),
-              let pending = task.requestLifecycle.requests.first(where: { $0.value.id == requestID }),
+              let pending = task.requestLifecycle.requests.first(where: { $0.value.id == requestID }), pending.value.canRespond,
               let key = asyncPresentationKey(pending, task: task) else { return }
         var presentation = asyncPresentations[key] ?? .init()
         presentation.claimed = true; presentation.expiresAt = nil
@@ -2004,7 +2102,7 @@ final class IslandLiveStore {
             for pending in pendingRequests {
                 guard let key = asyncPresentationKey(pending, task: tasks[i]) else { continue }
                 activeKeys.insert(key)
-                if retiredAsyncPresentations[key] != nil {
+                if isRetiredAsync(pending, task: tasks[i]) {
                     tasks[i].requestLifecycle.requests.removeAll { $0.value.id == pending.value.id }
                     continue
                 }
@@ -2017,6 +2115,7 @@ final class IslandLiveStore {
                     // Codex remains the place to inspect an uncertain result.
                     if presentation.handoffAt == nil { presentation.handoffAt = now.addingTimeInterval(3) }
                 case .ready, .failed:
+                    if !pending.value.canRespond { presentation.claimed = false }
                     if visible && !isArchived(tasks[i]) && !presentation.claimed && presentation.expiresAt == nil {
                         presentation.expiresAt = now.addingTimeInterval(30)
                     }
@@ -2044,6 +2143,7 @@ final class IslandLiveStore {
         let turn = tasks[i].turnKey
         let epoch = connectionEpoch
         let handle = wire.desktopHandle
+        let sharedHandle = wire.sharedQuestionHandle
         if let handle {
             guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
                   turn == CodexActivityPrivacy.hashIdentifier(handle.turnID),
@@ -2061,7 +2161,7 @@ final class IslandLiveStore {
             return
         }
         guard case .reply(let result) = decision, wire.permits(result),
-              let respond = wire.isAntigravity ? antigravityRespond : wire.isDSH ? dshRespond : wire.isClaudeCode ? claudeRespond : self.respond else { return }
+              let respond = wire.isOpenCode ? openCodeRespond : wire.isAntigravity ? antigravityRespond : wire.isDSH ? dshRespond : wire.isClaudeCode ? claudeRespond : self.respond else { return }
         claimConfirmation(taskID: id, requestID: requestID)
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
@@ -2076,6 +2176,7 @@ final class IslandLiveStore {
                           tasks[i].requestLifecycle.requests[j].value.protocolRequest?.desktopHandle == handle,
                           desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return nil }
                 } else if !wire.isLocalHook, epoch != connectionEpoch { return nil }
+                if let sharedHandle, tasks[i].requestLifecycle.requests[j].value.protocolRequest?.sharedQuestionHandle != sharedHandle { return nil }
                 return (i, j)
             }
             guard let (i, j) = currentRequest() else { return }
@@ -2095,7 +2196,7 @@ final class IslandLiveStore {
         }
     }
     private func capability(for wire: IslandCodexApprovalRequest) -> Bool {
-        (wire.isAntigravity ? antigravityResponseCapability : wire.isDSH ? dshResponseCapability : wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
+        (wire.isOpenCode ? openCodeResponseCapability : wire.isAntigravity ? antigravityResponseCapability : wire.isDSH ? dshResponseCapability : wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
     }
     private func advanceProgress(at now: Date) {
         for i in tasks.indices {
@@ -2134,18 +2235,22 @@ final class IslandLiveStore {
             let children = privacy ? [] : childPresentations(parent: task.key, english: english, language: language, at: now)
             let runningChildren = children.filter { [.thinking, .working, .compactingContext].contains($0.visualState) }
             metas[task.id] = cardOptions.applying(to: .init(modelName: task.model.isEmpty ? (appCopy.text("模型未知", "Unknown model")) : task.model, reasoningEffort: task.effort, elapsedSeconds: duration, subagents: children))
-            var request = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)].value
-            if settlement != nil { request = nil }
-            if let pending = task.requests.first(where: { $0.value.id == request?.id }) {
+            let provider = self.provider(for: task.key)
+            let pending = task.requests.isEmpty ? nil : task.requests[min(task.requestIndex, task.requests.count - 1)]
+            var request = settlement == nil ? pending?.value : nil
+            if let pending, request != nil {
                 request?.canDismissLocally = asyncPresentationKey(pending, task: task) != nil
                     || (pending.isGeneric && task.requestLifecycle.canHideObserverReminder)
+                if provider == .codex, pending.isGeneric, !desktopConnected {
+                    request?.impact = .init("QuotaView 尚未连接到 Codex 桌面端的审批通道。请在原对话中处理。",
+                        "QuotaView is disconnected from Codex desktop approvals. Respond in the original conversation.")
+                }
             }
             request?.queueIndex = task.requestIndex + 1; request?.queueCount = task.requests.count
-            let provider = self.provider(for: task.key)
             request?.provider = provider
             // DSH task observation remains read-only, but an admitted live
             // approval carries its own revocable response capability.
-            if provider.isObserverOnly && !(provider == .dsh && request?.protocolRequest?.isDSH == true)
+            if provider.isObserverOnly && !(provider == .openCode && request?.protocolRequest?.isOpenCode == true) && !(provider == .dsh && request?.protocolRequest?.isDSH == true)
                 && !(provider == .antigravity && request?.protocolRequest?.isAntigravity == true) {
                 request?.canRespond = false
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")

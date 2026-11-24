@@ -381,6 +381,22 @@ final class CodexActivityStore: ObservableObject {
         }
     }
 
+    func sharedQuestionHandles(threadID: String, turnHash: String) async throws -> [CodexSharedQuestionHandle] {
+        let generation = nativeGeneration
+        let handles = try await sharedActivityClient.questionHandles(threadID: threadID, turnHash: turnHash)
+        guard nativeGeneration == generation else { throw CodexDesktopIPCError.staleRequest }
+        return handles
+    }
+
+    func submitSharedQuestion(handle: CodexSharedQuestionHandle, answers: [String]) async throws {
+        let generation = nativeGeneration
+        let client = sharedActivityClient
+        guard await client.isCurrentQuestionHandle(handle), nativeGeneration == generation else {
+            throw CodexDesktopIPCError.staleRequest
+        }
+        try await client.submitQuestion(handle: handle, answers: answers)
+    }
+
     private func executionMetadataPreferences(generation expected: UInt64) -> [CodexLocalExecutionMetadata.Execution] {
         guard nativeGeneration == expected else { return [] }
         return taskRegistry.executionIdentities.filter { observedActivityBySession[$0.sessionHash] != nil }.map {

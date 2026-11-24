@@ -1,6 +1,148 @@
 # QuotaView 开发交接
 
-## 当前开发：0.9.7 Build 3 / 设置导航按钮材质
+## 0.9.7 Build 30 / 后台完成卡保留选中光边
+
+用户在 15:52 的截图中指出 Antigravity 完成卡持续高亮，当时选中的是 Codex。回归测试用两张真实任务卡视图复现：后台 Antigravity 卡完成冲击波后仍挂载选中光效，切换回 Codex 后再次出现。现由唯一选中项决定是否绘制持续高光；各卡照常播放完成冲击波和对号。见[进度效果适配协议](docs/specs/PROGRESS_EFFECT_ADAPTATION.md#097-build-30-任务列表单卡高亮)。
+
+Build 30（内部 267）于 15:55 在本机启动。6 项定向冒烟通过，覆盖双卡切换、冲击波及高光生命周期。已核对开发包和实际进程，桌面视觉待用户验收。修复前复现、修复后冒烟及运行证据位于 `.build/single-card-097b30/`。
+
+## 0.9.7 Build 29 / Antigravity 网络命令审批表单
+
+15:10 的实测截图中，Antigravity 正在等用户选择命令授权范围，Build 28 只显示 run_command 活动。2.34.0 客户端为这种请求使用带编号选项、Skip 和 Submit 的表单，与 Build 28 适配的 Runtime permission 卡有两套控件。Build 29 已补上该命令表单的识别，岛内按原卡选中范围提交；同一张卡的 Skip 回传本次拒绝。点选前复查会话、命令、范围及原生按钮。详见[接入规格](docs/specs/agent-integrations.md#antigravity-原生审批)。
+
+开发包 0.9.7 Build 29（内部 266）于 15:49 在本机启动。已核对安装版客户端表单结构与拒绝语义，隔离 Chromium 表单核对了辅助功能选项和按钮名称。5 项定向冒烟、本地化与开发构建通过。诊断时当前窗口没有这张待批表单，真实审批回传待用户复测。运行证据位于 `.build/anti-command-097b29/runtime/`。
+
+## 0.9.7 Build 28 / Antigravity 真实权限卡
+
+Antigravity 的工具前置 Hook 已恢复为观察模式。桌面会话出现可识别的原生权限卡后，灵动岛读取当前请求目标与授权范围，点击时再次匹配原会话、卡片内容和控件，再提交到客户端。当前适配 2.34.0 会话内嵌权限卡。见[接入规格](docs/specs/agent-integrations.md#antigravity-原生审批)。公开稳定版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+开发包 0.9.7 Build 28（内部 265）于 12:31 启动。4 项定向测试通过，覆盖普通工具调用、原卡消失或变更、原生范围、允许与拒绝。已核验实际安装的 Hook 与运行包一致、交互 Hook 关闭、签名要求与 Build 27 一致。当前无真实待批卡，桌面审批的端到端效果待用户实测。证据位于 `.build/anti-native-097b28/runtime/`。
+
+## 0.9.7 Build 27 / 开发版辅助功能与任务跳转
+
+11:27 的系统 TCC 日志两次报告 Build 26 与已有辅助功能授权的代码要求不匹配。旧开发包使用绑定可执行文件哈希的临时签名。DSH 与 Antigravity 的桌面跳转共用该权限，原来仅在打开详情时检查一次可用性。Build 27 使用 Apple Development 签名，展开详情期间每五秒按原会话复核侧栏。切换签名后需用户在系统设置确认开发版授权。见[接入规格](docs/specs/agent-integrations.md#桌面会话导航)和[开发包验证](docs/workflow/VALIDATION.md)。
+
+开发包 0.9.7 Build 27（内部 264）于 11:34 启动。4 项定向测试通过，已核验开发包签名、开发 App Group 与运行进程的加载路径。用户已为开发版开启辅助功能，并实测确认 Antigravity 和 DSH 新会话均可从灵动岛跳转。旧 DSH 会话此前跳转失败，具体原因尚未确认。证据位于 `.build/agent-navigation-097b27/runtime/`。公开稳定版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
+
+12:04 用户反馈系统权限列表仅显示同名 QuotaView 条目，开发版仍显示未授权。Launch Services 已登记正在运行的 Build 27，但按开发 Bundle ID 查询首选位置仍返回同标识的旧测试包 `/Applications/QuotaView Devin Test.app`（内部 144），重新登记当前包后结果相同。列表名称无法确认具体副本。随后用户反馈已开启权限。
+
+## 0.9.7 Build 26 / DSH 的 DeepSeek API 余额
+
+本机已开启 DSH 和后台额度。Build 25 只识别手动 Key 与进程环境变量，遗漏了官方 DSH 凭据存储。Build 26 按其 v1 YAML 结构读取 DeepSeek 的命名引用，并在请求完成时复核账户。参见[接入规格](docs/specs/agent-integrations.md)。
+
+开发运行包 0.9.7 Build 26（内部 263）于 11:21 启动。6 项隔离额度测试通过，独立生产读取器验证已使用本机 DSH 的凭据从官方接口获得有效余额。未记录金额或凭据。已核对开发包、资源、本地化及进程加载路径。用户已确认 DeepSeek 额度读取问题解决。证据位于 `.build/dsh-balance-097b26/`。
+
+本机 arm64 Debug 运行包内常规文件共 77,812,717 字节，磁盘占用 76,256 KiB。按相同口径复测，0.9.7 Build 1 开发包为 73,632,677 字节，Build 25 为 76,281,885 字节。
+
+## 0.9.7 Build 25 / 整行拖动与自动让位
+
+Build 24 将拖放起点和系统预览扩大到整个 Agent 行。Build 25 在列表内显示与原行等高的落点，越过相邻行中线时用弹簧动画调整位置。松开后才写入顺序，取消或离开列表撤回预览。开启「减少动态效果」时直接让位。见[接入规格](docs/specs/agent-integrations.md)。
+
+开发运行包 0.9.7 Build 25（内部 262）于 10:55 启动。8 项定向测试通过，含不同行高的中线、反向移动、跨行预览和持久化。已核对本地化、运行包清单及进程加载路径。真实拖动、取消和回弹手感待用户验收。证据位于 `.build/agent-spring-097b25/runtime/`。
+
+## 0.9.7 Build 23 / Agent 接入列表排序
+
+拖动 Agent 品牌图标左侧的手柄，松开后将其移到高亮行的位置。列表顺序按本机偏好保存；打开设置时忽略失效和重复条目，新增 Agent 追加到末尾。见[接入规格](docs/specs/agent-integrations.md)。
+
+开发运行包 0.9.7 Build 23（内部 260）于 10:43 启动。6 项定向冒烟通过，覆盖排序、持久化、旧设置恢复、导航与连接。另外验证了系统拖放数据往返、运行包的拖动类型声明和实际加载路径。手柄拖放体验待用户验收。证据位于 `.build/agent-order-097b23/`。
+
+## 0.9.7 Build 22 / Agent 图标与列表留白
+
+Build 21 在一级列表恢复了原有的 26 × 26 pt 品牌图标。Build 22 的二级页标题复用同一图标，一级列表恢复 52 pt 最小行高、8 pt 上下内边距，以及 11 pt 的图标左边距和图文间距。见[接入规格](docs/specs/agent-integrations.md)。
+
+开发运行包 0.9.7 Build 22（内部 259）于 10:27 启动。5 项连接及设置导航冒烟、本地化、品牌资源及运行包加载路径核对通过。实际外观待用户验收。证据位于 `.build/agent-layout-097b22/runtime/`。
+
+## 0.9.7 Build 20 / Agent 接入状态与开关
+
+11 个 Agent 共用紧凑单行列表，名称与状态打开二级页，右侧开关控制接入。任务或额度异常优先显示黄色警告，详情提供原因与连接检查。见[接入规格](docs/specs/agent-integrations.md)。开发包 0.9.7 Build 20（内部 257）于 10:24 启动，3 项定向测试与本地化检查通过，运行包清单和进程加载路径已核对。外观和实际点击体验待用户验收。证据位于 `.build/agent-switch-097b20/runtime/`。
+
+## 0.9.7 Build 19 / 设置发起终端授权
+
+用户反馈 macOS 自动化列表没有 QuotaView。旧的首次使用按钮只打开列表。现在在 Agent 接入的终端行点「请求授权」即可从 QuotaView 发起原生授权，尚未运行时显示「启动并请求授权」。见[接入规格](docs/specs/agent-integrations.md)。内部 256 已于 10:09 启动；两项定向测试使用隔离的授权结果，开发包及加载路径一致。本机实际系统弹窗与列表显示待用户验收。证据在 `.build/terminal-consent-097b19/runtime/`。
+
+## 0.9.7 Build 18 / Agent 列表箭头
+
+「连接／检查连接」在左，详情箭头统一靠行的最右侧。点击名称或箭头均进入对应 Agent 的详情。开发运行包（内部 255）已于 10:05 启动，本地化、增量构建、包清单和加载路径核对通过，实际布局待用户验收。证据在 `.build/agent-chevron-097b18/runtime/`。
+
+## 0.9.7 Build 17 / Agent 名称后的接入状态点
+
+Agent 接入列表的 11 个名称后显示红、黄、绿状态点，副标题解释连接情况。见[接入规格](docs/specs/agent-integrations.md)。内部 254 的开发运行包于 10:03 启动；3 项连接冒烟、本地化检查、开发包清单和实际加载路径核对通过。验证记录位于 `.build/agent-status-097b17/runtime/`。设置外观待用户验收。
+
+## 0.9.7 Build 16 / Agent 一步接入
+
+设置 → Agent 接入的 11 个 Agent 均有连接入口；详情分别显示任务、额度、审批及问答能力。使用已有登录或用户保存的额度凭据，首次连接配置支持的渠道，按用户明确关闭的单项设置处理。OpenCode 1.x 插件新增原生请求的单次审批和单选问答。其他来源按实际实现显示在岛内处理或回到原会话。详见[接入规格](docs/specs/agent-integrations.md)。
+
+Build 16（内部 253）09:52 已启动。定向检查 73 项通过、4 项按条件跳过；本地化、272 项源码输入、开发包清单及进程加载路径核对通过。证据位于 `.build/agent-connect-097b16/runtime/`。隔离的官方 OpenCode 1.19.5 和本地模拟模型亦收到原单选答案和拒绝决定。 账户与交互效果由用户验收。
+
+Codex 26.1117.41037 的原生控制 socket 握手成功，`thread/loaded/list` 返回 0 条、无下一页。当前默认桌面聊天的选择题仍在原会话回答；已实测正常的命令 Hook 继续使用原审批路径。
+
+## 0.9.7 Build 15 / 本地会话只读实测
+
+11 月 24 日 08:52 用户实测，岛内为只读，橙色是在 Codex 原生界面选择。桌面 26.1117.41037（29803）的本地 host 在 08:50 通过 stdio 完成握手，WebSocket 属于 durable host。桌面为本地 host 添加配置覆盖项，而原生 daemon 启动分支要求覆盖列表为空。Build 15 对该精确构建停止提供无效的共享重启，保留命令 Hook、旧版桌面回答，以及对确实匹配同一服务的题目的处理。这个版本的普通本地会话仍需在 Codex 内作答。
+
+Build 15（内部 252）已于 08:57 启动，272 个构建输入、运行包清单及加载路径一致。52 项定向检查通过，另 1 项需要独立原生服务的测试按环境跳过。证据在 `.build/codex-choice-097b15/runtime/`。本批纠正启动和展示状态，岛内回答本地独占会话仍未实现。
+
+## 前序开发：0.9.7 Build 14 / Hook 授权与选择题回答
+
+Codex 设置的「任务事件连接」现在联动共享回答启动。通过设置启用或授权 Hook 后，QuotaView 核对所选数据目录中的原生信任状态，再准备共享启动。已经授权的人可直接在同一页点「连接回答」。Codex 正运行时显示等待和取消，用户保存退出后 QuotaView 重新打开一次。该启动使用桌面自带 CLI 和所选数据目录，仅在本次打开时设置共享环境。以后从 Dock 普通启动仍按 Codex 自己的默认模式，需要回答时可再从设置连接。
+
+开发 Build 14（内部 251）于 18:44 启动，272 个构建输入、运行包清单和实际加载路径一致。60 项定向检查全部通过，其中 4 项使用隔离原生服务补跑。原轮次已产生接受回答的回执。本地化检查通过。证据见 `.build/hook-answers-097b14/`。本次没有关闭当前 Codex。通过设置启动真实桌面后，岛内选择、原会话继续和弹窗去重待用户实测。协议与启动条件详见[确认同步](docs/specs/codex-desktop-confirmation-sync.md)。
+
+## 前序开发：0.9.7 Build 13 / 新版 Codex 回答通道
+
+用户在确认命令审批正常后，明确要求接入新版 Codex 回答通道。已实现同一原生共享 App Server 上的异步选择题提交：核对原会话、当前轮次、原生题目及未回答状态，通过带 `expectedTurnId` 的 `turn/steer` 单次回传。现有只读请求原位升级，保留 UUID 与草稿；ACK 不当作已回答。旧 Desktop 回答通道优先，PermissionRequest 命令 Hook 保留。详见[确认同步](docs/specs/codex-desktop-confirmation-sync.md)。
+
+开发运行包 0.9.7 Build 13（内部 250）已于 2026-11-23 18:11 启动，PID 61948；272 个生产输入、包清单与进程加载路径一致，正式安装未改。58 项定向检查中初跑 57 通过、原生隔离项跳过；随后使用本机 Codex CLI 与本地模拟模型补跑该项通过，生产 Swift 客户端取得原轮次接受回答回执，错误轮次被拒绝。证据 `.build/shared-answers-097b13/final-tests.log`、`native-client-tests.log`、`native-probe-result.json`、`runtime/runtime-result.json`。本批仅本地开发，未提交、推送或发布。
+
+**Build 13 当时的实测条件**：正在运行的 Codex 26.1117.41037（29803）仍使用独占 host，不能直接连接这批原会话。用户保存工作并完全退出 Codex 后，运行 [共享模式启动脚本](scripts/start-codex-shared-answers.command)，再进入原会话或创建新测试问题。脚本启动/复用原生 daemon，并仅对本次桌面启动设置 `CODEX_APP_SERVER_USE_LOCAL_DAEMON=1`；普通启动方式仍用默认模式。已检查脚本语法与“桌面仍运行时拒绝启动”的保护，但未关闭当前 Codex 或运行真实 daemon 启动步骤。岛内选择、原会话继续、重复弹窗及原生题框关闭待用户验收。
+
+## 前序开发：0.9.7 Build 12 / Codex 命令审批
+
+开发运行包已启动（内部 249）。新版 Codex 的命令审批通过原生 PermissionRequest Hook 回传用户的单次选择。旧桌面审批连接可用时继续走原流程。72 项定向测试通过，含用本机 Codex 可执行文件补跑的隔离授权测试。开发 Hook 的超时配置更新后，已通过本机 Codex 的 hooks/list 核对 PermissionRequest 为 trusted 且启用。详见[确认同步](docs/specs/codex-desktop-confirmation-sync.md)和 `.build/codex-decision-097b12/`。2026-11-23 用户确认命令确认类审批正常；选择题仍有兼容缺口，见下节。
+
+## 前序诊断：新版 Codex 选择题只能查看（11 月 23 日 17:37 反馈）
+
+用户确认确认类审批正常；所附 17:37:05 截图中的“是否批准这项虚构代码改动？”是带“批准 / 拒绝”选项的异步问题，岛内仅显示文字与“在 Codex 处理”，没有选择与提交能力。不能将该题按 PermissionRequest 的命令允许/拒绝处理。
+
+本次只读复核：Codex 26.1117.41037（29803）的旧 `ipc/ipc.sock` 连接仍返回 `ECONNREFUSED`（61），共享 daemon 端点不存在。当前回答路由仍需要旧 Desktop handle；新 PermissionRequest 路由仅处理实时 shell 命令。新版应用内部有 `turn/steer`，但尚未建立 QuotaView 可连接且能校验原会话、轮次、题目身份的替代通道，不能通过另启独立 app-server 假定能回答原会话。
+
+诊断当时未修改应用源码或重建，运行包为 Build 12（249）。证据在 `.build/codex-choice-097b12/diagnosis.json`。随后按用户授权实现 Build 13，见顶部；在当前桌面尚未切换共享模式时，仍需在原 Codex 会话回答，不能把只读展示或跳转写作岛内作答验收通过。
+
+## 前序开发：0.9.7 Build 11 / Codex 审批断线提示
+
+11 月 23 日已对照 Codex 26.1111.71025 与 26.1117.41037 的桌面包及本机日志：新版运行时使用独立 app-server host，旧审批 socket 文件仍在但无人监听。开发 Build 11 与正式版均已复现，详细证据见下方确认同步规格。
+
+Codex 网络审批排查确认 16:20:45 的 Hook 已送达，桌面端 26.1117.41037 的审批 socket 拒绝连接。通用请求占位在断线时改为明确提示去原对话处理，岛内提交仍需有效的桌面请求句柄。开发 Build 11（内部 248）已运行，79 项定向测试通过。见[确认同步](docs/specs/codex-desktop-confirmation-sync.md)及 `.build/codex-confirmation-097b11/`。
+
+## 前序开发：0.9.7 Build 10 / Claude Code 前往对话
+
+Claude 桌面版新增第三方会话目录匹配。CLI 支持 Terminal 标签页与 iTerm2 分屏，打开前复核会话、进程与终端，权限由用户首次点击时申请。0.9.7 Build 10（内部 247）已启动。36 项 Claude 接入与导航冒烟通过，开发渠道 Hook 与运行包字节一致，隔离 socket 验证了打包 Hook 的桌面 ID 上报。Terminal 脚本已编译。终端实际切页、首次系统授权及 Claude 第三方模式待用户验收，本机未安装 iTerm2。见[Agent 接入](docs/specs/agent-integrations.md)和 `.build/claude-navigation-097b10/`。
+
+## 前序开发：0.9.7 Build 9 / 原生额度读取
+
+七个可选来源已改用 QuotaView 主程序直接查询。开发包实测 74,618,095 字节，较上版 114,291,201 字节减少 34.7%。开发运行包已启动（内部 246），包内仅保留原有任务 Hook。59 项定向冒烟中 56 项通过，3 项按环境跳过，覆盖七个来源的模拟响应、Antigravity 的本机账户和 Codex 确认通道。七个新增来源仍待相应真实账户验证。Gemini CLI 个人登录的续期条件见[接入规格](docs/specs/agent-integrations.md)。证据位于 `.build/native-quota-097b9/`。
+
+## 前序开发：0.9.7 Build 8 / 回答通道与额度读取
+
+Codex 本地提问、桌面提交权限、已接受的回答回执分别判断。当天两次记录中，前一次在重启时重放已答题，后一次截图位于新题和回答回执之间。本机桌面端没有监听 QV 的提交 socket，返回 ECONNREFUSED。断线后只读详情展示题目与选项文字，「在 Codex 处理」有目标时直达原会话。连接恢复可重新取得相应题目的提交权限。见[确认同步](docs/specs/codex-desktop-confirmation-sync.md)。
+
+额度读取器在构建时链接 CodexBarCore v0.85.0，新增七个可选账户来源。开发环境中 agy 后台查询返回 5 个有效窗口；其余七个来源均跑过无凭据路径，真实账户覆盖待验证。见[接入规格](docs/specs/agent-integrations.md)。App 冒烟 46 项通过，3 项缺少专用环境跳过；额度窗口独立夹具通过。实际岛内提交仍受桌面连接可用性影响，界面由用户验收。开发运行包 0.9.7 Build 8（内部 245）于 15:13 启动，源码与包清单校验通过。证据位于 `.build/embedded-quota-097b8/`。
+
+## 前序开发：0.9.7 Build 7 / Antigravity 可选 agy 后台额度
+
+Agent 接入 → Antigravity 展示 agy 安装状态与用途，支持通过 Google 官方安装程序装到当前用户目录。每次额度刷新先调用已安装的 agy，缺失、失败或无有效额度时继续桌面读取。Build 7（内部 244）已启动，运行进程于 14:08:25 在后台读到 5 项真实额度。隔离临时用户目录中验证了从未安装到成功安装并运行 agy 1.5.14。6 项定向冒烟与本地化检查通过。证据见 `.build/agy-097b7/`。本批仅本地开发，设置页视觉待用户验收。
+
+## 前序开发：0.9.7 Build 6 / Antigravity 桌面端额度
+
+桌面直读使用 macOS 辅助功能和官方 Models 页的刷新按钮。Antigravity 2.34.0 的实机冒烟读到 Gemini、Claude/GPT 和 Gemini 4 Argon 共 5 项额度，读取后已观察到原会话入口恢复。可选备用来源只使用本机已有的 CodexBar。Build 6（内部 243）的同一进程于 12:34:34 和 12:39:35 自动直读 5 项额度。7 项针对性检查及本地化检查通过。验证记录见 `.build/desktop-quota-097b6/`；本批仅在本地开发。
+
+## 前序开发：0.9.7 Build 5 / 异步问题回放与实时额度
+
+Build 4 修正 Antigravity 离线历史误报剩余 100%。Build 5 在恢复正在运行的 Codex 会话时合并原问题与已接受的回执，保留其他待答问题。此次本机记录只有一个提问和一次有效回答，回执抵达时开发版正在重启。73 项定向测试通过，含通过临时 agy 1.5.14 调用本机 CodexBar 的实时账户冒烟。Build 5（内部 242）已启动，运行与测试记录见 `.build/async-replay-097b5/`。实际弹窗体验待用户验收。本批修改仅在本地。
+
+2026-11-23 已按用户授权将 Google 官方 agy 1.5.14 安装到当前用户的 `~/.local/bin/agy`。清除临时 CLI 路径后，QuotaView 实时额度读取冒烟通过。12:17:09 运行中的 Build 5 自行调用 CodexBarCLI，后者通过用户目录的 agy 执行 /usage，12:17:16 两个子进程均成功退出。核验记录见 `.build/async-replay-097b5/installed-agy-cycle.log` 和 `installed-agy-smoke.log`。
+
+## 前序开发：0.9.7 Build 3 / 设置导航按钮材质
 
 设置标题栏中，前进与后退按钮共用原生液态玻璃胶囊，旧系统使用常规材质。开发版 Build 3（内部 240）已启动，4 项窗口冒烟测试通过。记录见 `.build/settings-nav-glass-097b3/`。公开版见[版本历史](VERSION_HISTORY.md#当前最新版本)。
 
@@ -1586,11 +1728,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `ccd9bb0`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.7 Build 3 / 内部 240 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `c424deb`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.7 Build 30 / 内部 267 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-23，实际加载路径见 `.build/settings-nav-glass-097b3/runtime/runtime-result.json` |
-| 源码与运行包 | 本地 0.9.7 Build 3 的 266 个生产输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-24，实际加载路径见 `.build/single-card-097b30/runtime/runtime-result.json` |
+| 源码与运行包 | 本地 0.9.7 Build 30 的 276 个构建输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

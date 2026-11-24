@@ -633,6 +633,65 @@ final class Island073SmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundAntigravityCompletionLeavesHighlightOnSelectedCodexCard() async throws {
+        let store = IslandLiveStore()
+        func tasks() -> [CodexMultitaskRenderTask] {
+            store.display(english: true, remaining: nil, enabled: true, privacy: false).state.tasks
+        }
+        func complete(_ thread: String, _ turn: String) {
+            store.receive(json("turn/completed", ["threadId": thread, "turn": ["id": turn, "status": "completed"]]))
+        }
+        func card(_ task: CodexMultitaskRenderTask, selected: Bool) -> IslandTaskCard {
+            IslandTaskCard(task: task, selected: selected, metadata: nil, english: true,
+                           playback: false, effectVisible: true, reduceMotion: true, cardWidth: 450)
+        }
+        func contains<T: NSView>(_ view: NSView, _ type: T.Type) -> Bool {
+            view is T || view.subviews.contains { contains($0, type) }
+        }
+
+        start(store, "codex", "one", at: Date())
+        complete("codex", "one")
+        let codex = try XCTUnwrap(tasks().first)
+        start(store, "anti", "two", at: Date())
+        var anti = try XCTUnwrap(tasks().first { $0.id != codex.id })
+        anti.provider = .antigravity
+        let frame = NSRect(x: 0, y: 0, width: 450, height: 150)
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        let group = NSView(frame: frame)
+        window.contentView = group
+        let front = NSHostingView(rootView: card(codex, selected: true))
+        let back = NSHostingView(rootView: card(anti, selected: false))
+        for (index, row) in [front, back].enumerated() {
+            group.addSubview(row)
+            row.frame = NSRect(x: 0, y: 74 * index, width: 450, height: 62)
+            row.layoutSubtreeIfNeeded()
+        }
+        XCTAssertTrue(contains(front, IslandQuantumProgressHost.self))
+        XCTAssertFalse(contains(back, IslandQuantumProgressHost.self))
+
+        complete("anti", "two")
+        anti = try XCTUnwrap(tasks().first { $0.id == anti.id })
+        anti.provider = .antigravity
+        back.rootView = card(anti, selected: false)
+        back.layoutSubtreeIfNeeded()
+        XCTAssertTrue(contains(back, IslandCardWaveView.self))
+        let deadline = ContinuousClock.now + .seconds(5)
+        while contains(back, IslandCardWaveView.self), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+            back.layoutSubtreeIfNeeded()
+        }
+        XCTAssertFalse(contains(back, IslandCardWaveView.self))
+        for selectCodex in [true, false, true] {
+            front.rootView = card(codex, selected: selectCodex)
+            back.rootView = card(anti, selected: !selectCodex)
+            front.layoutSubtreeIfNeeded()
+            back.layoutSubtreeIfNeeded()
+            XCTAssertEqual(contains(front, IslandQuantumProgressHost.self), selectCodex)
+            XCTAssertEqual(contains(back, IslandQuantumProgressHost.self), !selectCodex)
+        }
+    }
+
+    @MainActor
     func testCardCompletionWaveRunsOnLocalCardAndFinishes() async throws {
         guard MTLCreateSystemDefaultDevice() != nil else { throw XCTSkip("Metal unavailable") }
         let frame = NSRect(x: 0, y: 0, width: 450, height: 62)

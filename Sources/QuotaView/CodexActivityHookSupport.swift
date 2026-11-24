@@ -159,6 +159,18 @@ struct CodexActivityEnvironmentInspector: Sendable {
         )
     }
 
+    /// Use the desktop's own CLI and the same data directory used for Hook trust.
+    func prepareSharedAnswerService() throws {
+        guard let executablePath else { throw InspectionError.codexUnavailable }
+        _ = try run(executablePath: executablePath, arguments: ["app-server", "daemon", "start"])
+        try Task.checkCancellation()
+        let result = try run(executablePath: executablePath, arguments: ["app-server", "daemon", "version"])
+        guard let version = try JSONSerialization.jsonObject(with: Data(result.standardOutput.utf8)) as? [String: Any],
+              let server = version["appServerVersion"] as? String, !server.isEmpty else {
+            throw InspectionError.codexUnavailable
+        }
+    }
+
     private func run(executablePath: String, arguments: [String]) throws -> CommandResult {
         let process = Process(), standardOutput = Pipe(), standardError = Pipe()
         process.executableURL = URL(fileURLWithPath: executablePath)
@@ -358,13 +370,17 @@ struct CodexActivityHookInstaller: Sendable {
         return try installedEventNames(in: readHooks(from: readRoot()))
     }
 
+    private static func handlerTimeout(_ event: String) -> Int {
+        event == "PermissionRequest" ? 65 : 2
+    }
+
     private func installedEventNames(in hooks: [String: Any]) -> Set<String> {
         var installed = Set<String>()
         for (eventName, value) in hooks {
             let owned = (value as? [[String: Any]] ?? []).flatMap { handlers(in: $0) }
                 .filter { owns(command(in: $0)) }
             guard !owned.isEmpty else { continue }
-            let expectedTimeout = 2
+            let expectedTimeout = Self.handlerTimeout(eventName)
             guard owned.count == 1,
                   owned[0]["type"] as? String == "command",
                   command(in: owned[0]) == hookCommand,
@@ -407,7 +423,7 @@ struct CodexActivityHookInstaller: Sendable {
                 for eventName in scope.eventNames {
                     var groups = hooks[eventName] as? [[String: Any]] ?? []
                     groups.append(["hooks": [["type": "command", "command": hookCommand,
-                        "timeout": 2]]])
+                        "timeout": Self.handlerTimeout(eventName)]]])
                     hooks[eventName] = groups
                 }
                 root["hooks"] = hooks

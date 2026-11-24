@@ -33,6 +33,9 @@ enum IslandApprovalDecisionChoices {
     static func options(_ request: IslandCodexApprovalRequest) -> [IslandApprovalDecisionOption] {
         request.actions.compactMap { action in
             let decision = action.result["decision"]
+            if request.isAntigravity && decision.text == "accept" {
+                return .init(action: action, title: action.label, detail: .init(request.params["command"].text))
+            }
             switch decision.text {
             case "accept": return .init(action: action, title: .init("仅一次", "Once"), detail: .init("下次仍需确认", "Ask again next time"))
             case "acceptForSession": return .init(action: action, title: .init("本会话", "This session"), detail: .init("本次批准在会话内有效", "This approval lasts for the session"))
@@ -157,7 +160,7 @@ struct IslandApprovalMetrics {
                             group += q.options.reduce(0) { $0 + Self.optionHeight($1["label"].text, description: $1["description"].text, width: width) + 8 }
                         }
                     }
-                    if q.allowsCustomAnswer { group += 8 + Self.inputHeight }
+                    if q.allowsCustomAnswer && request.canRespond { group += 8 + Self.inputHeight }
                     h += group
                 }
                 h += CGFloat(max(0, wire.questions.count - 1)) * 20
@@ -340,7 +343,8 @@ struct IslandApprovalView: View {
         }
         guard var action = wire.flatMap({ IslandApprovalDecisionChoices.selected($0, id: draft.decisionID)?.action })
             ?? actions.first(where: { $0.result["decision"] == .string("accept") }) else { return nil }
-        if wire?.isDSH == true || wire?.isAntigravity == true { action.label = .init("仅本次允许", "Allow once"); return action }
+        if wire?.isAntigravity == true { return action }
+        if wire?.isDSH == true { action.label = .init("仅本次允许", "Allow once"); return action }
         if let wire, action.result["decision"] == .string("accept") {
             switch wire.kind {
             case .command: action.label = .init("允许执行", "Allow command")
@@ -406,10 +410,10 @@ struct IslandApprovalView: View {
     private var actionBar: some View {
         IslandApprovalActionLayout {
             if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
-                specialButton(request.provider == .antigravity ? text("在 Antigravity 中处理", "Continue in Antigravity") : isDSH ? text("在 DSH 中处理", "Continue in DSH") : isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(request.provider == .openCode ? text("在 OpenCode 中处理", "Continue in OpenCode") : request.provider == .antigravity ? text("在 Antigravity 中处理", "Continue in Antigravity") : isDSH ? text("在 DSH 中处理", "Continue in DSH") : isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
                 if showsLocalDismiss { localDismissButton }
             } else if wire?.kind == .questions {
-                if wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
+                if wire?.isOpenCode == true || wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
                     if showsLocalDismiss { localDismissButton }
                 } else {
                     Button { questionInteraction.skip() } label: {
@@ -420,7 +424,7 @@ struct IslandApprovalView: View {
                 }
                 if let action = primaryAction { actionButton(action, primary: true) }
             } else {
-            if let action = actions.first(where: { ["dshDelegate", "antigravityDelegate"].contains($0.result["decision"].text) }) { actionButton(action) }
+            if let action = actions.first(where: { $0.result["decision"].text == "dshDelegate" }) { actionButton(action) }
             if let action = cancelAction { actionButton(action) }
             if let action = firstNegative { actionButton(action, destructive: true) }
             if wire?.kind == .mcpURL && !draft.openedURL {
@@ -540,7 +544,7 @@ struct IslandApprovalView: View {
                                 }
                             }
                         } else { ForEach(Array(q.options.enumerated()), id: \.offset) { _, option in optionButton(q, option: option) } }
-                        if q.allowsCustomAnswer {
+                        if q.allowsCustomAnswer && self.request.canRespond {
                             IslandApprovalInput(placeholder: text(q.options.isEmpty ? "输入你的回答" : "自行输入…",
                                 q.options.isEmpty ? "Your answer" : "Enter your own answer…"), secret: q.secret,
                                 value: questionInteraction.answerBinding(questionID: q.id),
@@ -672,32 +676,34 @@ struct IslandApprovalView: View {
         }.buttonStyle(IslandApprovalSelectionStyle(selected: draft.sessionScope == session))
             .accessibilityValue(draft.sessionScope == session ? text("已选择", "Selected") : text("未选择", "Not selected"))
     }
-    private func optionButton(_ q: IslandApprovalQuestion, option: IslandApprovalJSON, width: CGFloat? = nil, height: CGFloat? = nil) -> some View {
+    @ViewBuilder private func optionButton(_ q: IslandApprovalQuestion, option: IslandApprovalJSON, width: CGFloat? = nil, height: CGFloat? = nil) -> some View {
         let label = option["label"].text
         let availableWidth = width ?? metrics.contentWidth
         let selected = questionInteraction.isSelected(label, questionID: q.id)
-        return Button {
-            questionInteraction.choose(label, questionID: q.id)
-        } label: {
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+        let content = HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineSpacing(2)
+                    .lineLimit(2).truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: IslandTaskTextMetrics.limitedHeight(label, lines: 2, size: 12, semibold: true, width: availableWidth - 54), alignment: .topLeading)
+                if !option["description"].text.isEmpty {
+                    Text(option["description"].text).font(.system(size: 11)).foregroundStyle(secondary).lineSpacing(2)
                         .lineLimit(2).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(height: IslandTaskTextMetrics.limitedHeight(label, lines: 2, size: 12, semibold: true, width: availableWidth - 54), alignment: .topLeading)
-                    if !option["description"].text.isEmpty {
-                        Text(option["description"].text).font(.system(size: 11)).foregroundStyle(secondary).lineSpacing(2)
-                            .lineLimit(2).truncationMode(.tail)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: IslandTaskTextMetrics.limitedHeight(option["description"].text, lines: 2, width: availableWidth - 54), alignment: .topLeading)
-                    }
-                }.fixedSize(horizontal: false, vertical: true)
-                selectionMark(selected, multiple: false)
-            }.padding(.horizontal, 12).frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: height ?? IslandApprovalMetrics.optionHeight(label, description: option["description"].text, width: availableWidth))
-        }.buttonStyle(IslandApprovalSelectionStyle(selected: selected))
-            .contextMenu { copyContentButton(label + (option["description"].text.isEmpty ? "" : "\n" + option["description"].text)) }
-            .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
+                        .frame(height: IslandTaskTextMetrics.limitedHeight(option["description"].text, lines: 2, width: availableWidth - 54), alignment: .topLeading)
+                }
+            }.fixedSize(horizontal: false, vertical: true)
+            if request.canRespond { selectionMark(selected, multiple: false) }
+        }.padding(.horizontal, 12).frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: height ?? IslandApprovalMetrics.optionHeight(label, description: option["description"].text, width: availableWidth))
+        if request.canRespond {
+            Button { questionInteraction.choose(label, questionID: q.id) } label: { content }
+                .buttonStyle(IslandApprovalSelectionStyle(selected: selected))
+                .contextMenu { copyContentButton(label + (option["description"].text.isEmpty ? "" : "\n" + option["description"].text)) }
+                .accessibilityValue(selected ? text("已选择", "Selected") : text("未选择", "Not selected"))
+        } else {
+            content.accessibilityElement(children: .combine)
+        }
     }
     private func selectionMark(_ selected: Bool, multiple: Bool) -> some View {
         Image(systemName: multiple ? (selected ? "checkmark.square.fill" : "square") : (selected ? "checkmark.circle.fill" : "circle"))
@@ -714,6 +720,12 @@ struct IslandApprovalView: View {
         case .resultUnknown: return text("结果未确认，请在\(handlerName)核对", "Result unconfirmed; check in \(handlerNameEnglish)")
         case .resolved: return text("请求已处理", "Request resolved")
         default: break
+        }
+        if request.provider == .codex, !request.canRespond, wire?.kind == .questions, wire?.supportedQuestions == true {
+            if wire?.localObservation?.asynchronous == true {
+                return text("请在 Codex 原对话中选择", "Choose an answer in the original Codex chat")
+            }
+            return text("暂时无法向 Codex 提交回答", "Cannot submit to Codex right now")
         }
         if !request.canRespond { return text("请在\(handlerName)处理", "Handle this request in \(handlerNameEnglish)") }
         guard let wire else { return text("等待选择", "Awaiting a choice") }
@@ -816,10 +828,22 @@ struct IslandApprovalView: View {
     private var isDSH: Bool { request.provider == .dsh }
     private var isClaude: Bool { request.provider == .claudeCode }
     private var agentName: String { request.provider.displayName }
-    private var handlerName: String { request.provider == .antigravity ? " Antigravity " : isDSH ? " DSH " : isClaude ? "运行 Claude Code 的终端" : " Codex " }
-    private var handlerNameEnglish: String { request.provider == .antigravity ? "Antigravity" : isDSH ? "DSH" : isClaude ? "the Claude Code terminal" : "Codex" }
+    private var handlerName: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? " Antigravity " : isDSH ? " DSH " : isClaude ? "运行 Claude Code 的终端" : " Codex " }
+    private var handlerNameEnglish: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? "Antigravity" : isDSH ? "DSH" : isClaude ? "the Claude Code terminal" : "Codex" }
     private func openCodex() {
+        if request.provider == .codex, let url = metrics.conversationURL {
+            Task { @MainActor in
+                if !(await IslandConversationNavigation.open(url)) {
+                    codexJumpMessage = text("打开失败，重试", "Couldn’t open. Retry")
+                }
+            }
+            return
+        }
         if request.provider == .antigravity { codexJumpMessage = text("请在 Antigravity 中处理。", "Handle this request in Antigravity."); return }
+        if request.provider == .openCode {
+            codexJumpMessage = text("请在原 OpenCode 会话中处理。", "Use the original OpenCode session.")
+            return
+        }
         if isDSH { codexJumpMessage = text("请切换到对应的 DSH 客户端处理", "Switch to the corresponding DSH client"); return }
         if isClaude {
             // Claude Code may run in any terminal or IDE; QuotaView cannot identify its window.
