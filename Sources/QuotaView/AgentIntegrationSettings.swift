@@ -366,6 +366,7 @@ struct AgentIntegrationSettings<Details: View>: View {
             case .codex:
                 guard preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy else { return original }
                 if codex.liveIsland.model.usesLegacyDesktopAnswers { return available }
+                if codex.canUseNativeQuestionInput { return copy.text("可回答已打开的 Codex 问题卡", "Reply to an open Codex question card") }
                 if codex.desktopIgnoresDaemonPreference { return original }
                 return codex.nativeConnectionState == .connected
                     ? copy.text("可在同一共享会话中回答", "Reply in the same shared session") : original
@@ -653,8 +654,8 @@ private struct ConversationAccessibilitySettings: View {
         let hint = copy.text("在系统设置中管理权限", "Manage permission in System Settings")
         NativeSettingsCard {
             NativeSettingsRow(title: title,
-                subtitle: copy.text("辅助功能用于在 DSH 和 Antigravity 中前往对话，以及读取 Antigravity 桌面端额度。",
-                                    "Accessibility lets QuotaView open DSH and Antigravity conversations and read quotas from the Antigravity desktop app."),
+                subtitle: copy.text("辅助功能用于回答 Codex 问题、跳转 DSH 和 Antigravity 对话，以及读取 Antigravity 额度。",
+                                    "Accessibility lets QuotaView answer Codex questions, open DSH and Antigravity conversations, and read Antigravity quotas."),
                 symbol: "accessibility") {
                 HStack(spacing: 8) {
                     Text(status).font(.caption).foregroundStyle(.secondary)

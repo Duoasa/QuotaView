@@ -1,5 +1,9 @@
 # QuotaView 开发交接
 
+## 0.9.7 Build 31 / Codex 岛内文本回答
+
+已在本机启动开发版 0.9.7 Build 31（内部 268）。Codex 普通启动时，已打开的单题可通过辅助功能在岛内选择或自行输入，并经原问题卡提交。已观察到岛内两项按钮与自填框可用，生产输入模块发送的「文本甲」收到原题回执。29 项定向测试通过，1 项需另行启动隔离服务的测试跳过。2026-11-25 用户在灵动岛选择「樱桃」并确认，Codex 原轮次收到一条匹配原题的回答。默认启动下的单题点选已通过人工验收，后续兼容检查沿用此用例。见[接入规格](docs/specs/codex-desktop-confirmation-sync.md#build-31-岛内文本回答)，证据在 `.build/codex-question-input-097b31/`。
+
 ## 0.9.7 Build 30 / 后台完成卡保留选中光边
 
 用户在 15:52 的截图中指出 Antigravity 完成卡持续高亮，当时选中的是 Codex。回归测试用两张真实任务卡视图复现：后台 Antigravity 卡完成冲击波后仍挂载选中光效，切换回 Codex 后再次出现。现由唯一选中项决定是否绘制持续高光；各卡照常播放完成冲击波和对号。见[进度效果适配协议](docs/specs/PROGRESS_EFFECT_ADAPTATION.md#097-build-30-任务列表单卡高亮)。
@@ -1728,11 +1732,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `c424deb`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.7 Build 30 / 内部 267 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `40666d2`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.7 Build 31 / 内部 268 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-24，实际加载路径见 `.build/single-card-097b30/runtime/runtime-result.json` |
-| 源码与运行包 | 本地 0.9.7 Build 30 的 276 个构建输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-25，实际加载路径见 `.build/codex-question-input-097b31/runtime/runtime-result.json` |
+| 源码与运行包 | 本地 0.9.7 Build 31 的 277 个构建输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

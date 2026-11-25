@@ -757,10 +757,10 @@ struct SettingsView: View {
                     codexHookAction
                 }
             }
-            if activityRuntime.canConfigureSharedAnswers {
+            if activityRuntime.canConfigureSharedAnswers || activityRuntime.canUseNativeQuestionInput {
                 NativeSettingsDivider()
                 NativeSettingsRow(title: copy.text("选择题回答", "Question replies"), subtitle: answerLaunchSubtitle) {
-                    if !activityRuntime.desktopIgnoresDaemonPreference {
+                    if !activityRuntime.desktopIgnoresDaemonPreference && (!activityRuntime.canUseNativeQuestionInput || activityRuntime.answerLaunchState != .idle) {
                         switch activityRuntime.answerLaunchState {
                         case .waitingForQuit:
                             Button(copy.text("取消", "Cancel")) { activityRuntime.cancelAnswerLaunch() }
@@ -816,6 +816,9 @@ struct SettingsView: View {
     }
 
     private var answerLaunchSubtitle: String {
+        if activityRuntime.canUseNativeQuestionInput && activityRuntime.answerLaunchState == .idle {
+            return copy.text("在岛上选择或输入答案，确认后发送到 Codex 当前打开的问题卡。", "Choose or type an answer in the island to send it to the open Codex question card.")
+        }
         if activityRuntime.desktopIgnoresDaemonPreference {
             return copy.text("当前 Codex 版本以独占模式打开本地会话，请在原对话中回答。", "This Codex version opens local chats in exclusive mode. Answer in the original chat.")
         }

@@ -121,6 +121,7 @@ struct IslandCodexApprovalRequest: Equatable {
     /// from a public JSON envelope or a local rollout projection.
     private(set) var desktopHandle: CodexDesktopIPCRequestHandle? = nil
     private(set) var sharedQuestionHandle: CodexSharedQuestionHandle? = nil
+    var nativeQuestionCard: CodexDesktopQuestionInput.Card?
     struct LocalObservation: Equatable {
         let sessionHash: String; let turnHash: String; let callID: String
         let mode: CodexUserInputMode
@@ -129,7 +130,7 @@ struct IslandCodexApprovalRequest: Equatable {
     var userInputMode: CodexUserInputMode? {
         method == "desktop/tool/requestUserInputAsync" ? .asynchronous : localObservation?.mode
     }
-    var observationOnly: Bool { (localObservation != nil && sharedQuestionHandle == nil) || contextUnavailable }
+    var observationOnly: Bool { (localObservation != nil && sharedQuestionHandle == nil && nativeQuestionCard == nil) || contextUnavailable }
     var contextUnavailable = false
     /// Built by QuotaView from a Claude Code PermissionRequest Hook; answered
     /// over that Hook's own connection, never through a Codex transport.
@@ -202,7 +203,7 @@ struct IslandCodexApprovalRequest: Equatable {
         var copy = self
         // The caller must correlate an actor-issued handle with its exact
         // projected request. Local question IDs never obtain a write capability.
-        guard !observationOnly, let handle, handle.conversationID == threadID,
+        guard localObservation == nil, !observationOnly, let handle, handle.conversationID == threadID,
               handle.turnID == turnID, handle.method == method,
               let object = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
               let id = object["id"], let encoded = try? JSONSerialization.data(withJSONObject: id, options: [.fragmentsAllowed]),
