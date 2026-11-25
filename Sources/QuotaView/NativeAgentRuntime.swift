@@ -66,6 +66,7 @@ final class NativeAgentRuntime: ObservableObject {
     private var dshTitleReadAt: [String: Date] = [:]
     private struct Session {
         var turn: String?
+        var terminalBinding: UUID?
         var nativeTurn: String?
         var conversation: IslandConversationTarget?
         var active = false
@@ -96,9 +97,23 @@ final class NativeAgentRuntime: ObservableObject {
         var updated = Date()
     }
     private var sessions: [String: Session] = [:]
+    private struct DevinPermission {
+        let wire: IslandCodexApprovalRequest
+        let call: String?
+        var dispatched = false
+    }
+    private var devinPermissions: [String: DevinPermission] = [:]
+    var devinInteractive: Bool {
+        provider.isDevin && (provider == .devinCLI ? preferences.devinCLIApprovals : preferences.devinDesktopApprovals)
+            && preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy
+    }
+    private var dshInteractive: Bool {
+        preferences.dshInteractiveApprovals && preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy
+    }
     private struct DSHRequest {
         let session: String; let turn: String; let epoch: String; let auditID: String
-        let rpcID: IslandApprovalJSON
+        let wire: IslandCodexApprovalRequest
+        var rpcID: IslandApprovalJSON { wire.rpcID }
         var awaitsDecision = true
     }
     private struct AntigravityRequest {
@@ -111,6 +126,8 @@ final class NativeAgentRuntime: ObservableObject {
     private var antigravityApprovalPoll: Task<Void, Never>?
     private var handledAntigravityCards: [UUID: AntigravityDesktopApproval.Card] = [:]
     private let readApprovalCards: (Set<UUID>) async -> [UUID: AntigravityDesktopApproval.Card]
+    typealias AnswerNativeQuestion = @MainActor (AntigravityDesktopApproval.Card, String, () -> Bool) async -> Bool
+    private let answerNativeQuestion: AnswerNativeQuestion
     private let pressApprovalButton: (AntigravityDesktopApproval.Card, Bool) -> Bool
     private struct OpenCodeRequest {
         let wire: IslandCodexApprovalRequest
@@ -127,7 +144,9 @@ final class NativeAgentRuntime: ObservableObject {
 
     init(provider: IslandAgentProvider, preferences: AppPreferences, island: IslandSession, defaults: UserDefaults, installer suppliedInstaller: NativeAgentInstaller? = nil,
          readApprovalCards: ((Set<UUID>) async -> [UUID: AntigravityDesktopApproval.Card])? = nil,
-         pressApprovalButton: @escaping (AntigravityDesktopApproval.Card, Bool) -> Bool = AntigravityDesktopApproval.press) {
+         pressApprovalButton: @escaping (AntigravityDesktopApproval.Card, Bool) -> Bool = AntigravityDesktopApproval.press,
+         answerNativeQuestion: @escaping AnswerNativeQuestion = AntigravityDesktopApproval.answer) {
+        self.answerNativeQuestion = answerNativeQuestion
         self.readApprovalCards = readApprovalCards ?? { ids in
             guard suppliedInstaller == nil else { return [:] }
             return await Task.detached(priority: .utility) { AntigravityDesktopApproval.scan(ids) }.value
@@ -145,6 +164,21 @@ final class NativeAgentRuntime: ObservableObject {
         installer = suppliedInstaller ?? NativeAgentInstaller(provider: provider, socketURL: socket, authenticationToken: token)
         defaultDSHNamespace = CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path)
         bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: installer.authenticationToken)
+        if provider.isDevin {
+            island.model.devinCapabilities[provider] = { [weak self] wire in
+                guard let self, running, listening, enabled, devinInteractive, wire.devinProvider == provider,
+                      let held = devinPermissions[wire.rpcID.text], !held.dispatched, held.wire == wire,
+                      let session = sessions[wire.threadID] else { return false }
+                return session.active && session.turn == wire.turnID
+            }
+            island.model.devinResponders[provider] = { [weak self] wire, result in
+                guard let self, island.model.devinCapabilities[provider]?(wire) == true, wire.permits(result),
+                      ["accept", "decline"].contains(result["decision"].text) else { throw CancellationError() }
+                devinPermissions[wire.rpcID.text]?.dispatched = true
+                bridge.resolve(eventID: String(wire.rpcID.text.dropFirst(provider.rawValue.count + 1)),
+                    decision: ["decision": result["decision"].text == "accept" ? "approve" : "block"])
+            }
+        }
         if provider == .openCode {
             island.model.openCodeResponseCapability = { [weak self] wire in
                 guard let self, openCodeInteractive, enabled, running, listening,
@@ -178,7 +212,7 @@ final class NativeAgentRuntime: ObservableObject {
             island.model.antigravityResponseCapability = { [weak self] wire in
                 guard let self, wire.isAntigravity, enabled, listening, antigravityApprovalsEnabled,
                       let live = antigravityRequests[String(wire.rpcID.text.dropFirst("antigravity:".count))] else { return false }
-                return live.key == wire.threadID && live.turn == wire.turnID && sessions[live.key]?.active == true
+                return handledAntigravityCards[live.card.conversation] != live.card && live.key == wire.threadID && live.turn == wire.turnID && sessions[live.key]?.active == true
                     && sessions[live.key]?.turn == live.turn
             }
             island.model.antigravityRespond = { [weak self] wire, result in
@@ -191,6 +225,16 @@ final class NativeAgentRuntime: ObservableObject {
                       current[session] == request.card else {
                     removeAntigravityRequest(id)
                     throw CancellationError()
+                }
+                if request.card.question != nil {
+                    guard let answer = result["answers"]["answer"]["answers"].array.first?.text,
+                          await answerNativeQuestion(request.card, answer, {
+                              self.island.model.antigravityResponseCapability?(wire) == true
+                          }) else { throw CocoaError(.userCancelled) }
+                    handledAntigravityCards[session] = request.card
+                    // AXPress confirms dispatch. The next native scan retires
+                    // the card when the original question actually disappears.
+                    return
                 }
                 let allow: Bool
                 switch result["decision"].text {
@@ -205,8 +249,8 @@ final class NativeAgentRuntime: ObservableObject {
         }
         if provider == .dsh {
             island.model.dshResponseCapability = { [weak self] wire in
-                guard let self, running, listening, enabled, preferences.dshInteractiveApprovals,
-                      let id = DSHApproval.eventID(of: wire), let request = dshRequests[id], request.awaitsDecision,
+                guard let self, running, listening, enabled, dshInteractive,
+                      let id = DSHApproval.eventID(of: wire), let request = dshRequests[id], request.awaitsDecision, request.wire == wire,
                       let session = sessions[request.session] else { return false }
                 return session.active && session.turn == request.turn && session.epoch == request.epoch
             }
@@ -273,16 +317,25 @@ final class NativeAgentRuntime: ObservableObject {
     }
     private func reconcile(force: Bool = false) {
         if provider == .antigravity { refreshAntigravityApprovalMonitor() }
-        if provider == .dsh && (!enabled || !preferences.dshInteractiveApprovals) {
+        if provider == .dsh && (!enabled || !dshInteractive) {
             for id in Array(dshRequests.keys) { releaseDSH(id) }
         }
         if !openCodeInteractive {
             for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
         }
-        let interactive = provider == .openCode && openCodeInteractive
-        if running, enabled, listening, provider == .openCode, approvalRouteEnabled != interactive {
+        if !devinInteractive { for id in Array(devinPermissions.keys) { closeDevin(id) } }
+        if preferences.codexIslandPrivacy {
+            for (key, session) in sessions where session.terminalBinding != nil {
+                if let id = session.terminalBinding { ClaudeTerminalNavigation.bind(nil, to: id) }
+                sessions[key]?.terminalBinding = nil
+                sessions[key]?.conversation = nil
+                publishMetadata(key)
+            }
+        }
+        let interactive = openCodeInteractive || devinInteractive || (provider == .dsh && dshInteractive)
+        if running, enabled, listening, provider == .openCode || provider.isDevin || provider == .dsh, approvalRouteEnabled != interactive {
             do {
-                try installer.writeExternalRoute(interactiveApprovals: interactive)
+                try installer.writeRoute(interactiveApprovals: interactive)
                 approvalRouteEnabled = interactive
             } catch { failure = .invalidConfiguration; status = .failed }
         }
@@ -337,12 +390,13 @@ final class NativeAgentRuntime: ObservableObject {
                 }, onDisconnect: { [weak self] id in
                     Task { @MainActor in
                         guard let self, self.revision == current else { return }
+                        if self.provider.isDevin { self.closeDevin(self.provider.rawValue + ":" + id) }
                         self.releaseDSH(id)
                         self.closeOpenCode("openCode:" + id)
                     }
                 })
                 listening = true; status = .waiting
-                if provider == .openCode {
+                if provider == .openCode || provider.isDevin || provider == .dsh {
                     approvalRouteEnabled = approvals
                     reconcile()
                 }
@@ -351,6 +405,7 @@ final class NativeAgentRuntime: ObservableObject {
         }
     }
     private func stopListening() {
+        for id in Array(devinPermissions.keys) { closeDevin(id) }
         for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
         if provider == .antigravity {
             antigravityApprovalPoll?.cancel()
@@ -371,6 +426,7 @@ final class NativeAgentRuntime: ObservableObject {
         rateLogTask?.cancel(); rateLogTask = nil
         if listening { bridge.stop() }; listening = false
         for (key, value) in sessions {
+            if let id = value.terminalBinding { ClaudeTerminalNavigation.bind(nil, to: id) }
             if let turn = value.turn { island.model.withdrawHookExecution(session: key, turn: turn) }
             if value.parent != nil { island.model.withdrawSubagentObservation(for: key) }
         }
@@ -432,7 +488,57 @@ final class NativeAgentRuntime: ObservableObject {
         } else { closeOpenCode(id) }
     }
 
+    private func closeDevin(_ id: String) {
+        guard let held = devinPermissions.removeValue(forKey: id) else { return }
+        if !held.dispatched {
+            bridge.resolve(eventID: String(id.dropFirst(provider.rawValue.count + 1)), decision: nil)
+        }
+        island.model.resolveLocalHookRequest(sessionKey: held.wire.threadID, rpcID: held.wire.rpcID)
+    }
+
+    private func admitDevin(_ message: ClaudeCodeBridgeMessage, payload: [String: Any]) -> Bool {
+        guard running, enabled, listening, devinInteractive, message.awaitsDecision,
+              UUID(uuidString: message.eventID) != nil, devinPermissions.count < 32,
+              payload["hook_event_name"] as? String == "PermissionRequest", payload["tool_name"] as? String == "exec",
+              let rawSession = payload["session_id"] as? String, let nativeTurn = payload["turn_id"] as? String,
+              !nativeTurn.isEmpty, let input = payload["tool_input"] as? [String: Any],
+              let command = input["command"] as? String, !command.isEmpty,
+              let cwd = payload["cwd"] as? String, !cwd.isEmpty, cwd.utf8.count <= 4096,
+              let data = try? JSONSerialization.data(withJSONObject: input, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
+              data.count <= 48_000 else { return false }
+        let key = CodexActivityPrivacy.hashIdentifier(provider.rawValue + ":" + rawSession)
+        let id = provider.rawValue + ":" + message.eventID
+        guard let session = sessions[key], session.active, session.nativeTurn == nativeTurn, session.parent == nil,
+              let turn = session.turn, !devinPermissions.values.contains(where: { $0.wire.threadID == key }) else { return false }
+        let call = (payload["tool_use_id"] ?? payload["tool_call_id"]) as? String
+        let params: [String: Any] = ["devinProvider": provider.rawValue, "threadId": key, "turnId": turn, "itemId": call ?? id,
+            "toolName": "exec", "command": String(decoding: data, as: UTF8.self), "cwd": cwd,
+            "availableDecisions": ["accept", "decline"]]
+        guard let raw = try? JSONSerialization.data(withJSONObject: ["method": "item/commandExecution/requestApproval",
+            "id": id, "params": params]), let wire = try? IslandCodexApprovalRequest(data: raw) else { return false }
+        devinPermissions[id] = .init(wire: wire, call: call)
+        let callHash = CodexActivityPrivacy.hashIdentifier(provider.rawValue + ":" + rawSession + ":" + (call ?? id))
+        guard island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn, callHash: callHash) else {
+            devinPermissions.removeValue(forKey: id)
+            return false
+        }
+        return true
+    }
+
     private func receive(_ message: ClaudeCodeBridgeMessage) {
+        if provider.isDevin, !message.awaitsDecision,
+           let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: String],
+           payload["hook_event_name"] == "DevinDecisionReturned", let event = payload["request_id"] {
+            let id = provider.rawValue + ":" + event
+            if let held = devinPermissions[id], held.dispatched { closeDevin(id) }
+            return
+        }
+        if provider.isDevin, message.awaitsDecision {
+            if let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
+               admitDevin(message, payload: payload) { return }
+            bridge.resolve(eventID: message.eventID, decision: nil)
+            return
+        }
         if provider == .openCode, let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
            let name = payload["hook_event_name"] as? String, ["OpenCodeInteraction", "OpenCodeReleased", "OpenCodeDeliveryFailed"].contains(name) {
             receiveOpenCode(message, payload: payload)
@@ -440,7 +546,7 @@ final class NativeAgentRuntime: ObservableObject {
         }
         if provider == .dsh,
            let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
-           let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") {
+           let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") || name.hasPrefix("DSHQuestion") {
             if !receiveDSH(message, payload: payload, name: name), message.awaitsDecision { bridge.resolve(eventID: message.eventID, decision: nil) }
             return
         }
@@ -473,6 +579,7 @@ final class NativeAgentRuntime: ObservableObject {
         let key = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession)
         if sessions[key] == nil, sessions.count >= 512 {
             guard let oldest = sessions.filter({ !$0.value.active }).min(by: { $0.value.updated < $1.value.updated })?.key else { return }
+            if let id = sessions[oldest]?.terminalBinding { ClaudeTerminalNavigation.bind(nil, to: id) }
             sessions.removeValue(forKey: oldest)
         }
         var session = sessions[key] ?? Session()
@@ -554,6 +661,24 @@ final class NativeAgentRuntime: ObservableObject {
                 session.devinStore = store; session.devinSourceSession = sourceSession
             }
         }
+        if [.kimiCode, .geminiCLI, .copilotCLI, .devinCLI].contains(provider), session.parent == nil {
+            // Only the local helper supplies this descriptor. Each surface gets
+            // a private binding even when two providers use the same session ID.
+            if !preferences.codexIslandPrivacy, name != "SessionEnd",
+               let field = payload["terminal_host"] as? [String: Any],
+               let data = try? JSONSerialization.data(withJSONObject: field), data.count <= 2048,
+               let terminal = try? JSONDecoder().decode(ClaudeConversationHost.Terminal.self, from: data),
+               terminal.agentProvider == provider.rawValue, terminal.valid {
+                let id = session.terminalBinding ?? UUID()
+                ClaudeTerminalNavigation.bind(terminal, to: id)
+                session.terminalBinding = id
+                session.conversation = .agentTerminal(provider, id)
+            } else if let id = session.terminalBinding {
+                ClaudeTerminalNavigation.bind(nil, to: id)
+                session.terminalBinding = nil
+                session.conversation = nil
+            }
+        }
         if !preferences.codexIslandPrivacy, session.parent == nil {
             if provider == .devinDesktop, session.devinStore != nil, IslandConversationTarget.isSessionID(sourceSession) {
                 session.conversation = .devin(sourceSession)
@@ -572,6 +697,14 @@ final class NativeAgentRuntime: ObservableObject {
         }
         island.model.setProvider(provider, for: key)
         sessions[key] = session
+        if provider.isDevin {
+            for (id, held) in devinPermissions where held.wire.threadID == key {
+                let post = ["PostToolUse", "PostToolUseFailure"].contains(name)
+                let call = (payload["tool_use_id"] ?? payload["tool_call_id"]) as? String
+                if held.wire.turnID != session.turn || ["Stop", "SessionEnd", "StopFailure", "Interrupt"].contains(name)
+                    || (post && held.call != nil && held.call == call && payload["tool_name"] as? String == "exec") { closeDevin(id) }
+            }
+        }
         if provider == .openCode {
             for (id, request) in openCodeRequests where request.wire.threadID == key {
                 if request.epoch != session.epoch || request.wire.turnID != session.turn ||
@@ -764,10 +897,20 @@ final class NativeAgentRuntime: ObservableObject {
                   !antigravityRequests.values.contains(where: { $0.card == card }) else { continue }
             let key = scope.key, turn = scope.turn
             let id = UUID().uuidString
-            let params: [String: Any] = ["antigravity": true, "threadId": key, "turnId": turn, "itemId": id,
-                "command": card.content, "nativeScope": card.scope.rawValue, "availableDecisions": ["accept", "decline"]]
+            var params: [String: Any] = ["antigravity": true, "threadId": key, "turnId": turn, "itemId": id]
+            let method: String
+            if let question = card.question {
+                method = "item/tool/requestUserInput"
+                params["questions"] = [["id": "answer", "question": card.content, "isOther": true,
+                    "options": question.options.map { ["label": $0.label] }]]
+            } else if let nativeScope = card.scope {
+                method = "item/commandExecution/requestApproval"
+                params["command"] = card.content
+                params["nativeScope"] = nativeScope.rawValue
+                params["availableDecisions"] = ["accept", "decline"]
+            } else { continue }
             guard let data = try? JSONSerialization.data(withJSONObject: ["id": "antigravity:" + id,
-                "method": "item/commandExecution/requestApproval", "params": params]),
+                "method": method, "params": params]),
                   let wire = try? IslandCodexApprovalRequest(data: data) else { continue }
             antigravityRequests[id] = .init(key: key, turn: turn, card: card, rpcID: wire.rpcID)
             if !island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn, callHash: id) {
@@ -794,13 +937,13 @@ final class NativeAgentRuntime: ObservableObject {
         let key = CodexActivityPrivacy.hashIdentifier(prefix)
         guard let session = sessions[key], session.active, session.parent == nil,
               session.epoch == epoch, session.nativeTurn == nativeTurn, let turn = session.turn else { return false }
-        if name == "DSHApprovalRequest" {
-            guard message.awaitsDecision, message.eventID == id, preferences.dshInteractiveApprovals,
+        if name == "DSHApprovalRequest" || name == "DSHQuestionRequest" {
+            guard message.awaitsDecision, message.eventID == id, dshInteractive,
                   dshRequests[id] == nil, dshRequests.count < 32,
                   !dshRequests.values.contains(where: { $0.session == key && $0.auditID == auditID }),
                   let call = payload["tool_use_id"] as? String, !call.isEmpty, call.utf8.count <= 256,
                   let wire = try? DSHApproval.request(eventID: id, sessionKey: key, turnKey: turn, payload: payload) else { return false }
-            dshRequests[id] = .init(session: key, turn: turn, epoch: epoch, auditID: auditID, rpcID: wire.rpcID)
+            dshRequests[id] = .init(session: key, turn: turn, epoch: epoch, auditID: auditID, wire: wire)
             guard island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
                     callHash: CodexActivityPrivacy.hashIdentifier(prefix + ":" + call)) else {
                 dshRequests.removeValue(forKey: id); return false
@@ -810,7 +953,9 @@ final class NativeAgentRuntime: ObservableObject {
         }
         guard let request = dshRequests[id], request.session == key, request.turn == turn,
               request.epoch == epoch, request.auditID == auditID else { return false }
-        if name == "DSHApprovalSettled", let outcome = payload["outcome"] as? String,
+        if name == "DSHQuestionClosed", request.wire.kind == .questions {
+            releaseDSH(id)
+        } else if name == "DSHApprovalSettled", let outcome = payload["outcome"] as? String,
            ["allowed-once", "rejected", "cancelled", "unavailable"].contains(outcome) {
             dshRequests.removeValue(forKey: id)
             bridge.resolve(eventID: id, decision: nil)
@@ -822,6 +967,13 @@ final class NativeAgentRuntime: ObservableObject {
     private func respondDSH(_ wire: IslandCodexApprovalRequest, result: IslandApprovalJSON) throws {
         guard island.model.dshResponseCapability?(wire) == true, wire.permits(result),
               let id = DSHApproval.eventID(of: wire), dshRequests[id]?.rpcID == wire.rpcID else { throw CocoaError(.userCancelled) }
+        if wire.kind == .questions, let question = wire.questions.first,
+           let answer = result["answers"][question.id]["answers"].array.first?.text {
+            guard answer.utf8.count <= 4096 else { throw CocoaError(.fileReadTooLarge) }
+            dshRequests[id]?.awaitsDecision = false
+            bridge.resolve(eventID: id, decision: ["answer": answer])
+            return
+        }
         switch result["decision"].text {
         case "accept", "decline":
             dshRequests[id]?.awaitsDecision = false
@@ -835,7 +987,11 @@ final class NativeAgentRuntime: ObservableObject {
     private func releaseDSH(_ id: String) {
         guard let request = dshRequests.removeValue(forKey: id) else { return }
         bridge.resolve(eventID: id, decision: nil)
-        island.model.returnDSHRequest(sessionKey: request.session, rpcID: request.rpcID)
+        if request.wire.kind == .questions {
+            island.model.resolveLocalHookRequest(sessionKey: request.session, rpcID: request.rpcID)
+        } else {
+            island.model.returnDSHRequest(sessionKey: request.session, rpcID: request.rpcID)
+        }
     }
 
     private struct DevinRead: Sendable {

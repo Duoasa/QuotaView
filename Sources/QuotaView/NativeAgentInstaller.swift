@@ -61,6 +61,13 @@ struct NativeAgentInstaller: Sendable {
 
     enum Failure: Error { case missingInstallation, invalidConfiguration, configurationChanged, missingHelper, listenerUnavailable }
 
+    func writeRoute(interactiveApprovals: Bool) throws {
+        let fields: [String: Any] = ["version": 1, "socketPath": socketURL.path,
+            "authenticationToken": authenticationToken, "interactiveApprovals": (provider == .openCode || provider.isDevin || provider == .dsh) && interactiveApprovals,
+            "agentProvider": provider.rawValue]
+        try privateWrite(JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]), to: route)
+    }
+
     /// Returns the homes configured during this pass. The ledger also remembers
     /// earlier profiles so disabling can remove our block after a client moves.
     func configure(enabled: Bool, additionalHomes: [URL] = [], interactiveApprovals: Bool = true) throws -> [URL] {
@@ -103,9 +110,7 @@ struct NativeAgentInstaller: Sendable {
             guard !discovered.isEmpty else { throw Failure.missingInstallation }
             guard fm.isExecutableFile(atPath: bundledHelper.path) else { throw Failure.missingHelper }
             try privateWrite(Data(contentsOf: bundledHelper), to: helper, mode: 0o700)
-            let data = try JSONSerialization.data(withJSONObject: ["version": 1, "socketPath": socketURL.path,
-                "authenticationToken": authenticationToken, "interactiveApprovals": provider == .dsh, "agentProvider": provider.rawValue], options: [.sortedKeys])
-            try privateWrite(data, to: route)
+            try writeRoute(interactiveApprovals: interactiveApprovals)
             if provider == .dsh {
                 let source = NativeAgentDSHPlugin.source.replacingOccurrences(of: "__ROUTE_PATH__", with: jsonString(route.path))
                 try privateWrite(Data(source.utf8), to: plugin)

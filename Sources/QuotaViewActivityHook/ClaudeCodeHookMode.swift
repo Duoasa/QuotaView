@@ -428,6 +428,11 @@ enum NativeAgentHookForwarder {
         }
         guard let object = decoded as? [String: Any],
               var payload = NativeAgentHookNormalizer.normalize(object, provider: provider, event: event) else { return }
+        if ["kimiCode", "geminiCLI", "copilotCLI", "devinCLI"].contains(provider),
+           let terminal = ClaudeConversationHost.current(provider: provider).terminal,
+           let data = try? JSONEncoder().encode(terminal) {
+            payload["terminal_host"] = try? JSONSerialization.jsonObject(with: data)
+        }
         if provider == "devinDesktop" || provider == "devinCLI",
            let session = payload["session_id"] as? String,
            let store = DevinSessionUsage.Store.current(session: session) {
@@ -449,8 +454,42 @@ enum NativeAgentHookForwarder {
             if ["UserPromptSubmit", "TurnStarted"].contains(payload["hook_event_name"] as? String ?? ""),
                let position = AgentRateLog.position(log) { payload["rate_log_position"] = position }
         }
+        if route.interactiveApprovals == true, ["devinDesktop", "devinCLI"].contains(provider),
+           event == "PermissionRequest", (object["hook_event_name"] as? String ?? event) == event,
+           object["parent_session_id"] == nil, object["agent_id"] == nil,
+           object["agent_type"] == nil, let sessionID = object["session_id"] as? String, !sessionID.isEmpty,
+           sessionID.utf8.count <= 256, payload["tool_name"] as? String == "exec",
+           let turn = object["prompt_id"] as? String, !turn.isEmpty, turn.utf8.count <= 256,
+           let input = object["tool_input"] as? [String: Any],
+           let command = input["command"] as? String, !command.isEmpty,
+           let bytes = try? JSONSerialization.data(withJSONObject: input), bytes.count <= 24_000,
+           let cwd = object["cwd"] as? String, !cwd.isEmpty, cwd.utf8.count <= 4096 {
+            payload["tool_input"] = input
+            payload["cwd"] = cwd
+            let requestID = UUID().uuidString
+            if let choice = devinDecision(payload, id: requestID, route: route),
+               (try? FileHandle.standardOutput.write(contentsOf: choice)) != nil {
+                _ = forward(["hook_event_name": "DevinDecisionReturned", "request_id": requestID], route: route)
+            }
+            return
+        }
         _ = forward(payload, route: route)
     }
+    private static func devinDecision(_ payload: [String: Any], id: String, route: ClaudeCodeRoute) -> Data? {
+        let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": id,
+            "kind": "hook", "awaitDecision": true, "payload": payload]
+        guard var line = try? JSONSerialization.data(withJSONObject: envelope) else { return nil }
+        line.append(0x0A)
+        let client = ClaudeCodeSocketClient()
+        guard client.connect(path: route.socketPath, timeout: 0.5), client.send(line, timeout: 1),
+              let ack = client.readLine(until: Date().addingTimeInterval(2)), ack["eventID"] as? String == id,
+              ack["pending"] as? Bool == true,
+              let response = client.readLine(until: Date().addingTimeInterval(110)), response["eventID"] as? String == id,
+              let result = response["decision"] as? [String: String], let choice = result["decision"],
+              ["approve", "block"].contains(choice) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: ["decision": choice])
+    }
+
     private static func forward(_ payload: [String: Any], route: ClaudeCodeRoute) -> Bool {
         let eventID = UUID().uuidString
         let envelope: [String: Any] = ["authenticationToken": route.authenticationToken, "eventID": eventID,

@@ -129,6 +129,89 @@ final class DevinIntegrationSmokeTests: XCTestCase {
         }
     }
     @MainActor
+    func testPermissionRepliesStayWithOriginalSurfaceAndExpireWithTurn() async throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "QuotaView.DevinDecisions." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults), island = IslandSession()
+        preferences.devinCLIEnabled = true
+        preferences.devinDesktopEnabled = true
+        preferences.devinCLIApprovals = true
+        preferences.devinDesktopApprovals = true
+        let helper = URL(fileURLWithPath: FileManager.default.currentDirectoryPath + "/.build/debug/QuotaViewActivityHook")
+        let cli = installer(.devinCLI, root, helper: helper), desktop = installer(.devinDesktop, root, helper: helper)
+        let runtimes = [cli, desktop].map { NativeAgentRuntime(provider: $0.provider, preferences: preferences,
+            island: island, defaults: defaults, installer: $0) }
+        defer { runtimes.forEach { $0.stop() }; island.stop() }
+        runtimes.forEach { $0.start() }
+        try await waitFor { runtimes.allSatisfy { $0.status == .waiting } }
+        let start = ["session_id": "shared", "hook_event_name": "UserPromptSubmit", "turn_id": "turn"]
+        for item in [cli, desktop] { try Self.send(start, socket: item.socketURL.path) }
+        try await waitFor { island.model.tasks.count == 2 }
+
+        // The CLI uses the installed production helper. The desktop fixture exercises
+        // its separate authenticated socket without impersonating a desktop process.
+        func invoke(_ item: NativeAgentInstaller, turn: String) throws -> (Process, Pipe) {
+            let process = Process(), input = Pipe(), output = Pipe()
+            let payload: [String: Any] = ["hook_event_name": "PermissionRequest", "tool_name": "exec",
+                "session_id": "shared", "turn_id": turn, "prompt_id": turn, "cwd": "/fixture",
+                "tool_input": ["command": "echo fixture", "timeout": 15]]
+            if item.provider == .devinCLI {
+                process.executableURL = helper
+                process.arguments = ["--agent-hook", "--configuration", item.route.path, "--event", "PermissionRequest"]
+                input.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: payload))
+            } else {
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                process.arguments = ["node", "-e", #"""
+                const {connect}=require('node:net'), {readFileSync}=require('node:fs');
+                const body=readFileSync(0,'utf8'), sock=connect(process.argv[1],()=>sock.write(body+'\n'));
+                sock.setEncoding('utf8'); let input='';
+                sock.on('data',chunk=>{input+=chunk;let i;while((i=input.indexOf('\n'))>=0) {
+                  const m=JSON.parse(input.slice(0,i));input=input.slice(i+1);
+                  if(m.decision)process.stdout.write(JSON.stringify(m.decision));
+                }});
+                sock.setTimeout(6000,()=>sock.destroy());
+                """#, item.socketURL.path]
+                input.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: ["eventID": UUID().uuidString,
+                    "authenticationToken": "fixture", "awaitDecision": true, "kind": "hook", "payload": payload]))
+            }
+            try input.fileHandleForWriting.close()
+            process.standardInput = input; process.standardOutput = output
+            try process.run()
+            return (process, output)
+        }
+        func decide(_ provider: IslandAgentProvider, _ choice: String) throws {
+            let task = try XCTUnwrap(island.model.tasks.first { island.model.provider(for: $0.key) == provider })
+            let card = try XCTUnwrap(task.requests.first?.value), wire = try XCTUnwrap(card.protocolRequest)
+            XCTAssertTrue(card.canRespond)
+            XCTAssertEqual(wire.devinProvider, provider); XCTAssertEqual(IslandApprovalLayout(wire), .dshTool)
+            XCTAssertTrue(wire.detail.contains("timeout")); XCTAssertEqual(wire.params["cwd"].text, "/fixture")
+            island.model.submit(task.id, requestID: card.id, decision: .reply(.object(["decision": .string(choice)])))
+        }
+        let a = try invoke(cli, turn: "turn"), b = try invoke(desktop, turn: "turn")
+        defer { for p in [a.0, b.0] where p.isRunning { p.terminate() } }
+        try await waitFor { island.model.tasks.flatMap(\.requests).filter { $0.value.canRespond }.count == 2 }
+        try decide(.devinDesktop, "decline"); try decide(.devinCLI, "accept")
+        try await waitFor { !a.0.isRunning && !b.0.isRunning }
+        for (output, expected) in [(a.1, "approve"), (b.1, "block")] {
+            let reply = try XCTUnwrap(JSONSerialization.jsonObject(with: output.fileHandleForReading.readDataToEndOfFile()) as? [String: String])
+            XCTAssertEqual(reply, ["decision": expected])
+        }
+        var next = start; next["turn_id"] = "next"
+        try Self.send(next, socket: cli.socketURL.path)
+        try await waitFor { island.model.tasks.flatMap(\.requests).allSatisfy { $0.value.protocolRequest?.devinProvider != .devinCLI } }
+        let stale = try invoke(cli, turn: "turn"), current = try invoke(cli, turn: "next")
+        defer { for p in [stale.0, current.0] where p.isRunning { p.terminate() } }
+        try await waitFor { !stale.0.isRunning && island.model.tasks.flatMap(\.requests).contains { $0.value.protocolRequest?.devinProvider == .devinCLI } }
+        preferences.codexIslandPrivacy = true
+        try await waitFor { !current.0.isRunning }
+        XCTAssertTrue(stale.1.fileHandleForReading.readDataToEndOfFile().isEmpty)
+        XCTAssertTrue(current.1.fileHandleForReading.readDataToEndOfFile().isEmpty)
+    }
+
+    @MainActor
     func testSessionModelAndUsageReachBothCardsIncludingDelayedFinalCommit() async throws {
         for provider in [IslandAgentProvider.devinDesktop, .devinCLI] {
             let fixture = try DevinUsageFixture()

@@ -2,6 +2,24 @@
 
 Spec ID：`QV-PRODUCT-AGENT-INTEGRATIONS-001` · `Accepted / Verifying` · 2026-10-09。
 
+## Build 32 跨 Agent 问答与确认
+
+同一待答请求只选一条提交通路。客户端已有可用的回答接口时，使用产生请求的实例。原生操作兜底需要匹配到已打开的原题和对应控件。只收到提醒、确认范围不明、会话已结束或目标已变化时，由用户在原客户端处理。
+
+| 来源 | 岛内行为和边界 |
+|---|---|
+| Codex、Claude Code | 使用已有通路。Codex 默认启动的单题通过已打开的原卡提交，命令审批走 PermissionRequest Hook。 |
+| DSH Desktop、Web、TUI | 在启用交互的配置中，普通单题通过原 Agent 的 `user-questions/request` 回传选项或自填。按原 waterfall 顺序注册。选择「在 DSH 中处理」、断线或停用均交给后续回答器。多题、多选、计划审阅、附带详情和未知字段交回原客户端。工具审批沿用原通路。 |
+| Antigravity Desktop | 原生命令审批继续使用已有识别器。普通问答只接受展开、可折叠、包含单选组与原生自填控件的单题。绑定会话、轮次、原卡和控件，复核选项或文字与 Submit 后提交一次。保留已有自填草稿。跳过、调查表、翻页题和发送新聊天消息的建议卡不进入此通路。 |
+| OpenCode 插件 | 继续通过发起请求的客户端回传。缺少原有 POST 方法时，使用原客户端的 `question.reply` 或 `permission.reply`。发送后含糊的结果留给原会话核实。 |
+| Devin Desktop、Devin CLI | 默认为观察。两处设置可分别启用 `exec` 权限请求回传。完整参数和目录在岛内供审阅，单次决定通过等待中的原 Hook 返回。隐私、停用、旧轮次、断线、其他工具留给 Devin。普通问答仍在 Devin。 |
+| Kimi Code、Gemini CLI、Copilot CLI、Devin CLI | 本机 Apple Terminal 或 iTerm2 下的受支持前台进程可绑定回原标签。绑定来自 Hook 自身的进程链，跳转时重查进程启动时间、TTY、终端宿主和标签。同一进程同时绑定多个会话时隐藏跳转，SSH、tmux、未知宿主或无法对应的进程由用户切回原终端。Kimi、Gemini、Copilot 的通知不产生岛内回答按钮；Copilot 的前置权限钩子会先于自身规则执行，未用它截断正常审批。 |
+| Cursor | 沿用已验证的会话跳转。当前接入的 Hook 没有可供回传的原问题，普通问答留在 Cursor。 |
+
+Kimi 的 PermissionRequest、Gemini 的 ToolPermission 都是通知；Copilot 的 permissionRequest 先于常规权限规则。参见 [Kimi Hook 事件表](https://moonshotai.github.io/kimi-code/en/customization/hooks)、[Gemini Hook 参考](https://geminicli.com/docs/hooks/reference/)和 [Copilot permissionRequest](https://docs.github.com/en/copilot/reference/hooks-reference#permissionrequest-decision-control)。
+
+开发证据在 `.build/agent-interactions-097b32/`。DSH 隔离测试加载本机官方问答服务。OpenCode 测试用官方 SDK 1.19.5 和隔离传输验证实际请求路径、请求体及工作目录。Antigravity 的控件识别依据 2.34.0 渲染代码，提交生命周期经模拟控件验证。各客户端实际界面由用户验收。
+
 ## Build 16 一步接入
 
 用户在列表或详情打开接入开关后，QuotaView 配置该 Agent 支持的渠道。二级页提供「检查连接」，并分别显示任务、额度、审批和问答的状态。用户已关闭的可选额度、Claude 状态栏和交互选项保持关闭；后续启动复用已有的接入配置和安装器。原生首次授权、缺少登录或组织 ID 时，显示下一步所需操作。

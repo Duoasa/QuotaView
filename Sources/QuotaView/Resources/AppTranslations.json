@@ -1,4 +1,9 @@
 {
+  "Use Accessibility to respond to open permission cards and single questions.": {
+    "ja": "アクセシビリティを使って、開いている権限カードと単一の質問に回答します。",
+    "ko": "손쉬운 사용으로 열려 있는 권한 카드와 단일 질문에 응답합니다.",
+    "es": "Usa Accesibilidad para responder a las tarjetas de permisos y a las preguntas individuales abiertas."
+  },
   "This Codex version opens local chats in exclusive mode. Answer in the original chat.": {
     "ja": "このバージョンの Codex はローカルチャットを専用モードで開きます。元のチャットで回答してください。",
     "ko": "이 Codex 버전은 로컬 채팅을 전용 모드로 엽니다. 원래 채팅에서 답하세요.",

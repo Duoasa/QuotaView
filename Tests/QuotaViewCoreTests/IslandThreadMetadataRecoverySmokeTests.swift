@@ -175,6 +175,28 @@ final class IslandThreadMetadataRecoverySmokeTests: XCTestCase {
             target.matches(.init(pid: pid, parent: 3, started: started, tty: tty, path: path ?? nativePath, foreground: foreground))
         }
         XCTAssertTrue(matches())
+        var native = target
+        for (provider, binary) in [("kimiCode", "kimi"), ("geminiCLI", "gemini"), ("copilotCLI", "copilot"), ("devinCLI", "devin")] {
+            native.agentProvider = provider
+            XCTAssertTrue(native.matches(.init(pid: 321, parent: 3, started: 123, tty: "ttys003", path: "/fixture/" + binary, foreground: true)))
+            XCTAssertFalse(native.matches(.init(pid: 321, parent: 3, started: 123, tty: "ttys003", path: "/bin/zsh", foreground: true)))
+            XCTAssertFalse(native.matches(.init(pid: 321, parent: 3, started: 123, tty: "ttys003", path: "/fixture/" + binary, foreground: false)))
+        }
+        XCTAssertTrue(ClaudeConversationHost.ProcessInfoRow.isAgentScript("/fixture/node_modules/@google/gemini-cli/dist/index.js", provider: "geminiCLI"))
+        XCTAssertFalse(ClaudeConversationHost.ProcessInfoRow.isAgentScript("/fixture/node_modules/@google/gemini-cli/dist/index.js", provider: "copilotCLI"))
+        let bound = UUID()
+        let sibling = UUID()
+        ClaudeTerminalNavigation.bind(native, to: bound)
+        ClaudeTerminalNavigation.bind(native, to: sibling)
+        XCTAssertNil(ClaudeTerminalNavigation.binding(for: bound))
+        XCTAssertNil(ClaudeTerminalNavigation.binding(for: sibling))
+        ClaudeTerminalNavigation.bind(nil, to: sibling)
+        XCTAssertEqual(ClaudeTerminalNavigation.binding(for: bound), native)
+        ClaudeTerminalNavigation.bind(nil, to: bound)
+        let candidate = IslandConversationTarget.agentTerminal(.devinCLI, bound)
+        XCTAssertEqual(candidate.provider, .devinCLI)
+        XCTAssertTrue(candidate.needsRecheck(after: candidate))
+        XCTAssertEqual(ClaudeTerminalNavigation.session(in: try XCTUnwrap(candidate.url)), bound)
         XCTAssertFalse(matches(started: 456))
         XCTAssertFalse(matches(pid: 322))
         XCTAssertFalse(matches(tty: "ttys004"))

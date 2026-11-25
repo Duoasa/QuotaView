@@ -5,7 +5,7 @@ import SwiftUI
 enum IslandApprovalLayout: String, CaseIterable {
     case dshTool, command, terminalInput, fileChange, network, permissions, connector, questions, toolApproval, form, authorization, verification
     init(_ request: IslandCodexApprovalRequest) {
-        if request.isDSH || request.isAntigravity { self = .dshTool; return }
+        if request.kind == .command && (request.isDSH || request.isAntigravity || request.devinProvider != nil) { self = .dshTool; return }
         switch request.kind {
         case .command: self = .command
         case .terminalInput: self = .terminalInput
@@ -303,7 +303,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
             }.font(.system(size: 10, weight: .medium)).padding(.horizontal, 12).frame(height: 36)
                 .background(IslandApprovalAppearance.raised)
             Group {
-                if showsCompleteCode || request.isDSH || request.isAntigravity {
+                if showsCompleteCode || request.isDSH || request.isAntigravity || request.devinProvider != nil {
                     ScrollView(.vertical) {
                         Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white).lineSpacing(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -317,7 +317,7 @@ struct IslandApprovalTypedContent<Controls: View>: View {
                         .textSelection(.enabled)
                 }
             }.frame(height: IslandApprovalCodePreview.height(value, width: width - 24), alignment: .topLeading).padding(12)
-            if !request.isDSH && !request.isAntigravity && IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
+            if !request.isDSH && !request.isAntigravity && request.devinProvider == nil && IslandApprovalCodePreview.isTruncated(value, width: width - 24) {
                 HStack {
                     Button((showsCompleteCode ? text("收起完整内容", "Show preview") : text("查看完整内容", "Show full content"))) { showsCompleteCode.toggle() }
                     Spacer()

@@ -1,5 +1,25 @@
 # QuotaView 开发交接
 
+## 0.9.7 Build 32 / 跨 Agent 问答与确认（仅本地）
+
+DSH Desktop、Web 和 TUI 的交互配置支持将选项或自填答案回传原单题，也可交回 DSH。Antigravity Desktop 增加展开单题的辅助功能兜底，复核原题、选中项或自填值后才按 Submit。OpenCode 优先使用已有通路，备用方法来自同一个客户端实例。Devin Desktop、CLI 分别可开启一次性 `exec` 权限回传。Kimi、Gemini CLI、Copilot CLI 的当前接入只回到可核对的 Terminal 或 iTerm2 标签，Cursor 沿用已有会话跳转，普通问题仍在各自客户端回答。详见[逐来源适配范围](docs/specs/agent-integrations.md#build-32-跨-agent-问答与确认)。
+
+本机已启动开发版 Build 32（内部 269）。跨 Agent 定向测试 60 项通过、4 项跳过；Codex 问答 29 项通过、1 项跳过；IPC 重连组 32 项通过。另用 DSH 官方服务复验交回原客户端与撤销单题，确认旧卡失效。OpenCode SDK 1.19.5 通过隔离传输，Antigravity 使用实际客户端表单结构及模拟控件，双 Devin 使用隔离 socket；真实客户端交互待用户验收。验证日志和运行包核对在 `.build/agent-interactions-097b32/`，本轮仅本地开发。
+
+## 2026-11-25 / Codex 后台单题仅查看
+
+16:13 截图中的单题已送达，原轮次随后中断。对同一会话的另一道待答题做只读检查时，Build 31 的匹配逻辑找到了原窗口及页脚，未找到可提交表单。此前「樱桃」验收覆盖已打开的问题卡。当时尚未开展跨 Agent 适配；Build 32 的实际覆盖见本页顶部。详见[确认同步规格](docs/specs/codex-desktop-confirmation-sync.md#build-31-岛内文本回答)和 `.build/codex-question-diagnosis-BQiWaU/result.json`。
+
+16:35 在同一会话重发 16:13 原题，参数逐字一致。Codex 窗口在后台，辅助功能扫描匹配到完整表单，岛内两个选项可点。原轮次收到一条匹配本次调用的回答「桌面与纯终端 Agent 都覆盖」。本次未复现仅查看，16:13 的具体阻断条件仍未知。记录在 `.build/codex-question-repro-1795595685183/result.json`。
+
+## 2026-11-25 / IPC 重连测试时序修复（仅本地）
+
+基线为 PR #155 合并提交 `b846b03336a7a5800de6a2401a0b83abf12110b3`。main 首轮重连测试在固定 350 ms 后只观测到一次初始化；同提交复跑通过，原证据在 `.build/codex-question-input-097b31/github-merge.json` 与 `ci-reconnect-*.log`。
+
+已确认测试存在时序假设：250 ms 是重连退避下限，不是完成握手的期限。仅为隔离 connector 增加 150 ms 延迟，原测试即重现第 16 行 expected 2 / observed 1；未发现需要修改生产重连逻辑的证据，原 CI 当时的具体调度延迟无法由现有日志确定。测试改为最多等待 5 秒的新连接事件，使用单调时钟记录 connector 尝试时刻，分别断言 250/500 ms 下限，并覆盖下一次重试窗口内 stop 取消；保留延迟 connector 回归用例，异常退出亦停止客户端。
+
+`swift test --filter CodexDesktopIPCClientTests`：32 项通过、零失败、零跳过。复现与验证日志位于 `.build/ci-reconnect-timing-20261125/old-delayed.log` 和 `client-suite.log`。本轮仅修改测试和记录，生产源码及开发运行包保持 Build 31（内部 268），未重建运行包、改版本、提交、推送或发布。现有原型、未跟踪文档及设备数据保留。
+
 ## 0.9.7 Build 31 / Codex 岛内文本回答
 
 已在本机启动开发版 0.9.7 Build 31（内部 268）。Codex 普通启动时，已打开的单题可通过辅助功能在岛内选择或自行输入，并经原问题卡提交。已观察到岛内两项按钮与自填框可用，生产输入模块发送的「文本甲」收到原题回执。29 项定向测试通过，1 项需另行启动隔离服务的测试跳过。2026-11-25 用户在灵动岛选择「樱桃」并确认，Codex 原轮次收到一条匹配原题的回答。默认启动下的单题点选已通过人工验收，后续兼容检查沿用此用例。见[接入规格](docs/specs/codex-desktop-confirmation-sync.md#build-31-岛内文本回答)，证据在 `.build/codex-question-input-097b31/`。
@@ -1732,11 +1752,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `40666d2`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.7 Build 31 / 内部 268 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `b846b03`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.7 Build 32 / 内部 269 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-25，实际加载路径见 `.build/codex-question-input-097b31/runtime/runtime-result.json` |
-| 源码与运行包 | 本地 0.9.7 Build 31 的 277 个构建输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-25，实际加载路径见 `.build/agent-interactions-097b32/runtime/runtime-result.json` |
+| 源码与运行包 | 本地 0.9.7 Build 32 的 277 个构建输入、开发包清单与运行身份已核对 |
 | 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

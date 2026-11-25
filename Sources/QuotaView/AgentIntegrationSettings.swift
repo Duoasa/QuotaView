@@ -356,6 +356,9 @@ struct AgentIntegrationSettings<Details: View>: View {
             case .claudeCode: return preferences.claudeCodeInteractiveApprovals && (claude.status == .connected || claude.status == .awaitingEvent) ? available : original
             case .openCode: return preferences.openCodeInteractionsEnabled && (openCode.status == .waiting || openCode.status == .connected)
                 ? copy.text("支持的 OpenCode 插件会话", "Supported OpenCode plugin sessions") : original
+            case .devinDesktop, .devinCLI:
+                guard let runtime = nativeRuntime(provider), runtime.devinInteractive, runtime.status == .waiting || runtime.status == .connected else { return original }
+                return available
             case .dsh: return preferences.dshInteractiveApprovals && (dsh.status == .connected || dsh.status == .waiting) ? available : original
             case .antigravity: return preferences.antigravityInteractiveApprovals && AXIsProcessTrusted() && (antigravity.status == .connected || antigravity.status == .waiting) ? available : original
             default: return original
@@ -370,7 +373,7 @@ struct AgentIntegrationSettings<Details: View>: View {
                 if codex.desktopIgnoresDaemonPreference { return original }
                 return codex.nativeConnectionState == .connected
                     ? copy.text("可在同一共享会话中回答", "Reply in the same shared session") : original
-            case .claudeCode, .openCode: return approvals
+            case .claudeCode, .openCode, .dsh, .antigravity: return approvals
             default: return original
             }
         }()
@@ -546,6 +549,14 @@ struct AgentIntegrationSettings<Details: View>: View {
     }
     private func nativeDetails(_ runtime: NativeAgentRuntime) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if runtime.provider.isDevin {
+                let title = copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island")
+                NativeSettingsRow(title: title, subtitle: runtime.provider.displayName) {
+                    Toggle(title, isOn: runtime.provider == .devinCLI ? $preferences.devinCLIApprovals : $preferences.devinDesktopApprovals)
+                        .labelsHidden().toggleStyle(.switch).disabled(!runtime.enabled)
+                }
+                NativeSettingsDivider()
+            }
             if runtime.provider == .openCode {
                 NativeSettingsRow(title: copy.text("岛内审批与问答", "Island approvals and replies"),
                     subtitle: copy.text("在新 OpenCode 会话中处理权限请求和单选问题。", "Handle permissions and single-choice questions in new OpenCode sessions.")) {
@@ -574,18 +585,18 @@ struct AgentIntegrationSettings<Details: View>: View {
                     NativeSettingsNote(text: copy.text("agy 安装失败，可稍后重试。", "Could not install agy. Try again later."))
                 }
                 NativeSettingsDivider()
-                NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
-                    subtitle: copy.text("Antigravity 桌面会话显示权限卡时，可按卡片选中的范围批准或拒绝。需要辅助功能权限。", "Approve the selected scope or deny when a permission card is open in the Antigravity desktop conversation. Requires Accessibility permission.")) {
-                    Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.antigravityInteractiveApprovals)
+                NativeSettingsRow(title: copy.text("岛内审批与问答", "Island approvals and replies"),
+                    subtitle: copy.text("通过辅助功能处理已打开的权限卡和单题。", "Use Accessibility to respond to open permission cards and single questions.")) {
+                    Toggle(copy.text("岛内审批与问答", "Island approvals and replies"), isOn: $preferences.antigravityInteractiveApprovals)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                         .disabled(!runtime.enabled)
                 }
                 NativeSettingsDivider()
             }
             if runtime.provider == .dsh {
-                NativeSettingsRow(title: copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"),
-                    subtitle: copy.text("仅本次允许或拒绝；关闭后在 DSH 中处理。", "Allow once or decline; when off, handle requests in DSH.")) {
-                    Toggle(copy.text("在灵动岛处理权限请求", "Handle permission prompts in the island"), isOn: $preferences.dshInteractiveApprovals)
+                NativeSettingsRow(title: copy.text("岛内审批与问答", "Island approvals and replies"),
+                    subtitle: runtime.provider.displayName) {
+                    Toggle(copy.text("岛内审批与问答", "Island approvals and replies"), isOn: $preferences.dshInteractiveApprovals)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                         .disabled(!runtime.enabled)
                 }
@@ -623,7 +634,7 @@ struct AgentIntegrationSettings<Details: View>: View {
             if runtime.provider == .dsh {
                 NativeSettingsNote(text: copy.text("更新接入后重启 DSH。待审批动作的参数仅在本机临时显示，不保存到任务历史；不支持的请求在 DSH 中处理。",
                     "Restart DSH after updating the integration. Pending action parameters are shown locally and never saved to task history; handle unsupported requests in DSH."))
-            } else if runtime.provider == .antigravity {
+            } else if runtime.provider == .antigravity || runtime.provider.isDevin {
                 NativeSettingsNote(text: copy.text("新会话会自动连接；权限请求按上方设置处理。", "New sessions connect automatically. Permission requests follow the setting above."))
             } else if runtime.provider != .openCode {
                 NativeSettingsNote(text: copy.text("启用后重启对应客户端；权限请求仍在原客户端确认。",

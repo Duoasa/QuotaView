@@ -5,13 +5,6 @@ import QuotaViewCore
 extension NativeAgentInstaller {
     /// Called under the per-channel/provider installation lock. Only our exact
     /// commands are removed; another application's hooks and preferences survive.
-    func writeExternalRoute(interactiveApprovals: Bool) throws {
-        let fields: [String: Any] = ["version": 1, "socketPath": socketURL.path,
-            "authenticationToken": authenticationToken, "interactiveApprovals": provider == .openCode && interactiveApprovals,
-            "agentProvider": provider.rawValue]
-        try privateWrite(JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]), to: route)
-    }
-
     func configureExternal(enabled: Bool, interactiveApprovals: Bool) throws -> [URL] {
         let fm = FileManager.default
         guard fm.fileExists(atPath: home.path) else {
@@ -49,7 +42,7 @@ extension NativeAgentInstaller {
         if enabled {
             guard fm.isExecutableFile(atPath: bundledHelper.path) else { throw Failure.missingHelper }
             try privateWrite(Data(contentsOf: bundledHelper), to: helper, mode: 0o700)
-            try writeExternalRoute(interactiveApprovals: interactiveApprovals)
+            try writeRoute(interactiveApprovals: interactiveApprovals)
         }
         guard original != result else { return enabled ? [home] : [] }
         guard try read(destination) == original else { throw Failure.configurationChanged }
@@ -246,6 +239,7 @@ private struct DevinHookConfiguration {
         var bytes = Array(original ?? Data("{}".utf8))
         var root = try document(bytes)
         let owned = Set(commands.values)
+        var currentTimeouts = true
         var removals: [Range<Int>] = [], counts: [String: Int] = [:]
         func remove(_ indices: Set<Int>, from array: Node) {
             guard !indices.isEmpty else { return }
@@ -265,7 +259,13 @@ private struct DevinHookConfiguration {
                           children.children.allSatisfy({ $0.value is [String: Any] }) else { throw NativeAgentInstaller.Failure.invalidConfiguration }
                     let indices = Set(children.children.indices.filter {
                         guard let command = children.children[$0].members["command"]?.value as? String else { return false }
-                        if owned.contains(command) { counts[event, default: 0] += 1; return true }
+                        if owned.contains(command) {
+                            counts[event, default: 0] += 1
+                            if event == "PermissionRequest", children.children[$0].members["timeout"]?.value as? Int != 120 {
+                                currentTimeouts = false
+                            }
+                            return true
+                        }
                         return false
                     })
                     if !indices.isEmpty && indices.count == children.children.count { removedEntries.insert(index) }
@@ -274,7 +274,7 @@ private struct DevinHookConfiguration {
                 remove(removedEntries, from: array)
             }
         }
-        if enabled && commands.keys.allSatisfy({ counts[$0] == 1 }) && counts.values.reduce(0, +) == commands.count { return original }
+        if enabled && currentTimeouts && commands.keys.allSatisfy({ counts[$0] == 1 }) && counts.values.reduce(0, +) == commands.count { return original }
         if !enabled && removals.isEmpty { return original }
         for range in removals.sorted(by: { $0.lowerBound > $1.lowerBound }) { bytes.removeSubrange(range) }
         if enabled {
@@ -283,7 +283,9 @@ private struct DevinHookConfiguration {
             func encoded(_ value: Any) throws -> String {
                 String(decoding: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]), as: UTF8.self)
             }
-            let entries = commands.mapValues { ["hooks": [["type": "command", "command": $0, "timeout": 2]]] as [String: Any] }
+            let entries = Dictionary(uniqueKeysWithValues: commands.map { event, command in
+                (event, ["hooks": [["type": "command", "command": command, "timeout": event == "PermissionRequest" ? 120 : 2]]] as [String: Any])
+            })
             var insertions: [(Int, String)] = []
             func append(_ content: String, to node: Node, hasValues: Bool) {
                 // An existing trailing comma is legal JSONC; reuse it.

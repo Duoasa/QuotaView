@@ -14,24 +14,35 @@ enum ClaudeTerminalNavigation {
 
     @MainActor static func bind(_ terminal: Terminal?, to session: UUID) {
         if let terminal, terminal.valid {
-            bindings = bindings.filter { $0.value.pid != terminal.pid || $0.key == session }
+            if terminal.agentProvider == nil {
+                bindings = bindings.filter { $0.value.pid != terminal.pid || $0.key == session }
+            }
             bindings[session] = terminal
         } else { bindings.removeValue(forKey: session) }
     }
 
-    @MainActor static func binding(for session: UUID) -> Terminal? { bindings[session] }
+    @MainActor static func binding(for session: UUID) -> Terminal? {
+        guard let target = bindings[session] else { return nil }
+        // A multi-session TUI can host two chats in one process. A pane
+        // alone cannot distinguish them even if one hook fired more recently.
+        if target.agentProvider != nil && bindings.contains(where: { id, peer in
+            id != session && peer.pid == target.pid && peer.started == target.started && peer.tty == target.tty
+        }) { return nil }
+        return target
+    }
 
-    @MainActor static func removeAll() { bindings.removeAll() }
+    @MainActor static func removeClaudeBindings() { bindings = bindings.filter { $0.value.agentProvider != nil } }
 
     static func session(in url: URL) -> UUID? {
-        guard url.scheme == "quotaview-claude-terminal", url.host == "session",
+        guard ["quotaview-claude-terminal", "quotaview-agent-terminal"].contains(url.scheme), url.host == "session",
               let id = UUID(uuidString: String(url.path.dropFirst())),
-              url.absoluteString == link(for: id).absoluteString else { return nil }
+              url.absoluteString == link(for: id, nativeAgent: url.scheme == "quotaview-agent-terminal").absoluteString else { return nil }
         return id
     }
 
-    static func link(for session: UUID) -> URL {
-        URL(string: "quotaview-claude-terminal://session/" + session.uuidString.lowercased())!
+    static func link(for session: UUID, nativeAgent: Bool = false) -> URL {
+        let scheme = nativeAgent ? "quotaview-agent-terminal" : "quotaview-claude-terminal"
+        return URL(string: scheme + "://session/" + session.uuidString.lowercased())!
     }
 
     enum Permission {
@@ -91,7 +102,7 @@ enum ClaudeTerminalNavigation {
             guard inspect(target) else { return Permission.unavailable }
             return authorize(target.application, select)
         }.value
-        guard bindings[id] == target, !Task.isCancelled else { return false }
+        guard binding(for: id) == target, !Task.isCancelled else { return false }
         if access == .firstUse { return !select }
         guard access == .granted else { return false }
         return await Task.detached(priority: .userInitiated) {
