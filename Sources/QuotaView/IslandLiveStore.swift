@@ -531,7 +531,7 @@ final class IslandLiveStore {
             // identity mapping. The full current-owner question set supersedes
             // only this turn's read-only async source; text is never correlation.
             desktopAsyncQuestionsAuthoritative = true
-            let local = requests.filter { $0.mode == .asynchronous && $0.value.protocolRequest?.observationOnly == true }
+            let local = requests.filter { $0.mode == .asynchronous && $0.value.protocolRequest?.localObservation != nil }
             let keys = Set(local.map(\.key))
             requests.removeAll { keys.contains($0.key) }
             if var wait = sourceWait, var identities = wait.requestIdentities {
@@ -765,7 +765,7 @@ final class IslandLiveStore {
         mutating func invalidateResponses(except epoch: UInt64? = nil) {
             // Claude Code is answered over its own Hook connection.
             for i in requests.indices where requests[i].desktopIdentity == nil && (epoch == nil || requests[i].rpcEpoch != epoch)
-                && requests[i].value.protocolRequest?.isLocalHook != true {
+                && requests[i].value.protocolRequest?.isLocalHook != true && requests[i].value.protocolRequest?.nativeQuestionCard == nil {
                 requests[i].value.canRespond = false
                 if !requests[i].value.phase.canSubmit { requests[i].value.phase = .resultUnknown }
             }
@@ -1309,13 +1309,68 @@ final class IslandLiveStore {
                         && tasks[i].turnKey == CodexActivityPrivacy.hashIdentifier($0.turnID)
                 }
                 let updated = wire.attachingSharedQuestionHandle(tasks[i].terminal || desktopConnected ? nil : matching)
-                let canRespond = updated.sharedQuestionHandle != nil && respond != nil && capability(for: updated)
+                let canRespond = (updated.sharedQuestionHandle != nil || updated.nativeQuestionCard != nil) && respond != nil && capability(for: updated)
                 if updated != wire || canRespond != tasks[i].requestLifecycle.requests[j].value.canRespond {
                     tasks[i].requestLifecycle.requests[j].value.protocolRequest = updated
                     tasks[i].requestLifecycle.requests[j].value.canRespond = canRespond
                     if !canRespond && !tasks[i].requestLifecycle.requests[j].value.phase.canSubmit {
                         tasks[i].requestLifecycle.requests[j].value.phase = .resultUnknown
                     }
+                    changed = true
+                }
+            }
+        }
+        if changed { onChange?() }
+    }
+
+    func nativeQuestionTargets(_ identities: [CodexLocalRolloutThreadIdentity]) -> [CodexDesktopQuestionInput.Target] {
+        tasks.flatMap { task -> [CodexDesktopQuestionInput.Target] in
+            guard !task.terminal, let turn = task.turnKey,
+                  let identity = identities.first(where: { $0.sessionHash == task.key && $0.sessionKind == .user }),
+                  let thread = UUID(uuidString: identity.threadID) else { return [] }
+            return task.requests.compactMap { pending in
+                guard pending.value.phase.canSubmit, let wire = pending.value.protocolRequest,
+                      wire.desktopHandle == nil, wire.sharedQuestionHandle == nil, !wire.contextUnavailable,
+                      let local = wire.localObservation, local.asynchronous, local.turnHash == turn,
+                      wire.questions.count == 1, wire.supportedQuestions, let q = wire.questions.first, !q.secret
+                else { return nil }
+                return .init(thread: thread, turnHash: turn, callID: local.callID,
+                             question: q.title, options: q.options.map { $0["label"].text })
+            }
+        }
+    }
+
+    func isSubmittingNativeQuestion(_ card: CodexDesktopQuestionInput.Card) -> Bool {
+        guard let task = tasks.first(where: { $0.key == CodexActivityPrivacy.hashIdentifier(card.target.thread.uuidString.lowercased()) }),
+              !task.terminal, task.turnKey == card.target.turnHash else { return false }
+        let matches = task.requests.filter { pending in
+            guard let wire = pending.value.protocolRequest, wire.localObservation?.asynchronous == true else { return false }
+            return wire.questions.contains { $0.title == card.target.question && $0.options.map { $0["label"].text } == card.target.options }
+        }
+        guard matches.count == 1, let request = matches.first, case .submitting = request.value.phase else { return false }
+        return request.value.canRespond && request.value.protocolRequest?.nativeQuestionCard == card
+    }
+
+    func updateNativeQuestionCards(_ cards: [CodexDesktopQuestionInput.Card]) {
+        var changed = false
+        for i in tasks.indices {
+            for j in tasks[i].requestLifecycle.requests.indices {
+                let pending = tasks[i].requestLifecycle.requests[j].value
+                guard pending.phase.canSubmit, var wire = pending.protocolRequest,
+                      let local = wire.localObservation, local.asynchronous else { continue }
+                let card = cards.first { card in
+                    let t = card.target
+                    return t.turnHash == local.turnHash && t.callID == local.callID &&
+                        CodexActivityPrivacy.hashIdentifier(t.thread.uuidString.lowercased()) == local.sessionHash &&
+                        wire.questions.count == 1 && wire.questions[0].title == t.question &&
+                        wire.questions[0].options.map { $0["label"].text } == t.options
+                }
+                let previous = wire.nativeQuestionCard
+                wire.nativeQuestionCard = desktopConnected || tasks[i].terminal || wire.sharedQuestionHandle != nil ? nil : card
+                let enabled = (wire.nativeQuestionCard != nil || wire.sharedQuestionHandle != nil) && respond != nil && capability(for: wire)
+                if wire.nativeQuestionCard != previous || enabled != pending.canRespond {
+                    tasks[i].requestLifecycle.requests[j].value.protocolRequest = wire
+                    tasks[i].requestLifecycle.requests[j].value.canRespond = enabled
                     changed = true
                 }
             }
@@ -2175,6 +2230,8 @@ final class IslandLiveStore {
                     guard desktopConnected, desktopConnectionEpoch == handle.connectionEpoch,
                           tasks[i].requestLifecycle.requests[j].value.protocolRequest?.desktopHandle == handle,
                           desktopScopes[tasks[i].key]?.owner == handle.ownerClientID else { return nil }
+                } else if let card = wire.nativeQuestionCard, sharedHandle == nil {
+                    guard tasks[i].requestLifecycle.requests[j].value.protocolRequest?.nativeQuestionCard == card else { return nil }
                 } else if !wire.isLocalHook, epoch != connectionEpoch { return nil }
                 if let sharedHandle, tasks[i].requestLifecycle.requests[j].value.protocolRequest?.sharedQuestionHandle != sharedHandle { return nil }
                 return (i, j)

@@ -154,10 +154,20 @@
     "ko": "시스템 설정에서 권한 관리",
     "es": "Gestionar el permiso en Ajustes del Sistema"
   },
-  "Accessibility lets QuotaView open DSH and Antigravity conversations and read quotas from the Antigravity desktop app.": {
-    "ja": "アクセシビリティを使って DSH と Antigravity の会話を開き、Antigravity デスクトップアプリの利用枠を読み取ります。",
-    "ko": "손쉬운 사용 권한으로 DSH 및 Antigravity 대화를 열고 Antigravity 데스크톱 앱의 할당량을 읽습니다.",
-    "es": "Accesibilidad permite abrir conversaciones de DSH y Antigravity y leer las cuotas de la app de escritorio Antigravity."
+  "Accessibility lets QuotaView answer Codex questions, open DSH and Antigravity conversations, and read Antigravity quotas.": {
+    "ja": "アクセシビリティを使って Codex の質問に回答し、DSH と Antigravity の会話を開き、Antigravity の利用枠を読み取ります。",
+    "ko": "손쉬운 사용으로 Codex 질문에 답하고 DSH 및 Antigravity 대화를 열고 Antigravity 할당량을 읽습니다.",
+    "es": "Accesibilidad permite responder preguntas de Codex, abrir conversaciones de DSH y Antigravity y leer las cuotas de Antigravity."
+  },
+  "Reply to an open Codex question card": {
+    "ja": "開いている Codex の質問に回答できます",
+    "ko": "열린 Codex 질문 카드에 답할 수 있습니다",
+    "es": "Responder a una pregunta abierta de Codex"
+  },
+  "Choose or type an answer in the island to send it to the open Codex question card.": {
+    "ja": "アイランドで回答を選ぶか入力して、Codex で開いている質問に送信します。",
+    "ko": "아일랜드에서 답을 선택하거나 입력하여 Codex에 열린 질문 카드로 전송합니다.",
+    "es": "Elige o escribe una respuesta en la isla para enviarla a la pregunta abierta en Codex."
   },
   "Usage page improvements": {
     "ja": "使用量ページの改善",

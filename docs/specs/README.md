@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 0.9.7 Build 31 / Codex 岛内文本回答
+
+[确认同步](codex-desktop-confirmation-sync.md#build-31-岛内文本回答)记录默认启动下通过辅助功能向 Codex 原问题卡提交文本的路径。2026-11-25 用户在岛上选择「樱桃」，原轮次收到匹配回执，单题点选通过人工验收。
+
 ## 0.9.7 Build 30 / 后台完成任务卡高亮
 
 [进度效果适配协议](PROGRESS_EFFECT_ADAPTATION.md#097-build-30-任务列表单卡高亮)记录当前选中项与完成动画的关系。

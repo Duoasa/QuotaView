@@ -1,4 +1,6 @@
 import Foundation
+import ApplicationServices
+import SQLite3
 import XCTest
 @testable import QuotaView
 @testable import QuotaViewCore
@@ -186,6 +188,66 @@ final class LocalAsyncReplySettlementSmokeTests: XCTestCase {
         XCTAssertEqual(second.tasks[0].requests.map { $0.value.question.chinese }, ["Another question?"])
         XCTAssertTrue(fixture.submissions.isEmpty)
         await client.stop()
+    }
+
+    func testNativeCardEnablesOptionAndTextOnlyForItsLocalQuestion() throws {
+        let thread = UUID(), rawID = thread.uuidString.lowercased()
+        let session = CodexActivityPrivacy.hashIdentifier(rawID), turn = CodexActivityPrivacy.hashIdentifier("turn")
+        let model = IslandLiveStore()
+        model.receiveLegacy(.init(event: .userPromptSubmit, sessionHash: session, turnHash: turn,
+                                  sessionKind: .user, source: .appServer))
+        let args = #"{"questions":[{"title":"Choose?","options":["A","B"]}]}"#
+        let data = try CodexDesktopIPCClientTests.data(["type": "response_item", "payload": [
+            "type": "function_call", "name": "functions.request_user_input_async", "call_id": "call", "arguments": args]])
+        model.receiveLocalContent(try XCTUnwrap(CodexLocalPublicContent.decode(data, sessionHash: session, activeTurnHash: turn)))
+        let target = try XCTUnwrap(model.nativeQuestionTargets([.init(threadID: rawID, sessionHash: session, sessionKind: .user)]).first)
+        let element = AXUIElementCreateApplication(getpid())
+        func card(_ target: CodexDesktopQuestionInput.Target) -> CodexDesktopQuestionInput.Card {
+            .init(target: target, window: element, form: element, editor: element, send: element)
+        }
+        model.respond = { _, _ in XCTFail("Drafts must not send") }
+        model.responseCapability = { $0.nativeQuestionCard != nil }
+        let original = try XCTUnwrap(model.tasks.first?.requests.first?.value)
+        XCTAssertFalse(original.canRespond)
+        model.updateNativeQuestionCards([card(.init(thread: thread, turnHash: turn, callID: "older-call",
+                                                    question: target.question, options: target.options))])
+        XCTAssertFalse(model.tasks[0].requests[0].value.canRespond)
+        model.updateNativeQuestionCards([card(target)])
+        model.updateSharedQuestionCapabilities(handles: [])
+        let request = model.tasks[0].requests[0].value
+        let wire = try XCTUnwrap(request.protocolRequest), question = try XCTUnwrap(wire.questions.first)
+        XCTAssertTrue(request.canRespond)
+        XCTAssertEqual(request.id, original.id)
+        for answer in ["A", "自己的回答"] {
+            let result = IslandApprovalJSON.object(["answers": .object([question.id: .object(["answers": .array([.string(answer)])])])])
+            XCTAssertTrue(wire.permits(result))
+        }
+        model.updateNativeQuestionCards([])
+        XCTAssertFalse(model.tasks[0].requests[0].value.canRespond)
+        XCTAssertEqual(model.tasks[0].requests[0].value.id, original.id)
+    }
+
+    func testNativeQuestionMatchesCompleteRenderedMarkdown() {
+        let prompt = "Review **changes**\n\n```swift\nlet a = 1\n```\n\nContinue?"
+        XCTAssertTrue(CodexDesktopQuestionInput.matchesPrompt(prompt, fragments: ["Review ", "changes", "let a = 1", "Continue?"]))
+        XCTAssertFalse(CodexDesktopQuestionInput.matchesPrompt(prompt, fragments: ["Continue?"]))
+        XCTAssertFalse(CodexDesktopQuestionInput.matchesPrompt(prompt, fragments: ["Review changes", "let a = 2", "Continue?"]))
+    }
+
+    func testNativeWindowTitleMustIdentifyExactlyOneThread() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(home.appendingPathComponent("state_5.sqlite").path, &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        let id = UUID()
+        XCTAssertEqual(sqlite3_exec(db, "CREATE TABLE threads(id TEXT, name TEXT, title TEXT)", nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "INSERT INTO threads VALUES ('\(id.uuidString)', 'Current chat', 'Initial prompt')", nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(CodexDesktopQuestionInput.thread(named: "Current chat", home: home), id)
+        XCTAssertNil(CodexDesktopQuestionInput.thread(named: "Initial prompt", home: home))
+        XCTAssertEqual(sqlite3_exec(db, "INSERT INTO threads VALUES ('\(UUID().uuidString)', NULL, 'Current chat')", nil, nil, nil), SQLITE_OK)
+        XCTAssertNil(CodexDesktopQuestionInput.thread(named: "Current chat", home: home))
     }
 
     func testReadonlyAsyncQuestionStillExpiresAfterDraftInteraction() throws {

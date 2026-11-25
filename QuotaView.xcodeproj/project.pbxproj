@@ -122,6 +122,7 @@
 		D58A00100000000000000001 /* DSHApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58A00100000000000000002 /* DSHApproval.swift */; };
 		10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */; };
 		F124AA046A000A1231449201 /* AntigravityHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F124AA046A000A1231449202 /* AntigravityHistory.swift */; };
+		F125BB046A000A1231459401 /* CodexDesktopQuestionInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = F125BB046A000A1231459402 /* CodexDesktopQuestionInput.swift */; };
 		F124AA046A000A1231449301 /* AntigravityDesktopApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */; };
 		A047AE046A000A1231449201 /* AgentQuota.swift in Sources */ = {isa = PBXBuildFile; fileRef = A047AE046A000A1231449202 /* AgentQuota.swift */; };
 		B047AE046A000A1231449201 /* NativeQuotaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B047AE046A000A1231449202 /* NativeQuotaClient.swift */; };
@@ -322,6 +323,7 @@
 		D58A00100000000000000002 /* DSHApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSHApproval.swift; sourceTree = "<group>"; };
 		CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentRuntime.swift; sourceTree = "<group>"; };
 		F124AA046A000A1231449202 /* AntigravityHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityHistory.swift; sourceTree = "<group>"; };
+		F125BB046A000A1231459402 /* CodexDesktopQuestionInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDesktopQuestionInput.swift; sourceTree = "<group>"; };
 		F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityDesktopApproval.swift; sourceTree = "<group>"; };
 		A047AE046A000A1231449202 /* AgentQuota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentQuota.swift; sourceTree = "<group>"; };
 		B047AE046A000A1231449202 /* NativeQuotaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeQuotaClient.swift; sourceTree = "<group>"; };
@@ -424,6 +426,7 @@
 				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
 				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
 				F124AA046A000A1231449202 /* AntigravityHistory.swift */,
+				F125BB046A000A1231459402 /* CodexDesktopQuestionInput.swift */,
 				F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */,
 				A047AE046A000A1231449202 /* AgentQuota.swift */,
 				B047AE046A000A1231449202 /* NativeQuotaClient.swift */,
@@ -846,6 +849,7 @@
 				097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */,
 				10AF17967D6FFCBC3878A583 /* NativeAgentRuntime.swift in Sources */,
 				F124AA046A000A1231449201 /* AntigravityHistory.swift in Sources */,
+				F125BB046A000A1231459401 /* CodexDesktopQuestionInput.swift in Sources */,
 				F124AA046A000A1231449301 /* AntigravityDesktopApproval.swift in Sources */,
 				A047AE046A000A1231449201 /* AgentQuota.swift in Sources */,
 				B047AE046A000A1231449201 /* NativeQuotaClient.swift in Sources */,

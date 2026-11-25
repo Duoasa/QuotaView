@@ -58,6 +58,7 @@ final class CodexActivityRuntime: ObservableObject {
     private var decisionBridge: ClaudeCodeBridge?
     private var permissionRequests: [String: IslandCodexApprovalRequest] = [:]
     private var sharedQuestionRefreshTask: Task<Void, Never>?
+    private var nativeCardScan: Task<Void, Never>?
     private var sharedQuestionRefreshID: UUID?
     private var lastSharedQuestionRefresh = Date.distantPast
     private var fileBridge: CodexActivityFileBridge
@@ -258,6 +259,7 @@ final class CodexActivityRuntime: ObservableObject {
         store.localPublicContentDidReceive = { [weak self] content in
             self?.liveIsland.model.receiveLocalContent(content)
             self?.refreshSharedQuestionsIfNeeded()
+            self?.refreshNativeQuestionInput()
         }
         store.threadMetadataDidReceive = { [weak self] identity, metadata in
             self?.liveIsland.model.receiveThreadMetadata(metadata, identity: identity)
@@ -289,6 +291,7 @@ final class CodexActivityRuntime: ObservableObject {
                     && !isChangingDataDirectory && !liveIsland.model.usesLegacyDesktopAnswers
                     && automaticConnection.sharedState == .connected
             }
+            if wire.nativeQuestionCard != nil { return canUseNativeQuestionInput }
             guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else { return false }
             return handle.conversationID == wire.threadID && handle.turnID == wire.turnID
         }
@@ -306,6 +309,16 @@ final class CodexActivityRuntime: ObservableObject {
                 }
                 let answers = wire.questions.map { result["answers"][$0.id]["answers"].array.first?.text ?? "" }
                 try await store.submitSharedQuestion(handle: handle, answers: answers)
+                return
+            }
+            if let card = wire.nativeQuestionCard {
+                guard canUseNativeQuestionInput, wire.permits(result), let q = wire.questions.first,
+                      let answer = result["answers"][q.id]["answers"].array.first?.text else { throw CodexDesktopIPCError.staleRequest }
+                let home = dataDirectoryURL, run = desktopRunGeneration
+                try await CodexDesktopQuestionInput.submit(card, answer: answer, home: home) { [weak self] in
+                    guard let self, canUseNativeQuestionInput, dataDirectoryURL == home, desktopRunGeneration == run else { return false }
+                    return liveIsland.model.isSubmittingNativeQuestion(card)
+                }
                 return
             }
             guard isRunning, preferences.codexIntegrationEnabled, !isChangingDataDirectory, let handle = wire.desktopHandle else {
@@ -702,7 +715,7 @@ final class CodexActivityRuntime: ObservableObject {
 
     func enableCompatibilityHook() {
         guard hookOperation == .idle, !isChangingDataDirectory else { return }
-        answerLaunchState = .requested
+        answerLaunchState = canUseNativeQuestionInput ? .idle : .requested
         defaults.set(true, forKey: DefaultsKey.automaticHook)
         reconcileHook(install: true)
     }
@@ -710,7 +723,7 @@ final class CodexActivityRuntime: ObservableObject {
     /// Consent is scoped to QuotaView's exact user Hook definitions, never trust-all.
     func openCodexSecurityReview() {
         guard hookOperation == .idle, !isChangingDataDirectory else { return }
-        answerLaunchState = .requested
+        answerLaunchState = canUseNativeQuestionInput ? .idle : .requested
         defaults.set(true, forKey: DefaultsKey.automaticHook)
         reconcileHook(install: true, authorize: true)
     }
@@ -1246,6 +1259,34 @@ final class CodexActivityRuntime: ObservableObject {
         set { liveIsland.board.state.onOpenSettings = newValue }
     }
 
+    var canUseNativeQuestionInput: Bool {
+        isRunning && preferences.codexIntegrationEnabled && preferences.codexActivityIslandEnabled &&
+            !preferences.codexIslandPrivacy && !isChangingDataDirectory &&
+            !liveIsland.model.usesLegacyDesktopAnswers && AXIsProcessTrusted()
+    }
+
+    private func refreshNativeQuestionInput() {
+        guard canUseNativeQuestionInput else {
+            liveIsland.model.updateNativeQuestionCards([])
+            return
+        }
+        guard nativeCardScan == nil,
+              !liveIsland.model.nativeQuestionTargets(store.localDesktopFollowIdentities).isEmpty else { return }
+        nativeCardScan = Task { [weak self] in
+            guard let self else { return }
+            defer { nativeCardScan = nil }
+            while canUseNativeQuestionInput && !Task.isCancelled {
+                let targets = liveIsland.model.nativeQuestionTargets(store.localDesktopFollowIdentities)
+                guard !targets.isEmpty else { break }
+                let home = dataDirectoryURL, generation = desktopRunGeneration
+                let cards = await Task.detached(priority: .utility) { CodexDesktopQuestionInput.scan(targets, home: home) }.value
+                guard canUseNativeQuestionInput, dataDirectoryURL == home, generation == desktopRunGeneration, !Task.isCancelled else { break }
+                liveIsland.model.updateNativeQuestionCards(cards)
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+            }
+        }
+    }
+
     private func refreshSharedQuestionsIfNeeded() {
         guard canConfigureSharedAnswers, !preferences.codexIslandPrivacy,
               !isChangingDataDirectory, !liveIsland.model.usesLegacyDesktopAnswers,
@@ -1294,6 +1335,7 @@ final class CodexActivityRuntime: ObservableObject {
     private func render() {
         guard isRunning else { return }
         refreshSharedQuestionsIfNeeded()
+        refreshNativeQuestionInput()
         // The primary interface stays available for the application's lifetime.
         // Retired menu-bar/standalone-island visibility preferences do not hide it.
         if !permissionHookEnabled { returnPendingPermissionHooks() }
