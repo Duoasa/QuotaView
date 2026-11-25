@@ -18,6 +18,7 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
         public let started: Int64
         public let tty: String
         public let pane: UUID?
+        public var agentProvider: String? = nil
 
         public var valid: Bool {
             let digits = tty.utf8.dropFirst(4)
@@ -28,7 +29,7 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
         }
 
         func matches(_ anchor: ProcessInfoRow) -> Bool {
-            anchor.pid == pid && anchor.started == started && anchor.tty == tty && anchor.foreground && anchor.isClaudeCandidate
+            anchor.pid == pid && anchor.started == started && anchor.tty == tty && anchor.foreground && anchor.isCandidate(for: agentProvider)
         }
 
         public func isCurrent() -> Bool {
@@ -54,6 +55,42 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
             let directory = (path as NSString).deletingLastPathComponent
             return directory.hasSuffix("/claude/versions") &&
                 executable.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+([-+][A-Za-z0-9.-]+)?$"#, options: .regularExpression) != nil
+        }
+
+        func isCandidate(for provider: String?) -> Bool {
+            guard let provider else { return isClaudeCandidate }
+            switch (provider, executable) {
+            case ("kimiCode", "kimi"), ("kimiCode", "kimi-code"), ("devinCLI", "devin"), ("devinCLI", "devin-cli"),
+                 ("geminiCLI", "gemini"), ("copilotCLI", "copilot"): return true
+            case ("geminiCLI", "node"), ("copilotCLI", "node"), ("kimiCode", "node"):
+                guard let entry = Self.nodeEntryPoint(pid) else { return false }
+                return Self.isAgentScript(entry, provider: provider)
+            default: return false
+            }
+        }
+
+        static func isAgentScript(_ entry: String, provider: String) -> Bool {
+            guard entry.hasPrefix("/") else { return false }
+            let path = URL(fileURLWithPath: entry).resolvingSymlinksInPath().standardizedFileURL.path
+            let packages = ["geminiCLI": "@google/gemini-cli", "copilotCLI": "@github/copilot", "kimiCode": "@moonshot-ai/kimi-code"]
+            guard let package = packages[provider] else { return false }
+            return path.contains("/node_modules/" + package + "/")
+        }
+
+        // Inspect only argv[1], the Node entry point. Never decode or forward
+        // user arguments, prompts or the environment portion of KERN_PROCARGS2.
+        private static func nodeEntryPoint(_ pid: Int32) -> String? {
+            var query = [CTL_KERN, KERN_PROCARGS2, pid], size = 0
+            guard sysctl(&query, 3, nil, &size, nil, 0) == 0, size > 4, size <= 1_048_576 else { return nil }
+            var buffer = [UInt8](repeating: 0, count: size)
+            guard sysctl(&query, 3, &buffer, &size, nil, 0) == 0,
+                  buffer.withUnsafeBytes({ $0.loadUnaligned(as: Int32.self) }) >= 2 else { return nil }
+            let bytes = buffer.prefix(size)
+            guard let exeEnd = bytes.dropFirst(4).firstIndex(of: 0),
+                  let argStart = bytes[exeEnd...].firstIndex(where: { $0 != 0 }),
+                  let argEnd = bytes[argStart...].firstIndex(of: 0), argEnd + 1 < size,
+                  let end = bytes[(argEnd + 1)...].firstIndex(of: 0), end - argEnd <= 4097 else { return nil }
+            return String(bytes: bytes[(argEnd + 1)..<end], encoding: .utf8)
         }
 
         static func read(_ pid: Int32) -> Self? {
@@ -89,7 +126,7 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
         return nil
     }
 
-    public static func current() -> Self {
+    public static func current(provider: String? = nil) -> Self {
         let env = ProcessInfo.processInfo.environment
         let desktop = env["CLAUDE_CODE_HOST_SESSION_ID"].flatMap {
             $0.hasPrefix("local_") ? UUID(uuidString: String($0.dropFirst(6))) : nil
@@ -99,7 +136,7 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
         var pid = getppid()
         for _ in 0..<10 {
             guard let row = ProcessInfoRow.read(pid) else { break }
-            if row.isClaudeCandidate {
+            if row.isCandidate(for: provider) {
                 guard let tty = row.tty else { break }
                 let app = terminalApp(above: row.parent)
                 var pane: UUID?
@@ -109,8 +146,8 @@ public struct ClaudeConversationHost: Codable, Equatable, Sendable {
                 }
                 guard let application = app?.application ?? (pane == nil ? nil : Application.iTerm) else { break }
                 let terminal = Terminal(application: application, appPID: app?.pid, pid: row.pid, started: row.started,
-                                        tty: tty, pane: application == .iTerm ? pane : nil)
-                if terminal.valid { host.terminal = terminal }
+                                        tty: tty, pane: application == .iTerm ? pane : nil, agentProvider: provider)
+                if terminal.valid && (provider == nil || row.foreground) { host.terminal = terminal }
                 break
             }
             guard ["sh", "bash", "zsh", "dash", "fish", "env"].contains(row.executable) else { break }

@@ -162,7 +162,7 @@ export function apply(ctx, config = {}) {
       return input;
     }
   }
-  async function askIsland(payload, signal, eventID) {
+  async function askIsland(payload, signal, eventID, question) {
     let target;
     try { target = await route(); } catch { return; }
     if (stopped || signal?.aborted || target.interactiveApprovals !== true) return;
@@ -182,9 +182,10 @@ export function apply(ctx, config = {}) {
       socket.on('error', abort); socket.on('close', abort);
       signal?.addEventListener('abort', abort, {once:true});
       if (stopped || signal?.aborted) { abort(); return; }
+      socket.setEncoding('utf8');
       socket.on('data', chunk => {
-        buffer += chunk.toString('utf8');
-        if (buffer.length > 8192) { abort(); return; }
+        buffer += chunk;
+        if (buffer.length > 32768) { abort(); return; }
         while (buffer.includes('\n')) {
           const end = buffer.indexOf('\n'), line = buffer.slice(0,end); buffer = buffer.slice(end+1);
           try {
@@ -193,6 +194,13 @@ export function apply(ctx, config = {}) {
             if (reply.admitted === true) {
               admitted = true; clearTimeout(timer); timer = setTimeout(abort, 600000);
             } else if (reply.decision) {
+              if (question) {
+                const answer = reply.decision.answer;
+                if (!admitted || typeof answer !== 'string' || !answer.trim() || Buffer.byteLength(answer) > 4096) { abort(); return; }
+                const selected = (question.options ?? []).some(option => option.label === answer);
+                finish({answers:[selected ? {id:question.id, selected:[answer]} : {id:question.id, selected:[], custom:answer}]});
+                return;
+              }
               const outcome = reply.decision.outcome;
               finish(admitted && ['allowed-once','rejected'].includes(outcome) ? outcome : undefined);
             } else if (reply.pending !== true) { abort(); return; }
@@ -231,6 +239,40 @@ export function apply(ctx, config = {}) {
     if (outcome) return outcome;
     enqueue({...identity, hook_event_name:'DSHApprovalReleased'});
     return next();
+  });
+  // Keep ordinary single questions on the owner's scoped waterfall. Other
+  // answerers, including plan review and multi-select, retain their full request.
+  ctx.on('user-questions/request', async (request, next) => {
+    const session = request?.agent?.session, header = session?.header ?? session?.meta ?? {};
+    const id = header.id ?? session?.id, turn = turns.get(id);
+    if (stopped || config.interactiveProfile !== true || slots.size >= 32 || header.origin === 'subagent'
+        || typeof id !== 'string' || !id || turn == null || request.signal?.aborted
+        || !Array.isArray(request.questions) || request.questions.length !== 1) return next();
+    const q = request.questions[0], bounded = (v, n) => typeof v === 'string' && v.trim() && Buffer.byteLength(v) <= n;
+    if (!q || Object.keys(q).some(k => !['id','question','header','options','multiSelect'].includes(k))
+        || !bounded(q.id, 128) || !bounded(q.question, 4096) || (q.header != null && !bounded(q.header, 256))
+        || (q.multiSelect != null && q.multiSelect !== false)) return next();
+    const options = q.options ?? [];
+    if (!Array.isArray(options) || options.length > 32 || options.some(o => !o
+        || Object.keys(o).some(k => !['label','description'].includes(k)) || !bounded(o.label, 1024)
+        || (o.description != null && (typeof o.description !== 'string' || Buffer.byteLength(o.description) > 2048)))
+        || new Set(options.map(o => o.label)).size !== options.length) return next();
+    const eventID = randomUUID();
+    const identity = {session_id:id, turn_id:String(turn), source_namespace:namespace, source_epoch:epoch,
+      request_id:eventID, approval_id:eventID, tool_use_id:eventID};
+    slots.add(eventID);
+    let answer, timer;
+    try {
+      const synced = await Promise.race([drain().then(() => true),
+        new Promise(resolve => { timer = setTimeout(() => resolve(false), 1500); })]);
+      if (synced && !stopped && turns.get(id) === turn) {
+        answer = await askIsland({...identity, hook_event_name:'DSHQuestionRequest',
+          question:{id:q.id, question:q.question, header:q.header, options, isOther:true}}, request.signal, eventID, q);
+      }
+    } finally { clearTimeout(timer); slots.delete(eventID); }
+    enqueue({...identity, hook_event_name:'DSHQuestionClosed'});
+    if (request.signal?.aborted || (!stopped && turns.get(id) !== turn)) throw Error('Question cancelled');
+    return answer ?? next();
   });
   ctx.on('session/event', (session, event) => {
     if (stopped || !supported.has(event?.type)) return;

@@ -46,7 +46,18 @@ export const QuotaView = async ({client} = {}) => {
     }
   }
   function present(sessionID, s, type, props) {
-    if (typeof client?._client?.post !== 'function' || !validID(props.id) || interactions.size >= 32) return false;
+    if (!validID(props.id) || interactions.size >= 32) return false;
+    // Bind one transport on the originating plugin client before presenting.
+    // A failed or ambiguous delivery must never be replayed through another API.
+    const raw = client?._client;
+    const api = client?.[type];
+    let reply;
+    if (typeof raw?.post === 'function') {
+      reply = (body, options) => raw.post({url:'/'+type+'/'+props.id+'/reply', body,
+        headers:{'Content-Type':'application/json'}, ...options});
+    } else if (typeof api?.reply === 'function') {
+      reply = (body, options) => api.reply({requestID:props.id, ...body}, options);
+    } else { return false; }
     const key = JSON.stringify([sessionID,type,props.id]);
     if (interactions.has(key)) return true;
     const fields = {interaction_type:type, native_id:props.id};
@@ -63,7 +74,7 @@ export const QuotaView = async ({client} = {}) => {
       fields.command = [props.permission,...props.patterns].join('\n');
     }
     if (Buffer.byteLength(JSON.stringify(fields)) > 48000) return false;
-    const item = {id:props.id, sessionID, type, key, eventID:randomUUID(), turn:s.turn};
+    const item = {id:props.id, sessionID, type, key, reply, eventID:randomUUID(), turn:s.turn};
     item.timeout = setTimeout(() => forget(item), 300000);
     item.timeout.unref?.();
     interactions.set(key,item);
@@ -106,8 +117,7 @@ export const QuotaView = async ({client} = {}) => {
           // The plugin SDK retains the owning instance and its directory/auth headers.
           void (async () => {
             try {
-              const result = await client._client.post({url:'/'+item.type+'/'+item.id+'/reply', body,
-                headers:{'Content-Type':'application/json'}, throwOnError:true, signal:AbortSignal.timeout(5000)});
+              const result = await item.reply(body, {throwOnError:true, signal:AbortSignal.timeout(5000)});
               if (!result?.response?.ok || result.error) throw Error('Reply not acknowledged');
               await report(item,'OpenCodeReleased');
               forget(item);

@@ -270,7 +270,7 @@ final class ClaudeCodeRuntime: ObservableObject {
             island.model.resolveLocalHookRequest(sessionKey: approval.sessionKey, rpcID: approval.rpcID)
         }
         approvals.removeAll()
-        ClaudeTerminalNavigation.removeAll()
+        ClaudeTerminalNavigation.removeClaudeBindings()
         sessions.removeAll()
         connectedThisRun = false
         rateLimits = nil; usage = nil; profile = nil

@@ -413,6 +413,12 @@ final class AppPreferences: ObservableObject {
     @Published var openCodeEnabled: Bool {
         didSet { defaults.set(openCodeEnabled, forKey: "integrations.openCode.enabled") }
     }
+    @Published var devinDesktopApprovals: Bool {
+        didSet { defaults.set(devinDesktopApprovals, forKey: "integrations.devinDesktop.approvals") }
+    }
+    @Published var devinCLIApprovals: Bool {
+        didSet { defaults.set(devinCLIApprovals, forKey: "integrations.devinCLI.approvals") }
+    }
     @Published var devinDesktopEnabled: Bool {
         didSet { defaults.set(devinDesktopEnabled, forKey: "integrations.devinDesktop.enabled") }
     }
@@ -708,6 +714,8 @@ final class AppPreferences: ObservableObject {
         antigravityEnabled = defaults.bool(forKey: "integrations.antigravity.enabled")
         openCodeInteractionsEnabled = defaults.bool(forKey: "integrations.openCode.interactions")
         openCodeEnabled = defaults.bool(forKey: "integrations.openCode.enabled")
+        devinDesktopApprovals = defaults.bool(forKey: "integrations.devinDesktop.approvals")
+        devinCLIApprovals = defaults.bool(forKey: "integrations.devinCLI.approvals")
         devinDesktopEnabled = defaults.bool(forKey: "integrations.devinDesktop.enabled")
         devinCLIEnabled = defaults.bool(forKey: "integrations.devinCLI.enabled")
         copilotCLIEnabled = defaults.bool(forKey: "integrations.copilotCLI.enabled")

@@ -410,10 +410,12 @@ struct IslandApprovalView: View {
     private var actionBar: some View {
         IslandApprovalActionLayout {
             if !request.canRespond || wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) || (wire?.kind == .questions && wire?.supportedQuestions == false) || wire?.kind == .mcpURL {
-                specialButton(request.provider == .openCode ? text("在 OpenCode 中处理", "Continue in OpenCode") : request.provider == .antigravity ? text("在 Antigravity 中处理", "Continue in Antigravity") : isDSH ? text("在 DSH 中处理", "Continue in DSH") : isClaude ? text("在终端处理", "Use terminal") : text("在 Codex 处理", "Open Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(request.provider == .openCode ? text("在 OpenCode 中处理", "Continue in OpenCode") : request.provider == .antigravity ? text("在 Antigravity 中处理", "Continue in Antigravity") : isDSH ? text("在 DSH 中处理", "Continue in DSH") : isClaude ? text("在终端处理", "Use terminal") : request.provider == .codex ? text("在 Codex 处理", "Open Codex") : text("在原会话中处理", "Use original chat"), icon: "arrow.up.right", enabled: true) { openOriginalConversation() }
                 if showsLocalDismiss { localDismissButton }
             } else if wire?.kind == .questions {
-                if wire?.isOpenCode == true || wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
+                if let delegate = actions.first(where: { $0.id == "dshDelegate" }) {
+                    actionButton(delegate)
+                } else if wire?.isOpenCode == true || wire?.isAntigravity == true || wire?.userInputMode == .asynchronous || (showsLocalDismiss && !request.phase.canSubmit) {
                     if showsLocalDismiss { localDismissButton }
                 } else {
                     Button { questionInteraction.skip() } label: {
@@ -430,10 +432,10 @@ struct IslandApprovalView: View {
             if wire?.kind == .mcpURL && !draft.openedURL {
                 specialButton(text("打开授权页面", "Open authorization page"), icon: "arrow.up.right", enabled: wire?.url != nil) { draft.openedURL = true }
             } else if wire?.kind == .nativeOnly || (wire?.kind == .mcpForm && wire?.supportedForm == false) {
-                specialButton(isClaude ? text("在终端验证", "Verify in terminal") : text("在 Codex 中验证", "Verify in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isClaude ? text("在终端验证", "Verify in terminal") : text("在 Codex 中验证", "Verify in Codex"), icon: "arrow.up.right", enabled: true) { openOriginalConversation() }
             } else if let action = primaryAction { actionButton(action, primary: true) }
             else if firstNegative == nil {
-                specialButton(isClaude ? text("在终端处理", "Continue in terminal") : text("在 Codex 中处理", "Continue in Codex"), icon: "arrow.up.right", enabled: true) { openCodex() }
+                specialButton(isClaude ? text("在终端处理", "Continue in terminal") : text("在 Codex 中处理", "Continue in Codex"), icon: "arrow.up.right", enabled: true) { openOriginalConversation() }
             }
             if showsLocalDismiss { localDismissButton }
             }
@@ -828,10 +830,10 @@ struct IslandApprovalView: View {
     private var isDSH: Bool { request.provider == .dsh }
     private var isClaude: Bool { request.provider == .claudeCode }
     private var agentName: String { request.provider.displayName }
-    private var handlerName: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? " Antigravity " : isDSH ? " DSH " : isClaude ? "运行 Claude Code 的终端" : " Codex " }
-    private var handlerNameEnglish: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? "Antigravity" : isDSH ? "DSH" : isClaude ? "the Claude Code terminal" : "Codex" }
-    private func openCodex() {
-        if request.provider == .codex, let url = metrics.conversationURL {
+    private var handlerName: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? " Antigravity " : isDSH ? " DSH " : isClaude ? "运行 Claude Code 的终端" : " " + agentName + " " }
+    private var handlerNameEnglish: String { request.provider == .openCode ? "OpenCode" : request.provider == .antigravity ? "Antigravity" : isDSH ? "DSH" : isClaude ? "the Claude Code terminal" : agentName }
+    private func openOriginalConversation() {
+        if let url = metrics.conversationURL {
             Task { @MainActor in
                 if !(await IslandConversationNavigation.open(url)) {
                     codexJumpMessage = text("打开失败，重试", "Couldn’t open. Retry")
@@ -848,6 +850,10 @@ struct IslandApprovalView: View {
         if isClaude {
             // Claude Code may run in any terminal or IDE; QuotaView cannot identify its window.
             codexJumpMessage = text("请切换到运行 Claude Code 的终端处理", "Switch to the terminal running Claude Code"); return
+        }
+        if request.provider != .codex {
+            codexJumpMessage = text("请在 \(agentName) 中确认。", "Confirm this request in \(agentName).")
+            return
         }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.codex") else {
             codexJumpMessage = text("未找到 Codex，请手动打开对应任务", "Codex not found; open the task manually"); return

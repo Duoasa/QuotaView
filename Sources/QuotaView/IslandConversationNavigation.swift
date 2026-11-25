@@ -6,8 +6,11 @@ import SQLite3
 enum IslandConversationTarget: Equatable {
     case claudeHook(UUID, desktop: UUID? = nil, terminal: Bool = false), claudeTerminal(UUID), claude(UUID), cursor(UUID), devin(String), dsh(String), antigravity(UUID), antigravityHook(UUID)
 
+    case agentTerminal(IslandAgentProvider, UUID)
+
     var provider: IslandAgentProvider {
         switch self {
+        case let .agentTerminal(provider, _): provider
         case .dsh: .dsh
         case .antigravity, .antigravityHook: .antigravity
         case .claudeHook, .claudeTerminal, .claude: .claudeCode
@@ -19,7 +22,7 @@ enum IslandConversationTarget: Equatable {
     /// These destinations depend on live permissions, sidebar rows or a terminal session.
     func needsRecheck(after resolved: Self?) -> Bool {
         switch self {
-        case .dsh, .antigravity, .antigravityHook: return true
+        case .dsh, .antigravity, .antigravityHook, .agentTerminal: return true
         case .claudeHook(_, _, true):
             if case .claude = resolved { return false }
             return true
@@ -30,6 +33,7 @@ enum IslandConversationTarget: Equatable {
     var url: URL? {
         switch self {
         case .claudeHook, .antigravityHook: return nil
+        case .agentTerminal(_, let id): return ClaudeTerminalNavigation.link(for: id, nativeAgent: true)
         case .claudeTerminal(let id): return ClaudeTerminalNavigation.link(for: id)
         case .claude(let id):
             return URL(string: "claude://claude.ai/epitaxy/local_" + id.uuidString.lowercased())

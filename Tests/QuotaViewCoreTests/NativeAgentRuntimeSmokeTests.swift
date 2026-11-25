@@ -104,11 +104,21 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         let installer = NativeAgentInstaller(provider: .antigravity, socketURL: root.appendingPathComponent("hook.sock"), authenticationToken: "fixture", homeOverride: home, supportOverride: root.appendingPathComponent("support"), helperOverride: helper)
         var nativeCard: AntigravityDesktopApproval.Card?
         var pressed: [AXUIElement] = []
+        var answers: [String] = []
         let runtime = NativeAgentRuntime(provider: .antigravity, preferences: prefs, island: island, defaults: defaults, installer: installer,
             readApprovalCards: { sessions in
                 guard let nativeCard, sessions.contains(nativeCard.conversation) else { return [:] }
                 return [nativeCard.conversation: nativeCard]
-            }, pressApprovalButton: { card, allowed in pressed.append(allowed ? card.allow : card.deny); return true })
+            }, pressApprovalButton: { card, allowed in
+                guard let deny = card.deny else { return false }
+                pressed.append(allowed ? card.allow : deny)
+                return true
+            }, answerNativeQuestion: { _, answer, current in
+                guard current() else { return false }
+                answers.append(answer)
+                nativeCard = nil
+                return true
+            })
         defer { runtime.stop(); island.stop() }
         prefs.antigravityEnabled = true
         runtime.start()
@@ -170,6 +180,24 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         func card(_ content: String, scope: AntigravityDesktopApproval.Scope = .once) -> AntigravityDesktopApproval.Card {
             .init(conversation: conversation, content: content, scope: scope, element: AXUIElementCreateApplication(1000), allow: allow, deny: deny)
         }
+        for (mode, answer) in [("choose", "Orange"), ("type", "A different fruit"), ("superseded", "Apple")] {
+            let question = AntigravityDesktopApproval.NativeQuestion(options: [
+                .init(label: "Orange", radio: allow), .init(label: "Apple", radio: deny)],
+                writeInRadio: AXUIElementCreateApplication(1237), field: AXUIElementCreateApplication(1238))
+            nativeCard = .init(conversation: conversation, content: "Fruit? " + mode,
+                scope: nil, element: AXUIElementCreateApplication(1239), allow: allow, deny: nil, question: question)
+            try await waitFor { island.model.tasks.first?.requests.first?.value.protocolRequest?.kind == .questions }
+            let task = try XCTUnwrap(island.model.tasks.first), pending = try XCTUnwrap(task.requests.first?.value)
+            let wire = try XCTUnwrap(pending.protocolRequest), q = try XCTUnwrap(wire.questions.first)
+            XCTAssertNil(wire.questionSkipResult)
+            XCTAssertEqual(IslandApprovalLayout(wire), .questions)
+            var draft = IslandApprovalDraft()
+            if mode == "type" { draft.setAnswer(answer, for: q) } else { draft.selectAnswer(answer, for: q) }
+            if mode == "superseded" { nativeCard = nil }
+            island.model.submit(task.id, requestID: pending.id, decision: .reply(try XCTUnwrap(draft.result(for: wire))))
+            try await waitFor { island.model.tasks.first?.requests.isEmpty == true }
+        }
+        XCTAssertEqual(answers, ["Orange", "A different fruit"])
         for choice in ["stale", "changed", "accept", "scoped", "decline", "native", "disable"] {
             nativeCard = card("Exact native target: " + choice, scope: choice == "scoped" ? .project : .once)
             try await waitFor { island.model.tasks.first?.requests.first?.value.protocolRequest?.isAntigravity == true }
@@ -179,7 +207,7 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
             let wire = try XCTUnwrap(request.protocolRequest)
             XCTAssertTrue(request.canRespond)
             XCTAssertEqual(wire.params["command"].text, nativeCard?.content)
-            XCTAssertEqual(wire.actions.first?.label.english, nativeCard?.scope.label.english)
+            XCTAssertEqual(wire.actions.first?.label.english, nativeCard?.scope?.label.english)
             XCTAssertEqual(wire.actions.map { $0.result["decision"].text }, ["accept", "decline"])
             if choice == "disable" { prefs.antigravityInteractiveApprovals = false }
             else if choice == "native" { nativeCard = nil }
@@ -246,6 +274,29 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         XCTAssertNil(parse(prefix + [deny, item("AXButton", "Allow once", enabled: false)]))
         XCTAssertNil(parse(prefix + [deny, allow, allow]))
         XCTAssertNil(parse(prefix + [deny, allow, item("AXButton", "Open Subagent: other")]))
+    }
+
+    func testAntigravitySingleQuestionRequiresNativeWriteInAndCollapsibleForm() throws {
+        typealias Approval = AntigravityDesktopApproval
+        let root = AXUIElementCreateApplication(1240), session = UUID()
+        func control(_ role: String, _ label: String, _ id: String? = nil) -> Approval.Control {
+            .init(element: root, role: role, label: label, value: nil, enabled: true, domID: id)
+        }
+        let items = [control("AXStaticText", "Pick one"), control("AXButton", "Collapse questionnaire"),
+            control("AXRadioGroup", ""), control("AXRadioButton", "A Orange", "ask-opt-r1-A"),
+            control("AXRadioButton", "B", "ask-opt-r1-__write_in__"), control("AXTextArea", "Other (write your answer)"),
+            control("AXButton", "Submit↵")]
+        func parse(_ items: [Approval.Control]) -> Approval.Card? {
+            Approval.parseSingleQuestion(items, conversation: session, element: root)
+        }
+        XCTAssertEqual(parse(items)?.question?.options.map(\.label), ["A Orange"])
+        XCTAssertNil(parse(items)?.scope)
+        XCTAssertNil(parse(items + [control("AXButton", "Next question")]))
+        XCTAssertNil(parse(items + [control("AXTextArea", "Edit permission target")]))
+        XCTAssertNil(parse(items.filter { $0.label != "Collapse questionnaire" }))
+        XCTAssertNil(parse(items + [control("AXCheckBox", "More")]))
+        XCTAssertNil(parse(items + [control("AXButton", "Submit")]))
+        XCTAssertNil(Approval.parseQuestionnaire(items, conversation: session, element: root))
     }
 
     func testAntigravityCommandQuestionnaireUsesSelectedScopeAndNativeButtons() throws {
@@ -747,6 +798,16 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
 
     @MainActor
     func testOpenCodeOwnerReceivesSingleAnswerAndPermission() async throws {
+        try await verifyOpenCodeReplies(typedAPI: false)
+    }
+
+    @MainActor
+    func testOpenCodeTypedOwnerFallbackReceivesSingleAnswerAndPermission() async throws {
+        try await verifyOpenCodeReplies(typedAPI: true)
+    }
+
+    @MainActor
+    private func verifyOpenCodeReplies(typedAPI: Bool) async throws {
         let root=URL(fileURLWithPath:"/private/tmp/qv-ask-"+UUID().uuidString.prefix(8))
         try FileManager.default.createDirectory(at:root.appendingPathComponent("config"),withIntermediateDirectories:true)
         defer { try? FileManager.default.removeItem(at:root) }
@@ -767,7 +828,19 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         let script = """
         const {QuotaView}=await import(\(literal));
         const replies=[];
-        const plugin=await QuotaView({client:{_client:{post:async opts=>{replies.push([opts.url,opts.body]);return {data:true,response:{ok:true}};}}}});
+        const raw={post:async opts=>{replies.push([opts.url,opts.body]);return {data:true,response:{ok:true}};}};
+        const typed=type=>({reply:async ({requestID,...body})=>raw.post({url:'/'+type+'/'+requestID+'/reply',body})});
+        let client=\(typedAPI ? "{permission:typed('permission'),question:typed('question')}" : "{_client:raw}");
+        if (\(typedAPI) && process.env.QV_OPENCODE_SDK) {
+          const {createOpencodeClient}=await import(process.env.QV_OPENCODE_SDK);
+          client=createOpencodeClient({baseUrl:'http://fixture.invalid',directory:'/isolated',fetch:async req=>{
+            const url=new URL(req.url);
+            if(url.hostname!=='fixture.invalid' || req.headers.get('x-opencode-directory')!==encodeURIComponent('/isolated')) throw Error('Wrong instance');
+            replies.push([url.pathname,await req.json()]);
+            return Response.json(true);
+          }});
+        }
+        const plugin=await QuotaView({client});
         const emit=(type,properties)=>plugin.event({event:{type,properties:{sessionID:'session1',...properties}}});
         await emit('session.status',{status:{type:'busy'}});
         await emit('question.asked',{id:'que_1',questions:[{question:'Choose a color',options:[{label:'Blue'},{label:'Orange'}]}]});

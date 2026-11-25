@@ -1160,6 +1160,8 @@ final class IslandLiveStore {
     var claudeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     var antigravityResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var antigravityRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
+    var devinCapabilities: [IslandAgentProvider: (IslandCodexApprovalRequest) -> Bool] = [:]
+    var devinResponders: [IslandAgentProvider: (IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void] = [:]
     var openCodeResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
     var openCodeRespond: ((IslandCodexApprovalRequest, IslandApprovalJSON) async throws -> Void)?
     var dshResponseCapability: ((IslandCodexApprovalRequest) -> Bool)?
@@ -1242,12 +1244,12 @@ final class IslandLiveStore {
 
     @discardableResult
     func observeNativeToolRequest(_ wire: IslandCodexApprovalRequest, sessionKey: String, turnKey: String, callHash: String) -> Bool {
-        let agent: IslandAgentProvider = wire.isOpenCode ? .openCode : wire.isDSH ? .dsh : .antigravity
-        guard wire.isDSH || wire.isAntigravity || wire.isOpenCode, provider(for: sessionKey) == agent, capability(for: wire),
+        let agent = wire.devinProvider ?? (wire.isOpenCode ? IslandAgentProvider.openCode : wire.isDSH ? .dsh : .antigravity)
+        guard wire.isDSH || wire.isAntigravity || wire.isOpenCode || wire.devinProvider != nil, provider(for: sessionKey) == agent, capability(for: wire),
               let i = tasks.firstIndex(where: { $0.key == sessionKey && $0.turnKey == turnKey && !$0.terminal }) else { return false }
         tasks[i].requestLifecycle.observe(.init(key: (agent.rawValue + ":") + wire.key, value: .init(
-            question: wire.isOpenCode ? wire.kind.title : wire.isDSH ? .init("DSH 请求审批", "DSH requests approval") : .init("Antigravity 请求审批", "Antigravity requests approval"),
-            impact: wire.isOpenCode ? .init("处理后同步至 OpenCode。", "Send this response to OpenCode.") : wire.isDSH ? .init("处理后同步至 DSH。", "Send this response to DSH.") : .init("处理后同步至 Antigravity。", "Send this response to Antigravity."), protocolRequest: wire, canRespond: true),
+            question: wire.kind == .questions ? .init(wire.questions.first?.title ?? "") : wire.isOpenCode || wire.devinProvider != nil ? wire.kind.title : wire.isDSH ? .init("DSH 请求审批", "DSH requests approval") : .init("Antigravity 请求审批", "Antigravity requests approval"),
+            impact: wire.devinProvider != nil ? .init(agent.displayName) : wire.isOpenCode ? .init("处理后同步至 OpenCode。", "Send this response to OpenCode.") : wire.isDSH ? .init("处理后同步至 DSH。", "Send this response to DSH.") : .init("处理后同步至 Antigravity。", "Send this response to Antigravity."), protocolRequest: wire, canRespond: true),
             callHash: callHash, rpcEpoch: 0))
         let admitted = tasks[i].requests.contains { $0.value.protocolRequest?.rpcID == wire.rpcID }
         if admitted { tasks[i].observerReminderDismissed = false; onChange?() }
@@ -2215,8 +2217,12 @@ final class IslandLiveStore {
             }
             return
         }
-        guard case .reply(let result) = decision, wire.permits(result),
-              let respond = wire.isOpenCode ? openCodeRespond : wire.isAntigravity ? antigravityRespond : wire.isDSH ? dshRespond : wire.isClaudeCode ? claudeRespond : self.respond else { return }
+        let handler = if let provider = wire.devinProvider {
+            devinResponders[provider]
+        } else {
+            wire.isOpenCode ? openCodeRespond : wire.isAntigravity ? antigravityRespond : wire.isDSH ? dshRespond : wire.isClaudeCode ? claudeRespond : self.respond
+        }
+        guard case .reply(let result) = decision, wire.permits(result), let respond = handler else { return }
         claimConfirmation(taskID: id, requestID: requestID)
         tasks[i].requestLifecycle.requests[j].value.phase = .submitting(decision); onChange?()
         Task { [weak self] in
@@ -2253,7 +2259,8 @@ final class IslandLiveStore {
         }
     }
     private func capability(for wire: IslandCodexApprovalRequest) -> Bool {
-        (wire.isOpenCode ? openCodeResponseCapability : wire.isAntigravity ? antigravityResponseCapability : wire.isDSH ? dshResponseCapability : wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
+        if let provider = wire.devinProvider { return devinCapabilities[provider]?(wire) == true }
+        return (wire.isOpenCode ? openCodeResponseCapability : wire.isAntigravity ? antigravityResponseCapability : wire.isDSH ? dshResponseCapability : wire.isClaudeCode ? claudeResponseCapability : responseCapability)?(wire) == true
     }
     private func advanceProgress(at now: Date) {
         for i in tasks.indices {
@@ -2307,7 +2314,7 @@ final class IslandLiveStore {
             request?.provider = provider
             // DSH task observation remains read-only, but an admitted live
             // approval carries its own revocable response capability.
-            if provider.isObserverOnly && !(provider == .openCode && request?.protocolRequest?.isOpenCode == true) && !(provider == .dsh && request?.protocolRequest?.isDSH == true)
+            if provider.isObserverOnly && request?.protocolRequest?.devinProvider != provider && !(provider == .openCode && request?.protocolRequest?.isOpenCode == true) && !(provider == .dsh && request?.protocolRequest?.isDSH == true)
                 && !(provider == .antigravity && request?.protocolRequest?.isAntigravity == true) {
                 request?.canRespond = false
                 request?.impact = .init("请在 \(provider.displayName) 中确认。", "Confirm this request in \(provider.displayName).")

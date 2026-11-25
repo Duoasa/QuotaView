@@ -76,6 +76,33 @@ final class DSHApprovalSmokeTests: XCTestCase {
             }
             return nil
         }
+        for (qid, answer) in [("choose", "樱桃"), ("type", "一条自填回答"), ("delegate-question", ""), ("abort-question", "")] {
+            func question() -> (Int, IslandConfirmation)? {
+                for task in island.model.tasks {
+                    if let request = task.requests.first(where: { $0.value.protocolRequest?.questions.first?.id == qid }) {
+                        return (task.id, request.value)
+                    }
+                }
+                return nil
+            }
+            try await waitFor { question()?.1.canRespond == true }
+            let (task, card) = try XCTUnwrap(question())
+            let wire = try XCTUnwrap(card.protocolRequest), q = try XCTUnwrap(wire.questions.first)
+            XCTAssertEqual(IslandApprovalLayout(wire), .questions)
+            XCTAssertNil(wire.questionSkipResult)
+            if qid == "abort-question" {
+                try Data().write(to: root.appendingPathComponent("abort-question"))
+            } else if qid == "delegate-question" {
+                let handoff = try XCTUnwrap(wire.actions.first { $0.id == "dshDelegate" })
+                island.model.submit(task, requestID: card.id, decision: .reply(handoff.result))
+            } else {
+                var draft = IslandApprovalDraft()
+                if qid == "choose" { draft.selectAnswer(answer, for: q) } else { draft.setAnswer(answer, for: q) }
+                island.model.submit(task, requestID: card.id, decision: .reply(try XCTUnwrap(draft.result(for: wire))))
+            }
+            try await waitFor { question() == nil }
+            XCTAssertFalse(island.model.dshResponseCapability?(wire) ?? true)
+        }
         for (call, decision) in [("allow", "accept"), ("deny", "decline"), ("delegate", "dshDelegate"), ("file", "accept")] {
             try await waitFor { pending(call)?.1.canRespond == true }
             XCTAssertEqual(try String(contentsOf: root.appendingPathComponent("namespace"), encoding: .utf8), CodexActivityPrivacy.hashIdentifier(installer.home.resolvingSymlinksInPath().standardizedFileURL.path))
@@ -180,8 +207,26 @@ final class DSHApprovalSmokeTests: XCTestCase {
     return {ctx,service};
     }
     const {ctx,service}=await context();
+    let ask, registerQuestion;
+    if (actual) {
+      const {default:Questions} = await import(pathToFileURL(actual+'/dsh-user-questions/lib/index.js'));
+      ctx.provide('agents');
+      ctx.set('agents',{get:id => id === agent.id ? agent : undefined, roots:() => [agent]});
+      await ctx.plugin(Questions);
+      ask = req => ctx.userQuestions.ask(req);
+      registerQuestion = fn => ctx.on('user-questions/request',fn);
+    } else {
+      const questionHandlers = [];
+      registerQuestion = fn => questionHandlers.push(fn);
+      ask = req => {
+        const handlers = [...questionHandlers];
+        function next() { return handlers.shift()(req,next); }
+        return next();
+      };
+    }
+    registerQuestion((req,next) => req.questions[0].id === 'existing' ? 'existing-answerer' : next());
     ctx.on('approval/request',(req,next)=>req.callId==='policy'?'rejected':next());
-    const adapter={on:ctx.on.bind(ctx),effect:fn=>cleanup.push(fn())};
+    const adapter={on:(name,fn)=>name === 'user-questions/request' ? registerQuestion(fn) : ctx.on(name,fn),effect:fn=>cleanup.push(fn())};
     const namespace=readFileSync(new URL('namespace',base),'utf8');
     apply(adapter,{sourceNamespace:namespace,interactiveProfile:true,officialDesktopNavigation:true});
     let fallbacks=0;
@@ -194,7 +239,7 @@ final class DSHApprovalSmokeTests: XCTestCase {
       append(type,data){const event={type,data,seq:seq++};events.push(event);ctx.emit('session/event',session,event);return event}};
     return session;
     }
-    const session=newSession(ctx), agent={session};
+    const session=newSession(ctx), agent={session,id:"fixture-agent"};
     session.append('turn/start',{turn});
     const outcomes={};
     async function run(name, tool='bash', input={command:'echo PRIVATE_FIXTURE',description:'Fixture only'}){
@@ -209,6 +254,18 @@ final class DSHApprovalSmokeTests: XCTestCase {
       await pause(30);
       return result;
     }
+    registerQuestion(()=>'original-client');
+    const q = {id:'choose', question:'选择水果', options:[{label:'苹果'},{label:'樱桃'}]};
+    const request = question => ask({agent, questions:[question], signal:new AbortController().signal});
+    assert.equal(await request({...q,id:'existing'}),'existing-answerer');
+    assert.equal(await request({...q,multiSelect:true}),'original-client');
+    assert.equal(await request({...q,detail:'full plan'}),'original-client');
+    assert.deepEqual(await request(q),{answers:[{id:'choose',selected:['樱桃']}]});
+    assert.deepEqual(await request({...q,id:'type'}),{answers:[{id:'type',selected:[],custom:'一条自填回答'}]});
+    assert.equal(await request({...q,id:'delegate-question'}),'original-client');
+    const abortQuestion = new AbortController();
+    const aborted = assert.rejects(ask({agent,questions:[{...q,id:'abort-question'}],signal:abortQuestion.signal}));
+    await gate('abort-question'); abortQuestion.abort(); await aborted;
     assert.equal(await run('allow'),'allowed-once');
     assert.equal(await run('deny'),'rejected');
     assert.equal(await run('delegate'),'rejected');

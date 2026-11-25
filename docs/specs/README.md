@@ -1,5 +1,9 @@
 # QuotaView SDD 注册表
 
+## 0.9.7 Build 32 / 跨 Agent 问答与确认
+
+[Agent 接入](agent-integrations.md#build-32-跨-agent-问答与确认)记录 DSH 与 Antigravity 的单题、OpenCode 原实例备用接口、Devin 双端权限回传和终端来源匹配。
+
 ## 0.9.7 Build 31 / Codex 岛内文本回答
 
 [确认同步](codex-desktop-confirmation-sync.md#build-31-岛内文本回答)记录默认启动下通过辅助功能向 Codex 原问题卡提交文本的路径。2026-11-25 用户在岛上选择「樱桃」，原轮次收到匹配回执，单题点选通过人工验收。

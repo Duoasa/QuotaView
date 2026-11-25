@@ -4,6 +4,14 @@ import Foundation
 enum DSHApproval {
     static func request(eventID: String, sessionKey: String, turnKey: String,
                         payload: [String: Any]) throws -> IslandCodexApprovalRequest {
+        if payload["hook_event_name"] as? String == "DSHQuestionRequest" {
+            guard let q = payload["question"] as? [String: Any] else { throw CocoaError(.coderInvalidValue) }
+            let wire = try IslandCodexApprovalRequest(data: JSONSerialization.data(withJSONObject: [
+                "id": "dsh:" + eventID, "method": "item/tool/requestUserInput",
+                "params": ["dsh": true, "threadId": sessionKey, "turnId": turnKey, "itemId": eventID, "questions": [q]]]))
+            guard wire.supportedQuestions, wire.questions.first?.secret == false else { throw CocoaError(.coderInvalidValue) }
+            return wire
+        }
         guard let tool = payload["tool_name"] as? String,
               let input = payload["tool_input"] as? [String: Any],
               JSONSerialization.isValidJSONObject(input),

@@ -138,8 +138,13 @@ struct IslandCodexApprovalRequest: Equatable {
     var isOpenCode: Bool { params["openCode"].boolean && rpcID.text.hasPrefix("openCode:") }
     var isDSH: Bool { params["dsh"].boolean }
     var isAntigravity: Bool { params["antigravity"].boolean && rpcID.text.hasPrefix("antigravity:") }
+    var devinProvider: IslandAgentProvider? {
+        guard let provider = IslandAgentProvider(rawValue: params["devinProvider"].text), provider.isDevin,
+              rpcID.text.hasPrefix(provider.rawValue + ":") else { return nil }
+        return provider
+    }
     var isCodexPermissionHook: Bool { params["codexPermissionHook"].boolean && rpcID.text.hasPrefix("codex-hook:") }
-    var isLocalHook: Bool { isClaudeCode || isDSH || isOpenCode || isAntigravity || isCodexPermissionHook }
+    var isLocalHook: Bool { isClaudeCode || isDSH || isOpenCode || isAntigravity || devinProvider != nil || isCodexPermissionHook }
     var contextItem: IslandApprovalJSON? = nil
     var params: IslandApprovalJSON { envelope["params"] }
     var rpcID: IslandApprovalJSON { envelope["id"] }
@@ -258,7 +263,7 @@ struct IslandCodexApprovalRequest: Equatable {
     /// Native synchronous Skip responds with an empty answer collection.
     /// Async Skip is only a local dismissal and must never send an empty answer.
     var questionSkipResult: IslandApprovalJSON? {
-        guard !isOpenCode, kind == .questions, method == "item/tool/requestUserInput", supportedQuestions else { return nil }
+        guard !isOpenCode, !isDSH, !isAntigravity, kind == .questions, method == "item/tool/requestUserInput", supportedQuestions else { return nil }
         return .object(["answers": .object([:])])
     }
     var fields: [IslandApprovalField] {
@@ -360,7 +365,10 @@ struct IslandCodexApprovalRequest: Equatable {
             }
         case .permissions:
             return [.init(id: "deny", label: .init("不授予", "Deny"), result: .object(["permissions": .object([:]), "scope": .string("turn")]), affirmative: false)]
-        case .questions: return []
+        case .questions:
+            guard isDSH else { return [] }
+            return [.init(id: "dshDelegate", label: .init("在 DSH 中处理", "Continue in DSH"),
+                result: .object(["decision": .string("dshDelegate")]), affirmative: false)]
         case .nativeOnly: return []
         case .mcpForm, .mcpURL:
             return ["decline", "cancel"].map {

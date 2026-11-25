@@ -5,21 +5,43 @@ import Darwin
 
 final class CodexDesktopIPCClientTests: XCTestCase {
     func testSuccessfulShortConnectionsStillBackOffBeforeReconnecting() async throws {
+        try await assertShortConnectionBackoff()
+    }
+
+    func testSuccessfulShortConnectionsBackOffWithDelayedConnector() async throws {
+        // A healthy connector can exceed the old test's 100 ms scheduling margin.
+        try await assertShortConnectionBackoff(connectionDelayNanoseconds: 150_000_000)
+    }
+
+    private func assertShortConnectionBackoff(connectionDelayNanoseconds: UInt64 = 0) async throws {
         let fixture = CodexDesktopIPCFixture(state: Self.state(requests: []))
-        let client = fixture.client(), recorder = CodexDesktopIPCSnapshotRecorder()
+        let client = fixture.client(connectionDelayNanoseconds: connectionDelayNanoseconds)
+        let recorder = CodexDesktopIPCSnapshotRecorder()
         await client.start(snapshotHandler: { await recorder.record($0) }, stateHandler: { await recorder.recordState($0) })
-        try await recorder.waitForConnection()
-        fixture.disconnect()
-        try await Task.sleep(nanoseconds: 100_000_000)
-        XCTAssertEqual(fixture.initializeCount, 1)
-        try await Task.sleep(nanoseconds: 250_000_000)
-        XCTAssertEqual(fixture.initializeCount, 2)
-        fixture.disconnect()
-        try await Task.sleep(nanoseconds: 300_000_000)
-        XCTAssertEqual(fixture.initializeCount, 2)
-        await client.stop()
-        try await Task.sleep(nanoseconds: 300_000_000)
-        XCTAssertEqual(fixture.initializeCount, 2)
+        do {
+            try await recorder.waitForConnection()
+            for (index, minimumDelay) in [0.25, 0.5].enumerated() {
+                let disconnectedAt = ProcessInfo.processInfo.systemUptime
+                fixture.disconnect()
+                // Wait for a new completed handshake, not a fixed wall-clock slot.
+                try await recorder.waitForConnection(count: index + 2)
+                let attempts = fixture.connectionAttemptTimes
+                XCTAssertEqual(attempts.count, index + 2)
+                let attempt = try XCTUnwrap(attempts.last)
+                XCTAssertGreaterThanOrEqual(attempt - disconnectedAt, minimumDelay,
+                    "Successful short connections must retain exponential backoff")
+            }
+            fixture.disconnect()
+            try await recorder.waitForDisconnect(count: 3)
+            await client.stop()
+            // Negative observation intentionally spans the next (1 second) retry.
+            try await Task.sleep(nanoseconds: 1_100_000_000)
+            XCTAssertEqual(fixture.connectionAttemptTimes.count, 3, "Stop must cancel pending reconnect")
+            XCTAssertEqual(fixture.initializeCount, 3)
+        } catch {
+            await client.stop()
+            throw error
+        }
     }
 
     func testLengthFramingHandlesFragmentationCoalescingAndBounds() throws {
@@ -676,6 +698,8 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
     private var supportsInput: Bool
     private var continuation: AsyncStream<Data>.Continuation?
     private var messages: [[String: Any]] = []
+    private var connectionAttempts: [TimeInterval] = []
+    var connectionAttemptTimes: [TimeInterval] { lock.withLock { connectionAttempts } }
     private let stateVersion: Int
     private var automaticSnapshots = true
     private var acknowledgeSubmissions = true
@@ -730,10 +754,15 @@ final class CodexDesktopIPCFixture: @unchecked Sendable {
             "params": ["conversationId": conversationID, "hostId": host, "change": ["type": "patches", "baseRevision": baseRevision, "revision": revision, "patches": patches]]]) }
     }
     func client(timeout: TimeInterval = 0.2, maximumFrameBytes: Int = 9_437_184,
-                maximumRetainedStateBytes: Int = 33_554_432, frameDrainTimeoutSeconds: TimeInterval = 5) -> CodexDesktopIPCClient {
+                maximumRetainedStateBytes: Int = 33_554_432, frameDrainTimeoutSeconds: TimeInterval = 5,
+                connectionDelayNanoseconds: UInt64 = 0) -> CodexDesktopIPCClient {
         .init(configuration: .init(socketURL: URL(fileURLWithPath: "/fixture/ipc.sock"), requestTimeoutSeconds: timeout,
             maximumFrameBytes: maximumFrameBytes, maximumRetainedStateBytes: maximumRetainedStateBytes,
-            frameDrainTimeoutSeconds: frameDrainTimeoutSeconds), connector: { [self] _ in makeTransport() })
+            frameDrainTimeoutSeconds: frameDrainTimeoutSeconds), connector: { [self] _ in
+                lock.withLock { connectionAttempts.append(ProcessInfo.processInfo.systemUptime) }
+                if connectionDelayNanoseconds > 0 { try await Task.sleep(nanoseconds: connectionDelayNanoseconds) }
+                return makeTransport()
+            })
     }
     func connectedClient(timeout: TimeInterval = 0.2) async throws -> (CodexDesktopIPCClient, CodexDesktopIPCSnapshotRecorder, CodexDesktopConversationSnapshot) {
         let client = client(timeout: timeout), recorder = CodexDesktopIPCSnapshotRecorder()
@@ -809,12 +838,19 @@ actor CodexDesktopIPCSnapshotRecorder {
         for _ in 0..<500 { if values.count > count, let value = values.last { return value }; try await Task.sleep(nanoseconds: 10_000_000) }
         throw CodexDesktopIPCError.unavailable
     }
-    func waitForConnection() async throws {
-        for _ in 0..<500 { if states.contains(.connected) { return }; try await Task.sleep(nanoseconds: 10_000_000) }
-        throw CodexDesktopIPCError.unavailable
+    func waitForConnection(count: Int = 1) async throws {
+        try await waitForState(.connected, count: count)
     }
-    func waitForDisconnect() async throws {
-        for _ in 0..<500 { if states.contains(.disconnected) { return }; try await Task.sleep(nanoseconds: 10_000_000) }
+    func waitForDisconnect(count: Int = 1) async throws {
+        try await waitForState(.disconnected, count: count)
+    }
+    private func waitForState(_ state: CodexDesktopIPCConnectionState, count: Int) async throws {
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            if states.filter({ $0 == state }).count >= count { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for \(count) \(state) events; observed \(states)")
         throw CodexDesktopIPCError.unavailable
     }
 }
