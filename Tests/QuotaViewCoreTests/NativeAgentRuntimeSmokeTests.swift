@@ -798,74 +798,136 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
 
     @MainActor
     func testOpenCodeOwnerReceivesSingleAnswerAndPermission() async throws {
-        try await verifyOpenCodeReplies(typedAPI: false)
+        try await verifyOpenCodeReplies(scenario: "primary")
     }
 
     @MainActor
     func testOpenCodeTypedOwnerFallbackReceivesSingleAnswerAndPermission() async throws {
-        try await verifyOpenCodeReplies(typedAPI: true)
+        try await verifyOpenCodeReplies(scenario: "fallback")
     }
 
     @MainActor
-    private func verifyOpenCodeReplies(typedAPI: Bool) async throws {
-        let root=URL(fileURLWithPath:"/private/tmp/qv-ask-"+UUID().uuidString.prefix(8))
-        try FileManager.default.createDirectory(at:root.appendingPathComponent("config"),withIntermediateDirectories:true)
-        defer { try? FileManager.default.removeItem(at:root) }
-        let suite="QuotaView.OpenCodeExitSmoke."+UUID().uuidString
-        let defaults=try XCTUnwrap(UserDefaults(suiteName:suite))
-        defer { defaults.removePersistentDomain(forName:suite) }
-        let preferences=AppPreferences(defaults:defaults), island=IslandSession()
-        preferences.openCodeEnabled=true; preferences.codexActivityIslandEnabled=true
-        preferences.openCodeInteractionsEnabled=true
-        let installer=NativeAgentInstaller(provider:.openCode,socketURL:root.appendingPathComponent("events.sock"),authenticationToken:"fixture",
-            homeOverride:root.appendingPathComponent("config"),supportOverride:root.appendingPathComponent("support"),
-            helperOverride:URL(fileURLWithPath:FileManager.default.currentDirectoryPath+"/.build/debug/QuotaViewActivityHook"))
-        let runtime=NativeAgentRuntime(provider:.openCode,preferences:preferences,island:island,defaults:defaults,installer:installer)
+    private func verifyOpenCodeReplies(scenario: String) async throws {
+        try await withOpenCodeOwner(scenario) { model, _ in
+            for id in ["que_1", "per_2"] {
+                let (taskID, card, wire) = try await self.openCodeCard(model, nativeID: id)
+                let result = try self.openCodeDecision(for: wire)
+                model.submit(taskID, requestID: card.id, decision: .reply(result))
+                model.submit(taskID, requestID: card.id, decision: .reply(result))
+                try await self.waitFor { model.openCodeResponseCapability?(wire) == false }
+                try await self.assertOpenCodeReplyRejected(model, wire: wire, result: result)
+            }
+            try await self.waitFor { model.tasks.allSatisfy { $0.requests.isEmpty } }
+        }
+    }
+
+    @MainActor
+    func testOpenCodeAmbiguousPrimaryDeliveryCannotRetryOrFallBack() async throws {
+        try await withOpenCodeOwner("uncertain") { model, _ in
+            let (taskID, card, wire) = try await self.openCodeCard(model, nativeID: "que_1")
+            let result = try self.openCodeDecision(for: wire)
+            model.submit(taskID, requestID: card.id, decision: .reply(result))
+            try await self.waitFor {
+                model.tasks.flatMap(\.requests).contains {
+                    $0.value.id == card.id && $0.value.phase == .resultUnknown && !$0.value.canRespond
+                }
+            }
+            model.submit(taskID, requestID: card.id, decision: .reply(result))
+            try await self.assertOpenCodeReplyRejected(model, wire: wire, result: result)
+        }
+    }
+
+    @MainActor
+    func testOpenCodeWithdrawnAndPreviousTurnCardsCannotAnswerNewQuestion() async throws {
+        try await withOpenCodeOwner("withdrawn") { model, root in
+            var previous: UUID?
+            for (nativeID, marker) in [("que_old", "settle-in-client"), ("que_1", "end-turn")] {
+                let (taskID, card, wire) = try await self.openCodeCard(model, nativeID: nativeID, excluding: previous)
+                try Data().write(to: root.appendingPathComponent(marker))
+                let (_, _, next) = try await self.openCodeCard(model, nativeID: "que_1", excluding: card.id)
+                XCTAssertEqual(wire.threadID, next.threadID)
+                if marker == "end-turn" {
+                    XCTAssertNotEqual(wire.turnID, next.turnID)
+                } else {
+                    XCTAssertFalse(model.tasks.flatMap(\.requests).contains { $0.value.protocolRequest?.params["itemId"].text == nativeID },
+                        "Replaying an already settled OpenCode request must not create another answerable card")
+                }
+                try await self.waitFor { model.tasks.allSatisfy { !$0.requests.contains { $0.value.id == card.id } } }
+                let oldAnswer = try self.openCodeDecision(for: wire, answer: "Blue")
+                model.submit(taskID, requestID: card.id, decision: .reply(oldAnswer))
+                try await self.assertOpenCodeReplyRejected(model, wire: wire, result: oldAnswer)
+                XCTAssertEqual(model.openCodeResponseCapability?(next), true)
+                previous = card.id
+            }
+            let (taskID, card, wire) = try await self.openCodeCard(model, nativeID: "que_1", excluding: previous)
+            model.submit(taskID, requestID: card.id, decision: .reply(try self.openCodeDecision(for: wire)))
+            try await self.waitFor { model.tasks.allSatisfy { $0.requests.isEmpty } }
+        }
+    }
+
+    @MainActor
+    private func openCodeCard(_ model: IslandLiveStore, nativeID: String, excluding oldID: UUID? = nil)
+        async throws -> (Int, IslandConfirmation, IslandCodexApprovalRequest) {
+        func find() -> (Int, IslandConfirmation, IslandCodexApprovalRequest)? {
+            for task in model.tasks {
+                for pending in task.requests where pending.value.id != oldID {
+                    if let wire = pending.value.protocolRequest, wire.params["itemId"].text == nativeID {
+                        return (task.id, pending.value, wire)
+                    }
+                }
+            }
+            return nil
+        }
+        try await waitFor { find() != nil }
+        return try XCTUnwrap(find())
+    }
+
+    private func openCodeDecision(for wire: IslandCodexApprovalRequest, answer: String = "Orange") throws -> IslandApprovalJSON {
+        if wire.kind == .command {
+            return try XCTUnwrap(wire.actions.first { $0.result["decision"].text == "decline" }?.result)
+        }
+        var draft = IslandApprovalDraft()
+        draft.selectAnswer(answer, for: try XCTUnwrap(wire.questions.first))
+        return try XCTUnwrap(draft.result(for: wire))
+    }
+
+    @MainActor
+    private func assertOpenCodeReplyRejected(_ model: IslandLiveStore, wire: IslandCodexApprovalRequest, result: IslandApprovalJSON) async throws {
+        XCTAssertEqual(model.openCodeResponseCapability?(wire), false)
+        let respond = try XCTUnwrap(model.openCodeRespond)
+        do {
+            try await respond(wire, result)
+            XCTFail("The adapter sent a decision for an inactive request")
+        } catch is CancellationError {}
+    }
+
+    @MainActor
+    private func withOpenCodeOwner(_ scenario: String, verify: @MainActor (IslandLiveStore, URL) async throws -> Void) async throws {
+        let root = URL(fileURLWithPath: "/private/tmp/qv-ask-" + UUID().uuidString.prefix(8))
+        let home = root.appendingPathComponent("config")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "QuotaView.OpenCodeInteractionSmoke." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults), island = IslandSession()
+        preferences.openCodeEnabled = true
+        preferences.codexActivityIslandEnabled = true
+        preferences.openCodeInteractionsEnabled = true
+        let installer = NativeAgentInstaller(provider: .openCode, socketURL: root.appendingPathComponent("events.sock"),
+            authenticationToken: "fixture", homeOverride: home, supportOverride: root.appendingPathComponent("support"),
+            helperOverride: URL(fileURLWithPath: FileManager.default.currentDirectoryPath + "/.build/debug/QuotaViewActivityHook"))
+        let runtime = NativeAgentRuntime(provider: .openCode, preferences: preferences, island: island, defaults: defaults, installer: installer)
         defer { runtime.stop(); island.stop() }
-        runtime.start(); try await waitFor { runtime.status == .waiting }
-        let plugin=installer.home.appendingPathComponent("plugins/"+installer.marker+".js")
-        let literal=String(data:try JSONEncoder().encode(plugin.absoluteString),encoding:.utf8)!
-        let script = """
-        const {QuotaView}=await import(\(literal));
-        const replies=[];
-        const raw={post:async opts=>{replies.push([opts.url,opts.body]);return {data:true,response:{ok:true}};}};
-        const typed=type=>({reply:async ({requestID,...body})=>raw.post({url:'/'+type+'/'+requestID+'/reply',body})});
-        let client=\(typedAPI ? "{permission:typed('permission'),question:typed('question')}" : "{_client:raw}");
-        if (\(typedAPI) && process.env.QV_OPENCODE_SDK) {
-          const {createOpencodeClient}=await import(process.env.QV_OPENCODE_SDK);
-          client=createOpencodeClient({baseUrl:'http://fixture.invalid',directory:'/isolated',fetch:async req=>{
-            const url=new URL(req.url);
-            if(url.hostname!=='fixture.invalid' || req.headers.get('x-opencode-directory')!==encodeURIComponent('/isolated')) throw Error('Wrong instance');
-            replies.push([url.pathname,await req.json()]);
-            return Response.json(true);
-          }});
-        }
-        const plugin=await QuotaView({client});
-        const emit=(type,properties)=>plugin.event({event:{type,properties:{sessionID:'session1',...properties}}});
-        await emit('session.status',{status:{type:'busy'}});
-        await emit('question.asked',{id:'que_1',questions:[{question:'Choose a color',options:[{label:'Blue'},{label:'Orange'}]}]});
-        await emit('permission.asked',{id:'per_2',permission:'read',patterns:['file.txt']});
-        for(let i=0;i<300 && replies.length!==2;i++) await new Promise(r=>setTimeout(r,20));
-        const expected=[['/permission/per_2/reply',{reply:'reject'}],['/question/que_1/reply',{answers:[['Orange']]}]];
-        if(JSON.stringify(replies.sort())!==JSON.stringify(expected)) throw Error(JSON.stringify(replies));
-        await emit('session.idle',{});
-        """
-        let file = root.appendingPathComponent("owner.mjs")
-        try script.write(to: file, atomically: true, encoding: .utf8)
-        async let run = execute(URL(fileURLWithPath: "/usr/bin/env"), arguments: ["node",file.path])
-        for kind in [IslandCodexApprovalRequest.Kind.questions, .command] {
-            try await waitFor { island.model.tasks.contains { task in task.requests.contains { $0.value.protocolRequest?.kind == kind } } }
-            let task = try XCTUnwrap(island.model.tasks.first)
-            let pending = try XCTUnwrap(task.requests.first { $0.value.protocolRequest?.kind == kind })
-            let wire = try XCTUnwrap(pending.value.protocolRequest)
-            let result: IslandApprovalJSON
-            if kind == .questions {
-                var draft = IslandApprovalDraft()
-                draft.selectAnswer("Orange", for: try XCTUnwrap(wire.questions.first))
-                result = try XCTUnwrap(draft.result(for: wire))
-            } else { result = try XCTUnwrap(wire.actions.first { $0.result["decision"].text == "decline" }?.result) }
-            island.model.submit(task.id, requestID: pending.value.id, decision: .reply(result))
-        }
+        runtime.start()
+        try await waitFor { runtime.status == .waiting }
+        let plugin = installer.home.appendingPathComponent("plugins/" + installer.marker + ".js")
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/agent-integrations/opencode_interaction_owner.mjs")
+        async let run = execute(URL(fileURLWithPath: "/usr/bin/env"),
+            arguments: ["node", fixture.path, plugin.absoluteString, scenario], directory: root)
+        try await verify(island.model, root)
+        try Data().write(to: root.appendingPathComponent("finish"))
         let outcome = try await run
         XCTAssertEqual(outcome.0, 0, outcome.1)
         try await waitFor { island.model.tasks.allSatisfy { $0.requests.isEmpty } }

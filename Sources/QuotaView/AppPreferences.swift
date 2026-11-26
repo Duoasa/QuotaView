@@ -4,6 +4,13 @@ import Foundation
 import QuotaViewCore
 import SwiftUI
 
+enum QuotaViewGlassMode: String, CaseIterable, Identifiable {
+    case frosted
+    case clear
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class AppPreferences: ObservableObject {
     enum IslandMaterial: String, CaseIterable, Identifiable {
@@ -117,12 +124,6 @@ final class AppPreferences: ObservableObject {
             return .english
         }
         static var systemResolved: Language { resolve(preferredLanguages: Locale.preferredLanguages) }
-    }
-
-    enum MenuBarComponent {
-        case statusIcon
-        case remainingQuota
-        case resetCountdown
     }
 
     enum TokenActivityRange: String, CaseIterable, Identifiable {
@@ -864,54 +865,6 @@ final class AppPreferences: ObservableObject {
         case .dark: .darkAqua
         }
         NSApplication.shared.appearance = NSAppearance(named: appearanceName)
-    }
-
-    func isVisible(_ component: MenuBarComponent) -> Bool {
-        switch component {
-        case .statusIcon: showStatusIcon
-        case .remainingQuota: showRemainingQuota
-        case .resetCountdown: showResetCountdown
-        }
-    }
-
-    func canHide(_ component: MenuBarComponent) -> Bool {
-        guard isVisible(component) else { return true }
-        return visibleMenuBarComponentCount > 1
-    }
-
-    func binding(for component: MenuBarComponent) -> Binding<Bool> {
-        Binding(
-            get: { [weak self] in
-                self?.isVisible(component) ?? false
-            },
-            set: { [weak self] newValue in
-                self?.setVisibility(newValue, for: component)
-            }
-        )
-    }
-
-    private var visibleMenuBarComponentCount: Int {
-        [showStatusIcon, showRemainingQuota, showResetCountdown]
-            .filter { $0 }
-            .count
-    }
-
-    private func setVisibility(
-        _ isVisible: Bool,
-        for component: MenuBarComponent
-    ) {
-        if !isVisible, !canHide(component) {
-            return
-        }
-
-        switch component {
-        case .statusIcon:
-            showStatusIcon = isVisible
-        case .remainingQuota:
-            showRemainingQuota = isVisible
-        case .resetCountdown:
-            showResetCountdown = isVisible
-        }
     }
 }
 
