@@ -37,29 +37,33 @@ export const QuotaView = async ({client} = {}) => {
     await send({session_id:item.sessionID,source_epoch:epoch,turn_id:item.turn,
       hook_event_name:event,interaction_id:item.eventID});
   }
-  function withdraw(sessionID, requestID) {
+  function withdraw(sessionID, requestID, type) {
+    if (requestID) sessions.get(sessionID)?.handled?.add(JSON.stringify([sessionID,type,requestID]));
     for (const item of interactions.values()) {
-      if (item.sessionID === sessionID && (!requestID || item.id === requestID)) {
+      if (item.sessionID === sessionID && (!requestID || (item.type === type && item.id === requestID))) {
         void report(item,'OpenCodeReleased');
         forget(item);
       }
     }
   }
   function present(sessionID, s, type, props) {
-    if (!validID(props.id) || interactions.size >= 32) return false;
+    if (!validID(props.id)) return false;
+    const key = JSON.stringify([sessionID,type,props.id]);
+    // A replayed .asked notification can get a new socket but still names the same native request.
+    if (s.handled.has(key) || interactions.has(key)) return true;
+    if (interactions.size >= 32) return false;
     // Bind one transport on the originating plugin client before presenting.
     // A failed or ambiguous delivery must never be replayed through another API.
     const raw = client?._client;
-    const api = client?.[type];
     let reply;
     if (typeof raw?.post === 'function') {
       reply = (body, options) => raw.post({url:'/'+type+'/'+props.id+'/reply', body,
         headers:{'Content-Type':'application/json'}, ...options});
-    } else if (typeof api?.reply === 'function') {
+    } else {
+      const api = client?.[type];
+      if (typeof api?.reply !== 'function') return false;
       reply = (body, options) => api.reply({requestID:props.id, ...body}, options);
-    } else { return false; }
-    const key = JSON.stringify([sessionID,type,props.id]);
-    if (interactions.has(key)) return true;
+    }
     const fields = {interaction_type:type, native_id:props.id};
     if (type === 'question') {
       const questions = props.questions;
@@ -114,6 +118,7 @@ export const QuotaView = async ({client} = {}) => {
             body = {answers:message.decision.answers};
           } else { return socket.destroy(); }
           submitted = true;
+          sessions.get(item.sessionID).handled.add(item.key);
           // The plugin SDK retains the owning instance and its directory/auth headers.
           void (async () => {
             try {
@@ -184,12 +189,12 @@ export const QuotaView = async ({client} = {}) => {
   }
   function start(id,s) {
     if (s.active) return;
-    s.active = true; s.turn = randomUUID(); emit(id,s,'TurnStarted');
+    s.active = true; s.turn = randomUUID(); s.handled = new Set(); emit(id,s,'TurnStarted');
   }
   function finish(id,s,name) {
     withdraw(id);
     if (!s.active) return;
-    emit(id,s,name); s.active = false; flushTerminal();
+    emit(id,s,name); s.active = false; s.handled = undefined; flushTerminal();
   }
   return {
     event: async ({event}) => {
@@ -219,13 +224,13 @@ export const QuotaView = async ({client} = {}) => {
         case 'question.asked':
           start(id,s); present(id,s,'question',p); break;
         case 'question.replied': case 'question.rejected':
-          if (validID(p.requestID)) withdraw(id,p.requestID); break;
+          if (validID(p.requestID)) withdraw(id,p.requestID,'question'); break;
         case 'permission.asked': case 'permission.v2.asked':
           start(id,s);
           if (present(id,s,'permission',p)) break;
           start(id,s); emit(id,s,'PermissionRequest',{tool_name:text(p.permission ?? p.action),tool_use_id:text(p.id)}); break;
         case 'permission.replied': case 'permission.v2.replied':
-          if (validID(p.requestID)) withdraw(id,p.requestID);
+          if (validID(p.requestID)) withdraw(id,p.requestID,'permission');
           emit(id,s,'PermissionResult',{tool_use_id:text(p.requestID)}); break;
       }
     },

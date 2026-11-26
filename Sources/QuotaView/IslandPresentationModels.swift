@@ -121,6 +121,15 @@ struct IslandSubagentPresentation: Equatable, Identifiable {
 }
 
 extension AppCopy {
+    func quotaCountdown(until reset: Date?, now: Date) -> String {
+        guard let reset else { return "—" }
+        let seconds = max(0, reset.timeIntervalSince(now))
+        if seconds == 0 { return text("待刷新", "Due") }
+        if seconds >= 86_400 { return text("\(Int(seconds / 86_400))天", "\(Int(seconds / 86_400))d") }
+        if seconds >= 3_600 { return text("\(Int(seconds / 3_600))时", "\(Int(seconds / 3_600))h") }
+        return text("\(max(1, Int(ceil(seconds / 60))))分", "\(max(1, Int(ceil(seconds / 60))))m")
+    }
+
     var islandSubagentTitle: String { text("Codex 子 Agent", "Codex agent") }
     var islandSubagentStatusUnavailable: String { text("状态待更新", "Status unavailable") }
     var islandSubagentInterrupted: String { text("已中断", "Interrupted") }

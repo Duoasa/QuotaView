@@ -1,5 +1,17 @@
 # QuotaView 开发交接
 
+## 0.9.7 Build 34 / OpenCode 请求回传（本地开发）
+
+OpenCode 的交互请求登记、一次性提交、回执超时与撤销已拆到 `OpenCodeInteractionAdapter.swift`，会话和监听仍由共用运行时管理。已在隔离夹具复现原客户端回答后，同轮重放 `question.asked` 会重新出现可答卡；插件现在按原生请求身份忽略这类重复通知。详见[OpenCode 请求回传](docs/specs/agent-integrations.md#build-34-opencode-请求回传)。
+
+7 项 OpenCode 定向测试通过，零跳过。覆盖主通路优先、官方 SDK 1.19.5 在隔离传输中回传问答及权限、双击、回执丢失后禁止重发、原客户端结题、换轮及同 ID 新题。官方 CLI 1.19.5 使用本地模型完成任务状态冒烟。开发签名的 Build 34（内部 271）已启动，保留 Build 33 的设置窗口清理。实机交互待用户验收；证据在 `.build/opencode-097b34/`。
+
+## 0.9.7 Build 33 / 设置窗口与旧菜单清理（本地开发）
+
+设置窗口控制器、窗口类型与尺寸规则位于 `Sources/QuotaView/SettingsWindowController.swift`。灵动岛齿轮和重新打开 App 仍调用同一控制器。已核对生产端没有创建旧菜单控制器的入口，移除旧面板、状态栏标签、菜单重置演示和专属玻璃绘制，保留偏好兼容逻辑。灵动岛使用独立的 30 天费用模型 `Sources/QuotaView/EstimatedCostChartModel.swift` 和原有额度倒计时格式。窗口复用及历史菜单的适用范围见[界面规范](docs/design/QUOTAVIEW_UI_RULES.md#设置窗口)。
+
+15 项定向冒烟通过，覆盖原生设置窗口、费用计算、缺失数据、额度倒计时和偏好恢复。本地化检查与 Xcode Debug 构建通过。已核验 App 和 Widget 的开发签名、App Group、运行包内容与新进程的实际加载路径。本机已启动 Build 33（内部 270），证据在 `.build/settings-menu-097b33/`，窗口交互和费用图表外观待用户验收。
+
 ## 0.9.7 Build 32 / 跨 Agent 问答与确认（仅本地）
 
 DSH Desktop、Web 和 TUI 的交互配置支持将选项或自填答案回传原单题，也可交回 DSH。Antigravity Desktop 增加展开单题的辅助功能兜底，复核原题、选中项或自填值后才按 Submit。OpenCode 优先使用已有通路，备用方法来自同一个客户端实例。Devin Desktop、CLI 分别可开启一次性 `exec` 权限回传。Kimi、Gemini CLI、Copilot CLI 的当前接入只回到可核对的 Terminal 或 iTerm2 标签，Cursor 沿用已有会话跳转，普通问题仍在各自客户端回答。详见[逐来源适配范围](docs/specs/agent-integrations.md#build-32-跨-agent-问答与确认)。
@@ -1752,11 +1764,11 @@ Debug arm64 增量编译通过并启动 PID 15235，仍为 0.7.9 Build 2 / 内�
 | 对象 | 当前事实 |
 |---|---|
 | 开发工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
-| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `b846b03`，当前开发修改保留在工作区 |
-| 开发身份 | `com.quotaview.development073`，0.9.7 Build 32 / 内部 269 |
+| 分支 / 源码提交 | `codex/0.9.4-task-rate`，基线 `69c71ab`，当前开发修改保留在工作区 |
+| 开发身份 | `com.quotaview.development073`，0.9.7 Build 34 / 内部 271 |
 | 运行包 | `.build/DevelopmentRuntime/QuotaView.app` |
-| 最近运行核验 | 2026-11-25，实际加载路径见 `.build/agent-interactions-097b32/runtime/runtime-result.json` |
-| 源码与运行包 | 本地 0.9.7 Build 32 的 277 个构建输入、开发包清单与运行身份已核对 |
+| 最近运行核验 | 2026-11-26，实际加载路径见 `.build/opencode-097b34/runtime-result.json` |
+| 源码与运行包 | 本地 0.9.7 Build 34 的 Xcode 编译清单、开发包内容、签名与运行身份已核对 |
 | 公开稳定版 | 0.9.7 Build 1；完整事实与回滚入口见 [版本历史](VERSION_HISTORY.md#当前最新版本) |
 | 本机正式安装 | 本轮未替换 `/Applications/QuotaView.app`；历史核验为 0.8.3 Build 1 / 内部 75，不代表当前安装状态 |
 

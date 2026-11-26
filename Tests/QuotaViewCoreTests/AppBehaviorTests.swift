@@ -96,72 +96,17 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testMenuBarSingleWindowTextUsesRealWindow() {
-        let now = Date(timeIntervalSince1970: 1000)
-        let window = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
-            usedPercent: 90, remainingPercent: 10, windowDurationMinutes: 10080,
-            resetsAt: now.addingTimeInterval(86400))
-        let row = MenuBarQuotaImage.singleRow(windows: [window], showsCountdown: true,
-            now: now, copy: AppCopy(language: .english))
-        XCTAssertEqual(row, .init(label: "7d", remaining: 10, countdown: "1d"))
-        let missing = MenuBarQuotaImage.singleRow(windows: [], showsCountdown: true,
-            now: now, copy: AppCopy(language: .english))
-        XCTAssertEqual(missing, .init(label: "—", remaining: nil, countdown: "—"))
-    }
-
-    @MainActor
-    func testMenuBarQuotaCountdownsStayWithTheirWindow() {
+    func testIslandQuotaCountdownFormatsMissingDueAndFutureResets() {
         let now = Date(timeIntervalSince1970: 1000)
         let en = AppCopy(language: .english)
         let zh = AppCopy(language: .simplifiedChinese)
-        let primary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
-            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 300,
-            resetsAt: now.addingTimeInterval(7200))
-        let weekly = CodexQuotaWindowPresentation(id: CodexDomainCatalog.secondaryRateWindowID,
-            usedPercent: 22, remainingPercent: 78, windowDurationMinutes: 10080,
-            resetsAt: now.addingTimeInterval(259200))
-        let rows = MenuBarQuotaImage.rows(windows: [weekly, primary], showsCountdown: true, now: now, copy: en)
-        XCTAssertEqual(rows.map(\.countdown), ["2h", "3d"])
-        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [primary], showsCountdown: true, now: now)[1].countdown, "—")
-        XCTAssertNil(MenuBarQuotaImage.rows(windows: [primary], now: now)[0].countdown)
-        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now, now: now, copy: en), "Due")
-        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now.addingTimeInterval(-60), now: now, copy: zh), "待刷新")
-        XCTAssertEqual(MenuBarQuotaImage.countdown(until: now.addingTimeInterval(30), now: now, copy: en), "1m")
-        XCTAssertEqual(MenuBarQuotaImage.countdown(until: primary.resetsAt, now: now, copy: zh), "2时")
-        let full = MenuBarQuotaImage.make(rows: rows, showsIcon: true)
-        let countdownOnly = MenuBarQuotaImage.make(rows: rows, showsIcon: false, showsQuota: false)
-        XCTAssertLessThan(countdownOnly.size.width, full.size.width)
-        XCTAssertNotNil(countdownOnly.tiffRepresentation)
-    }
 
-    func testMenuBarQuotaUsesWindowIdentityAndRealDurations() {
-        let primary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
-            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 300, resetsAt: nil)
-        let secondary = CodexQuotaWindowPresentation(id: CodexDomainCatalog.secondaryRateWindowID,
-            usedPercent: 100, remainingPercent: 0, windowDurationMinutes: 10_080, resetsAt: nil)
-        XCTAssertTrue(MenuBarQuotaImage.showsDualQuota(windows: [secondary, primary]))
-        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: [secondary]))
-        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: []))
-        let weeklyOnly = CodexQuotaWindowPresentation(id: CodexDomainCatalog.primaryRateWindowID,
-            usedPercent: 10, remainingPercent: 90, windowDurationMinutes: 10_080, resetsAt: nil)
-        XCTAssertFalse(MenuBarQuotaImage.showsDualQuota(windows: [weeklyOnly]))
-        let rows = MenuBarQuotaImage.rows(windows: [secondary, primary])
-        XCTAssertEqual(rows, [.init(label: "5h", remaining: 90), .init(label: "7d", remaining: 0)])
-        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [primary])[1].value, "—%")
-        XCTAssertEqual(MenuBarQuotaImage.rows(windows: [secondary])[0].value, "—%")
-        XCTAssertEqual(rows[1].value, "0%")
-    }
-
-    @MainActor
-    func testMenuBarQuotaTemplateHasStableWidthAcrossQuotaChanges() {
-        let full = [MenuBarQuotaImage.Row(label: "5h", remaining: 100), .init(label: "7d", remaining: 100)]
-        let empty = [MenuBarQuotaImage.Row(label: "5h", remaining: 0), .init(label: "7d", remaining: nil)]
-        let image = MenuBarQuotaImage.make(rows: full, showsIcon: true)
-        XCTAssertTrue(image.isTemplate)
-        XCTAssertEqual(image.size.height, 22)
-        XCTAssertEqual(image.size, MenuBarQuotaImage.make(rows: empty, showsIcon: true).size)
-        XCTAssertEqual(image.size.width - MenuBarQuotaImage.make(rows: full, showsIcon: false).size.width, 23)
-        XCTAssertNotNil(image.tiffRepresentation)
+        XCTAssertEqual(en.quotaCountdown(until: nil, now: now), "—")
+        XCTAssertEqual(en.quotaCountdown(until: now, now: now), "Due")
+        XCTAssertEqual(zh.quotaCountdown(until: now.addingTimeInterval(-60), now: now), "待刷新")
+        XCTAssertEqual(en.quotaCountdown(until: now.addingTimeInterval(30), now: now), "1m")
+        XCTAssertEqual(zh.quotaCountdown(until: now.addingTimeInterval(7200), now: now), "2时")
+        XCTAssertEqual(en.quotaCountdown(until: now.addingTimeInterval(259200), now: now), "3d")
     }
 
     @MainActor
@@ -266,46 +211,6 @@ final class AppBehaviorTests: XCTestCase {
         XCTAssertFalse(controller.automaticallyChecksForUpdates)
     }
 
-    @MainActor
-    func testTokenActivityHoverCancellationDoesNotPresentTooltip()
-        async {
-        let controller = TokenActivityHoverController()
-        var presentedCellID: Int?
-        let cancelledPresentation = expectation(
-            description: "Cancelled hover does not present"
-        )
-        cancelledPresentation.isInverted = true
-
-        controller.schedule(
-            cellID: 4,
-            delayNanoseconds: 20_000_000
-        ) {
-            presentedCellID = 4
-            cancelledPresentation.fulfill()
-        }
-        controller.cancel()
-        await fulfillment(
-            of: [cancelledPresentation],
-            timeout: 0.1
-        )
-
-        XCTAssertNil(presentedCellID)
-
-        let presented = expectation(
-            description: "Active hover presents"
-        )
-        controller.schedule(
-            cellID: 9,
-            delayNanoseconds: 20_000_000
-        ) {
-            presentedCellID = 9
-            presented.fulfill()
-        }
-        await fulfillment(of: [presented], timeout: 1.0)
-
-        XCTAssertEqual(presentedCellID, 9)
-    }
-
     private func makeUpdateEnvironment(
         isDebugBuild: Bool = false,
         isApplicationBundle: Bool = true,
@@ -326,33 +231,6 @@ final class AppBehaviorTests: XCTestCase {
             feedURLString: feedURLString,
             publicEDKey: publicEDKey
         )
-    }
-
-    func testMenuPanelResizeKeepsItsMenuBarAnchorStable() {
-        let visibleFrame = NSRect(
-            x: 0,
-            y: 0,
-            width: 1_440,
-            height: 875
-        )
-        let compact = MenuBarPanelGeometry.anchoredFrame(
-            size: NSSize(width: 310, height: 500),
-            centerX: 1_250,
-            visibleFrame: visibleFrame,
-            screenEdgeInset: 8,
-            menuBarGap: 6
-        )
-        let expanded = MenuBarPanelGeometry.anchoredFrame(
-            size: NSSize(width: 310, height: 620),
-            centerX: 1_250,
-            visibleFrame: visibleFrame,
-            screenEdgeInset: 8,
-            menuBarGap: 6
-        )
-
-        XCTAssertEqual(compact.maxY, expanded.maxY)
-        XCTAssertEqual(compact.maxY, visibleFrame.maxY - 6)
-        XCTAssertEqual(compact.minX, expanded.minX)
     }
 
     func testCodexActivityProductionInactivityTiming() {
@@ -4172,171 +4050,6 @@ final class AppBehaviorTests: XCTestCase {
     }
 
     @MainActor
-    func testTokenActivityGridRestoresPlaceholdersAndCapsAtSixMonths()
-    throws {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let endDate = try XCTUnwrap(
-            DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 8,
-                day: 10
-            ).date
-        )
-        let sixMonthBoundary = try XCTUnwrap(
-            calendar.date(byAdding: .month, value: -6, to: endDate)
-        ).addingTimeInterval(86_400)
-        let tooOld = try XCTUnwrap(
-            calendar.date(byAdding: .day, value: -1, to: sixMonthBoundary)
-        )
-        let earlierDate = try XCTUnwrap(
-            calendar.date(byAdding: .day, value: -39, to: endDate)
-        )
-        let recentDate = try XCTUnwrap(
-            calendar.date(byAdding: .day, value: -3, to: endDate)
-        )
-        let futureDate = try XCTUnwrap(
-            calendar.date(byAdding: .day, value: 1, to: endDate)
-        )
-        let activity = [
-            DailyTokenActivity(date: tooOld, tokens: 20_000),
-            DailyTokenActivity(date: sixMonthBoundary, tokens: 1_000),
-            DailyTokenActivity(date: earlierDate, tokens: 9_000),
-            DailyTokenActivity(date: recentDate, tokens: 2_000),
-            DailyTokenActivity(date: endDate, tokens: 3_000),
-            DailyTokenActivity(date: endDate, tokens: 2_000),
-            DailyTokenActivity(date: futureDate, tokens: 30_000)
-        ]
-
-        for range in AppPreferences.TokenActivityRange.allCases {
-            let model = TokenActivityGridModel(
-                activity: activity,
-                range: range,
-                endingAt: endDate
-            )
-            let placeholderCount = model.cells
-                .prefix { $0.isPlaceholder }
-                .count
-
-            XCTAssertEqual(
-                model.cells.count,
-                model.rowCount * TokenActivityGridMetrics.columnCount
-            )
-            XCTAssertEqual(
-                placeholderCount,
-                model.cells.count - model.dayCount
-            )
-            XCTAssertFalse(
-                model.cells.dropFirst(placeholderCount).contains {
-                    $0.isPlaceholder
-                }
-            )
-        }
-
-        let week = TokenActivityGridModel(
-            activity: activity,
-            range: .week,
-            endingAt: endDate
-        )
-        XCTAssertEqual(week.dayCount, 7)
-        XCTAssertEqual(week.rowCount, 1)
-        XCTAssertEqual(week.cells.prefix { $0.isPlaceholder }.count, 9)
-        XCTAssertEqual(week.cells.compactMap(\.date).last, endDate)
-        XCTAssertEqual(week.maximumTokens, 5_000)
-        XCTAssertEqual(TokenActivityGridMetrics.gridWidth, 237)
-        XCTAssertEqual(
-            TokenActivityGridMetrics.tooltipDelayNanoseconds,
-            500_000_000
-        )
-        XCTAssertEqual(
-            TokenActivityGridMetrics.sectionHeight(
-                rowCount: week.rowCount
-            ),
-            59
-        )
-
-        let month = TokenActivityGridModel(
-            activity: activity,
-            range: .month,
-            endingAt: endDate
-        )
-        XCTAssertEqual(month.dayCount, 31)
-        XCTAssertEqual(month.rowCount, 2)
-        XCTAssertEqual(month.cells.prefix { $0.isPlaceholder }.count, 1)
-        XCTAssertEqual(
-            TokenActivityGridMetrics.sectionHeight(
-                rowCount: month.rowCount
-            ),
-            74
-        )
-
-        let sixMonths = TokenActivityGridModel(
-            activity: activity,
-            range: .sixMonths,
-            endingAt: endDate
-        )
-        let expectedSixMonthDays = try XCTUnwrap(
-            calendar.dateComponents(
-                [.day],
-                from: sixMonthBoundary,
-                to: endDate
-            ).day
-        ) + 1
-        XCTAssertEqual(sixMonths.dayCount, expectedSixMonthDays)
-        XCTAssertEqual(
-            sixMonths.rowCount,
-            (expectedSixMonthDays + 15) / 16
-        )
-        XCTAssertEqual(
-            sixMonths.cells.compactMap(\.date).first,
-            sixMonthBoundary
-        )
-        XCTAssertEqual(sixMonths.cells.compactMap(\.date).last, endDate)
-        XCTAssertFalse(sixMonths.cells.compactMap(\.date).contains(tooOld))
-        XCTAssertFalse(sixMonths.cells.compactMap(\.date).contains(futureDate))
-        XCTAssertEqual(sixMonths.maximumTokens, 9_000)
-
-        let partialHistory = TokenActivityGridModel(
-            activity: [
-                DailyTokenActivity(date: earlierDate, tokens: 9_000),
-                DailyTokenActivity(date: endDate, tokens: 3_000)
-            ],
-            range: .sixMonths,
-            endingAt: endDate
-        )
-        XCTAssertEqual(partialHistory.dayCount, 40)
-        XCTAssertEqual(partialHistory.rowCount, 3)
-        XCTAssertEqual(
-            partialHistory.cells.prefix { $0.isPlaceholder }.count,
-            8
-        )
-        XCTAssertEqual(
-            partialHistory.cells.compactMap(\.date).first,
-            earlierDate
-        )
-
-        let empty = TokenActivityGridModel(
-            activity: [],
-            range: .sixMonths,
-            endingAt: endDate
-        )
-        XCTAssertEqual(empty.dayCount, 31)
-        XCTAssertEqual(empty.rowCount, 2)
-        XCTAssertEqual(empty.cells.count, 32)
-        XCTAssertEqual(empty.cells.prefix { $0.isPlaceholder }.count, 1)
-        XCTAssertTrue(empty.cells.dropFirst().allSatisfy { $0.tokens == nil })
-        XCTAssertEqual(empty.maximumTokens, 0)
-        XCTAssertEqual(TokenActivityGridMetrics.gridHeight(rowCount: 0), 12)
-        XCTAssertEqual(
-            TokenActivityGridMetrics.sectionHeight(rowCount: 0),
-            59
-        )
-    }
-
-    @MainActor
     func testEstimatedCostChartUsesThirtyDaysAndCachedInputPrice()
     throws {
         var calendar = Calendar(identifier: .gregorian)
@@ -4376,10 +4089,6 @@ final class AppBehaviorTests: XCTestCase {
             to: endDate
         ))
         XCTAssertEqual(model.days.last?.date, endDate)
-        XCTAssertEqual(
-            EstimatedCostChartMetrics.cachedInputUSDPerMillionTokens,
-            0.50
-        )
         XCTAssertEqual(model.todayCost ?? -1, 37.50, accuracy: 0.000_001)
         XCTAssertEqual(model.latestCost ?? -1, 37.50, accuracy: 0.000_001)
         XCTAssertEqual(
@@ -4389,22 +4098,6 @@ final class AppBehaviorTests: XCTestCase {
         )
         XCTAssertEqual(model.maximumCost, 37.50, accuracy: 0.000_001)
         XCTAssertEqual(model.periodTokens, 100_000_000)
-        XCTAssertEqual(EstimatedCostChartMetrics.sectionHeight, 176)
-
-        let barWidth = CGFloat(EstimatedCostChartMetrics.dayCount)
-            * EstimatedCostChartMetrics.barWidth
-            + CGFloat(EstimatedCostChartMetrics.dayCount - 1)
-            * EstimatedCostChartMetrics.barSpacing
-        XCTAssertEqual(
-            barWidth,
-            EstimatedCostChartMetrics.contentWidth,
-            accuracy: 0.000_001
-        )
-        XCTAssertEqual(
-            EstimatedCostChartMetrics.barSpacing,
-            62.0 / 29.0,
-            accuracy: 0.000_001
-        )
 
         let noTodayBucket = EstimatedCostChartModel(
             activity: [

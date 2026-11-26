@@ -930,8 +930,7 @@ final class IslandBoardState: ObservableObject {
         display?.remainingPercent.map { "\(min(100, max(0, $0)))%" } ?? "—"
     }
     var quota: String {
-        let countdown = MenuBarQuotaImage.countdown(until: display?.quotaResetsAt, now: Date(),
-            copy: AppCopy(language: language))
+        let countdown = AppCopy(language: language).quotaCountdown(until: display?.quotaResetsAt, now: Date())
         return quotaPercent + " · " + countdown
     }
 
@@ -2060,7 +2059,7 @@ struct IslandUsageCapsuleContent: View {
     private func period(_ window: CodexQuotaWindowPresentation?, short: Bool) -> some View {
         let percent = current ? window?.remainingPercent : nil
         let copy = AppCopy(language: appLanguage ?? (english ? .english : .simplifiedChinese))
-        let countdown = MenuBarQuotaImage.countdown(until: current ? window?.resetsAt : nil, now: now, copy: copy)
+        let countdown = copy.quotaCountdown(until: current ? window?.resetsAt : nil, now: now)
         let title = (short ? copy.text("5小时", "5h") : copy.text("周额度", "Weekly"))
         let value = percent.map { "\(min(100, max(0, $0)))%" } ?? "—"
         return HStack(spacing: 6) {

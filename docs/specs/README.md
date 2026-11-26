@@ -1,5 +1,13 @@
 # QuotaView SDD 注册表
 
+## 0.9.7 Build 34 / OpenCode 请求回传
+
+[OpenCode 请求回传](agent-integrations.md#build-34-opencode-请求回传)记录适配器职责、主通路与原实例 SDK 兜底的选择、重复通知及换轮后的旧卡处理。
+
+## 0.9.7 Build 33 / 设置窗口与旧菜单清理
+
+[设置窗口](../design/QUOTAVIEW_UI_RULES.md#设置窗口)记录灵动岛与系统重开 App 的窗口复用规则。设置窗口和费用图表模型已独立，旧菜单面板与专属绘制代码已移除。
+
 ## 0.9.7 Build 32 / 跨 Agent 问答与确认
 
 [Agent 接入](agent-integrations.md#build-32-跨-agent-问答与确认)记录 DSH 与 Antigravity 的单题、OpenCode 原实例备用接口、Devin 双端权限回传和终端来源匹配。

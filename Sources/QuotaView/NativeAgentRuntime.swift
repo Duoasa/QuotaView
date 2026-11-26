@@ -129,13 +129,7 @@ final class NativeAgentRuntime: ObservableObject {
     typealias AnswerNativeQuestion = @MainActor (AntigravityDesktopApproval.Card, String, () -> Bool) async -> Bool
     private let answerNativeQuestion: AnswerNativeQuestion
     private let pressApprovalButton: (AntigravityDesktopApproval.Card, Bool) -> Bool
-    private struct OpenCodeRequest {
-        let wire: IslandCodexApprovalRequest
-        let epoch: String
-        let nativeTurn: String
-        var waiting = true
-    }
-    private var openCodeRequests: [String: OpenCodeRequest] = [:]
+    private var openCode: OpenCodeInteractionAdapter?
     private var openCodeInteractive: Bool {
         provider == .openCode && preferences.openCodeInteractionsEnabled &&
             preferences.codexActivityIslandEnabled && !preferences.codexIslandPrivacy
@@ -180,32 +174,12 @@ final class NativeAgentRuntime: ObservableObject {
             }
         }
         if provider == .openCode {
-            island.model.openCodeResponseCapability = { [weak self] wire in
-                guard let self, openCodeInteractive, enabled, running, listening,
-                      let request = openCodeRequests[wire.rpcID.text], request.wire.raw == wire.raw, request.waiting,
-                      let session = sessions[wire.threadID] else { return false }
-                return session.active && session.epoch == request.epoch && session.turn == wire.turnID
-            }
-            island.model.openCodeRespond = { [weak self] wire, result in
-                guard let self, island.model.openCodeResponseCapability?(wire) == true, wire.permits(result)
-                else { throw CocoaError(.userCancelled) }
-                let decision: [String: Any]
-                if wire.kind == .questions {
-                    decision = ["answers": wire.questions.map { result["answers"][$0.id]["answers"].array.map(\.text) }]
-                } else {
-                    switch result["decision"].text {
-                    case "accept": decision = ["reply": "once"]
-                    case "decline": decision = ["reply": "reject"]
-                    default: throw CocoaError(.coderInvalidValue)
-                    }
-                }
-                openCodeRequests[wire.rpcID.text]?.waiting = false
-                bridge.resolve(eventID: String(wire.rpcID.text.dropFirst("openCode:".count)), decision: decision)
-                Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(8))
-                    guard let self, openCodeRequests[wire.rpcID.text]?.waiting == false else { return }
-                    island.model.markOpenCodeDeliveryUnknown(wire)
-                }
+            openCode = OpenCodeInteractionAdapter(model: island.model, bridge: bridge) { [weak self] key in
+                guard let self, running, listening, enabled, openCodeInteractive,
+                      let session = sessions[key], session.active, session.parent == nil,
+                      let turn = session.turn, let nativeTurn = session.nativeTurn, let epoch = session.epoch
+                else { return nil }
+                return .init(id: turn, nativeID: nativeTurn, epoch: epoch)
             }
         }
         if provider == .antigravity {
@@ -321,7 +295,7 @@ final class NativeAgentRuntime: ObservableObject {
             for id in Array(dshRequests.keys) { releaseDSH(id) }
         }
         if !openCodeInteractive {
-            for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
+            openCode?.closeAll()
         }
         if !devinInteractive { for id in Array(devinPermissions.keys) { closeDevin(id) } }
         if preferences.codexIslandPrivacy {
@@ -392,7 +366,7 @@ final class NativeAgentRuntime: ObservableObject {
                         guard let self, self.revision == current else { return }
                         if self.provider.isDevin { self.closeDevin(self.provider.rawValue + ":" + id) }
                         self.releaseDSH(id)
-                        self.closeOpenCode("openCode:" + id)
+                        self.openCode?.disconnected(eventID: id)
                     }
                 })
                 listening = true; status = .waiting
@@ -406,7 +380,7 @@ final class NativeAgentRuntime: ObservableObject {
     }
     private func stopListening() {
         for id in Array(devinPermissions.keys) { closeDevin(id) }
-        for id in Array(openCodeRequests.keys) { closeOpenCode(id) }
+        openCode?.closeAll()
         if provider == .antigravity {
             antigravityApprovalPoll?.cancel()
             antigravityApprovalPoll = nil
@@ -432,62 +406,6 @@ final class NativeAgentRuntime: ObservableObject {
         }
         sessions.removeAll()
     }
-    private func closeOpenCode(_ id: String) {
-        guard let request = openCodeRequests.removeValue(forKey: id) else { return }
-        bridge.resolve(eventID: String(id.dropFirst("openCode:".count)), decision: nil)
-        island.model.resolveLocalHookRequest(sessionKey: request.wire.threadID, rpcID: request.wire.rpcID)
-    }
-
-    private func receiveOpenCode(_ message: ClaudeCodeBridgeMessage, payload: [String: Any]) {
-        defer { if message.awaitsDecision && openCodeRequests["openCode:" + message.eventID] == nil {
-            bridge.resolve(eventID: message.eventID, decision: nil)
-        } }
-        guard let source = payload["session_id"] as? String, let epoch = payload["source_epoch"] as? String,
-              let nativeTurn = payload["turn_id"] as? String, let eventID = payload["interaction_id"] as? String,
-              UUID(uuidString: eventID) != nil else { return }
-        let key = CodexActivityPrivacy.hashIdentifier("openCode:" + source)
-        let id = "openCode:" + eventID
-        if payload["hook_event_name"] as? String == "OpenCodeDeliveryFailed" {
-            if let request = openCodeRequests[id], !request.waiting, request.wire.threadID == key,
-               request.nativeTurn == nativeTurn, request.epoch == epoch {
-                island.model.markOpenCodeDeliveryUnknown(request.wire)
-            }
-            return
-        }
-        if payload["hook_event_name"] as? String == "OpenCodeReleased" {
-            if let request = openCodeRequests[id], request.wire.threadID == key,
-               request.nativeTurn == nativeTurn, request.epoch == epoch { closeOpenCode(id) }
-            return
-        }
-        guard running, enabled, listening, openCodeInteractive, message.awaitsDecision, message.eventID == eventID,
-              openCodeRequests.count < 32, openCodeRequests[id] == nil,
-              let session = sessions[key], session.active, session.parent == nil, session.nativeTurn == nativeTurn,
-              session.epoch == epoch, let turn = session.turn, let nativeID = payload["native_id"] as? String,
-              !nativeID.isEmpty, nativeID.utf8.count <= 128, message.payload.count <= 65536,
-              !openCodeRequests.values.contains(where: { $0.wire.threadID == key && $0.wire.params["itemId"].text == nativeID }) else { return }
-        var params: [String: Any] = ["openCode": true, "threadId": key, "turnId": turn, "itemId": nativeID]
-        let method: String
-        switch payload["interaction_type"] as? String {
-        case "question":
-            guard let questions = payload["questions"] as? [[String: Any]] else { return }
-            params["questions"] = questions
-            method = "item/tool/requestUserInput"
-        case "permission":
-            guard let command = payload["command"] as? String, !command.isEmpty else { return }
-            params["command"] = command
-            params["availableDecisions"] = ["accept", "decline"]
-            method = "item/commandExecution/requestApproval"
-        default: return
-        }
-        guard let data = try? JSONSerialization.data(withJSONObject: ["id": id, "method": method, "params": params]),
-              let wire = try? IslandCodexApprovalRequest(data: data), wire.kind != .questions || wire.supportedQuestions else { return }
-        openCodeRequests[id] = .init(wire: wire, epoch: epoch, nativeTurn: nativeTurn)
-        if island.model.observeNativeToolRequest(wire, sessionKey: key, turnKey: turn,
-            callHash: CodexActivityPrivacy.hashIdentifier("openCode:" + source + ":" + nativeID)) {
-            bridge.admit(eventID: eventID)
-        } else { closeOpenCode(id) }
-    }
-
     private func closeDevin(_ id: String) {
         guard let held = devinPermissions.removeValue(forKey: id) else { return }
         if !held.dispatched {
@@ -539,11 +457,7 @@ final class NativeAgentRuntime: ObservableObject {
             bridge.resolve(eventID: message.eventID, decision: nil)
             return
         }
-        if provider == .openCode, let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
-           let name = payload["hook_event_name"] as? String, ["OpenCodeInteraction", "OpenCodeReleased", "OpenCodeDeliveryFailed"].contains(name) {
-            receiveOpenCode(message, payload: payload)
-            return
-        }
+        if openCode?.handle(message) == true { return }
         if provider == .dsh,
            let payload = (try? JSONSerialization.jsonObject(with: message.payload)) as? [String: Any],
            let name = payload["hook_event_name"] as? String, name.hasPrefix("DSHApproval") || name.hasPrefix("DSHQuestion") {
@@ -705,12 +619,7 @@ final class NativeAgentRuntime: ObservableObject {
                     || (post && held.call != nil && held.call == call && payload["tool_name"] as? String == "exec") { closeDevin(id) }
             }
         }
-        if provider == .openCode {
-            for (id, request) in openCodeRequests where request.wire.threadID == key {
-                if request.epoch != session.epoch || request.wire.turnID != session.turn ||
-                    ["Stop", "StopFailure", "Interrupt", "SessionEnd"].contains(name) { closeOpenCode(id) }
-            }
-        }
+        openCode?.sessionDidChange(key, ended: ["Stop", "StopFailure", "Interrupt", "SessionEnd"].contains(name))
         if provider == .dsh, session.title == nil || startedTurn || name == "Stop" {
             refreshDSHTitle(key: key, sourceID: sourceSession, namespace: payload["source_namespace"] as? String)
         }
