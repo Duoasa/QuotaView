@@ -44,7 +44,7 @@ def string(source, start):
 
 
 def templates():
-    paths = sorted((ROOT / "Sources/QuotaView").glob("*.swift"))
+    paths = sorted((ROOT / "Sources/QuotaView").rglob("*.swift"))
     paths.append(ROOT / "Sources/QuotaViewWidget/QuotaViewWidget.swift")
     # text(), bilingual IslandDetailText initializers, and fixed effect-name tuples.
     pattern = r'\b(?:text|init)\s*\(\s*|\(\s*(?="[\u4e00-\u9fff])'

@@ -4,6 +4,8 @@ import Network
 /// A loopback-only HTTP forward proxy for Codex builds without native SOCKS support.
 /// HTTPS remains end-to-end encrypted: CONNECT bytes are relayed without inspection.
 final class SOCKS5HTTPBridge: @unchecked Sendable {
+    enum StartError: Error { case alreadyStarted }
+    // The listener, its sessions and their Network.framework callbacks all run on this queue.
     private let queue = DispatchQueue(label: "com.quotaview.socks-bridge")
     private var listener: NWListener?
     private var sessions: [UUID: SOCKSBridgeSession] = [:]
@@ -13,9 +15,13 @@ final class SOCKS5HTTPBridge: @unchecked Sendable {
     func start(configuration: ProxyConfiguration) async throws -> UInt16 {
         let value = try configuration.validated()
         return try await withCheckedThrowingContinuation { continuation in
-            queue.async {
+            queue.async { [self] in
                 guard !self.stopped else {
                     continuation.resume(throwing: CodexAppServerClient.ClientError.cancelled)
+                    return
+                }
+                guard self.listener == nil, self.startContinuation == nil else {
+                    continuation.resume(throwing: StartError.alreadyStarted)
                     return
                 }
                 self.startContinuation = continuation
@@ -85,12 +91,14 @@ final class SOCKS5HTTPBridge: @unchecked Sendable {
     }
 }
 
-private final class SOCKSBridgeSession {
+// Created and retained only by the bridge on its serial queue. Both connections
+// and the deadline timer deliver their callbacks on that same queue.
+private final class SOCKSBridgeSession: @unchecked Sendable {
     private let incoming: NWConnection
     private var outgoing: NWConnection?
     private let proxy: ProxyConfiguration
     private let queue: DispatchQueue
-    private let onStop: () -> Void
+    private let onStop: @Sendable () -> Void
     private var timer: DispatchSourceTimer?
     private var header = Data()
     private var stopped = false
@@ -98,7 +106,7 @@ private final class SOCKSBridgeSession {
     private var initialPayload = Data()
 
     init(incoming: NWConnection, proxy: ProxyConfiguration,
-         queue: DispatchQueue, onStop: @escaping () -> Void) {
+         queue: DispatchQueue, onStop: @escaping @Sendable () -> Void) {
         self.incoming = incoming
         self.proxy = proxy
         self.queue = queue
@@ -251,7 +259,7 @@ private final class SOCKSBridgeSession {
     }
 
     private func readExactly(_ count: Int, from connection: NWConnection,
-                             completion: @escaping (Data) -> Void) {
+                             completion: @escaping @Sendable (Data) -> Void) {
         connection.receive(minimumIncompleteLength: count, maximumLength: count) { [weak self] data, _, _, error in
             guard let self, !self.stopped else { return }
             guard error == nil, let data, data.count == count else { self.stop(); return }
@@ -259,7 +267,7 @@ private final class SOCKSBridgeSession {
         }
     }
 
-    private func send(_ data: Data, to connection: NWConnection, then completion: @escaping () -> Void) {
+    private func send(_ data: Data, to connection: NWConnection, then completion: @escaping @Sendable () -> Void) {
         guard !stopped else { return }
         guard !data.isEmpty else { completion(); return }
         connection.send(content: data, completion: .contentProcessed { [weak self] error in

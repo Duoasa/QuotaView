@@ -188,7 +188,11 @@ final class DevinIntegrationSmokeTests: XCTestCase {
             XCTAssertTrue(card.canRespond)
             XCTAssertEqual(wire.devinProvider, provider); XCTAssertEqual(IslandApprovalLayout(wire), .dshTool)
             XCTAssertTrue(wire.detail.contains("timeout")); XCTAssertEqual(wire.params["cwd"].text, "/fixture")
-            island.model.submit(task.id, requestID: card.id, decision: .reply(.object(["decision": .string(choice)])))
+            let other: IslandAgentProvider = provider == .devinDesktop ? .devinCLI : .devinDesktop
+            XCTAssertEqual(island.model.devinCapabilities[other]?(wire), false)
+            let decision = IslandConfirmationDecision.reply(.object(["decision": .string(choice)]))
+            island.model.submit(task.id, requestID: card.id, decision: decision)
+            island.model.submit(task.id, requestID: card.id, decision: decision)
         }
         let a = try invoke(cli, turn: "turn"), b = try invoke(desktop, turn: "turn")
         defer { for p in [a.0, b.0] where p.isRunning { p.terminate() } }

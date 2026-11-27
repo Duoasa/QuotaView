@@ -4,9 +4,9 @@
 
 <p align="center"><strong>多 Agent 状态与用量灵动岛。</strong><br>任务、审批与用量，都在桌面顶部。</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.7_Build_1-blue" alt="0.9.7 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
 
 <p align="center"><strong>简体中文</strong> · <a href="README.md">English</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights · 功能亮点</h2>
 
-<p>以下为 <strong>macOS 0.9.7</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
+<p>以下为 <strong>macOS 0.9.9</strong> 的完整功能概览。Windows 的版本与功能范围见<a href="#windows">单独备注</a>。</p>
 
 <table class="highlights">
 <tr>
@@ -163,26 +163,26 @@
 
 <p><strong>macOS 14+</strong> · Apple silicon + Intel 通用包 · Developer ID 签名 · Apple 公证</p>
 
-<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip">QuotaView 0.9.7 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → Agent 接入」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
+<ol><li>下载 <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip">QuotaView 0.9.9 Build 1</a>，解压后打开 <code>QuotaView.app</code>。</li><li>进入「设置 → Agent 接入」，启用已在本机安装和配置的 Agent。</li><li>Codex 可自动发现本地任务；配置 Hook 或插件后，按提示开启新会话或重启对应客户端。</li></ol>
 
 <p><strong>默认开启自动检查更新</strong>，已有用户偏好保留，可随时在设置中关闭；下载与安装仍需确认。</p>
 
 <details>
-<summary><strong>0.9.7 本次更新</strong></summary>
+<summary><strong>0.9.9 本次更新</strong></summary>
 <ul>
-<li>从任务详情返回六款桌面客户端中的原对话，审批与回答入口仍在原处。</li>
-<li>新增 Antigravity 接入，用量页集中展示额度和 Token 统计。</li>
-<li>在「卡片设置」选择显示输出速率、Token、耗时和模型。任务完成时会显示冲击波和对号动效。</li>
-<li>在「通用与显示」切换浅色、深色或自动外观，在「Agent 接入」逐项管理连接。退出按钮位于设置左栏底部。</li>
+<li>0.9.9 是 QuotaView 的最后一个开源版本，项目官网即将上线。</li>
+<li>卡片同步 Antigravity 当前步骤，Antigravity 与 Claude Code 的多步骤计划可映射到进度条。</li>
+<li>在灵动岛处理支持的单题和审批，也可返回对应的终端会话。</li>
+<li>直接查询七个平台的额度或余额，并在设置中管理 11 个 Agent 的连接。</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1">完整发布说明</a> · <a href="VERSION_HISTORY.md">版本历史</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · 单独说明</h2>
 
-<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.7。</p>
+<p>Windows 当前版本为 <strong>0.8.3-win.13</strong>，使用独立发布和更新通道。上方产品图与 Agent 支持列表描述 macOS 0.9.9。</p>
 
 <ul>
 <li>提供纯色灵动岛、任务状态、兼容客户端的审批和问题回复、用量统计、AI 球与量子噪点。</li>

@@ -1172,7 +1172,8 @@ public actor CodexSharedAppServerActivityClient {
         } onCancel: { opening.cancel() }
     }
 
-    struct OpenedSocket: @unchecked Sendable {
+    // The receiving actor either closes a stale result or transfers the fd to its FileHandle.
+    struct OpenedSocket: Sendable {
         let fileDescriptor: Int32
         let remainingData: Data
     }

@@ -1,0 +1,1 @@
+{"availability":"available","expiresAt":1785000900000,"generatedAt":1785000000000,"localeIdentifier":"en","provider":{"auxiliaryMetrics":[{"formattedValue":"42K","id":"today-tokens","label":"Today"}],"displayName":"Codex","primaryWindow":{"remainingFraction":0.75,"resetsAt":1785003600000,"usedFraction":0.25},"providerID":"codex"},"schemaVersion":1}

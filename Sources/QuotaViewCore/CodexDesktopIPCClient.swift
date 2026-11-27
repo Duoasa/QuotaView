@@ -258,7 +258,7 @@ public actor CodexDesktopIPCClient {
 
     public init(configuration: Configuration = .live()) {
         self.configuration = configuration
-        connector = { try await CodexDesktopIPCTransport.open($0) }
+        connector = { try await CodexDesktopIPCTransport.open($0, writeTimeout: configuration.frameDrainTimeoutSeconds) }
         decoder = .init(maximumFrameBytes: configuration.maximumFrameBytes)
     }
     init(configuration: Configuration, connector: @escaping Connector) {
@@ -1078,7 +1078,7 @@ struct CodexDesktopIPCTransport: Sendable {
     let write: @Sendable (Data) throws -> Void
     let close: @Sendable () -> Void
     var acknowledgeRead: @Sendable () -> Void = {}
-    static func open(_ url: URL) async throws -> Self {
+    static func open(_ url: URL, writeTimeout: TimeInterval) async throws -> Self {
         try await Task.detached(priority: .utility) {
             try verifyPeer(url)
             let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
@@ -1097,7 +1097,15 @@ struct CodexDesktopIPCTransport: Sendable {
             guard getpeereid(fd, &peerUID, &peerGID) == 0, peerUID == getuid() else { Darwin.close(fd); throw CodexDesktopIPCError.peerMismatch }
             do { try verifyPeer(url) } catch { Darwin.close(fd); throw error }
             var noSignal: Int32 = 1
-            setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size))
+            // Bound each stalled system write while the fd lock is held. This uses
+            // the same 0.05...30 s I/O timeout as the incoming frame drain.
+            let microseconds = Int((writeTimeout * 1_000_000).rounded(.up))
+            var timeout = timeval(tv_sec: microseconds / 1_000_000, tv_usec: Int32(microseconds % 1_000_000))
+            guard setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size)) == 0,
+                  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size)) == 0 else {
+                Darwin.close(fd)
+                throw CodexDesktopIPCError.unavailable
+            }
             let socket = DesktopIPCSocket(fd: fd)
             return .init(chunks: socket.chunks, write: { try socket.write($0) }, close: { socket.close() },
                          acknowledgeRead: { socket.acknowledgeRead() })
@@ -1166,7 +1174,13 @@ private final class DesktopIPCSocket: @unchecked Sendable {
     func write(_ data: Data) throws {
         writeLock.lock(); defer { writeLock.unlock() }
         guard !closed else { throw CodexDesktopIPCError.unavailable }
-        try handle.write(contentsOf: data)
+        do { try handle.write(contentsOf: data) }
+        catch {
+            // The peer may have received a partial frame. End the stream so the
+            // reader follows its usual disconnect path before another frame is sent.
+            Darwin.shutdown(handle.fileDescriptor, SHUT_RDWR)
+            throw error
+        }
     }
     func close() {
         writeLock.lock()

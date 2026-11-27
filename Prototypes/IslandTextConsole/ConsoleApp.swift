@@ -381,8 +381,7 @@ private final class TextIslandHost: NSView {
         island.setPresentationLayoutSize(NSSize(width: layoutPose.width, height: layoutPose.height))
         island.frame = pose.frame(in: canvas.bounds, inset: inset)
         island.setTextLayoutFrame(textPose.frame(relativeTo: layoutPose, inset: inset), opacity: textPose.visibility)
-        island.alphaValue = pose.visibility * (hover
-            ? CodexActivityIslandHoverTransparencyContract.hoveredAlpha : 1)
+        island.alphaValue = pose.visibility * CodexActivityIslandHoverTransparencyContract.alpha(isHovering: hover)
         island.isHidden = pose.visibility == 0
         island.layoutSubtreeIfNeeded()
     }

@@ -84,6 +84,21 @@ public struct CodexActivityPlanProgress: Codable, Equatable, Sendable {
         self.pendingSteps = pendingSteps
     }
 
+    /// Count a complete native checklist. An unknown state invalidates the snapshot.
+    public init?(statuses: [String], completedStatus: String) {
+        guard (1...Self.maximumStepCount).contains(statuses.count) else { return nil }
+        var completed = 0, active = 0, pending = 0
+        for status in statuses {
+            switch status {
+            case completedStatus: completed += 1
+            case "in_progress": active += 1
+            case "pending": pending += 1
+            default: return nil
+            }
+        }
+        self.init(completedSteps: completed, inProgressSteps: active, pendingSteps: pending)
+    }
+
     public var totalSteps: Int {
         let (partial, firstOverflow) = completedSteps.addingReportingOverflow(inProgressSteps)
         let (total, secondOverflow) = partial.addingReportingOverflow(pendingSteps)

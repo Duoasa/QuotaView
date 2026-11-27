@@ -16,6 +16,14 @@ final class ClaudeCodeSupportTests: XCTestCase {
         try? FileManager.default.removeItem(at: temporary)
     }
 
+    private func makeBridgeSocketURL() throws -> URL {
+        let directory = URL(fileURLWithPath: "/private/tmp/qv-cc-" + String(UUID().uuidString.prefix(12)), isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700])
+        addTeardownBlock { try FileManager.default.removeItem(at: directory) }
+        return directory.appendingPathComponent("hook.sock")
+    }
+
     private func line(_ object: [String: Any]) -> Data {
         try! JSONSerialization.data(withJSONObject: object)
     }
@@ -353,14 +361,19 @@ final class ClaudeCodeSupportTests: XCTestCase {
     // MARK: Bridge
 
     func testBridgeAcknowledgesHoldsAndResolvesPermissionConnections() throws {
-        let socket = URL(fileURLWithPath: "/tmp/qv-cc-\(UUID().uuidString.prefix(8)).sock")
+        let socket = try makeBridgeSocketURL()
         let bridge = ClaudeCodeBridge(socketURL: socket, authenticationToken: "secret")
         let received = expectation(description: "message")
         received.assertForOverFulfill = false
         let disconnected = expectation(description: "disconnect")
         let box = MessageBox()
         try bridge.start(onMessage: { message in box.append(message); received.fulfill() },
-                         onDisconnect: { id in if id == "held-2" { disconnected.fulfill() } })
+                         onDisconnect: { id in
+                             if id == "held-2" {
+                                 bridge.stop()
+                                 disconnected.fulfill()
+                             }
+                         })
         defer { bridge.stop(); unlink(socket.path + ".lock") }
 
         func connect() throws -> Int32 {
@@ -415,6 +428,7 @@ final class ClaudeCodeSupportTests: XCTestCase {
         XCTAssertEqual(readLine(abandoned)?["pending"] as? Bool, true)
         Darwin.close(abandoned)
         wait(for: [disconnected], timeout: 2)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: socket.path))
     }
 }
 
@@ -433,7 +447,7 @@ extension ClaudeCodeSupportTests {
         try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("#!/bin/sh\n".utf8).write(to: helper)
         chmod(helper.path, 0o755)
-        let socket = URL(fileURLWithPath: "/tmp/qv-cl-\(UUID().uuidString.prefix(8)).sock")
+        let socket = try makeBridgeSocketURL()
         let installer = ClaudeCodeInstaller(socketURL: socket, authenticationToken: "tok",
             configurationDirectory: temporary.appendingPathComponent("claude"),
             supportDirectory: temporary.appendingPathComponent("support"), helperURL: helper, environment: [:])
@@ -679,7 +693,7 @@ extension ClaudeCodeSupportTests {
         let helper = temporary.appendingPathComponent("bundle/QuotaViewActivityHook")
         try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("#!/bin/sh\n".utf8).write(to: helper); chmod(helper.path, 0o755)
-        let socket = URL(fileURLWithPath: "/tmp/qv-cr-\(UUID().uuidString.prefix(8)).sock")
+        let socket = try makeBridgeSocketURL()
         let installer = ClaudeCodeInstaller(socketURL: socket, authenticationToken: "tok",
             configurationDirectory: temporary.appendingPathComponent("claude"), supportDirectory: temporary.appendingPathComponent("support"),
             helperURL: helper, environment: [:])
