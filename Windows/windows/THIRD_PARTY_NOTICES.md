@@ -1,8 +1,8 @@
 # Third-party notices
 
-QuotaView Windows is an independent port. Upstream QuotaView source and reused visual resources are copyright (c) 2026 Duoasa, distributed under the repository MIT license. See the included LICENSE. Provider names and marks identify their respective services and do not imply endorsement.
+QuotaView Windows is an independent port. The project license is [GPL-3.0-only](LICENSE). Source and visual resources reused from earlier MIT-licensed versions of QuotaView are copyright (c) 2026 Duoasa. Their [original MIT notice](assets/licenses/QuotaView-MIT.txt) is included with the assets. Provider names and marks identify their respective services and do not imply endorsement.
 
-Asta Sans is copyright 2024 The Asta Sans Project Authors and is distributed under the SIL Open Font License 1.1. The complete license is included in assets/fonts/AstaSans-OFL.txt and copied with the bundled assets. The font files have not been relicensed as MIT.
+Asta Sans is copyright 2024 The Asta Sans Project Authors and is distributed under the SIL Open Font License 1.1. The complete license is included in assets/fonts/AstaSans-OFL.txt and copied with the bundled assets.
 
 Electron ships Chromium, Node.js and other components with their own notices. Preserve LICENSE.electron.txt and LICENSES.chromium.html distributed alongside the packaged runtime; those notices supplement this file. This application does not include Apple’s proprietary Liquid Glass implementation.
 

@@ -7,7 +7,7 @@
   "seed": "original native thread ID / conversation ID",
   "algorithm": "iterate JavaScript UTF-16 units; h = (h * 31 + unit) % 2147483647; index = h % 28",
   "conversion": "dark SVG to 64px PNG, displayed at 14pt; native palette order preserved",
-  "licenseScope": "Third-party OpenAI UI artwork; not original Duoasa artwork or included in the QuotaView MIT grant.",
+  "licenseScope": "Third-party OpenAI UI artwork outside the scope of the QuotaView project license.",
   "assets": [
     {
       "index": 0,

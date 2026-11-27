@@ -1242,7 +1242,7 @@ function AboutSettings() {
             null,
             e("\u5F00\u6E90\u8BB8\u53EF", "Open-source license"),
           ),
-          React.createElement("small", null, "MIT \xB7 Duoasa"),
+          React.createElement("small", null, "GPL-3.0-only \xB7 Duoasa"),
         ),
         React.createElement(Icon, { name: "external", size: 14 }),
       ),
