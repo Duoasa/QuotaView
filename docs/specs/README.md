@@ -1,5 +1,29 @@
 # QuotaView SDD 注册表
 
+## 0.9.9 Build 1 / 应用内公告
+
+[0.9.9 公告定稿](brand-announcement.md#099-公告定稿)记录最后一个开源版本与官网预告，以及自 0.9.7 以来的十条更新和改进。
+
+## 0.9.7 Build 42–43 / 步骤标题与计划进度
+
+[Antigravity 步骤与计划](agent-integrations.md#build-4243--antigravity-步骤与计划)和 [Claude Code 复杂任务进度](claude-code-support.md#build-43--复杂任务进度)记录各来源的字段与回执。真实客户端的卡片和详情待人工验收。
+
+## 0.9.7 Build 41 / Swift 6 模块试点与并发审计
+
+[编译边界与快照](macos-architecture.md#build-41-编译边界与快照)记录四个 SwiftPM 模块、原生 Xcode 归属和旧 Widget 文件兼容性。[并发审计](macos-architecture.md#并发审计)列出同步、回调与释放责任。
+
+## 0.9.7 Build 40 / 活动状态与观察
+
+[活动与观察](macos-architecture.md#build-40-活动与观察)记录异步身份、计时器取消、六个场景的视图更新次数和各 Store 的观察策略。
+
+## 0.9.7 Build 39 / 多来源接入
+
+运行时归属、交互能力和独立断开的约束见[多来源运行时归属](agent-integrations.md#build-39--多来源运行时归属)。
+
+## 0.9.7 Build 35 / DSH 请求回传
+
+[DSH 交互状态归属](dsh-interactive-approvals.md#build-35-交互状态归属)记录请求身份、轮次、命名空间和提交后的结算规则。
+
 ## 0.9.7 Build 34 / OpenCode 请求回传
 
 [OpenCode 请求回传](agent-integrations.md#build-34-opencode-请求回传)记录适配器职责、主通路与原实例 SDK 兜底的选择、重复通知及换轮后的旧卡处理。

@@ -4,9 +4,9 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.7_Build_1-blue" alt="0.9.7 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
@@ -18,7 +18,7 @@
 <a name="highlights"></a>
 <h2>Highlights</h2>
 
-<p>A full feature overview of <strong>macOS 0.9.7</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
+<p>A full feature overview of <strong>macOS 0.9.9</strong>. See the <a href="#windows">separate Windows notes</a> for its version and feature scope.</p>
 
 <table class="highlights">
 <tr>
@@ -163,26 +163,26 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.7-build.1/QuotaView-v0.9.7-build.1.zip">QuotaView 0.9.7 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip">QuotaView 0.9.9 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
 <details>
-<summary><strong>New in 0.9.7</strong></summary>
+<summary><strong>New in 0.9.9</strong></summary>
 <ul>
-<li>Return to the original conversation in six desktop clients and handle supported approvals and replies from task details.</li>
-<li>Connect Antigravity and review quotas alongside token totals on the usage page.</li>
-<li>Choose output rate, tokens, duration, and model in Card settings. A ripple and orb checkmark mark task completion.</li>
-<li>Choose Light, Dark, or Auto in General & Display and manage individual connections in Agent integration. Quit QuotaView sits at the bottom of the sidebar.</li>
+<li>0.9.9 is the last open-source version of QuotaView. The project website is coming soon.</li>
+<li>Follow Antigravity’s current step and track multi-step plans in Antigravity and Claude Code.</li>
+<li>Answer supported single questions and review approvals in the island, or jump back to the matching terminal session.</li>
+<li>Check quotas and balances directly across seven providers and manage all 11 agent connections in Settings.</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 
 <a name="windows"></a>
 <h2>Windows · Separate edition</h2>
 
-<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.7.</p>
+<p>The current Windows release is <strong>0.8.3-win.13</strong>, with its own release and update channel. The product images and agent list above describe macOS 0.9.9.</p>
 
 <ul>
 <li>Includes a solid-color Island, task status, approvals and answers for compatible clients, usage statistics, AI orb, and quantum noise.</li>

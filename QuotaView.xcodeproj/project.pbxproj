@@ -34,7 +34,7 @@
 		B1000000000000000000000D /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* AppPreferences.swift */; };
 		B08725000000000000000001 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = F08725000000000000000001 /* AppLocalization.swift */; };
 		B08725000000000000000002 /* AppTranslations.json in Resources */ = {isa = PBXBuildFile; fileRef = F08725000000000000000002 /* AppTranslations.json */; };
-		B1000000000000000000000F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SettingsView.swift */; };
+		B1000000000000000000000F /* SettingsShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SettingsShellView.swift */; };
 		B10000000000000000000010 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* SettingsWindowController.swift */; };
 		B10000000000000000000011 /* AstaSansFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* AstaSansFont.swift */; };
 		B10000000000000000000012 /* EstimatedCostChartModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* EstimatedCostChartModel.swift */; };
@@ -57,7 +57,7 @@
 		B10000000000000000000025 /* WidgetAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WidgetAssets.xcassets */; };
 		B10000000000000000000026 /* CodexActivityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* CodexActivityModels.swift */; };
 		B10000000000000000000027 /* CodexActivityRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* CodexActivityRuntime.swift */; };
-		B10000000000000000000028 /* CodexActivityIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIsland.swift */; };
+		B10000000000000000000028 /* CodexActivityIslandViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* CodexActivityIslandViews.swift */; };
 		B10000000000000000000029 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* main.swift */; };
 		C1A0DE000000000000000002 /* ClaudeCodeHookMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A0DE000000000000000001 /* ClaudeCodeHookMode.swift */; };
 		B1000000000000000000002A /* QuotaViewActivityHook in Embed Helpers */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002F /* QuotaViewActivityHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -66,7 +66,7 @@
 		B1D500000000000000000026 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = P20000000000000000000002 /* Yams */; };
 		B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000031 /* CodexActivityRippleGlow.swift */; };
 		B1000000000000000000002E /* CodexActivityRippleGlowShader.txt in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */; };
-		B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* CodexActivityStateSmoke.swift */; };
+		B1000000000000000000002F /* StateSmokeMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* StateSmokeMetalView.swift */; };
 		B10000000000000000000030 /* PlanProgressParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000034 /* PlanProgressParser.swift */; };
 		B10000000000000000000031 /* CodexAppServerActivityNotificationDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */; };
 		B10000000000000000000032 /* CodexSharedAppServerActivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */; };
@@ -84,11 +84,12 @@
 		B07300000000000000000001 /* IslandApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000001 /* IslandApproval.swift */; };
 		B07300000000000000000002 /* IslandApprovalProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000002 /* IslandApprovalProtocol.swift */; };
 		B07300000000000000000003 /* IslandApprovalTypedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000003 /* IslandApprovalTypedContent.swift */; };
-		B07300000000000000000004 /* IslandConceptBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000004 /* IslandConceptBoard.swift */; };
+		B07300000000000000000004 /* IslandBoardState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000004 /* IslandBoardState.swift */; };
 		B094000000000000000000B1 /* IslandCardCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F094000000000000000000B1 /* IslandCardCompletion.swift */; };
 		B07300000000000000000090 /* IslandResetPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000090 /* IslandResetPage.swift */; };
 		B09200000000000000000003 /* IslandResetDust.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09200000000000000000003 /* IslandResetDust.swift */; };
 		B07300000000000000000005 /* IslandLiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000005 /* IslandLiveStore.swift */; };
+		3A7938ADC29C4B0B8FC551A8 /* IslandRequestLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F2AD536FD5D4462A3B7F823 /* IslandRequestLifecycle.swift */; };
 		B07300000000000000000006 /* IslandPresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000006 /* IslandPresentationModels.swift */; };
 		B09400000000000000000321 /* IslandConversationNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09400000000000000000321 /* IslandConversationNavigation.swift */; };
 		B07300000000000000000007 /* IslandScrollingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07300000000000000000007 /* IslandScrollingText.swift */; };
@@ -128,6 +129,7 @@
 		097A0B95FDBE28D1E79D3247 /* AgentIntegrationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */; };
 		B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */; };
 		1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */; };
+		424E3B3C329C42C7BD1F672A /* DSHInteractionAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA53CE1CEAB4D44AC6CD807 /* DSHInteractionAdapter.swift */; };
 		F7A949BC4A7A431AAB0CB333 /* OpenCodeInteractionAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C02DEB7A5194B7B9F0C7A63 /* OpenCodeInteractionAdapter.swift */; };
 		42AB862663C04DE29160BCF6 /* NativeAgentHookNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */; };
 		AD26CA070000009701000003 /* ClaudeConversationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD26CA070000009701000005 /* ClaudeConversationHost.swift */; };
@@ -135,6 +137,37 @@
 		AD26CA070000009701000004 /* ClaudeConversationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD26CA070000009701000005 /* ClaudeConversationHost.swift */; };
 		B08730000000000000000001 /* ProviderIconNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = F08730000000000000000001 /* ProviderIconNotices.txt */; };
 		B1D500000000000000000027 /* YamsNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1D500000000000000000027 /* YamsNotices.txt */; };
+		2B2D77B0C4F6522288DEC1CD /* CodexActivityIslandController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20746FCD6F868CF85CF6579 /* CodexActivityIslandController.swift */; };
+		368111F65F13A20B88CB82A0 /* CodexActivityIslandGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BCDEDEAFBFF5E150942F47 /* CodexActivityIslandGeometry.swift */; };
+		CE31C55DFB2BE8CC62441A00 /* IslandNotchWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E7E3D9A9C2856622C7D2250 /* IslandNotchWindow.swift */; };
+		16AE8A4E9B41B4836736A129 /* ActivityIslandCompletionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2920A597CE34B515514109 /* ActivityIslandCompletionViews.swift */; };
+		CD638C8EB40B9BD1CB790D74 /* ActivityOrbMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34C44B20C1D848FEECDAF1DF /* ActivityOrbMetalView.swift */; };
+		D2DF13F2B76A7C2A41CC4121 /* StateSmokeSimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D761CD8974A6E74D7F4342A /* StateSmokeSimulation.swift */; };
+		17B7C476C26D12261C3DB081 /* IslandUsageChartCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504DE5A4A73BAE0253875045 /* IslandUsageChartCache.swift */; };
+		F288979CE006085BB019B8AE /* ActivitySingleLineTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F50765A2E02DDD955120C6 /* ActivitySingleLineTextView.swift */; };
+		2C822A57EF09EB80C4D4BF09 /* IslandBoardChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51A7C7235A640283711C56F /* IslandBoardChrome.swift */; };
+		6CC05755B6B8813E6F891FC8 /* IslandBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CADD901EF9DE5F230E072C3 /* IslandBoardView.swift */; };
+		32A34377F122FF2D28F7B0B2 /* IslandResetTicket.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED985B17BA5AF7F3F96F34E3 /* IslandResetTicket.swift */; };
+		7141AA2EE7E9D720A565B3D6 /* IslandTaskCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E06FDFF407281819FFE79 /* IslandTaskCardView.swift */; };
+		C0830AECF0FD2B7515C0E1E2 /* IslandUsageBento.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DBFE18E073F48FE5E015A32 /* IslandUsageBento.swift */; };
+		1B8334E7B215F8E2A9879CDF /* CodexActivityStateSmokeShader.txt in Resources */ = {isa = PBXBuildFile; fileRef = E6880C78F788705A30A4419E /* CodexActivityStateSmokeShader.txt */; };
+		2C841B49B54918A3BB55E04E /* SettingsAboutPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8F1D0B67DFA31DDBF0114F /* SettingsAboutPage.swift */; };
+		48C756061BA85B21ADB6976E /* SettingsCardsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7848EE6EDD09488850A875 /* SettingsCardsPage.swift */; };
+		5FD5F40635716B8F6FAA22FB /* SettingsConnectionsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CA8FBC8C5FB711D685B975B /* SettingsConnectionsPage.swift */; };
+		3AA29BE0F4F3C21CAF1D0655 /* SettingsDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8F7580397DC8A0B5EEFB2F /* SettingsDesignSystem.swift */; };
+		048F7C3A04743BBA1F4F0FEB /* SettingsFeedbackPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2C7FE57D46771009EED47F /* SettingsFeedbackPage.swift */; };
+		966E04867B8F1D7DF79C94DF /* SettingsGeneralPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 404BED1A2BEDA410249FF7B7 /* SettingsGeneralPage.swift */; };
+		DC1C4DDA0BB58E5D7DF911A6 /* SettingsIslandPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E0B37A63A44E9CE982DAD5 /* SettingsIslandPage.swift */; };
+		5D1B621A0BDE7ADA654EA9F1 /* SettingsIslandPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368679BBB4DD28BCCC4CA1 /* SettingsIslandPreview.swift */; };
+		2C1ABFD50E38DAD86BCE7686 /* SettingsProxyPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F11DE26B3B257D9B04808B /* SettingsProxyPage.swift */; };
+		820E9587D69483973B6C6315 /* SettingsUsagePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D96D1D4B44878286584899 /* SettingsUsagePage.swift */; };
+		91294080B9D5FE3DD08B3F79 /* AntigravityAgentAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A689526F764D8B1E52776E9D /* AntigravityAgentAdapter.swift */; };
+		0600810272C1C5F41C8BD3F0 /* DevinAgentAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF3D5E18ABEE96C509980E3D /* DevinAgentAdapter.swift */; };
+		7B4BFDF4CF0D27B8E88C8DB6 /* GenericHookAgentAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F289CE4569AAC0575D76630B /* GenericHookAgentAdapter.swift */; };
+		7A297A76C6AF914442BCE2E9 /* NativeAgentHookContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5235ADF6FDC4F26FADB8E164 /* NativeAgentHookContext.swift */; };
+		F1E02C411FB38412924200F2 /* ActivityTitleCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13BC5105B46635E51D4C5459 /* ActivityTitleCache.swift */; };
+		F6AC1D9D101787E4C06B850F /* MultitaskEntryScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F645C1A3123BAF1D456B42B /* MultitaskEntryScheduler.swift */; };
+		DC4A6ECD425ACADDF291C617 /* SubagentActivityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985B9EBE5A6C2C0AA401C4B9 /* SubagentActivityTracker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -233,7 +266,7 @@
 		F10000000000000000000011 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		F08725000000000000000001 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
 		F08725000000000000000002 /* AppTranslations.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/AppTranslations.json; sourceTree = "<group>"; };
-		F10000000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F10000000000000000000013 /* SettingsShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsShellView.swift; sourceTree = "<group>"; };
 		F10000000000000000000014 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		F10000000000000000000015 /* AstaSansFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AstaSansFont.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* EstimatedCostChartModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimatedCostChartModel.swift; sourceTree = "<group>"; };
@@ -258,14 +291,14 @@
 		F1000000000000000000002A /* WidgetAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = WidgetAssets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000002B /* CodexActivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityModels.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* CodexActivityRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityRuntime.swift; sourceTree = "<group>"; };
-		F1000000000000000000002D /* CodexActivityIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIsland.swift; sourceTree = "<group>"; };
+		F1000000000000000000002D /* CodexActivityIslandViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIslandViews.swift; sourceTree = "<group>"; };
 		C1A0DE000000000000000001 /* ClaudeCodeHookMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHookMode.swift; sourceTree = "<group>"; };
 		F1000000000000000000002E /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F1000000000000000000002F /* QuotaViewActivityHook */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = QuotaViewActivityHook; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000030 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
 		F10000000000000000000031 /* CodexActivityRippleGlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityRippleGlow.swift; sourceTree = "<group>"; };
 		F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/CodexActivityRippleGlowShader.txt; sourceTree = "<group>"; };
-		F10000000000000000000033 /* CodexActivityStateSmoke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityStateSmoke.swift; sourceTree = "<group>"; };
+		F10000000000000000000033 /* StateSmokeMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateSmokeMetalView.swift; sourceTree = "<group>"; };
 		F10000000000000000000034 /* PlanProgressParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressParser.swift; sourceTree = "<group>"; };
 		F10000000000000000000035 /* CodexAppServerActivityNotificationDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerActivityNotificationDecoder.swift; sourceTree = "<group>"; };
 		F10000000000000000000036 /* CodexSharedAppServerActivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSharedAppServerActivityClient.swift; sourceTree = "<group>"; };
@@ -283,11 +316,12 @@
 		F07300000000000000000001 /* IslandApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApproval.swift; sourceTree = "<group>"; };
 		F07300000000000000000002 /* IslandApprovalProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalProtocol.swift; sourceTree = "<group>"; };
 		F07300000000000000000003 /* IslandApprovalTypedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandApprovalTypedContent.swift; sourceTree = "<group>"; };
-		F07300000000000000000004 /* IslandConceptBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandConceptBoard.swift; sourceTree = "<group>"; };
+		F07300000000000000000004 /* IslandBoardState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandBoardState.swift; sourceTree = "<group>"; };
 		F094000000000000000000B1 /* IslandCardCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandCardCompletion.swift; sourceTree = "<group>"; };
 		F07300000000000000000090 /* IslandResetPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandResetPage.swift; sourceTree = "<group>"; };
 		F09200000000000000000003 /* IslandResetDust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandResetDust.swift; sourceTree = "<group>"; };
 		F07300000000000000000005 /* IslandLiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandLiveStore.swift; sourceTree = "<group>"; };
+		3F2AD536FD5D4462A3B7F823 /* IslandRequestLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandRequestLifecycle.swift; sourceTree = "<group>"; };
 		F07300000000000000000006 /* IslandPresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPresentationModels.swift; sourceTree = "<group>"; };
 		F09400000000000000000321 /* IslandConversationNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandConversationNavigation.swift; sourceTree = "<group>"; };
 		F07300000000000000000007 /* IslandScrollingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandScrollingText.swift; sourceTree = "<group>"; };
@@ -327,11 +361,43 @@
 		53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIntegrationSettings.swift; sourceTree = "<group>"; };
 		439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentExternalInstaller.swift; sourceTree = "<group>"; };
 		25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentOpenCodePlugin.swift; sourceTree = "<group>"; };
+		7FA53CE1CEAB4D44AC6CD807 /* DSHInteractionAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSHInteractionAdapter.swift; sourceTree = "<group>"; };
 		1C02DEB7A5194B7B9F0C7A63 /* OpenCodeInteractionAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeInteractionAdapter.swift; sourceTree = "<group>"; };
 		477DA501CB2502379A625F95 /* NativeAgentHookNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentHookNormalizer.swift; sourceTree = "<group>"; };
 		AD26CA070000009701000005 /* ClaudeConversationHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeConversationHost.swift; sourceTree = "<group>"; };
 		F08730000000000000000001 /* ProviderIconNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/ProviderIconNotices.txt; sourceTree = "<group>"; };
 		F1D500000000000000000027 /* YamsNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/YamsNotices.txt; sourceTree = "<group>"; };
+		C20746FCD6F868CF85CF6579 /* CodexActivityIslandController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIslandController.swift; sourceTree = "<group>"; };
+		43BCDEDEAFBFF5E150942F47 /* CodexActivityIslandGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexActivityIslandGeometry.swift; sourceTree = "<group>"; };
+		0E7E3D9A9C2856622C7D2250 /* IslandNotchWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandNotchWindow.swift; sourceTree = "<group>"; };
+		CC2920A597CE34B515514109 /* ActivityIslandCompletionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityIslandCompletionViews.swift; sourceTree = "<group>"; };
+		34C44B20C1D848FEECDAF1DF /* ActivityOrbMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityOrbMetalView.swift; sourceTree = "<group>"; };
+		7D761CD8974A6E74D7F4342A /* StateSmokeSimulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateSmokeSimulation.swift; sourceTree = "<group>"; };
+		504DE5A4A73BAE0253875045 /* IslandUsageChartCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandUsageChartCache.swift; sourceTree = "<group>"; };
+		B3F50765A2E02DDD955120C6 /* ActivitySingleLineTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySingleLineTextView.swift; sourceTree = "<group>"; };
+		B51A7C7235A640283711C56F /* IslandBoardChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandBoardChrome.swift; sourceTree = "<group>"; };
+		6CADD901EF9DE5F230E072C3 /* IslandBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandBoardView.swift; sourceTree = "<group>"; };
+		ED985B17BA5AF7F3F96F34E3 /* IslandResetTicket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandResetTicket.swift; sourceTree = "<group>"; };
+		BD1E06FDFF407281819FFE79 /* IslandTaskCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandTaskCardView.swift; sourceTree = "<group>"; };
+		9DBFE18E073F48FE5E015A32 /* IslandUsageBento.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandUsageBento.swift; sourceTree = "<group>"; };
+		E6880C78F788705A30A4419E /* CodexActivityStateSmokeShader.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/CodexActivityStateSmokeShader.txt; sourceTree = "<group>"; };
+		CF8F1D0B67DFA31DDBF0114F /* SettingsAboutPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsAboutPage.swift; sourceTree = "<group>"; };
+		DE7848EE6EDD09488850A875 /* SettingsCardsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCardsPage.swift; sourceTree = "<group>"; };
+		8CA8FBC8C5FB711D685B975B /* SettingsConnectionsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsConnectionsPage.swift; sourceTree = "<group>"; };
+		ED8F7580397DC8A0B5EEFB2F /* SettingsDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDesignSystem.swift; sourceTree = "<group>"; };
+		3D2C7FE57D46771009EED47F /* SettingsFeedbackPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFeedbackPage.swift; sourceTree = "<group>"; };
+		404BED1A2BEDA410249FF7B7 /* SettingsGeneralPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGeneralPage.swift; sourceTree = "<group>"; };
+		F4E0B37A63A44E9CE982DAD5 /* SettingsIslandPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsIslandPage.swift; sourceTree = "<group>"; };
+		CB368679BBB4DD28BCCC4CA1 /* SettingsIslandPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsIslandPreview.swift; sourceTree = "<group>"; };
+		A4F11DE26B3B257D9B04808B /* SettingsProxyPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProxyPage.swift; sourceTree = "<group>"; };
+		C8D96D1D4B44878286584899 /* SettingsUsagePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUsagePage.swift; sourceTree = "<group>"; };
+		A689526F764D8B1E52776E9D /* AntigravityAgentAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityAgentAdapter.swift; sourceTree = "<group>"; };
+		AF3D5E18ABEE96C509980E3D /* DevinAgentAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevinAgentAdapter.swift; sourceTree = "<group>"; };
+		F289CE4569AAC0575D76630B /* GenericHookAgentAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericHookAgentAdapter.swift; sourceTree = "<group>"; };
+		5235ADF6FDC4F26FADB8E164 /* NativeAgentHookContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAgentHookContext.swift; sourceTree = "<group>"; };
+		13BC5105B46635E51D4C5459 /* ActivityTitleCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityTitleCache.swift; sourceTree = "<group>"; };
+		8F645C1A3123BAF1D456B42B /* MultitaskEntryScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultitaskEntryScheduler.swift; sourceTree = "<group>"; };
+		985B9EBE5A6C2C0AA401C4B9 /* SubagentActivityTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubagentActivityTracker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -405,6 +471,12 @@
 		G10000000000000000000003 /* QuotaView */ = {
 			isa = PBXGroup;
 			children = (
+				7B4842147B49A6B90FF08215 /* App */,
+				914DED75605C83A590BF6ED3 /* Approval */,
+				E6880C78F788705A30A4419E /* CodexActivityStateSmokeShader.txt */,
+				99C2888B0A73506A566EE574 /* Island */,
+				231718817A81C09365BF7310 /* Runtimes */,
+				F2ED5FFFD54EFEACC75D5CA4 /* Settings */,
 				F0730000000000000000000C /* CodexProviderIcon.png */,
 				F09102000000000000000001 /* QuotaViewAppIcon.png */,
 				F07400000000000000000001 /* CodexAgentAvatars */,
@@ -413,68 +485,7 @@
 				F07700000000000000000011 /* ProviderIcons.xcassets */,
 				F08730000000000000000001 /* ProviderIconNotices.txt */,
 				F1D500000000000000000027 /* YamsNotices.txt */,
-				F0730000000000000000000A /* IslandTaskScrolling.swift */,
-				F07300000000000000000009 /* IslandTaskDetail.swift */,
-				F07500000000000000000031 /* IslandMarkdownResult.swift */,
-				F07300000000000000000008 /* IslandSession.swift */,
-				66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */,
-				CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */,
-				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
-				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
-				F124AA046A000A1231449202 /* AntigravityHistory.swift */,
-				F125BB046A000A1231459402 /* CodexDesktopQuestionInput.swift */,
-				F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */,
-				A047AE046A000A1231449202 /* AgentQuota.swift */,
-				B047AE046A000A1231449202 /* NativeQuotaClient.swift */,
-				AD26CA070000009701000002 /* ClaudeTerminalNavigation.swift */,
-				C047AE046A000A1231449202 /* NativeQuotaResponse.swift */,
-				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
-				D58A00100000000000000002 /* DSHApproval.swift */,
-				25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */,
-				1C02DEB7A5194B7B9F0C7A63 /* OpenCodeInteractionAdapter.swift */,
-				EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */,
-				439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */,
-				567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */,
-				246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */,
-				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
-				F07300000000000000000007 /* IslandScrollingText.swift */,
-				F07300000000000000000006 /* IslandPresentationModels.swift */,
-				F09400000000000000000321 /* IslandConversationNavigation.swift */,
-				F07300000000000000000005 /* IslandLiveStore.swift */,
-				F07300000000000000000004 /* IslandConceptBoard.swift */,
-				F094000000000000000000B1 /* IslandCardCompletion.swift */,
-				F07300000000000000000090 /* IslandResetPage.swift */,
-				F09200000000000000000003 /* IslandResetDust.swift */,
-				F07300000000000000000003 /* IslandApprovalTypedContent.swift */,
-				F07300000000000000000002 /* IslandApprovalProtocol.swift */,
-				F07300000000000000000001 /* IslandApproval.swift */,
-				4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */,
-				F10000000000000000000001 /* QuotaViewApp.swift */,
-				F10000000000000000000030 /* AppUpdateController.swift */,
-				F10000000000000000000002 /* CodexStatusStore.swift */,
-				AF421910CBB845D6902DB70A /* CodexResetController.swift */,
-				F10000000000000000000011 /* AppPreferences.swift */,
-				F08725000000000000000001 /* AppLocalization.swift */,
 				F08725000000000000000002 /* AppTranslations.json */,
-				F10000000000000000000013 /* SettingsView.swift */,
-				F10000000000000000000014 /* SettingsWindowController.swift */,
-				F10000000000000000000015 /* AstaSansFont.swift */,
-				F10000000000000000000016 /* EstimatedCostChartModel.swift */,
-				F1000000000000000000001E /* CurrentCodexPresentation.swift */,
-				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
-				F1000000000000000000002C /* CodexActivityRuntime.swift */,
-				A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */,
-				A05200000000000000000002 /* CodexMultitaskIsland.swift */,
-				A05200000000000000000001 /* CodexActivityMultitaskState.swift */,
-				F48800000000000000000005 /* CodexActivityHookSupport.swift */,
-				F48800000000000000000004 /* CodexActivityBridges.swift */,
-				F48800000000000000000003 /* CodexActivityCopy.swift */,
-				F48800000000000000000002 /* CodexActivityStore.swift */,
-				F48800000000000000000001 /* CodexActivityConnectionPresentation.swift */,
-				F1000000000000000000002D /* CodexActivityIsland.swift */,
-				F50000000000000000000001 /* CodexActivityIslandMotion.swift */,
-				F10000000000000000000031 /* CodexActivityRippleGlow.swift */,
-				F10000000000000000000033 /* CodexActivityStateSmoke.swift */,
 				F10000000000000000000032 /* CodexActivityRippleGlowShader.txt */,
 			);
 			path = QuotaView;
@@ -604,6 +615,174 @@
 				F1000000000000000000002F /* QuotaViewActivityHook */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F2ED5FFFD54EFEACC75D5CA4 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				53593E6F400A65891EF5512A /* AgentIntegrationSettings.swift */,
+				66EA91A0E5CA4C884CAE0AE5 /* ClaudeCodeSettingsView.swift */,
+				CF8F1D0B67DFA31DDBF0114F /* SettingsAboutPage.swift */,
+				DE7848EE6EDD09488850A875 /* SettingsCardsPage.swift */,
+				8CA8FBC8C5FB711D685B975B /* SettingsConnectionsPage.swift */,
+				ED8F7580397DC8A0B5EEFB2F /* SettingsDesignSystem.swift */,
+				3D2C7FE57D46771009EED47F /* SettingsFeedbackPage.swift */,
+				404BED1A2BEDA410249FF7B7 /* SettingsGeneralPage.swift */,
+				F4E0B37A63A44E9CE982DAD5 /* SettingsIslandPage.swift */,
+				CB368679BBB4DD28BCCC4CA1 /* SettingsIslandPreview.swift */,
+				A4F11DE26B3B257D9B04808B /* SettingsProxyPage.swift */,
+				F10000000000000000000013 /* SettingsShellView.swift */,
+				C8D96D1D4B44878286584899 /* SettingsUsagePage.swift */,
+				F10000000000000000000014 /* SettingsWindowController.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		99C2888B0A73506A566EE574 /* Island */ = {
+			isa = PBXGroup;
+			children = (
+				F5BB29B376D0EBB468A7213A /* Core */,
+				3AF1BB982640247D2F05CA8F /* Effects */,
+				17A4BAF300D8A137424D6684 /* State */,
+				9AD73E825B5B89A5BB8A0FFE /* Views */,
+			);
+			path = Island;
+			sourceTree = "<group>";
+		};
+		17A4BAF300D8A137424D6684 /* State */ = {
+			isa = PBXGroup;
+			children = (
+				13BC5105B46635E51D4C5459 /* ActivityTitleCache.swift */,
+				8F645C1A3123BAF1D456B42B /* MultitaskEntryScheduler.swift */,
+				985B9EBE5A6C2C0AA401C4B9 /* SubagentActivityTracker.swift */,
+				A047AE046A000A1231449202 /* AgentQuota.swift */,
+				A05200000000000000000001 /* CodexActivityMultitaskState.swift */,
+				F48800000000000000000002 /* CodexActivityStore.swift */,
+				F10000000000000000000002 /* CodexStatusStore.swift */,
+				F1000000000000000000001E /* CurrentCodexPresentation.swift */,
+				F10000000000000000000016 /* EstimatedCostChartModel.swift */,
+				F07300000000000000000004 /* IslandBoardState.swift */,
+				F07300000000000000000005 /* IslandLiveStore.swift */,
+				F07300000000000000000006 /* IslandPresentationModels.swift */,
+				3F2AD536FD5D4462A3B7F823 /* IslandRequestLifecycle.swift */,
+				504DE5A4A73BAE0253875045 /* IslandUsageChartCache.swift */,
+			);
+			path = State;
+			sourceTree = "<group>";
+		};
+		914DED75605C83A590BF6ED3 /* Approval */ = {
+			isa = PBXGroup;
+			children = (
+				F124AA046A000A1231449302 /* AntigravityDesktopApproval.swift */,
+				567DFFDC41B4757898DFDBCF /* ClaudeCodeApproval.swift */,
+				F125BB046A000A1231459402 /* CodexDesktopQuestionInput.swift */,
+				D58A00100000000000000002 /* DSHApproval.swift */,
+				F07300000000000000000001 /* IslandApproval.swift */,
+				F07300000000000000000002 /* IslandApprovalProtocol.swift */,
+				F07300000000000000000003 /* IslandApprovalTypedContent.swift */,
+			);
+			path = Approval;
+			sourceTree = "<group>";
+		};
+		231718817A81C09365BF7310 /* Runtimes */ = {
+			isa = PBXGroup;
+			children = (
+				5235ADF6FDC4F26FADB8E164 /* NativeAgentHookContext.swift */,
+				F21D2FA65CA79030BB6B1662 /* Adapters */,
+				F124AA046A000A1231449202 /* AntigravityHistory.swift */,
+				56247C0A64DE2AF5F0377DCF /* ClaudeCodeBridge.swift */,
+				246B3B9B8E904093E43E6CC3 /* ClaudeCodeInstaller.swift */,
+				CD642417FEC058836A0BC3CD /* ClaudeCodeRuntime.swift */,
+				AD26CA070000009701000002 /* ClaudeTerminalNavigation.swift */,
+				F48800000000000000000004 /* CodexActivityBridges.swift */,
+				F48800000000000000000005 /* CodexActivityHookSupport.swift */,
+				F1000000000000000000002C /* CodexActivityRuntime.swift */,
+				545DA089A9305D7423476545 /* NativeAgentDSHPlugin.swift */,
+				439F9E01C8649D9219FDF59E /* NativeAgentExternalInstaller.swift */,
+				EDEEA9DA1218C93A18C0309C /* NativeAgentInstaller.swift */,
+				25BC2F314237CECB3D706F62 /* NativeAgentOpenCodePlugin.swift */,
+				CC444F5D7CD70F5E03B5E18E /* NativeAgentRuntime.swift */,
+				B047AE046A000A1231449202 /* NativeQuotaClient.swift */,
+				C047AE046A000A1231449202 /* NativeQuotaResponse.swift */,
+			);
+			path = Runtimes;
+			sourceTree = "<group>";
+		};
+		7B4842147B49A6B90FF08215 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F08725000000000000000001 /* AppLocalization.swift */,
+				F10000000000000000000011 /* AppPreferences.swift */,
+				F10000000000000000000030 /* AppUpdateController.swift */,
+				F10000000000000000000015 /* AstaSansFont.swift */,
+				4715B244EE5BA1D1DD18EA8C /* BrandAnnouncement.swift */,
+				F10000000000000000000001 /* QuotaViewApp.swift */,
+				F10000000000000000000020 /* QuotaViewWidgetSnapshotWriter.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9AD73E825B5B89A5BB8A0FFE /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B3F50765A2E02DDD955120C6 /* ActivitySingleLineTextView.swift */,
+				F48800000000000000000001 /* CodexActivityConnectionPresentation.swift */,
+				F48800000000000000000003 /* CodexActivityCopy.swift */,
+				F1000000000000000000002D /* CodexActivityIslandViews.swift */,
+				A05200000000000000000002 /* CodexMultitaskIsland.swift */,
+				B51A7C7235A640283711C56F /* IslandBoardChrome.swift */,
+				6CADD901EF9DE5F230E072C3 /* IslandBoardView.swift */,
+				F07500000000000000000031 /* IslandMarkdownResult.swift */,
+				F07300000000000000000090 /* IslandResetPage.swift */,
+				ED985B17BA5AF7F3F96F34E3 /* IslandResetTicket.swift */,
+				F07300000000000000000007 /* IslandScrollingText.swift */,
+				BD1E06FDFF407281819FFE79 /* IslandTaskCardView.swift */,
+				F07300000000000000000009 /* IslandTaskDetail.swift */,
+				F0730000000000000000000A /* IslandTaskScrolling.swift */,
+				9DBFE18E073F48FE5E015A32 /* IslandUsageBento.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3AF1BB982640247D2F05CA8F /* Effects */ = {
+			isa = PBXGroup;
+			children = (
+				CC2920A597CE34B515514109 /* ActivityIslandCompletionViews.swift */,
+				34C44B20C1D848FEECDAF1DF /* ActivityOrbMetalView.swift */,
+				F50000000000000000000001 /* CodexActivityIslandMotion.swift */,
+				F10000000000000000000031 /* CodexActivityRippleGlow.swift */,
+				A05200000000000000000003 /* CodexMultitaskIslandMotion.swift */,
+				F094000000000000000000B1 /* IslandCardCompletion.swift */,
+				F09200000000000000000003 /* IslandResetDust.swift */,
+				F10000000000000000000033 /* StateSmokeMetalView.swift */,
+				7D761CD8974A6E74D7F4342A /* StateSmokeSimulation.swift */,
+			);
+			path = Effects;
+			sourceTree = "<group>";
+		};
+		F5BB29B376D0EBB468A7213A /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				C20746FCD6F868CF85CF6579 /* CodexActivityIslandController.swift */,
+				43BCDEDEAFBFF5E150942F47 /* CodexActivityIslandGeometry.swift */,
+				AF421910CBB845D6902DB70A /* CodexResetController.swift */,
+				F09400000000000000000321 /* IslandConversationNavigation.swift */,
+				0E7E3D9A9C2856622C7D2250 /* IslandNotchWindow.swift */,
+				F07300000000000000000008 /* IslandSession.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		F21D2FA65CA79030BB6B1662 /* Adapters */ = {
+			isa = PBXGroup;
+			children = (
+				A689526F764D8B1E52776E9D /* AntigravityAgentAdapter.swift */,
+				AF3D5E18ABEE96C509980E3D /* DevinAgentAdapter.swift */,
+				F289CE4569AAC0575D76630B /* GenericHookAgentAdapter.swift */,
+				7FA53CE1CEAB4D44AC6CD807 /* DSHInteractionAdapter.swift */,
+				1C02DEB7A5194B7B9F0C7A63 /* OpenCodeInteractionAdapter.swift */,
+			);
+			path = Adapters;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -780,6 +959,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B8334E7B215F8E2A9879CDF /* CodexActivityStateSmokeShader.txt in Resources */,
 				B0730000000000000000000C /* CodexProviderIcon.png in Resources */,
 				B09102000000000000000001 /* QuotaViewAppIcon.png in Resources */,
 				B07400000000000000000001 /* CodexAgentAvatars in Resources */,
@@ -834,6 +1014,36 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1E02C411FB38412924200F2 /* ActivityTitleCache.swift in Sources */,
+				F6AC1D9D101787E4C06B850F /* MultitaskEntryScheduler.swift in Sources */,
+				DC4A6ECD425ACADDF291C617 /* SubagentActivityTracker.swift in Sources */,
+				91294080B9D5FE3DD08B3F79 /* AntigravityAgentAdapter.swift in Sources */,
+				0600810272C1C5F41C8BD3F0 /* DevinAgentAdapter.swift in Sources */,
+				7B4BFDF4CF0D27B8E88C8DB6 /* GenericHookAgentAdapter.swift in Sources */,
+				7A297A76C6AF914442BCE2E9 /* NativeAgentHookContext.swift in Sources */,
+				2B2D77B0C4F6522288DEC1CD /* CodexActivityIslandController.swift in Sources */,
+				368111F65F13A20B88CB82A0 /* CodexActivityIslandGeometry.swift in Sources */,
+				CE31C55DFB2BE8CC62441A00 /* IslandNotchWindow.swift in Sources */,
+				16AE8A4E9B41B4836736A129 /* ActivityIslandCompletionViews.swift in Sources */,
+				CD638C8EB40B9BD1CB790D74 /* ActivityOrbMetalView.swift in Sources */,
+				D2DF13F2B76A7C2A41CC4121 /* StateSmokeSimulation.swift in Sources */,
+				17B7C476C26D12261C3DB081 /* IslandUsageChartCache.swift in Sources */,
+				F288979CE006085BB019B8AE /* ActivitySingleLineTextView.swift in Sources */,
+				2C822A57EF09EB80C4D4BF09 /* IslandBoardChrome.swift in Sources */,
+				6CC05755B6B8813E6F891FC8 /* IslandBoardView.swift in Sources */,
+				32A34377F122FF2D28F7B0B2 /* IslandResetTicket.swift in Sources */,
+				7141AA2EE7E9D720A565B3D6 /* IslandTaskCardView.swift in Sources */,
+				C0830AECF0FD2B7515C0E1E2 /* IslandUsageBento.swift in Sources */,
+				2C841B49B54918A3BB55E04E /* SettingsAboutPage.swift in Sources */,
+				48C756061BA85B21ADB6976E /* SettingsCardsPage.swift in Sources */,
+				5FD5F40635716B8F6FAA22FB /* SettingsConnectionsPage.swift in Sources */,
+				3AA29BE0F4F3C21CAF1D0655 /* SettingsDesignSystem.swift in Sources */,
+				048F7C3A04743BBA1F4F0FEB /* SettingsFeedbackPage.swift in Sources */,
+				966E04867B8F1D7DF79C94DF /* SettingsGeneralPage.swift in Sources */,
+				DC1C4DDA0BB58E5D7DF911A6 /* SettingsIslandPage.swift in Sources */,
+				5D1B621A0BDE7ADA654EA9F1 /* SettingsIslandPreview.swift in Sources */,
+				2C1ABFD50E38DAD86BCE7686 /* SettingsProxyPage.swift in Sources */,
+				820E9587D69483973B6C6315 /* SettingsUsagePage.swift in Sources */,
 				B0730000000000000000000A /* IslandTaskScrolling.swift in Sources */,
 				B07300000000000000000009 /* IslandTaskDetail.swift in Sources */,
 				B07500000000000000000031 /* IslandMarkdownResult.swift in Sources */,
@@ -855,6 +1065,7 @@
 				8CC1FE7DA176DCABD3EEA6AF /* NativeAgentDSHPlugin.swift in Sources */,
 				D58A00100000000000000001 /* DSHApproval.swift in Sources */,
 				1D987DF90941E45054B0CEB3 /* NativeAgentOpenCodePlugin.swift in Sources */,
+				424E3B3C329C42C7BD1F672A /* DSHInteractionAdapter.swift in Sources */,
 				F7A949BC4A7A431AAB0CB333 /* OpenCodeInteractionAdapter.swift in Sources */,
 				A7CFAFDF0D4A7FAC16D5FD3A /* NativeAgentInstaller.swift in Sources */,
 				B5E96731E5F9B63F719B27A3 /* NativeAgentExternalInstaller.swift in Sources */,
@@ -865,7 +1076,8 @@
 				B07300000000000000000006 /* IslandPresentationModels.swift in Sources */,
 				B09400000000000000000321 /* IslandConversationNavigation.swift in Sources */,
 				B07300000000000000000005 /* IslandLiveStore.swift in Sources */,
-				B07300000000000000000004 /* IslandConceptBoard.swift in Sources */,
+				3A7938ADC29C4B0B8FC551A8 /* IslandRequestLifecycle.swift in Sources */,
+				B07300000000000000000004 /* IslandBoardState.swift in Sources */,
 				B094000000000000000000B1 /* IslandCardCompletion.swift in Sources */,
 				B07300000000000000000090 /* IslandResetPage.swift in Sources */,
 				B09200000000000000000003 /* IslandResetDust.swift in Sources */,
@@ -879,7 +1091,7 @@
 				F2CFC972219747DA80425E15 /* CodexResetController.swift in Sources */,
 				B1000000000000000000000D /* AppPreferences.swift in Sources */,
 				B08725000000000000000001 /* AppLocalization.swift in Sources */,
-				B1000000000000000000000F /* SettingsView.swift in Sources */,
+				B1000000000000000000000F /* SettingsShellView.swift in Sources */,
 				B10000000000000000000010 /* SettingsWindowController.swift in Sources */,
 				B10000000000000000000011 /* AstaSansFont.swift in Sources */,
 				B10000000000000000000012 /* EstimatedCostChartModel.swift in Sources */,
@@ -895,10 +1107,10 @@
 				B48800000000000000000003 /* CodexActivityCopy.swift in Sources */,
 				B48800000000000000000002 /* CodexActivityStore.swift in Sources */,
 				B48800000000000000000001 /* CodexActivityConnectionPresentation.swift in Sources */,
-				B10000000000000000000028 /* CodexActivityIsland.swift in Sources */,
+				B10000000000000000000028 /* CodexActivityIslandViews.swift in Sources */,
 				B50000000000000000000001 /* CodexActivityIslandMotion.swift in Sources */,
 				B1000000000000000000002D /* CodexActivityRippleGlow.swift in Sources */,
-				B1000000000000000000002F /* CodexActivityStateSmoke.swift in Sources */,
+				B1000000000000000000002F /* StateSmokeMetalView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1037,6 +1249,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = F1000000000000000000000B /* Core.xcconfig */;
 			buildSettings = {
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};

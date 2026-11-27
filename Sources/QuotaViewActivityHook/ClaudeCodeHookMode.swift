@@ -212,6 +212,39 @@ struct ClaudeCodeHookForwarder {
         "stop_hook_active", "is_interrupt", "requires_permission", "auto_approved", "trigger"
     ]
 
+    /// Only status and bounded task identifiers cross the socket for plan results.
+    private static func planResult(tool: String, response: [String: Any]) -> [String: Any]? {
+        func identifier(_ value: Any?) -> String? {
+            guard let id = value as? String, (1...128).contains(id.utf8.count) else { return nil }
+            return id
+        }
+        switch tool {
+        case "TaskCreate":
+            guard let task = response["task"] as? [String: Any], let id = identifier(task["id"]) else { return nil }
+            return ["id": id]
+        case "TaskUpdate":
+            guard response["success"] as? Bool == true, let id = identifier(response["taskId"]),
+                  let change = response["statusChange"] as? [String: String],
+                  let status = change["to"], ["pending", "in_progress", "completed", "deleted"].contains(status) else { return nil }
+            return ["id": id, "status": status]
+        case "TaskList", "TodoWrite":
+            guard let rows = response[tool == "TaskList" ? "tasks" : "newTodos"] as? [[String: Any]] else { return nil }
+            guard rows.count <= 100 else { return ["oversized": true] }
+            var steps: [[String: String]] = []
+            for row in rows {
+                guard let status = row["status"] as? String, ["pending", "in_progress", "completed"].contains(status) else { return nil }
+                var step = ["status": status]
+                if tool == "TaskList" {
+                    guard let id = identifier(row["id"]) else { return nil }
+                    step["id"] = id
+                }
+                steps.append(step)
+            }
+            return ["steps": steps]
+        default: return nil
+        }
+    }
+
     func run() {
         signal(SIGPIPE, SIG_IGN)
         guard let input = ClaudeCodeHookIO.readStandardInput(maximumBytes: 8_388_608),
@@ -224,6 +257,10 @@ struct ClaudeCodeHookForwarder {
             if let value = ClaudeCodeHookIO.bounded(object[key], maximumBytes: 16_384) { payload[key] = value }
         }
         if let value = ClaudeCodeHookIO.bounded(object["tool_input"], maximumBytes: 262_144) { payload["tool_input"] = value }
+        if event == "PostToolUse", let tool = payload["tool_name"] as? String,
+           let response = object["tool_response"] as? [String: Any] {
+            payload["plan_result"] = Self.planResult(tool: tool, response: response)
+        }
         if let value = ClaudeCodeHookIO.bounded(object["permission_suggestions"], maximumBytes: 65_536) {
             payload["permission_suggestions"] = value
         }

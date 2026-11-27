@@ -137,8 +137,12 @@ final class DesktopWaitReconciliationSmokeTests: XCTestCase {
         XCTAssertEqual(store.snapshot?.state, .awaitingConfirmation)
         XCTAssertEqual(island.tasks[0].status, .waiting)
         XCTAssertEqual(island.tasks[0].requests.first?.key, "observer-placeholder")
+        let placeholder = try XCTUnwrap(island.tasks[0].requests.first?.value)
+        XCTAssertEqual(placeholder.question.chinese, "请求详情暂不可用")
+        XCTAssertEqual(placeholder.question.english, "Request details unavailable")
         _ = await apply(store, try pair(revision: 2, flags: ["waitingOnUserInput"]))
         XCTAssertEqual(island.tasks[0].sourceWaitReason, .userInput)
+        XCTAssertEqual(island.tasks[0].requests.first?.value.id, placeholder.id)
         _ = await apply(store, try pair(revision: 3)); assertRunning(store, island)
         await store.stop()
     }

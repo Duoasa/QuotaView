@@ -23,6 +23,55 @@ final class DSHApprovalSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testOldEpochCannotSettleReusedRequestAndReplyIsOneShot() async throws {
+        let model = IslandLiveStore()
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let bridge = ClaudeCodeBridge(socketURL: home.appendingPathComponent("events.sock"), authenticationToken: "fixture")
+        let namespace = CodexActivityPrivacy.hashIdentifier(home.resolvingSymlinksInPath().standardizedFileURL.path)
+        let key = CodexActivityPrivacy.hashIdentifier("dsh:" + namespace + ":session")
+        var turn = DSHInteractionAdapter.Turn(id: "first", nativeID: "one", epoch: "old", isChild: false)
+        let adapter = DSHInteractionAdapter(model: model, bridge: bridge, home: home,
+            isInteractive: { true }, currentTurn: { $0 == key ? turn : nil })
+        defer { adapter.stop() }
+
+        func message(_ name: String, _ native: String, _ epoch: String) throws -> ClaudeCodeBridgeMessage {
+            let payload: [String: Any] = [
+                "hook_event_name": name, "session_id": "session", "source_namespace": namespace,
+                "source_epoch": epoch, "turn_id": native, "request_id": "reused", "approval_id": "same-audit",
+                "tool_name": "bash", "tool_use_id": "same-call", "tool_input": ["command": "echo fixture"],
+                "outcome": "allowed-once"
+            ]
+            return .init(eventID: "reused", kind: "hook", awaitsDecision: name == "DSHApprovalRequest",
+                         payload: try JSONSerialization.data(withJSONObject: payload))
+        }
+
+        func admit(_ native: String, _ epoch: String) throws -> IslandCodexApprovalRequest {
+            model.receiveLegacy(.init(event: .userPromptSubmit, sessionHash: key, turnHash: turn.id, sessionKind: .user, source: .hook))
+            XCTAssertTrue(adapter.handle(try message("DSHApprovalRequest", native, epoch)))
+            return try XCTUnwrap(model.tasks.first?.requests.first?.value.protocolRequest)
+        }
+
+        model.setProvider(.dsh, for: key)
+        let old = try admit("one", "old")
+        adapter.releaseRequests(in: key)
+        turn = .init(id: "second", nativeID: "two", epoch: "new", isChild: false)
+        let current = try admit("two", "new")
+        XCTAssertFalse(model.dshResponseCapability?(old) ?? true)
+        XCTAssertTrue(adapter.handle(try message("DSHApprovalSettled", "one", "old")))
+        XCTAssertTrue(model.dshResponseCapability?(current) ?? false)
+
+        let respond = try XCTUnwrap(model.dshRespond)
+        let allow = try XCTUnwrap(current.actions.first { $0.result["decision"].text == "accept" }).result
+        try await respond(current, allow)
+        do {
+            try await respond(current, allow)
+            XCTFail("A submitted DSH request must no longer accept decisions")
+        } catch { XCTAssertEqual(error as? CocoaError, CocoaError(.userCancelled)) }
+        XCTAssertTrue(adapter.handle(try message("DSHApprovalSettled", "two", "new")))
+        XCTAssertNil(model.tasks.first?.requests.first?.value.protocolRequest)
+    }
+
+    @MainActor
     private func waitFor(_ condition: () -> Bool, file: StaticString = #filePath, line: UInt = #line) async throws {
         for _ in 0..<400 { if condition() { return }; try await Task.sleep(nanoseconds: 10_000_000) }
         XCTFail("DSH smoke timed out", file: file, line: line)
@@ -41,8 +90,8 @@ final class DSHApprovalSmokeTests: XCTestCase {
         try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
         try Data(#"{"version":7,"record":{"rows":{"title":{"ver":1,"val":"Recovered session title"}}}}"#.utf8)
             .write(to: cache.appendingPathComponent("same-session.json"))
-        XCTAssertEqual(NativeAgentRuntime.dshCachedTitle(home: root.appendingPathComponent("home"), sessionID: "same-session"), "Recovered session title")
-        XCTAssertNil(NativeAgentRuntime.dshCachedTitle(home: root.appendingPathComponent("home"), sessionID: "../same-session"))
+        XCTAssertEqual(DSHInteractionAdapter.cachedTitle(home: root.appendingPathComponent("home"), sessionID: "same-session"), "Recovered session title")
+        XCTAssertNil(DSHInteractionAdapter.cachedTitle(home: root.appendingPathComponent("home"), sessionID: "../same-session"))
         let suite = "QuotaView.DSHSmoke." + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }

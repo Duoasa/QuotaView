@@ -64,6 +64,46 @@ final class WidgetContractTests: XCTestCase {
         XCTAssertFalse(encodedText.contains("prompt"))
     }
 
+    func testFileStoreReadsLegacySchemaOneSnapshot() throws {
+        // Written by the 0.2.1 codec (aef6e3c) in Swift 5 mode.
+        let directory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/widget-schema-1", isDirectory: true)
+        let store = WidgetSnapshotFileStore(containerURL: directory)
+        let generatedAt = Date(timeIntervalSince1970: 1_785_000_000)
+        let snapshot = try store.read(now: generatedAt.addingTimeInterval(60))
+
+        XCTAssertEqual(snapshot.schemaVersion, 1)
+        XCTAssertEqual(snapshot.availability, .available)
+        XCTAssertEqual(snapshot.generatedAt, generatedAt)
+        XCTAssertEqual(snapshot.expiresAt, generatedAt.addingTimeInterval(900))
+        XCTAssertNil(snapshot.updatedAt)
+        let provider = try XCTUnwrap(snapshot.provider)
+        XCTAssertEqual(provider.primaryWindow?.remainingFraction, 0.75)
+        XCTAssertEqual(provider.primaryWindow?.resetsAt, generatedAt.addingTimeInterval(3_600))
+        XCTAssertEqual(provider.auxiliaryMetrics.first?.formattedValue, "42K")
+        XCTAssertNil(provider.plan)
+        XCTAssertNil(provider.availableResetCredits)
+        let original = try Data(contentsOf: store.fileURL)
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let output = WidgetSnapshotFileStore(containerURL: scratch)
+        try output.write(snapshot)
+        XCTAssertEqual(try Data(contentsOf: output.fileURL), original)
+        XCTAssertEqual(try output.read(now: generatedAt), snapshot)
+        XCTAssertThrowsError(try output.read(now: snapshot.expiresAt)) {
+            XCTAssertEqual($0 as? WidgetSnapshotCodecError, .expired)
+        }
+        var future = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        future["schemaVersion"] = 99
+        try JSONSerialization.data(withJSONObject: future).write(to: output.fileURL)
+        XCTAssertThrowsError(try output.read(now: generatedAt)) {
+            XCTAssertEqual($0 as? WidgetSnapshotCodecError, .unsupportedSchema(99))
+        }
+    }
+
     func testCodecRejectsExpiredAndUnknownSnapshots() throws {
         let now = Date(timeIntervalSince1970: 1_785_000_000)
         let codec = WidgetSnapshotCodec()

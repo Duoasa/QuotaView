@@ -54,10 +54,9 @@ zsh 'Prototypes/IslandTextConsole/Open Console.command' --verify-only
 - 可将控制窗口拖到另一块屏幕，顶部预览随屏幕移动；手动控制会中止 Demo。
   这是独立开发台，不运行真实任务的完成 / 缩小 / 隐藏计时器。
 
-`prepare.py` 将生产 Sources 复制到被忽略的 `.build/Workspace`，仅更换 @main，
-并使 `ActivityIslandContentView` 在这个隔离副本中可供宿主调用。隔离副本另将 shader 资源查找指向标准 App Resources。没有复制旧版
-渲染器或添加生产调试入口。`.build/source-manifest.json` 记录全部生产源码与开发台哈希、
-渲染器可见性替换及宿主适配；四种特效所在的 `CodexActivityStateSmoke.swift` 在构建前校验逐字节一致。
+`prepare.py` 将生产 Sources 复制到被忽略的 `.build/Workspace`，按 Swift 声明定位
+App 入口、渲染器和 Metal 特效。在隔离副本中移除生产入口的 `@main`，由开发台提供启动入口。
+其余生产文件在构建前逐字节核对。`.build/source-manifest.json` 记录实际源路径、文件哈希和入口适配。
 独立 Bundle ID `com.quotaview.island-text-console`，无 App Group 权限
 或 Widget 扩展，开发产物只作本机 ad-hoc 签名。
 

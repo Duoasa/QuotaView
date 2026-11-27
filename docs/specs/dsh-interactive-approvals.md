@@ -4,6 +4,10 @@ Spec ID：`QV-DSH-APPROVAL-001` · `Accepted / Complete` · 2026-11-04。
 
 用户已明确要求“按这个方案接入DSH审批，完成后重启开发版”。Build 17 实现工具审批与显式交接；Build 18 修复真实反馈暴露的展示权限问题；Build 19 增加插件标题/模型补读；当前 Build 20 / 内部 153 增加不依赖插件重载的 Runtime 标题补读。真实客户端操作与视觉由用户验收，不包含推送或发布。
 
+## Build 35 交互状态归属
+
+每个 DSH 运行时有独立的 `DSHInteractionAdapter`。适配器保存待答请求和标题读取任务，运行时提供当前会话、轮次及来源代次。原题撤销、连接断开、交回客户端或设置关闭时，适配器按原请求释放。不同数据目录即使使用相同的会话和工具调用标识，也用各自的命名空间对齐请求。普通审批提交后等待原端审计事件结算，已提交的同一请求无法再次操作。
+
 ## 结论
 
 通过 DSH 的公开 Host 插件接口接入，无须修改 DSH 客户端源码或模拟点击。已补入 QuotaView 的决策回传、请求生命周期与详情适配。
@@ -26,7 +30,7 @@ CLI 与新 Desktop 的审批服务文件 SHA-256 均为 `6a5ad1ba3c3dc3abbbae52e
 
 ## 调研时的缺口（已在 Build 17 补齐）
 
-- `Sources/QuotaView/NativeAgentDSHPlugin.swift` 监听审计事件 `approval/asked` / `approval/decided`，映射成权限提醒/结束；发送固定 `awaitDecision: false`，发送后关闭连接，没有注册可返回决定的 `approval/request`。
+- `Sources/QuotaView/Runtimes/NativeAgentDSHPlugin.swift` 监听审计事件 `approval/asked` / `approval/decided`，映射成权限提醒/结束；发送固定 `awaitDecision: false`，发送后关闭连接，没有注册可返回决定的 `approval/request`。
 - `NativeAgentRuntime.swift` 只更新观察状态，不保存可答复请求，也没有处理 socket 断开撤销。
 - `ClaudeCodeBridge.swift` 已有认证、等待及决定回传能力，可复用传输基础；Claude 的权限协议不能直接当成 DSH 协议。
 - `IslandLiveStore.swift` 仍以 Codex/Claude 两路分派响应，`IslandApprovalProtocol.swift` 有 Claude 专用标记。DSH 必须独立判断来源、能力和连接代次，不能伪装为 Claude。

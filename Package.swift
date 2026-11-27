@@ -34,16 +34,16 @@ let package = Package(
     targets: [
         .target(
             name: "QuotaViewCore",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "QuotaViewWidgetContract",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "QuotaViewFutureContracts",
             dependencies: ["QuotaViewCore"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
             name: "QuotaView",
@@ -56,6 +56,7 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/CodexActivityRippleGlowShader.txt"),
+                .copy("Resources/CodexActivityStateSmokeShader.txt"),
                 .copy("Resources/CodexProviderIcon.png"),
                 .copy("Resources/QuotaViewAppIcon.png"),
                 .process("Resources/AppTranslations.json"),
@@ -80,7 +81,7 @@ let package = Package(
         ),
         .target(
             name: "QuotaViewActivityHookSupport",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "QuotaViewCoreTests",

@@ -255,6 +255,7 @@ final class ResetDustRenderingTests: XCTestCase {
         let a = try await first.value, b = try await second.value
         let c = try await cache.load { captures += 1; return image }
         XCTAssertTrue(a === b && b === c)
+        XCTAssertEqual(a.texture.usage, .shaderRead)
         XCTAssertEqual(captures, 1, "Host recreation must not recapture artwork or compile/upload again")
     }
 

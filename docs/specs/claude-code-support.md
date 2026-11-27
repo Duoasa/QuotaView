@@ -5,6 +5,12 @@
 来源：用户要求按 `PLAN-claude-code-support.md`（2026-10-07 草案）为 QuotaView 加入
 Claude Code 全功能支持。本规格记录目标、边界与证据；实现位于本节列出的文件。
 
+## Build 43 / 复杂任务进度
+
+当前主任务轮次先登记工具调用，再消费相同调用的成功 `PostToolUse` 回执。辅助程序从计划结果中只转发任务标识和状态。新版 `TaskCreate`、`TaskUpdate` 增量维护本轮已知任务，`TaskList` 用完整列表校准。首次遇到未知任务更新时等待完整列表。旧版 `TodoWrite` 使用回执的 `newTodos`。失败、子代理调用和上轮迟到的回执不能推进当前卡片。新提示词重置轮次计划。
+
+本机 Claude Code 2.1.292 使用隔离配置与本地模拟模型，实际执行了创建、列表、状态更新、删除、未知任务更新及 TodoWrite。独立的 Hook→灵动岛冒烟覆盖运行上限、成功和失败终态、换轮与空列表。[进度语义](PROGRESS_EFFECT_ADAPTATION.md#2-进度语义)
+
 ## 目标
 
 - 灵动岛显示 Claude Code 会话：标题、模型、过程、工具输出、Token、完成/中断/失败。

@@ -32,3 +32,34 @@ jobs:
 
       - name: Run native question closure contract fixtures
         run: PYTHONDONTWRITEBYTECODE=1 python3 Prototypes/NativeQuestionBridgeContract/smoke.py
+
+  macos-build:
+    name: macOS app and embedded products
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check production sources for debug fixture markers
+        run: |
+          if git grep -nI -E 'DEBUG-ONLY-MOCK|DEBUG MOCK|仅用于调试' -- Sources; then
+            exit 1
+          else
+            test "$?" -eq 1
+          fi
+
+      - name: Check application translations
+        run: |
+          python3 scripts/test-support/test_localization_scan.py
+          python3 scripts/check-localizations.py
+
+      - name: Build the shared scheme and verify its embedded executables
+        run: |
+          derived="$RUNNER_TEMP/QuotaViewDerived"
+          xcodebuild -project QuotaView.xcodeproj -scheme QuotaView -configuration Debug \
+            -destination 'platform=macOS' -derivedDataPath "$derived" \
+            -disableAutomaticPackageResolution CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES build
+          app="$derived/Build/Products/Debug/QuotaView.app"
+          test -x "$app/Contents/MacOS/QuotaView"
+          test -x "$app/Contents/PlugIns/QuotaViewWidgetExtension.appex/Contents/MacOS/QuotaViewWidgetExtension"
+          test -x "$app/Contents/Helpers/QuotaViewActivityHook"

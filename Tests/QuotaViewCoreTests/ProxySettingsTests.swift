@@ -160,6 +160,18 @@ final class ProxySettingsTests: XCTestCase {
         await store.stop()
     }
 
+    func testSOCKSBridgeRejectsAnotherStartOnItsLiveListener() async throws {
+        let bridge = SOCKS5HTTPBridge()
+        defer { bridge.stop() }
+        let config = ProxyConfiguration(isEnabled: true, scheme: .socks5, host: "127.0.0.1", port: "7890")
+        let port = try await bridge.start(configuration: config)
+        XCTAssertGreaterThan(port, 0)
+        do {
+            _ = try await bridge.start(configuration: config)
+            XCTFail("A second start must preserve the original listener")
+        } catch SOCKS5HTTPBridge.StartError.alreadyStarted {}
+    }
+
     func testSOCKSBridgeRejectsOversizedHeadersAndClosesItsListener() async throws {
         let bridge = SOCKS5HTTPBridge()
         let port = try await bridge.start(configuration: .init(isEnabled: true, scheme: .socks5))

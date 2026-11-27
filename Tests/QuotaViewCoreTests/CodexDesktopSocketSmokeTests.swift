@@ -4,6 +4,18 @@ import XCTest
 @testable import QuotaViewCore
 
 final class CodexDesktopSocketSmokeTests: XCTestCase {
+    func testClosingAnIdleNativeTransportTwiceFinishesItsReader() async throws {
+        let peer = try CodexDesktopUnixPeerFixture(state: Data("{}".utf8))
+        defer { peer.stop() }
+        let transport = try await CodexDesktopIPCTransport.open(peer.socketURL, writeTimeout: 1)
+        transport.close()
+        transport.close()
+        var reader = transport.chunks.makeAsyncIterator()
+        let end = await reader.next()
+        XCTAssertNil(end)
+        XCTAssertThrowsError(try transport.write(Data([1])))
+    }
+
     func testStockClientDrainsOversizedBurstThenSubmitsHealthyNativeQuestion() async throws {
         var question = CodexDesktopIPCClientTests.request(id: "question")
         question["method"] = "item/tool/requestUserInput"

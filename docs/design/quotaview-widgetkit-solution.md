@@ -36,7 +36,7 @@
 | Widget Bundle ID | `com.quotaview.menubar.widget` |
 | App Group | `BUUH229D5Q.com.quotaview.shared` |
 | Contract | `Sources/QuotaViewWidgetContract/WidgetSnapshot.swift` |
-| 主应用 Writer | `Sources/QuotaView/QuotaViewWidgetSnapshotWriter.swift` |
+| 主应用 Writer | `Sources/QuotaView/App/QuotaViewWidgetSnapshotWriter.swift` |
 | Extension | `Sources/QuotaViewWidget/QuotaViewWidget.swift` |
 | 配置 | `Configs/App.xcconfig`、`Configs/Widget.xcconfig`、`Support/*.entitlements` |
 

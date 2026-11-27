@@ -59,6 +59,8 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
             let runtime=NativeAgentRuntime(provider:provider,preferences:preferences,island:island,defaults:defaults,installer:installer)
             runtimes.append(runtime); runtime.start()
             try await waitFor { runtime.status == .waiting }
+            let route = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: installer.route)) as? [String: Any])
+            XCTAssertEqual(route["interactiveApprovals"] as? Bool, false)
             let file=home.appendingPathComponent(filename.isEmpty ? "hooks/"+installer.marker+".json" : filename)
             let config=try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:file)) as? [String:Any])
             let hooks=try XCTUnwrap(config["hooks"] as? [String:[[String:Any]]])
@@ -89,6 +91,68 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testClaudeConfirmedPlansReachCardThroughInstalledHook() async throws {
+        let root = URL(fileURLWithPath: "/private/tmp/qv-cc-plan-" + UUID().uuidString.prefix(8))
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "QuotaView.PlanSmoke." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefs = AppPreferences(defaults: defaults), island = IslandSession()
+        prefs.claudeCodeEnabled = true
+        let helper = URL(fileURLWithPath: ProcessInfo.processInfo.environment["QV_NATIVE_HELPER"] ?? FileManager.default.currentDirectoryPath + "/.build/debug/QuotaViewActivityHook")
+        let installer = ClaudeCodeInstaller(socketURL: root.appendingPathComponent("hook.sock"), authenticationToken: "fixture",
+            configurationDirectory: root.appendingPathComponent("config"), supportDirectory: root.appendingPathComponent("support"),
+            helperURL: helper, environment: [:])
+        let runtime = ClaudeCodeRuntime(preferences: prefs, island: island, defaults: defaults, installer: installer)
+        runtime.start()
+        defer { runtime.stop(); island.stop() }
+        try await waitFor { runtime.status == .awaitingEvent }
+        let sessionID = UUID().uuidString
+        func send(_ event: String, _ tool: String = "", _ call: String = "", _ result: [String: Any] = [:]) async throws {
+            let payload: [String: Any] = ["session_id": sessionID, "hook_event_name": event, "tool_name": tool,
+                                          "tool_use_id": call, "tool_response": result]
+            let outcome = try await execute(installer.installedHelperURL, arguments: ["--claude-code", "--configuration", installer.routeURL.path],
+                                            input: JSONSerialization.data(withJSONObject: payload))
+            XCTAssertEqual(outcome.0, 0)
+        }
+        func confirmed(_ tool: String, _ id: String, _ result: [String: Any]) async throws {
+            try await send("PreToolUse", tool, id)
+            try await send("PostToolUse", tool, id, result)
+        }
+        func fraction() -> Double? {
+            island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
+                .state.tasks.first?.renderState.approximateProgressFraction
+        }
+        try await send("UserPromptSubmit")
+        for id in ["1", "2"] { try await confirmed("TaskCreate", "create" + id, ["task": ["id": id]]) }
+        try await waitFor { island.model.tasks.first?.progress == 0 }
+        try await confirmed("TaskUpdate", "update", ["success": true, "taskId": "1", "statusChange": ["from": "pending", "to": "in_progress"]])
+        try await waitFor { fraction() == 0.05 }
+        try await confirmed("TaskUpdate", "failed", ["success": false, "taskId": "1", "statusChange": ["to": "completed"]])
+        XCTAssertEqual(fraction(), 0.05)
+        try await confirmed("TaskList", "list", ["tasks": [["id": "1", "status": "completed"], ["id": "2", "status": "in_progress"]]])
+        try await waitFor { fraction() == 0.55 }
+        try await confirmed("TaskUpdate", "remove", ["success": true, "taskId": "2", "statusChange": ["from": "in_progress", "to": "deleted"]])
+        try await waitFor { fraction() == 0.95 }
+        try await send("PreToolUse", "TaskList", "late")
+        try await send("Stop")
+        try await waitFor { fraction() == 1 }
+        try await send("UserPromptSubmit")
+        try await send("PostToolUse", "TaskList", "late", ["tasks": [["id": "1", "status": "completed"]]])
+        try await waitFor { island.model.tasks.first?.terminal == false }
+        XCTAssertNil(island.model.tasks.first?.progress)
+        try await confirmed("TodoWrite", "todos", ["newTodos": [["status": "pending"], ["status": "completed"]]])
+        try await waitFor { fraction() == 0.5 }
+        try await confirmed("TodoWrite", "clear", ["newTodos": []])
+        try await waitFor { island.model.tasks.first?.progress == nil }
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(fraction()), 0.5)
+        try await send("StopFailure")
+        try await waitFor { island.model.tasks.first?.terminal == true }
+        XCTAssertLessThan(try XCTUnwrap(fraction()), 1)
+    }
+
+    @MainActor
     func testAntigravityInvocationAndBackgroundStop() async throws {
         let root = URL(fileURLWithPath: "/private/tmp/qv-ag-" + UUID().uuidString.prefix(8))
         let home = root.appendingPathComponent("config")
@@ -103,10 +167,21 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         let helper = URL(fileURLWithPath: ProcessInfo.processInfo.environment["QV_NATIVE_HELPER"] ?? FileManager.default.currentDirectoryPath + "/.build/debug/QuotaViewActivityHook")
         let installer = NativeAgentInstaller(provider: .antigravity, socketURL: root.appendingPathComponent("hook.sock"), authenticationToken: "fixture", homeOverride: home, supportOverride: root.appendingPathComponent("support"), helperOverride: helper)
         var nativeCard: AntigravityDesktopApproval.Card?
+        typealias Cards = [UUID: AntigravityDesktopApproval.Card]
+        var holdNextPoll = false
+        var heldPoll: CheckedContinuation<Cards, Never>?
+        var oldReadReturned = false
+        defer { heldPoll?.resume(returning: [:]) }
         var pressed: [AXUIElement] = []
         var answers: [String] = []
         let runtime = NativeAgentRuntime(provider: .antigravity, preferences: prefs, island: island, defaults: defaults, installer: installer,
             readApprovalCards: { sessions in
+                if holdNextPoll {
+                    holdNextPoll = false
+                    let cards: Cards = await withCheckedContinuation { heldPoll = $0 }
+                    oldReadReturned = true
+                    return cards
+                }
                 guard let nativeCard, sessions.contains(nativeCard.conversation) else { return [:] }
                 return [nativeCard.conversation: nativeCard]
             }, pressApprovalButton: { card, allowed in
@@ -135,16 +210,24 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         XCTAssertEqual(sqlite3_exec(db, "CREATE TABLE conversation_summaries(conversation_id TEXT PRIMARY KEY, title TEXT, preview TEXT); INSERT INTO conversation_summaries VALUES ('" + id + "', '', 'Preview title')", nil, nil, nil), SQLITE_OK)
         sqlite3_close(db)
         let stamp = ISO8601DateFormatter().string(from: Date())
-        let record: [String: Any] = ["step_index": 7, "type": "PLANNER_RESPONSE", "status": "DONE", "created_at": stamp,
+        let record: [String: Any] = ["step_index": 12, "type": "PLANNER_RESPONSE", "status": "DONE", "created_at": stamp,
             "content": "Public answer", "thinking": "private reasoning", "input_tokens": 100, "cache_read_tokens": 50, "output_tokens": 24]
         let older: [String: Any] = ["step_index": 1, "type": "PLANNER_RESPONSE", "status": "DONE", "created_at": stamp,
             "content": "Earlier turn", "input_tokens": 10, "output_tokens": 5]
         var lines = Data()
-        for row in [older, record] { lines.append(try JSONSerialization.data(withJSONObject: row)); lines.append(10) }
+        lines.append(try JSONSerialization.data(withJSONObject: older)); lines.append(10)
         try lines.write(to: dir.appendingPathComponent("transcript_full.jsonl"))
         let chunks = dir.appendingPathComponent("chunks/transcript_full")
         try FileManager.default.createDirectory(at: chunks, withIntermediateDirectories: true)
-        try lines.write(to: chunks.appendingPathComponent("00000000.jsonl"))
+        var mirror = lines
+        mirror.append(try JSONSerialization.data(withJSONObject: record)); mirror.append(10)
+        try mirror.write(to: chunks.appendingPathComponent("00000000.jsonl"))
+        func append(_ row: [String: Any]) throws {
+            let transcript = try FileHandle(forWritingTo: dir.appendingPathComponent("transcript_full.jsonl"))
+            defer { try? transcript.close() }
+            try transcript.seekToEnd()
+            try transcript.write(contentsOf: JSONSerialization.data(withJSONObject: row) + Data([10]))
+        }
         var payload: [String: Any] = ["conversationId": id, "initialNumSteps": 5, "invocationNum": 0, "modelName": "fixture-model", "transcriptPath": FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".gemini/" + relative + "transcript.jsonl").path]
         func send(_ event: String) async throws {
             var entry = try XCTUnwrap((hooks[event] as? [[String: Any]])?.first)
@@ -159,6 +242,45 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         try await send("PreInvocation")
         try await waitFor { island.model.tasks.first?.model == "fixture-model" }
         try await waitFor { island.model.tasks.first?.title == "Preview title" }
+        let focusTitle = "Checking the current branch"
+        let focus: [String: Any] = ["step_index": 6, "type": "PLANNER_RESPONSE", "status": "DONE",
+            "created_at": ISO8601DateFormatter().string(from: Date()), "content": "", "thinking": "private reasoning",
+            "tool_calls": [["name": "other", "args": ["focus": "unrelated focus"]],
+                           ["name": "update_focus", "args": ["focus": focusTitle, "extra": "private argument"]]]]
+        try append(focus)
+        try append(focus)
+        // No intervening hook. The new step must reach both live projections.
+        try await waitFor {
+            island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
+                .state.tasks.first?.renderState.operation == focusTitle
+        }
+        let active = island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
+        XCTAssertEqual(active.taskDetails.values.first?.entries.filter { $0.text.chinese == focusTitle && $0.kind == .progress }.count, 1)
+        var liveDetail = try XCTUnwrap(active.taskDetails.values.first)
+        liveDetail.entries.append(.init(text: .init("Other public commentary"), publicItem: .init(category: .message,
+            sourceID: "later", turnID: "fixture", messagePhase: "commentary")))
+        XCTAssertEqual(IslandTaskDetailSelection(data: liveDetail).focus.first?.text.chinese, focusTitle)
+        XCTAssertNil(liveDetail.finalResponse)
+        XCTAssertFalse(active.taskDetails.values.flatMap(\.entries).contains { ["unrelated focus", "private argument", "private reasoning"].contains($0.text.chinese) })
+        XCTAssertNil(island.model.tasks.first?.progress, "A focus title alone has no denominator")
+        func appendPlan(_ statuses: [String], step: Int) throws {
+            var row = focus
+            row["step_index"] = step
+            row["tool_calls"] = [["name": "update_steps", "args": ["steps": statuses.map { ["status": $0, "title": "private plan title"] }]]]
+            try append(row)
+        }
+        try appendPlan(["done", "in_progress", "pending", "pending"], step: 8)
+        try await waitFor { island.model.tasks.first?.progress == 0.275 }
+        func fraction() -> Double? {
+            island.model.display(english: true, remaining: nil, enabled: true, privacy: false).state.tasks.first?.renderState.approximateProgressFraction
+        }
+        XCTAssertEqual(fraction(), 0.275)
+        try appendPlan(["done", "done", "done", "done"], step: 9)
+        try appendPlan(["pending"], step: 8) // An older step can be replayed after the newer snapshot.
+        try appendPlan(["unknown"], step: 10)
+        try await waitFor { fraction() == 0.95 }
+        XCTAssertFalse(island.model.tasks.flatMap(\.entries).contains { $0.text.chinese.contains("private plan title") })
+        try append(record)
         payload.removeValue(forKey: "initialNumSteps")
         payload.removeValue(forKey: "transcriptPath")
         try await send("PostInvocation")
@@ -233,6 +355,7 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         await runtime.refreshAntigravityUsage()
         var display = island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
         XCTAssertEqual(display.taskDetails.values.first?.finalResponse?.text.chinese, "Public answer")
+        XCTAssertEqual(display.state.tasks.first?.renderState.approximateProgressFraction, 1)
         display.antigravityUsage = island.antigravityUsage
         let board = IslandBoardState()
         board.update(display, reduceMotion: true)
@@ -250,6 +373,30 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
         XCTAssertNil(island.antigravityUsage)
         let remaining = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: config)) as? [String: Any])
         XCTAssertEqual(Set(remaining.keys), ["other"])
+
+        // A cancelled AX scan can return after the same conversation has been reconnected.
+        // Its result must neither remove the current request nor reinstall the previous card.
+        prefs.antigravityInteractiveApprovals = true
+        prefs.antigravityEnabled = true
+        try await waitFor { runtime.status == .waiting }
+        holdNextPoll = true
+        payload = ["conversationId": id, "initialNumSteps": 20, "invocationNum": 0]
+        try await send("PreInvocation")
+        try await waitFor { heldPoll != nil }
+        let staleRead = try XCTUnwrap(heldPoll)
+        runtime.stop()
+        runtime.start()
+        try await waitFor { runtime.status == .waiting }
+        nativeCard = card("Current conversation target")
+        payload["initialNumSteps"] = 25
+        try await send("PreInvocation")
+        try await waitFor { island.model.tasks.first?.requests.first?.value.protocolRequest?.params["command"].text == nativeCard?.content }
+        let current = try XCTUnwrap(island.model.tasks.first?.requests.first?.value)
+        heldPoll = nil
+        staleRead.resume(returning: [conversation: card("Previous conversation target")])
+        try await waitFor { oldReadReturned }
+        XCTAssertEqual(island.model.tasks.first?.requests.first?.value.id, current.id)
+        XCTAssertEqual(island.model.tasks.first?.requests.first?.value.protocolRequest?.params["command"].text, "Current conversation target")
     }
 
     func testAntigravityPermissionCardRequiresNativeScopeAndAction() {

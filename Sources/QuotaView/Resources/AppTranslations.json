@@ -1,4 +1,104 @@
 {
+  "Version and website": {
+    "ja": "バージョンと公式サイト",
+    "ko": "버전 및 공식 웹사이트",
+    "es": "Versión y sitio web"
+  },
+  "0.9.9 is the last open-source version of QuotaView. The project’s official website is coming soon.": {
+    "ja": "0.9.9 は QuotaView の最後のオープンソース版です。プロジェクトの公式サイトは近日公開予定です。",
+    "ko": "0.9.9는 QuotaView의 마지막 오픈 소스 버전입니다. 프로젝트 공식 웹사이트가 곧 공개됩니다.",
+    "es": "La 0.9.9 es la última versión de código abierto de QuotaView. El sitio web oficial del proyecto estará disponible próximamente."
+  },
+  "Current step and plan progress": {
+    "ja": "現在のステップと計画の進捗",
+    "ko": "현재 단계 및 계획 진행률",
+    "es": "Paso actual y progreso del plan"
+  },
+  "The Antigravity card shows the current step, then the final answer. Plans in Antigravity and Claude Code reach 95% when every step is checked off and 100% when the agent confirms completion.": {
+    "ja": "Antigravity のカードには現在のステップが表示され、完了すると最終回答に切り替わります。Antigravity と Claude Code の計画進捗は、全ステップが完了すると 95% で待機し、タスクの完了が確認されると 100% になります。",
+    "ko": "Antigravity 카드는 현재 단계를 표시하고 작업이 끝나면 최종 답변으로 전환됩니다. Antigravity와 Claude Code의 계획 진행률은 모든 단계가 체크되면 95%에 머물고, 작업 완료가 확인되면 100%가 됩니다.",
+    "es": "La tarjeta de Antigravity muestra el paso actual y, al terminar, la respuesta final. En Antigravity y Claude Code, la barra del plan llega al 95% al marcar todos los pasos y al 100% cuando el agente confirma que ha terminado."
+  },
+  "Answer a question from the island": {
+    "ja": "アイランドで質問に回答",
+    "ko": "아일랜드에서 단일 질문에 답하기",
+    "es": "Responder desde la isla"
+  },
+  "For a single question open in Codex desktop, select an option or type an answer in the island. Your reply is submitted to the original question.": {
+    "ja": "Codex デスクトップで開いている単一の質問には、アイランドで選択肢を選ぶか回答を入力できます。回答は元の質問に自動で送信されます。",
+    "ko": "Codex 데스크톱에 열려 있는 단일 질문은 아일랜드에서 선택지를 고르거나 답을 입력할 수 있습니다. 답변은 원래 질문으로 자동 전송됩니다.",
+    "es": "Si hay una pregunta individual abierta en Codex para escritorio, selecciona una opción o escribe tu respuesta en la isla. Se enviará automáticamente a la pregunta original."
+  },
+  "More approvals in the island": {
+    "ja": "アイランドで扱える承認を拡充",
+    "ko": "아일랜드 승인 지원 확대",
+    "es": "Más aprobaciones en la isla"
+  },
+  "Handle supported single questions and approvals from DSH, Antigravity, and OpenCode in the island. Choose the permission scope for Antigravity network commands, and enable one-time approvals separately for Devin desktop and CLI.": {
+    "ja": "DSH、Antigravity、OpenCode の対応する単一の質問と承認をアイランドで処理できます。Antigravity のネットワークコマンドでは許可範囲を選択でき、Devin のデスクトップ版と CLI では一度限りの承認を個別に有効にできます。",
+    "ko": "DSH, Antigravity, OpenCode에서 지원하는 단일 질문과 승인 요청을 아일랜드에서 처리할 수 있습니다. Antigravity 네트워크 명령의 권한 범위를 선택하고, Devin 데스크톱과 CLI의 일회성 승인을 각각 켤 수 있습니다.",
+    "es": "Gestiona en la isla las preguntas individuales y las aprobaciones compatibles de DSH, Antigravity y OpenCode. Elige el alcance de los permisos para los comandos de red de Antigravity y activa por separado las aprobaciones puntuales en Devin para escritorio y en su CLI."
+  },
+  "Quotas across providers": {
+    "ja": "各サービスの利用枠",
+    "ko": "여러 서비스의 한도 조회",
+    "es": "Cuotas de varios servicios"
+  },
+  "Check quotas or balances directly for DeepSeek, Kimi Code, Gemini CLI, OpenCode Go, GitHub Copilot, Cursor, and Devin. DSH can reuse your existing DeepSeek credentials.": {
+    "ja": "DeepSeek、Kimi Code、Gemini CLI、OpenCode Go、GitHub Copilot、Cursor、Devin の利用枠や残高を直接確認できます。DSH では既存の DeepSeek 認証情報を使用できます。",
+    "ko": "DeepSeek, Kimi Code, Gemini CLI, OpenCode Go, GitHub Copilot, Cursor, Devin의 한도 또는 잔액을 직접 조회할 수 있습니다. DSH에서는 기존 DeepSeek 인증 정보를 사용할 수 있습니다.",
+    "es": "Consulta directamente la cuota o el saldo de DeepSeek, Kimi Code, Gemini CLI, OpenCode Go, GitHub Copilot, Cursor y Devin. DSH puede usar tus credenciales existentes de DeepSeek."
+  },
+  "Open the original terminal conversation": {
+    "ja": "ターミナルの元の会話を開く",
+    "ko": "터미널의 원래 대화로 이동",
+    "es": "Volver a la conversación en el terminal"
+  },
+  "With Claude Code, Kimi Code, Gemini CLI, Copilot CLI, or Devin CLI, return to the matching Terminal tab or iTerm2 session in one click.": {
+    "ja": "Claude Code、Kimi Code、Gemini CLI、Copilot CLI、Devin CLI では、対応するターミナルのタブまたは iTerm2 セッションにワンクリックで戻れます。",
+    "ko": "Claude Code, Kimi Code, Gemini CLI, Copilot CLI, Devin CLI에서 클릭 한 번으로 해당 터미널 탭이나 iTerm2 세션으로 돌아갈 수 있습니다.",
+    "es": "Con Claude Code, Kimi Code, Gemini CLI, Copilot CLI o Devin CLI, vuelve con un clic a la pestaña de Terminal o a la sesión de iTerm2 correspondiente."
+  },
+  "Antigravity background refresh": {
+    "ja": "Antigravity のバックグラウンド更新",
+    "ko": "Antigravity 백그라운드 새로 고침",
+    "es": "Actualización de Antigravity en segundo plano"
+  },
+  "Refresh quotas in the background with the official agy tool. Missing readings are shown as unknown, fixing an issue where offline records showed 100% remaining.": {
+    "ja": "公式ツール agy で利用枠をバックグラウンド更新できます。有効な値がない場合は不明と表示され、オフラインの記録で残り 100% と誤表示される問題を修正しました。",
+    "ko": "공식 agy 도구로 백그라운드에서 한도를 새로 고칩니다. 유효한 값이 없으면 알 수 없음으로 표시하며, 오프라인 기록의 잔여량이 100%로 잘못 표시되던 문제를 수정했습니다.",
+    "es": "La herramienta oficial agy actualiza las cuotas en segundo plano. Si falta una lectura válida, la cuota aparece como desconocida. Se corrigió el error que mostraba un 100% restante en registros sin conexión."
+  },
+  "Manage agent connections": {
+    "ja": "エージェント接続の管理",
+    "ko": "에이전트 연결 관리",
+    "es": "Gestión de conexiones de agentes"
+  },
+  "All 11 agent entries have a connection switch and status indicator. Drag a row to reorder it, or open its details to check tasks, quotas, approvals, and replies individually.": {
+    "ja": "11 のエージェントすべてに接続スイッチと状態表示を用意しました。行全体をドラッグして並べ替えられ、詳細画面ではタスク、利用枠、承認、質問への回答の接続状況を個別に確認できます。",
+    "ko": "11개 에이전트 항목 모두에 연결 스위치와 상태 표시가 있습니다. 행을 드래그해 순서를 바꾸고, 상세 화면에서 작업, 한도, 승인, 질의응답 연결을 각각 확인할 수 있습니다.",
+    "es": "Los 11 agentes tienen un interruptor de conexión y un indicador de estado. Arrastra las filas para reordenarlas o abre los detalles para comprobar por separado tareas, cuotas, aprobaciones y respuestas."
+  },
+  "Repeated questions and card highlights": {
+    "ja": "質問の再表示とカードの強調表示を修正",
+    "ko": "질문 재표시 및 카드 강조 수정",
+    "es": "Preguntas repetidas y resaltado de tarjetas"
+  },
+  "Answered OpenCode questions no longer reappear, and reconnecting Codex no longer brings back answered questions. When several tasks run, only the selected card stays highlighted after a background task finishes.": {
+    "ja": "回答済みの質問が OpenCode で再表示される問題と、Codex の再接続時に再表示される問題を修正しました。バックグラウンドのタスクが完了した後も強調表示されるのは、選択中のカードだけです。",
+    "ko": "OpenCode에서 답한 질문이 다시 뜨거나 Codex 재연결 후 답한 질문이 다시 나타나는 문제를 수정했습니다. 여러 작업 중 백그라운드 작업이 끝나도 현재 선택한 카드만 강조됩니다.",
+    "es": "Se corrigieron las preguntas ya respondidas que reaparecían en OpenCode o al reconectar Codex. Si hay varias tareas y una termina en segundo plano, solo la tarjeta seleccionada queda resaltada."
+  },
+  "Quota countdown refresh": {
+    "ja": "利用枠カウントダウンの部分更新",
+    "ko": "한도 카운트다운 부분 새로 고침",
+    "es": "Actualización de la cuenta atrás"
+  },
+  "Only the quota countdown refreshes when its timer ticks, reducing redraws while tasks stay unchanged.": {
+    "ja": "利用枠のカウントダウン部分だけを更新し、タスクに変化がないときの再描画を減らしました。",
+    "ko": "한도 카운트다운 영역만 새로 고쳐 작업에 변화가 없을 때 다시 그리는 횟수를 줄였습니다.",
+    "es": "Solo se actualiza la cuenta atrás de la cuota cuando cambia el tiempo, lo que reduce los redibujados mientras las tareas siguen igual."
+  },
   "Use Accessibility to respond to open permission cards and single questions.": {
     "ja": "アクセシビリティを使って、開いている権限カードと単一の質問に回答します。",
     "ko": "손쉬운 사용으로 열려 있는 권한 카드와 단일 질문에 응답합니다.",

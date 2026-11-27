@@ -37,6 +37,47 @@ final class DesktopRequestLifecycleSmokeTests: XCTestCase {
         throw CodexDesktopIPCError.unavailable
     }
 
+    func testRequestLifecycleEmptySnapshotRequiresMatchingOwnerAndEpoch() {
+        let identity = CodexDesktopPendingRequestIdentity(
+            turnID: "turn", requestID: .integer(42), method: "item/commandExecution/requestApproval")
+        var state = IslandLiveStore.RequestLifecycle()
+        state.observe(.init(key: "request", value: .init(question: .init(""), impact: .init("")),
+                            desktopIdentity: .server(identity), desktopOwner: "original", desktopEpoch: 1))
+        let beforeSettlement = state
+        let date = Date(timeIntervalSince1970: 1_000)
+
+        XCTAssertFalse(state.resolveDesktopRequests(owner: "replacement", epoch: 1, pending: [], asyncQuestions: [], at: date))
+        XCTAssertFalse(state.resolveDesktopRequests(owner: "original", epoch: 2, pending: [], asyncQuestions: [], at: date))
+        XCTAssertTrue(state.hasBlockingRequest)
+        XCTAssertTrue(state.resolveDesktopRequests(owner: "original", epoch: 1, pending: [], asyncQuestions: [], at: date))
+        XCTAssertTrue(state.requests.isEmpty)
+        XCTAssertEqual(beforeSettlement.requests.map(\.desktopIdentity), [.server(identity)])
+    }
+
+    func testRequestLifecycleLateAsyncReplyCannotSettleReusedQuestionIDWithNewTitle() throws {
+        let questionID = "item#0"
+        func pending(turn: String, title: String) throws -> IslandLiveStore.Pending {
+            let question = CodexDesktopProjectedAsyncQuestion(questionItemID: questionID, sourceItemID: "item",
+                questionIndex: 0, turnID: turn, question: title, options: ["A", "B"], resolvedAnswer: nil)
+            let wire = try IslandCodexApprovalRequest(desktopAsyncQuestion: question, conversationID: "conversation")
+            return .init(key: questionID, value: .init(question: .init(title), impact: .init(""), protocolRequest: wire),
+                         desktopIdentity: .asynchronousQuestion(questionID), desktopOwner: "owner", desktopEpoch: 1,
+                         mode: .asynchronous)
+        }
+        var state = IslandLiveStore.RequestLifecycle()
+        state.observe(try pending(turn: "first", title: "Original question?"))
+        let identityHash = CodexActivityPrivacy.hashIdentifier(questionID)
+        let lateReply = (identityHash, CodexActivityPrivacy.hashIdentifier("Original question?"))
+        state.finishTurn()
+        state.observe(try pending(turn: "second", title: "Updated question?"))
+
+        XCTAssertTrue(state.receiveAcceptedAsyncReplies([lateReply]).isEmpty)
+        XCTAssertEqual(state.requests.first?.value.protocolRequest?.turnID, "second")
+        let currentReply = (identityHash, CodexActivityPrivacy.hashIdentifier("Updated question?"))
+        XCTAssertEqual(state.receiveAcceptedAsyncReplies([currentReply]).count, 1)
+        XCTAssertTrue(state.requests.isEmpty)
+    }
+
     @MainActor
     func testV13NetworkApprovalBecomesInteractiveUntilOwnerResolves() async throws {
         let raw: [String: Any] = ["id": 17, "method": "item/commandExecution/requestApproval",
