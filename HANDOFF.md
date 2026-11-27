@@ -13,9 +13,9 @@
 | Widget 试点保存点 | 本地分支 `spike/swift6-build35`，提交 `f841624`。Build 41 已恢复兼容夹具、验证 Swift 6 包模块及 App/Widget 的原生编译归属 |
 | 工作进度 | 架构优化至 Build 41 已完成。0.9.9 已写入定稿公告，沿用 Build 42–43 的步骤标题与计划进度；公告排版和真实任务效果待用户验收 |
 
-## 0.9.9 Build 1 / 发布准备
+## 0.9.9 Build 1 / 正式发布
 
-用户已批准正式发布及 Sparkle 自动更新，目标为 `v0.9.9-build.1` / `QuotaView-v0.9.9-build.1.zip`，内部 281。已封存的 0.9.7 Build 1 为本次回滚基线。[发布规格](docs/specs/release-0.9.9.md)
+macOS 0.9.9 Build 1（内部 281）已发布到 [GitHub](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1) 与 [Sparkle](https://duoasa.github.io/QuotaView/appcast.xml)。回滚基线为 `v0.9.7-build.1` / `8109feb`。发布验证在独立检出中完成。[版本历史与验证证据](VERSION_HISTORY.md#当前最新版本)
 
 ## 0.9.9 Build 1 / 更新与公告
 

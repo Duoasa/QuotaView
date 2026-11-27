@@ -6,14 +6,32 @@
 
 | 平台 | 稳定版 | 回滚入口 |
 |---|---|---|
-| macOS | [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1)，内部 238，2026-11-21 发布 | [0.9.3 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.3-build.1)，内部 189 |
+| macOS | [0.9.9 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1)，内部 281，2026-11-27 发布（UTC） | [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1)，内部 238 |
 | Windows | [0.8.3-win.13](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13)，使用独立签名 appcast | [Windows 首个正式版与回滚记录](docs/archive/2026-11-26/VERSION_HISTORY.md#windows-083-win首个正式版--windows-回滚基线) |
+
+### macOS 0.9.9 Build 1
+
+| 项目 | 发布证据 |
+|---|---|
+| 版本 | 0.9.9 Build 1（内部 281），[GitHub Stable Release](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1) |
+| 源码 | `v0.9.9-build.1`，发布提交 `b0afb04f4cdb4b6621f6c962a68ce9afd2f9983f`，[PR #158](https://github.com/Duoasa/QuotaView/pull/158)；322 个冻结构建输入已核对 |
+| 资产 | [QuotaView-v0.9.9-build.1.zip](https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip)，34,493,734 字节，SHA-256 `694a215b967a5f065855e8cddb5f545260cbb4636cfeaec7a72e584ce861fdb0`；公开回下载逐字节一致 |
+| 兼容性 | macOS 14+，App、Widget、Core、Hook、Sparkle 均为 arm64 和 x86_64。隔离启动 15 秒并核对解压包的动态库路径 |
+| 签名与公证 | Developer ID Application: Chenchen Xu (BUUH229D5Q)；Apple Accepted，公证 ID `667f8f4d-99ba-4d8a-8e0c-cb42819a4d89`。本地与回下载包的签名、公证票据和 Gatekeeper 检查通过 |
+| 验证 | 隔离 XCTest 共 896 项，跳过 11，失败 0；44 项问答契约通过。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/46004893009)、[发布 main CI](https://github.com/Duoasa/QuotaView/actions/runs/46005533474) 通过 |
+| 自动更新 | [线上签名 appcast](https://duoasa.github.io/QuotaView/appcast.xml)，序列 281 / 238 / 189。ZIP 和线上 Feed 均通过 EdDSA 验签。[Pages 部署](https://github.com/Duoasa/QuotaView/actions/runs/46006673608)，提交 `cbf59fd7da2a097f80ae4cdf3ceb713dfc7ff410` |
+| Feed SHA-256 | `3e5546310a13ec2912f0d77b0b8f0118881e54d7380373f1565c477b69396c7a` |
+| ZIP EdDSA | `u3uwreHrH73szHrmqaCZKQimAW2i7nR0bRzH+BKqRKKqwmMwKRbgDrccgurEYxSuvjOBqEpDCMKECQ4WUYZlCw==` |
+| 回滚 | [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1)，内部 238，标签 `v0.9.7-build.1`。本次再次回下载并核对原 ZIP 的 SHA-256 |
 
 ### macOS 0.9.7 Build 1
 
+
 发布标签 `v0.9.7-build.1`，提交 `8109feb4dffaf6087692aa77e8ff412adcc7892e`，ZIP 的 SHA-256 为 `8d16a373952774a9b205b24b5c460e167d22c9f4c57ee0adfbce94d04988cb91`。发布时已核验公证、Universal 架构、解压启动与公开下载。[完整发布证据](docs/archive/2026-11-26/VERSION_HISTORY.md#macos-097-build-1)
 
-### macOS 0.9.3 Build 1（上一 macOS 稳定版 / 回滚基线）
+<a id="macos-093-build-1上一-macos-稳定版--回滚基线"></a>
+
+### macOS 0.9.3 Build 1（历史版本）
 
 发布标签 `v0.9.3-build.1`，提交 `f0ee1ceb4372ba1b4a9e1df3b38f842a17d37985`。作为 0.9.7 的回滚版本，其公开 ZIP 已回下载并核对原始摘要。[回滚版本证据](docs/archive/2026-11-26/VERSION_HISTORY.md#macos-093-build-1上一-macos-稳定版--回滚基线)
 

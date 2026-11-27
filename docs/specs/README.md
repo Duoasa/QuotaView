@@ -1,6 +1,8 @@
 # QuotaView SDD 注册表
 
-## 0.9.9 Build 1 / 应用内公告
+## 0.9.9 Build 1 / 正式发布与公告
+
+[发布规格](release-0.9.9.md)记录 macOS 稳定版与 Sparkle 更新准入。[版本历史](../../VERSION_HISTORY.md#当前最新版本)列出公开交付证据。
 
 [0.9.9 公告定稿](brand-announcement.md#099-公告定稿)记录最后一个开源版本与官网预告，以及自 0.9.7 以来的十条更新和改进。
 
