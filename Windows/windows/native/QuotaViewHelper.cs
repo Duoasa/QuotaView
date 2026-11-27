@@ -1,4 +1,4 @@
-// QuotaView, MIT. Framework 4.8 is part of supported Windows installations.
+// QuotaView, GPL-3.0-only. Framework 4.8 is part of supported Windows installations.
 // Fail-open hook transport: only a matching live Claude permission reply may
 // emit a decision. Codex observation never emits a decision or prompt content.
 using System;

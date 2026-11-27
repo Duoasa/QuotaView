@@ -5,7 +5,7 @@
   "description": "Windows Dynamic Island for local coding agents",
   "main": "src/main.cjs",
   "author": "Duoasa",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "engines": {

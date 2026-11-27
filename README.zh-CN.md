@@ -4,7 +4,7 @@
 
 <p align="center"><strong>多 Agent 状态与用量灵动岛。</strong><br>任务、审批与用量，都在桌面顶部。</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--only-blue.svg" alt="GPL-3.0-only"></a></p>
 
 <p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip"><strong>下载 macOS 版</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">支持的 Agent</a> · <a href="#installation">安装</a> · <a href="#windows">Windows 备注</a></p>
 
@@ -217,8 +217,14 @@ swift run QuotaView</code></pre>
 <a name="feedback"></a>
 <h2>项目与反馈</h2>
 
-<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">提交问题</a> · <a href="CONTRIBUTING.md">贡献指南</a> · <a href="docs/specs/README.md">设计与行为规格</a> · <a href="LICENSE">MIT License</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">提交问题</a> · <a href="CONTRIBUTING.md">贡献指南</a> · <a href="docs/specs/README.md">设计与行为规格</a></p>
 
 <p>QQ 反馈群：<strong>1108649282</strong></p>
 
 <p align="center"><img src="docs/media/readme/shared/feedback-qr.jpg" alt="QuotaView QQ 反馈群二维码" width="240"></p>
+
+<h2>许可证</h2>
+
+<p>版权所有 © 2026 Duoasa。自本次许可变更起，QuotaView 源码采用 <a href="LICENSE">GNU 通用公共许可证第 3 版（仅限此版本，GPL-3.0-only）</a>。单独标明许可或署名的组件和素材沿用各自的条款。</p>
+
+<p>此前按 MIT 发布的版本（包括 <a href="https://github.com/Duoasa/QuotaView/blob/v0.9.9-build.1/LICENSE">macOS 0.9.9 Build 1</a>）继续适用<a href="LICENSES/MIT.txt">原 MIT 许可证</a>。</p>

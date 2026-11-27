@@ -4,7 +4,7 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--only-blue.svg" alt="GPL-3.0-only"></a></p>
 
 <p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
@@ -217,8 +217,14 @@ swift run QuotaView</code></pre>
 <a name="feedback"></a>
 <h2>Project and feedback</h2>
 
-<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">Report an issue</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="docs/specs/README.md">Design and behavior specs</a> · <a href="LICENSE">MIT License</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/issues/new/choose">Report an issue</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="docs/specs/README.md">Design and behavior specs</a></p>
 
 <p>QQ feedback group: <strong>1108649282</strong></p>
 
 <p align="center"><img src="docs/media/readme/shared/feedback-qr.jpg" alt="QuotaView QQ feedback group QR code" width="240"></p>
+
+<h2>License</h2>
+
+<p>Copyright © 2026 Duoasa. This revision of QuotaView is licensed under the <a href="LICENSE">GNU General Public License, version 3 only (GPL-3.0-only)</a>. Components and assets with separate license or attribution notices retain their own terms.</p>
+
+<p>Previously published MIT versions, including <a href="https://github.com/Duoasa/QuotaView/blob/v0.9.9-build.1/LICENSE">macOS 0.9.9 Build 1</a>, retain their <a href="LICENSES/MIT.txt">original MIT license</a>.</p>
