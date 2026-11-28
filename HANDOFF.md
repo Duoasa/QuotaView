@@ -13,9 +13,9 @@
 | Widget 试点保存点 | 本地分支 `spike/swift6-build35`，提交 `f841624`。Build 41 已恢复兼容夹具、验证 Swift 6 包模块及 App/Widget 的原生编译归属 |
 | 工作进度 | Claude Code 并行子行角色名已修复并通过隔离验证，开发包已更新，用户已在本机 CC 并行验收中确认子行显示成功 |
 
-## macOS 0.9.9 Build 2 / 公开发布候选
+## macOS 0.9.9 Build 2 / 正式发布
 
-正式候选使用内部版本 284，包含已验收的 Antigravity 直接父子识别和 Claude Code 并行角色名修复。回滚基线为 [0.9.9 Build 1](VERSION_HISTORY.md#当前最新版本)。Sparkle 准入待本次渠道确认。
+正式版 Build 2（内部 284）包含 Antigravity 直接父子归组与 Claude Code 角色名修复。GitHub 已发布。线上 Sparkle 继续提供 Build 1（内部 281）。 上一稳定版为 `v0.9.9-build.1` / `b0afb04`。[发布证据及回滚入口](VERSION_HISTORY.md#当前最新版本)
 
 ## 0.9.9 Build 3 / Claude Code 并行子 Agent 名称
 
