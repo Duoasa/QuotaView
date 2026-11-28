@@ -14,6 +14,8 @@ final class AntigravityAgentAdapter {
         didSet { installationChanged?(agyInstallation) }
     }
     private struct Metadata {
+        var lineageTask: Task<Void, Never>?
+        var lineageResolved = false
         var turnStep: Int?
         var client: String?
         var firstStep: Int?
@@ -139,12 +141,14 @@ final class AntigravityAgentAdapter {
         context.island.antigravityUsage = nil
         for task in usageTasks.values { task.cancel() }
         usageTasks.removeAll()
-        for state in metadata.values { state.progressTask?.cancel() }
+        for state in metadata.values { state.progressTask?.cancel(); state.lineageTask?.cancel() }
         metadata.removeAll()
     }
 
     func removeSession(_ key: String) {
-        metadata.removeValue(forKey: key)?.progressTask?.cancel()
+        let state = metadata.removeValue(forKey: key)
+        state?.progressTask?.cancel()
+        state?.lineageTask?.cancel()
         detailTasks.removeValue(forKey: key)?.cancel()
     }
 
@@ -181,11 +185,59 @@ final class AntigravityAgentAdapter {
                 }
             }
         }
+        if previousClient != state.client {
+            state.lineageTask?.cancel()
+            state.lineageTask = nil
+            state.lineageResolved = false
+        }
+        if !state.lineageResolved, state.lineageTask == nil {
+            let client = state.client
+            state.lineageTask = Task { [weak self] in
+                await self?.resolveLineage(key: key, source: source, client: client)
+            }
+        }
         metadata[key] = state
     }
 
+    private func resolveLineage(key: String, source: String, client: String?) async {
+        let root = context.installer.home.deletingLastPathComponent()
+        var attempt = 0
+        while !Task.isCancelled {
+            let relation = await Task.detached(priority: .utility) {
+                AntigravityHistory.lineage(root: root, session: source, client: client)
+            }.value
+            guard !Task.isCancelled, context.running, let session = context.sessions[key] else { return }
+            if case .root = relation, session.parent == nil {
+                metadata[key]?.lineageResolved = true
+                break
+            }
+            if case let .child(parent, role) = relation, session.parent == nil || session.parent == parent,
+               let identity = CodexActivitySubagentIdentity(threadID: "antigravity:" + source.lowercased(),
+                   parentThreadID: "antigravity:" + parent, role: role) {
+                if session.parent == nil || role != nil {
+                    context.sessions[key]?.parent = parent
+                    context.sessions[key]?.conversation = nil
+                    metadata[key]?.progressTask?.cancel()
+                    metadata[key]?.progressTask = nil
+                    context.island.model.receiveSubagentIdentity(identity, migratingTurn: session.turn)
+                    refreshApprovalMonitor()
+                }
+                if role != nil || attempt >= 5 {
+                    metadata[key]?.lineageResolved = true
+                    break
+                }
+            }
+            if attempt >= 5 && !session.active { break }
+            attempt += 1
+            // Keep a quiet active turn recoverable without scanning every hook or every second.
+            let delay: Duration = attempt < 5 ? .milliseconds(400) : .seconds(min(30, attempt))
+            do { try await Task.sleep(for: delay) } catch { return }
+        }
+        if !Task.isCancelled { metadata[key]?.lineageTask = nil }
+    }
+
     private func publishProgress(_ batch: AntigravityHistory.ProgressBatch, key: String, turn: String) {
-        guard !Task.isCancelled, context.enabled, context.running, context.sessions[key]?.active == true,
+        guard !Task.isCancelled, context.enabled, context.running, context.sessions[key]?.active == true, context.sessions[key]?.parent == nil,
               context.sessions[key]?.turn == turn else { return }
         if batch.planChanged { context.island.model.receiveObservedPlan(batch.plan, key: key, turn: turn) }
         if !batch.focuses.isEmpty { context.island.model.receiveAntigravityFocus(batch.focuses, key: key, turn: turn) }
@@ -200,6 +252,10 @@ final class AntigravityAgentAdapter {
     }
 
     func observeUsage(key: String, sourceSession: String, turn: String, session: NativeAgentHookContext.Session, name: String, payload: [String: Any]) {
+        if session.parent != nil {
+            if ["Usage", "Stop"].contains(name) { Task { await refreshAntigravityUsage() } }
+            return
+        }
         if ["Usage", "Stop"].contains(name), let id = session.rateRequestID,
            let start = session.rateRequestStart, let endMS = payload["rate_event_ms"] as? Double,
            UUID(uuidString: sourceSession) != nil {
@@ -218,8 +274,9 @@ final class AntigravityAgentAdapter {
                         guard let logs = AntigravityHistory.logs(root: root, session: sourceSession, client: hint) else { return nil }
                         return Self.antigravityUsage(logs.appendingPathComponent("transcript_full.jsonl"), step: step, start: start, end: end)
                     }).value {
-                        guard !Task.isCancelled, context.revision == version, context.enabled, context.sessions[key]?.turn == turn,
-                              metadata[key]?.countedSteps.insert(usage.step).inserted == true else { return }
+                        guard !Task.isCancelled, context.revision == version, context.enabled, context.sessions[key]?.turn == turn else { return }
+                        guard context.sessions[key]?.parent == nil else { await refreshAntigravityUsage(); return }
+                        guard metadata[key]?.countedSteps.insert(usage.step).inserted == true else { return }
                         if let rate = AgentRateObservation(id: id, output: usage.output, durationMS: end.timeIntervalSince(start) * 1000, end: end) {
                             context.receiveRates([rate], key: key, turn: turn)
                         }

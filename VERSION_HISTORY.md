@@ -6,8 +6,22 @@
 
 | 平台 | 稳定版 | 回滚入口 |
 |---|---|---|
-| macOS | [0.9.9 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1)，内部 281，2026-11-27 发布（UTC） | [0.9.7 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.7-build.1)，内部 238 |
+| macOS | [0.9.9 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.2)，内部 284，2026-11-28 发布（UTC） | [0.9.9 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1)，内部 281 |
 | Windows | [0.8.3-win.13](https://github.com/Duoasa/QuotaView/releases/tag/v0.8.3-win.13)，使用独立签名 appcast | [Windows 首个正式版与回滚记录](docs/archive/2026-11-26/VERSION_HISTORY.md#windows-083-win首个正式版--windows-回滚基线) |
+
+### macOS 0.9.9 Build 2
+
+| 项目 | 发布证据 |
+|---|---|
+| 版本 | [0.9.9 Build 2](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.2)，内部 284，2026-11-28 发布（UTC） |
+| 源码 | `v0.9.9-build.2`，提交 `90193c8581f1d4ca8e84d6c39089c1daec239736`，[发布 PR](https://github.com/Duoasa/QuotaView/pull/161)。324 个冻结构建输入均与标签一致 |
+| 资产 | [QuotaView-v0.9.9-build.2.zip](https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.2/QuotaView-v0.9.9-build.2.zip)，34,538,949 字节，SHA-256 `4d97029ec21d65e51da4d5b68101b6c1558ad3dc9058b5841aeaa0b7ab9dc8e9`，公开回下载逐字节一致 |
+| 验证 | XCTest 899 项，888 项通过，11 项按条件跳过，0 项失败。44 项问答契约通过。[PR CI](https://github.com/Duoasa/QuotaView/actions/runs/46124470892) |
+| 兼容性 | macOS 14+。App、Widget、Core、Hook 和 Sparkle 均包含 Intel 与 Apple 芯片架构。解压包隔离启动 15 秒，已核对实际加载路径 |
+| 签名与公证 | Developer ID Application: Chenchen Xu (BUUH229D5Q)。Apple Accepted，公证 ID `7ee99f51-435b-4a66-8f22-ed52d2fb185f`。公开包通过签名、Staple、Gatekeeper 和 EdDSA 检查 |
+| 更新渠道 | GitHub 已发布。线上 Sparkle 继续提供 Build 1（内部 281）。 |
+| ZIP EdDSA | `BSZnhcganMEhJByY3j+j8l7jACmcavTOAnnz+uGtU0lT5bIQR5GBrQBWW5G0xIDEpZArCX34wCAWfvwH993RDw==` |
+| 回滚 | [0.9.9 Build 1](https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1)，内部 281，标签 `v0.9.9-build.1`，发布提交 `b0afb04f4cdb4b6621f6c962a68ce9afd2f9983f`。原 ZIP 已再次回下载核对 |
 
 ### macOS 0.9.9 Build 1
 

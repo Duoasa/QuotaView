@@ -448,8 +448,13 @@ final class ClaudeCodeRuntime: ObservableObject {
         guard var session = sessions[sessionID],
               let identity = CodexActivitySubagentIdentity(threadID: "claude-code-agent:" + agentID,
                   parentThreadID: "claude-code:" + sessionID, nickname: payload["agent_type"] as? String) else { return }
-        island.model.setProvider(.claudeCode, for: identity.sessionHash)
-        island.model.receiveSubagentIdentity(identity)
+        let previous = island.model.subagents[identity.sessionHash]?.identity
+        if let previous, previous.parentSessionHash != identity.parentSessionHash { return }
+        // Tool and stop hooks may omit agent_type after SubagentStart supplied it.
+        if previous == nil || (identity.nickname != nil && identity.nickname != previous?.nickname) {
+            island.model.setProvider(.claudeCode, for: identity.sessionHash)
+            island.model.receiveSubagentIdentity(identity)
+        }
         let turn = session.agentTurns[agentID] ?? CodexActivityPrivacy.hashIdentifier("claude-agent-turn:" + agentID)
         session.agentTurns[agentID] = turn
         sessions[sessionID] = session

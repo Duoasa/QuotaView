@@ -472,6 +472,67 @@ extension ClaudeCodeSupportTests {
     }
 
     @MainActor
+    func testParallelChildHooksPreserveRolesAndParentTurn() async throws {
+        let (_, runtime, _, socket, island) = try runtimeFixture()
+        runtime.start()
+        try await waitForRuntime { runtime.status == .awaitingEvent }
+
+        let sessionID = "parallel-parent"
+        func send(_ event: String, agent: String? = nil, role: String? = nil) {
+            var payload = ["session_id": sessionID, "hook_event_name": event]
+            payload["agent_id"] = agent
+            payload["agent_type"] = role
+            if event == "PreToolUse" || event == "PostToolUse" { payload["tool_name"] = "Read" }
+            _ = Self.send(["authenticationToken": "tok", "eventID": UUID().uuidString, "kind": "hook",
+                           "payload": payload], to: socket)
+        }
+
+        send("UserPromptSubmit")
+        try await waitForRuntime { island.model.tasks.count == 1 }
+        let parent = try XCTUnwrap(island.model.tasks.first)
+        let parentTurn = try XCTUnwrap(parent.turnKey)
+        func rolesUnderParent() -> [String: String] {
+            let display = island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
+            let rows = display.sessionMetadata[parent.id]?.subagents ?? []
+            return Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0.title) })
+        }
+
+        let children = [("a", "Explore"), ("b", "Plan"), ("c", "general-purpose")]
+        var expected: [String: String] = [:]
+        for (agent, role) in children {
+            expected[CodexActivityPrivacy.hashIdentifier("claude-code-agent:" + agent)] = role
+            send("SubagentStart", agent: agent, role: role)
+        }
+        try await waitForRuntime { rolesUnderParent() == expected }
+
+        for (agent, _) in children { send("PreToolUse", agent: agent) }
+        try await waitForRuntime { island.model.subagents.values.filter { $0.status == .working }.count == 3 }
+        XCTAssertEqual(rolesUnderParent(), expected)
+
+        // A real role update takes effect; subsequent blank or omitted labels carry no new name.
+        let changed = CodexActivityPrivacy.hashIdentifier("claude-code-agent:b")
+        expected[changed] = "reviewer"
+        send("PostToolUse", agent: "b", role: "reviewer")
+        try await waitForRuntime { rolesUnderParent()[changed] == "reviewer" }
+        send("PreToolUse", agent: "b", role: "  ")
+        try await waitForRuntime { island.model.subagents[changed]?.status == .working }
+        XCTAssertEqual(rolesUnderParent(), expected)
+
+        for (agent, _) in children.reversed() {
+            send("SubagentStop", agent: agent)
+            expected.removeValue(forKey: CodexActivityPrivacy.hashIdentifier("claude-code-agent:" + agent))
+            try await waitForRuntime { rolesUnderParent().count == expected.count }
+            XCTAssertEqual(rolesUnderParent(), expected)
+            XCTAssertEqual(island.model.tasks.map(\.id), [parent.id])
+            XCTAssertEqual(island.model.tasks.first?.turnKey, parentTurn)
+            XCTAssertEqual(island.model.tasks.first?.status, parent.status)
+            XCTAssertEqual(island.model.tasks.first?.terminal, false)
+        }
+        send("Stop")
+        try await waitForRuntime { island.model.tasks.first?.terminal == true }
+    }
+
+    @MainActor
     func testBackgroundTranscriptReadPreservesStopAndNextPromptOrder() async throws {
         let reading = expectation(description: "background read suspended")
         let gate = DispatchSemaphore(value: 0)

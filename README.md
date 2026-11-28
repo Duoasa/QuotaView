@@ -4,9 +4,9 @@
 
 <p align="center"><strong>Dynamic Island for AI agents.</strong><br>Tasks, approvals, and usage, together at the top of your desktop.</p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_1-blue" alt="0.9.9 Build 1"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--only-blue.svg" alt="GPL-3.0-only"></a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.2"><img src="https://img.shields.io/badge/macOS-v0.9.9_Build_2-blue" alt="0.9.9 Build 2"></a> <img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"> <a href="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml"><img src="https://github.com/Duoasa/QuotaView/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--only-blue.svg" alt="GPL-3.0-only"></a></p>
 
-<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
+<p align="center"><a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.2/QuotaView-v0.9.9-build.2.zip"><strong>Download for macOS</strong></a> · <a href="#highlights">Highlights</a> · <a href="#supported-agents">Supported agents</a> · <a href="#installation">Install</a> · <a href="#windows">Windows notes</a></p>
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
@@ -163,19 +163,20 @@
 
 <p><strong>macOS 14+</strong> · Universal Apple silicon + Intel · Developer ID signed · Apple notarized</p>
 
-<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.1/QuotaView-v0.9.9-build.1.zip">QuotaView 0.9.9 Build 1</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
+<ol><li>Download <a href="https://github.com/Duoasa/QuotaView/releases/download/v0.9.9-build.2/QuotaView-v0.9.9-build.2.zip">QuotaView 0.9.9 Build 2</a>, unzip it, and open <code>QuotaView.app</code>.</li><li>Open Settings → Agent integration and enable the agents installed and configured on your Mac.</li><li>Codex can discover local tasks automatically. After installing hooks or plugins, start a new session or restart the client as prompted.</li></ol>
 
 <p><strong>Automatic update checks are on by default.</strong> Existing preferences are respected, and checks can be disabled in Settings. Downloads and installation still require confirmation.</p>
 
 <details>
 <summary><strong>New in 0.9.9</strong></summary>
 <ul>
+<li>Build 2 groups Antigravity subtasks under their parent and preserves Claude Code subagent names across tool events.</li>
 <li>0.9.9 is the last open-source version of QuotaView. The project website is coming soon.</li>
 <li>Follow Antigravity’s current step and track multi-step plans in Antigravity and Claude Code.</li>
 <li>Answer supported single questions and review approvals in the island, or jump back to the matching terminal session.</li>
 <li>Check quotas and balances directly across seven providers and manage all 11 agent connections in Settings.</li>
 </ul>
-<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.1">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
+<p><a href="https://github.com/Duoasa/QuotaView/releases/tag/v0.9.9-build.2">Full release notes</a> · <a href="VERSION_HISTORY.md">Version history</a></p>
 </details>
 
 

@@ -8,10 +8,26 @@
 |---|---|
 | 工作区 | `/Users/sukduoasa/.codex/worktrees/quotaview-073/widget` |
 | 重构分支 | `codex/macos-architecture`，Build 33/34 源码基线 `e49e139` |
-| 开发版 | 0.9.9 Build 1（内部 281），`com.quotaview.development073` |
-| 运行包 | `.build/DevelopmentRuntime/QuotaView.app`，本地未提交工作树构建，签名、版本、构建输入与实际加载路径见 `.build/macos-architecture/announcement-099/runtime-result.json` |
+| 开发版 | 0.9.9 Build 3（内部 283），`com.quotaview.development073` |
+| 运行包 | `.build/DevelopmentRuntime/QuotaView.app`，本地未提交工作树构建，签名、版本、构建输入与实际加载路径见 `.build/macos-architecture/cc-child-roles/runtime-result.json` |
 | Widget 试点保存点 | 本地分支 `spike/swift6-build35`，提交 `f841624`。Build 41 已恢复兼容夹具、验证 Swift 6 包模块及 App/Widget 的原生编译归属 |
-| 工作进度 | 架构优化至 Build 41 已完成。0.9.9 已写入定稿公告，沿用 Build 42–43 的步骤标题与计划进度；公告排版和真实任务效果待用户验收 |
+| 工作进度 | Claude Code 并行子行角色名已修复并通过隔离验证，开发包已更新，用户已在本机 CC 并行验收中确认子行显示成功 |
+
+## macOS 0.9.9 Build 2 / 正式发布
+
+正式版 Build 2（内部 284）包含 Antigravity 直接父子归组与 Claude Code 角色名修复。GitHub 已发布。线上 Sparkle 继续提供 Build 1（内部 281）。 上一稳定版为 `v0.9.9-build.1` / `b0afb04`。[发布证据及回滚入口](VERSION_HISTORY.md#当前最新版本)
+
+## 0.9.9 Build 3 / Claude Code 并行子 Agent 名称
+
+隔离回归在修复前复现名称丢失。修复后 4 项定向测试通过，涵盖三个并行子行的省略与空白角色字段、单个角色显式更新、各子任务结束及父轮次持续运行。开发签名、App 与 Widget 版本及主进程加载路径已核验，仅开发版运行。测试与部署证据位于 `.build/macos-architecture/cc-child-roles/`。
+
+使用 Claude Code 2.1.292 和本地模拟模型实际派生 Explore、Plan 与 general-purpose。验收脚本在转发子任务读取文件的工具事件时省略角色字段，三条子行并行显示期间用户确认成功。
+
+## 0.9.9 Build 2 / Antigravity 直接父子识别
+
+隔离测试 4 项通过。双父任务并行时，父关系迟到的子任务从独立卡迁到正确父卡，保留开始时间与活动状态，旧审批失效。子任务的计划已达 95%，结束后父任务的计划、最终回答、21 个 Token 与速率均独立，全局统计含子任务共 121 个 Token。旧版摘要库、系统消息头和多客户端歧义均有夹具覆盖。Xcode Debug 增量构建、开发签名及实际加载路径已核验。测试与部署记录位于 `.build/macos-architecture/anti-children/`。实际客户端交互待验收。
+
+11 月 28 日并行验收期间，桌面摘要库中 3 个 `research` 会话具有同一个直接父 UUID。使用真实关系和模拟 Hook 事件在开发源码回放，1 张父卡显示 3 个子行，逐一结束后子行递减到 0，父卡持续运行。记录在 `.build/macos-architecture/anti-children/parallel-real-source-replay.log`。当时已安装 Build 1 与开发 Build 2 均有启用的 Anti Hook，两个在屏灵动岛窗口的位置和大小完全相同。随后按用户授权正常退出正式版，已确认在屏灵动岛只剩开发版进程 87886，开发通道 Hook 已启用，监听套接字存在。用户随后反馈单开开发版验收通过。
 
 ## 0.9.9 Build 1 / 正式发布
 
