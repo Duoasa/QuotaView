@@ -57,7 +57,8 @@ final class GenericHookAgentAdapter {
         // identified child so its Stop cannot complete the parent's task.
         let child = context.provider == .kimiCode ? (payload["agent_id"] as? String).flatMap { $0.isEmpty || $0 == "main" ? nil : $0 } : nil
         let rawSession = child.map { sourceSession + ":agent:" + $0 } ?? sourceSession
-        let key = CodexActivityPrivacy.hashIdentifier(sourcePrefix + rawSession)
+        let threadID = sourcePrefix + (context.provider == .antigravity ? rawSession.lowercased() : rawSession)
+        let key = CodexActivityPrivacy.hashIdentifier(threadID)
         if context.sessions[key] == nil, context.sessions.count >= 512 {
             guard let oldest = context.sessions.filter({ !$0.value.active }).min(by: { $0.value.updated < $1.value.updated })?.key else { return }
             if let id = context.sessions[oldest]?.terminalBinding { ClaudeTerminalNavigation.bind(nil, to: id) }
@@ -81,7 +82,7 @@ final class GenericHookAgentAdapter {
             session.title = String(title.components(separatedBy: .newlines).joined(separator: " ").prefix(256))
         }
         // DSH declares origin=subagent. Ordinary forks are never grouped as children.
-        if let parent = child == nil ? payload["parent_session_id"] as? String : sourceSession,
+        if context.provider != .antigravity, let parent = child == nil ? payload["parent_session_id"] as? String : sourceSession,
            let identity = CodexActivitySubagentIdentity(threadID: sourcePrefix + rawSession,
                parentThreadID: sourcePrefix + parent, title: session.title) {
             session.parent = parent

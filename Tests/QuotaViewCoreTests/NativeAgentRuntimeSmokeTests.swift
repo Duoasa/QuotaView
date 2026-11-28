@@ -153,6 +153,146 @@ final class NativeAgentRuntimeSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testAntigravityLateDirectChildKeepsParentTurnIsolated() async throws {
+        let root = URL(fileURLWithPath: "/private/tmp/qv-lineage-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "qv.lineage." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefs = AppPreferences(defaults: defaults), island = IslandSession()
+        prefs.antigravityEnabled = true
+        let installer = NativeAgentInstaller(provider: .antigravity, socketURL: root.appendingPathComponent("fixture.sock"),
+            authenticationToken: "fixture", homeOverride: root.appendingPathComponent("config"))
+        let bridge = ClaudeCodeBridge(socketURL: installer.socketURL, authenticationToken: "fixture")
+        let context = NativeAgentHookContext(provider: .antigravity, preferences: prefs, island: island, installer: installer, bridge: bridge)
+        context.running = true; context.listening = true
+        let parent = UUID().uuidString, other = UUID().uuidString, child = UUID().uuidString
+        let childID = try XCTUnwrap(UUID(uuidString: child))
+        let button = AXUIElementCreateApplication(1001)
+        let approval = AntigravityDesktopApproval.Card(conversation: childID, content: "fixture command", scope: .once,
+            element: button, allow: button, deny: button)
+        prefs.antigravityInteractiveApprovals = true
+        let anti = AntigravityAgentAdapter(context: context, readsInstalledAccount: false, readApprovalCards: { sessions in
+            sessions.contains(childID) ? [childID: approval] : [:]
+        },
+            pressApprovalButton: { _, _ in false }, answerNativeQuestion: { _, _, _ in false })
+        let ingress = GenericHookAgentAdapter(context: context, devin: nil, antigravity: anti, openCode: nil, dsh: nil)
+        defer { context.running = false; ingress.stop(); anti.stop(); island.stop() }
+        func key(_ id: String) -> String { CodexActivityPrivacy.hashIdentifier("antigravity:" + id.lowercased()) }
+        func send(_ name: String, _ session: String) throws {
+            let payload: [String: Any] = ["hook_event_name": name, "session_id": session, "log_client": "antigravity",
+                "rate_event_ms": Date().timeIntervalSince1970 * 1000, "first_step": 1]
+            ingress.receive(.init(eventID: UUID().uuidString, kind: "hook", awaitsDecision: false,
+                payload: try JSONSerialization.data(withJSONObject: payload)), homes: [], connected: {})
+        }
+        func writeHistory(_ session: String, _ answer: String, output: Int) throws {
+            let dir = root.appendingPathComponent("antigravity/brain/" + session + "/.system_generated/logs")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let row: [String: Any] = ["step_index": 1, "type": "PLANNER_RESPONSE", "status": "DONE",
+                "created_at": ISO8601DateFormatter().string(from: Date()), "content": answer, "input_tokens": 10, "output_tokens": output]
+            try (JSONSerialization.data(withJSONObject: row) + Data([10])).write(to: dir.appendingPathComponent("transcript_full.jsonl"))
+        }
+
+        try send("TurnStarted", parent); try send("TurnStarted", other); try send("TurnStarted", child)
+        try send("PreToolUse", child)
+        let parentID = try XCTUnwrap(island.model.tasks.first { $0.key == key(parent) }?.id)
+        let otherID = try XCTUnwrap(island.model.tasks.first { $0.key == key(other) }?.id)
+        let turn = try XCTUnwrap(context.sessions[key(parent)]?.turn)
+        let original = try XCTUnwrap(island.model.tasks.first { $0.key == key(child) })
+        func parentTask() -> IslandLiveStore.TaskRecord? { island.model.tasks.first { $0.id == parentID } }
+        island.model.receiveObservedPlan(.init(statuses: ["done", "pending"], completedStatus: "done"), key: key(parent), turn: turn)
+        let progress = try XCTUnwrap(parentTask()?.progress)
+        try writeHistory(parent, "Parent answer", output: 11)
+        try send("Usage", parent)
+        try await waitFor { parentTask()?.tokens == 21 }
+        let rate = try XCTUnwrap(parentTask()?.outputRate)
+
+        try await waitFor { island.model.tasks.first { $0.key == key(child) }?.requests.first?.value.protocolRequest != nil }
+        let oldApproval = try XCTUnwrap(island.model.tasks.first { $0.key == key(child) }?.requests.first?.value.protocolRequest)
+        XCTAssertEqual(island.model.antigravityResponseCapability?(oldApproval), true)
+        // The child's own plan is already visible on its provisional card when the relation arrives.
+        let childLogs = root.appendingPathComponent("antigravity/brain/" + child + "/.system_generated/logs")
+        try FileManager.default.createDirectory(at: childLogs, withIntermediateDirectories: true)
+        let plan: [String: Any] = ["step_index": 1, "type": "PLANNER_RESPONSE", "status": "DONE",
+            "created_at": ISO8601DateFormatter().string(from: Date()),
+            "tool_calls": [["name": "update_steps", "args": ["steps": [["status": "done"], ["status": "done"]]]]]]
+        try (JSONSerialization.data(withJSONObject: plan) + Data([10])).write(to: childLogs.appendingPathComponent("transcript_full.jsonl"))
+        try await waitFor { island.model.tasks.first { $0.key == key(child) }?.progress == 0.95 }
+        XCTAssertEqual(parentTask()?.progress, progress)
+        XCTAssertNotEqual(progress, 0.95)
+
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(root.appendingPathComponent("antigravity/conversation_summaries.db").path, &db), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "CREATE TABLE conversation_summaries(conversation_id TEXT PRIMARY KEY,parent_conversation_id TEXT,agent_name TEXT); INSERT INTO conversation_summaries VALUES ('" + child + "','" + parent + "','browser')", nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+        func rows(_ id: Int) -> [IslandSubagentPresentation] {
+            island.model.display(english: true, remaining: nil, enabled: true, privacy: false).sessionMetadata[id]?.subagents ?? []
+        }
+        try await waitFor { rows(parentID).first?.title == "browser" }
+        XCTAssertTrue(rows(otherID).isEmpty)
+        XCTAssertEqual(island.model.antigravityResponseCapability?(oldApproval), false)
+        XCTAssertEqual(Set(island.model.tasks.map(\.id)), Set([parentID, otherID]))
+        let migrated = try XCTUnwrap(island.model.subagents[key(child)])
+        XCTAssertEqual(migrated.startedAt, original.startedAt)
+        XCTAssertEqual(migrated.status, original.activityStatus)
+
+        try writeHistory(child, "Child answer", output: 90)
+        try send("Usage", child); try send("Stop", child)
+        try await waitFor { island.antigravityUsage?.total == 121 }
+        XCTAssertEqual(island.model.subagents[key(child)]?.status, .completed)
+        XCTAssertTrue(rows(parentID).isEmpty)
+        XCTAssertEqual(parentTask()?.terminal, false)
+        XCTAssertEqual(parentTask()?.turnKey, turn)
+        XCTAssertEqual(parentTask()?.progress, progress)
+        XCTAssertEqual(parentTask()?.tokens, 21)
+        XCTAssertEqual(parentTask()?.outputRate, rate)
+        XCTAssertFalse(parentTask()?.entries.contains { $0.text.chinese == "Child answer" } ?? true)
+        XCTAssertEqual(context.sessions[key(other)]?.active, true)
+        try send("Stop", parent)
+        try await waitFor {
+            island.model.display(english: true, remaining: nil, enabled: true, privacy: false)
+                .taskDetails[parentID]?.finalResponse?.text.chinese == "Parent answer"
+        }
+        XCTAssertEqual(parentTask()?.tokens, 21)
+    }
+
+    func testAntigravityLineageRequiresNativeHeaderOrDatabase() throws {
+        let root = URL(fileURLWithPath: "/private/tmp/qv-origin-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let child = UUID().uuidString, parent = UUID().uuidString.lowercased()
+        let logs = root.appendingPathComponent("antigravity/brain/" + child + "/.system_generated/logs")
+        try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+        let header = "The following is a <SYSTEM_MESSAGE> not actually sent by the user. It is provided by the system as important information to pay attention to.\n\n<SYSTEM_MESSAGE>\n[Message] timestamp=2026-11-28T00:00:00Z sender=" + parent + " priority=normal"
+        let file = logs.appendingPathComponent("transcript.jsonl")
+        func write(_ source: String, _ type: String, _ content: String, step: Int = 0) throws {
+            let row: [String: Any] = ["step_index": step, "source": source, "type": type, "content": content]
+            try (JSONSerialization.data(withJSONObject: row) + Data([10])).write(to: file)
+        }
+        func relation() -> AntigravityHistory.Lineage? { AntigravityHistory.lineage(root: root, session: child, client: nil) }
+        try write("SYSTEM", "SYSTEM_MESSAGE", header)
+        XCTAssertEqual(relation(), .child(parent: parent, role: nil))
+        try write("SYSTEM", "SYSTEM_MESSAGE", "quoted text\n" + header)
+        XCTAssertNil(relation())
+        try write("SYSTEM", "SYSTEM_MESSAGE", header, step: 1)
+        XCTAssertNil(relation())
+        try write("SYSTEM", "SYSTEM_MESSAGE", header.replacingOccurrences(of: parent, with: child))
+        XCTAssertNil(relation())
+        try write("USER_EXPLICIT", "USER_INPUT", header)
+        XCTAssertEqual(relation(), .root)
+        try Data(repeating: 65, count: 5000).write(to: file)
+        XCTAssertNil(relation())
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(root.appendingPathComponent("antigravity/conversation_summaries.db").path, &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        XCTAssertEqual(sqlite3_exec(db, "CREATE TABLE conversation_parents(conversation_id TEXT PRIMARY KEY,parent_id TEXT); INSERT INTO conversation_parents VALUES ('" + child + "','" + parent + "')", nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(relation(), .child(parent: parent, role: nil))
+        let duplicate = root.appendingPathComponent("antigravity-cli/brain/" + child + "/.system_generated/logs")
+        try FileManager.default.createDirectory(at: duplicate, withIntermediateDirectories: true)
+        XCTAssertNil(relation())
+        XCTAssertEqual(AntigravityHistory.lineage(root: root, session: child, client: "antigravity"), .child(parent: parent, role: nil))
+    }
+
+    @MainActor
     func testAntigravityInvocationAndBackgroundStop() async throws {
         let root = URL(fileURLWithPath: "/private/tmp/qv-ag-" + UUID().uuidString.prefix(8))
         let home = root.appendingPathComponent("config")

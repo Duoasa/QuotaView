@@ -5,6 +5,10 @@
 来源：用户要求按 `PLAN-claude-code-support.md`（2026-10-07 草案）为 QuotaView 加入
 Claude Code 全功能支持。本规格记录目标、边界与证据；实现位于本节列出的文件。
 
+## 0.9.9 Build 3 / 并行子 Agent 名称
+
+同一 CC 会话以 `session_id` 确定父卡，按 `agent_id` 区分并行子行。子行沿用最近一次非空的 `agent_type`；后续 Hook 省略该字段或只传空白时保留名称，显式传入新名称时仅更新对应子行。`SubagentStop` 结束对应子任务，父卡继续当前轮次。
+
 ## Build 43 / 复杂任务进度
 
 当前主任务轮次先登记工具调用，再消费相同调用的成功 `PostToolUse` 回执。辅助程序从计划结果中只转发任务标识和状态。新版 `TaskCreate`、`TaskUpdate` 增量维护本轮已知任务，`TaskList` 用完整列表校准。首次遇到未知任务更新时等待完整列表。旧版 `TodoWrite` 使用回执的 `newTodos`。失败、子代理调用和上轮迟到的回执不能推进当前卡片。新提示词重置轮次计划。

@@ -148,15 +148,27 @@ final class IslandLiveStore {
     private(set) var subagents: [String: SubagentRecord] = [:]
     private var subagentOrder: [String] = []
 
-    func receiveSubagentIdentity(_ identity: CodexActivitySubagentIdentity) {
+    func receiveSubagentIdentity(_ identity: CodexActivitySubagentIdentity, migratingTurn: String? = nil) {
         guard presentationKind(for: identity.sessionHash) != .memoryConsolidation else { return }
         if let previous = subagents[identity.sessionHash], previous.identity.parentSessionHash != identity.parentSessionHash { return }
         // Store supplies a validated native parent relation. Legacy generic
         // internal classification may be refined, but never a memory execution.
         sessionKinds[identity.sessionHash] = .subagent
+        // Antigravity may publish its parent after the hook has already created a task.
+        let observed = migratingTurn.flatMap { turn in tasks.first { $0.key == identity.sessionHash && $0.turnKey == turn } }
         withdrawNonUserSession(identity.sessionHash, kind: .subagent)
         if subagents[identity.sessionHash] == nil {
-            subagents[identity.sessionHash] = .init(identity: identity)
+            var child = SubagentRecord(identity: identity)
+            if let observed {
+                child.turn = observed.turnKey
+                child.status = observed.activityStatus
+                child.startedAt = observed.startedAt
+                child.updatedAt = observed.updatedAt
+                child.source = .hook
+                child.model = observed.model
+                child.progress = observed.antigravityFocus?.title ?? observed.publicProgress
+            }
+            subagents[identity.sessionHash] = child
             subagentOrder.append(identity.sessionHash)
         } else { subagents[identity.sessionHash]?.identity = identity }
         if let title = identity.title, !title.isEmpty { subagents[identity.sessionHash]?.title = title }

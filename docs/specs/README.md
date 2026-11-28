@@ -1,5 +1,17 @@
 # QuotaView SDD 注册表
 
+## macOS 0.9.9 Build 2 / 公开发布候选
+
+正式候选使用内部版本 284，包含已验收的 Antigravity 直接父子识别和 Claude Code 并行角色名修复。回滚基线为 [0.9.9 Build 1](../../VERSION_HISTORY.md#当前最新版本)。Sparkle 准入待本次渠道确认。
+
+## 0.9.9 Build 3 / Claude Code 并行子 Agent
+
+[Claude Code 子行名称](claude-code-support.md#099-build-3--并行子-agent-名称)记录并行会话的角色更新与结束行为。
+
+## 0.9.9 Build 2 / Antigravity 直接父子会话
+
+[Antigravity 直接父子会话](agent-integrations.md#099-build-2--antigravity-直接父子会话)记录身份来源、迟到收编与用量边界。
+
 ## 0.9.9 Build 1 / 正式发布与公告
 
 [发布规格](release-0.9.9.md)记录 macOS 稳定版与 Sparkle 更新准入。[版本历史](../../VERSION_HISTORY.md#当前最新版本)列出公开交付证据。

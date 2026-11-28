@@ -23,27 +23,89 @@ enum AntigravityHistory {
         url.standardizedFileURL.path == url.resolvingSymlinksInPath().standardizedFileURL.path
     }
 
-    static func title(database: URL, session: String) -> String? {
+    private static func readDatabase<T>(_ database: URL, lookup: (OpaquePointer?) -> T?) -> T? {
         guard safe(database), FileManager.default.fileExists(atPath: database.path) else { return nil }
-        func read(_ path: String) -> String? {
+        func read(_ path: String) -> T? {
             var db: OpaquePointer?
             defer { sqlite3_close(db) }
             guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK else { return nil }
-            var statement: OpaquePointer?
-            defer { sqlite3_finalize(statement) }
-            let sql = "SELECT substr(coalesce(nullif(trim(title), ''), preview), 1, 256) FROM conversation_summaries WHERE conversation_id = ?"
-            guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return nil }
-            return session.withCString { id in
-                guard sqlite3_bind_text(statement, 1, id, -1, nil) == SQLITE_OK,
-                      sqlite3_step(statement) == SQLITE_ROW, let raw = sqlite3_column_text(statement, 0) else { return nil }
-                let value = String(cString: raw).split(whereSeparator: \.isWhitespace).joined(separator: " ")
-                return value.isEmpty ? nil : value
+            return lookup(db)
+        }
+        if FileManager.default.fileExists(atPath: database.path + "-wal") { return read(database.path) }
+        return read(database.absoluteString + "?immutable=1")
+    }
+
+    private static func row(_ db: OpaquePointer?, _ sql: String, session: String) -> [String?]? {
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return nil }
+        return session.withCString { id in
+            guard sqlite3_bind_text(statement, 1, id, -1, nil) == SQLITE_OK,
+                  sqlite3_step(statement) == SQLITE_ROW else { return nil }
+            return (0..<sqlite3_column_count(statement)).map { sqlite3_column_text(statement, $0).map { String(cString: $0) } }
+        }
+    }
+
+    static func title(database: URL, session: String) -> String? {
+        let sql = "SELECT substr(coalesce(nullif(trim(title), ''), preview), 1, 256) FROM conversation_summaries WHERE conversation_id = ?"
+        return readDatabase(database) { db in
+            guard let value = row(db, sql, session: session)?[0] else { return nil }
+            let clean = value.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            return clean.isEmpty ? nil : clean
+        }
+    }
+
+    enum Lineage: Equatable, Sendable {
+        case root
+        case child(parent: String, role: String?)
+    }
+
+    static func lineage(root: URL, session: String, client: String?) -> Lineage? {
+        guard let id = UUID(uuidString: session) else { return nil }
+        let directories = clients.filter { client == nil || client == $0 }
+        var matches: [Lineage?] = []
+        for name in directories {
+            let base = root.appendingPathComponent(name)
+            let database = base.appendingPathComponent("conversation_summaries.db")
+            let relation: (parent: String?, role: String?)? = readDatabase(database) { db in
+                let summary = row(db, "SELECT parent_conversation_id, substr(trim(agent_name),1,128) FROM conversation_summaries WHERE conversation_id IN (?1, lower(?1), upper(?1))", session: session)
+                let primary = summary?[0]?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let primary, !primary.isEmpty { return (primary, summary?[1]) }
+                let auxiliary = row(db, "SELECT trim(parent_id) FROM conversation_parents WHERE conversation_id IN (?1, lower(?1), upper(?1))", session: session)
+                guard summary != nil || auxiliary != nil else { return nil }
+                return (auxiliary?[0], summary?[1])
+            }
+            if let parent = relation?.parent, !parent.isEmpty {
+                let parentID = UUID(uuidString: parent)
+                let role = relation?.role
+                matches.append(parentID != nil && parentID != id ? .child(parent: parent.lowercased(), role: role == "" ? nil : role) : nil)
+            } else if let logs = logs(root: root, session: session, client: name) {
+                matches.append(firstLineage(logs.appendingPathComponent("transcript.jsonl"), session: id))
+            } else if relation != nil {
+                matches.append(nil)
             }
         }
-        if let value = read(database.path) { return value }
-        // A checkpointed WAL database can lack sidecars. Read it without creating any.
-        guard !FileManager.default.fileExists(atPath: database.path + "-wal") else { return nil }
-        return read(database.absoluteString + "?immutable=1")
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    private static let systemEnvelope = "The following is a <SYSTEM_MESSAGE> not actually sent by the user. It is provided by the system as important information to pay attention to.\n\n<SYSTEM_MESSAGE>\n"
+
+    private static func firstLineage(_ file: URL, session: UUID) -> Lineage? {
+        guard safe(file), let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: 4096), let end = data.firstIndex(of: 10),
+              let record = try? JSONSerialization.jsonObject(with: data[..<end]) as? [String: Any],
+              record["step_index"] as? Int == 0 else { return nil }
+        if record["source"] as? String == "USER_EXPLICIT", record["type"] as? String == "USER_INPUT" { return .root }
+        guard record["source"] as? String == "SYSTEM", record["type"] as? String == "SYSTEM_MESSAGE",
+              let text = record["content"] as? String,
+              text.hasPrefix(systemEnvelope) else { return nil }
+        let line = text.dropFirst(systemEnvelope.count).prefix { !$0.isNewline }
+        let fields = line.split(separator: " ", maxSplits: 3)
+        guard fields.count >= 3, fields[0] == "[Message]", fields[1].hasPrefix("timestamp="),
+              fields[2].hasPrefix("sender="), let parent = UUID(uuidString: String(fields[2].dropFirst(7))),
+              parent != session else { return nil }
+        return .child(parent: parent.uuidString.lowercased(), role: nil)
     }
 
     struct Focus: Equatable, Sendable {

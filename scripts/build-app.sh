@@ -191,6 +191,9 @@ fi
 
 /usr/bin/ditto "${built_app}" "${staging_app}"
 xattr -cr "${staging_app}"
+# Ship the project license and the original notice for code incorporated under MIT.
+install -m 0644 "${project_dir}/LICENSE" "${staging_app}/Contents/Resources/LICENSE"
+install -m 0644 "${project_dir}/LICENSES/MIT.txt" "${staging_app}/Contents/Resources/QuotaView-Legacy-MIT.txt"
 
 if [[ ! -d "${widget_extension}" ]]; then
     print -u2 "Missing embedded widget extension: ${widget_extension}"
