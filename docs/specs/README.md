@@ -2,7 +2,7 @@
 
 ## macOS 0.9.9 Build 2 / 正式发布
 
-正式版 Build 2（内部 284）包含 Antigravity 直接父子归组与 Claude Code 角色名修复。GitHub 已发布。线上 Sparkle 继续提供 Build 1（内部 281）。 上一稳定版为 `v0.9.9-build.1` / `b0afb04`。[发布证据及回滚入口](../../VERSION_HISTORY.md#当前最新版本)
+正式版 Build 2（内部 284）包含 Antigravity 直接父子归组与 Claude Code 角色名修复。GitHub 与 Sparkle 均已发布。已用正式 Build 1 的 Sparkle 确认可以查询到 Build 2。上一稳定版为 `v0.9.9-build.1` / `b0afb04`。[发布证据及回滚入口](../../VERSION_HISTORY.md#当前最新版本)
 
 ## 0.9.9 Build 3 / Claude Code 并行子 Agent
 
